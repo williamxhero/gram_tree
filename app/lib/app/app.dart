@@ -3,6 +3,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../l10n/app_localizations.dart';
+import '../observability/crash_reporting.dart';
 import 'router.dart';
 import 'theme.dart';
 
@@ -11,7 +12,13 @@ class GramTreeApp extends ConsumerWidget {
   const GramTreeApp({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) => MaterialApp.router(
+  Widget build(BuildContext context, WidgetRef ref) {
+    // 用户同意隐私政策后才会真正初始化崩溃上报
+    ref.watch(crashReportingProvider);
+    return _app(ref);
+  }
+
+  Widget _app(WidgetRef ref) => MaterialApp.router(
     onGenerateTitle: (context) => AppLocalizations.of(context).appTitle,
     debugShowCheckedModeBanner: false,
     theme: buildTheme(Brightness.light),
