@@ -1,0 +1,9 @@
+{
+	email {$ACME_EMAIL}
+}
+
+# Caddy 自动申请和续期 HTTPS 证书
+{$GRAMTREE_DOMAIN} {
+	encode gzip
+	reverse_proxy api:8000
+}

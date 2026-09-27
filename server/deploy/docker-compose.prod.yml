@@ -1,0 +1,68 @@
+# 单台服务器部署：API、PostgreSQL + pgvector、Redis、任务进程，前面用 Caddy 提供 HTTPS。
+# 用法见 deploy/README.md。所有密码、域名从同目录的 .env 读取。
+x-app: &app
+  image: ${GRAMTREE_IMAGE:-gramtree-server:latest}
+  build: ..
+  restart: unless-stopped
+  env_file: .env
+  environment:
+    GRAMTREE_DATABASE_URL: postgresql+psycopg://gramtree:${POSTGRES_PASSWORD}@db:5432/gramtree
+    GRAMTREE_REDIS_URL: redis://redis:6379/0
+    GRAMTREE_BACKUP_DIR: /var/backups/gramtree
+  depends_on:
+    db:
+      condition: service_healthy
+    redis:
+      condition: service_healthy
+
+services:
+  db:
+    image: pgvector/pgvector:pg16
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: gramtree
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?在 .env 里设置 POSTGRES_PASSWORD}
+      POSTGRES_DB: gramtree
+    volumes: [db-data:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "gramtree"]
+      interval: 5s
+      retries: 30
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: redis-server --appendonly yes
+    volumes: [redis-data:/data]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      retries: 30
+
+  api:
+    <<: *app
+
+  worker:
+    <<: *app
+    command: celery -A gramtree.tasks.celery_app worker --beat -l info
+    volumes:
+      - backups:/var/backups/gramtree
+      - ./rclone.conf:/root/.config/rclone/rclone.conf:ro
+
+  caddy:
+    image: caddy:2
+    restart: unless-stopped
+    ports: ["80:80", "443:443"]
+    environment:
+      GRAMTREE_DOMAIN: ${GRAMTREE_DOMAIN:?在 .env 里设置 GRAMTREE_DOMAIN}
+      ACME_EMAIL: ${ACME_EMAIL:-}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+    depends_on: [api]
+
+volumes:
+  db-data:
+  redis-data:
+  backups:
+  caddy-data:

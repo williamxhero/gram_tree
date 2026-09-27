@@ -1,0 +1,32 @@
+{
+  "@@locale": "zh",
+  "appTitle": "味谱",
+  "@appTitle": {"description": "App name shown in the task switcher and web tab."},
+
+  "tabToday": "今天",
+  "tabDiscover": "发现",
+  "tabCreate": "新建",
+  "@tabCreate": {"description": "Semantics label of the center ＋ primary button."},
+  "tabRecords": "记录",
+  "tabMe": "我的",
+
+  "todayEmptyTitle": "今天还没有安排",
+  "todayEmptyBody": "这里会显示今天要做的菜。点下方的＋开始添加。",
+  "todayEmptyAction": "添加第一道菜谱",
+
+  "discoverEmptyTitle": "还没有可发现的内容",
+  "discoverEmptyBody": "以后这里会推荐适合你的菜谱和做法。",
+
+  "createEmptyTitle": "想做点什么？",
+  "createEmptyBody": "以后可以在这里录入菜谱、记录一次做菜。",
+
+  "recordsEmptyTitle": "还没有做菜记录",
+  "recordsEmptyBody": "每次做完菜后的记录和心得会保存在这里。",
+
+  "meEmptyTitle": "个人中心",
+  "meEmptyBody": "账号、口味偏好和设置会放在这里。",
+
+  "featureReceiptScan": "拍小票记价格",
+  "@featureReceiptScan": {"description": "Entry on the ＋ page, shown only when the server enables feature receipt_scan."},
+  "comingSoon": "这个功能正在准备中"
+}
