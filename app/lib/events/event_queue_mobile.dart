@@ -26,7 +26,21 @@ class QueuedEvents extends Table {
   Set<Column> get primaryKey => {id};
 }
 
-@DriftDatabase(tables: [QueuedEvents])
+/// 拒收区（票 5 / #73）：服务端答复"拒收"的事件从 [QueuedEvents] 挪到这里，
+/// 不再参与 [DriftEventQueue.pending]/上传。不存内容，只留诊断需要的字段。
+@DataClassName('RejectedEventRow')
+class RejectedEvents extends Table {
+  TextColumn get id => text()();
+  TextColumn get eventType => text().named('event_type')();
+  IntColumn get typeVersion => integer().named('type_version')();
+  TextColumn get reasonCode => text().named('reason_code')();
+  DateTimeColumn get rejectedAt => dateTime().named('rejected_at')();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}
+
+@DriftDatabase(tables: [QueuedEvents, RejectedEvents])
 class EventQueueDatabase extends _$EventQueueDatabase {
   /// 手机端真正落盘的位置：`getApplicationDocumentsDirectory()` 下的
   /// `event_queue.sqlite`（drift_flutter 的默认行为）。
@@ -36,6 +50,8 @@ class EventQueueDatabase extends _$EventQueueDatabase {
   /// 用来验证“杀进程重开后数据还在”。
   EventQueueDatabase.withExecutor(super.executor);
 
+  // 加了 RejectedEvents 表（票 5 / #73），但整个事件管道还没有发布给真实用户
+  // 数据，不需要 onUpgrade：schemaVersion 维持 1，新装的 App 直接按最新表结构建库。
   @override
   int get schemaVersion => 1;
 }
@@ -71,6 +87,34 @@ class DriftEventQueue implements EventQueue {
     final idList = ids.toList();
     if (idList.isEmpty) return;
     await (_db.delete(_db.queuedEvents)..where((t) => t.id.isIn(idList))).go();
+  }
+
+  @override
+  Future<void> reject(String id, {required String reasonCode}) async {
+    await _db.transaction(() async {
+      final row = await (_db.select(
+        _db.queuedEvents,
+      )..where((t) => t.id.equals(id))).getSingleOrNull();
+      if (row == null) return; // 已经不在队列里，什么都不做（安静忽略）
+      await _db
+          .into(_db.rejectedEvents)
+          .insertOnConflictUpdate(
+            RejectedEventsCompanion.insert(
+              id: row.id,
+              eventType: row.eventType,
+              typeVersion: row.typeVersion,
+              reasonCode: reasonCode,
+              rejectedAt: DateTime.now().toUtc(),
+            ),
+          );
+      await (_db.delete(_db.queuedEvents)..where((t) => t.id.equals(id))).go();
+    });
+  }
+
+  @override
+  Future<int> rejectedCount() async {
+    final rows = await _db.select(_db.rejectedEvents).get();
+    return rows.length;
   }
 
   @override

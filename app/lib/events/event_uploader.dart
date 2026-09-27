@@ -2,13 +2,21 @@
 // 不能直接用同名的私有字段做 initializing formal（外部调用不了以下划线开头的具名参数）。
 // ignore_for_file: prefer_initializing_formals
 import 'dart:async';
+import 'dart:math' as math;
 
+import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gramtree_api/gramtree_api.dart';
 
 import '../api/api_client.dart';
 import '../auth/session.dart';
+import '../observability/crash_reporting.dart';
 import 'event_queue.dart';
+
+/// 服务端答复"这一整批超过上限"用的错误码（#70：`events.upload_max_items`/
+/// `events.upload_max_bytes`），命中时要自动砍小批次重传，不是走网络失败那套
+/// 退避重试（同样大小的批次再重试多少次也还是会被拒）。
+const _batchTooLargeCodes = {'too_many_events', 'payload_too_large'};
 
 /// 把本机队列里的事件按顺序传给 #69 的批量上传接口，失败按退避间隔重试。
 ///
@@ -33,7 +41,7 @@ class EventUploader {
     int batchSize = 100,
   }) : _initialBackoff = initialBackoff,
        _maxBackoff = maxBackoff,
-       _batchSize = batchSize {
+       _effectiveBatchSize = batchSize {
     _backoff = _initialBackoff;
   }
 
@@ -41,9 +49,20 @@ class EventUploader {
   final Duration _initialBackoff;
   final Duration _maxBackoff;
 
-  /// 一次最多传几条；服务端单批硬上限是 500（票 2 起会换成可配置的正式上限），
-  /// 这里给个明显更小的默认值，避免单次请求体太大。超限之后的自动分批重传是票 5（#73）的范围。
-  final int _batchSize;
+  /// 一次最多传几条；一开始是构造函数传的 `batchSize`（服务端单批硬上限是可配置
+  /// 的正式上限，见 #70 的 `events.upload_max_items`/`events.upload_max_bytes`，
+  /// 这里给个明显更小的默认值，避免单次请求体太大）。服务端答复"超过上限"之后
+  /// 会砍半，直到不再超限或跌到 [_minBatchSize]（票 5 / #73）；砍小之后不再自动
+  /// 恢复——同一个上传器的生命周期内没必要反复试探服务端的上限在哪。
+  int _effectiveBatchSize;
+
+  static const _minBatchSize = 1;
+
+  /// 队列条数超过这个数就发一次积压告警（不删除任何事件）。
+  static const backlogCountThreshold = 500;
+
+  /// 最老一条距今超过这个时长也发一次积压告警。
+  static const backlogAgeThreshold = Duration(hours: 24);
 
   late Duration _backoff;
   Timer? _retryTimer;
@@ -77,6 +96,10 @@ class EventUploader {
         await _drain();
         if (!_ref.mounted) return;
       } while (_rerunRequested);
+      // 尽力上传完之后再看一眼积压情况：不管这次有没有传完，队列还是那么大/
+      // 那么老就报一次告警，不删除任何事件。同一次 triggerUpload 只检查这一次，
+      // 不会因为上面的 do-while 跑了好几轮就报好几次。
+      await _checkBacklog();
     } finally {
       if (_ref.mounted) _uploading = false;
     }
@@ -87,24 +110,32 @@ class EventUploader {
     // 请求失败，与其那样不如直接跳过，事件照样留在队列里，登录后再传。
     if (_session.current == null) return;
     while (true) {
-      final batch = await _queue.pending(limit: _batchSize);
+      final batch = await _queue.pending(limit: _effectiveBatchSize);
       if (!_ref.mounted) return;
       if (batch.isEmpty) {
         _backoff = _initialBackoff;
         return;
       }
-      final allDone = await _uploadBatch(batch);
+      final outcome = await _uploadBatch(batch);
       if (!_ref.mounted) return;
-      if (!allDone) {
-        _scheduleRetry();
-        return;
+      switch (outcome) {
+        case _BatchOutcome.done:
+          // 批次还有剩（队列比一批多）就继续 while 循环马上传下一批。
+          _backoff = _initialBackoff;
+          break;
+        case _BatchOutcome.retrySmaller:
+          // 已经在 _uploadBatch 里砍小 _effectiveBatchSize 了，什么都不用做：
+          // 循环回到顶部会直接用新的批次大小重新取一批，不是网络问题，不用等退避。
+          break;
+        case _BatchOutcome.retryLater:
+          _scheduleRetry();
+          return;
       }
-      _backoff = _initialBackoff;
     }
   }
 
-  /// 上传一批，返回这一批是不是已经整批都能从队列里删除。
-  Future<bool> _uploadBatch(List<QueuedEvent> batch) async {
+  /// 上传一批，返回这一批接下来该怎么办（见 [_BatchOutcome]）。
+  Future<_BatchOutcome> _uploadBatch(List<QueuedEvent> batch) async {
     final EventUploadResponse response;
     try {
       final resp = await _api.getEventsApi().uploadEvents(
@@ -112,29 +143,85 @@ class EventUploader {
           events: [for (final e in batch) _toItem(e)],
         ),
       );
-      if (!_ref.mounted) return true; // 容器没了，别再碰 _ref，也别再排重试
+      if (!_ref.mounted) {
+        return _BatchOutcome.done; // 容器没了，别再碰 _ref，也别再排重试
+      }
       final data = resp.data;
-      if (data == null) return false;
+      if (data == null) return _BatchOutcome.retryLater;
       response = data;
+    } on DioException catch (e) {
+      if (_isBatchTooLarge(e)) {
+        _shrinkBatchSize();
+        return _BatchOutcome.retrySmaller;
+      }
+      // 网络错误、服务端 5xx 都保守处理成“这批没传成功”：不崩溃，事件留在队列里，
+      // 外层按退避间隔重试。
+      return _BatchOutcome.retryLater;
     } catch (_) {
-      // 网络错误、服务端 5xx、响应解析失败（比如遇到这份客户端还不认识的取值）
-      // 都保守处理成“这批没传成功”：不崩溃，事件留在队列里，外层按退避间隔重试。
-      return false;
+      // 响应解析失败（比如遇到这份客户端还不认识的取值）同样保守处理。
+      return _BatchOutcome.retryLater;
     }
     final done = <String>[];
+    final handled = <String>{};
     for (final result in response.results) {
       switch (result.status) {
         case EventUploadResultItemStatusEnum.accepted:
         case EventUploadResultItemStatusEnum.duplicate:
           done.add(result.id);
+          handled.add(result.id);
         case EventUploadResultItemStatusEnum.rejected:
-          // 票 5（#73）会在这里挪进拒收区、通过现有错误上报通道报告（不带内容），
-          // 同样从队列删除。这一票暂不处理，事件留在队列里等 #73 落地。
-          break;
+          await _handleRejected(batch, result);
+          handled.add(result.id);
       }
     }
+    if (!_ref.mounted) return _BatchOutcome.done;
     if (done.isNotEmpty) await _queue.removeAll(done);
-    return done.length == batch.length;
+    return handled.length == batch.length
+        ? _BatchOutcome.done
+        : _BatchOutcome.retryLater;
+  }
+
+  /// 挪进本机拒收区、通过崩溃/错误上报通道报告原因（不带事件内容），不再重试。
+  Future<void> _handleRejected(
+    List<QueuedEvent> batch,
+    EventUploadResultItem result,
+  ) async {
+    final reasonCode = result.reason?.code ?? 'unknown';
+    await _queue.reject(result.id, reasonCode: reasonCode);
+    if (!_ref.mounted) return;
+    final event = _findEvent(batch, result.id);
+    reportEventRejection(
+      _ref,
+      eventId: result.id,
+      eventType: event?.eventType ?? 'unknown',
+      typeVersion: event?.typeVersion ?? 0,
+      reasonCode: reasonCode,
+    );
+  }
+
+  /// 队列条数或最老一条积压时间超限时报一次告警，不删除任何事件。
+  Future<void> _checkBacklog() async {
+    final pending = await _queue.pending();
+    if (!_ref.mounted || pending.isEmpty) return;
+    // pending() 按 deviceTime 从早到晚排好序，第一条就是最老的。
+    final oldestAge = DateTime.now().toUtc().difference(
+      pending.first.deviceTime,
+    );
+    if (pending.length > backlogCountThreshold ||
+        oldestAge > backlogAgeThreshold) {
+      reportEventBacklogAlert(
+        _ref,
+        count: pending.length,
+        oldestAge: oldestAge,
+      );
+    }
+  }
+
+  bool _isBatchTooLarge(DioException error) =>
+      _batchTooLargeCodes.contains(ApiFailure.from(error).code);
+
+  void _shrinkBatchSize() {
+    _effectiveBatchSize = math.max(_minBatchSize, _effectiveBatchSize ~/ 2);
   }
 
   EventUploadItem _toItem(QueuedEvent e) => EventUploadItem(
@@ -161,4 +248,26 @@ class EventUploader {
   void dispose() {
     _retryTimer?.cancel();
   }
+}
+
+QueuedEvent? _findEvent(List<QueuedEvent> batch, String id) {
+  for (final e in batch) {
+    if (e.id == id) return e;
+  }
+  return null;
+}
+
+/// 一批上传完之后接下来该怎么办。
+enum _BatchOutcome {
+  /// 这一批里的每条都有了结论（accepted/duplicate 已删除，rejected 已挪进拒收区），
+  /// 队列里如果还有更多待上传事件，外层会立刻接着传下一批。
+  done,
+
+  /// 服务端答复"这一批超过上限"：已经把 [EventUploader._effectiveBatchSize] 砍小，
+  /// 外层应该立刻用新的批次大小重试，不用等退避。
+  retrySmaller,
+
+  /// 网络问题、服务端 5xx、或者响应里有解析不了/不认识的取值：这一批原样留在
+  /// 队列里，外层按退避间隔重试。
+  retryLater,
 }
