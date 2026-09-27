@@ -19,6 +19,15 @@ else
   mapfile -t targets < <(find integration_test -name '*_test.dart' | sort)
 fi
 
+# chromedriver 按 PATH 里的 google-chrome 找浏览器，可能找到另一个版本的系统 Chrome；
+# 这里把 CHROME_EXECUTABLE 包成 google-chrome 放到 PATH 最前面，保证版本和 chromedriver 一致
+if [[ -n "${CHROME_EXECUTABLE:-}" ]]; then
+  shim_dir="$(mktemp -d)"
+  printf '#!/bin/sh\nexec "%s" "$@"\n' "$CHROME_EXECUTABLE" >"$shim_dir/google-chrome"
+  chmod +x "$shim_dir/google-chrome"
+  export PATH="$shim_dir:$PATH"
+fi
+
 "$CHROMEDRIVER" --port="$PORT" >/tmp/chromedriver.log 2>&1 &
 driver_pid=$!
 trap 'kill $driver_pid 2>/dev/null || true' EXIT
