@@ -3,7 +3,8 @@
 # 用法：tool/web_test.sh [integration_test/某个文件.dart ...]（默认跑 integration_test 下全部）
 #
 # 需要：
-#   CHROME_EXECUTABLE  Chromium/Chrome 可执行文件（云端会话由 session-start 钩子设好）
+#   CHROME_EXECUTABLE  Chromium/Chrome 可执行文件，传给 --chrome-binary（不传时 chromedriver 会用系统默认的 Chrome，
+#                      版本可能和 chromedriver 不一致；云端会话由 session-start 钩子设好）
 #   chromedriver       主版本和浏览器一致；在 PATH 里，或用 CHROMEDRIVER 指定
 # 注意：必须用 --profile（debug 模式下结果回不来会卡住）；--no-web-resources-cdn 避免从 CDN 拉渲染引擎。
 set -euo pipefail
@@ -17,15 +18,6 @@ if [[ $# -gt 0 ]]; then
   targets=("$@")
 else
   mapfile -t targets < <(find integration_test -name '*_test.dart' | sort)
-fi
-
-# chromedriver 按 PATH 里的 google-chrome 找浏览器，可能找到另一个版本的系统 Chrome；
-# 这里把 CHROME_EXECUTABLE 包成 google-chrome 放到 PATH 最前面，保证版本和 chromedriver 一致
-if [[ -n "${CHROME_EXECUTABLE:-}" ]]; then
-  shim_dir="$(mktemp -d)"
-  printf '#!/bin/sh\nexec "%s" "$@"\n' "$CHROME_EXECUTABLE" >"$shim_dir/google-chrome"
-  chmod +x "$shim_dir/google-chrome"
-  export PATH="$shim_dir:$PATH"
 fi
 
 "$CHROMEDRIVER" --port="$PORT" >/tmp/chromedriver.log 2>&1 &
@@ -43,6 +35,7 @@ for target in "${targets[@]}"; do
     --driver=test_driver/integration_test.dart \
     --target="$target" \
     -d web-server --browser-name=chrome --headless \
+    ${CHROME_EXECUTABLE:+--chrome-binary="$CHROME_EXECUTABLE"} \
     --dart-define=APP_ENV=dev || status=1
 done
 exit $status
