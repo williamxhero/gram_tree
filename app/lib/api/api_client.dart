@@ -24,6 +24,23 @@ final apiClientProvider = Provider<GramtreeApi>(
 /// null 表示真的发请求。
 final fakeServerProvider = Provider<Interceptor?>((ref) => null);
 
+/// 端到端测试专用的"飞行模式"开关：默认 false（正常联网），只有测试代码会把它
+/// 置成 true。跟 [fakeServerProvider] 不一样——这里仍然是真的服务端，只是本机
+/// 暂时不让任何请求发出去，用来在安卓模拟器上模拟断网又不用真的操作系统级飞行模式
+/// （集成测试进程没有权限切系统网络设置，见 SPEC-010.1 票 7 的
+/// `integration_test/event_offline_replay_test.dart`）。生产代码里没有任何地方
+/// 会把它设成 true。
+class OfflineSimulation extends Notifier<bool> {
+  @override
+  bool build() => false;
+
+  void set(bool offline) => state = offline;
+}
+
+final offlineSimulationProvider = NotifierProvider<OfflineSimulation, bool>(
+  OfflineSimulation.new,
+);
+
 const deviceIdHeader = 'X-Device-ID';
 
 Dio _baseDio(Ref ref) {
@@ -33,6 +50,23 @@ Dio _baseDio(Ref ref) {
       baseUrl: config.apiBaseUrl,
       connectTimeout: const Duration(seconds: 10),
       receiveTimeout: const Duration(seconds: 20),
+    ),
+  );
+  dio.interceptors.add(
+    InterceptorsWrapper(
+      onRequest: (options, handler) {
+        if (ref.read(offlineSimulationProvider)) {
+          handler.reject(
+            DioException(
+              requestOptions: options,
+              type: DioExceptionType.connectionError,
+              error: 'offline simulation (test only)',
+            ),
+          );
+        } else {
+          handler.next(options);
+        }
+      },
     ),
   );
   dio.interceptors.add(ConsentGate(() => ref.read(privacyConsentProvider)));

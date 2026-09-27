@@ -12,6 +12,7 @@ from gramtree.core.errors import install_error_handlers
 from gramtree.core.logging import configure_logging
 from gramtree.core.middleware import RequestContextMiddleware
 from gramtree.db import make_engine, make_session_factory
+from gramtree.events import dev as events_dev
 from gramtree.events import router as events
 from gramtree.legal import router as legal
 from gramtree.settings import Settings, get_settings
@@ -63,6 +64,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     v1.include_router(analytics.router)
     if settings.dev_tools_enabled:
         v1.include_router(accounts_dev.router)
+        v1.include_router(events_dev.router)
     if settings.examples_enabled:
         from gramtree.examples.router import router as examples_router
 
