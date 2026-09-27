@@ -427,6 +427,221 @@
         "title": "ErrorResponse",
         "type": "object"
       },
+      "EventCorrelationIds": {
+        "description": "关联 ID：都可以留空。这些字段名是所有事件类型统一使用的命名，\n后面新增的关联类型也照这个模式加字段，不要另起一套命名。",
+        "properties": {
+          "cooking_record_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "做菜记录",
+            "title": "Cooking Record Id"
+          },
+          "plan_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "规划",
+            "title": "Plan Id"
+          },
+          "recipe_version_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "菜谱版本",
+            "title": "Recipe Version Id"
+          },
+          "recommendation_exposure_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "推荐曝光",
+            "title": "Recommendation Exposure Id"
+          },
+          "suggestion_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "建议",
+            "title": "Suggestion Id"
+          },
+          "taste_profile_change_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "口味档案变更",
+            "title": "Taste Profile Change Id"
+          },
+          "ui_composition_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "界面组合",
+            "title": "Ui Composition Id"
+          }
+        },
+        "title": "EventCorrelationIds",
+        "type": "object"
+      },
+      "EventUploadItem": {
+        "properties": {
+          "app_version": {
+            "maxLength": 32,
+            "minLength": 1,
+            "title": "App Version",
+            "type": "string"
+          },
+          "content": {
+            "additionalProperties": true,
+            "description": "事件内容。用户 ID 只按登录状态填入，这里出现的任何 user_id 字段都不采信",
+            "title": "Content",
+            "type": "object"
+          },
+          "correlation": {
+            "$ref": "#/components/schemas/EventCorrelationIds"
+          },
+          "device_id": {
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "Device Id",
+            "type": "string"
+          },
+          "device_time": {
+            "description": "设备本地时间，必须带时区",
+            "format": "date-time",
+            "title": "Device Time",
+            "type": "string"
+          },
+          "event_type": {
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Event Type",
+            "type": "string"
+          },
+          "id": {
+            "description": "客户端生成的事件 ID（UUID v4），全局唯一，按它去重",
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "type_version": {
+            "description": "事件类型的版本号",
+            "minimum": 1.0,
+            "title": "Type Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "event_type",
+          "type_version",
+          "device_id",
+          "device_time",
+          "app_version"
+        ],
+        "title": "EventUploadItem",
+        "type": "object"
+      },
+      "EventUploadRequest": {
+        "properties": {
+          "events": {
+            "items": {
+              "$ref": "#/components/schemas/EventUploadItem"
+            },
+            "maxItems": 500,
+            "minItems": 1,
+            "title": "Events",
+            "type": "array"
+          }
+        },
+        "required": [
+          "events"
+        ],
+        "title": "EventUploadRequest",
+        "type": "object"
+      },
+      "EventUploadResponse": {
+        "properties": {
+          "results": {
+            "items": {
+              "$ref": "#/components/schemas/EventUploadResultItem"
+            },
+            "title": "Results",
+            "type": "array"
+          }
+        },
+        "required": [
+          "results"
+        ],
+        "title": "EventUploadResponse",
+        "type": "object"
+      },
+      "EventUploadResultItem": {
+        "properties": {
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "status": {
+            "description": "accepted：已接收入库；duplicate：这个 ID 之前已经收到过，原记录未改动",
+            "enum": [
+              "accepted",
+              "duplicate"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "status"
+        ],
+        "title": "EventUploadResultItem",
+        "type": "object"
+      },
       "HealthChecks": {
         "properties": {
           "api": {
@@ -1224,6 +1439,62 @@
         "summary": "App 用的能力开关和参数",
         "tags": [
           "config"
+        ]
+      }
+    },
+    "/v1/events/upload": {
+      "post": {
+        "operationId": "upload_events",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EventUploadRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EventUploadResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "参数错误"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "服务端错误"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "批量上传经验层事件（需要登录，按事件 ID 去重，只追加存储）",
+        "tags": [
+          "events"
         ]
       }
     },

@@ -13,6 +13,11 @@ import 'package:gramtree_api/src/model/email_login_request.dart';
 import 'package:gramtree_api/src/model/email_reauth_request.dart';
 import 'package:gramtree_api/src/model/error_body.dart';
 import 'package:gramtree_api/src/model/error_response.dart';
+import 'package:gramtree_api/src/model/event_correlation_ids.dart';
+import 'package:gramtree_api/src/model/event_upload_item.dart';
+import 'package:gramtree_api/src/model/event_upload_request.dart';
+import 'package:gramtree_api/src/model/event_upload_response.dart';
+import 'package:gramtree_api/src/model/event_upload_result_item.dart';
 import 'package:gramtree_api/src/model/health_checks.dart';
 import 'package:gramtree_api/src/model/health_response.dart';
 import 'package:gramtree_api/src/model/identity_out.dart';
@@ -84,6 +89,21 @@ ReturnType deserialize<ReturnType, BaseType>(
       return ErrorBody.fromJson(value as Map<String, dynamic>) as ReturnType;
     case 'ErrorResponse':
       return ErrorResponse.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'EventCorrelationIds':
+      return EventCorrelationIds.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'EventUploadItem':
+      return EventUploadItem.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'EventUploadRequest':
+      return EventUploadRequest.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'EventUploadResponse':
+      return EventUploadResponse.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'EventUploadResultItem':
+      return EventUploadResultItem.fromJson(value as Map<String, dynamic>)
           as ReturnType;
     case 'HealthChecks':
       return HealthChecks.fromJson(value as Map<String, dynamic>) as ReturnType;
