@@ -127,9 +127,10 @@ class EventUploader {
         case EventUploadResultItemStatusEnum.accepted:
         case EventUploadResultItemStatusEnum.duplicate:
           done.add(result.id);
-        // 票 5（#73）会在这里加 rejected 分支：挪进拒收区、通过现有错误上报通道
-        // 报告（不带内容），同样从这里删除。这份客户端还不认识的取值（服务端以后
-        // 又加了新状态）保守处理：不加进 done，留着下次重试，不能崩溃也不能乱删。
+        case EventUploadResultItemStatusEnum.rejected:
+          // 票 5（#73）会在这里挪进拒收区、通过现有错误上报通道报告（不带内容），
+          // 同样从队列删除。这一票暂不处理，事件留在队列里等 #73 落地。
+          break;
       }
     }
     if (done.isNotEmpty) await _queue.removeAll(done);
