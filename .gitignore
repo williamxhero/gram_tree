@@ -1,5 +1,6 @@
 .claude/worktrees/
 .claude/settings.local.json
 
-# 核心产品设计文档只保留本地，不提交（其他 article，如竞品分析、UI 样稿等，正常入库）
-/docs/可进化食谱 App 产品设计文档.md
+# 所有设计文档只保留本地，永远不提交（硬性原则，见 CLAUDE.md 第 0 节）。
+# 其他 article（竞品分析、UI 样稿等）不受此限制，正常入库。
+**/*设计文档*.md
