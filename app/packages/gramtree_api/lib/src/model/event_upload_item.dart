@@ -41,7 +41,7 @@ class EventUploadItem {
 
   /// 事件内容。用户 ID 只按登录状态填入，这里出现的任何 user_id 字段都不采信
   @JsonKey(name: r'content', required: false, includeIfNull: false)
-  final Map<String, Object>? content;
+  final Object? content;
 
   @JsonKey(name: r'correlation', required: false, includeIfNull: false)
   final EventCorrelationIds? correlation;

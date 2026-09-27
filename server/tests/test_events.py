@@ -247,10 +247,13 @@ def _all_routes(app) -> list[tuple[str, tuple[str, ...]]]:
 
 
 def test_no_public_route_reads_or_mutates_event_details(client: TestClient) -> None:
+    # 只看经验层事件表（/v1/events/...）的路由；产品埋点（/v1/analytics/...，SPEC-010.1
+    # 票 6）是完全独立的通道，本来就该有自己的上传接口，不受这条"经验层只追加、不对外
+    # 开放明细"的约束。
     event_routes = {
         (path, method)
         for path, methods in _all_routes(client.app)
-        if "event" in path
+        if path.startswith("/v1/events")
         for method in methods
         if method not in ("HEAD", "OPTIONS")
     }

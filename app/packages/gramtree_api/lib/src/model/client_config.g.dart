@@ -9,7 +9,7 @@ part of 'client_config.dart';
 abstract class _$ClientConfigCWProxy {
   ClientConfig features(Map<String, bool> features);
 
-  ClientConfig params(Map<String, Object> params);
+  ClientConfig params(Object params);
 
   /// This function **does support** nullification of nullable fields. All `null` values passed to `non-nullable` fields will be ignored. You can also use `ClientConfig(...).copyWith.fieldName(...)` to override fields one at a time with nullification support.
   ///
@@ -17,7 +17,7 @@ abstract class _$ClientConfigCWProxy {
   /// ```dart
   /// ClientConfig(...).copyWith(id: 12, name: "My name")
   /// ````
-  ClientConfig call({Map<String, bool> features, Map<String, Object> params});
+  ClientConfig call({Map<String, bool> features, Object params});
 }
 
 /// Proxy class for `copyWith` functionality. This is a callable class and can be used as follows: `instanceOfClientConfig.copyWith(...)`. Additionally contains functions for specific fields e.g. `instanceOfClientConfig.copyWith.fieldName(...)`
@@ -30,7 +30,7 @@ class _$ClientConfigCWProxyImpl implements _$ClientConfigCWProxy {
   ClientConfig features(Map<String, bool> features) => this(features: features);
 
   @override
-  ClientConfig params(Map<String, Object> params) => this(params: params);
+  ClientConfig params(Object params) => this(params: params);
 
   @override
   /// This function **does support** nullification of nullable fields. All `null` values passed to `non-nullable` fields will be ignored. You can also use `ClientConfig(...).copyWith.fieldName(...)` to override fields one at a time with nullification support.
@@ -51,7 +51,7 @@ class _$ClientConfigCWProxyImpl implements _$ClientConfigCWProxy {
       params: params == const $CopyWithPlaceholder()
           ? _value.params
           // ignore: cast_nullable_to_non_nullable
-          : params as Map<String, Object>,
+          : params as Object,
     );
   }
 }
@@ -74,12 +74,7 @@ ClientConfig _$ClientConfigFromJson(Map<String, dynamic> json) =>
           'features',
           (v) => Map<String, bool>.from(v as Map),
         ),
-        params: $checkedConvert(
-          'params',
-          (v) => (v as Map<String, dynamic>).map(
-            (k, e) => MapEntry(k, e as Object),
-          ),
-        ),
+        params: $checkedConvert('params', (v) => v as Object),
       );
       return val;
     });

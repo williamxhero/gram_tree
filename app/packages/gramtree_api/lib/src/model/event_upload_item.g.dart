@@ -9,7 +9,7 @@ part of 'event_upload_item.dart';
 abstract class _$EventUploadItemCWProxy {
   EventUploadItem appVersion(String appVersion);
 
-  EventUploadItem content(Map<String, Object>? content);
+  EventUploadItem content(Object? content);
 
   EventUploadItem correlation(EventCorrelationIds? correlation);
 
@@ -31,7 +31,7 @@ abstract class _$EventUploadItemCWProxy {
   /// ````
   EventUploadItem call({
     String appVersion,
-    Map<String, Object>? content,
+    Object? content,
     EventCorrelationIds? correlation,
     String deviceId,
     DateTime deviceTime,
@@ -51,8 +51,7 @@ class _$EventUploadItemCWProxyImpl implements _$EventUploadItemCWProxy {
   EventUploadItem appVersion(String appVersion) => this(appVersion: appVersion);
 
   @override
-  EventUploadItem content(Map<String, Object>? content) =>
-      this(content: content);
+  EventUploadItem content(Object? content) => this(content: content);
 
   @override
   EventUploadItem correlation(EventCorrelationIds? correlation) =>
@@ -100,7 +99,7 @@ class _$EventUploadItemCWProxyImpl implements _$EventUploadItemCWProxy {
       content: content == const $CopyWithPlaceholder()
           ? _value.content
           // ignore: cast_nullable_to_non_nullable
-          : content as Map<String, Object>?,
+          : content as Object?,
       correlation: correlation == const $CopyWithPlaceholder()
           ? _value.correlation
           // ignore: cast_nullable_to_non_nullable
@@ -157,12 +156,7 @@ EventUploadItem _$EventUploadItemFromJson(Map<String, dynamic> json) =>
         );
         final val = EventUploadItem(
           appVersion: $checkedConvert('app_version', (v) => v as String),
-          content: $checkedConvert(
-            'content',
-            (v) => (v as Map<String, dynamic>?)?.map(
-              (k, e) => MapEntry(k, e as Object),
-            ),
-          ),
+          content: $checkedConvert('content', (v) => v),
           correlation: $checkedConvert(
             'correlation',
             (v) => v == null
