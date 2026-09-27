@@ -13,6 +13,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, Response
 from pydantic import BaseModel, Field
 from sqlalchemy import select, tuple_
+from sqlalchemy.dialects.postgresql import insert as pg_insert
 
 from gramtree.core.errors import ERROR_RESPONSES, ErrorResponse, NotFound
 from gramtree.core.ids import IdV4
@@ -24,7 +25,7 @@ from gramtree.core.pagination import (
     encode_cursor,
     page_params,
 )
-from gramtree.core.time import Timestamp
+from gramtree.core.time import Timestamp, utcnow
 from gramtree.deps import SessionDep
 from gramtree.examples.models import Sample, TaskHeartbeat
 from gramtree.runtime_config import service as config
@@ -66,13 +67,18 @@ def _sample_out(row: Sample) -> SampleOut:
     summary="创建示例（同一个 ID 重复提交返回已有记录）",
 )
 def put_sample(body: SampleCreate, session: SessionDep, response: Response) -> SampleOut:
-    existing = session.get(Sample, body.id)
-    if existing is not None:
-        return _sample_out(existing)
-    row = Sample(id=body.id, title=body.title)
-    session.add(row)
+    # 并发重复提交同一个 ID 时也不能报错：插入冲突就读回已有记录
+    inserted = session.execute(
+        pg_insert(Sample)
+        .values(id=body.id, title=body.title, created_at=utcnow())
+        .on_conflict_do_nothing(index_elements=[Sample.id])
+        .returning(Sample.id)
+    ).first()
     session.commit()
-    response.status_code = 201
+    if inserted is not None:
+        response.status_code = 201
+    row = session.get(Sample, body.id)
+    assert row is not None
     return _sample_out(row)
 
 

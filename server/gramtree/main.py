@@ -1,4 +1,5 @@
 from fastapi import APIRouter, FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from redis import Redis
 
 from gramtree.api import client_config, health
@@ -33,6 +34,14 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     )
 
     install_error_handlers(app)
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=[o.strip() for o in settings.cors_origins.split(",") if o.strip()],
+        allow_origin_regex=settings.cors_origin_regex,
+        allow_methods=["*"],
+        allow_headers=["*"],
+        expose_headers=["X-Request-ID"],
+    )
     app.add_middleware(RequestContextMiddleware)
 
     v1 = APIRouter(prefix=API_PREFIX)

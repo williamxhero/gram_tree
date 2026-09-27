@@ -128,3 +128,27 @@ def test_examples_not_mounted_in_prod(database_url: str) -> None:
 
     with TestClient(create_app(make_settings(env="prod"))) as c:
         assert c.get("/v1/examples/samples").status_code == 404
+
+
+def test_non_utf8_header_does_not_break_request(client: TestClient) -> None:
+    resp = client.get("/v1/health", headers={"X-Custom": b"caf\xe9"})
+    assert resp.status_code == 200
+    assert resp.headers["X-Request-ID"]
+
+
+def test_web_build_on_localhost_may_call_api(client: TestClient) -> None:
+    resp = client.options(
+        "/v1/client-config",
+        headers={"Origin": "http://localhost:54321", "Access-Control-Request-Method": "GET"},
+    )
+    assert resp.status_code == 200
+    assert resp.headers["access-control-allow-origin"] == "http://localhost:54321"
+
+
+def test_other_origins_not_allowed_in_prod(database_url: str) -> None:
+    from gramtree.main import create_app
+    from tests.conftest import make_settings
+
+    with TestClient(create_app(make_settings(env="prod"))) as c:
+        resp = c.get("/v1/health", headers={"Origin": "http://localhost:54321"})
+    assert "access-control-allow-origin" not in resp.headers

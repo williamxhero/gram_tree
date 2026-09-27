@@ -11,7 +11,11 @@ import 'package:sentry_flutter/sentry_flutter.dart';
 
 class FakeBackend implements CrashReporterBackend {
   int initCalls = 0;
+  int closeCalls = 0;
   String? environment;
+
+  @override
+  Future<void> close() async => closeCalls++;
 
   @override
   Future<void> init({
@@ -60,7 +64,7 @@ void main() {
     expect(backend.initCalls, 0);
   });
 
-  testWidgets('同意隐私政策后初始化一次，之后不重复', (tester) async {
+  testWidgets('同意隐私政策后初始化，撤回同意后关闭', (tester) async {
     final backend = FakeBackend();
     final container = await pumpWith(tester, backend);
     container.read(privacyConsentProvider.notifier).set(true);
@@ -68,11 +72,18 @@ void main() {
     expect(backend.initCalls, 1);
     expect(backend.environment, 'prod');
 
-    container.read(privacyConsentProvider.notifier).set(false);
-    await tester.pumpAndSettle();
-    container.read(privacyConsentProvider.notifier).set(true);
+    // 界面重建不会重复初始化
+    await tester.tap(find.text('发现'));
     await tester.pumpAndSettle();
     expect(backend.initCalls, 1);
+
+    container.read(privacyConsentProvider.notifier).set(false);
+    await tester.pumpAndSettle();
+    expect(backend.closeCalls, 1);
+
+    container.read(privacyConsentProvider.notifier).set(true);
+    await tester.pumpAndSettle();
+    expect(backend.initCalls, 2);
   });
 
   testWidgets('开发构建可以手动打开', (tester) async {

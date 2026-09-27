@@ -1,6 +1,7 @@
 import logging
 import time
 
+from starlette.concurrency import run_in_threadpool
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
 from gramtree.core.errors import error_response
@@ -23,7 +24,9 @@ class RequestContextMiddleware:
         if scope["type"] != "http":
             await self.app(scope, receive, send)
             return
-        headers = {k.decode().lower(): v.decode() for k, v in scope.get("headers", [])}
+        headers = {
+            k.decode("latin-1").lower(): v.decode("latin-1") for k, v in scope.get("headers", [])
+        }
         request_id = accept_or_new(headers.get(REQUEST_ID_HEADER.lower()))
         set_request_id(request_id)
         started = time.perf_counter()
@@ -70,5 +73,6 @@ class RequestContextMiddleware:
             app_state = scope.get("app")
             redis = getattr(getattr(app_state, "state", None), "redis", None)
             if redis is not None:
-                metrics.record(redis, status_code, duration_ms)
+                # Redis 调用会阻塞，放到线程池里，不卡住事件循环
+                await run_in_threadpool(metrics.record, redis, status_code, duration_ms)
             set_request_id(None)

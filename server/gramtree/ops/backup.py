@@ -72,9 +72,20 @@ def prune_remote(remote: str, retention_days: int) -> None:
     )
 
 
-def restore(backup_file: Path, target_url: str) -> None:
-    """恢复到一个新库（库已存在会先删掉重建），不碰正在用的库。"""
+class RestoreRefused(ValueError):
+    pass
+
+
+def restore(backup_file: Path, target_url: str, live_url: str) -> None:
+    """恢复到一个新库（库已存在会先删掉重建）。目标是正在用的库时拒绝执行。"""
     target = make_url(target_url)
+    live = make_url(live_url)
+    if (target.host, target.port or 5432, target.database) == (
+        live.host,
+        live.port or 5432,
+        live.database,
+    ):
+        raise RestoreRefused(f"目标库 {target.database} 就是正在使用的库，不能直接覆盖")
     admin = create_engine(target.set(database="postgres"), isolation_level="AUTOCOMMIT")
     with admin.connect() as conn:
         conn.execute(text(f'DROP DATABASE IF EXISTS "{target.database}" WITH (FORCE)'))

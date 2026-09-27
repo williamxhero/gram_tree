@@ -55,3 +55,16 @@ def test_old_local_backups_pruned_by_retention(client: TestClient, backup_dir: P
     assert old.name not in names
     assert len(names) == 1
     assert os.path.getsize(backup_dir / names[0]) > 0
+
+
+def test_restore_refuses_to_overwrite_live_database(
+    client: TestClient, backup_dir: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    sample_id = str(uuid.uuid4())
+    client.put("/v1/examples/samples", json={"id": sample_id, "title": "线上数据"})
+    assert cli(["backup", "run"]) == 0
+    dump = next(backup_dir.glob("gramtree-*.dump"))
+
+    assert cli(["backup", "restore", str(dump), "--to", TEST_DATABASE_URL]) == 1
+    assert "正在使用的库" in capsys.readouterr().err
+    assert client.get(f"/v1/examples/samples/{sample_id}").status_code == 200

@@ -1,4 +1,6 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- 正式包也要能访问服务端 -->
+    <uses-permission android:name="android.permission.INTERNET"/>
     <application
         android:label="味谱"
         android:name="${applicationName}"

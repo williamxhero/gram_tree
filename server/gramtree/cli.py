@@ -81,7 +81,11 @@ def cmd_backup(args: argparse.Namespace) -> int:
         print(backup_database())
         return 0
     if args.action == "restore":
-        backup.restore(Path(args.file), args.to)
+        try:
+            backup.restore(Path(args.file), args.to, get_settings().database_url)
+        except backup.RestoreRefused as exc:
+            print(f"错误：{exc}", file=sys.stderr)
+            return 1
         print(f"已恢复到 {args.to.rsplit('/', 1)[-1]}")
         return 0
     return 2

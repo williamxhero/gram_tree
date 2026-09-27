@@ -16,6 +16,8 @@ class Settings(BaseSettings):
     database_url: str = "postgresql+psycopg://postgres:postgres@localhost:5432/gramtree"
     redis_url: str = "redis://localhost:6379/0"
     log_level: str = "INFO"
+    # 允许跨域访问的网页来源（逗号分隔）。网页版只用于测试，正式环境留空
+    cors_origins: str = ""
     # 健康检查里探测数据库和 Redis 的超时（秒）
     health_timeout_seconds: float = 2.0
     # 告警邮件用的 SMTP；告警接收方式和地址是运行时配置项 ops.alert_*
@@ -25,6 +27,13 @@ class Settings(BaseSettings):
     backup_remote: str = ""
     smtp_port: int = 25
     smtp_from: str = "alerts@gramtree.local"
+
+    @property
+    def cors_origin_regex(self) -> str | None:
+        """开发和测试环境放行本机任意端口，方便网页版连本机服务端。"""
+        if self.env in ("dev", "test"):
+            return r"https?://(localhost|127\.0\.0\.1)(:\d+)?"
+        return None
 
     @property
     def examples_enabled(self) -> bool:

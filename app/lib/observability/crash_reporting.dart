@@ -31,6 +31,9 @@ abstract class CrashReporterBackend {
     required String environment,
     required BeforeSendCallback beforeSend,
   });
+
+  /// 用户撤回同意时关闭上报。
+  Future<void> close();
 }
 
 class SentryCrashReporterBackend implements CrashReporterBackend {
@@ -49,6 +52,9 @@ class SentryCrashReporterBackend implements CrashReporterBackend {
       ..attachScreenshot = false
       ..beforeSend = beforeSend;
   });
+
+  @override
+  Future<void> close() => Sentry.close();
 }
 
 final crashReporterBackendProvider = Provider<CrashReporterBackend>(
@@ -72,7 +78,7 @@ final crashReportingConfigProvider = Provider<CrashReportingConfig>(
   (ref) => CrashReportingConfig.fromEnvironment(),
 );
 
-/// 上报是否已经初始化。在 App 根部 watch 它，条件满足时初始化一次。
+/// 上报是否正在运行。在 App 根部 watch 它：条件满足时初始化，撤回同意时关闭。
 final crashReportingProvider = NotifierProvider<CrashReporting, bool>(
   CrashReporting.new,
 );
@@ -84,8 +90,13 @@ class CrashReporting extends Notifier<bool> {
     final config = ref.watch(crashReportingConfigProvider);
     final app = ref.watch(appConfigProvider);
     final allowed = consent || (config.devOverride && !app.isProd);
-    if (!allowed || config.dsn.isEmpty) return stateOrNull ?? false;
-    if (stateOrNull == true) return true;
+    final running = stateOrNull ?? false;
+    if (!allowed || config.dsn.isEmpty) {
+      // 撤回同意后立刻停止上报
+      if (running) ref.read(crashReporterBackendProvider).close();
+      return false;
+    }
+    if (running) return true;
     ref
         .read(crashReporterBackendProvider)
         .init(
