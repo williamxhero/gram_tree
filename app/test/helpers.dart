@@ -10,6 +10,9 @@ import 'package:gramtree_api/gramtree_api.dart';
 import 'package:gram_tree/api/api_client.dart';
 import 'package:gram_tree/app/app.dart';
 import 'package:gram_tree/auth/session.dart';
+import 'package:gram_tree/events/event_queue.dart';
+import 'package:gram_tree/events/event_recorder.dart';
+import 'package:gram_tree/events/fake_event_queue.dart';
 import 'package:gram_tree/features_flags/features.dart';
 import 'package:gram_tree/platform/app_exit.dart';
 import 'package:gram_tree/platform/apple_sign_in.dart';
@@ -186,6 +189,17 @@ class FakeServer extends Interceptor {
       return (200, [for (final i in identities) i.toJson()]);
     });
     on('POST', '/v1/me/consents', (_) => (204, null));
+    on('POST', '/v1/events/upload', (r) {
+      final events = ((r.body as Map)['events'] as List).cast<Map>();
+      return (
+        200,
+        {
+          'results': [
+            for (final e in events) {'id': e['id'], 'status': 'accepted'},
+          ],
+        },
+      );
+    });
     on('POST', '/v1/me/deletion', (_) {
       if (!reauthed) return error(403, 'reauth_required', '为了安全，请先重新验证身份');
       return (
@@ -349,6 +363,7 @@ class TestEnv {
     FakeAppExit? exit,
     FakeAppleSignIn? apple,
     FakePermissions? permissions,
+    FakeEventQueue? eventQueue,
     this.timezone = 'Asia/Shanghai',
     this.features = const {},
   }) : server = server ?? FakeServer(),
@@ -356,7 +371,8 @@ class TestEnv {
        secure = secure ?? MemorySecureStore(),
        exit = exit ?? FakeAppExit(),
        apple = apple ?? FakeAppleSignIn(),
-       permissions = permissions ?? FakePermissions();
+       permissions = permissions ?? FakePermissions(),
+       eventQueue = eventQueue ?? FakeEventQueue();
 
   /// 已同意、已登录。
   factory TestEnv.signedIn({
@@ -378,6 +394,7 @@ class TestEnv {
   final FakeAppExit exit;
   final FakeAppleSignIn apple;
   final FakePermissions permissions;
+  final FakeEventQueue eventQueue;
   final links = FakeLinkOpener();
   final String? timezone;
   final Map<String, bool> features;
@@ -392,6 +409,8 @@ class TestEnv {
     linkOpenerProvider.overrideWithValue(links),
     timezoneSourceProvider.overrideWithValue(FakeTimezone(timezone)),
     permissionServiceProvider.overrideWithValue(permissions),
+    eventQueueProvider.overrideWithValue(eventQueue),
+    appVersionProvider.overrideWith((ref) async => '0.1.0-test'),
     if (features.isNotEmpty)
       clientConfigProvider.overrideWith(
         (ref) async => ClientConfig(features: features, params: const {}),

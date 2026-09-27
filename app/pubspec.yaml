@@ -27,6 +27,9 @@ dependencies:
   # 13.x 的安卓实现要求 compileSdk 37，当前 Android Gradle 插件最高支持 36；升级插件后再升
   permission_handler: ^12.0.3
   flutter_timezone: ^5.1.0
+  drift: ^2.35.0
+  drift_flutter: ^0.3.1
+  package_info_plus: ^10.2.1
 
 dev_dependencies:
   flutter_test:
@@ -36,6 +39,8 @@ dev_dependencies:
   flutter_driver:
     sdk: flutter
   flutter_lints: ^6.0.0
+  drift_dev: ^2.35.0
+  build_runner: ^2.16.1
 
 flutter:
   uses-material-design: true
