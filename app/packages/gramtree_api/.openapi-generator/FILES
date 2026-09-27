@@ -8,6 +8,7 @@ lib/src/api.dart
 lib/src/api/account_api.dart
 lib/src/api/auth_api.dart
 lib/src/api/config_api.dart
+lib/src/api/events_api.dart
 lib/src/api/health_api.dart
 lib/src/auth/api_key_auth.dart
 lib/src/auth/auth.dart
@@ -30,6 +31,11 @@ lib/src/model/email_login_request.dart
 lib/src/model/email_reauth_request.dart
 lib/src/model/error_body.dart
 lib/src/model/error_response.dart
+lib/src/model/event_correlation_ids.dart
+lib/src/model/event_upload_item.dart
+lib/src/model/event_upload_request.dart
+lib/src/model/event_upload_response.dart
+lib/src/model/event_upload_result_item.dart
 lib/src/model/health_checks.dart
 lib/src/model/health_response.dart
 lib/src/model/identity_out.dart

@@ -54,6 +54,15 @@ def check_and_notify(session: Session, redis: Redis, now: float | None = None) -
     }
 
 
+def notify(session: Session, subject: str, body: str) -> bool:
+    """供其他模块（比如事件管道发现的一次性异常）直接发一条自定义告警。
+
+    走同一套接收方式和地址（ops.alert_channel/ops.alert_target），但不做窗口去重——
+    调用方按自己的场景决定要不要限流，这里只负责把消息送出去。
+    """
+    return _send(session, subject, body)
+
+
 def _send(session: Session, subject: str, body: str) -> bool:
     channel = config.get(session, "ops.alert_channel")
     target = str(config.get(session, "ops.alert_target"))
