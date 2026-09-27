@@ -196,6 +196,47 @@ ITEMS: tuple[ConfigItem, ...] = (
         minimum=1000,
         maximum=50_000_000,
     ),
+    ConfigItem(
+        "events.device_time_suspicious_threshold_seconds",
+        "int",
+        300,
+        "设备时间和服务端接收时间相差超过这个秒数，事件就标记为“设备时间可疑”，"
+        "分析用的时间改用服务端接收时间",
+        minimum=1,
+        maximum=86_400,
+    ),
+    ConfigItem(
+        "events.alert_window_minutes",
+        "int",
+        5,
+        "计算事件上传重复率、拒收率的时间窗口（分钟）",
+        minimum=1,
+        maximum=60,
+    ),
+    ConfigItem(
+        "events.alert_min_events",
+        "int",
+        20,
+        "窗口内事件总数少于此值时不告警，避免小样本误报",
+        minimum=1,
+        maximum=100_000,
+    ),
+    ConfigItem(
+        "events.alert_duplicate_rate",
+        "float",
+        0.3,
+        "窗口内事件重复率超过此值就告警",
+        minimum=0.0,
+        maximum=1.0,
+    ),
+    ConfigItem(
+        "events.alert_reject_rate",
+        "float",
+        0.1,
+        "窗口内事件拒收率超过此值就告警",
+        minimum=0.0,
+        maximum=1.0,
+    ),
     # —— 部署与备份 ——
     ConfigItem(
         "ops.backup_retention_days",

@@ -5,6 +5,7 @@ from redis import Redis
 from sqlalchemy.orm import Session, sessionmaker
 
 from gramtree.db import make_engine, make_session_factory
+from gramtree.events import alerts as events_alerts
 from gramtree.examples.models import TaskHeartbeat
 from gramtree.observability import alerts
 from gramtree.settings import get_settings
@@ -33,6 +34,14 @@ def check_api_alerts() -> dict[str, object]:
     redis = Redis.from_url(get_settings().redis_url)
     with _session_factory()() as session:
         return alerts.check_and_notify(session, redis)
+
+
+@celery_app.task(name="gramtree.tasks.jobs.check_events_alerts")
+def check_events_alerts() -> dict[str, object]:
+    """事件上传重复率、拒收率超阈值时告警（SPEC-010.1 票 3）。"""
+    redis = Redis.from_url(get_settings().redis_url)
+    with _session_factory()() as session:
+        return events_alerts.check_and_notify(session, redis)
 
 
 @celery_app.task(name="gramtree.tasks.jobs.backup_database")

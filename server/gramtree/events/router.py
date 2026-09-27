@@ -13,19 +13,27 @@
 - 关联 ID 字段这里故意只做"格式是不是字符串"的结构校验（不是 `IdV4`），格式是否是合法
   UUID v4 放到 `validate_event` 里按条判断，这样单条关联 ID 写错不会让整批请求直接 422，
   而是这一条被拒收、其余合格事件仍然入库。
+
+票 3（设备时间可疑标记、内部查询、上传监控告警）落在别的模块，这里只在每次上传处理完
+之后调一次 `gramtree.events.metrics.record_upload_batch`，把这一批的接收/重复/拒收
+条数和被接收事件的上传延迟记下来，供 SPEC-013.1 的监控和事件管道自己的告警任务
+（`gramtree.events.alerts`）读。
 """
 
 import uuid
+from datetime import datetime
 from typing import Any, Literal
 
 from fastapi import APIRouter, Request
 from pydantic import BaseModel, Field
+from redis import Redis
 
 from gramtree.accounts.deps import CurrentAuth
 from gramtree.core.errors import ERROR_RESPONSES, ApiError
 from gramtree.core.ids import IdV4
 from gramtree.core.time import Timestamp, utcnow
-from gramtree.deps import SessionDep
+from gramtree.deps import RedisDep, SessionDep
+from gramtree.events import metrics as events_metrics
 from gramtree.events import service, validation
 from gramtree.runtime_config import service as config_service
 
@@ -107,7 +115,11 @@ class EventUploadResponse(BaseModel):
     summary="批量上传经验层事件（需要登录，按登记表校验，按事件 ID 去重，只追加存储）",
 )
 def upload_events(
-    request: Request, body: EventUploadRequest, auth: CurrentAuth, session: SessionDep
+    request: Request,
+    body: EventUploadRequest,
+    auth: CurrentAuth,
+    session: SessionDep,
+    redis: RedisDep,
 ) -> EventUploadResponse:
     _check_batch_limits(request, body, session)
 
@@ -132,7 +144,9 @@ def upload_events(
             )
         )
 
-    outcome = service.upload(session, auth.user.id, accepted_items, now=utcnow())
+    now = utcnow()
+    outcome = service.upload(session, auth.user.id, accepted_items, now=now)
+    _record_batch_metrics(redis, accepted_items, outcome, rejections, now)
 
     results = []
     for e in body.events:
@@ -143,6 +157,34 @@ def upload_events(
         else:
             results.append(EventUploadResultItem(id=e.id, status=outcome[e.id]))
     return EventUploadResponse(results=results)
+
+
+def _record_batch_metrics(
+    redis: Redis,
+    accepted_items: list[service.EventInput],
+    outcome: dict[uuid.UUID, service.UploadStatus],
+    rejections: dict[uuid.UUID, RejectionReason],
+    now: datetime,
+) -> None:
+    """把这一批的上传结果和延迟记进事件管道指标（票 3）。
+
+    延迟只算这一批里被新接收（`accepted`）的事件：设备时间到服务端接收时间
+    （`now`）的差值，单位毫秒；重复、拒收的事件不产生新的延迟样本。
+    """
+    accepted = sum(1 for status in outcome.values() if status == "accepted")
+    duplicate = sum(1 for status in outcome.values() if status == "duplicate")
+    delays_ms = [
+        (now - item.device_time).total_seconds() * 1000
+        for item in accepted_items
+        if outcome[item.id] == "accepted"
+    ]
+    events_metrics.record_upload_batch(
+        redis,
+        accepted=accepted,
+        duplicate=duplicate,
+        rejected=len(rejections),
+        delays_ms=delays_ms,
+    )
 
 
 def _check_batch_limits(request: Request, body: EventUploadRequest, session: SessionDep) -> None:

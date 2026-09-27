@@ -5,6 +5,10 @@
   SPEC-013.1 的告警通道（`gramtree.observability.alerts.notify`）。
 - 用户 ID 只认调用方传入的登录用户 ID（由路由层从 CurrentAuth 取），这一层根本不从
   事件内容里读 user_id，所以客户端在内容里自报的用户 ID 不可能影响归属。
+- 设备时间和服务端接收时间相差超过配置项
+  `events.device_time_suspicious_threshold_seconds` 时，落库前把这条事件标记成
+  "设备时间可疑"（`Event.device_time_suspicious`）。分析用的时间见
+  `Event.analysis_time`（SPEC-010.1 票 3）。
 """
 
 import hashlib
@@ -21,6 +25,7 @@ from sqlalchemy.orm import Session
 
 from gramtree.events.models import Event
 from gramtree.observability import alerts
+from gramtree.runtime_config import service as config_service
 
 logger = logging.getLogger("gramtree.events")
 
@@ -69,6 +74,9 @@ def upload(
     if not items:
         return {}
 
+    threshold_seconds = float(
+        config_service.get(session, "events.device_time_suspicious_threshold_seconds")
+    )
     fingerprints = {item.id: _fingerprint(user_id, item) for item in items}
     rows = [
         {
@@ -83,6 +91,8 @@ def upload(
             "content": item.content,
             "content_fingerprint": fingerprints[item.id],
             "received_at": now,
+            "device_time_suspicious": abs((item.device_time - now).total_seconds())
+            > threshold_seconds,
         }
         for item in items
     ]

@@ -44,6 +44,11 @@ def make_celery() -> Celery:
                 "task": "gramtree.tasks.jobs.check_api_alerts",
                 "schedule": 60.0,
             },
+            # 每分钟检查一次事件上传重复率、拒收率，超阈值就告警
+            "check-events-alerts": {
+                "task": "gramtree.tasks.jobs.check_events_alerts",
+                "schedule": 60.0,
+            },
         },
     )
     return app
