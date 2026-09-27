@@ -39,5 +39,6 @@ export 'package:gramtree_api/src/model/health_response.dart';
 export 'package:gramtree_api/src/model/identity_out.dart';
 export 'package:gramtree_api/src/model/profile_update.dart';
 export 'package:gramtree_api/src/model/refresh_request.dart';
+export 'package:gramtree_api/src/model/rejection_reason.dart';
 export 'package:gramtree_api/src/model/token_pair.dart';
 export 'package:gramtree_api/src/model/user_out.dart';

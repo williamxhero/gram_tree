@@ -18,7 +18,7 @@ class EventsApi {
 
   const EventsApi(this._dio);
 
-  /// 批量上传经验层事件（需要登录，按事件 ID 去重，只追加存储）
+  /// 批量上传经验层事件（需要登录，按登记表校验，按事件 ID 去重，只追加存储）
   ///
   ///
   /// Parameters:

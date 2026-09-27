@@ -211,10 +211,11 @@ def test_user_id_spoofed_in_content_is_ignored(api: Api, engine: Engine) -> None
     tokens = api.login("cook@example.com")
     me = api.client.get("/v1/me", headers=bearer(tokens)).json()
     someone_else = new_uuid()
-    event = _event(content={"user_id": someone_else, "note": "冒充别人"})
+    event = _event(content={"ping": "pong", "user_id": someone_else, "note": "冒充别人"})
 
     resp = api.client.post("/v1/events/upload", json={"events": [event]}, headers=bearer(tokens))
     assert resp.status_code == 200
+    assert resp.json()["results"][0]["status"] == "accepted"
 
     rows = _rows(engine)
     assert str(rows[0]["user_id"]) == me["id"]

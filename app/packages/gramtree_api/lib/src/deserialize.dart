@@ -23,6 +23,7 @@ import 'package:gramtree_api/src/model/health_response.dart';
 import 'package:gramtree_api/src/model/identity_out.dart';
 import 'package:gramtree_api/src/model/profile_update.dart';
 import 'package:gramtree_api/src/model/refresh_request.dart';
+import 'package:gramtree_api/src/model/rejection_reason.dart';
 import 'package:gramtree_api/src/model/token_pair.dart';
 import 'package:gramtree_api/src/model/user_out.dart';
 
@@ -117,6 +118,9 @@ ReturnType deserialize<ReturnType, BaseType>(
           as ReturnType;
     case 'RefreshRequest':
       return RefreshRequest.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'RejectionReason':
+      return RejectionReason.fromJson(value as Map<String, dynamic>)
           as ReturnType;
     case 'TokenPair':
       return TokenPair.fromJson(value as Map<String, dynamic>) as ReturnType;

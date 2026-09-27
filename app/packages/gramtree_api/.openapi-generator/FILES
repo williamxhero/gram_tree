@@ -41,6 +41,7 @@ lib/src/model/health_response.dart
 lib/src/model/identity_out.dart
 lib/src/model/profile_update.dart
 lib/src/model/refresh_request.dart
+lib/src/model/rejection_reason.dart
 lib/src/model/token_pair.dart
 lib/src/model/user_out.dart
 pubspec.yaml

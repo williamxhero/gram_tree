@@ -179,6 +179,23 @@ ITEMS: tuple[ConfigItem, ...] = (
         "",
         "告警接收地址：webhook URL 或邮箱",
     ),
+    # —— 经验层事件管道（SPEC-010.1） ——
+    ConfigItem(
+        "events.upload_max_items",
+        "int",
+        500,
+        "经验层事件单次上传最多多少条，超过整批拒绝，客户端据此分批重传",
+        minimum=1,
+        maximum=5000,
+    ),
+    ConfigItem(
+        "events.upload_max_bytes",
+        "int",
+        2_000_000,
+        "经验层事件单次上传请求体最大字节数（按 Content-Length 头判断），超过整批拒绝",
+        minimum=1000,
+        maximum=50_000_000,
+    ),
     # —— 部署与备份 ——
     ConfigItem(
         "ops.backup_retention_days",
