@@ -6,6 +6,8 @@
 #   CHROME_EXECUTABLE  Chromium/Chrome 可执行文件，传给 --chrome-binary（不传时 chromedriver 会用系统默认的 Chrome，
 #                      版本可能和 chromedriver 不一致；云端会话由 session-start 钩子设好）
 #   chromedriver       主版本和浏览器一致；在 PATH 里，或用 CHROMEDRIVER 指定
+# 端到端测试连真的服务端：脚本先用 tool/e2e_server.sh 起一个（test 环境、空库），跑完关掉。
+#   已经有服务端在跑时设 GRAMTREE_E2E_SERVER=external 跳过。
 # 注意：必须用 --profile（debug 模式下结果回不来会卡住）；--no-web-resources-cdn 避免从 CDN 拉渲染引擎。
 set -euo pipefail
 
@@ -22,7 +24,12 @@ fi
 
 "$CHROMEDRIVER" --port="$PORT" >/tmp/chromedriver.log 2>&1 &
 driver_pid=$!
-trap 'kill $driver_pid 2>/dev/null || true' EXIT
+cleanup() {
+  kill $driver_pid 2>/dev/null || true
+  [[ "${GRAMTREE_E2E_SERVER:-}" == external ]] || "$ROOT/tool/e2e_server.sh" stop
+}
+trap cleanup EXIT
+[[ "${GRAMTREE_E2E_SERVER:-}" == external ]] || "$ROOT/tool/e2e_server.sh" start
 for _ in $(seq 1 50); do
   curl -fs "http://localhost:$PORT/status" >/dev/null 2>&1 && break
   sleep 0.2

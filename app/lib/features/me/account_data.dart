@@ -8,8 +8,9 @@ import '../../auth/auth_controller.dart';
 final identitiesProvider = FutureProvider.autoDispose<List<IdentityOut>>((
   ref,
 ) async {
-  // 换账号或退出后重新拉取
-  ref.watch(authProvider.select((a) => a.value?.id));
+  // 换账号后重新拉取；退出后不再请求
+  final userId = ref.watch(authProvider.select((a) => a.value?.id));
+  if (userId == null) return const [];
   final resp = await ref
       .watch(apiClientProvider)
       .getAccountApi()

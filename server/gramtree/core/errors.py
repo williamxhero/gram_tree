@@ -5,6 +5,7 @@
 code 给客户端判断用；message 给用户看；detail 给开发者看；request_id 用来查日志。
 """
 
+import logging
 from typing import Any
 
 from fastapi import FastAPI, Request
@@ -14,6 +15,8 @@ from pydantic import BaseModel
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from gramtree.core.request_context import REQUEST_ID_HEADER, get_request_id
+
+logger = logging.getLogger("gramtree.errors")
 
 
 class ErrorBody(BaseModel):
@@ -80,7 +83,9 @@ def install_error_handlers(app: FastAPI) -> None:
         for err in exc.errors():
             loc = ".".join(str(p) for p in err.get("loc", ()))
             parts.append(f"{loc}: {err.get('msg')}")
-        return error_response(422, "invalid_request", "请求参数有误", "; ".join(parts))
+        detail = "; ".join(parts)
+        logger.info("request validation failed", extra={"detail": detail})
+        return error_response(422, "invalid_request", "请求参数有误", detail)
 
     @app.exception_handler(StarletteHTTPException)
     async def _http(_: Request, exc: StarletteHTTPException) -> JSONResponse:

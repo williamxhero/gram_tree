@@ -20,8 +20,9 @@ final apiClientProvider = Provider<GramtreeApi>(
   (ref) => GramtreeApi(dio: ref.watch(dioProvider), interceptors: const []),
 );
 
-/// 测试时换成假的网络层（记录请求、返回预设的响应）。null 表示用 Dio 默认的真实网络。
-final httpClientAdapterProvider = Provider<HttpClientAdapter?>((ref) => null);
+/// 测试时在拦截链最后加一个假服务端（记录请求、直接返回预设的响应，不走网络层）。
+/// null 表示真的发请求。
+final fakeServerProvider = Provider<Interceptor?>((ref) => null);
 
 const deviceIdHeader = 'X-Device-ID';
 
@@ -34,8 +35,6 @@ Dio _baseDio(Ref ref) {
       receiveTimeout: const Duration(seconds: 20),
     ),
   );
-  final adapter = ref.watch(httpClientAdapterProvider);
-  if (adapter != null) dio.httpClientAdapter = adapter;
   dio.interceptors.add(ConsentGate(() => ref.read(privacyConsentProvider)));
   dio.interceptors.add(
     InterceptorsWrapper(
@@ -48,10 +47,16 @@ Dio _baseDio(Ref ref) {
   return dio;
 }
 
+void _addFakeServer(Ref ref, Dio dio) {
+  final fake = ref.watch(fakeServerProvider);
+  if (fake != null) dio.interceptors.add(fake);
+}
+
 final dioProvider = Provider<Dio>((ref) {
   final dio = _baseDio(ref);
   // 续期用单独的 Dio，不经过下面的续期拦截，避免递归
   final refreshDio = _baseDio(ref);
+  _addFakeServer(ref, refreshDio);
   dio.interceptors.add(
     AuthInterceptor(
       dio: dio,
@@ -67,6 +72,7 @@ final dioProvider = Provider<Dio>((ref) {
           ref.read(sessionStoreProvider).expire(reason: 'refresh_failed'),
     ),
   );
+  _addFakeServer(ref, dio);
   return dio;
 });
 

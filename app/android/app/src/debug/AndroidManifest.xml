@@ -4,4 +4,6 @@
          to allow setting breakpoints, to provide hot reload, etc.
     -->
     <uses-permission android:name="android.permission.INTERNET"/>
+    <!-- 模拟器端到端测试连本机的 http 服务端（10.0.2.2:8000）。只在 debug 包里放开明文请求。 -->
+    <application android:usesCleartextTraffic="true"/>
 </manifest>

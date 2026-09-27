@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:typed_data';
 
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
@@ -62,7 +61,10 @@ class Recorded {
 }
 
 /// 一个很小的假服务端：常用接口有默认行为，测试可以用 [on] 覆盖。
-class FakeServer implements HttpClientAdapter {
+///
+/// 它是 Dio 拦截链的最后一环，直接给出响应，不经过网络层：网页上 Dio 的网络层要等真实的浏览器事件，
+/// 页面测试的假时钟里等不到。
+class FakeServer extends Interceptor {
   FakeServer() {
     _defaults();
   }
@@ -194,38 +196,44 @@ class FakeServer implements HttpClientAdapter {
   }
 
   @override
-  Future<ResponseBody> fetch(
+  Future<void> onRequest(
     RequestOptions options,
-    Stream<Uint8List>? requestStream,
-    Future<void>? cancelFuture,
+    RequestInterceptorHandler handler,
   ) async {
-    Object? body;
-    if (requestStream != null) {
-      final bytes = await requestStream.expand((b) => b).toList();
-      if (bytes.isNotEmpty) body = jsonDecode(utf8.decode(bytes));
-    }
+    final sent = options.data;
+    final Object? body = sent == null
+        ? null
+        : jsonDecode(sent is String ? sent : jsonEncode(sent));
     final rec = Recorded(
       options.method,
       options.uri.path,
       body,
-      options.headers,
+      Map.of(options.headers),
     );
     requests.add(rec);
-    final handler = _routes['${options.method} ${options.uri.path}'];
-    final (status, data) = handler == null
+    final handle = _routes['${options.method} ${options.uri.path}'];
+    final (status, data) = handle == null
         ? error(404, 'not_found', '没有找到')
-        : await handler(rec);
-    return ResponseBody.fromString(
-      data == null ? '' : jsonEncode(data),
-      status,
-      headers: {
-        Headers.contentTypeHeader: ['application/json'],
-      },
+        : await handle(rec);
+    // 和真的网络响应一样，数据是解析好的 JSON
+    final response = Response<dynamic>(
+      requestOptions: options,
+      statusCode: status,
+      data: data == null ? null : jsonDecode(jsonEncode(data)),
     );
+    if (status >= 200 && status < 300) {
+      handler.resolve(response, true);
+    } else {
+      handler.reject(
+        DioException.badResponse(
+          statusCode: status,
+          requestOptions: options,
+          response: response,
+        ),
+        true,
+      );
+    }
   }
-
-  @override
-  void close({bool force = false}) {}
 }
 
 class FakeAppExit implements AppExit {
@@ -377,7 +385,7 @@ class TestEnv {
   List<Override> get overrides => [
     localStoreProvider.overrideWithValue(local),
     secureStoreProvider.overrideWithValue(secure),
-    httpClientAdapterProvider.overrideWithValue(server),
+    fakeServerProvider.overrideWithValue(server),
     deviceCapabilitiesProvider.overrideWithValue(FakeDeviceCapabilities()),
     appExitProvider.overrideWithValue(exit),
     appleSignInProvider.overrideWithValue(apple),
