@@ -92,8 +92,8 @@ provider with the fake.
 
 ## Large text and dark mode
 
-The theme follows the system (`ThemeMode.system`, Material 3, warm seed
-color). Pages must not overflow at text scale 2.0 and 3.0; the bottom bar caps
+The theme follows the system (`ThemeMode.system`, Material 3) and uses the
+UI spec's palette and fonts (`lib/app/theme.dart`, see CLAUDE.md §6). Pages must not overflow at text scale 2.0 and 3.0; the bottom bar caps
 its own label scale at 1.4 and keeps full semantics labels. Page tests cover
 light, dark and large text on 360×780 and 320×568 screens.
 
