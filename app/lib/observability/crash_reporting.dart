@@ -2,27 +2,16 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
 
 import '../config/app_config.dart';
+import '../privacy/consent.dart';
 
 /// 崩溃和错误上报（兼容 Sentry 协议，默认指向自建的 GlitchTip，不交给外部第三方）。
 ///
 /// 规则：
-/// * 用户同意隐私政策之前不初始化，不上报任何东西。同意流程在 SPEC-013.2 做，
-///   在那之前 [privacyConsentProvider] 一直是 false。
+/// * 用户同意隐私政策之前不初始化，不上报任何东西（[privacyConsentProvider]）；
+///   撤回同意后立刻关闭。
 /// * 开发和测试构建可以用 `--dart-define=CRASH_REPORTING_DEV=true` 手动打开；正式构建无效。
 /// * 地址用 `--dart-define=SENTRY_DSN=...` 传入，没配就不初始化。
 /// * 上报前用 [scrubEvent] 去掉菜谱内容、口味档案、健康信息和请求内容。
-
-/// 用户是否已同意隐私政策。SPEC-013.2 负责持久化和修改它。
-final privacyConsentProvider = NotifierProvider<PrivacyConsent, bool>(
-  PrivacyConsent.new,
-);
-
-class PrivacyConsent extends Notifier<bool> {
-  @override
-  bool build() => false;
-
-  void set(bool agreed) => state = agreed;
-}
 
 /// 真正去初始化上报 SDK 的那一层，测试里换成假的。
 abstract class CrashReporterBackend {

@@ -34,6 +34,11 @@ def make_celery() -> Celery:
                 "task": "gramtree.tasks.jobs.backup_database",
                 "schedule": crontab(hour=19, minute=0),
             },
+            # 每天 UTC 20:00（北京时间凌晨 4 点）删除注销到期账号的个人数据
+            "purge-deleted-accounts": {
+                "task": "gramtree.tasks.jobs.purge_deleted_accounts",
+                "schedule": crontab(hour=20, minute=0),
+            },
             # 每分钟检查一次接口错误率和耗时，超阈值就告警
             "check-api-alerts": {
                 "task": "gramtree.tasks.jobs.check_api_alerts",

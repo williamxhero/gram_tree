@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gramtree_api/gramtree_api.dart';
 
 import '../api/api_client.dart';
+import '../privacy/consent.dart';
 
 /// 服务端下发的能力开关（服务端配置项 feature.*）。
 ///
@@ -20,7 +21,11 @@ enum Feature {
 }
 
 /// 启动时从服务端拉取 App 配置。拉取失败时按“全部关闭”处理。
+/// 同意隐私政策之前不联网，全部视为关闭；同意后自动重新拉取。
 final clientConfigProvider = FutureProvider<ClientConfig>((ref) async {
+  if (!ref.watch(privacyConsentProvider)) {
+    return ClientConfig(features: const {}, params: const {});
+  }
   final response = await ref
       .watch(apiClientProvider)
       .getConfigApi()

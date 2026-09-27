@@ -2,11 +2,16 @@ from fastapi import APIRouter, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from redis import Redis
 
+from gramtree.accounts import dev as accounts_dev
+from gramtree.accounts import router as accounts
+from gramtree.accounts.apple import AppleClient, HttpAppleTransport
+from gramtree.accounts.mailer import make_mail_sender
 from gramtree.api import client_config, health
 from gramtree.core.errors import install_error_handlers
 from gramtree.core.logging import configure_logging
 from gramtree.core.middleware import RequestContextMiddleware
 from gramtree.db import make_engine, make_session_factory
+from gramtree.legal import router as legal
 from gramtree.settings import Settings, get_settings
 
 API_PREFIX = "/v1"
@@ -15,6 +20,7 @@ API_PREFIX = "/v1"
 def create_app(settings: Settings | None = None) -> FastAPI:
     settings = settings or get_settings()
     configure_logging(settings.log_level)
+    check_settings(settings)
 
     app = FastAPI(
         title="味谱 GramTree API",
@@ -32,6 +38,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         socket_timeout=settings.health_timeout_seconds,
         socket_connect_timeout=settings.health_timeout_seconds,
     )
+    app.state.mailer = make_mail_sender(settings)
+    app.state.apple = AppleClient(settings, HttpAppleTransport())
 
     install_error_handlers(app)
     app.add_middleware(
@@ -47,9 +55,26 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     v1 = APIRouter(prefix=API_PREFIX)
     v1.include_router(health.router)
     v1.include_router(client_config.router)
+    v1.include_router(accounts.router)
+    v1.include_router(accounts.me_router)
+    if settings.dev_tools_enabled:
+        v1.include_router(accounts_dev.router)
     if settings.examples_enabled:
         from gramtree.examples.router import router as examples_router
 
         v1.include_router(examples_router)
     app.include_router(v1)
+    app.include_router(legal.router)
     return app
+
+
+DEV_AUTH_SECRET = Settings.model_fields["auth_secret"].default
+
+
+def check_settings(settings: Settings) -> None:
+    """正式和预发环境不能带着开发用的默认值启动。"""
+    if settings.env in ("staging", "prod"):
+        if settings.auth_secret == DEV_AUTH_SECRET or len(settings.auth_secret) < 32:
+            raise RuntimeError("GRAMTREE_AUTH_SECRET 必须设置成至少 32 位的随机串")
+        if settings.mail_backend != "smtp":
+            raise RuntimeError("正式环境的 GRAMTREE_MAIL_BACKEND 必须是 smtp")

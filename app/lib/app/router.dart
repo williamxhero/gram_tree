@@ -2,19 +2,87 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../auth/auth_controller.dart';
+import '../features/auth/code_page.dart';
+import '../features/auth/login_page.dart';
 import '../features/create/create_page.dart';
 import '../features/discover/discover_page.dart';
+import '../features/me/delete_account_page.dart';
+import '../features/me/document_page.dart';
+import '../features/me/identities_page.dart';
 import '../features/me/me_page.dart';
+import '../features/me/settings_page.dart';
+import '../features/me/withdraw_page.dart';
+import '../features/onboarding/consent_page.dart';
 import '../features/records/records_page.dart';
 import '../features/tab_paths.dart';
 import '../features/today/today_page.dart';
+import '../privacy/consent.dart';
 import 'bottom_nav.dart';
+
+const consentPath = '/consent';
+const loadingPath = '/loading';
+
+/// 不登录也能看的页面。
+bool _isPublic(String location) =>
+    location == consentPath ||
+    location == goodbyePath ||
+    location.startsWith(loginPath);
+
+/// 路由守卫：没同意隐私政策 → 同意页；没登录 → 登录页；都满足才进主界面。
+String? guard({
+  required bool consented,
+  required AsyncValue<Object?> auth,
+  required String location,
+}) {
+  if (!consented) {
+    return location == consentPath || location == goodbyePath
+        ? null
+        : consentPath;
+  }
+  if (auth.isLoading && !auth.hasValue) {
+    return location == loadingPath ? null : loadingPath;
+  }
+  if (auth.value == null) {
+    return location.startsWith(loginPath) ? null : loginPath;
+  }
+  if (_isPublic(location) || location == loadingPath) return TabPaths.today;
+  return null;
+}
 
 /// App router: one branch per fixed bottom entry, each keeping its own stack.
 final routerProvider = Provider<GoRouter>((ref) {
+  final refresh = ValueNotifier<int>(0);
+  ref.listen(privacyConsentProvider, (_, _) => refresh.value++);
+  ref.listen(authProvider, (_, _) => refresh.value++);
   final router = GoRouter(
     initialLocation: TabPaths.today,
+    refreshListenable: refresh,
+    redirect: (context, state) => guard(
+      consented: ref.read(privacyConsentProvider),
+      auth: ref.read(authProvider),
+      location: state.matchedLocation,
+    ),
     routes: [
+      GoRoute(path: consentPath, builder: (_, _) => const ConsentPage()),
+      GoRoute(path: goodbyePath, builder: (_, _) => const GoodbyePage()),
+      GoRoute(
+        path: loadingPath,
+        builder: (_, _) =>
+            const Scaffold(body: Center(child: CircularProgressIndicator())),
+      ),
+      GoRoute(path: loginPath, builder: (_, _) => const LoginPage()),
+      GoRoute(
+        path: CodePage.path,
+        builder: (_, state) {
+          final q = state.uri.queryParameters;
+          return CodePage(
+            email: q['email'] ?? '',
+            resendAfter: int.tryParse(q['resend'] ?? '') ?? 60,
+            expiresIn: int.tryParse(q['expires'] ?? '') ?? 600,
+          );
+        },
+      ),
       StatefulShellRoute.indexedStack(
         builder: (context, state, shell) => AppShell(shell: shell),
         branches: [
@@ -25,9 +93,35 @@ final routerProvider = Provider<GoRouter>((ref) {
           _branch(TabPaths.me, const MePage()),
         ],
       ),
+      GoRoute(
+        path: SettingsPage.path,
+        builder: (_, _) => const SettingsPage(),
+        routes: [
+          GoRoute(
+            path: 'identities',
+            builder: (_, _) => const IdentitiesPage(),
+            routes: [
+              GoRoute(path: 'email', builder: (_, _) => const BindEmailPage()),
+            ],
+          ),
+          GoRoute(
+            path: 'doc/:id',
+            builder: (_, state) =>
+                DocumentPage(id: state.pathParameters['id']!),
+          ),
+          GoRoute(
+            path: 'withdraw',
+            builder: (_, _) => const WithdrawConsentPage(),
+          ),
+          GoRoute(path: 'delete', builder: (_, _) => const DeleteAccountPage()),
+        ],
+      ),
     ],
   );
-  ref.onDispose(router.dispose);
+  ref.onDispose(() {
+    router.dispose();
+    refresh.dispose();
+  });
   return router;
 });
 

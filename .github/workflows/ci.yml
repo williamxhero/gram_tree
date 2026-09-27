@@ -105,8 +105,26 @@ jobs:
   web-e2e:
     name: 网页版端到端测试
     runs-on: ubuntu-24.04
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres" --health-interval 2s --health-retries 30
+      redis:
+        image: redis:7-alpine
+        ports: ["6379:6379"]
+        options: >-
+          --health-cmd "redis-cli ping" --health-interval 2s --health-retries 30
     steps:
       - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          version: "0.8.17"
+      - run: (cd server && uv sync --frozen)
       - uses: subosito/flutter-action@v2
         with:
           flutter-version: ${{ env.FLUTTER_VERSION }}
@@ -126,8 +144,28 @@ jobs:
     name: 安卓模拟器端到端测试
     runs-on: ubuntu-24.04
     timeout-minutes: 45
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres" --health-interval 2s --health-retries 30
+      redis:
+        image: redis:7-alpine
+        ports: ["6379:6379"]
+        options: >-
+          --health-cmd "redis-cli ping" --health-interval 2s --health-retries 30
     steps:
       - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          version: "0.8.17"
+      - run: (cd server && uv sync --frozen)
+      - name: 启动端到端用的服务端（模拟器里通过 10.0.2.2 访问）
+        run: tool/e2e_server.sh start
       - name: 启用 KVM
         run: |
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
@@ -152,7 +190,10 @@ jobs:
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
           disable-animations: true
           working-directory: app
-          script: flutter test integration_test --dart-define=APP_ENV=dev -d emulator-5554
+          script: flutter test integration_test --dart-define=APP_ENV=dev --dart-define=API_BASE_URL=http://10.0.2.2:8000 -d emulator-5554
+      - name: 服务端日志
+        if: failure()
+        run: cat /tmp/gramtree_e2e_server.log || true
 
   ios-e2e:
     name: iOS 模拟器端到端测试（手动触发）
@@ -166,6 +207,19 @@ jobs:
           flutter-version: ${{ env.FLUTTER_VERSION }}
           channel: stable
           cache: true
+      - name: 装数据库和 Redis（macOS 机器没有服务容器）
+        run: |
+          brew install postgresql@17 pgvector redis
+          brew services start postgresql@17
+          brew services start redis
+          export PATH="$(brew --prefix postgresql@17)/bin:$PATH"
+          until pg_isready -h localhost; do sleep 1; done
+          createuser -h localhost -s postgres
+          psql -h localhost -d postgres -c "ALTER USER postgres PASSWORD 'postgres'"
+      - uses: astral-sh/setup-uv@v6
+        with:
+          version: "0.8.17"
+      - run: (cd server && uv sync --frozen) && tool/e2e_server.sh start
       - name: 启动 iPhone 模拟器
         run: |
           UDID=$(xcrun simctl list devices available -j | python3 -c "import json,sys; d=json.load(sys.stdin)['devices']; print(next(x['udid'] for r in d.values() for x in r if x['name'].startswith('iPhone')))")

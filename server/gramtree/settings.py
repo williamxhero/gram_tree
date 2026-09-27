@@ -27,6 +27,22 @@ class Settings(BaseSettings):
     backup_remote: str = ""
     smtp_port: int = 25
     smtp_from: str = "alerts@gramtree.local"
+    smtp_username: str = ""
+    smtp_password: str = ""
+    smtp_starttls: bool = False
+
+    # —— 账号与登录（SPEC-013.2） ——
+    # 签发访问令牌的密钥。正式环境必须设置成足够长的随机串
+    auth_secret: str = "dev-only-secret-change-me-0123456789abcdef"
+    # 验证码邮件怎么发：smtp（正式）或 memory（开发和测试，发出的邮件留在内存里）
+    mail_backend: Literal["smtp", "memory"] = "memory"
+    mail_from: str = "味谱 <no-reply@gramtree.local>"
+    # 通过 Apple 登录：App 的 Bundle ID，以及用来换取和撤销授权的密钥（.p8 内容）
+    # apple_client_id 留空表示不启用 Apple 登录
+    apple_client_id: str = ""
+    apple_team_id: str = ""
+    apple_key_id: str = ""
+    apple_private_key: str = ""
 
     @property
     def cors_origin_regex(self) -> str | None:
@@ -34,6 +50,11 @@ class Settings(BaseSettings):
         if self.env in ("dev", "test"):
             return r"https?://(localhost|127\.0\.0\.1)(:\d+)?"
         return None
+
+    @property
+    def dev_tools_enabled(self) -> bool:
+        """开发和测试环境才有的辅助接口（例如读出发给某个邮箱的验证码）。"""
+        return self.env in ("dev", "test")
 
     @property
     def examples_enabled(self) -> bool:

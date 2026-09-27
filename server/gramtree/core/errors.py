@@ -5,6 +5,7 @@
 code 给客户端判断用；message 给用户看；detail 给开发者看；request_id 用来查日志。
 """
 
+import logging
 from typing import Any
 
 from fastapi import FastAPI, Request
@@ -14,6 +15,8 @@ from pydantic import BaseModel
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from gramtree.core.request_context import REQUEST_ID_HEADER, get_request_id
+
+logger = logging.getLogger("gramtree.errors")
 
 
 class ErrorBody(BaseModel):
@@ -60,19 +63,30 @@ ERROR_RESPONSES: dict[int | str, dict[str, Any]] = {
 }
 
 
-def error_response(status: int, code: str, message: str, detail: str | None) -> JSONResponse:
+def error_response(
+    status: int,
+    code: str,
+    message: str,
+    detail: str | None,
+    *,
+    headers: dict[str, str] | None = None,
+) -> JSONResponse:
     request_id = get_request_id()
     body = ErrorResponse(
         error=ErrorBody(code=code, message=message, detail=detail, request_id=request_id)
     )
-    headers = {REQUEST_ID_HEADER: request_id} if request_id else None
-    return JSONResponse(body.model_dump(), status_code=status, headers=headers)
+    all_headers = dict(headers or {})
+    if request_id:
+        all_headers[REQUEST_ID_HEADER] = request_id
+    return JSONResponse(body.model_dump(), status_code=status, headers=all_headers or None)
 
 
 def install_error_handlers(app: FastAPI) -> None:
     @app.exception_handler(ApiError)
     async def _api_error(_: Request, exc: ApiError) -> JSONResponse:
-        return error_response(exc.status, exc.code, exc.message, exc.detail)
+        retry_after = getattr(exc, "retry_after", None)
+        headers = {"Retry-After": str(retry_after)} if retry_after is not None else None
+        return error_response(exc.status, exc.code, exc.message, exc.detail, headers=headers)
 
     @app.exception_handler(RequestValidationError)
     async def _validation(_: Request, exc: RequestValidationError) -> JSONResponse:
@@ -80,7 +94,9 @@ def install_error_handlers(app: FastAPI) -> None:
         for err in exc.errors():
             loc = ".".join(str(p) for p in err.get("loc", ()))
             parts.append(f"{loc}: {err.get('msg')}")
-        return error_response(422, "invalid_request", "请求参数有误", "; ".join(parts))
+        detail = "; ".join(parts)
+        logger.info("request validation failed", extra={"detail": detail})
+        return error_response(422, "invalid_request", "请求参数有误", detail)
 
     @app.exception_handler(StarletteHTTPException)
     async def _http(_: Request, exc: StarletteHTTPException) -> JSONResponse:

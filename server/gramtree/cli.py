@@ -5,6 +5,7 @@ gramtree config get <key>
 gramtree config set <key> <value> --by <修改人> --reason <原因>
 gramtree config history [<key>]
 gramtree openapi [--out 路径]
+gramtree accounts purge [--as-of 时间]
 """
 
 import argparse
@@ -91,6 +92,23 @@ def cmd_backup(args: argparse.Namespace) -> int:
     return 2
 
 
+def cmd_accounts(args: argparse.Namespace) -> int:
+    from datetime import datetime
+
+    from gramtree.tasks.jobs import purge_deleted_accounts
+
+    if args.as_of:
+        as_of = datetime.fromisoformat(args.as_of)
+        if as_of.tzinfo is None:
+            print("错误：--as-of 必须带时区，例如 2026-10-20T00:00:00+08:00", file=sys.stderr)
+            return 1
+        count = purge_deleted_accounts(as_of.isoformat())
+    else:
+        count = purge_deleted_accounts()
+    print(f"已删除 {count} 个注销到期账号的个人数据")
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="gramtree")
     sub = parser.add_subparsers(dest="command", required=True)
@@ -116,6 +134,12 @@ def build_parser() -> argparse.ArgumentParser:
     restore.add_argument("file")
     restore.add_argument("--to", required=True, help="目标库地址，库会被重建")
     bk.set_defaults(func=cmd_backup)
+
+    acc = sub.add_parser("accounts", help="账号维护")
+    acc_sub = acc.add_subparsers(dest="action", required=True)
+    purge = acc_sub.add_parser("purge", help="立刻删除注销到期账号的个人数据（和每日定时任务相同）")
+    purge.add_argument("--as-of", help="按这个时间判断是否到期（默认现在），带时区的 ISO 8601")
+    acc.set_defaults(func=cmd_accounts)
 
     openapi = sub.add_parser("openapi", help="导出 OpenAPI 描述")
     openapi.add_argument("--out")
