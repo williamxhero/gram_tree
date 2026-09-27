@@ -116,13 +116,23 @@ def test_daily_limit_per_device(api: Api) -> None:
     for i in range(10):
         # 每封从不同的 IP、发给不同的邮箱，只有设备相同
         c = _from_ip(api, f"10.0.0.{i}")
-        resp = c.post("/v1/auth/email/code", json={"email": f"u{i}@example.com"}, headers=headers)
+        resp = c.post(
+            "/v1/auth/email/code",
+            json={"email": f"u{i}@example.com", "purpose": "login"},
+            headers=headers,
+        )
         assert resp.status_code == 200
     c = _from_ip(api, "10.0.1.1")
-    resp = c.post("/v1/auth/email/code", json={"email": "u10@example.com"}, headers=headers)
+    resp = c.post(
+        "/v1/auth/email/code",
+        json={"email": "u10@example.com", "purpose": "login"},
+        headers=headers,
+    )
     assert resp.json()["error"]["code"] == "daily_limit_reached"
     other = c.post(
-        "/v1/auth/email/code", json={"email": "u10@example.com"}, headers={"X-Device-ID": "d2"}
+        "/v1/auth/email/code",
+        json={"email": "u10@example.com", "purpose": "login"},
+        headers={"X-Device-ID": "d2"},
     )
     assert other.status_code == 200
 
@@ -132,16 +142,20 @@ def test_daily_limit_per_ip(api: Api) -> None:
     for i in range(10):
         resp = c.post(
             "/v1/auth/email/code",
-            json={"email": f"ip{i}@example.com"},
+            json={"email": f"ip{i}@example.com", "purpose": "login"},
             headers={"X-Device-ID": f"d{i}"},
         )
         assert resp.status_code == 200
     resp = c.post(
-        "/v1/auth/email/code", json={"email": "ip10@example.com"}, headers={"X-Device-ID": "d10"}
+        "/v1/auth/email/code",
+        json={"email": "ip10@example.com", "purpose": "login"},
+        headers={"X-Device-ID": "d10"},
     )
     assert resp.json()["error"]["code"] == "daily_limit_reached"
     other = _from_ip(api, "10.9.9.10").post(
-        "/v1/auth/email/code", json={"email": "ip10@example.com"}, headers={"X-Device-ID": "d10"}
+        "/v1/auth/email/code",
+        json={"email": "ip10@example.com", "purpose": "login"},
+        headers={"X-Device-ID": "d10"},
     )
     assert other.status_code == 200
 
@@ -256,3 +270,9 @@ def test_dev_code_endpoint_is_not_in_openapi(api: Api) -> None:
     from gramtree.openapi_export import export
 
     assert "latest-email-code" not in export()
+
+
+def test_purpose_is_required(api: Api) -> None:
+    resp = api.client.post("/v1/auth/email/code", json={"email": "p@example.com"})
+    assert resp.status_code == 422
+    assert resp.json()["error"]["code"] == "invalid_request"

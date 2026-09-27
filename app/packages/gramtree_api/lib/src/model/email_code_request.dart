@@ -17,22 +17,13 @@ part 'email_code_request.g.dart';
 )
 class EmailCodeRequest {
   /// Returns a new [EmailCodeRequest] instance.
-  EmailCodeRequest({
-    required this.email,
-
-    this.purpose = const EmailCodeRequestPurposeEnum._('login'),
-  });
+  EmailCodeRequest({required this.email, required this.purpose});
 
   @JsonKey(name: r'email', required: true, includeIfNull: false)
   final String email;
 
-  @JsonKey(
-    defaultValue: 'login',
-    name: r'purpose',
-    required: false,
-    includeIfNull: false,
-  )
-  final EmailCodeRequestPurposeEnum? purpose;
+  @JsonKey(name: r'purpose', required: true, includeIfNull: false)
+  final EmailCodeRequestPurposeEnum purpose;
 
   @override
   bool operator ==(Object other) =>

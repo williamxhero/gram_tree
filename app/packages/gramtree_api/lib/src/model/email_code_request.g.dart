@@ -9,7 +9,7 @@ part of 'email_code_request.dart';
 abstract class _$EmailCodeRequestCWProxy {
   EmailCodeRequest email(String email);
 
-  EmailCodeRequest purpose(EmailCodeRequestPurposeEnum? purpose);
+  EmailCodeRequest purpose(EmailCodeRequestPurposeEnum purpose);
 
   /// This function **does support** nullification of nullable fields. All `null` values passed to `non-nullable` fields will be ignored. You can also use `EmailCodeRequest(...).copyWith.fieldName(...)` to override fields one at a time with nullification support.
   ///
@@ -17,7 +17,7 @@ abstract class _$EmailCodeRequestCWProxy {
   /// ```dart
   /// EmailCodeRequest(...).copyWith(id: 12, name: "My name")
   /// ````
-  EmailCodeRequest call({String email, EmailCodeRequestPurposeEnum? purpose});
+  EmailCodeRequest call({String email, EmailCodeRequestPurposeEnum purpose});
 }
 
 /// Proxy class for `copyWith` functionality. This is a callable class and can be used as follows: `instanceOfEmailCodeRequest.copyWith(...)`. Additionally contains functions for specific fields e.g. `instanceOfEmailCodeRequest.copyWith.fieldName(...)`
@@ -30,7 +30,7 @@ class _$EmailCodeRequestCWProxyImpl implements _$EmailCodeRequestCWProxy {
   EmailCodeRequest email(String email) => this(email: email);
 
   @override
-  EmailCodeRequest purpose(EmailCodeRequestPurposeEnum? purpose) =>
+  EmailCodeRequest purpose(EmailCodeRequestPurposeEnum purpose) =>
       this(purpose: purpose);
 
   @override
@@ -52,7 +52,7 @@ class _$EmailCodeRequestCWProxyImpl implements _$EmailCodeRequestCWProxy {
       purpose: purpose == const $CopyWithPlaceholder()
           ? _value.purpose
           // ignore: cast_nullable_to_non_nullable
-          : purpose as EmailCodeRequestPurposeEnum?,
+          : purpose as EmailCodeRequestPurposeEnum,
     );
   }
 }
@@ -69,14 +69,12 @@ extension $EmailCodeRequestCopyWith on EmailCodeRequest {
 
 EmailCodeRequest _$EmailCodeRequestFromJson(Map<String, dynamic> json) =>
     $checkedCreate('EmailCodeRequest', json, ($checkedConvert) {
-      $checkKeys(json, requiredKeys: const ['email']);
+      $checkKeys(json, requiredKeys: const ['email', 'purpose']);
       final val = EmailCodeRequest(
         email: $checkedConvert('email', (v) => v as String),
         purpose: $checkedConvert(
           'purpose',
-          (v) =>
-              $enumDecodeNullable(_$EmailCodeRequestPurposeEnumEnumMap, v) ??
-              'login',
+          (v) => $enumDecode(_$EmailCodeRequestPurposeEnumEnumMap, v),
         ),
       );
       return val;
@@ -85,7 +83,7 @@ EmailCodeRequest _$EmailCodeRequestFromJson(Map<String, dynamic> json) =>
 Map<String, dynamic> _$EmailCodeRequestToJson(EmailCodeRequest instance) =>
     <String, dynamic>{
       'email': instance.email,
-      'purpose': ?_$EmailCodeRequestPurposeEnumEnumMap[instance.purpose],
+      'purpose': _$EmailCodeRequestPurposeEnumEnumMap[instance.purpose]!,
     };
 
 const _$EmailCodeRequestPurposeEnumEnumMap = {

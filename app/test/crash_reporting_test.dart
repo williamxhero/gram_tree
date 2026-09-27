@@ -2,12 +2,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gram_tree/app/app.dart';
 import 'package:gram_tree/config/app_config.dart';
-import 'package:gram_tree/features_flags/features.dart';
 import 'package:gram_tree/observability/crash_reporting.dart';
-import 'package:gram_tree/platform/device_capabilities.dart';
-import 'package:gram_tree/platform/fake_device_capabilities.dart';
-import 'package:gramtree_api/gramtree_api.dart';
+import 'package:gram_tree/privacy/consent.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
+
+import 'helpers.dart';
 
 class FakeBackend implements CrashReporterBackend {
   int initCalls = 0;
@@ -34,13 +33,12 @@ Future<ProviderContainer> pumpWith(
   String dsn = 'https://key@glitchtip.example/1',
   bool devOverride = false,
   AppEnv env = AppEnv.prod,
+  bool consented = false,
 }) async {
+  final testEnv = consented ? TestEnv.signedIn() : TestEnv();
   final container = ProviderContainer(
     overrides: [
-      deviceCapabilitiesProvider.overrideWithValue(FakeDeviceCapabilities()),
-      clientConfigProvider.overrideWith(
-        (ref) async => ClientConfig(features: const {}, params: const {}),
-      ),
+      ...testEnv.overrides,
       appConfigProvider.overrideWithValue(AppConfig.forEnv(env)),
       crashReporterBackendProvider.overrideWithValue(backend),
       crashReportingConfigProvider.overrideWithValue(
@@ -60,30 +58,35 @@ void main() {
   testWidgets('未同意隐私政策时，崩溃上报不初始化', (tester) async {
     final backend = FakeBackend();
     await pumpWith(tester, backend);
-    expect(find.text('今天还没有安排'), findsOneWidget);
+    expect(find.text('开始之前，先说清楚我们会用到什么'), findsOneWidget);
     expect(backend.initCalls, 0);
   });
 
   testWidgets('同意隐私政策后初始化，撤回同意后关闭', (tester) async {
     final backend = FakeBackend();
     final container = await pumpWith(tester, backend);
-    container.read(privacyConsentProvider.notifier).set(true);
+    await container.read(consentProvider.notifier).agree();
     await tester.pumpAndSettle();
     expect(backend.initCalls, 1);
     expect(backend.environment, 'prod');
 
     // 界面重建不会重复初始化
-    await tester.tap(find.text('发现'));
     await tester.pumpAndSettle();
     expect(backend.initCalls, 1);
 
-    container.read(privacyConsentProvider.notifier).set(false);
+    await container.read(consentProvider.notifier).withdraw();
     await tester.pumpAndSettle();
     expect(backend.closeCalls, 1);
 
-    container.read(privacyConsentProvider.notifier).set(true);
+    await container.read(consentProvider.notifier).agree();
     await tester.pumpAndSettle();
     expect(backend.initCalls, 2);
+  });
+
+  testWidgets('已同意过的用户重新打开 App 时直接初始化', (tester) async {
+    final backend = FakeBackend();
+    await pumpWith(tester, backend, consented: true);
+    expect(backend.initCalls, 1);
   });
 
   testWidgets('开发构建可以手动打开', (tester) async {
@@ -101,7 +104,7 @@ void main() {
   testWidgets('没配上报地址时，同意了也不初始化', (tester) async {
     final backend = FakeBackend();
     final container = await pumpWith(tester, backend, dsn: '');
-    container.read(privacyConsentProvider.notifier).set(true);
+    await container.read(consentProvider.notifier).agree();
     await tester.pumpAndSettle();
     expect(backend.initCalls, 0);
   });

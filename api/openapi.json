@@ -301,7 +301,6 @@
             "type": "string"
           },
           "purpose": {
-            "default": "login",
             "enum": [
               "login",
               "bind",
@@ -312,7 +311,8 @@
           }
         },
         "required": [
-          "email"
+          "email",
+          "purpose"
         ],
         "title": "EmailCodeRequest",
         "type": "object"

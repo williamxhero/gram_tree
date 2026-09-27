@@ -76,7 +76,7 @@ class TokenPair(BaseModel):
 
 class EmailCodeRequest(BaseModel):
     email: str
-    purpose: Literal["login", "bind", "reauth"] = "login"
+    purpose: Literal["login", "bind", "reauth"]
 
 
 class EmailCodeSent(BaseModel):
