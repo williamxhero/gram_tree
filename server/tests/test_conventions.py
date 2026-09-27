@@ -126,7 +126,9 @@ def test_examples_not_mounted_in_prod(database_url: str) -> None:
     from gramtree.main import create_app
     from tests.conftest import make_settings
 
-    with TestClient(create_app(make_settings(env="prod"))) as c:
+    with TestClient(
+        create_app(make_settings(env="prod", auth_secret="s" * 40, mail_backend="smtp"))
+    ) as c:
         assert c.get("/v1/examples/samples").status_code == 404
 
 
@@ -149,6 +151,8 @@ def test_other_origins_not_allowed_in_prod(database_url: str) -> None:
     from gramtree.main import create_app
     from tests.conftest import make_settings
 
-    with TestClient(create_app(make_settings(env="prod"))) as c:
+    with TestClient(
+        create_app(make_settings(env="prod", auth_secret="s" * 40, mail_backend="smtp"))
+    ) as c:
         resp = c.get("/v1/health", headers={"Origin": "http://localhost:54321"})
     assert "access-control-allow-origin" not in resp.headers

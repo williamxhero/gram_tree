@@ -8,12 +8,15 @@
 - 一台装好 Docker 的 Linux 服务器（2 核 4 GB 起步）
 - 一个域名，A 记录指向服务器；80 和 443 端口对外开放
 - 一个服务器之外的备份位置（对象存储或另一台机器），配置成 rclone 的 remote
+- 一个能发邮件的 SMTP 账号（登录验证码要用），填进 `.env` 的 `GRAMTREE_SMTP_*`
+- 访问令牌密钥：`openssl rand -hex 32` 生成，填进 `GRAMTREE_AUTH_SECRET`（不设置 API 不会启动）
+- 如果 iOS 版要开放“通过 Apple 登录”：在 Apple 开发者后台给 App 打开 Sign in with Apple，建一个 Key，把 Bundle ID、Team ID、Key ID 和 .p8 内容填进 `GRAMTREE_APPLE_*`
 
 ## 第一次部署
 
 ```bash
 git clone https://github.com/williamxhero/gram_tree.git && cd gram_tree/server/deploy
-cp .env.example .env          # 填域名、邮箱、数据库密码、备份位置
+cp .env.example .env          # 填域名、邮箱、数据库密码、备份位置、SMTP、令牌密钥
 rclone config --config ./rclone.conf   # 配置异地备份的 remote，名字和 .env 里一致
 docker compose -f docker-compose.prod.yml up -d --build
 curl https://<你的域名>/v1/health     # 应返回 {"status":"ok",...}

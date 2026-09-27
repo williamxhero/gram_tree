@@ -10,5 +10,7 @@ from gramtree.settings import Settings
 
 
 def export() -> str:
-    app = create_app(Settings(env="prod"))
+    app = create_app(
+        Settings(env="prod", auth_secret="export-only-" + "x" * 32, mail_backend="smtp")
+    )
     return json.dumps(app.openapi(), ensure_ascii=False, indent=2, sort_keys=True) + "\n"

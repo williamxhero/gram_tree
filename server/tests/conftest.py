@@ -34,6 +34,8 @@ from sqlalchemy.engine import Engine  # noqa: E402
 from gramtree.main import create_app  # noqa: E402
 from gramtree.settings import Settings, get_settings  # noqa: E402
 
+pytest_plugins = ["tests.accounts_support"]
+
 SERVER_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 

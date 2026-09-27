@@ -51,3 +51,18 @@ def backup_database() -> str:
         backup.upload(path, settings.backup_remote)
         backup.prune_remote(settings.backup_remote, retention)
     return str(path)
+
+
+@celery_app.task(name="gramtree.tasks.jobs.purge_deleted_accounts")
+def purge_deleted_accounts(as_of: str | None = None) -> int:
+    """删除注销期限已到的账号的个人数据（SPEC-013.2）。"""
+    from datetime import datetime
+
+    from gramtree.accounts import service as accounts
+    from gramtree.accounts.apple import AppleClient, HttpAppleTransport
+    from gramtree.core.time import utcnow
+
+    now = datetime.fromisoformat(as_of) if as_of else utcnow()
+    apple = AppleClient(get_settings(), HttpAppleTransport())
+    with _session_factory()() as session:
+        return accounts.purge_due_accounts(session, apple, now)
