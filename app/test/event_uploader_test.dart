@@ -195,6 +195,203 @@ void main() {
     await container.read(eventUploaderProvider).triggerUpload();
     expect(server.calls('POST', '/v1/events/upload'), isEmpty);
   });
+
+  // SPEC-010.1 票 5（#73）：拒收、分批、积压告警。
+
+  test('部分拒收：接收和重复的从队列删除，拒收的进拒收区且不再上传，原因被上报不含内容', () async {
+    final server = FakeServer()
+      ..on('POST', '/v1/events/upload', (r) {
+        final events = ((r.body as Map)['events'] as List).cast<Map>();
+        return (
+          200,
+          {
+            'results': [
+              for (final e in events)
+                if (e['id'] == 'accepted-1')
+                  {'id': e['id'], 'status': 'accepted'}
+                else if (e['id'] == 'dup-1')
+                  {'id': e['id'], 'status': 'duplicate'}
+                else
+                  {
+                    'id': e['id'],
+                    'status': 'rejected',
+                    'reason': {
+                      'code': 'unknown_event_type',
+                      'message': '不认识这个事件类型',
+                    },
+                  },
+            ],
+          },
+        );
+      });
+    final env = TestEnv.signedIn(server: server);
+    final container = ProviderContainer(overrides: env.overrides);
+    addTearDown(container.dispose);
+    await container.read(sessionStoreProvider).load();
+    final queue = container.read(eventQueueProvider) as FakeEventQueue;
+    await queue.enqueue(
+      sample(id: 'accepted-1', deviceTime: DateTime.utc(2026, 9, 27, 0)),
+    );
+    await queue.enqueue(
+      sample(id: 'dup-1', deviceTime: DateTime.utc(2026, 9, 27, 1)),
+    );
+    await queue.enqueue(
+      sample(id: 'bad-1', deviceTime: DateTime.utc(2026, 9, 27, 2)),
+    );
+
+    await container.read(eventUploaderProvider).triggerUpload();
+
+    // 已接收、重复的都从待上传队列删除；拒收的既不在待上传队列，也不再重传。
+    expect(await queue.pending(), isEmpty);
+    expect(queue.rejectedItems.map((e) => e.id), ['bad-1']);
+    expect(await queue.rejectedCount(), 1);
+
+    // 拒收原因被上报，只带 ID/类型/版本/原因代码，不带事件内容。
+    final reports = env.eventReports.reports;
+    expect(reports, hasLength(1));
+    expect(reports.single, contains('bad-1'));
+    expect(reports.single, contains('pipeline.self_check'));
+    expect(reports.single, contains('unknown_event_type'));
+    expect(reports.single, isNot(contains('"content"')));
+
+    // 再触发一次也不会把拒收的那条重新发出去（队列已经空了，不会再发请求）。
+    final callsBefore = server.calls('POST', '/v1/events/upload').length;
+    await container.read(eventUploaderProvider).triggerUpload();
+    expect(server.calls('POST', '/v1/events/upload').length, callsBefore);
+  });
+
+  test('积压超过单批上限时分多批上传，全部上传完成', () async {
+    final server = FakeServer();
+    final container = ProviderContainer(
+      overrides: [
+        ...TestEnv.signedIn(server: server).overrides,
+        eventUploaderProvider.overrideWith((ref) {
+          final uploader = EventUploader(
+            ref,
+            initialBackoff: const Duration(milliseconds: 5),
+            maxBackoff: const Duration(milliseconds: 20),
+            batchSize: 2,
+          );
+          ref.onDispose(uploader.dispose);
+          return uploader;
+        }),
+      ],
+    );
+    addTearDown(container.dispose);
+    await container.read(sessionStoreProvider).load();
+    final queue = container.read(eventQueueProvider) as FakeEventQueue;
+    for (var i = 0; i < 5; i++) {
+      await queue.enqueue(
+        sample(id: 'e$i', deviceTime: DateTime.utc(2026, 9, 27, i)),
+      );
+    }
+
+    await container.read(eventUploaderProvider).triggerUpload();
+
+    expect(await queue.pending(), isEmpty);
+    // 5 条事件、单批 2 条：2 + 2 + 1，一共 3 次请求。
+    expect(server.calls('POST', '/v1/events/upload'), hasLength(3));
+  });
+
+  test('服务端答复超过上限时自动缩小批次重传，最终全部上传成功', () async {
+    final server = FakeServer()
+      ..on('POST', '/v1/events/upload', (r) {
+        final events = ((r.body as Map)['events'] as List).cast<Map>();
+        if (events.length > 2) {
+          return FakeServer.error(422, 'too_many_events', '单次上传的事件条数超过上限');
+        }
+        return (
+          200,
+          {
+            'results': [
+              for (final e in events) {'id': e['id'], 'status': 'accepted'},
+            ],
+          },
+        );
+      });
+    final container = ProviderContainer(
+      overrides: [
+        ...TestEnv.signedIn(server: server).overrides,
+        eventUploaderProvider.overrideWith((ref) {
+          final uploader = EventUploader(
+            ref,
+            initialBackoff: const Duration(milliseconds: 5),
+            maxBackoff: const Duration(milliseconds: 20),
+            batchSize: 5,
+          );
+          ref.onDispose(uploader.dispose);
+          return uploader;
+        }),
+      ],
+    );
+    addTearDown(container.dispose);
+    await container.read(sessionStoreProvider).load();
+    final queue = container.read(eventQueueProvider) as FakeEventQueue;
+    for (var i = 0; i < 5; i++) {
+      await queue.enqueue(
+        sample(id: 'e$i', deviceTime: DateTime.utc(2026, 9, 27, i)),
+      );
+    }
+
+    await container.read(eventUploaderProvider).triggerUpload();
+
+    expect(await queue.pending(), isEmpty);
+    // 第一次按 5 条一批被拒（超过上限），砍到 2 条重传后就一直成功了。
+    final calls = server.calls('POST', '/v1/events/upload').toList();
+    expect(calls.first.body, isA<Map>());
+    expect(((calls.first.body as Map)['events'] as List), hasLength(5));
+    expect(calls.length, greaterThan(1));
+    expect(
+      ((calls.last.body as Map)['events'] as List).length,
+      lessThanOrEqualTo(2),
+    );
+  });
+
+  test('未登录、有一条积压超过阈值天数的事件时发一次积压告警，不丢事件', () async {
+    final server = FakeServer();
+    final env = TestEnv(server: server); // 未登录：不会真的发上传请求
+    final container = ProviderContainer(overrides: env.overrides);
+    addTearDown(container.dispose);
+    await container.read(sessionStoreProvider).load();
+    final queue = container.read(eventQueueProvider) as FakeEventQueue;
+    await queue.enqueue(
+      sample(
+        id: 'old-1',
+        deviceTime: DateTime.now().toUtc().subtract(const Duration(days: 2)),
+      ),
+    );
+
+    await container.read(eventUploaderProvider).triggerUpload();
+
+    // 没有被删除
+    expect(await queue.pending(), hasLength(1));
+    // 只报一次
+    expect(env.eventReports.reports, hasLength(1));
+    expect(env.eventReports.reports.single, contains('event_backlog_alert'));
+  });
+
+  test('队列条数超过阈值时也发一次积压告警，不丢事件', () async {
+    final server = FakeServer();
+    final env = TestEnv(server: server); // 未登录：不会真的发上传请求
+    final container = ProviderContainer(overrides: env.overrides);
+    addTearDown(container.dispose);
+    await container.read(sessionStoreProvider).load();
+    final queue = container.read(eventQueueProvider) as FakeEventQueue;
+    for (var i = 0; i < EventUploader.backlogCountThreshold + 1; i++) {
+      await queue.enqueue(
+        sample(id: 'e$i', deviceTime: DateTime.utc(2026, 9, 27, 0, i)),
+      );
+    }
+
+    await container.read(eventUploaderProvider).triggerUpload();
+
+    expect(
+      await queue.pending(),
+      hasLength(EventUploader.backlogCountThreshold + 1),
+    );
+    expect(env.eventReports.reports, hasLength(1));
+    expect(env.eventReports.reports.single, contains('event_backlog_alert'));
+  });
 }
 
 /// 轮询等一个条件成立，避免死等固定时长导致测试变慢或偶发失败。

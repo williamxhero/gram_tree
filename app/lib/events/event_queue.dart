@@ -56,6 +56,14 @@ abstract class EventQueue {
   /// 批量删除，等价于多次 [remove]，但落盘实现只需要一次事务。
   Future<void> removeAll(Iterable<String> ids);
 
+  /// 服务端答复"拒收"（未通过登记表校验）后调用：把这一条从待上传队列移到
+  /// 本机拒收区，记下原因代码，之后 [pending] 不会再返回它，也不会再重试上传
+  /// （票 5 / #73）。不认识的 [id]（已经不在队列里）安静忽略。
+  Future<void> reject(String id, {required String reasonCode});
+
+  /// 拒收区里当前有多少条，诊断/测试用，不涉及事件内容。
+  Future<int> rejectedCount();
+
   /// 释放底层资源（drift 的数据库连接等）；内存替身不需要做什么。
   Future<void> close();
 }

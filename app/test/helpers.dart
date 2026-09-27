@@ -14,6 +14,7 @@ import 'package:gram_tree/events/event_queue.dart';
 import 'package:gram_tree/events/event_recorder.dart';
 import 'package:gram_tree/events/fake_event_queue.dart';
 import 'package:gram_tree/features_flags/features.dart';
+import 'package:gram_tree/observability/crash_reporting.dart';
 import 'package:gram_tree/platform/app_exit.dart';
 import 'package:gram_tree/platform/apple_sign_in.dart';
 import 'package:gram_tree/platform/device_capabilities.dart';
@@ -24,6 +25,7 @@ import 'package:gram_tree/platform/timezone_source.dart';
 import 'package:gram_tree/privacy/policy.dart';
 import 'package:gram_tree/storage/local_store.dart';
 import 'package:gram_tree/storage/secure_store.dart';
+import 'package:sentry_flutter/sentry_flutter.dart';
 
 /// 页面测试共用的启动和操作方法。
 ///
@@ -291,6 +293,17 @@ class FakeAppleSignIn implements AppleSignIn {
   }
 }
 
+/// 拒收原因、积压告警走的轻量上报通道（SPEC-010.1 票 5），测试里换成这个，
+/// 记录报了什么消息，不真的碰 Sentry。
+class FakeEventReportBackend implements EventReportBackend {
+  final reports = <String>[];
+
+  @override
+  void report(String message, {required SentryLevel level}) {
+    reports.add(message);
+  }
+}
+
 class FakeTimezone implements TimezoneSource {
   FakeTimezone(this.tz);
 
@@ -365,6 +378,7 @@ class TestEnv {
     FakeAppleSignIn? apple,
     FakePermissions? permissions,
     FakeEventQueue? eventQueue,
+    FakeEventReportBackend? eventReports,
     this.timezone = 'Asia/Shanghai',
     this.features = const {},
   }) : server = server ?? FakeServer(),
@@ -373,7 +387,8 @@ class TestEnv {
        exit = exit ?? FakeAppExit(),
        apple = apple ?? FakeAppleSignIn(),
        permissions = permissions ?? FakePermissions(),
-       eventQueue = eventQueue ?? FakeEventQueue();
+       eventQueue = eventQueue ?? FakeEventQueue(),
+       eventReports = eventReports ?? FakeEventReportBackend();
 
   /// 已同意、已登录。
   factory TestEnv.signedIn({
@@ -396,6 +411,7 @@ class TestEnv {
   final FakeAppleSignIn apple;
   final FakePermissions permissions;
   final FakeEventQueue eventQueue;
+  final FakeEventReportBackend eventReports;
   final links = FakeLinkOpener();
   final String? timezone;
   final Map<String, bool> features;
@@ -411,6 +427,7 @@ class TestEnv {
     timezoneSourceProvider.overrideWithValue(FakeTimezone(timezone)),
     permissionServiceProvider.overrideWithValue(permissions),
     eventQueueProvider.overrideWithValue(eventQueue),
+    eventReportBackendProvider.overrideWithValue(eventReports),
     appVersionProvider.overrideWith((ref) async => '0.1.0-test'),
     if (features.isNotEmpty)
       clientConfigProvider.overrideWith(

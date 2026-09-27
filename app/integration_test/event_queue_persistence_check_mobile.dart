@@ -54,5 +54,15 @@ Future<void> checkEventQueueSurvivesRestart() async {
   final queue2 = DriftEventQueue(_open());
   final afterRestart = await queue2.pending();
   expect(afterRestart.map((e) => e.id).toList(), [earlyId]);
+
+  // 票 5（#73）：拒收之后从待上传队列消失、进拒收区，重开进程后拒收区还在。
+  await queue2.reject(earlyId, reasonCode: 'unknown_event_type');
+  expect(await queue2.pending(), isEmpty);
+  expect(await queue2.rejectedCount(), 1);
   await queue2.close();
+
+  final queue3 = DriftEventQueue(_open());
+  expect(await queue3.pending(), isEmpty);
+  expect(await queue3.rejectedCount(), 1);
+  await queue3.close();
 }
