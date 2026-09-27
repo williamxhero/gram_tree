@@ -5,6 +5,7 @@ from redis import Redis
 from sqlalchemy.orm import Session, sessionmaker
 
 from gramtree.db import make_engine, make_session_factory
+from gramtree.events import alerts as events_alerts
 from gramtree.examples.models import TaskHeartbeat
 from gramtree.observability import alerts
 from gramtree.settings import get_settings
@@ -35,6 +36,14 @@ def check_api_alerts() -> dict[str, object]:
         return alerts.check_and_notify(session, redis)
 
 
+@celery_app.task(name="gramtree.tasks.jobs.check_events_alerts")
+def check_events_alerts() -> dict[str, object]:
+    """事件上传重复率、拒收率超阈值时告警（SPEC-010.1 票 3）。"""
+    redis = Redis.from_url(get_settings().redis_url)
+    with _session_factory()() as session:
+        return events_alerts.check_and_notify(session, redis)
+
+
 @celery_app.task(name="gramtree.tasks.jobs.backup_database")
 def backup_database() -> str:
     from pathlib import Path
@@ -51,6 +60,21 @@ def backup_database() -> str:
         backup.upload(path, settings.backup_remote)
         backup.prune_remote(settings.backup_remote, retention)
     return str(path)
+
+
+@celery_app.task(name="gramtree.tasks.jobs.purge_expired_analytics_events")
+def purge_expired_analytics_events(as_of: str | None = None) -> int:
+    """清理超过保存期的产品埋点（SPEC-010.1 票 6，和经验层事件完全独立的通道）。"""
+    from datetime import datetime
+
+    from gramtree.analytics import service as analytics
+    from gramtree.core.time import utcnow
+    from gramtree.runtime_config import service as config
+
+    now = datetime.fromisoformat(as_of) if as_of else utcnow()
+    with _session_factory()() as session:
+        retention = int(config.get(session, "analytics.retention_days"))
+        return analytics.purge_expired(session, now, retention)
 
 
 @celery_app.task(name="gramtree.tasks.jobs.purge_deleted_accounts")

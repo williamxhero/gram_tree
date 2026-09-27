@@ -1,3 +1,5 @@
+import 'package:gramtree_api/src/model/analytics_event_in.dart';
+import 'package:gramtree_api/src/model/analytics_upload_request.dart';
 import 'package:gramtree_api/src/model/apple_login_request.dart';
 import 'package:gramtree_api/src/model/apple_reauth_request.dart';
 import 'package:gramtree_api/src/model/bind_apple_request.dart';
@@ -13,11 +15,17 @@ import 'package:gramtree_api/src/model/email_login_request.dart';
 import 'package:gramtree_api/src/model/email_reauth_request.dart';
 import 'package:gramtree_api/src/model/error_body.dart';
 import 'package:gramtree_api/src/model/error_response.dart';
+import 'package:gramtree_api/src/model/event_correlation_ids.dart';
+import 'package:gramtree_api/src/model/event_upload_item.dart';
+import 'package:gramtree_api/src/model/event_upload_request.dart';
+import 'package:gramtree_api/src/model/event_upload_response.dart';
+import 'package:gramtree_api/src/model/event_upload_result_item.dart';
 import 'package:gramtree_api/src/model/health_checks.dart';
 import 'package:gramtree_api/src/model/health_response.dart';
 import 'package:gramtree_api/src/model/identity_out.dart';
 import 'package:gramtree_api/src/model/profile_update.dart';
 import 'package:gramtree_api/src/model/refresh_request.dart';
+import 'package:gramtree_api/src/model/rejection_reason.dart';
 import 'package:gramtree_api/src/model/token_pair.dart';
 import 'package:gramtree_api/src/model/user_out.dart';
 
@@ -43,6 +51,12 @@ ReturnType deserialize<ReturnType, BaseType>(
       return (valueString == 'true' || valueString == '1') as ReturnType;
     case 'double':
       return (value is double ? value : double.parse('$value')) as ReturnType;
+    case 'AnalyticsEventIn':
+      return AnalyticsEventIn.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'AnalyticsUploadRequest':
+      return AnalyticsUploadRequest.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
     case 'AppleLoginRequest':
       return AppleLoginRequest.fromJson(value as Map<String, dynamic>)
           as ReturnType;
@@ -85,6 +99,21 @@ ReturnType deserialize<ReturnType, BaseType>(
     case 'ErrorResponse':
       return ErrorResponse.fromJson(value as Map<String, dynamic>)
           as ReturnType;
+    case 'EventCorrelationIds':
+      return EventCorrelationIds.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'EventUploadItem':
+      return EventUploadItem.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'EventUploadRequest':
+      return EventUploadRequest.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'EventUploadResponse':
+      return EventUploadResponse.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'EventUploadResultItem':
+      return EventUploadResultItem.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
     case 'HealthChecks':
       return HealthChecks.fromJson(value as Map<String, dynamic>) as ReturnType;
     case 'HealthResponse':
@@ -97,6 +126,9 @@ ReturnType deserialize<ReturnType, BaseType>(
           as ReturnType;
     case 'RefreshRequest':
       return RefreshRequest.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'RejectionReason':
+      return RejectionReason.fromJson(value as Map<String, dynamic>)
           as ReturnType;
     case 'TokenPair':
       return TokenPair.fromJson(value as Map<String, dynamic>) as ReturnType;

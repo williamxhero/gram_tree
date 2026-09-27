@@ -22,3 +22,12 @@ def test_prod_has_no_dev_code_endpoint(database_url: str) -> None:
     app = create_app(make_settings(env="prod", auth_secret="s" * 40, mail_backend="smtp"))
     with TestClient(app) as c:
         assert c.get("/v1/dev/latest-email-code", params={"email": "a@b.cd"}).status_code == 404
+
+
+def test_prod_has_no_dev_events_count_endpoint(database_url: str) -> None:
+    from fastapi.testclient import TestClient
+
+    app = create_app(make_settings(env="prod", auth_secret="s" * 40, mail_backend="smtp"))
+    with TestClient(app) as c:
+        params = {"event_type": "pipeline.self_check"}
+        assert c.get("/v1/dev/events/count", params=params).status_code == 404

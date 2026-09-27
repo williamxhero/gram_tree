@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
 
@@ -126,4 +128,60 @@ SentryEvent scrubEvent(SentryEvent event) {
       )
       .toList();
   return event;
+}
+
+/// 拒收原因、积压告警这类"需要关注但不是崩溃"的情况，走同一条上报通道（同样
+/// 只在用户同意隐私政策后才真正发送——未初始化时 Sentry 的静态方法是空操作，
+/// 不需要在这里重复判断一遍）。接口很窄：只是一句不含事件内容的消息，方便测试
+/// 用假实现替换、断言到底报了什么。
+abstract class EventReportBackend {
+  void report(String message, {required SentryLevel level});
+}
+
+class SentryEventReportBackend implements EventReportBackend {
+  const SentryEventReportBackend();
+
+  @override
+  void report(String message, {required SentryLevel level}) {
+    unawaited(Sentry.captureMessage(message, level: level));
+  }
+}
+
+final eventReportBackendProvider = Provider<EventReportBackend>(
+  (ref) => const SentryEventReportBackend(),
+);
+
+/// 一条事件被服务端拒收（未通过登记表校验）、挪进本机拒收区之后调用。
+///
+/// 只报事件 ID、类型、版本号和原因代码，不带事件内容——[content] 本来就不在这个
+/// 函数的参数里，不是靠上报前再过滤一遍。
+void reportEventRejection(
+  Ref ref, {
+  required String eventId,
+  required String eventType,
+  required int typeVersion,
+  required String reasonCode,
+}) {
+  ref
+      .read(eventReportBackendProvider)
+      .report(
+        'event_rejected id=$eventId type=$eventType v$typeVersion '
+        'reason=$reasonCode',
+        level: SentryLevel.warning,
+      );
+}
+
+/// 本机待上传事件积压（数量或最老一条距今的时间）超过阈值时调用。
+/// 只报数量和积压时长，不删除、不读取任何事件内容。
+void reportEventBacklogAlert(
+  Ref ref, {
+  required int count,
+  required Duration oldestAge,
+}) {
+  ref
+      .read(eventReportBackendProvider)
+      .report(
+        'event_backlog_alert count=$count oldest_age_seconds=${oldestAge.inSeconds}',
+        level: SentryLevel.warning,
+      );
 }

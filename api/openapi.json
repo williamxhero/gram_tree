@@ -1,6 +1,92 @@
 {
   "components": {
     "schemas": {
+      "AnalyticsEventIn": {
+        "additionalProperties": false,
+        "description": "只允许这些字段：事件类型、页面/入口标识、可选耗时、发生时间、设备 ID。\n\n不含菜谱内容、口味档案、过敏和健康信息；也不接受用户 ID（服务端按登录状态填入）。",
+        "properties": {
+          "device_id": {
+            "anyOf": [
+              {
+                "maxLength": 64,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Device Id"
+          },
+          "duration_ms": {
+            "anyOf": [
+              {
+                "maximum": 600000.0,
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "耗时（毫秒），仅部分事件类型有意义",
+            "title": "Duration Ms"
+          },
+          "event_type": {
+            "enum": [
+              "page_view",
+              "tap",
+              "load_duration"
+            ],
+            "title": "Event Type",
+            "type": "string"
+          },
+          "id": {
+            "description": "客户端生成的 UUID v4，用于去重",
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "occurred_at": {
+            "format": "date-time",
+            "title": "Occurred At",
+            "type": "string"
+          },
+          "target": {
+            "description": "页面或入口标识",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Target",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "event_type",
+          "target",
+          "occurred_at"
+        ],
+        "title": "AnalyticsEventIn",
+        "type": "object"
+      },
+      "AnalyticsUploadRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "events": {
+            "items": {
+              "$ref": "#/components/schemas/AnalyticsEventIn"
+            },
+            "maxItems": 100,
+            "minItems": 1,
+            "title": "Events",
+            "type": "array"
+          }
+        },
+        "required": [
+          "events"
+        ],
+        "title": "AnalyticsUploadRequest",
+        "type": "object"
+      },
       "AppleLoginRequest": {
         "properties": {
           "authorization_code": {
@@ -427,6 +513,225 @@
         "title": "ErrorResponse",
         "type": "object"
       },
+      "EventCorrelationIds": {
+        "description": "关联 ID：都可以留空。这些字段名是所有事件类型统一使用的命名，\n后面新增的关联类型也照这个模式加字段，不要另起一套命名。\n\n这里只要求\"是字符串\"，不在 pydantic 层面强制 UUID v4 格式——格式是否合法放在\n`gramtree.events.validation` 里按条判断，不合法的那一条被单独拒收\n（原因码 `invalid_correlation_id`），不会拖累同一批里其它合格的事件。",
+        "properties": {
+          "cooking_record_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "做菜记录",
+            "title": "Cooking Record Id"
+          },
+          "plan_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "规划",
+            "title": "Plan Id"
+          },
+          "recipe_version_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "菜谱版本",
+            "title": "Recipe Version Id"
+          },
+          "recommendation_exposure_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "推荐曝光",
+            "title": "Recommendation Exposure Id"
+          },
+          "suggestion_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "建议",
+            "title": "Suggestion Id"
+          },
+          "taste_profile_change_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "口味档案变更",
+            "title": "Taste Profile Change Id"
+          },
+          "ui_composition_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "界面组合",
+            "title": "Ui Composition Id"
+          }
+        },
+        "title": "EventCorrelationIds",
+        "type": "object"
+      },
+      "EventUploadItem": {
+        "properties": {
+          "app_version": {
+            "maxLength": 32,
+            "minLength": 1,
+            "title": "App Version",
+            "type": "string"
+          },
+          "content": {
+            "additionalProperties": true,
+            "description": "事件内容。用户 ID 只按登录状态填入，这里出现的任何 user_id 字段都不采信",
+            "title": "Content",
+            "type": "object"
+          },
+          "correlation": {
+            "$ref": "#/components/schemas/EventCorrelationIds"
+          },
+          "device_id": {
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "Device Id",
+            "type": "string"
+          },
+          "device_time": {
+            "description": "设备本地时间，必须带时区",
+            "format": "date-time",
+            "title": "Device Time",
+            "type": "string"
+          },
+          "event_type": {
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Event Type",
+            "type": "string"
+          },
+          "id": {
+            "description": "客户端生成的事件 ID（UUID v4），全局唯一，按它去重",
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "type_version": {
+            "description": "事件类型的版本号",
+            "minimum": 1.0,
+            "title": "Type Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "event_type",
+          "type_version",
+          "device_id",
+          "device_time",
+          "app_version"
+        ],
+        "title": "EventUploadItem",
+        "type": "object"
+      },
+      "EventUploadRequest": {
+        "properties": {
+          "events": {
+            "items": {
+              "$ref": "#/components/schemas/EventUploadItem"
+            },
+            "minItems": 1,
+            "title": "Events",
+            "type": "array"
+          }
+        },
+        "required": [
+          "events"
+        ],
+        "title": "EventUploadRequest",
+        "type": "object"
+      },
+      "EventUploadResponse": {
+        "properties": {
+          "results": {
+            "items": {
+              "$ref": "#/components/schemas/EventUploadResultItem"
+            },
+            "title": "Results",
+            "type": "array"
+          }
+        },
+        "required": [
+          "results"
+        ],
+        "title": "EventUploadResponse",
+        "type": "object"
+      },
+      "EventUploadResultItem": {
+        "properties": {
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RejectionReason"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "status 是 rejected 时才有，说明被拒收的原因"
+          },
+          "status": {
+            "description": "accepted：已接收入库；duplicate：这个 ID 之前已经收到过，原记录未改动；rejected：没通过登记表校验，未入库，见 reason",
+            "enum": [
+              "accepted",
+              "duplicate",
+              "rejected"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "status"
+        ],
+        "title": "EventUploadResultItem",
+        "type": "object"
+      },
       "HealthChecks": {
         "properties": {
           "api": {
@@ -561,6 +866,26 @@
         "title": "RefreshRequest",
         "type": "object"
       },
+      "RejectionReason": {
+        "properties": {
+          "code": {
+            "description": "程序可判断的拒收原因代码：unknown_event_type / unsupported_version / invalid_content / invalid_correlation_id",
+            "title": "Code",
+            "type": "string"
+          },
+          "message": {
+            "description": "给人看的一句话说明，不包含事件内容本身",
+            "title": "Message",
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "message"
+        ],
+        "title": "RejectionReason",
+        "type": "object"
+      },
       "TokenPair": {
         "properties": {
           "access_expires_in": {
@@ -668,6 +993,56 @@
   },
   "openapi": "3.1.0",
   "paths": {
+    "/v1/analytics/events": {
+      "post": {
+        "description": "同意隐私政策前、或关闭“产品改进统计”开关后，客户端不应调用这个接口。服务端只按登记好的字段接收，多余字段一律拒收；不接受第三方分析服务转发。",
+        "operationId": "upload_analytics_events",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AnalyticsUploadRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "服务端错误"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "上传产品埋点（页面访问 / 入口点击 / 加载耗时）",
+        "tags": [
+          "analytics"
+        ]
+      }
+    },
     "/v1/auth/apple/login": {
       "post": {
         "operationId": "apple_login",
@@ -1224,6 +1599,62 @@
         "summary": "App 用的能力开关和参数",
         "tags": [
           "config"
+        ]
+      }
+    },
+    "/v1/events/upload": {
+      "post": {
+        "operationId": "upload_events",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EventUploadRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EventUploadResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "参数错误"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "服务端错误"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "批量上传经验层事件（需要登录，按登记表校验，按事件 ID 去重，只追加存储）",
+        "tags": [
+          "events"
         ]
       }
     },

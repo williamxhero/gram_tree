@@ -23,7 +23,7 @@ class ClientConfig {
   final Map<String, bool> features;
 
   @JsonKey(name: r'params', required: true, includeIfNull: false)
-  final Map<String, Object> params;
+  final Object params;
 
   @override
   bool operator ==(Object other) =>

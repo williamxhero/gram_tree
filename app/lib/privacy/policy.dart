@@ -6,6 +6,9 @@
 const termsVersion = 'v1';
 const privacyVersion = 'v1';
 
+/// “产品改进统计”开关本身的版本（不是隐私政策的版本）。改了采集范围就提高这个版本号。
+const productAnalyticsVersion = 'v1';
+
 /// 每个版本相对上一版改了什么（给已同意旧版的用户看）。
 const privacyChangeLog = <String, List<String>>{
   // 'v2': ['新增：……', '修改：……'],

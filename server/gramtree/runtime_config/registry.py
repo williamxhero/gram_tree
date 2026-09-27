@@ -179,6 +179,73 @@ ITEMS: tuple[ConfigItem, ...] = (
         "",
         "告警接收地址：webhook URL 或邮箱",
     ),
+    # —— 经验层事件管道（SPEC-010.1） ——
+    ConfigItem(
+        "events.upload_max_items",
+        "int",
+        500,
+        "经验层事件单次上传最多多少条，超过整批拒绝，客户端据此分批重传",
+        minimum=1,
+        maximum=5000,
+    ),
+    ConfigItem(
+        "events.upload_max_bytes",
+        "int",
+        2_000_000,
+        "经验层事件单次上传请求体最大字节数（按 Content-Length 头判断），超过整批拒绝",
+        minimum=1000,
+        maximum=50_000_000,
+    ),
+    ConfigItem(
+        "events.device_time_suspicious_threshold_seconds",
+        "int",
+        300,
+        "设备时间和服务端接收时间相差超过这个秒数，事件就标记为“设备时间可疑”，"
+        "分析用的时间改用服务端接收时间",
+        minimum=1,
+        maximum=86_400,
+    ),
+    ConfigItem(
+        "events.alert_window_minutes",
+        "int",
+        5,
+        "计算事件上传重复率、拒收率的时间窗口（分钟）",
+        minimum=1,
+        maximum=60,
+    ),
+    ConfigItem(
+        "events.alert_min_events",
+        "int",
+        20,
+        "窗口内事件总数少于此值时不告警，避免小样本误报",
+        minimum=1,
+        maximum=100_000,
+    ),
+    ConfigItem(
+        "events.alert_duplicate_rate",
+        "float",
+        0.3,
+        "窗口内事件重复率超过此值就告警",
+        minimum=0.0,
+        maximum=1.0,
+    ),
+    ConfigItem(
+        "events.alert_reject_rate",
+        "float",
+        0.1,
+        "窗口内事件拒收率超过此值就告警",
+        minimum=0.0,
+        maximum=1.0,
+    ),
+    # —— 产品埋点（SPEC-010.1，和经验层事件完全分开的独立通道） ——
+    ConfigItem(
+        "analytics.retention_days",
+        "int",
+        90,
+        "产品埋点保存天数，超期由后台任务清理",
+        minimum=1,
+        maximum=3650,
+    ),
     # —— 部署与备份 ——
     ConfigItem(
         "ops.backup_retention_days",
