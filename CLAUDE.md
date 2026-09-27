@@ -45,6 +45,8 @@
 | 实现整个子 SPEC | `.claude/skills/implement-spec`（上游还在 in-progress 目录） |
 | 实现单个 ticket（implement-spec 的子代理用） | `.claude/skills/implement`，配合 `.claude/skills/tdd` |
 
+- 2026-09-27：用户把 `to-tickets`、`implement-spec`、`implement` 三个技能的 `disable-model-invocation` 从 `true` 改成了 `false`（直接改仓库里的文件，commit `bbe0189`），目的是让新开的开发 session 不用等真人敲斜杠命令，可以自己调用这几个技能往下推进。这条不影响"由 Claude 自己合并到 main，不等用户"这条早就定好的规则——本来就没打算每次合并前再问一遍。
+
 - 用户说的 “Implement-spec” 就是 `implement-spec`。
 - issue 跟踪和领域文档的配置在 `docs/agents/`（GitHub Issues、标签 `ready-for-agent`），技能不会再要求跑 `setup-matt-pocock-skills`。
 - 云端线程没有 `gh` 命令，技能里用 `gh` 的地方改用 GitHub MCP 工具，对照表在 `docs/agents/issue-tracker.md`。
