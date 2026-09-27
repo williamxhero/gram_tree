@@ -151,7 +151,13 @@ class DriftEventQueue implements EventQueue {
     eventType: row.eventType,
     typeVersion: row.typeVersion,
     deviceId: row.deviceId,
-    deviceTime: row.deviceTime,
+    // drift 默认把 DateTime 存成不带时区的 unix 时间戳，读回来的 DateTime 瞬间
+    // 是对的，但 isUtc 标记会丢（变回 false/"本地时间"）；序列化成请求体的
+    // ISO 8601 字符串因此会漏掉时区后缀，被服务端的 Timestamp 校验拒收
+    // （`device_time: Input should have timezone info`）。写入前已经是 UTC
+    // （event_recorder.dart 生成时就 `.toUtc()` 了），这里 `.toUtc()` 只是
+    // 把标记转回来，不改变实际时刻。
+    deviceTime: row.deviceTime.toUtc(),
     appVersion: row.appVersion,
     correlation: row.correlationJson == null
         ? null

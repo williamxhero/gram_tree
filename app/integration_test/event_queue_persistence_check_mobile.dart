@@ -45,6 +45,12 @@ Future<void> checkEventQueueSurvivesRestart() async {
   expect(beforeRestart.map((e) => e.id).toList(), [earlyId, lateId]);
   expect(beforeRestart.first.correlation?.recipeVersionId, 'recipe-$earlyId');
   expect(beforeRestart.first.content, {'step': 1});
+  // drift 默认把 DateTime 存成不带时区的 unix 时间戳，读回来时 isUtc 标记会丢，
+  // 序列化成请求体时就漏掉时区后缀，被服务端拒收（"Input should have timezone
+  // info"）。这条断言曾经在这里漏掉，导致真机/模拟器上传一直 422，网页版和
+  // 单元测试（内存队列，没有序列化往返）却测不出来——代码评审后补上。
+  expect(beforeRestart.first.deviceTime.isUtc, isTrue);
+  expect(beforeRestart.first.deviceTime.toIso8601String(), endsWith('Z'));
 
   // 删掉一条，模拟服务端已经确认收到。
   await queue1.remove(lateId);
