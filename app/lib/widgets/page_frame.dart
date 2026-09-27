@@ -263,10 +263,21 @@ class ValueTile extends StatelessWidget {
             ),
           );
     final arrow = onTap == null ? null : const Icon(Icons.chevron_right);
+    Widget? trailing;
+    if (large) {
+      trailing = arrow;
+    } else if (v != null && arrow != null) {
+      trailing = Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [v, const SizedBox(width: 4), arrow],
+      );
+    } else {
+      trailing = v ?? arrow;
+    }
     return ListTile(
       title: Text(title, style: color == null ? null : TextStyle(color: color)),
       subtitle: large ? v : null,
-      trailing: large ? arrow : (v ?? arrow),
+      trailing: trailing,
       onTap: onTap,
     );
   }

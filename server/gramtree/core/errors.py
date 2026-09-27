@@ -63,19 +63,30 @@ ERROR_RESPONSES: dict[int | str, dict[str, Any]] = {
 }
 
 
-def error_response(status: int, code: str, message: str, detail: str | None) -> JSONResponse:
+def error_response(
+    status: int,
+    code: str,
+    message: str,
+    detail: str | None,
+    *,
+    headers: dict[str, str] | None = None,
+) -> JSONResponse:
     request_id = get_request_id()
     body = ErrorResponse(
         error=ErrorBody(code=code, message=message, detail=detail, request_id=request_id)
     )
-    headers = {REQUEST_ID_HEADER: request_id} if request_id else None
-    return JSONResponse(body.model_dump(), status_code=status, headers=headers)
+    all_headers = dict(headers or {})
+    if request_id:
+        all_headers[REQUEST_ID_HEADER] = request_id
+    return JSONResponse(body.model_dump(), status_code=status, headers=all_headers or None)
 
 
 def install_error_handlers(app: FastAPI) -> None:
     @app.exception_handler(ApiError)
     async def _api_error(_: Request, exc: ApiError) -> JSONResponse:
-        return error_response(exc.status, exc.code, exc.message, exc.detail)
+        retry_after = getattr(exc, "retry_after", None)
+        headers = {"Retry-After": str(retry_after)} if retry_after is not None else None
+        return error_response(exc.status, exc.code, exc.message, exc.detail, headers=headers)
 
     @app.exception_handler(RequestValidationError)
     async def _validation(_: Request, exc: RequestValidationError) -> JSONResponse:

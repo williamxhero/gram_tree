@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../api/api_client.dart';
 import '../../config/app_config.dart';
 import '../../l10n/app_localizations.dart';
 import '../../platform/app_exit.dart';
@@ -26,11 +27,21 @@ class ConsentPage extends ConsumerStatefulWidget {
 class _ConsentPageState extends ConsumerState<ConsentPage> {
   bool _explaining = false;
   bool _saving = false;
+  String? _error;
 
   Future<void> _agree() async {
-    setState(() => _saving = true);
-    await ref.read(consentProvider.notifier).agree();
-    // 路由会在同意后自动跳到登录页
+    setState(() {
+      _saving = true;
+      _error = null;
+    });
+    try {
+      await ref.read(consentProvider.notifier).agree();
+      // 路由会在同意后自动跳到登录页
+    } catch (e) {
+      if (mounted) setState(() => _error = ApiFailure.from(e).message);
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
   }
 
   Future<void> _quit() async {
@@ -57,6 +68,7 @@ class _ConsentPageState extends ConsumerState<ConsentPage> {
             ],
           ),
           BodyText(l10n.consentExplainTail),
+          if (_error != null) ErrorText(_error!),
         ],
         actions: [
           PrimaryButton(
@@ -97,6 +109,7 @@ class _ConsentPageState extends ConsumerState<ConsentPage> {
           ),
         ],
         const LegalLinks(),
+        if (_error != null) ErrorText(_error!),
       ],
       actions: [
         PrimaryButton(

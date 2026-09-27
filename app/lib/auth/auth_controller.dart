@@ -75,10 +75,9 @@ class AuthController extends AsyncNotifier<UserOut?> {
     await _afterSignIn();
   }
 
-  /// 登录后：补传登录前存在本机的同意记录，同步手机的时区。失败不影响使用，下次再试。
+  /// 登录后：补传登录前存在本机的同意记录，同步手机的时区。两者互不依赖，并发执行；失败不影响使用，下次再试。
   Future<void> _afterSignIn() async {
-    await uploadPendingConsents();
-    await _syncTimezone();
+    await Future.wait([uploadPendingConsents(), _syncTimezone()]);
   }
 
   Future<void> uploadPendingConsents() async {

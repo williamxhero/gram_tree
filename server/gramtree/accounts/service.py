@@ -455,6 +455,8 @@ def bind_apple(
     ensure_identity_free(session, IdentityKind.apple, info.subject, user)
     if _user_for_identity(session, IdentityKind.apple, info.subject) is None:
         _add_apple_identity(session, apple, user, info, authorization_code, now)
+    elif authorization_code:
+        _refresh_apple_grant(session, apple, info.subject, authorization_code)
     session.commit()
 
 
