@@ -273,3 +273,81 @@ def test_empty_batch_rejected(api: Api) -> None:
     tokens = api.login("cook@example.com")
     resp = api.client.post("/v1/events/upload", json={"events": []}, headers=bearer(tokens))
     assert resp.status_code == 422
+
+
+# —— 票 7：dev-only 的事件计数接口，给端到端测试确认"只收到一次" ——
+
+
+def test_dev_events_count_endpoint_is_not_in_openapi() -> None:
+    from gramtree.openapi_export import export
+
+    assert "/dev/events/count" not in export()
+
+
+def test_dev_events_count_requires_login(client: TestClient) -> None:
+    resp = client.get("/v1/dev/events/count", params={"event_type": "pipeline.self_check"})
+    assert resp.status_code == 401
+
+
+def test_dev_events_count_matches_accepted_rows_and_ignores_duplicates(api: Api) -> None:
+    tokens = api.login("cook@example.com")
+    events = [_event(device_id="device-a") for _ in range(3)]
+    api.client.post("/v1/events/upload", json={"events": events}, headers=bearer(tokens))
+
+    resp = api.client.get(
+        "/v1/dev/events/count",
+        params={"event_type": "pipeline.self_check"},
+        headers=bearer(tokens),
+    )
+    assert resp.status_code == 200
+    assert resp.json() == {"count": 3}
+
+    # 重复上传同一批（模拟客户端重试）不应该让计数翻倍
+    api.client.post("/v1/events/upload", json={"events": events}, headers=bearer(tokens))
+    resp = api.client.get(
+        "/v1/dev/events/count",
+        params={"event_type": "pipeline.self_check"},
+        headers=bearer(tokens),
+    )
+    assert resp.json() == {"count": 3}
+
+
+def test_dev_events_count_filters_by_device_id_and_version(api: Api) -> None:
+    tokens = api.login("cook@example.com")
+    api.client.post(
+        "/v1/events/upload",
+        json={"events": [_event(device_id="device-a")]},
+        headers=bearer(tokens),
+    )
+    api.client.post(
+        "/v1/events/upload",
+        json={"events": [_event(device_id="device-b")]},
+        headers=bearer(tokens),
+    )
+
+    resp = api.client.get(
+        "/v1/dev/events/count",
+        params={"event_type": "pipeline.self_check", "device_id": "device-a"},
+        headers=bearer(tokens),
+    )
+    assert resp.json() == {"count": 1}
+
+    resp = api.client.get(
+        "/v1/dev/events/count",
+        params={"event_type": "pipeline.self_check", "version": 2},
+        headers=bearer(tokens),
+    )
+    assert resp.json() == {"count": 0}
+
+
+def test_dev_events_count_only_sees_own_events(api: Api) -> None:
+    tokens = api.login("cook@example.com")
+    api.client.post("/v1/events/upload", json={"events": [_event()]}, headers=bearer(tokens))
+
+    other_tokens = api.login("other@example.com")
+    resp = api.client.get(
+        "/v1/dev/events/count",
+        params={"event_type": "pipeline.self_check"},
+        headers=bearer(other_tokens),
+    )
+    assert resp.json() == {"count": 0}
