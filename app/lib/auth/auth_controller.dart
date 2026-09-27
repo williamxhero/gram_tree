@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gramtree_api/gramtree_api.dart';
 
 import '../api/api_client.dart';
+import '../events/event_uploader.dart';
 import '../platform/apple_sign_in.dart';
 import '../platform/timezone_source.dart';
 import '../privacy/consent.dart';
@@ -75,9 +76,15 @@ class AuthController extends AsyncNotifier<UserOut?> {
     await _afterSignIn();
   }
 
-  /// 登录后：补传登录前存在本机的同意记录，同步手机的时区。两者互不依赖，并发执行；失败不影响使用，下次再试。
+  /// 登录后：补传登录前存在本机的同意记录，同步手机的时区，试着传一次本机队列里
+  /// 积压的事件（登录前记的事件留在队列里，登录后才有 token 可以传）。三者互不依赖，
+  /// 并发执行；失败不影响使用，下次再试。
   Future<void> _afterSignIn() async {
-    await Future.wait([uploadPendingConsents(), _syncTimezone()]);
+    await Future.wait([
+      uploadPendingConsents(),
+      _syncTimezone(),
+      ref.read(eventUploaderProvider).triggerUpload(),
+    ]);
   }
 
   Future<void> uploadPendingConsents() async {

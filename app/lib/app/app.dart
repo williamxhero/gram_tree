@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../events/event_upload_lifecycle.dart';
 import '../l10n/app_localizations.dart';
 import '../observability/crash_reporting.dart';
 import 'router.dart';
@@ -15,7 +16,7 @@ class GramTreeApp extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     // 用户同意隐私政策后才会真正初始化崩溃上报
     ref.watch(crashReportingProvider);
-    return _app(ref);
+    return EventUploadTrigger(child: _app(ref));
   }
 
   Widget _app(WidgetRef ref) => MaterialApp.router(

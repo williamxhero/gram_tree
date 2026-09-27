@@ -4,8 +4,9 @@ Flutter client for iOS and Android. The same code also compiles to web, which
 is used only for cloud testing (not a product surface).
 
 - State: Riverpod (`flutter_riverpod`). Routing: `go_router`
-  (`StatefulShellRoute` with the fixed bottom bar). Local DB: drift (added
-  when first needed).
+  (`StatefulShellRoute` with the fixed bottom bar). Local DB: drift, first
+  used by the event queue in `lib/events/` (mobile only; web/tests use an
+  in-memory stand-in).
 - Minimum OS: iOS 15.0 (`ios/Podfile`, `IPHONEOS_DEPLOYMENT_TARGET`),
   Android 8.0 / API 26 (`android/app/build.gradle.kts`).
 - No Google Mobile Services / Play-services dependencies.
