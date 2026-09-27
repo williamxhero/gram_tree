@@ -1,3 +1,5 @@
+import 'package:gramtree_api/src/model/analytics_event_in.dart';
+import 'package:gramtree_api/src/model/analytics_upload_request.dart';
 import 'package:gramtree_api/src/model/apple_login_request.dart';
 import 'package:gramtree_api/src/model/apple_reauth_request.dart';
 import 'package:gramtree_api/src/model/bind_apple_request.dart';
@@ -49,6 +51,12 @@ ReturnType deserialize<ReturnType, BaseType>(
       return (valueString == 'true' || valueString == '1') as ReturnType;
     case 'double':
       return (value is double ? value : double.parse('$value')) as ReturnType;
+    case 'AnalyticsEventIn':
+      return AnalyticsEventIn.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'AnalyticsUploadRequest':
+      return AnalyticsUploadRequest.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
     case 'AppleLoginRequest':
       return AppleLoginRequest.fromJson(value as Map<String, dynamic>)
           as ReturnType;

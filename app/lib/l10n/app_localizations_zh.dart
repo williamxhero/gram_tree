@@ -243,6 +243,13 @@ class AppLocalizationsZh extends AppLocalizations {
   String get settingsWithdraw => '撤回同意';
 
   @override
+  String get settingsProductAnalytics => '产品改进统计';
+
+  @override
+  String get settingsProductAnalyticsDetail =>
+      '页面访问、入口点击、加载耗时；不含菜谱内容、口味档案、过敏和健康信息，同意隐私政策后才采集';
+
+  @override
   String get signOut => '退出登录';
 
   @override

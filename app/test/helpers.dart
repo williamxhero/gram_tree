@@ -186,6 +186,7 @@ class FakeServer extends Interceptor {
       return (200, [for (final i in identities) i.toJson()]);
     });
     on('POST', '/v1/me/consents', (_) => (204, null));
+    on('POST', '/v1/analytics/events', (_) => (204, null));
     on('POST', '/v1/me/deletion', (_) {
       if (!reauthed) return error(403, 'reauth_required', '为了安全，请先重新验证身份');
       return (

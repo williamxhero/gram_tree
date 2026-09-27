@@ -6,6 +6,7 @@ build.yaml
 lib/gramtree_api.dart
 lib/src/api.dart
 lib/src/api/account_api.dart
+lib/src/api/analytics_api.dart
 lib/src/api/auth_api.dart
 lib/src/api/config_api.dart
 lib/src/api/events_api.dart
@@ -16,6 +17,8 @@ lib/src/auth/basic_auth.dart
 lib/src/auth/bearer_auth.dart
 lib/src/auth/oauth.dart
 lib/src/deserialize.dart
+lib/src/model/analytics_event_in.dart
+lib/src/model/analytics_upload_request.dart
 lib/src/model/apple_login_request.dart
 lib/src/model/apple_reauth_request.dart
 lib/src/model/bind_apple_request.dart

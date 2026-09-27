@@ -91,6 +91,13 @@ class ConsentState {
 
   List<ConsentEntry> get pendingUpload =>
       entries.where((e) => !e.uploaded).toList();
+
+  /// “产品改进统计”开关的当前状态。默认开启（同意隐私政策后就采集使用情况），
+  /// 用户在设置里关掉后记一条撤回记录，这里就会读到最新的状态。
+  bool get productAnalyticsEnabled {
+    final latest = _latest(ConsentKind.productAnalytics);
+    return latest?.agree ?? true;
+  }
 }
 
 const _storeKey = 'consent_records';
@@ -167,6 +174,20 @@ class ConsentController extends Notifier<ConsentState> {
     return _save([
       for (final e in state.entries) done.contains(e.id) ? e.markUploaded() : e,
     ]);
+  }
+
+  /// 打开或关闭“产品改进统计”，开关变化都留一条记录（SPEC-010.1 票 6）。
+  Future<ConsentEntry> setProductAnalytics(bool enabled) async {
+    final entry = ConsentEntry(
+      id: newUuidV4(),
+      kind: ConsentKind.productAnalytics,
+      version: productAnalyticsVersion,
+      agree: enabled,
+      occurredAt: DateTime.now(),
+      deviceId: ref.read(deviceIdProvider),
+    );
+    await _save([...state.entries, entry]);
+    return entry;
   }
 }
 

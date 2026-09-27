@@ -59,6 +59,28 @@ void main() {
     expect(env.secure.values[sessionStorageKey], isNull);
   });
 
+  testWidgets('产品改进统计开关：默认开启，关闭后留一条同意记录', (tester) async {
+    final env = await pumpApp(tester);
+    await openSettings(tester);
+    final toggle = find.byKey(const ValueKey('product-analytics-switch'));
+    await tester.ensureVisible(toggle);
+    await tester.pumpAndSettle();
+    expect(tester.widget<SwitchListTile>(toggle).value, isTrue);
+
+    await tester.tap(toggle);
+    await tester.pumpAndSettle();
+    expect(tester.widget<SwitchListTile>(toggle).value, isFalse);
+
+    final upload = env.server.calls('POST', '/v1/me/consents').last.body as Map;
+    final records = (upload['records'] as List).cast<Map>();
+    expect(
+      records.any(
+        (r) => r['kind'] == 'product_analytics' && r['action'] == 'withdraw',
+      ),
+      isTrue,
+    );
+  });
+
   testWidgets('三份隐私文档都能打开', (tester) async {
     final env = await pumpApp(tester);
     await openSettings(tester);

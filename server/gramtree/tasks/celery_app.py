@@ -39,6 +39,11 @@ def make_celery() -> Celery:
                 "task": "gramtree.tasks.jobs.purge_deleted_accounts",
                 "schedule": crontab(hour=20, minute=0),
             },
+            # 每天 UTC 20:30 清理超过保存期的产品埋点（和经验层事件完全独立的通道）
+            "purge-expired-analytics-events": {
+                "task": "gramtree.tasks.jobs.purge_expired_analytics_events",
+                "schedule": crontab(hour=20, minute=30),
+            },
             # 每分钟检查一次接口错误率和耗时，超阈值就告警
             "check-api-alerts": {
                 "task": "gramtree.tasks.jobs.check_api_alerts",

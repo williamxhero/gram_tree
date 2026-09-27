@@ -5,6 +5,7 @@ import 'package:gramtree_api/gramtree_api.dart';
 
 import '../../auth/auth_controller.dart';
 import '../../l10n/app_localizations.dart';
+import '../../privacy/consent.dart';
 import '../../privacy/documents.dart';
 import '../../privacy/policy.dart';
 import '../../widgets/page_frame.dart';
@@ -73,6 +74,18 @@ class SettingsPage extends ConsumerWidget {
             onTap: () => context.push(document(personalInfoList.id)),
           ),
           item(sdkList.title, onTap: () => context.push(document(sdkList.id))),
+          SwitchListTile(
+            key: const ValueKey('product-analytics-switch'),
+            title: Text(l10n.settingsProductAnalytics),
+            subtitle: Text(
+              l10n.settingsProductAnalyticsDetail,
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+            ),
+            value: ref.watch(consentProvider).productAnalyticsEnabled,
+            onChanged: (enabled) => _setProductAnalytics(ref, enabled),
+          ),
           item(l10n.settingsWithdraw, onTap: () => context.push(withdraw)),
           const Divider(height: 32),
           item(l10n.signOut, onTap: () => _signOut(context, ref)),
@@ -106,5 +119,18 @@ class SettingsPage extends ConsumerWidget {
       ),
     );
     if (ok == true) await ref.read(authProvider.notifier).signOut();
+  }
+
+  /// 开关变化都记一条 `product_analytics` 同意记录，登录状态下立刻尝试上传。
+  Future<void> _setProductAnalytics(WidgetRef ref, bool enabled) async {
+    final entry = await ref
+        .read(consentProvider.notifier)
+        .setProductAnalytics(enabled);
+    final uploaded = await ref.read(authProvider.notifier).uploadConsentRecords(
+      [entry],
+    );
+    if (uploaded) {
+      await ref.read(consentProvider.notifier).markUploaded([entry.id]);
+    }
   }
 }

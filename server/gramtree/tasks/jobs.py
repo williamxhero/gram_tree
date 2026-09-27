@@ -62,6 +62,21 @@ def backup_database() -> str:
     return str(path)
 
 
+@celery_app.task(name="gramtree.tasks.jobs.purge_expired_analytics_events")
+def purge_expired_analytics_events(as_of: str | None = None) -> int:
+    """清理超过保存期的产品埋点（SPEC-010.1 票 6，和经验层事件完全独立的通道）。"""
+    from datetime import datetime
+
+    from gramtree.analytics import service as analytics
+    from gramtree.core.time import utcnow
+    from gramtree.runtime_config import service as config
+
+    now = datetime.fromisoformat(as_of) if as_of else utcnow()
+    with _session_factory()() as session:
+        retention = int(config.get(session, "analytics.retention_days"))
+        return analytics.purge_expired(session, now, retention)
+
+
 @celery_app.task(name="gramtree.tasks.jobs.purge_deleted_accounts")
 def purge_deleted_accounts(as_of: str | None = None) -> int:
     """删除注销期限已到的账号的个人数据（SPEC-013.2）。"""

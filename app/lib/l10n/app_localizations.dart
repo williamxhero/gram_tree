@@ -544,6 +544,18 @@ abstract class AppLocalizations {
   /// **'撤回同意'**
   String get settingsWithdraw;
 
+  /// No description provided for @settingsProductAnalytics.
+  ///
+  /// In zh, this message translates to:
+  /// **'产品改进统计'**
+  String get settingsProductAnalytics;
+
+  /// No description provided for @settingsProductAnalyticsDetail.
+  ///
+  /// In zh, this message translates to:
+  /// **'页面访问、入口点击、加载耗时；不含菜谱内容、口味档案、过敏和健康信息，同意隐私政策后才采集'**
+  String get settingsProductAnalyticsDetail;
+
   /// No description provided for @signOut.
   ///
   /// In zh, this message translates to:
