@@ -1,6 +1,92 @@
 {
   "components": {
     "schemas": {
+      "AnalyticsEventIn": {
+        "additionalProperties": false,
+        "description": "只允许这些字段：事件类型、页面/入口标识、可选耗时、发生时间、设备 ID。\n\n不含菜谱内容、口味档案、过敏和健康信息；也不接受用户 ID（服务端按登录状态填入）。",
+        "properties": {
+          "device_id": {
+            "anyOf": [
+              {
+                "maxLength": 64,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Device Id"
+          },
+          "duration_ms": {
+            "anyOf": [
+              {
+                "maximum": 600000.0,
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "耗时（毫秒），仅部分事件类型有意义",
+            "title": "Duration Ms"
+          },
+          "event_type": {
+            "enum": [
+              "page_view",
+              "tap",
+              "load_duration"
+            ],
+            "title": "Event Type",
+            "type": "string"
+          },
+          "id": {
+            "description": "客户端生成的 UUID v4，用于去重",
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "occurred_at": {
+            "format": "date-time",
+            "title": "Occurred At",
+            "type": "string"
+          },
+          "target": {
+            "description": "页面或入口标识",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Target",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "event_type",
+          "target",
+          "occurred_at"
+        ],
+        "title": "AnalyticsEventIn",
+        "type": "object"
+      },
+      "AnalyticsUploadRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "events": {
+            "items": {
+              "$ref": "#/components/schemas/AnalyticsEventIn"
+            },
+            "maxItems": 100,
+            "minItems": 1,
+            "title": "Events",
+            "type": "array"
+          }
+        },
+        "required": [
+          "events"
+        ],
+        "title": "AnalyticsUploadRequest",
+        "type": "object"
+      },
       "AppleLoginRequest": {
         "properties": {
           "authorization_code": {
@@ -668,6 +754,56 @@
   },
   "openapi": "3.1.0",
   "paths": {
+    "/v1/analytics/events": {
+      "post": {
+        "description": "同意隐私政策前、或关闭“产品改进统计”开关后，客户端不应调用这个接口。服务端只按登记好的字段接收，多余字段一律拒收；不接受第三方分析服务转发。",
+        "operationId": "upload_analytics_events",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AnalyticsUploadRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "服务端错误"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "上传产品埋点（页面访问 / 入口点击 / 加载耗时）",
+        "tags": [
+          "analytics"
+        ]
+      }
+    },
     "/v1/auth/apple/login": {
       "post": {
         "operationId": "apple_login",

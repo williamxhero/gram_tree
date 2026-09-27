@@ -179,6 +179,15 @@ ITEMS: tuple[ConfigItem, ...] = (
         "",
         "告警接收地址：webhook URL 或邮箱",
     ),
+    # —— 产品埋点（SPEC-010.1，和经验层事件完全分开的独立通道） ——
+    ConfigItem(
+        "analytics.retention_days",
+        "int",
+        90,
+        "产品埋点保存天数，超期由后台任务清理",
+        minimum=1,
+        maximum=3650,
+    ),
     # —— 部署与备份 ——
     ConfigItem(
         "ops.backup_retention_days",
