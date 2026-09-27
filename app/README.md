@@ -21,9 +21,39 @@ lib/
                             create, records, me)
   l10n/                     UI strings: app_zh.arb (+ generated Dart)
   platform/                 phone-only capabilities behind an interface
+  api/api_client.dart       generated API client wired to the environment
+  features_flags/           server feature flags + FeatureGate widget
+  observability/            crash reporting (off until privacy consent)
   widgets/                  shared widgets (EmptyState, TabPage)
+packages/gramtree_api/      API client generated from ../api/openapi.json (do not edit)
 test/                       page tests (what is on screen, what a tap does)
+integration_test/           end-to-end tests (web in cloud/CI, Android emulator in CI)
+test_driver/                driver for `flutter drive` on web
 ```
+
+## API client
+
+`packages/gramtree_api` is generated from the server's OpenAPI description by
+`tool/gen_api_client.sh` (openapi-generator 7.16.0, `dart-dio` +
+`json_serializable`). Never edit it by hand; after changing a server endpoint,
+rerun the script and commit the result. CI (`tool/check_api_client.sh`) fails
+when the server, `api/openapi.json` and the generated code disagree.
+
+## Feature flags
+
+`GET /v1/client-config` returns the server's feature flags. Wrap any entry
+that depends on a flag in `FeatureGate(feature: Feature.x, child: ...)`. While
+the config is loading or failed to load, every flag counts as off. The five
+bottom entries are fixed and never flag-controlled.
+
+## Crash reporting
+
+Sentry-protocol reporting (self-hosted GlitchTip) is initialized only after
+the user agrees to the privacy policy (`privacyConsentProvider`, wired up in
+SPEC-013.2). Pass the address with `--dart-define=SENTRY_DSN=...`; dev and
+staging builds can force it on with `--dart-define=CRASH_REPORTING_DEV=true`.
+`scrubEvent` drops request bodies, user details other than the id, breadcrumb
+text and any field about recipes, taste or health.
 
 ## Environments
 
@@ -70,8 +100,13 @@ light, dark and large text on 360×780 and 320×568 screens.
 ## Checks (run in CI on every push)
 
 ```sh
-dart format --set-exit-if-changed .
+dart format --set-exit-if-changed lib test integration_test test_driver
 flutter analyze
-flutter test
+flutter test                    # page tests (VM)
+flutter test --platform chrome  # the same page tests in a browser
 flutter build web
+../tool/web_test.sh             # end-to-end on web (headless Chromium)
 ```
+
+Android emulator end-to-end runs only in GitHub Actions (`android-e2e`);
+the iOS simulator job runs when CI is triggered by hand.
