@@ -145,7 +145,7 @@ def upload_events(
         )
 
     now = utcnow()
-    outcome = service.upload(session, auth.user.id, accepted_items, now=now)
+    outcome = service.upload(session, redis, auth.user.id, accepted_items, now=now)
     _record_batch_metrics(redis, accepted_items, outcome, rejections, now)
 
     results = []

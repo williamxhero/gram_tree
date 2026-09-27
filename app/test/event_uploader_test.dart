@@ -347,6 +347,49 @@ void main() {
     );
   });
 
+  test('单条事件本身就超过服务端上限时按退避重试，不会不停原地重试', () async {
+    // 服务端对任何批次（哪怕只有 1 条）都答复超过上限：批次已经砍到 1 条砍不动了，
+    // 应该转成按退避间隔重试，而不是每次都立刻重试、把队列彻底卡死打爆服务端。
+    final server = FakeServer()
+      ..on(
+        'POST',
+        '/v1/events/upload',
+        (_) => FakeServer.error(422, 'payload_too_large', '单条事件超过大小上限'),
+      );
+    final container = ProviderContainer(
+      overrides: [
+        ...TestEnv.signedIn(server: server).overrides,
+        eventUploaderProvider.overrideWith((ref) {
+          final uploader = EventUploader(
+            ref,
+            initialBackoff: const Duration(milliseconds: 20),
+            maxBackoff: const Duration(milliseconds: 40),
+            batchSize: 1,
+          );
+          ref.onDispose(uploader.dispose);
+          return uploader;
+        }),
+      ],
+    );
+    addTearDown(container.dispose);
+    await container.read(sessionStoreProvider).load();
+    final queue = container.read(eventQueueProvider) as FakeEventQueue;
+    await queue.enqueue(sample());
+
+    await container.read(eventUploaderProvider).triggerUpload();
+    // 批次已经是 1、砍不动了：这一轮 triggerUpload 只应该请求一次就转成退避重试，
+    // 不能在没有任何等待的情况下原地一直重传。
+    expect(server.calls('POST', '/v1/events/upload'), hasLength(1));
+    expect(await queue.pending(), hasLength(1)); // 事件还在，没有被丢弃
+
+    // 退避到期后触发下一次重试，确认走的是定时重试而不是死循环。
+    await Future<void>.delayed(const Duration(milliseconds: 60));
+    expect(
+      server.calls('POST', '/v1/events/upload').length,
+      inInclusiveRange(2, 3),
+    );
+  });
+
   test('未登录、有一条积压超过阈值天数的事件时发一次积压告警，不丢事件', () async {
     final server = FakeServer();
     final env = TestEnv(server: server); // 未登录：不会真的发上传请求

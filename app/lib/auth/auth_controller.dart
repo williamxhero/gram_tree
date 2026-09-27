@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gramtree_api/gramtree_api.dart';
 
 import '../api/api_client.dart';
+import '../events/event_queue.dart';
 import '../events/event_uploader.dart';
 import '../platform/apple_sign_in.dart';
 import '../platform/timezone_source.dart';
@@ -146,7 +147,11 @@ class AuthController extends AsyncNotifier<UserOut?> {
 
   /// 退出当前设备的登录。服务端没连上也照样清掉本机的登录状态。
   Future<void> signOut() async {
+    // 先尽力把这个账号还没传完的事件传掉；传不掉的（网络不通、服务端拒绝）
+    // 会在下面 _clearLocalEventQueue() 里被丢弃，不能留到下一个登录的账号名下。
+    await ref.read(eventUploaderProvider).triggerUpload();
     await signOutOnServer();
+    await _clearLocalEventQueue();
     await _session.clear();
   }
 
@@ -159,5 +164,16 @@ class AuthController extends AsyncNotifier<UserOut?> {
   }
 
   /// 清掉本机的登录状态（注销账号后服务端已经吊销了令牌）。
-  Future<void> clearLocalSession() => _session.clear();
+  Future<void> clearLocalSession() async {
+    await _clearLocalEventQueue();
+    await _session.clear();
+  }
+
+  /// 丢弃本机队列里还没传完的事件（含拒收区）：这台设备接下来可能换别的账号
+  /// 登录，留着的事件会被当成新账号的事件传上去，造成经验数据归错人。
+  Future<void> _clearLocalEventQueue() async {
+    try {
+      await ref.read(eventQueueProvider).clear();
+    } catch (_) {}
+  }
 }

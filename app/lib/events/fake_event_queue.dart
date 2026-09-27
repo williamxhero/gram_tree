@@ -46,5 +46,11 @@ class FakeEventQueue implements EventQueue {
   Future<int> rejectedCount() async => _rejected.length;
 
   @override
+  Future<void> clear() async {
+    _items.clear();
+    _rejected.clear();
+  }
+
+  @override
   Future<void> close() async {}
 }

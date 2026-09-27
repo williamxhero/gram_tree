@@ -193,6 +193,29 @@ def test_same_id_different_content_keeps_original_and_alerts(
     assert event_id in _Receiver.received[0]["text"]
 
 
+def test_repeated_conflict_for_same_id_only_alerts_once(
+    api: Api, engine: Engine, webhook: str
+) -> None:
+    """同一个事件 ID 被反复重传（内容还是不一致）不应该把告警通道刷爆。"""
+    assert cli(["config", "set", "ops.alert_channel", "webhook", "--by", "t", "--reason", "t"]) == 0
+    assert cli(["config", "set", "ops.alert_target", webhook, "--by", "t", "--reason", "t"]) == 0
+
+    tokens = api.login("cook@example.com")
+    event_id = new_uuid()
+    original = _event(id=event_id, content={"ping": "pong"})
+    api.client.post("/v1/events/upload", json={"events": [original]}, headers=bearer(tokens))
+
+    for i in range(3):
+        changed = _event(id=event_id, content={"ping": f"changed-{i}"})
+        resp = api.client.post(
+            "/v1/events/upload", json={"events": [changed]}, headers=bearer(tokens)
+        )
+        assert resp.json()["results"][0]["status"] == "duplicate"
+
+    assert len(_rows(engine)) == 1  # 原记录始终没被改
+    assert len(_Receiver.received) == 1  # 3 次冲突重传只告警了一次
+
+
 def test_same_id_same_content_does_not_alert(api: Api, webhook: str) -> None:
     assert cli(["config", "set", "ops.alert_channel", "webhook", "--by", "t", "--reason", "t"]) == 0
     assert cli(["config", "set", "ops.alert_target", webhook, "--by", "t", "--reason", "t"]) == 0

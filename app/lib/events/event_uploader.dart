@@ -151,8 +151,11 @@ class EventUploader {
       response = data;
     } on DioException catch (e) {
       if (_isBatchTooLarge(e)) {
-        _shrinkBatchSize();
-        return _BatchOutcome.retrySmaller;
+        // 已经砍到 _minBatchSize 还是超限，说明是这一条事件本身太大，再怎么砍
+        // 批次也没用：改走 retryLater 让退避间隔生效，不然会不停原地重试打服务端。
+        return _shrinkBatchSize()
+            ? _BatchOutcome.retrySmaller
+            : _BatchOutcome.retryLater;
       }
       // 网络错误、服务端 5xx 都保守处理成“这批没传成功”：不崩溃，事件留在队列里，
       // 外层按退避间隔重试。
@@ -220,8 +223,11 @@ class EventUploader {
   bool _isBatchTooLarge(DioException error) =>
       _batchTooLargeCodes.contains(ApiFailure.from(error).code);
 
-  void _shrinkBatchSize() {
+  /// 把批次砍小一半；已经在 [_minBatchSize] 时砍不动了，返回 false。
+  bool _shrinkBatchSize() {
+    if (_effectiveBatchSize <= _minBatchSize) return false;
     _effectiveBatchSize = math.max(_minBatchSize, _effectiveBatchSize ~/ 2);
+    return true;
   }
 
   EventUploadItem _toItem(QueuedEvent e) => EventUploadItem(

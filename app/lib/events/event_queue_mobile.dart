@@ -118,6 +118,14 @@ class DriftEventQueue implements EventQueue {
   }
 
   @override
+  Future<void> clear() async {
+    await _db.transaction(() async {
+      await _db.delete(_db.queuedEvents).go();
+      await _db.delete(_db.rejectedEvents).go();
+    });
+  }
+
+  @override
   Future<void> close() => _db.close();
 
   QueuedEventsCompanion _toRow(QueuedEvent event) =>
