@@ -54,15 +54,16 @@ void _addFakeServer(Ref ref, Dio dio) {
 
 final dioProvider = Provider<Dio>((ref) {
   final dio = _baseDio(ref);
-  // 续期用单独的 Dio，不经过下面的续期拦截，避免递归
-  final refreshDio = _baseDio(ref);
-  _addFakeServer(ref, refreshDio);
+  // 续期和续期后的重试都用单独的 Dio，不经过下面的续期拦截：
+  // 续期拦截是排队执行的，在它里面再走同一条拦截链，重试失败时会互相等待、永远卡住
+  final plainDio = _baseDio(ref);
+  _addFakeServer(ref, plainDio);
   dio.interceptors.add(
     AuthInterceptor(
-      dio: dio,
+      retryDio: plainDio,
       session: ref.watch(sessionStoreProvider),
       refresh: (token) async {
-        final api = GramtreeApi(dio: refreshDio, interceptors: const []);
+        final api = GramtreeApi(dio: plainDio, interceptors: const []);
         final resp = await api.getAuthApi().refreshTokens(
           refreshRequest: RefreshRequest(refreshToken: token),
         );
@@ -108,13 +109,14 @@ class ConsentRequired implements Exception {
 /// 带上访问令牌；收到 token_expired 时用刷新令牌续期（同一时间只续一次）并重试原请求。
 class AuthInterceptor extends QueuedInterceptor {
   AuthInterceptor({
-    required this.dio,
+    required this.retryDio,
     required this.session,
     required this.refresh,
     required this.onSessionExpired,
   });
 
-  final Dio dio;
+  /// 重试原请求用的 Dio，不能带这个拦截器。
+  final Dio retryDio;
   final SessionStore session;
   final Future<TokenPair> Function(String refreshToken) refresh;
   final Future<void> Function() onSessionExpired;
@@ -158,7 +160,7 @@ class AuthInterceptor extends QueuedInterceptor {
       ..extra[_retried] = true
       ..headers['Authorization'] = 'Bearer ${session.current!.accessToken}';
     try {
-      handler.resolve(await dio.fetch<dynamic>(retry));
+      handler.resolve(await retryDio.fetch<dynamic>(retry));
     } on DioException catch (e) {
       handler.next(e);
     }

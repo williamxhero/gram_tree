@@ -1,4 +1,7 @@
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:gram_tree/api/api_client.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gram_tree/auth/session.dart';
 import 'package:gram_tree/storage/local_store.dart';
@@ -121,6 +124,37 @@ void main() {
     final refresh = server.calls('POST', '/v1/auth/refresh').single;
     expect(refresh.body, {'refresh_token': 'refresh-0'});
     expect(env.secure.values[sessionStorageKey], contains('refresh-1'));
+  });
+
+  test('续期成功但重试仍失败时，请求带着错误返回，不会卡住后面的请求', () async {
+    final server = FakeServer();
+    var calls = 0;
+    server.on('GET', '/v1/me/identities', (r) {
+      calls++;
+      if (calls == 1) return FakeServer.error(401, 'token_expired', '登录已过期');
+      if (calls == 2) return FakeServer.error(500, 'internal_error', '服务器出错了');
+      return (200, [for (final i in server.identities) i.toJson()]);
+    });
+    final container = ProviderContainer(
+      overrides: TestEnv.signedIn(server: server).overrides,
+    );
+    addTearDown(container.dispose);
+    await container.read(sessionStoreProvider).load();
+    final api = container.read(apiClientProvider).getAccountApi();
+
+    await expectLater(
+      api.listIdentities().timeout(const Duration(seconds: 5)),
+      throwsA(
+        isA<DioException>().having(
+          (e) => e.response?.statusCode,
+          'status',
+          500,
+        ),
+      ),
+    );
+    expect(server.calls('POST', '/v1/auth/refresh'), hasLength(1));
+    final next = await api.listIdentities().timeout(const Duration(seconds: 5));
+    expect(next.data, hasLength(1));
   });
 
   testWidgets('续期失败就回到登录页', (tester) async {

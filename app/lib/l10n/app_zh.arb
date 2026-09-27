@@ -110,6 +110,7 @@
   },
   "save": "保存",
   "cancel": "取消",
+  "retry": "重试",
   "confirm": "确定",
   "settings": "设置",
   "settingsAccount": "账号",

@@ -168,6 +168,25 @@ void main() {
     expect(env.secure.values[sessionStorageKey], isNull);
   });
 
+  testWidgets('注销页拉不到登录方式时显示错误，可以重试', (tester) async {
+    final server = FakeServer();
+    var fail = true;
+    server.on('GET', '/v1/me/identities', (_) {
+      if (fail) return FakeServer.error(500, 'internal_error', '服务器出错了');
+      return (200, [for (final i in server.identities) i.toJson()]);
+    });
+    await pumpApp(tester, env: TestEnv.signedIn(server: server));
+    await openSettings(tester);
+    await tapVisible(tester, find.text('注销账号'));
+    expect(find.byType(CircularProgressIndicator), findsNothing);
+    expect(find.text('服务器出错了'), findsOneWidget);
+
+    fail = false;
+    await tester.tap(find.text('重试'));
+    await tester.pumpAndSettle();
+    expect(find.text('验证码会发到 $testEmail。'), findsOneWidget);
+  });
+
   for (final brightness in Brightness.values) {
     testWidgets('设置页在 ${brightness.name} 模式、最大字号下不溢出', (tester) async {
       await pumpApp(

@@ -114,8 +114,20 @@ class _DeleteAccountPageState extends ConsumerState<DeleteAccountPage> {
   }
 
   List<Widget> _verifyStep(AppLocalizations l10n) {
-    final ids = ref.watch(identitiesProvider).value;
-    if (ids == null) return const [Center(child: CircularProgressIndicator())];
+    final list = ref.watch(identitiesProvider);
+    final ids = list.value;
+    if (ids == null) {
+      if (!list.hasError) {
+        return const [Center(child: CircularProgressIndicator())];
+      }
+      return [
+        ErrorText(ApiFailure.from(list.error!).message),
+        SecondaryButton(
+          label: l10n.retry,
+          onPressed: () => ref.invalidate(identitiesProvider),
+        ),
+      ];
+    }
     final email = ids
         .where((i) => i.kind == IdentityOutKindEnum.email)
         .map((i) => i.email)

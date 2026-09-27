@@ -496,6 +496,12 @@ abstract class AppLocalizations {
   /// **'取消'**
   String get cancel;
 
+  /// No description provided for @retry.
+  ///
+  /// In zh, this message translates to:
+  /// **'重试'**
+  String get retry;
+
   /// No description provided for @confirm.
   ///
   /// In zh, this message translates to:
