@@ -24,7 +24,8 @@ dependencies:
   flutter_secure_storage: ^11.2.0
   url_launcher: ^6.3.2
   sign_in_with_apple: ^8.2.0
-  permission_handler: ^13.0.2
+  # 13.x 的安卓实现要求 compileSdk 37，当前 Android Gradle 插件最高支持 36；升级插件后再升
+  permission_handler: ^12.0.3
   flutter_timezone: ^5.1.0
 
 dev_dependencies:
