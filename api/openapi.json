@@ -143,7 +143,7 @@
   "paths": {
     "/v1/client-config": {
       "get": {
-        "operationId": "client_config_v1_client_config_get",
+        "operationId": "client_config",
         "responses": {
           "200": {
             "content": {
@@ -184,7 +184,7 @@
     },
     "/v1/health": {
       "get": {
-        "operationId": "health_v1_health_get",
+        "operationId": "health",
         "responses": {
           "200": {
             "content": {

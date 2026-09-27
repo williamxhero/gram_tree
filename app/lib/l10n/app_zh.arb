@@ -24,5 +24,9 @@
   "recordsEmptyBody": "每次做完菜后的记录和心得会保存在这里。",
 
   "meEmptyTitle": "个人中心",
-  "meEmptyBody": "账号、口味偏好和设置会放在这里。"
+  "meEmptyBody": "账号、口味偏好和设置会放在这里。",
+
+  "featureReceiptScan": "拍小票记价格",
+  "@featureReceiptScan": {"description": "Entry on the ＋ page, shown only when the server enables feature receipt_scan."},
+  "comingSoon": "这个功能正在准备中"
 }

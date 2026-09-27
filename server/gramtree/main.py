@@ -19,6 +19,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         title="味谱 GramTree API",
         version="1.0.0",
         description="味谱服务端接口。Dart 客户端由这份描述生成，不要手改生成代码。",
+        # operationId 用函数名，生成的 Dart 方法名才简洁（例如 clientConfig()）
+        generate_unique_id_function=lambda route: route.name,
     )
     app.state.settings = settings
     engine = make_engine(settings.database_url, settings.health_timeout_seconds)

@@ -10,6 +10,7 @@ class EmptyState extends StatelessWidget {
     required this.message,
     this.actionLabel,
     this.onAction,
+    this.footer,
   });
 
   final IconData icon;
@@ -17,6 +18,9 @@ class EmptyState extends StatelessWidget {
   final String message;
   final String? actionLabel;
   final VoidCallback? onAction;
+
+  /// 放在说明和按钮下面的额外内容，例如受能力开关控制的入口。
+  final Widget? footer;
 
   @override
   Widget build(BuildContext context) {
@@ -55,6 +59,7 @@ class EmptyState extends StatelessWidget {
                     child: Text(actionLabel!, textAlign: TextAlign.center),
                   ),
                 ],
+                ?footer,
               ],
             ),
           ),

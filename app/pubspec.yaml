@@ -16,6 +16,9 @@ dependencies:
   flutter_riverpod: ^3.4.3
   go_router: ^18.0.1
   intl: ^0.20.3
+  dio: ^5.7.0
+  gramtree_api:
+    path: packages/gramtree_api
 
 dev_dependencies:
   flutter_test:

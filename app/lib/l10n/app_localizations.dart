@@ -195,6 +195,18 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'账号、口味偏好和设置会放在这里。'**
   String get meEmptyBody;
+
+  /// Entry on the ＋ page, shown only when the server enables feature receipt_scan.
+  ///
+  /// In zh, this message translates to:
+  /// **'拍小票记价格'**
+  String get featureReceiptScan;
+
+  /// No description provided for @comingSoon.
+  ///
+  /// In zh, this message translates to:
+  /// **'这个功能正在准备中'**
+  String get comingSoon;
 }
 
 class _AppLocalizationsDelegate

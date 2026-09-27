@@ -59,4 +59,10 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get meEmptyBody => '账号、口味偏好和设置会放在这里。';
+
+  @override
+  String get featureReceiptScan => '拍小票记价格';
+
+  @override
+  String get comingSoon => '这个功能正在准备中';
 }
