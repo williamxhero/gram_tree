@@ -2,9 +2,17 @@
 
 #77 只有“默认组合”——内容和标准布局一致，每个组件理由都是“默认”。按场景选择内容的
 规则在 SPEC-009.2（#34）加；这里的 `COMPOSERS` 是以后新增页面类型时注册组合函数的地方。
+
+#84 起，组合函数额外接受 `experiment`（要写进页面描述的实验标识）、`detail_overrides`
+（实验要改成什么详略档位，组件类型 -> 详略）、`exclude_components`（实验要去掉哪些
+组件类型）——`router.compose()` 按 `gramtree.ui_protocol.experiments` 算好了传进来。
+这个模块本身不知道、也不需要知道"实验"是什么，只是"有的话就用、没有就按原来的默认值
+来"；实验分组、详略变体、组件增减的对照表在 `experiments.py` 里，"去掉必显组件的变体
+不生效"这条约束也不是靠这里的代码挡住的——挡的是组合结果产出之后 `router.compose()`
+仍然会跑的那道 #79 必显校验，见 `experiments.py` 顶部的选型说明。
 """
 
-from collections.abc import Callable
+from collections.abc import Callable, Collection, Mapping
 from uuid import uuid4
 
 from gramtree.core.time import utcnow
@@ -13,6 +21,8 @@ from gramtree.ui_protocol.protocol import (
     CacheInfo,
     ComponentDescriptor,
     ComponentReason,
+    DetailLevel,
+    ExperimentInfo,
     FallbackInfo,
     FallbackReasonCode,
     PageDescription,
@@ -21,12 +31,20 @@ from gramtree.ui_protocol.protocol import (
 PROTOCOL_VERSION = "1.0"
 
 
-def compose_today(supported_components: set[str]) -> PageDescription:
+def compose_today(
+    supported_components: set[str],
+    *,
+    experiment: ExperimentInfo | None = None,
+    detail_overrides: Mapping[str, DetailLevel] | None = None,
+    exclude_components: Collection[str] | None = None,
+) -> PageDescription:
+    overrides = detail_overrides or {}
+    excluded = frozenset(exclude_components or ())
     candidates = [
         ComponentDescriptor(
             type="hint_bar",
             id="c1",
-            detail="brief",
+            detail=overrides.get("hint_bar", "brief"),
             data={"conclusion": "先添加一道你常做的菜"},
             actions=[ActionDescriptor(intent="open_page", params={"page": "create"})],
             reason=ComponentReason(code="default", text="默认组合"),
@@ -35,7 +53,7 @@ def compose_today(supported_components: set[str]) -> PageDescription:
         ComponentDescriptor(
             type="empty_state",
             id="c2",
-            detail="standard",
+            detail=overrides.get("empty_state", "standard"),
             data={
                 "conclusion": "今天还没有安排",
                 "basis": {"text": "这里会显示今天要做的菜"},
@@ -46,25 +64,38 @@ def compose_today(supported_components: set[str]) -> PageDescription:
             required=False,
         ),
     ]
-    selected = [c for c in candidates if c.type in supported_components]
+    selected = [c for c in candidates if c.type in supported_components and c.type not in excluded]
     return PageDescription(
         protocol=PROTOCOL_VERSION,
         page_type="today",
         composition_id=uuid4(),
         generated_at=utcnow(),
         cache=CacheInfo(depends_on={"plan": "v0"}, ttl_s=600),
-        experiment=None,
+        experiment=experiment,
         components=selected,
     )
 
 
-COMPOSERS: dict[str, Callable[[set[str]], PageDescription]] = {
+COMPOSERS: dict[str, Callable[..., PageDescription]] = {
     "today": compose_today,
 }
 
 
-def compose(page_type: str, supported_components: set[str]) -> PageDescription:
-    return COMPOSERS[page_type](supported_components)
+def compose(
+    page_type: str,
+    supported_components: set[str],
+    *,
+    experiment: ExperimentInfo | None = None,
+    detail_overrides: Mapping[str, DetailLevel] | None = None,
+    exclude_components: Collection[str] | None = None,
+) -> PageDescription:
+    composer = COMPOSERS[page_type]
+    return composer(
+        supported_components,
+        experiment=experiment,
+        detail_overrides=detail_overrides,
+        exclude_components=exclude_components,
+    )
 
 
 def build_fallback_description(page_type: str, reason_code: FallbackReasonCode) -> PageDescription:
