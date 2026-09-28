@@ -54,6 +54,10 @@ lib/src/model/page_description.dart
 lib/src/model/profile_update.dart
 lib/src/model/refresh_request.dart
 lib/src/model/rejection_reason.dart
+lib/src/model/skip_adjustment_request.dart
+lib/src/model/skip_adjustment_result.dart
+lib/src/model/source_basis.dart
+lib/src/model/sourced_value.dart
 lib/src/model/token_pair.dart
 lib/src/model/user_out.dart
 pubspec.yaml

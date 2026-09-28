@@ -5,6 +5,7 @@ import 'components/empty_state_component.dart';
 import 'components/hint_bar_component.dart';
 import 'components/list_component.dart';
 import 'components/section_title_component.dart';
+import 'components/source_demo_component.dart';
 import 'components/text_block_component.dart';
 
 /// 组件登记时要给的标准空态文案：结论层（各组件类型自己的必填字段，比如
@@ -73,8 +74,12 @@ class ComponentRegistry {
 }
 
 /// #80 登记齐 SPEC-009.1 #18 要求的五个通用组件：提示条、分区标题、文字块、
-/// 列表容器、标准空态。来源标记（`source_mark`）和"为什么"面板（`why_panel`）
-/// 由 #82 登记。
+/// 列表容器、标准空态。来源标记（`SourceMark`）和"为什么"面板（`WhyPanel`）是
+/// #82 加的通用组件，但它们不是独立的"组件类型"——协议里没有单独的 `source_mark`/
+/// `why_panel` type，它们是任何组件在渲染自己的 `data` 时可以内嵌使用的展示单元
+/// （见 `source_mark.dart`）。`source_demo` 是 #82 新登记的组件类型，
+/// 仅测试用，专门用来驱动"来源标记 -> 为什么面板 -> 反馈"这条链路，不是真实业务
+/// 组件（真实的换算内容留给以后的子 SPEC）。
 final defaultComponentRegistry = ComponentRegistry(const [
   ComponentSpec(
     type: 'hint_bar',
@@ -101,5 +106,10 @@ final defaultComponentRegistry = ComponentRegistry(const [
     builder: buildEmptyStateComponent,
     emptyState: ComponentEmptyState(title: '没有内容'),
     fillsRemainingSpace: true,
+  ),
+  ComponentSpec(
+    type: 'source_demo',
+    builder: buildSourceDemoComponent,
+    emptyState: ComponentEmptyState(title: '没有可显示的示例'),
   ),
 ]);

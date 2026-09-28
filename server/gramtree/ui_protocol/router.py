@@ -28,7 +28,11 @@ from gramtree.accounts.deps import CurrentAuth
 from gramtree.core.errors import ERROR_RESPONSES, ApiError
 from gramtree.deps import RedisDep, SessionDep
 from gramtree.ui_protocol import cache, composition_events, experiments, service, validation
-from gramtree.ui_protocol.protocol import PageDescription
+from gramtree.ui_protocol.protocol import (
+    PageDescription,
+    SkipAdjustmentRequest,
+    SkipAdjustmentResult,
+)
 
 logger = logging.getLogger("gramtree.ui_protocol")
 
@@ -114,3 +118,29 @@ def compose(
     # 重新走一遍完整流程，不会一直下发同一份兜底结果。
     cache.set_(redis, key, description)
     return description
+
+
+@router.post(
+    "/compositions/skip-adjustment",
+    response_model=SkipAdjustmentResult,
+    responses=ERROR_RESPONSES,
+    summary='"这次不用"：返回去掉这条来源调整后的结果，只影响这次查看，不写口味档案（需要登录）',
+)
+def skip_adjustment(body: SkipAdjustmentRequest, auth: CurrentAuth) -> SkipAdjustmentResult:
+    # SPEC-009.1 #82：App 端"为什么"面板里点"这次不用"时调用（走票 5 的意图派发，
+    # 意图处理器直接调这个接口，不另写处理路径）。这是一次独立于组合缓存/组合展示
+    # 事件之外的轻量重算——不查、不写组合缓存，不记"组合展示"事件（没有产生新的一份
+    # 页面组合决定，只是把某个组件里的一条调整去掉重算），也不落库、不改任何"口味
+    # 档案"（本子 SPEC 范围内还没有真正的口味档案概念，`service.
+    # skip_source_demo_adjustment` 本身也确实没有调用任何写档案的代码路径）——这正是
+    # "只影响这次查看"的含义。本子 SPEC 只有 source_demo 这一个测试用组件接了这条
+    # 链路，其它 component_id 一律 404。
+    result = service.skip_source_demo_adjustment(body.component_id)
+    if result is None:
+        raise ApiError(
+            404,
+            "unknown_component",
+            "没有这个组件实例的来源调整可以去掉",
+            body.component_id,
+        )
+    return result

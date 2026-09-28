@@ -37,9 +37,67 @@ from gramtree.ui_protocol.protocol import (
     FallbackInfo,
     FallbackReasonCode,
     PageDescription,
+    SkipAdjustmentResult,
+    SourceBasis,
+    SourcedValue,
 )
 
 PROTOCOL_VERSION = "1.0"
+
+# SPEC-009.1 #82：source_demo 是仅测试用的示例组件，验证"来源标记 -> 为什么面板 ->
+# 反馈"这条链路；本子 SPEC 还没有真实的换算内容（真实换算是 SPEC-005.3 的事），这里
+# 固定一个组件实例 ID 和固定的"调整前/调整后"两组值，够用来驱动整条链路的测试就够了。
+SOURCE_DEMO_COMPONENT_ID = "c3"
+_SOURCE_DEMO_ADJUSTED_VALUE = "3 g"
+_SOURCE_DEMO_ORIGINAL_VALUE = "5 g"
+
+
+def _source_demo_component(overrides: Mapping[str, DetailLevel]) -> ComponentDescriptor:
+    return ComponentDescriptor(
+        type="source_demo",
+        id=SOURCE_DEMO_COMPONENT_ID,
+        detail=overrides.get("source_demo", "standard"),
+        data={
+            "conclusion": f"建议用盐 {_SOURCE_DEMO_ADJUSTED_VALUE}",
+            "source": {
+                "source_type": "taste_adjusted",
+                "value": _SOURCE_DEMO_ADJUSTED_VALUE,
+                "original_value": _SOURCE_DEMO_ORIGINAL_VALUE,
+                "basis": {
+                    "reason_code": "taste_profile_salt_down",
+                    "text": "你最近几次做菜都调低了盐量",
+                    "citation": "口味档案更新于 2026-09-20",
+                },
+            },
+        },
+        actions=[],
+        reason=ComponentReason(
+            code="source_demo",
+            text="仅用于测试来源标记链路的示例组件，不是真实换算",
+        ),
+        required=False,
+    )
+
+
+def skip_source_demo_adjustment(component_id: str) -> SkipAdjustmentResult | None:
+    """ "这次不用"（SPEC-009.1 #82）：去掉 source_demo 示例组件的换算调整，返回退回
+    原值后的结果；只影响这次查看（调用方不落库、不写缓存），不写口味档案——本子 SPEC
+    范围内还没有真正的口味档案概念，这个函数本身也确实没有调用任何写档案的代码路径。
+    只认识这一个测试用组件 ID；其它 component_id 返回 None，由路由层转成 404。"""
+    if component_id != SOURCE_DEMO_COMPONENT_ID:
+        return None
+    return SkipAdjustmentResult(
+        component_id=component_id,
+        source=SourcedValue(
+            source_type="author_filled",
+            value=_SOURCE_DEMO_ORIGINAL_VALUE,
+            basis=SourceBasis(
+                reason_code="skip_adjustment",
+                text="已去掉按你的口味换算的调整，显示菜谱原文用量",
+            ),
+        ),
+    )
+
 
 # 组合缓存机制验证用的测试依赖（票 7，#83）：不对应任何真实业务数据，见
 # runtime_config.registry 里这个配置项的登记说明。
@@ -128,6 +186,7 @@ def compose_today(
             reason=ComponentReason(code="default", text="默认组合"),
             required=False,
         ),
+        _source_demo_component(overrides),
     ]
     selected = [c for c in candidates if c.type in supported_components and c.type not in excluded]
     return PageDescription(

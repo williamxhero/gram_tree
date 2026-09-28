@@ -1132,6 +1132,112 @@
         "title": "RejectionReason",
         "type": "object"
       },
+      "SkipAdjustmentRequest": {
+        "properties": {
+          "component_id": {
+            "description": "要去掉来源调整的组件实例 ID",
+            "title": "Component Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "component_id"
+        ],
+        "title": "SkipAdjustmentRequest",
+        "type": "object"
+      },
+      "SkipAdjustmentResult": {
+        "description": "\"这次不用\"的返回：去掉这条调整后的来源字段，只影响这次查看，不写口味档案。",
+        "properties": {
+          "component_id": {
+            "title": "Component Id",
+            "type": "string"
+          },
+          "source": {
+            "$ref": "#/components/schemas/SourcedValue"
+          }
+        },
+        "required": [
+          "component_id",
+          "source"
+        ],
+        "title": "SkipAdjustmentResult",
+        "type": "object"
+      },
+      "SourceBasis": {
+        "description": "依据：只用等级、日期这类用户看得懂的信息，不含内部分数或精确统计\n（SPEC-010 开放边界，#82 明确要求）。",
+        "properties": {
+          "citation": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "来源引用，例如记录日期、口味档案变更、菜谱原文",
+            "title": "Citation"
+          },
+          "reason_code": {
+            "description": "理由代码，供程序判断用",
+            "title": "Reason Code",
+            "type": "string"
+          },
+          "text": {
+            "description": "一句大白话说明",
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "reason_code",
+          "text"
+        ],
+        "title": "SourceBasis",
+        "type": "object"
+      },
+      "SourcedValue": {
+        "properties": {
+          "basis": {
+            "$ref": "#/components/schemas/SourceBasis"
+          },
+          "original_value": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "换算/调整前的原值，只有真的发生换算/调整时才有",
+            "title": "Original Value"
+          },
+          "source_type": {
+            "enum": [
+              "author_filled",
+              "taste_adjusted",
+              "scenario_adjusted",
+              "ai_estimated",
+              "verified"
+            ],
+            "title": "Source Type",
+            "type": "string"
+          },
+          "value": {
+            "title": "Value",
+            "type": "string"
+          }
+        },
+        "required": [
+          "source_type",
+          "value",
+          "basis"
+        ],
+        "title": "SourcedValue",
+        "type": "object"
+      },
       "TokenPair": {
         "properties": {
           "access_expires_in": {
@@ -2530,6 +2636,62 @@
           }
         ],
         "summary": "按 App 声明的协议版本和组件清单，下发一份页面描述（需要登录）",
+        "tags": [
+          "ui-protocol"
+        ]
+      }
+    },
+    "/v1/ui/compositions/skip-adjustment": {
+      "post": {
+        "operationId": "skip_adjustment",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SkipAdjustmentRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkipAdjustmentResult"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "参数错误"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "服务端错误"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "\"这次不用\"：返回去掉这条来源调整后的结果，只影响这次查看，不写口味档案（需要登录）",
         "tags": [
           "ui-protocol"
         ]

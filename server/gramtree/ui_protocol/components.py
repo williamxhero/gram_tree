@@ -23,6 +23,11 @@ class ComponentSpec:
 ITEMS: tuple[ComponentSpec, ...] = (
     ComponentSpec("hint_bar", "提示条：结论 + 可选动作"),
     ComponentSpec("empty_state", "标准空态：结论 + 可选依据说明"),
+    ComponentSpec(
+        "source_demo",
+        '仅测试用：验证来源标记/"为什么"面板/反馈链路的示例组件，不是真实业务组件'
+        "（SPEC-009.1 #82，真实换算内容留给以后的子 SPEC）",
+    ),
 )
 
 BY_TYPE: dict[str, ComponentSpec] = {item.type: item for item in ITEMS}

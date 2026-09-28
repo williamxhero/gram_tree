@@ -7,6 +7,7 @@ import '../l10n/app_localizations.dart';
 import 'component_registry.dart';
 import 'composition_provider.dart';
 import 'intent_dispatcher.dart';
+import 'source_mark.dart' show CompositionIdScope;
 
 /// 渲染服务端下发的一份页面描述：按组件登记表把每个组件类型映射成 widget，按顺序
 /// 排列。合法结果和标准布局用同一个入口显示，不合法/请求出错/等待超时时先退回
@@ -126,18 +127,23 @@ class _CompositionBody extends StatelessWidget {
     ];
     // 撑满剩余空间的组件（比如标准空态）需要有界高度，不能塞进无界高度的滚动视图；
     // 没有这种组件时整体按普通列表滚动（详细的布局规则见 #80）。
-    if (hasFiller) {
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: children,
-      );
-    }
-    return SingleChildScrollView(
-      padding: const EdgeInsets.symmetric(vertical: 12),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: children,
-      ),
+    final body = hasFiller
+        ? Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: children,
+          )
+        : SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(vertical: 12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: children,
+            ),
+          );
+    // SPEC-009.1 #82：把这次组合的 composition_id 挂到组件子树能读到的地方——来源
+    // 标记打开"为什么"面板时要用它记事件，见 `source_mark.dart` 顶部的说明。
+    return CompositionIdScope(
+      compositionId: description.compositionId,
+      child: body,
     );
   }
 

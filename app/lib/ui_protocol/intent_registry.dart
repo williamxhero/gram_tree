@@ -1,10 +1,17 @@
 import 'dart:async';
 
+import 'package:dio/dio.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:gramtree_api/gramtree_api.dart'
+    show EventCorrelationIds, SkipAdjustmentRequest;
 
+import '../api/api_client.dart';
+import '../events/event_recorder.dart';
 import 'registered_pages.dart';
+import 'source_overrides.dart';
+import 'source_types.dart';
 
 /// App 内置意图登记表（SPEC-009.1 #81）：组件上的每个动作只能是这里登记过的意图，
 /// 按钮、菜单、以后的一句话输入都落到同一批意图，都走同一个处理器
@@ -129,13 +136,114 @@ void _handleOpenRecordCard(
 bool _validateCallOperation(Map<String, dynamic> params) =>
     _requireNonEmptyString(params, 'operation');
 
-/// 下面四个意图（存进口味、应用改动、这次不用、以后别这样）这张票只登记名字，参数
-/// 格式留给真正实现处理器的子 SPEC（`skip_this_time`/`dont_do_again` 是 #82）按业务
-/// 需要再收紧——`ui.source_feedback` 事件（#78 登记的类型）已经定了
-/// `skip_this_time`/`dont_do_again` 大致要带的信息（`component_id`、来源标记、
-/// 这次不用/以后别这样），但动作参数的确切形状由实现处理器时决定，这里先只要求
-/// `params` 是一个对象（协议信封 Schema 已经保证这一点），不做进一步约束。
+/// `save_to_taste`/`apply_change`：还没有实现处理器的子 SPEC 接手，这两个意图这张
+/// 票只登记名字，参数格式留给以后按业务需要再收紧，这里先只要求 `params` 是一个
+/// 对象（协议信封 Schema 已经保证这一点），不做进一步约束。
 bool _acceptAnyParams(Map<String, dynamic> params) => true;
+
+/// `skip_this_time`/`dont_do_again`（SPEC-009.1 #82 收紧）：两个意图共用同一套
+/// 参数格式——`component_id`（这份页面描述里的组件实例 ID）、`source_type`（已登记
+/// 的来源类型之一），和服务端 `gramtree.ui_protocol.actions._validate_source_feedback`
+/// 是同一套规则；`composition_id` 是可选的（来自 `SourceMark` 用
+/// `CompositionIdScope` 读到的组合 ID，读不到时不带这个参数，处理器就不在事件里带
+/// `ui_composition_id`），不参与合法性校验。
+bool _validateSourceFeedback(Map<String, dynamic> params) {
+  final componentId = params['component_id'];
+  final sourceType = params['source_type'];
+  return componentId is String &&
+      componentId.isNotEmpty &&
+      sourceType is String &&
+      sourceTypes.contains(sourceType);
+}
+
+/// "这次不用"（SPEC-009.1 #82）：
+/// 1. 记一条 `ui.source_feedback` 事件（`feedback: skip_once`）。
+/// 2. 调用服务端"去掉这条调整"的接口（`POST /v1/ui/compositions/skip-adjustment`），
+///    只影响这次查看，不写口味档案（服务端那边的说明见
+///    `gramtree.ui_protocol.service.skip_source_demo_adjustment`）。
+/// 3. 把服务端退回的值存进 [sourceOverridesProvider]，`source_demo_component.dart`
+///    据此重新渲染——网络出问题（离线、服务端报错）时安静地什么都不做，不崩溃、
+///    不影响其它界面（呼应 `intent_dispatcher.dart`/`component_scaffold.dart` 里
+///    同样的兜底口子），已经记下的反馈事件不受影响，留在本机队列里等下次上传。
+Future<void> _handleSkipThisTime(
+  BuildContext context,
+  Ref ref,
+  Map<String, dynamic> params,
+) async {
+  final componentId = params['component_id'] as String;
+  final sourceType = params['source_type'] as String;
+  final compositionId = params['composition_id'] as String?;
+
+  await ref
+      .read(eventRecorderProvider)
+      .record(
+        eventType: 'ui.source_feedback',
+        typeVersion: 1,
+        correlation: compositionId == null
+            ? null
+            : EventCorrelationIds(uiCompositionId: compositionId),
+        content: {
+          'component_id': componentId,
+          'source_type': sourceType,
+          'feedback': 'skip_once',
+        },
+      );
+
+  try {
+    final response = await ref
+        .read(apiClientProvider)
+        .getUiProtocolApi()
+        .skipAdjustment(
+          skipAdjustmentRequest: SkipAdjustmentRequest(
+            componentId: componentId,
+          ),
+        );
+    final result = response.data;
+    if (result == null) return;
+    final source = result.source_;
+    ref
+        .read(sourceOverridesProvider.notifier)
+        .set(
+          componentId,
+          SourceOverride(
+            sourceType: source.sourceType.value,
+            value: source.value,
+            originalValue: source.originalValue,
+            basisText: source.basis.text,
+            citation: source.basis.citation,
+          ),
+        );
+  } on DioException {
+    // 网络/服务端问题：这条链路只是演示用（#82），安静地忽略，不影响界面其它部分。
+  }
+}
+
+/// "以后别这样"（SPEC-009.1 #82）：只记一条 `ui.source_feedback` 事件
+/// （`feedback: never_again`），由 SPEC-005.3/SPEC-009.2 消化；这张票不需要立刻
+/// 改变界面内容，所以不像 `skip_this_time` 那样还要调服务端接口。
+Future<void> _handleDontDoAgain(
+  BuildContext context,
+  Ref ref,
+  Map<String, dynamic> params,
+) async {
+  final componentId = params['component_id'] as String;
+  final sourceType = params['source_type'] as String;
+  final compositionId = params['composition_id'] as String?;
+  await ref
+      .read(eventRecorderProvider)
+      .record(
+        eventType: 'ui.source_feedback',
+        typeVersion: 1,
+        correlation: compositionId == null
+            ? null
+            : EventCorrelationIds(uiCompositionId: compositionId),
+        content: {
+          'component_id': componentId,
+          'source_type': sourceType,
+          'feedback': 'never_again',
+        },
+      );
+}
 
 /// SPEC-009.1 #81 登记的意图表：#77/#80 用到的 `open_page`/`start_cooking`/
 /// `open_record_card` 沿用之前的默认文案，新增 `call_operation` 和四个先只登记
@@ -177,12 +285,14 @@ final defaultIntentRegistry = IntentRegistry(const [
   IntentSpec(
     name: 'skip_this_time',
     defaultLabel: '这次不用',
-    validateParams: _acceptAnyParams,
+    validateParams: _validateSourceFeedback,
+    handler: _handleSkipThisTime,
   ),
   IntentSpec(
     name: 'dont_do_again',
     defaultLabel: '以后别这样',
-    validateParams: _acceptAnyParams,
+    validateParams: _validateSourceFeedback,
+    handler: _handleDontDoAgain,
   ),
 ]);
 

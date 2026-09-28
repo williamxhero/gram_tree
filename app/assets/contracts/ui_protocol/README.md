@@ -4,6 +4,7 @@
 
 - `schema/<major>.<minor 起点>/page_description.schema.json`：协议信封的 Schema。新增大版本时新建一个目录（例如 `schema/2.0/`），不改旧目录；同一大版本内的小版本增量不新建目录，只在信封里出现新的可选字段。
 - `schema/<version>/components/<type>.schema.json`：每个组件类型的 `data` 字段格式，登记在服务端 `server/gramtree/ui_protocol/components.py` 和 App `app/lib/ui_protocol/component_registry.dart`，两边都从这里的文件读、不各写一份。
+  - `source_demo.schema.json`（SPEC-009.1 #82）：仅测试用，验证"来源标记 -> 为什么面板 -> 反馈"这条链路，不是真实业务组件；它的 `data.source` 是协议里"带来源的字段"这个通用形状的示例，以后哪个组件要给数值/内容标来源，照这个形状加字段（`source_type`/`value`/`original_value`/`basis`），具体字段含义见该文件自己的 `description`。
 - `samples/valid/`：合法的页面描述样例，服务端和 App 的测试都读同一份文件，判定必须一致。
 - `samples/invalid/`：不合法的样例，文件名即错误场景（SPEC-009.1 #79 起补全）：
   - `unknown_component.json`：组件类型没有登记过（`unknown_component`）。

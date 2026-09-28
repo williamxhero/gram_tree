@@ -34,6 +34,10 @@ import 'package:gramtree_api/src/model/page_description.dart';
 import 'package:gramtree_api/src/model/profile_update.dart';
 import 'package:gramtree_api/src/model/refresh_request.dart';
 import 'package:gramtree_api/src/model/rejection_reason.dart';
+import 'package:gramtree_api/src/model/skip_adjustment_request.dart';
+import 'package:gramtree_api/src/model/skip_adjustment_result.dart';
+import 'package:gramtree_api/src/model/source_basis.dart';
+import 'package:gramtree_api/src/model/sourced_value.dart';
 import 'package:gramtree_api/src/model/token_pair.dart';
 import 'package:gramtree_api/src/model/user_out.dart';
 
@@ -160,6 +164,16 @@ ReturnType deserialize<ReturnType, BaseType>(
     case 'RejectionReason':
       return RejectionReason.fromJson(value as Map<String, dynamic>)
           as ReturnType;
+    case 'SkipAdjustmentRequest':
+      return SkipAdjustmentRequest.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'SkipAdjustmentResult':
+      return SkipAdjustmentResult.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'SourceBasis':
+      return SourceBasis.fromJson(value as Map<String, dynamic>) as ReturnType;
+    case 'SourcedValue':
+      return SourcedValue.fromJson(value as Map<String, dynamic>) as ReturnType;
     case 'TokenPair':
       return TokenPair.fromJson(value as Map<String, dynamic>) as ReturnType;
     case 'UserOut':

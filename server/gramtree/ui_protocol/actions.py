@@ -16,7 +16,11 @@ from __future__ import annotations
 
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, get_args
+
+from gramtree.events.registry import SourceType
+
+_SOURCE_TYPES: frozenset[str] = frozenset(get_args(SourceType))
 
 #: "打开页面"意图（`open_page`）能打开的页面名，和 App 端
 #: `app/lib/ui_protocol/registered_pages.dart` 的 `registeredPages` 保持一致——只有
@@ -47,10 +51,21 @@ def _validate_call_operation(params: Mapping[str, Any]) -> bool:
 
 
 def _accept_any_params(params: Mapping[str, Any]) -> bool:
-    # 存进口味/应用改动/这次不用/以后别这样：这张票只登记名字，参数格式留给实现
-    # 处理器的子 SPEC（#82 起）按业务需要再收紧，见 App 端
+    # 存进口味/应用改动：还没有实现处理器的子 SPEC 接手，先只登记名字，见 App 端
     # `intent_registry.dart` 里同样的说明。
     return True
+
+
+def _validate_source_feedback(params: Mapping[str, Any]) -> bool:
+    # 这次不用/以后别这样（SPEC-009.1 #82 收紧）：两个意图共用同一套参数格式——
+    # `component_id`（这份页面描述里的组件实例 ID）和 `source_type`（登记过的来源
+    # 类型之一），和 `WhyPanelOpenedContentV1`/`SourceFeedbackContentV1`
+    # （`gramtree.events.registry`）要求的字段对应，App 端 `intent_registry.dart`
+    # 的 `_validateSourceFeedback` 是同一套校验。
+    return (
+        _require_non_empty_string(params, "component_id")
+        and params.get("source_type") in _SOURCE_TYPES
+    )
 
 
 @dataclass(frozen=True)
@@ -66,8 +81,8 @@ ITEMS: tuple[ActionSpec, ...] = (
     ActionSpec("call_operation", _validate_call_operation),
     ActionSpec("save_to_taste", _accept_any_params),
     ActionSpec("apply_change", _accept_any_params),
-    ActionSpec("skip_this_time", _accept_any_params),
-    ActionSpec("dont_do_again", _accept_any_params),
+    ActionSpec("skip_this_time", _validate_source_feedback),
+    ActionSpec("dont_do_again", _validate_source_feedback),
 )
 
 BY_INTENT: dict[str, ActionSpec] = {item.intent: item for item in ITEMS}

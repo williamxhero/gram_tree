@@ -407,6 +407,8 @@ void main() {
       'lib/ui_protocol/components/text_block_component.dart',
       'lib/ui_protocol/components/list_component.dart',
       'lib/ui_protocol/components/empty_state_component.dart',
+      'lib/ui_protocol/components/source_demo_component.dart',
+      'lib/ui_protocol/source_mark.dart',
     ];
     for (final path in files) {
       final content = File(path).readAsStringSync();

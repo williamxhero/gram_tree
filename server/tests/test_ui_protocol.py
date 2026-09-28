@@ -3,6 +3,7 @@
 票 2（#78）：每次组合都写一条“组合展示”事件，见文件末尾 `# —— 票 2 ——`。
 """
 
+import json
 import uuid
 
 import pytest
@@ -18,7 +19,7 @@ from gramtree.ui_protocol import page_types, schema_validation, service, validat
 from tests.accounts_support import Api, bearer
 from tests.test_conventions import assert_error_shape
 
-ALL_COMPONENTS = ["hint_bar", "empty_state"]
+ALL_COMPONENTS = ["hint_bar", "empty_state", "source_demo"]
 
 
 def _compose(api: Api, tokens: dict, **overrides: object) -> Response:
@@ -431,12 +432,89 @@ def test_action_registry_validates_params_per_intent() -> None:
 
 
 def test_action_registry_defers_param_shape_for_not_yet_implemented_intents() -> None:
-    """存进口味/应用改动/这次不用/以后别这样：这张票只登记名字，参数格式留给实现
-    处理器的子 SPEC 收紧，这里先只要求已登记。"""
-    for intent in (
-        "save_to_taste",
-        "apply_change",
-        "skip_this_time",
-        "dont_do_again",
-    ):
+    """存进口味/应用改动：还没有实现处理器的子 SPEC 接手，先只要求已登记。"""
+    for intent in ("save_to_taste", "apply_change"):
         assert actions_registry.is_valid_action(intent, {"anything": 1}) is True
+
+
+# —— 票 6（#82）：来源标记与"为什么"面板 ——
+
+
+def test_action_registry_source_feedback_intents_require_component_and_source_type() -> None:
+    """这次不用/以后别这样：SPEC-009.1 #82 收紧参数格式——`component_id` 和已登记的
+    `source_type` 都要有，任意 params 不再算合法（和 App 端
+    `intent_registry.dart` 的 `_validateSourceFeedback` 同一套规则）。"""
+    for intent in ("skip_this_time", "dont_do_again"):
+        assert (
+            actions_registry.is_valid_action(
+                intent, {"component_id": "c3", "source_type": "taste_adjusted"}
+            )
+            is True
+        )
+        assert actions_registry.is_valid_action(intent, {"anything": 1}) is False
+        assert actions_registry.is_valid_action(intent, {"component_id": "c3"}) is False
+        assert (
+            actions_registry.is_valid_action(
+                intent, {"component_id": "c3", "source_type": "not_a_real_type"}
+            )
+            is False
+        )
+
+
+def _skip_adjustment(api: Api, tokens: dict, component_id: str) -> Response:
+    return api.client.post(
+        "/v1/ui/compositions/skip-adjustment",
+        json={"component_id": component_id},
+        headers=bearer(tokens),
+    )
+
+
+def test_default_composition_source_demo_component_carries_source_type_and_basis(
+    api: Api,
+) -> None:
+    tokens = api.login("cook@example.com")
+    body = _compose(api, tokens).json()
+    demo = next(c for c in body["components"] if c["type"] == "source_demo")
+    source = demo["data"]["source"]
+    assert source["source_type"] == "taste_adjusted"
+    assert source["original_value"]
+    basis = source["basis"]
+    assert basis["reason_code"]
+    assert basis["text"]
+    # 依据只用等级、日期这类用户看得懂的信息，不含内部分数或精确统计（SPEC-010
+    # 开放边界，#82 明确要求）——这里只做一个粗略的字面检查：不出现看起来像内部分数
+    # 字段名的词。
+    forbidden = ("score", "probability", "weight", "confidence")
+    haystack = json.dumps(basis, ensure_ascii=False).lower()
+    for word in forbidden:
+        assert word not in haystack
+
+
+def test_skip_adjustment_returns_result_without_the_taste_adjustment(api: Api) -> None:
+    tokens = api.login("cook@example.com")
+    composed = _compose(api, tokens).json()
+    demo = next(c for c in composed["components"] if c["type"] == "source_demo")
+    component_id = demo["id"]
+    adjusted_value = demo["data"]["source"]["value"]
+    original_value = demo["data"]["source"]["original_value"]
+
+    resp = _skip_adjustment(api, tokens, component_id)
+    assert resp.status_code == 200, resp.text
+    result = resp.json()
+    assert result["component_id"] == component_id
+    # 去掉这条调整后退回原值，只影响这次查看：不是原来那个换算后的值。
+    assert result["source"]["value"] == original_value
+    assert result["source"]["value"] != adjusted_value
+    assert result["source"]["source_type"] != "taste_adjusted"
+
+
+def test_skip_adjustment_unknown_component_returns_404(api: Api) -> None:
+    tokens = api.login("cook@example.com")
+    resp = _skip_adjustment(api, tokens, "no-such-component")
+    error = assert_error_shape(resp, 404, "unknown_component")
+    assert error["message"]
+
+
+def test_skip_adjustment_without_login_returns_401(client: TestClient) -> None:
+    resp = client.post("/v1/ui/compositions/skip-adjustment", json={"component_id": "c3"})
+    assert_error_shape(resp, 401, "unauthorized")

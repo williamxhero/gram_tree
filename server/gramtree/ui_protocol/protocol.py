@@ -13,6 +13,7 @@ from typing import Any, Literal
 from pydantic import BaseModel, Field
 
 from gramtree.core.time import Timestamp
+from gramtree.events.registry import SourceType
 
 DetailLevel = Literal["brief", "standard", "detailed"]
 
@@ -74,3 +75,46 @@ class PageDescription(BaseModel):
         description="非空表示这份描述是标准布局兜底，components 为空数组",
     )
     components: list[ComponentDescriptor] = Field(default_factory=list)
+
+
+# —— SPEC-009.1 #82：来源标记与"为什么"面板 ——
+#
+# `SourcedValue` 是协议里"带来源的字段"这个通用形状：任何组件的 `data` 要给一个数值/
+# 内容标来源时都照这个形状加字段（`SourceType` 取值见 CLAUDE.md 第 6 节 UI 规范/
+# `gramtree.events.registry`）。这份 Schema 校验（App 端）不走这个 Pydantic 类型，走
+# `contracts/ui_protocol/schema/1.0/components/source_demo.schema.json` 里同样形状的
+# `source` 字段定义（两份定义都对应同一个形状，出现分歧时以 Schema 校验为准，见
+# 文件顶部说明）——这里只有 `source_demo` 这一个组件用它，本子 SPEC 还没有真实的
+# 换算内容，先用这一个测试专用组件驱动整条链路，见 `service.py` 的
+# `_source_demo_component`。
+
+
+class SourceBasis(BaseModel):
+    """依据：只用等级、日期这类用户看得懂的信息，不含内部分数或精确统计
+    （SPEC-010 开放边界，#82 明确要求）。"""
+
+    reason_code: str = Field(description="理由代码，供程序判断用")
+    text: str = Field(description="一句大白话说明")
+    citation: str | None = Field(
+        default=None, description="来源引用，例如记录日期、口味档案变更、菜谱原文"
+    )
+
+
+class SourcedValue(BaseModel):
+    source_type: SourceType
+    value: str
+    original_value: str | None = Field(
+        default=None, description="换算/调整前的原值，只有真的发生换算/调整时才有"
+    )
+    basis: SourceBasis
+
+
+class SkipAdjustmentRequest(BaseModel):
+    component_id: str = Field(description="要去掉来源调整的组件实例 ID")
+
+
+class SkipAdjustmentResult(BaseModel):
+    """ "这次不用"的返回：去掉这条调整后的来源字段，只影响这次查看，不写口味档案。"""
+
+    component_id: str
+    source: SourcedValue

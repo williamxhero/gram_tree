@@ -77,13 +77,8 @@ void main() {
       );
     });
 
-    test('存进口味/应用改动/这次不用/以后别这样先只登记名字和参数格式，处理器留给以后', () {
-      for (final intent in [
-        'save_to_taste',
-        'apply_change',
-        'skip_this_time',
-        'dont_do_again',
-      ]) {
+    test('存进口味/应用改动先只登记名字和参数格式，处理器留给以后', () {
+      for (final intent in ['save_to_taste', 'apply_change']) {
         expect(
           defaultIntentRegistry.isRegistered(intent),
           isTrue,
@@ -98,6 +93,42 @@ void main() {
           defaultIntentRegistry[intent]!.handler,
           isNull,
           reason: '$intent 的处理器留给以后的子 SPEC 补',
+        );
+      }
+    });
+
+    test('这次不用/以后别这样（SPEC-009.1 #82）要求 component_id 和已登记的 source_type', () {
+      for (final intent in ['skip_this_time', 'dont_do_again']) {
+        expect(
+          defaultIntentRegistry.isValidAction(intent, {
+            'component_id': 'c3',
+            'source_type': 'taste_adjusted',
+          }),
+          isTrue,
+          reason: intent,
+        );
+        expect(
+          defaultIntentRegistry.isValidAction(intent, {'anything': 1}),
+          isFalse,
+          reason: '$intent 缺 component_id/source_type',
+        );
+        expect(
+          defaultIntentRegistry.isValidAction(intent, {'component_id': 'c3'}),
+          isFalse,
+          reason: '$intent 缺 source_type',
+        );
+        expect(
+          defaultIntentRegistry.isValidAction(intent, {
+            'component_id': 'c3',
+            'source_type': 'not_a_real_type',
+          }),
+          isFalse,
+          reason: '$intent 的 source_type 不是已登记的来源类型',
+        );
+        expect(
+          defaultIntentRegistry[intent]!.handler,
+          isNotNull,
+          reason: '$intent 的处理器由 #82 实现',
         );
       }
     });
