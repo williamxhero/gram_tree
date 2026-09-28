@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:gramtree_api/gramtree_api.dart';
 
 import '../../l10n/app_localizations.dart';
 import '../../ui_protocol/composition_view.dart';
@@ -13,6 +12,10 @@ import '../tab_paths.dart';
 /// 看起来一样（完整的兜底原因记录、超时时限见 #79，机制说明见
 /// `composition_view.dart` 的 `CompositionView` 文档注释——这是"新页面类型怎么配
 /// 标准布局"的样板，以后加页面类型照这个写）。
+///
+/// 组件上的动作（比如提示条点整条跳到新建页）统一派发给意图登记表
+/// （SPEC-009.1 #81，见 `composition_view.dart`/`intent_dispatcher.dart`），页面
+/// 自己不用再写 `_handleAction`。
 class TodayPage extends StatelessWidget {
   const TodayPage({super.key});
 
@@ -21,20 +24,10 @@ class TodayPage extends StatelessWidget {
     return TabPage(
       child: CompositionView(
         pageType: 'today',
-        onAction: (action) => _handleAction(context, action),
         standardLayoutBuilder: (context) => const _StandardTodayLayout(),
       ),
     );
   }
-}
-
-/// 组件上的动作只能是 App 已登记的意图；完整的意图登记表和统一派发入口在
-/// SPEC-009.1 #81，这里先只处理“今天”页目前唯一用得到的 open_page。
-void _handleAction(BuildContext context, ActionDescriptor action) {
-  if (action.intent != 'open_page') return;
-  final params = action.params;
-  final page = params is Map ? params['page'] as String? : null;
-  if (page == 'create') context.go(TabPaths.create);
 }
 
 class _StandardTodayLayout extends StatelessWidget {

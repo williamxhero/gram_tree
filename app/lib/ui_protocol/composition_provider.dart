@@ -14,6 +14,7 @@ import '../api/api_client.dart';
 import '../events/event_recorder.dart';
 import '../features_flags/features.dart';
 import 'component_registry.dart';
+import 'intent_registry.dart';
 import 'page_types.dart';
 import 'protocol_paths.dart';
 import 'protocol_schemas.dart';
@@ -72,11 +73,18 @@ final compositionProvider = FutureProvider.family<CompositionResult, String>(
 /// 未登记组件、协议大版本这类语义校验要照共用的 Schema 文件走。
 ///
 /// SPEC-009.1 #79：以下情况都整页退回标准布局，并各自带上结构化的兜底原因代码——
-/// 协议大版本不认识、信封结构不合法（含动作格式不对，即“未登记的动作”目前唯一覆盖
-/// 的范围，真正的意图登记表是 #81 的事）、组件类型没登记过、组件数据不合法、缺应有的
-/// 必显组件、请求本身出错（网络/服务端报错）、等待超过配置的时限。判断顺序和服务端
-/// `gramtree.ui_protocol.validation.classify_invalid_description` 保持一致，两边对
-/// 同一份 `samples/invalid/` 样例的判定才会一样。
+/// 协议大版本不认识、信封结构不合法（含动作格式不对）、组件类型没登记过、组件数据
+/// 不合法、缺应有的必显组件、请求本身出错（网络/服务端报错）、等待超过配置的时限。
+/// 判断顺序和服务端 `gramtree.ui_protocol.validation.classify_invalid_description`
+/// 保持一致，两边对同一份 `samples/invalid/` 样例的判定才会一样。
+///
+/// SPEC-009.1 #81：在"信封结构合不合法"之外，这里还多一层"意图是不是已登记、参数
+/// 格式对不对"的语义校验（[IntentRegistry.isValidAction]）——协议信封 Schema 只
+/// 保证 `actions[].intent`/`actions[].params` 这两个字段本身的结构（字符串、对象）
+/// 合法，未登记的意图名（例如服务端 bug 下发了一个 App 不认识的意图）、已登记意图但
+/// 参数格式不对（比如 `open_page` 缺 `page`）、`open_page` 想跳到一个没登记过的页面
+/// （含任意网址）都在这一层被识别成非法动作，同样按 `illegal_action` 整页退回标准
+/// 布局。
 Future<CompositionResult> fetchComposition(
   Ref ref, {
   required String pageType,
@@ -162,6 +170,7 @@ Future<CompositionResult> fetchComposition(
     );
   }
 
+  final intentRegistry = ref.read(intentRegistryProvider);
   final components = raw['components'] as List<dynamic>? ?? const [];
   for (final entry in components) {
     final component = entry as Map<String, dynamic>;
@@ -183,6 +192,23 @@ Future<CompositionResult> fetchComposition(
         FallbackInfoReasonCodeEnum.invalidData,
         compositionId: compositionId,
       );
+    }
+    // SPEC-009.1 #81：信封 Schema 只校验了 actions 的结构，这里再校验语义——每个
+    // 动作的意图名必须已登记、参数必须符合这个意图的格式（未登记意图、参数格式错、
+    // open_page 跳到未登记页面/任意网址都在这一步被挡下）。
+    final actions = component['actions'] as List<dynamic>? ?? const [];
+    for (final actionEntry in actions) {
+      final action = actionEntry as Map<String, dynamic>;
+      final intent = action['intent'] as String?;
+      final params = action['params'] as Map<String, dynamic>? ?? const {};
+      if (intent == null || !intentRegistry.isValidAction(intent, params)) {
+        return _fail(
+          ref,
+          pageType,
+          FallbackInfoReasonCodeEnum.illegalAction,
+          compositionId: compositionId,
+        );
+      }
     }
   }
 

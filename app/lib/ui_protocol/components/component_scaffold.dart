@@ -3,7 +3,7 @@ import 'package:gramtree_api/gramtree_api.dart';
 
 import '../../app/theme.dart';
 import '../component_registry.dart';
-import '../intent_labels.dart';
+import '../intent_registry.dart';
 
 /// SPEC-009.1 #80：通用组件共用的"结论/依据/明细"三层骨架。业务组件以后按同一份
 /// 骨架接数据；来源标记和真正的"为什么"面板在 #82 做——这里的依据在"标准"档只是
