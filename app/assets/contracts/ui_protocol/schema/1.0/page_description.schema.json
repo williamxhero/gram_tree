@@ -2,9 +2,9 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://gramtree.app/contracts/ui_protocol/1.0/page_description.schema.json",
   "title": "GramTree 页面描述协议 1.0",
-  "description": "服务端组合模块下发、App 渲染前都要校验的页面描述信封。这份文件是协议的唯一来源（server 和 app 都从这里读，不各写一份）。每个组件的 `data` 字段在这里只校验成一个对象；具体到某个组件类型的数据格式，由 contracts/ui_protocol/schema/1.0/components/<type>.schema.json 分别定义，渲染方（App）按 `type` 查到对应组件登记项后再校验一次 `data`（SPEC-009.1 #77）。",
+  "description": "服务端组合模块下发、App 渲染前都要校验的页面描述信封。这份文件是协议的唯一来源（server 和 app 都从这里读，不各写一份）。每个组件的 `data` 字段在这里只校验成一个对象；具体到某个组件类型的数据格式，由 contracts/ui_protocol/schema/1.0/components/<type>.schema.json 分别定义，渲染方（App）按 `type` 查到对应组件登记项后再校验一次 `data`（SPEC-009.1 #77）。\n\n小版本兼容（SPEC-009.1 #79）：这份信封 Schema 里每一层都是 `additionalProperties: true`——同一大版本下服务端可以随时加一个 App 还不认识的新字段，App 照常渲染，不算校验失败；`required` 列的字段、每个字段的类型/格式/枚举取值仍然强制校验。真正决定“这个组件类型/这个动作 App 认不认识”的是登记表（`components.py`/`component_registry.dart`、以后 #81 的意图登记表），不是这份 Schema——未登记的组件类型在这里仍然只是个普通字符串，校验通过，由渲染方拿到 `type` 之后自己按登记表拒绝；这是有意为之，“多字段要容忍”和“未登记组件要拒绝”是两条不同的规则，不要混在 Schema 的 additionalProperties 里。",
   "type": "object",
-  "additionalProperties": false,
+  "additionalProperties": true,
   "required": [
     "protocol",
     "page_type",
@@ -36,7 +36,7 @@
     },
     "cache": {
       "type": "object",
-      "additionalProperties": false,
+      "additionalProperties": true,
       "required": ["depends_on", "ttl_s"],
       "properties": {
         "depends_on": {
@@ -57,7 +57,7 @@
         { "type": "null" },
         {
           "type": "object",
-          "additionalProperties": false,
+          "additionalProperties": true,
           "required": ["experiment", "variant"],
           "properties": {
             "experiment": { "type": "string", "minLength": 1 },
@@ -72,7 +72,7 @@
         { "type": "null" },
         {
           "type": "object",
-          "additionalProperties": false,
+          "additionalProperties": true,
           "required": ["reason_code"],
           "properties": {
             "reason_code": {
@@ -100,7 +100,7 @@
   "$defs": {
     "component": {
       "type": "object",
-      "additionalProperties": false,
+      "additionalProperties": true,
       "required": ["type", "id", "detail", "data", "actions", "reason", "required"],
       "properties": {
         "type": {
@@ -128,7 +128,7 @@
         },
         "reason": {
           "type": "object",
-          "additionalProperties": false,
+          "additionalProperties": true,
           "required": ["code", "text"],
           "properties": {
             "code": { "type": "string", "minLength": 1 },
@@ -144,7 +144,7 @@
     },
     "action": {
       "type": "object",
-      "additionalProperties": false,
+      "additionalProperties": true,
       "required": ["intent", "params"],
       "properties": {
         "intent": {

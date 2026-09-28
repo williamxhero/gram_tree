@@ -40,27 +40,55 @@ class ProtocolSchemas {
           .map((e) => ProtocolValidationIssue(e.instancePath, e.message))
           .toList();
 
+  /// 把协议版本号（例如 "1.7"）映射到信封 Schema 目录名（例如 "1.0"）：每个大版本
+  /// 一个 `<major>.0` 起点目录，小版本增量不新建目录，和服务端
+  /// `gramtree.ui_protocol.schema_validation.resolve_schema_major_dir` 保持一致
+  /// （SPEC-009.1 #79，见 docs/adr/0005）。格式不对，或者这个大版本压根没有内嵌的
+  /// Schema 目录时返回 `null`，调用方按"不认识的大版本"处理。
+  String? resolveMajorDir(String protocol) {
+    final parts = protocol.split('.');
+    if (parts.length != 2) return null;
+    if (int.tryParse(parts[0]) == null || int.tryParse(parts[1]) == null) {
+      return null;
+    }
+    final majorDir = '${parts[0]}.0';
+    return embeddedUiProtocolSchemas.containsKey(
+          pageDescriptionSchemaAsset(majorDir),
+        )
+        ? majorDir
+        : null;
+  }
+
   /// 校验整份页面描述是否符合协议信封 Schema。返回的列表为空表示合法。
+  ///
+  /// [protocol] 是描述自己带的版本号（例如 "1.7"），不是目录名；这里先按
+  /// [resolveMajorDir] 换算成对应大版本起点目录的 Schema 再校验，同一大版本下的
+  /// 小版本增量因此照常通过校验（小版本兼容，SPEC-009.1 #79）。
   Future<List<ProtocolValidationIssue>> validatePageDescription(
-    String protocolMajor,
+    String protocol,
     Map<String, dynamic> description,
   ) async {
-    final schema = _requireSchema(pageDescriptionSchemaAsset(protocolMajor));
-    if (schema == null) {
-      return [ProtocolValidationIssue('', '不认识的协议版本 "$protocolMajor"')];
+    final majorDir = resolveMajorDir(protocol);
+    if (majorDir == null) {
+      return [ProtocolValidationIssue('', '不认识的协议版本 "$protocol"')];
     }
+    final schema = _load(pageDescriptionSchemaAsset(majorDir));
     return _toIssues(schema.validate(description).errors);
   }
 
   /// 校验一个组件的 `data` 是否符合该组件类型登记的 Schema。
   /// 没有登记过这个组件类型（没有对应 Schema）时也算不合法。
   Future<List<ProtocolValidationIssue>> validateComponentData(
-    String protocolMajor,
+    String protocol,
     String componentType,
     Map<String, dynamic> data,
   ) async {
+    final majorDir = resolveMajorDir(protocol);
+    if (majorDir == null) {
+      return [ProtocolValidationIssue('', '不认识的协议版本 "$protocol"')];
+    }
     final schema = _requireSchema(
-      componentSchemaAsset(protocolMajor, componentType),
+      componentSchemaAsset(majorDir, componentType),
     );
     if (schema == null) {
       return [

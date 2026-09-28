@@ -13,6 +13,8 @@ from gramtree.ui_protocol.protocol import (
     CacheInfo,
     ComponentDescriptor,
     ComponentReason,
+    FallbackInfo,
+    FallbackReasonCode,
     PageDescription,
 )
 
@@ -63,3 +65,21 @@ COMPOSERS: dict[str, Callable[[set[str]], PageDescription]] = {
 
 def compose(page_type: str, supported_components: set[str]) -> PageDescription:
     return COMPOSERS[page_type](supported_components)
+
+
+def build_fallback_description(page_type: str, reason_code: FallbackReasonCode) -> PageDescription:
+    """出任何问题（协议大版本不认识、未登记组件、数据不合格、缺必显组件、服务端报错、
+    超时）时整页改用标准布局，服务端下发的就是这份占位描述：`components` 为空数组，
+    `fallback.reason_code` 说明原因（SPEC-009.1 #79）。App 收到 `fallback` 非空的描述
+    时不渲染 `components`（反正是空的），直接显示写在 App 里的标准布局，两边看起来
+    一样，不会因为服务端"没内容"和"出问题"两种情况显示不同的东西。"""
+    return PageDescription(
+        protocol=PROTOCOL_VERSION,
+        page_type=page_type,
+        composition_id=uuid4(),
+        generated_at=utcnow(),
+        cache=CacheInfo(depends_on={}, ttl_s=0),
+        experiment=None,
+        fallback=FallbackInfo(reason_code=reason_code),
+        components=[],
+    )

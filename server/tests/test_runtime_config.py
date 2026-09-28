@@ -15,6 +15,26 @@ def test_client_config_defaults(client: TestClient) -> None:
     }
     # 运维类配置不下发给 App
     assert not any(key.startswith("ops.") for key in body["params"])
+    # SPEC-009.1 #79：等待组合接口的时限，初始 800 毫秒，经这个接口下发给 App
+    assert body["params"]["ui.composition_timeout_ms"] == 800
+
+
+def test_composition_timeout_change_takes_effect_immediately(client: TestClient) -> None:
+    rc = cli(
+        [
+            "config",
+            "set",
+            "ui.composition_timeout_ms",
+            "1500",
+            "--by",
+            "yosef",
+            "--reason",
+            "临时调大超时时限",
+        ]
+    )
+    assert rc == 0
+    body = client.get("/v1/client-config").json()
+    assert body["params"]["ui.composition_timeout_ms"] == 1500
 
 
 def test_feature_flag_change_takes_effect_immediately(client: TestClient) -> None:

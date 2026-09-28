@@ -39,6 +39,20 @@ def _load_validator(schema_path: Path) -> Draft202012Validator:
     return Draft202012Validator(schema)
 
 
+def resolve_schema_major_dir(protocol: str) -> str | None:
+    """协议版本号（例如 "1.3"）映射到信封 Schema 目录名（例如 "1.0"）：每个大版本一个
+    "<major>.0" 起点目录，小版本增量不新建目录（见 docs/adr/0005）。格式不对（不是
+    "整数.整数"）或者这个大版本压根没有对应目录时返回 `None`，调用方按"不认识的大版本"
+    （`unknown_major`，SPEC-009.1 #79）处理。"""
+    parts = protocol.split(".")
+    if len(parts) != 2 or not parts[0].isdigit() or not parts[1].isdigit():
+        return None
+    major_dir = f"{parts[0]}.0"
+    if not (SCHEMA_ROOT / major_dir).is_dir():
+        return None
+    return major_dir
+
+
 def page_description_schema_path(protocol_major: str) -> Path:
     """`protocol_major` 例如 "1.0"（协议信封 Schema 目前按大版本起点建目录）。"""
     return SCHEMA_ROOT / protocol_major / "page_description.schema.json"

@@ -9,8 +9,10 @@ import '../../widgets/tab_page.dart';
 import '../tab_paths.dart';
 
 /// “今天”页由服务端的默认组合下发（SPEC-009.1 #77），标准布局
-/// （[_StandardTodayLayout]）在组合不合法、请求出错或还没返回时顶上，两者看起来
-/// 一样。完整的兜底原因记录、超时时限在 #79 补上。
+/// （[_StandardTodayLayout]）在组合不合法、请求出错、等待超时或还没返回时顶上，两者
+/// 看起来一样（完整的兜底原因记录、超时时限见 #79，机制说明见
+/// `composition_view.dart` 的 `CompositionView` 文档注释——这是"新页面类型怎么配
+/// 标准布局"的样板，以后加页面类型照这个写）。
 class TodayPage extends StatelessWidget {
   const TodayPage({super.key});
 

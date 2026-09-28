@@ -111,6 +111,17 @@ ITEMS: tuple[ConfigItem, ...] = (
         minimum=1,
         maximum=30,
     ),
+    # —— 界面描述协议（SPEC-009.1） ——
+    ConfigItem(
+        "ui.composition_timeout_ms",
+        "int",
+        800,
+        "App 等 POST /v1/ui/compositions 返回的时限（毫秒），超过就先显示写在 App 里"
+        "的标准布局，不一直转圈；出任何问题都不能卡住做饭",
+        minimum=100,
+        maximum=10_000,
+        public=True,
+    ),
     # —— 能力开关：关闭时 App 里对应入口不出现（SPEC-009） ——
     ConfigItem(
         "feature.evolution_tree",

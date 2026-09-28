@@ -1,0 +1,19 @@
+{
+  "protocol": "1.0",
+  "page_type": "today",
+  "composition_id": "00000000-0000-4000-8000-000000000001",
+  "generated_at": "2026-09-28T10:30:00Z",
+  "cache": { "depends_on": { "plan": "v0" }, "ttl_s": 600 },
+  "experiment": null,
+  "components": [
+    {
+      "type": "mystery_widget",
+      "id": "x1",
+      "detail": "brief",
+      "data": {},
+      "actions": [],
+      "reason": { "code": "default", "text": "默认组合" },
+      "required": false
+    }
+  ]
+}

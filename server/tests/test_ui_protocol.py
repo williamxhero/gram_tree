@@ -5,6 +5,7 @@
 
 import uuid
 
+import pytest
 from fastapi.testclient import TestClient
 from httpx import Response
 from sqlalchemy.engine import Engine
@@ -12,7 +13,7 @@ from sqlalchemy.orm import Session
 
 from gramtree.events.models import Event
 from gramtree.events.registry import BY_KEY, is_registered
-from gramtree.ui_protocol import schema_validation
+from gramtree.ui_protocol import page_types, schema_validation, service, validation
 from tests.accounts_support import Api, bearer
 from tests.test_conventions import assert_error_shape
 
@@ -259,3 +260,124 @@ def test_source_feedback_event_accepts_valid_content_and_rejects_bad_feedback(
     result = resp.json()["results"][0]
     assert result["status"] == "rejected"
     assert result["reason"]["code"] == "invalid_content"
+
+
+# —— 票 3（#79）：标准布局兜底、超时和必显内容 ——
+
+# 样例文件名 -> 期望的兜底原因代码。missing_required_component.json 不在这里：它本身
+# 是 Schema 合法的描述，是不是不合法要看当时的页面类型规格是否要求必显组件（见
+# app/assets/contracts/ui_protocol/README.md），单独测试。
+INVALID_SAMPLE_REASONS = {
+    "unknown_component.json": "unknown_component",
+    "missing_field.json": "invalid_data",
+    "illegal_action.json": "illegal_action",
+    "unknown_major.json": "unknown_major",
+}
+
+
+def test_resolve_schema_major_dir() -> None:
+    assert schema_validation.resolve_schema_major_dir("1.0") == "1.0"
+    # 小版本兼容：同一大版本的更高小版本号映射到同一个起点目录
+    assert schema_validation.resolve_schema_major_dir("1.7") == "1.0"
+    # 没有对应目录的大版本、格式不对的版本号都视为“不认识的大版本”
+    assert schema_validation.resolve_schema_major_dir("9.9") is None
+    assert schema_validation.resolve_schema_major_dir("not-a-version") is None
+
+
+def test_shared_invalid_samples_are_classified_with_expected_reason() -> None:
+    for filename, expected_reason in INVALID_SAMPLE_REASONS.items():
+        sample = schema_validation.load_sample("invalid", filename)
+        assert validation.classify_invalid_description(sample) == expected_reason, filename
+
+
+def test_shared_valid_sample_is_not_classified_as_invalid() -> None:
+    sample = schema_validation.load_sample("valid", "today_default.json")
+    assert validation.classify_invalid_description(sample) is None
+
+
+def test_envelope_tolerates_unknown_field_within_same_major_version() -> None:
+    """小版本兼容：同一大版本下出现 App 不认识的新字段时照常校验通过，不算失败。"""
+    sample = schema_validation.load_sample("valid", "today_default.json")
+    forward_compatible = {**sample, "protocol": "1.7", "future_field": "new-in-1.7"}
+    major_dir = schema_validation.resolve_schema_major_dir(forward_compatible["protocol"])
+    assert major_dir == "1.0"
+    schema_validation.validate_page_description(major_dir, forward_compatible)
+    assert validation.classify_invalid_description(forward_compatible) is None
+
+
+def test_missing_required_component_sample_is_valid_when_nothing_requires_it() -> None:
+    """`missing_required_component.json` 本身 Schema 合法；`today` 目前没有必显组件
+    要求时它不算不合法——机制本身在下一个测试里用临时注册验证。"""
+    sample = schema_validation.load_sample("invalid", "missing_required_component.json")
+    assert validation.classify_invalid_description(sample) is None
+
+
+def test_missing_required_component_detected_once_a_page_type_requires_it(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    sample = schema_validation.load_sample("invalid", "missing_required_component.json")
+    monkeypatch.setitem(
+        page_types.BY_PAGE_TYPE,
+        "today",
+        page_types.PageTypeSpec("today", required_component_types=("hint_bar",)),
+    )
+    assert validation.classify_invalid_description(sample) == "missing_required"
+
+
+def test_compose_falls_back_to_standard_layout_when_composer_raises(
+    api: Api, engine: Engine, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    tokens = api.login("cook@example.com")
+
+    def boom(supported_components: set[str]) -> None:
+        raise RuntimeError("组合模块炸了")
+
+    monkeypatch.setitem(service.COMPOSERS, "today", boom)
+
+    resp = _compose(api, tokens)
+    assert resp.status_code == 200, resp.text
+    body = resp.json()
+    assert body["components"] == []
+    assert body["fallback"] == {"reason_code": "server_error"}
+
+    events = _composition_events(engine)
+    assert len(events) == 1
+    assert events[0].content["is_fallback"] is True
+    assert events[0].content["fallback_reason"] == "server_error"
+    assert events[0].content["components"] == []
+
+
+def test_compose_falls_back_to_standard_layout_when_a_required_component_is_missing(
+    api: Api, engine: Engine, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """组合结果不合格（这里是缺必显组件）时不下发，改为返回可识别的兜底响应，并留下
+    可查的记录（SPEC-009.1 #79）。`today` 默认组合里两个组件都不是必显组件
+    （`required: false`），所以只要临时给 `today` 注册一个必显组件类型，默认组合
+    就一定会缺它。"""
+    tokens = api.login("cook@example.com")
+    monkeypatch.setitem(
+        page_types.BY_PAGE_TYPE,
+        "today",
+        page_types.PageTypeSpec("today", required_component_types=("hint_bar",)),
+    )
+
+    resp = _compose(api, tokens)
+    assert resp.status_code == 200, resp.text
+    body = resp.json()
+    assert body["components"] == []
+    assert body["fallback"] == {"reason_code": "missing_required"}
+
+    events = _composition_events(engine)
+    assert len(events) == 1
+    assert events[0].content["is_fallback"] is True
+    assert events[0].content["fallback_reason"] == "missing_required"
+
+
+def test_compose_default_result_is_not_flagged_as_fallback(api: Api, engine: Engine) -> None:
+    tokens = api.login("cook@example.com")
+    body = _compose(api, tokens).json()
+    assert body.get("fallback") is None
+
+    events = _composition_events(engine)
+    assert events[0].content["is_fallback"] is False
+    assert events[0].content["fallback_reason"] is None

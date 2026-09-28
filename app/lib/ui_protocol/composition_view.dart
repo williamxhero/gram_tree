@@ -6,8 +6,20 @@ import 'component_registry.dart';
 import 'composition_provider.dart';
 
 /// 渲染服务端下发的一份页面描述：按组件登记表把每个组件类型映射成 widget，按顺序
-/// 排列。合法结果和标准布局用同一个入口显示，不合法/请求出错时先退回
-/// [standardLayoutBuilder]（完整的超时、兜底原因记录见 SPEC-009.1 #79）。
+/// 排列。合法结果和标准布局用同一个入口显示，不合法/请求出错/等待超时时先退回
+/// [standardLayoutBuilder]（完整的超时、兜底原因记录见 SPEC-009.1 #79，判断逻辑在
+/// `composition_provider.dart` 的 `fetchComposition`）。
+///
+/// **新页面类型怎么配标准布局（SPEC-009.1 #79 定的统一方式，照抄 `today_page.dart`
+/// 就行）**：
+/// 1. 页面自己的标准布局写成一个私有 widget（例如 `_StandardXxxLayout`），只调用
+///    普通数据接口，不依赖组合服务——这是"出任何问题都不能卡住做饭"的底线，标准布局
+///    必须独立于组合服务能不能用。
+/// 2. 页面 widget 里用 [CompositionView] 包一层，`pageType` 填这个页面类型的名字，
+///    `standardLayoutBuilder` 传一个返回上面那个私有 widget 的 [WidgetBuilder]。
+/// 3. 如果这个页面类型有必显组件要求，去 `page_types.dart` 的
+///    `defaultRequiredComponentTypes` 里加一项（和服务端 `page_types.py` 的
+///    `ITEMS` 对应）；没有就不用加。
 class CompositionView extends ConsumerWidget {
   const CompositionView({
     super.key,
@@ -17,6 +29,10 @@ class CompositionView extends ConsumerWidget {
   });
 
   final String pageType;
+
+  /// 这个页面类型的标准布局。加载中、请求出错、等待超时、协议或数据不合法、缺必显
+  /// 组件时都会显示它——所有这些情况在 App 里看起来完全一样，不区分"为什么"，用户
+  /// 只看到"和平时一样能做菜"。
   final WidgetBuilder standardLayoutBuilder;
   final void Function(ActionDescriptor action) onAction;
 

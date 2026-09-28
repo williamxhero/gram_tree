@@ -25,6 +25,7 @@ import 'package:gram_tree/platform/timezone_source.dart';
 import 'package:gram_tree/privacy/policy.dart';
 import 'package:gram_tree/storage/local_store.dart';
 import 'package:gram_tree/storage/secure_store.dart';
+import 'package:gram_tree/ui_protocol/page_types.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
 
 /// 页面测试共用的启动和操作方法。
@@ -442,6 +443,8 @@ class TestEnv {
     FakeEventReportBackend? eventReports,
     this.timezone = 'Asia/Shanghai',
     this.features = const {},
+    this.params = const {},
+    this.requiredComponentTypes,
   }) : server = server ?? FakeServer(),
        local = local ?? MemoryLocalStore(),
        secure = secure ?? MemorySecureStore(),
@@ -455,6 +458,8 @@ class TestEnv {
   factory TestEnv.signedIn({
     FakeServer? server,
     Map<String, bool> features = const {},
+    Map<String, Object?> params = const {},
+    Map<String, Set<String>>? requiredComponentTypes,
   }) {
     final s = server ?? FakeServer();
     return TestEnv(
@@ -462,6 +467,8 @@ class TestEnv {
       local: MemoryLocalStore(consentedStore()),
       secure: MemorySecureStore(signedInSecure(s.user)),
       features: features,
+      params: params,
+      requiredComponentTypes: requiredComponentTypes,
     );
   }
 
@@ -477,6 +484,16 @@ class TestEnv {
   final String? timezone;
   final Map<String, bool> features;
 
+  /// 覆盖 `/v1/client-config` 的 `params`（例如
+  /// `ui.composition_timeout_ms`），测试组合服务等待时限之类"App 按下发的值执行"
+  /// 的行为时用（SPEC-009.1 #79）。
+  final Map<String, Object?> params;
+
+  /// 覆盖 `requiredComponentTypesProvider`，测试"缺必显组件时整页退回标准布局"这个
+  /// 机制本身时用（SPEC-009.1 #79）；`null` 表示不覆盖，用 App 里登记的默认值
+  /// （现在都是空集合）。
+  final Map<String, Set<String>>? requiredComponentTypes;
+
   List<Override> get overrides => [
     localStoreProvider.overrideWithValue(local),
     secureStoreProvider.overrideWithValue(secure),
@@ -490,10 +507,12 @@ class TestEnv {
     eventQueueProvider.overrideWithValue(eventQueue),
     eventReportBackendProvider.overrideWithValue(eventReports),
     appVersionProvider.overrideWith((ref) async => '0.1.0-test'),
-    if (features.isNotEmpty)
+    if (features.isNotEmpty || params.isNotEmpty)
       clientConfigProvider.overrideWith(
-        (ref) async => ClientConfig(features: features, params: const {}),
+        (ref) async => ClientConfig(features: features, params: params),
       ),
+    if (requiredComponentTypes != null)
+      requiredComponentTypesProvider.overrideWithValue(requiredComponentTypes!),
   ];
 }
 
