@@ -69,6 +69,12 @@ void main() {
     'unknown_component.json': 'unknown_component',
     'missing_field.json': 'invalid_data',
     'illegal_action.json': 'illegal_action',
+    // SPEC-009.1 #81：意图是不是已登记、参数格式对不对，也在这一层被判定为
+    // illegal_action（和服务端 server/tests/test_ui_protocol.py 的
+    // INVALID_SAMPLE_REASONS 保持一致）。
+    'unregistered_intent.json': 'illegal_action',
+    'invalid_action_params.json': 'illegal_action',
+    'arbitrary_url_action.json': 'illegal_action',
     'unknown_major.json': 'unknown_major',
   };
 

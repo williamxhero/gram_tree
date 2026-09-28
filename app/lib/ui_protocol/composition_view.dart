@@ -4,6 +4,7 @@ import 'package:gramtree_api/gramtree_api.dart';
 
 import 'component_registry.dart';
 import 'composition_provider.dart';
+import 'intent_dispatcher.dart';
 
 /// 渲染服务端下发的一份页面描述：按组件登记表把每个组件类型映射成 widget，按顺序
 /// 排列。合法结果和标准布局用同一个入口显示，不合法/请求出错/等待超时时先退回
@@ -20,12 +21,16 @@ import 'composition_provider.dart';
 /// 3. 如果这个页面类型有必显组件要求，去 `page_types.dart` 的
 ///    `defaultRequiredComponentTypes` 里加一项（和服务端 `page_types.py` 的
 ///    `ITEMS` 对应）；没有就不用加。
+///
+/// 组件上的动作怎么处理不用页面自己接（SPEC-009.1 #81 起）：每个组件动作都统一
+/// 派发给 [IntentDispatcher]（`intentDispatcherProvider`），按钮、整条可点这些不同
+/// 入口触发同一个意图时因此总是调用同一个处理器、得到同样的结果，页面 widget 不用
+/// 再写自己的 `_handleAction`。
 class CompositionView extends ConsumerWidget {
   const CompositionView({
     super.key,
     required this.pageType,
     required this.standardLayoutBuilder,
-    required this.onAction,
   });
 
   final String pageType;
@@ -34,12 +39,12 @@ class CompositionView extends ConsumerWidget {
   /// 组件时都会显示它——所有这些情况在 App 里看起来完全一样，不区分"为什么"，用户
   /// 只看到"和平时一样能做菜"。
   final WidgetBuilder standardLayoutBuilder;
-  final void Function(ActionDescriptor action) onAction;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final async = ref.watch(compositionProvider(pageType));
     final effectiveRegistry = ref.watch(componentRegistryProvider);
+    final dispatcher = ref.watch(intentDispatcherProvider);
     return async.when(
       // #77 阶段还没有超时/加载态设计：静态标准布局和默认组合内容一致，加载期间
       // 先显示标准布局，不会出现闪烁或转圈。
@@ -49,7 +54,7 @@ class CompositionView extends ConsumerWidget {
         CompositionReady(:final description) => _CompositionBody(
           description: description,
           registry: effectiveRegistry,
-          onAction: onAction,
+          dispatcher: dispatcher,
         ),
         CompositionFailed() => standardLayoutBuilder(context),
       },
@@ -61,12 +66,12 @@ class _CompositionBody extends StatelessWidget {
   const _CompositionBody({
     required this.description,
     required this.registry,
-    required this.onAction,
+    required this.dispatcher,
   });
 
   final PageDescription description;
   final ComponentRegistry registry;
-  final void Function(ActionDescriptor action) onAction;
+  final IntentDispatcher dispatcher;
 
   @override
   Widget build(BuildContext context) {
@@ -100,7 +105,17 @@ class _CompositionBody extends StatelessWidget {
     ComponentDescriptor component,
     ComponentSpec spec,
   ) {
-    final child = spec.builder(context, component, spec.emptyState, onAction);
+    final child = spec.builder(
+      context,
+      component,
+      spec.emptyState,
+      (action) => dispatcher.dispatch(
+        context,
+        compositionId: description.compositionId,
+        componentId: component.id,
+        action: action,
+      ),
+    );
     return spec.fillsRemainingSpace ? Expanded(child: child) : child;
   }
 }

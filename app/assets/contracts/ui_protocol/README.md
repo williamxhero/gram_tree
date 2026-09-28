@@ -8,7 +8,15 @@
 - `samples/invalid/`：不合法的样例，文件名即错误场景（SPEC-009.1 #79 起补全）：
   - `unknown_component.json`：组件类型没有登记过（`unknown_component`）。
   - `missing_field.json`：信封缺必填字段，这里缺的是 `cache`（`invalid_data`）。
-  - `illegal_action.json`：组件的 `actions` 里缺 `intent`（`illegal_action`）。
+  - `illegal_action.json`：组件的 `actions` 里缺 `intent`，信封 Schema 结构本身就不
+    合法（`illegal_action`）。
+  - `unregistered_intent.json`：`intent` 结构合法，但不是 App/服务端登记表里的意图名
+    （`illegal_action`，SPEC-009.1 #81 起）。
+  - `invalid_action_params.json`：`intent` 已登记（`open_page`），但 `params` 缺这个
+    意图要求的字段（`open_page` 缺 `page`）（`illegal_action`，#81 起）。
+  - `arbitrary_url_action.json`：`open_page` 的 `params.page` 是一个任意网址而不是
+    App 已登记的页面名（`illegal_action`，#81 起——"打开页面"类意图只能打开已登记
+    页面，其余一律拒绝，含任意网址跳转）。
   - `unknown_major.json`：`protocol` 的大版本没有对应的 Schema 目录（`unknown_major`）。
   - `missing_required_component.json`：Schema 本身合法（`components` 就是空数组），
     是不是不合法要看当时的页面类型规格——`today` 目前没有必显组件要求，所以这份样例

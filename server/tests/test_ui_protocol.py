@@ -13,6 +13,7 @@ from sqlalchemy.orm import Session
 
 from gramtree.events.models import Event
 from gramtree.events.registry import BY_KEY, is_registered
+from gramtree.ui_protocol import actions as actions_registry
 from gramtree.ui_protocol import page_types, schema_validation, service, validation
 from tests.accounts_support import Api, bearer
 from tests.test_conventions import assert_error_shape
@@ -271,6 +272,10 @@ INVALID_SAMPLE_REASONS = {
     "unknown_component.json": "unknown_component",
     "missing_field.json": "invalid_data",
     "illegal_action.json": "illegal_action",
+    # SPEC-009.1 #81：意图是不是已登记、参数格式对不对，两边都判定成不合法。
+    "unregistered_intent.json": "illegal_action",
+    "invalid_action_params.json": "illegal_action",
+    "arbitrary_url_action.json": "illegal_action",
     "unknown_major.json": "unknown_major",
 }
 
@@ -381,3 +386,42 @@ def test_compose_default_result_is_not_flagged_as_fallback(api: Api, engine: Eng
     events = _composition_events(engine)
     assert events[0].content["is_fallback"] is False
     assert events[0].content["fallback_reason"] is None
+
+
+# —— 票 5（#81）：动作即意图 ——
+
+
+def test_action_registry_rejects_unregistered_intent() -> None:
+    assert actions_registry.is_valid_action("delete_everything", {}) is False
+
+
+def test_action_registry_open_page_only_accepts_registered_pages() -> None:
+    assert actions_registry.is_valid_action("open_page", {"page": "create"}) is True
+    assert actions_registry.is_valid_action("open_page", {}) is False
+    assert (
+        actions_registry.is_valid_action("open_page", {"page": "https://evil.example.com/steal"})
+        is False
+    )
+
+
+def test_action_registry_validates_params_per_intent() -> None:
+    assert actions_registry.is_valid_action("start_cooking", {"recipe_version_id": "rv-1"}) is True
+    assert actions_registry.is_valid_action("start_cooking", {}) is False
+    assert (
+        actions_registry.is_valid_action("open_record_card", {"cooking_record_id": "cr-1"}) is True
+    )
+    assert actions_registry.is_valid_action("open_record_card", {}) is False
+    assert actions_registry.is_valid_action("call_operation", {"operation": "op-1"}) is True
+    assert actions_registry.is_valid_action("call_operation", {}) is False
+
+
+def test_action_registry_defers_param_shape_for_not_yet_implemented_intents() -> None:
+    """存进口味/应用改动/这次不用/以后别这样：这张票只登记名字，参数格式留给实现
+    处理器的子 SPEC 收紧，这里先只要求已登记。"""
+    for intent in (
+        "save_to_taste",
+        "apply_change",
+        "skip_this_time",
+        "dont_do_again",
+    ):
+        assert actions_registry.is_valid_action(intent, {"anything": 1}) is True
