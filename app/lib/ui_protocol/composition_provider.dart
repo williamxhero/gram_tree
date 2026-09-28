@@ -1,9 +1,14 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gramtree_api/gramtree_api.dart'
-    show ComposeRequest, PageDescription;
+    show
+        ComponentDescriptor,
+        ComposeRequest,
+        EventCorrelationIds,
+        PageDescription;
 
 import '../api/api_client.dart';
+import '../events/event_recorder.dart';
 import 'component_registry.dart';
 import 'protocol_paths.dart';
 import 'protocol_schemas.dart';
@@ -97,5 +102,48 @@ Future<CompositionResult> fetchComposition(
     }
   }
 
-  return CompositionReady(PageDescription.fromJson(raw));
+  final description = PageDescription.fromJson(raw);
+  // SPEC-009.1 票 2（#78）：合法结果显示前记一条“组合展示”事件，content 和服务端
+  // 那条（gramtree.ui_protocol.composition_events.composition_shown_content）
+  // 保持同样的形状，方便日后核对两边是否一致。这里只覆盖“组合结果合法”这条路径
+  // ——协议不合法/请求出错退回标准布局时该不该记、兜底原因怎么填，在 #79 里定。
+  await ref
+      .read(eventRecorderProvider)
+      .record(
+        eventType: 'ui.composition_shown',
+        typeVersion: 1,
+        correlation: EventCorrelationIds(
+          uiCompositionId: description.compositionId,
+        ),
+        content: _compositionShownContent(description),
+      );
+  return CompositionReady(description);
+}
+
+Map<String, dynamic> _compositionShownContent(PageDescription description) {
+  final components = description.components ?? const <ComponentDescriptor>[];
+  final fallback = description.fallback;
+  final experiment = description.experiment;
+  return {
+    'page_type': description.pageType,
+    'components': [
+      for (final c in components)
+        {
+          'type': c.type,
+          'detail': c.detail.value,
+          'reason_code': c.reason.code,
+          'reason_text': c.reason.text,
+        },
+    ],
+    'is_fallback': fallback != null,
+    // 上传时事件内容会被转成 Map<String, Object>（不接受 null 值，见
+    // event_uploader.dart 的 _toItem），所以没有兜底/实验分组时干脆不带这两个
+    // key，不写 null 值；服务端 content_schema 里这两个字段本来就是可选的。
+    if (fallback != null) 'fallback_reason': fallback.reasonCode.value,
+    if (experiment != null)
+      'experiment': {
+        'experiment': experiment.experiment,
+        'variant': experiment.variant,
+      },
+  };
 }

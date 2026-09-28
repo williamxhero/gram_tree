@@ -10,7 +10,8 @@ from pydantic import BaseModel, Field
 
 from gramtree.accounts.deps import CurrentAuth
 from gramtree.core.errors import ERROR_RESPONSES, ApiError
-from gramtree.ui_protocol import schema_validation, service
+from gramtree.deps import RedisDep, SessionDep
+from gramtree.ui_protocol import composition_events, schema_validation, service
 from gramtree.ui_protocol.protocol import PageDescription
 
 router = APIRouter(prefix="/ui", tags=["ui-protocol"])
@@ -31,13 +32,17 @@ class ComposeRequest(BaseModel):
     responses=ERROR_RESPONSES,
     summary="按 App 声明的协议版本和组件清单，下发一份页面描述（需要登录）",
 )
-def compose(body: ComposeRequest, auth: CurrentAuth) -> PageDescription:
-    del auth  # 目前默认组合不区分用户；按场景组合（SPEC-009.2 #34）起才用到
+def compose(
+    body: ComposeRequest, auth: CurrentAuth, session: SessionDep, redis: RedisDep
+) -> PageDescription:
+    # 目前默认组合的内容不区分用户（按场景组合是 SPEC-009.2 #34 起才用到），但每次
+    # 组合都要在经验层记一条"组合展示"事件（票 2，#78），事件要归到当前登录用户。
     if body.page_type not in service.COMPOSERS:
         raise ApiError(404, "unknown_page_type", "没有这个页面类型", body.page_type)
 
     description = service.compose(body.page_type, set(body.supported_components))
     _validate_before_returning(description)
+    composition_events.record_composition_shown(session, redis, auth.user.id, description)
     return description
 
 
