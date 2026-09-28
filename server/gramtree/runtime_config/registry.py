@@ -128,6 +128,17 @@ ITEMS: tuple[ConfigItem, ...] = (
         public=True,
     ),
     ConfigItem(
+        "ui.cache.test_dependency_version",
+        "str",
+        "v0",
+        "组合缓存机制验证用的测试依赖版本（SPEC-009.1 #83）：不对应任何真实业务"
+        "数据，只用来证明“组合结果按依赖版本缓存，依赖版本变了缓存自然失效、重新"
+        "计算”这条链路能跑通——测试改这个值，验证组合接口拿到新的 composition_id。"
+        "真实依赖（菜谱版本、口味档案、推荐候选、经验结论）由后续子 SPEC 接上后，"
+        "会照 gramtree.ui_protocol.service.dependency_versions() 里的样子，读真实"
+        "数据算出版本值，不会再是配置项。不下发给 App（public 默认 False）。",
+    ),
+    ConfigItem(
         "ui.experiment.today_composition",
         "json",
         {

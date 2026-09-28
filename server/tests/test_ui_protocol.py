@@ -55,18 +55,32 @@ def test_today_default_composition_matches_shared_sample(api: Api) -> None:
     sample = schema_validation.load_sample("valid", "today_default.json")
     assert body["protocol"] == sample["protocol"]
     assert body["page_type"] == sample["page_type"]
-    assert body["cache"] == sample["cache"]
     assert body["experiment"] == sample["experiment"]
     assert body["components"] == sample["components"]
     # composition_id/generated_at 每次都不同，只校验形状
     assert uuid.UUID(body["composition_id"]).version == 4
+    # cache.depends_on 从 SPEC-009.1 票 7（#83）起还带上了组合缓存机制自己的两个
+    # 维度（test_dependency、experiment_config 摘要，见
+    # gramtree.ui_protocol.service._today_dependency_versions 的说明），不再和
+    # 共用样例逐字段相等；样例本身的 Schema 合法性由
+    # test_shared_valid_sample_passes_schema_validation 覆盖，这里只校验没变的
+    # 那部分（ttl_s、plan 这个占位版本）。
+    assert body["cache"]["ttl_s"] == sample["cache"]["ttl_s"]
+    assert body["cache"]["depends_on"]["plan"] == sample["cache"]["depends_on"]["plan"]
 
 
-def test_composition_id_is_new_every_call(api: Api) -> None:
+def test_repeated_composition_with_unchanged_dependencies_returns_the_cached_description(
+    api: Api,
+) -> None:
+    """SPEC-009.1 票 7（#83）之前，这里断言的是"每次调用 composition_id 都不同"——
+    那时候还没有组合缓存，每次都要重新组合。#83 加了按用户/页面类型/场景/依赖版本
+    的缓存后，依赖没变时第二次调用命中缓存，直接拿到同一份描述（同一个
+    composition_id），这不算"重新组合"（见 router.compose() 的说明）。"依赖变了
+    才会拿到新结果"的测试见 test_ui_composition_cache.py。"""
     tokens = api.login("cook@example.com")
     first = _compose(api, tokens).json()["composition_id"]
     second = _compose(api, tokens).json()["composition_id"]
-    assert first != second
+    assert first == second
 
 
 def test_every_component_has_a_reason(api: Api) -> None:
@@ -153,18 +167,19 @@ def test_every_composition_writes_a_composition_shown_event(api: Api, engine: En
     spec.content_schema.model_validate(content)
 
 
-def test_each_composition_call_writes_its_own_event_with_matching_id(
+def test_cache_hit_does_not_write_a_second_composition_shown_event(
     api: Api, engine: Engine
 ) -> None:
+    """SPEC-009.1 票 7（#83）：命中组合缓存不算"重新组合"，不应该多写一条
+    "组合展示"事件——否则事件次数会和"用户实际看到过几次不同的组合结果"脱钩。"""
     tokens = api.login("cook@example.com")
     first = _compose(api, tokens).json()
     second = _compose(api, tokens).json()
-    assert first["composition_id"] != second["composition_id"]
+    assert first["composition_id"] == second["composition_id"]
 
     events = _composition_events(engine)
-    assert len(events) == 2
-    ids = {e.correlation["ui_composition_id"] for e in events}
-    assert ids == {first["composition_id"], second["composition_id"]}
+    assert len(events) == 1
+    assert events[0].correlation == {"ui_composition_id": first["composition_id"]}
 
 
 def test_composition_shown_event_belongs_to_the_logged_in_user(api: Api, engine: Engine) -> None:

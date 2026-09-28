@@ -357,4 +357,9 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get permissionOpenSettings => '去系统设置打开';
+
+  @override
+  String compositionLastUpdatedAt(String time) {
+    return '上次更新于 $time';
+  }
 }

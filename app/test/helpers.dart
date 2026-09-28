@@ -25,6 +25,7 @@ import 'package:gram_tree/platform/timezone_source.dart';
 import 'package:gram_tree/privacy/policy.dart';
 import 'package:gram_tree/storage/local_store.dart';
 import 'package:gram_tree/storage/secure_store.dart';
+import 'package:gram_tree/ui_protocol/composition_cache.dart';
 import 'package:gram_tree/ui_protocol/page_types.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
 
@@ -445,6 +446,8 @@ class TestEnv {
     this.features = const {},
     this.params = const {},
     this.requiredComponentTypes,
+    this.localDependencyVersions,
+    this.offline = false,
   }) : server = server ?? FakeServer(),
        local = local ?? MemoryLocalStore(),
        secure = secure ?? MemorySecureStore(),
@@ -460,15 +463,20 @@ class TestEnv {
     Map<String, bool> features = const {},
     Map<String, Object?> params = const {},
     Map<String, Set<String>>? requiredComponentTypes,
+    Map<String, String>? localDependencyVersions,
+    MemoryLocalStore? local,
+    bool offline = false,
   }) {
     final s = server ?? FakeServer();
     return TestEnv(
       server: s,
-      local: MemoryLocalStore(consentedStore()),
+      local: local ?? MemoryLocalStore(consentedStore()),
       secure: MemorySecureStore(signedInSecure(s.user)),
       features: features,
       params: params,
       requiredComponentTypes: requiredComponentTypes,
+      localDependencyVersions: localDependencyVersions,
+      offline: offline,
     );
   }
 
@@ -494,6 +502,16 @@ class TestEnv {
   /// （现在都是空集合）。
   final Map<String, Set<String>>? requiredComponentTypes;
 
+  /// 覆盖 `localDependencyVersionsProvider`，测试"本机缓存的 depends_on 和这个值
+  /// 一致才用缓存"这条机制时用（SPEC-009.1 票 7，#83）；`null` 表示不覆盖，用 App
+  /// 里的默认值（空 Map，见该 provider 的文档）。
+  final Map<String, String>? localDependencyVersions;
+
+  /// 让每个请求从一开始就被 [offlineSimulationProvider] 拒绝成
+  /// `DioException.connectionError`——测试"离线时使用本机缓存"（SPEC-009.1 票 7，
+  /// #83）时用；默认 false（正常联网）。
+  final bool offline;
+
   List<Override> get overrides => [
     localStoreProvider.overrideWithValue(local),
     secureStoreProvider.overrideWithValue(secure),
@@ -507,12 +525,17 @@ class TestEnv {
     eventQueueProvider.overrideWithValue(eventQueue),
     eventReportBackendProvider.overrideWithValue(eventReports),
     appVersionProvider.overrideWith((ref) async => '0.1.0-test'),
+    if (offline) offlineSimulationProvider.overrideWith(_AlwaysOffline.new),
     if (features.isNotEmpty || params.isNotEmpty)
       clientConfigProvider.overrideWith(
         (ref) async => ClientConfig(features: features, params: params),
       ),
     if (requiredComponentTypes != null)
       requiredComponentTypesProvider.overrideWithValue(requiredComponentTypes!),
+    if (localDependencyVersions != null)
+      localDependencyVersionsProvider.overrideWithValue(
+        localDependencyVersions!,
+      ),
   ];
 }
 
@@ -551,6 +574,15 @@ Future<TestEnv> pumpApp(
   );
   await tester.pumpAndSettle();
   return e;
+}
+
+/// [TestEnv.offline] 用：请求从 `pumpApp` 第一次渲染开始就被拒绝，不用先联网成功
+/// 一次再手动调用 `.set(true)`——这样"离线且本机有缓存"的测试可以直接控制
+/// [TestEnv.local] 里预先存好什么，不用先走一遍真实成功的组合请求（那样会覆盖掉
+/// 预先存的缓存，见 `composition_cache_test.dart`）。
+class _AlwaysOffline extends OfflineSimulation {
+  @override
+  bool build() => true;
 }
 
 /// 模拟杀掉进程重新打开：本机存储保留，内存里的状态全部重建。

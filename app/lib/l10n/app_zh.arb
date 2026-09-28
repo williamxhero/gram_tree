@@ -193,5 +193,14 @@
       }
     }
   },
-  "permissionOpenSettings": "去系统设置打开"
+  "permissionOpenSettings": "去系统设置打开",
+  "compositionLastUpdatedAt": "上次更新于 {time}",
+  "@compositionLastUpdatedAt": {
+    "description": "SPEC-009.1 票 7（#83）：离线/超时用本机缓存的描述时，显示它是什么时候存下来的。",
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  }
 }

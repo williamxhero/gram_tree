@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gramtree_api/gramtree_api.dart';
+import 'package:intl/intl.dart' as intl;
 
+import '../l10n/app_localizations.dart';
 import 'component_registry.dart';
 import 'composition_provider.dart';
 import 'intent_dispatcher.dart';
@@ -56,8 +58,47 @@ class CompositionView extends ConsumerWidget {
           registry: effectiveRegistry,
           dispatcher: dispatcher,
         ),
+        // SPEC-009.1 票 7（#83）：等待超时/离线时用的本机缓存——顶部加一条"上次
+        // 更新于 xx:xx"提示，内容渲染和正常成功时完全一样。
+        CompositionFromCache(:final description, :final savedAt) => Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            _LastUpdatedBanner(savedAt: savedAt),
+            Expanded(
+              child: _CompositionBody(
+                description: description,
+                registry: effectiveRegistry,
+                dispatcher: dispatcher,
+              ),
+            ),
+          ],
+        ),
         CompositionFailed() => standardLayoutBuilder(context),
       },
+    );
+  }
+}
+
+/// "上次更新于 xx:xx"提示条：够用就行，不追求花哨，参考 [Text] 直接用当前主题的
+/// 次要文字样式，时间按本机时区、24 小时制显示到分钟。
+class _LastUpdatedBanner extends StatelessWidget {
+  const _LastUpdatedBanner({required this.savedAt});
+
+  final DateTime savedAt;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context);
+    final time = intl.DateFormat.Hm().format(savedAt.toLocal());
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+      child: Text(
+        l10n.compositionLastUpdatedAt(time),
+        style: theme.textTheme.bodySmall?.copyWith(
+          color: theme.colorScheme.onSurfaceVariant,
+        ),
+      ),
     );
   }
 }

@@ -14,6 +14,7 @@ import '../api/api_client.dart';
 import '../events/event_recorder.dart';
 import '../features_flags/features.dart';
 import 'component_registry.dart';
+import 'composition_cache.dart';
 import 'intent_registry.dart';
 import 'page_types.dart';
 import 'protocol_paths.dart';
@@ -29,6 +30,19 @@ class CompositionReady extends CompositionResult {
   const CompositionReady(this.description);
 
   final PageDescription description;
+}
+
+/// 等待超时、或者请求本身连不上服务端（离线）时，本机有一份依赖版本和服务端最新
+/// 一次下发的完全一致的缓存——用它顶上，不算"正常拿到组合结果"（不会再记一条
+/// "组合展示"事件，[_fail] 已经先记过一条带兜底原因的事件了），所以是单独的一个
+/// 结果变体，而不是复用 [CompositionReady]（SPEC-009.1 票 7，#83）。
+class CompositionFromCache extends CompositionResult {
+  const CompositionFromCache(this.description, this.savedAt);
+
+  final PageDescription description;
+
+  /// 这份描述本机保存下来的时间，页面上显示成"上次更新于 xx:xx"。
+  final DateTime savedAt;
 }
 
 /// [reason] 和服务端 `FallbackReasonCode`（`app/assets/contracts/ui_protocol/
@@ -112,11 +126,30 @@ Future<CompositionResult> fetchComposition(
     }
     raw = data;
   } on TimeoutException {
-    return _fail(ref, pageType, FallbackInfoReasonCodeEnum.timeout);
-  } on DioException {
+    // 等待超过配置的时限（票 3，#79）：本机如果有依赖版本一致的缓存，先显示它，
+    // 不直接退回标准布局（票 7，#83）。
+    return _fail(
+      ref,
+      pageType,
+      FallbackInfoReasonCodeEnum.timeout,
+      tryCache: true,
+    );
+  } on DioException catch (e) {
     // ApiFailure 区分的网络/接口错误码是给用户提示用的；这里的兜底原因代码只有
     // FallbackReasonCode 这几种取值，没有更细的"网络不通"，都算作"服务端报错"。
-    return _fail(ref, pageType, FallbackInfoReasonCodeEnum.serverError);
+    //
+    // 票 7（#83）：只有"请求本身没能完成一个来回"（连不上、DNS 解析失败、被中途
+    // 断开……，DioException 的 connectionError/unknown 这类）才尝试用本机缓存
+    // 顶上——这才是"离线"；服务端已经收到请求、只是回了一个 4xx/5xx
+    // （`DioExceptionType.badResponse`）不算"离线"，是服务端本身出了问题，不应该
+    // 拿一份可能已经过期的本机内容顶上去掩盖它。
+    final tryCache = e.type != DioExceptionType.badResponse;
+    return _fail(
+      ref,
+      pageType,
+      FallbackInfoReasonCodeEnum.serverError,
+      tryCache: tryCache,
+    );
   }
 
   final compositionId = raw['composition_id'] as String?;
@@ -244,7 +277,23 @@ Future<CompositionResult> fetchComposition(
         ),
         content: _compositionShownContent(description),
       );
+  // SPEC-009.1 票 7（#83）：成功拿到的描述连同它依赖的内容版本存到本机，供下次
+  // 离线/超时时使用（见 [_fail] 的 tryCache 分支）。
+  await ref
+      .read(compositionCacheStoreProvider)
+      .save(pageType, description, DateTime.now().toUtc());
   return CompositionReady(description);
+}
+
+/// 本机是否有一份"依赖版本和现在完全一致"的缓存——离线/超时时用它，不一致（含
+/// 本机根本没存过）时返回 `null`，调用方退回标准布局。
+CachedComposition? _usableCache(Ref ref, String pageType) {
+  final cached = ref.read(compositionCacheStoreProvider).read(pageType);
+  if (cached == null) return null;
+  final cachedDependsOn = cached.description.cache.dependsOn ?? const {};
+  final current = ref.read(localDependencyVersionsProvider);
+  if (!dependsOnMatches(cachedDependsOn, current)) return null;
+  return cached;
 }
 
 FallbackInfoReasonCodeEnum _reasonFromValue(String? value) {
@@ -257,12 +306,38 @@ FallbackInfoReasonCodeEnum _reasonFromValue(String? value) {
 /// 整页退回标准布局时记一条同样的“组合展示”事件，`is_fallback: true`，
 /// `fallback_reason` 是这次退回的原因代码；没有拿到 `composition_id`（请求出错、
 /// 超时、响应里根本没有这个字段）时关联 ID 留空，不编造一个假的。
+///
+/// [tryCache] 为 true（超时、或者请求本身没能完成一个来回）时，先查本机有没有
+/// 依赖版本一致的缓存（SPEC-009.1 票 7，#83）——有就用它顶上，返回
+/// [CompositionFromCache] 而不是退回标准布局；这不算"重新拿到组合结果"，记的
+/// "组合展示"事件内容和正常成功时一样（用户确实看到了这些组件），沿用缓存里那份
+/// 描述自带的 composition_id，不是一次新的组合决定，只是 App 自己把上一次的决定
+/// 又显示了一遍——服务端这次请求根本没收到、不知道这件事，所以仍然要在本机记一条，
+/// 不能像服务端命中缓存那样直接不记。
 Future<CompositionResult> _fail(
   Ref ref,
   String pageType,
   FallbackInfoReasonCodeEnum reason, {
   String? compositionId,
+  bool tryCache = false,
 }) async {
+  if (tryCache) {
+    final cached = _usableCache(ref, pageType);
+    if (cached != null) {
+      await ref
+          .read(eventRecorderProvider)
+          .record(
+            eventType: 'ui.composition_shown',
+            typeVersion: 1,
+            correlation: EventCorrelationIds(
+              uiCompositionId: cached.description.compositionId,
+            ),
+            content: _compositionShownContent(cached.description),
+          );
+      return CompositionFromCache(cached.description, cached.savedAt);
+    }
+  }
+
   await ref
       .read(eventRecorderProvider)
       .record(

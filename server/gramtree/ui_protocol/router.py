@@ -13,6 +13,10 @@ gramtree.ui_protocol.validation。
 产出的组合结果和其他组合结果走的是同一条校验/兜底链路——变体如果配出了缺必显组件的
 结果，一样会被 `validation.classify_invalid_description` 拦下，整页退回标准布局，
 不会因为"这是实验"就绕过去。
+
+#83 起：按用户 + 页面类型 + 场景 + 依赖版本缓存组合结果（见 `gramtree.ui_protocol.
+cache` 模块顶部的设计说明），命中就直接返回上次的描述，不重新组合、不重新写
+"组合展示"事件；没命中才走下面这条完整流程，算完之后把结果存进缓存。
 """
 
 import logging
@@ -23,12 +27,18 @@ from pydantic import BaseModel, Field
 from gramtree.accounts.deps import CurrentAuth
 from gramtree.core.errors import ERROR_RESPONSES, ApiError
 from gramtree.deps import RedisDep, SessionDep
-from gramtree.ui_protocol import composition_events, experiments, service, validation
+from gramtree.ui_protocol import cache, composition_events, experiments, service, validation
 from gramtree.ui_protocol.protocol import PageDescription
 
 logger = logging.getLogger("gramtree.ui_protocol")
 
 router = APIRouter(prefix="/ui", tags=["ui-protocol"])
+
+# "今天"页目前没有场景差异（按场景选择内容是 SPEC-009.2 #34 的事），组合缓存的
+# "场景"维度先用这一个占位值；场景机制本身（不同场景不共享缓存）由
+# gramtree.ui_protocol.cache 的单元测试用假场景值验证，不需要等真实场景接上就能
+# 测（见票 7，#83）。
+DEFAULT_SCENARIO = "default"
 
 
 class ComposeRequest(BaseModel):
@@ -56,6 +66,24 @@ def compose(
     if body.page_type not in service.COMPOSERS:
         raise ApiError(404, "unknown_page_type", "没有这个页面类型", body.page_type)
 
+    # 票 7（#83）：按用户 + 页面类型 + 场景 + 依赖版本查组合缓存（设计说明见
+    # gramtree.ui_protocol.cache 模块顶部的文档）。`service.dependency_versions()`
+    # 是"轻量版"——只读这次组合依赖哪些内容版本，不真的跑组合，查缓存不需要先付出
+    # 一次完整组合的开销。
+    depends_on = service.dependency_versions(body.page_type, session)
+    key = cache.cache_key(auth.user.id, body.page_type, DEFAULT_SCENARIO, depends_on)
+    cached = cache.get(redis, key)
+    if cached is not None:
+        # 命中缓存：不是"重新组合"，直接把上次算出来的那份描述（同一个
+        # composition_id）再发一遍。不重新写"组合展示"事件——那条事件记的是"服务端
+        # 刚刚决定了下发什么"，命中缓存时服务端什么决定都没做，只是把上次的决定又
+        # 发了一遍，写第二条事件会让"组合展示"事件的次数和"用户实际看到过几次不同
+        # 的组合结果"脱钩，污染依赖这条事件计数的分析（比如后续子 SPEC 要统计的
+        # "展示次数"）。也不重新跑 experiments.assign_today_experiment()：分组结果
+        # 本来就该稳定（stable_bucket），缓存住的描述已经带着上次分组时算出的
+        # experiment 字段。
+        return cached
+
     try:
         assignment = (
             experiments.assign_today_experiment(session, auth.user.id)
@@ -65,6 +93,7 @@ def compose(
         description = service.compose(
             body.page_type,
             set(body.supported_components),
+            session=session,
             experiment=assignment.experiment,
             detail_overrides=assignment.detail_overrides,
             exclude_components=assignment.dropped_components,
@@ -81,4 +110,7 @@ def compose(
             description = service.build_fallback_description(body.page_type, reason)
 
     composition_events.record_composition_shown(session, redis, auth.user.id, description)
+    # 兜底描述（ttl_s=0）不会真的被写进去，见 cache.set_() 的说明——下次请求还是会
+    # 重新走一遍完整流程，不会一直下发同一份兜底结果。
+    cache.set_(redis, key, description)
     return description
