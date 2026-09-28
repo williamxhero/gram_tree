@@ -17,8 +17,12 @@ void main() {
     final body = calls.single.body as Map;
     expect(body['page_type'], 'today');
     expect(body['protocol_version'], '1.0');
+    // SPEC-009.1 #80 把通用组件库补齐到五个，App 声明支持的组件类型清单也跟着变。
     expect((body['supported_components'] as List).toSet(), {
       'hint_bar',
+      'section_title',
+      'text_block',
+      'list',
       'empty_state',
     });
   });

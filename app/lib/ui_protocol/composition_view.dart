@@ -84,7 +84,7 @@ class _CompositionBody extends StatelessWidget {
     ComponentDescriptor component,
     ComponentSpec spec,
   ) {
-    final child = spec.builder(context, component, onAction);
+    final child = spec.builder(context, component, spec.emptyState, onAction);
     return spec.fillsRemainingSpace ? Expanded(child: child) : child;
   }
 }

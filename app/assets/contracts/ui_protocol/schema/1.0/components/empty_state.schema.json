@@ -30,6 +30,11 @@
       "description": "第一个动作对应的按钮文案，没有主要动作时不出现。",
       "type": "string",
       "minLength": 1
+    },
+    "detail_label": {
+      "description": "明细入口的文案，只在详细档显示，没有第二个动作时不出现。",
+      "type": "string",
+      "minLength": 1
     }
   }
 }
