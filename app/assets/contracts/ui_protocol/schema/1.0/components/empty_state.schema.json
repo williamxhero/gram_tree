@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://gramtree.app/contracts/ui_protocol/1.0/components/empty_state.schema.json",
+  "title": "empty_state 组件数据",
+  "description": "标准空态：结论 + 可选依据说明。",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["conclusion"],
+  "properties": {
+    "conclusion": {
+      "type": "string",
+      "minLength": 1,
+      "description": "结论层：空态标题，例如“今天还没有安排”。"
+    },
+    "basis": {
+      "description": "依据层：可选，一句说明文字。",
+      "oneOf": [
+        { "type": "null" },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["text"],
+          "properties": {
+            "text": { "type": "string", "minLength": 1 }
+          }
+        }
+      ]
+    },
+    "action_label": {
+      "description": "第一个动作对应的按钮文案，没有主要动作时不出现。",
+      "type": "string",
+      "minLength": 1
+    }
+  }
+}

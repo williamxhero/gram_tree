@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://gramtree.app/contracts/ui_protocol/1.0/components/hint_bar.schema.json",
+  "title": "hint_bar 组件数据",
+  "description": "提示条：一句话结论加一个可选动作。没有依据/明细层。",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["conclusion"],
+  "properties": {
+    "conclusion": {
+      "type": "string",
+      "minLength": 1,
+      "description": "结论层：一眼可读的一句话。"
+    }
+  }
+}

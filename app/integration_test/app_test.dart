@@ -68,6 +68,9 @@ void main() {
       await latestCode(email),
     );
     await waitFor(tester, find.text('今天还没有安排'));
+    // 这句话只出现在服务端下发的组合结果里（SPEC-009.1 #77），标准布局兜底没有它，
+    // 确认走的确实是"今天"页面描述协议这条路，不是碰巧退回了兜底布局。
+    expect(find.text('先添加一道你常做的菜'), findsOneWidget);
 
     for (final label in ['今天', '发现', '新建', '记录', '我的']) {
       expect(find.bySemanticsLabel(label), findsWidgets, reason: label);

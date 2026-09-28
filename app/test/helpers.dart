@@ -203,6 +203,67 @@ class FakeServer extends Interceptor {
         },
       );
     });
+    on('POST', '/v1/ui/compositions', (r) {
+      final body = r.body as Map;
+      if (body['page_type'] != 'today') {
+        return error(404, 'unknown_page_type', '没有这个页面类型');
+      }
+      final supported = ((body['supported_components'] as List?) ?? const [])
+          .cast<String>()
+          .toSet();
+      final all = [
+        {
+          'type': 'hint_bar',
+          'id': 'c1',
+          'detail': 'brief',
+          'data': {'conclusion': '先添加一道你常做的菜'},
+          'actions': [
+            {
+              'intent': 'open_page',
+              'params': {'page': 'create'},
+            },
+          ],
+          'reason': {'code': 'default', 'text': '默认组合'},
+          'required': false,
+        },
+        {
+          'type': 'empty_state',
+          'id': 'c2',
+          'detail': 'standard',
+          'data': {
+            'conclusion': '今天还没有安排',
+            'basis': {'text': '这里会显示今天要做的菜'},
+            'action_label': '添加第一道菜谱',
+          },
+          'actions': [
+            {
+              'intent': 'open_page',
+              'params': {'page': 'create'},
+            },
+          ],
+          'reason': {'code': 'default', 'text': '默认组合'},
+          'required': false,
+        },
+      ];
+      return (
+        200,
+        {
+          'protocol': '1.0',
+          'page_type': 'today',
+          'composition_id': '7c9e6679-7425-40de-944b-e07fc1f90ae7',
+          'generated_at': '2026-09-28T10:30:00Z',
+          'cache': {
+            'depends_on': {'plan': 'v0'},
+            'ttl_s': 600,
+          },
+          'experiment': null,
+          'components': [
+            for (final c in all)
+              if (supported.contains(c['type'])) c,
+          ],
+        },
+      );
+    });
     on('POST', '/v1/me/deletion', (_) {
       if (!reauthed) return error(403, 'reauth_required', '为了安全，请先重新验证身份');
       return (
