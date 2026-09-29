@@ -1,0 +1,53 @@
+{
+  "protocol": "1.0",
+  "page_type": "today",
+  "composition_id": "7c9e6679-7425-40de-944b-e07fc1f90ae7",
+  "generated_at": "2026-09-28T10:30:00Z",
+  "cache": { "depends_on": { "plan": "v0" }, "ttl_s": 600 },
+  "experiment": null,
+  "components": [
+    {
+      "type": "hint_bar",
+      "id": "c1",
+      "detail": "brief",
+      "data": { "conclusion": "先添加一道你常做的菜" },
+      "actions": [{ "intent": "open_page", "params": { "page": "create" } }],
+      "reason": { "code": "default", "text": "默认组合" },
+      "required": false
+    },
+    {
+      "type": "empty_state",
+      "id": "c2",
+      "detail": "standard",
+      "data": {
+        "conclusion": "今天还没有安排",
+        "basis": { "text": "这里会显示今天要做的菜" },
+        "action_label": "添加第一道菜谱"
+      },
+      "actions": [{ "intent": "open_page", "params": { "page": "create" } }],
+      "reason": { "code": "default", "text": "默认组合" },
+      "required": false
+    },
+    {
+      "type": "source_demo",
+      "id": "c3",
+      "detail": "standard",
+      "data": {
+        "conclusion": "建议用盐 3 g",
+        "source": {
+          "source_type": "taste_adjusted",
+          "value": "3 g",
+          "original_value": "5 g",
+          "basis": {
+            "reason_code": "taste_profile_salt_down",
+            "text": "你最近几次做菜都调低了盐量",
+            "citation": "口味档案更新于 2026-09-20"
+          }
+        }
+      },
+      "actions": [],
+      "reason": { "code": "source_demo", "text": "仅用于测试来源标记链路的示例组件，不是真实换算" },
+      "required": false
+    }
+  ]
+}

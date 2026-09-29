@@ -747,6 +747,12 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'去系统设置打开'**
   String get permissionOpenSettings;
+
+  /// SPEC-009.1 票 7（#83）：离线/超时用本机缓存的描述时，显示它是什么时候存下来的。
+  ///
+  /// In zh, this message translates to:
+  /// **'上次更新于 {time}'**
+  String compositionLastUpdatedAt(String time);
 }
 
 class _AppLocalizationsDelegate

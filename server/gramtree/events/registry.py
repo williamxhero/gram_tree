@@ -25,8 +25,9 @@
 """
 
 from dataclasses import dataclass
+from typing import Literal
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 @dataclass(frozen=True)
@@ -65,6 +66,80 @@ class _RetiredDemoContent(BaseModel):
     ping: str
 
 
+# —— SPEC-009.1 票 2（#78）：四种界面事件 ——
+#
+# 都通过 `EventCorrelationIds.ui_composition_id` 关联到产生它们的那次界面组合，
+# 这里的 content 只放组合 ID 以外、和"这次界面交互本身"有关的字段。按 CLAUDE.md
+# 第 3 节和 #82 的"开放边界"：content 里不出现内部分数、精确统计，只出现等级、
+# 代码、一句话说明这类用户看得懂/程序可判断的信息。
+
+# 来源标记的五种取值（CLAUDE.md 第 6 节 UI 规范 / #82）：作者填写、按你的口味换算、
+# 按场景调整、AI 估算、已验证。打开"为什么"面板、来源反馈都会用到。
+SourceType = Literal[
+    "author_filled",
+    "taste_adjusted",
+    "scenario_adjusted",
+    "ai_estimated",
+    "verified",
+]
+
+
+class ComponentSummary(BaseModel):
+    """组合展示事件里，一个组件的摘要：类型、详略、理由，不含组件实例 ID
+    （实例 ID 是"这次渲染出的具体组件"，属于组件动作/为什么面板等事件，不属于
+    "这次组合选了什么"）。"""
+
+    type: str
+    detail: Literal["brief", "standard", "detailed"]
+    reason_code: str
+    reason_text: str
+
+
+class CompositionExperiment(BaseModel):
+    experiment: str
+    variant: str
+
+
+class CompositionShownContentV1(BaseModel):
+    """`ui.composition_shown` v1：服务端每次 `POST /v1/ui/compositions` 成功返回时
+    写的那一条（`gramtree.ui_protocol.composition_events`），content 和接口返回的
+    页面描述必须一致（组件类型、详略、理由）。"""
+
+    page_type: str
+    components: list[ComponentSummary] = Field(default_factory=list)
+    experiment: CompositionExperiment | None = None
+    is_fallback: bool = False
+    fallback_reason: str | None = Field(
+        default=None, description="非空表示这份组合是标准布局兜底，取值见票 3（#79）"
+    )
+
+
+class ComponentActionContentV1(BaseModel):
+    """`ui.component_action` v1：组件上的动作被触发时记（#81 触发，这里先登记类型）。"""
+
+    component_id: str = Field(description="这份页面描述里的组件实例 ID")
+    intent: str = Field(description="已登记的意图名（#81）")
+
+
+class WhyPanelOpenedContentV1(BaseModel):
+    """`ui.why_panel_opened` v1：打开"为什么"面板时记（#82 触发，这里先登记类型）。"""
+
+    component_id: str = Field(description="这份页面描述里的组件实例 ID")
+    source_type: SourceType
+
+
+class SourceFeedbackContentV1(BaseModel):
+    """`ui.source_feedback` v1：在"为什么"面板里点"这次不用"或"以后别这样"时记
+    （#82 触发，这里先登记类型）。"""
+
+    component_id: str = Field(description="这份页面描述里的组件实例 ID")
+    source_type: SourceType
+    feedback: Literal["skip_once", "never_again"] = Field(
+        description="skip_once＝这次不用（只影响这次查看，不写口味档案）；"
+        "never_again＝以后别这样（写入来源反馈，由 SPEC-005.3/SPEC-009.2 消化）"
+    )
+
+
 ITEMS: tuple[EventTypeSpec, ...] = (
     EventTypeSpec(
         event_type="pipeline.self_check",
@@ -99,6 +174,41 @@ ITEMS: tuple[EventTypeSpec, ...] = (
         exportable=False,
         content_schema=_RetiredDemoContent,
         supported=False,
+    ),
+    EventTypeSpec(
+        event_type="ui.composition_shown",
+        version=1,
+        description=(
+            "界面组合展示：服务端每次成功返回一份页面描述时写一条，记这次选了哪些"
+            "组件类型、详略、理由、是否命中实验分组、是否是标准布局兜底及兜底原因"
+        ),
+        correlation_fields=("ui_composition_id",),
+        exportable=True,
+        content_schema=CompositionShownContentV1,
+    ),
+    EventTypeSpec(
+        event_type="ui.component_action",
+        version=1,
+        description="组件动作：组件上的一个动作（已登记意图）被触发时记",
+        correlation_fields=("ui_composition_id",),
+        exportable=True,
+        content_schema=ComponentActionContentV1,
+    ),
+    EventTypeSpec(
+        event_type="ui.why_panel_opened",
+        version=1,
+        description='打开"为什么"面板：点任意来源标记或组件的理由入口时记',
+        correlation_fields=("ui_composition_id",),
+        exportable=True,
+        content_schema=WhyPanelOpenedContentV1,
+    ),
+    EventTypeSpec(
+        event_type="ui.source_feedback",
+        version=1,
+        description='来源反馈：在"为什么"面板里点"这次不用"或"以后别这样"时记',
+        correlation_fields=("ui_composition_id",),
+        exportable=True,
+        content_schema=SourceFeedbackContentV1,
     ),
 )
 

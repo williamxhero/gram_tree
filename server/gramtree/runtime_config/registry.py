@@ -6,16 +6,21 @@ key、类型、默认值、取值范围、说明、是否下发给客户端。
 """
 
 from dataclasses import dataclass
-from typing import Literal
+from typing import Any, Literal
 
-ValueType = Literal["int", "float", "bool", "str"]
+# "json" 是 #84 加的：值是一个 dict，形状由取用方（目前只有
+# `gramtree.ui_protocol.experiments`）自己再校验一层，这里的登记表和读写入口
+# （service.parse_value/validate）不理解它的内部结构，只当成"一个不透明的 JSON 值"
+# 存取——`ConfigValue.value` 列本来就是 JSONB，标量和 dict 存起来没有区别，不需要为
+# 了这一种情况新开一张表（选型说明见 `gramtree/ui_protocol/experiments.py` 顶部）。
+ValueType = Literal["int", "float", "bool", "str", "json"]
 
 
 @dataclass(frozen=True)
 class ConfigItem:
     key: str
     type: ValueType
-    default: int | float | bool | str
+    default: int | float | bool | str | dict[str, Any]
     description: str
     minimum: float | None = None
     maximum: float | None = None
@@ -110,6 +115,45 @@ ITEMS: tuple[ConfigItem, ...] = (
         "申请注销后多少个工作日内删除个人数据",
         minimum=1,
         maximum=30,
+    ),
+    # —— 界面描述协议（SPEC-009.1） ——
+    ConfigItem(
+        "ui.composition_timeout_ms",
+        "int",
+        800,
+        "App 等 POST /v1/ui/compositions 返回的时限（毫秒），超过就先显示写在 App 里"
+        "的标准布局，不一直转圈；出任何问题都不能卡住做饭",
+        minimum=100,
+        maximum=10_000,
+        public=True,
+    ),
+    ConfigItem(
+        "ui.cache.test_dependency_version",
+        "str",
+        "v0",
+        "组合缓存机制验证用的测试依赖版本（SPEC-009.1 #83）：不对应任何真实业务"
+        "数据，只用来证明“组合结果按依赖版本缓存，依赖版本变了缓存自然失效、重新"
+        "计算”这条链路能跑通——测试改这个值，验证组合接口拿到新的 composition_id。"
+        "真实依赖（菜谱版本、口味档案、推荐候选、经验结论）由后续子 SPEC 接上后，"
+        "会照 gramtree.ui_protocol.service.dependency_versions() 里的样子，读真实"
+        "数据算出版本值，不会再是配置项。不下发给 App（public 默认 False）。",
+    ),
+    ConfigItem(
+        "ui.experiment.today_composition",
+        "json",
+        {
+            "enabled": False,
+            "groups": [
+                {"name": "control", "ratio": 0.5, "variant": "default"},
+                {"name": "more_detail", "ratio": 0.5, "variant": "standard_detail"},
+            ],
+        },
+        "“今天”页组合实验（SPEC-009.1 #84 的测试用实验）：按用户稳定分组，试的是"
+        "hint_bar/empty_state 的详略程度；enabled=false（默认）时不生效，组合结果和"
+        "没有这个实验时完全一样。形状由 gramtree.ui_protocol.experiments."
+        "ExperimentDefinition 校验，不在这里（type=json 的配置项只存不管形状）。"
+        "不下发给 App（public 默认 False）——App 不需要知道实验定义，只需要从组合"
+        "接口的响应里读 experiment 字段。",
     ),
     # —— 能力开关：关闭时 App 里对应入口不出现（SPEC-009） ——
     ConfigItem(

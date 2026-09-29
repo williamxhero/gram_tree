@@ -16,6 +16,7 @@ from gramtree.events import dev as events_dev
 from gramtree.events import router as events
 from gramtree.legal import router as legal
 from gramtree.settings import Settings, get_settings
+from gramtree.ui_protocol import router as ui_protocol
 
 API_PREFIX = "/v1"
 
@@ -62,6 +63,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     v1.include_router(accounts.me_router)
     v1.include_router(events.router)
     v1.include_router(analytics.router)
+    v1.include_router(ui_protocol.router)
     if settings.dev_tools_enabled:
         v1.include_router(accounts_dev.router)
         v1.include_router(events_dev.router)

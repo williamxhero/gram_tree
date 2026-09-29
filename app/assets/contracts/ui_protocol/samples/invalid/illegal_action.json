@@ -1,0 +1,19 @@
+{
+  "protocol": "1.0",
+  "page_type": "today",
+  "composition_id": "00000000-0000-4000-8000-000000000003",
+  "generated_at": "2026-09-28T10:30:00Z",
+  "cache": { "depends_on": { "plan": "v0" }, "ttl_s": 600 },
+  "experiment": null,
+  "components": [
+    {
+      "type": "hint_bar",
+      "id": "c1",
+      "detail": "brief",
+      "data": { "conclusion": "先添加一道你常做的菜" },
+      "actions": [{ "params": { "page": "create" } }],
+      "reason": { "code": "default", "text": "默认组合" },
+      "required": false
+    }
+  ]
+}

@@ -3,6 +3,7 @@
 每次读取都查数据库（一张很小的表），所以改完立刻生效，不需要重启或发新版 App。
 """
 
+import json
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Any
@@ -36,9 +37,9 @@ def item(key: str) -> ConfigItem:
         raise ConfigError(f"没有登记的配置项：{key}") from exc
 
 
-def parse_value(cfg: ConfigItem, raw: str) -> int | float | bool | str:
+def parse_value(cfg: ConfigItem, raw: str) -> int | float | bool | str | dict[str, Any]:
     """把命令行传来的字符串转成配置项的类型，并检查取值范围。"""
-    value: int | float | bool | str
+    value: int | float | bool | str | dict[str, Any]
     try:
         if cfg.type == "int":
             value = int(raw)
@@ -49,16 +50,27 @@ def parse_value(cfg: ConfigItem, raw: str) -> int | float | bool | str:
             if lowered not in ("true", "false", "1", "0", "on", "off"):
                 raise ValueError(raw)
             value = lowered in ("true", "1", "on")
+        elif cfg.type == "json":
+            parsed = json.loads(raw)
+            if not isinstance(parsed, dict):
+                raise ValueError(raw)
+            value = parsed
         else:
             value = raw
     except ValueError as exc:
+        # json.JSONDecodeError 是 ValueError 的子类，"json" 类型解析失败也在这里
+        # 一并处理，不需要单独一个 except 分支。
         raise ConfigError(f"{cfg.key} 需要 {cfg.type} 类型的值，收到：{raw}") from exc
     validate(cfg, value)
     return value
 
 
-def validate(cfg: ConfigItem, value: int | float | bool | str) -> None:
-    if cfg.type in ("int", "float") and not isinstance(value, bool):
+def validate(cfg: ConfigItem, value: int | float | bool | str | dict[str, Any]) -> None:
+    if (
+        cfg.type in ("int", "float")
+        and isinstance(value, (int, float))
+        and not isinstance(value, bool)
+    ):
         number = float(value)
         if cfg.minimum is not None and number < cfg.minimum:
             raise ConfigError(f"{cfg.key} 不能小于 {cfg.minimum}，收到：{value}")

@@ -67,7 +67,14 @@ void main() {
       find.byKey(const ValueKey('code-input')),
       await latestCode(email),
     );
-    await waitFor(tester, find.text('今天还没有安排'));
+    // 这句话只出现在服务端下发的组合结果里（SPEC-009.1 #77），标准布局兜底没有它，
+    // 确认走的确实是"今天"页面描述协议这条路，不是碰巧退回了兜底布局。
+    // 不能拿"今天还没有安排"当就绪信号：标准布局在组合结果返回前也显示它，一进页面就
+    // 满足，慢的模拟器上断言会赶在组合结果校验完之前执行。这里等组合结果自己的句子，
+    // 组合真的退回了标准布局就等到超时失败。
+    await waitFor(tester, find.text('先添加一道你常做的菜'));
+    expect(find.text('先添加一道你常做的菜'), findsOneWidget);
+    expect(find.text('今天还没有安排'), findsOneWidget);
 
     for (final label in ['今天', '发现', '新建', '记录', '我的']) {
       expect(find.bySemanticsLabel(label), findsWidgets, reason: label);

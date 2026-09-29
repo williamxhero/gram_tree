@@ -1,6 +1,25 @@
 {
   "components": {
     "schemas": {
+      "ActionDescriptor": {
+        "properties": {
+          "intent": {
+            "description": "已登记的意图名（SPEC-009.1 #81）",
+            "title": "Intent",
+            "type": "string"
+          },
+          "params": {
+            "additionalProperties": true,
+            "title": "Params",
+            "type": "object"
+          }
+        },
+        "required": [
+          "intent"
+        ],
+        "title": "ActionDescriptor",
+        "type": "object"
+      },
       "AnalyticsEventIn": {
         "additionalProperties": false,
         "description": "只允许这些字段：事件类型、页面/入口标识、可选耗时、发生时间、设备 ID。\n\n不含菜谱内容、口味档案、过敏和健康信息；也不接受用户 ID（服务端按登录状态填入）。",
@@ -191,6 +210,29 @@
         "title": "BindEmailRequest",
         "type": "object"
       },
+      "CacheInfo": {
+        "properties": {
+          "depends_on": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "依赖的内容版本",
+            "title": "Depends On",
+            "type": "object"
+          },
+          "ttl_s": {
+            "description": "缓存有效期（秒）",
+            "minimum": 0.0,
+            "title": "Ttl S",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "ttl_s"
+        ],
+        "title": "CacheInfo",
+        "type": "object"
+      },
       "ClientConfig": {
         "description": "App 启动时拉取的服务端配置。",
         "properties": {
@@ -212,6 +254,108 @@
           "params"
         ],
         "title": "ClientConfig",
+        "type": "object"
+      },
+      "ComponentDescriptor": {
+        "properties": {
+          "actions": {
+            "items": {
+              "$ref": "#/components/schemas/ActionDescriptor"
+            },
+            "title": "Actions",
+            "type": "array"
+          },
+          "data": {
+            "additionalProperties": true,
+            "description": "组件数据，形状由该 type 的组件 Schema 定义",
+            "title": "Data",
+            "type": "object"
+          },
+          "detail": {
+            "enum": [
+              "brief",
+              "standard",
+              "detailed"
+            ],
+            "title": "Detail",
+            "type": "string"
+          },
+          "id": {
+            "description": "这份描述里的组件实例 ID",
+            "title": "Id",
+            "type": "string"
+          },
+          "reason": {
+            "$ref": "#/components/schemas/ComponentReason"
+          },
+          "required": {
+            "default": false,
+            "description": "是否是必显组件",
+            "title": "Required",
+            "type": "boolean"
+          },
+          "type": {
+            "description": "组件类型名，必须是 App 声明支持的组件",
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "type",
+          "id",
+          "detail",
+          "data",
+          "reason"
+        ],
+        "title": "ComponentDescriptor",
+        "type": "object"
+      },
+      "ComponentReason": {
+        "properties": {
+          "code": {
+            "description": "理由代码，例如 default",
+            "title": "Code",
+            "type": "string"
+          },
+          "text": {
+            "description": "给人看的一句话说明",
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "text"
+        ],
+        "title": "ComponentReason",
+        "type": "object"
+      },
+      "ComposeRequest": {
+        "properties": {
+          "page_type": {
+            "description": "要哪个页面类型的组合，例如 today",
+            "title": "Page Type",
+            "type": "string"
+          },
+          "protocol_version": {
+            "description": "App 自己实现的协议版本，例如 1.0",
+            "title": "Protocol Version",
+            "type": "string"
+          },
+          "supported_components": {
+            "description": "App 已登记、认识的组件类型清单；服务端只会下发这里面的类型",
+            "items": {
+              "type": "string"
+            },
+            "title": "Supported Components",
+            "type": "array"
+          }
+        },
+        "required": [
+          "page_type",
+          "protocol_version"
+        ],
+        "title": "ComposeRequest",
         "type": "object"
       },
       "ConsentRecord-Input": {
@@ -732,6 +876,46 @@
         "title": "EventUploadResultItem",
         "type": "object"
       },
+      "ExperimentInfo": {
+        "properties": {
+          "experiment": {
+            "title": "Experiment",
+            "type": "string"
+          },
+          "variant": {
+            "title": "Variant",
+            "type": "string"
+          }
+        },
+        "required": [
+          "experiment",
+          "variant"
+        ],
+        "title": "ExperimentInfo",
+        "type": "object"
+      },
+      "FallbackInfo": {
+        "properties": {
+          "reason_code": {
+            "enum": [
+              "unknown_major",
+              "unknown_component",
+              "illegal_action",
+              "invalid_data",
+              "missing_required",
+              "server_error",
+              "timeout"
+            ],
+            "title": "Reason Code",
+            "type": "string"
+          }
+        },
+        "required": [
+          "reason_code"
+        ],
+        "title": "FallbackInfo",
+        "type": "object"
+      },
       "HealthChecks": {
         "properties": {
           "api": {
@@ -824,6 +1008,68 @@
         "title": "IdentityOut",
         "type": "object"
       },
+      "PageDescription": {
+        "properties": {
+          "cache": {
+            "$ref": "#/components/schemas/CacheInfo"
+          },
+          "components": {
+            "items": {
+              "$ref": "#/components/schemas/ComponentDescriptor"
+            },
+            "title": "Components",
+            "type": "array"
+          },
+          "composition_id": {
+            "format": "uuid",
+            "title": "Composition Id",
+            "type": "string"
+          },
+          "experiment": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ExperimentInfo"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "fallback": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/FallbackInfo"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "非空表示这份描述是标准布局兜底，components 为空数组"
+          },
+          "generated_at": {
+            "title": "Generated At",
+            "type": "string"
+          },
+          "page_type": {
+            "title": "Page Type",
+            "type": "string"
+          },
+          "protocol": {
+            "description": "协议版本，大版本.小版本，例如 1.0",
+            "title": "Protocol",
+            "type": "string"
+          }
+        },
+        "required": [
+          "protocol",
+          "page_type",
+          "composition_id",
+          "generated_at",
+          "cache"
+        ],
+        "title": "PageDescription",
+        "type": "object"
+      },
       "ProfileUpdate": {
         "properties": {
           "nickname": {
@@ -884,6 +1130,112 @@
           "message"
         ],
         "title": "RejectionReason",
+        "type": "object"
+      },
+      "SkipAdjustmentRequest": {
+        "properties": {
+          "component_id": {
+            "description": "要去掉来源调整的组件实例 ID",
+            "title": "Component Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "component_id"
+        ],
+        "title": "SkipAdjustmentRequest",
+        "type": "object"
+      },
+      "SkipAdjustmentResult": {
+        "description": "\"这次不用\"的返回：去掉这条调整后的来源字段，只影响这次查看，不写口味档案。",
+        "properties": {
+          "component_id": {
+            "title": "Component Id",
+            "type": "string"
+          },
+          "source": {
+            "$ref": "#/components/schemas/SourcedValue"
+          }
+        },
+        "required": [
+          "component_id",
+          "source"
+        ],
+        "title": "SkipAdjustmentResult",
+        "type": "object"
+      },
+      "SourceBasis": {
+        "description": "依据：只用等级、日期这类用户看得懂的信息，不含内部分数或精确统计\n（SPEC-010 开放边界，#82 明确要求）。",
+        "properties": {
+          "citation": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "来源引用，例如记录日期、口味档案变更、菜谱原文",
+            "title": "Citation"
+          },
+          "reason_code": {
+            "description": "理由代码，供程序判断用",
+            "title": "Reason Code",
+            "type": "string"
+          },
+          "text": {
+            "description": "一句大白话说明",
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "reason_code",
+          "text"
+        ],
+        "title": "SourceBasis",
+        "type": "object"
+      },
+      "SourcedValue": {
+        "properties": {
+          "basis": {
+            "$ref": "#/components/schemas/SourceBasis"
+          },
+          "original_value": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "换算/调整前的原值，只有真的发生换算/调整时才有",
+            "title": "Original Value"
+          },
+          "source_type": {
+            "enum": [
+              "author_filled",
+              "taste_adjusted",
+              "scenario_adjusted",
+              "ai_estimated",
+              "verified"
+            ],
+            "title": "Source Type",
+            "type": "string"
+          },
+          "value": {
+            "title": "Value",
+            "type": "string"
+          }
+        },
+        "required": [
+          "source_type",
+          "value",
+          "basis"
+        ],
+        "title": "SourcedValue",
         "type": "object"
       },
       "TokenPair": {
@@ -2230,6 +2582,118 @@
         "summary": "绑定邮箱",
         "tags": [
           "account"
+        ]
+      }
+    },
+    "/v1/ui/compositions": {
+      "post": {
+        "operationId": "compose",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ComposeRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PageDescription"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "参数错误"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "服务端错误"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "按 App 声明的协议版本和组件清单，下发一份页面描述（需要登录）",
+        "tags": [
+          "ui-protocol"
+        ]
+      }
+    },
+    "/v1/ui/compositions/skip-adjustment": {
+      "post": {
+        "operationId": "skip_adjustment",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SkipAdjustmentRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkipAdjustmentResult"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "参数错误"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "服务端错误"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "\"这次不用\"：返回去掉这条来源调整后的结果，只影响这次查看，不写口味档案（需要登录）",
+        "tags": [
+          "ui-protocol"
         ]
       }
     }

@@ -1,0 +1,40 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://gramtree.app/contracts/ui_protocol/1.0/components/text_block.schema.json",
+  "title": "text_block 组件数据",
+  "description": "文字块：结论层是一段正文文字，依据、明细层可选（SPEC-009.1 #80）。",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["conclusion"],
+  "properties": {
+    "conclusion": {
+      "type": "string",
+      "minLength": 1,
+      "description": "结论层：要显示的一段正文文字。"
+    },
+    "basis": {
+      "description": "依据层：可选，一句说明文字。",
+      "oneOf": [
+        { "type": "null" },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["text"],
+          "properties": {
+            "text": { "type": "string", "minLength": 1 }
+          }
+        }
+      ]
+    },
+    "action_label": {
+      "type": "string",
+      "minLength": 1,
+      "description": "主要动作按钮的文案，没有主要动作时不出现。"
+    },
+    "detail_label": {
+      "type": "string",
+      "minLength": 1,
+      "description": "明细入口的文案，只在详细档显示，没有第二个动作时不出现。"
+    }
+  }
+}

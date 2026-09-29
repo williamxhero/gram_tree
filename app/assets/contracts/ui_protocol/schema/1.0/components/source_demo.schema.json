@@ -1,0 +1,60 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://gramtree.app/contracts/ui_protocol/1.0/components/source_demo.schema.json",
+  "title": "source_demo 组件数据（仅测试用）",
+  "description": "仅用来在两端测试里验证“来源标记 -> 为什么面板 -> 反馈”这条链路（SPEC-009.1 #82）；不是真实业务组件，真实的换算内容留给以后的子 SPEC（SPEC-005.3）。\n\n`source` 是协议里“带来源的字段”这个通用形状的一份示例：以后任何组件要给某个数值/内容标来源，都照这个形状加字段（不是通过跨文件 $ref 复用——这份契约里每个组件的 data Schema 都是独立文件、各自校验，见 page_description.schema.json 顶部说明；`source` 这个形状因此照这里的写法在新组件自己的 Schema 里再写一份，不是引用这个文件）：\n- `source_type`：来源类型，CLAUDE.md 第 6 节 UI 规范定的五种取值之一——author_filled 不显示标记，taste_adjusted/scenario_adjusted 用酱红，ai_estimated 用中性虚线（表示还没人确认），verified 用绿。\n- `value`：当前显示的值。\n- `original_value`（可选）：换算/调整前的原值，只有真的发生了换算/调整时才出现，不发生换算时这个字段整个不出现（不是出现并等于 null）。\n- `basis`：依据——`reason_code` 给程序判断用，`text` 是一句用户看得懂的大白话说明（只用等级、日期这类信息，不含内部分数或精确统计，SPEC-010 开放边界），`citation`（可选）是来源引用，例如记录日期、口味档案变更、菜谱原文。",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["conclusion", "source"],
+  "properties": {
+    "conclusion": {
+      "type": "string",
+      "minLength": 1,
+      "description": "结论层：一眼可读的一句话，包含这个来源字段的当前值。"
+    },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["source_type", "value", "basis"],
+      "properties": {
+        "source_type": {
+          "type": "string",
+          "enum": [
+            "author_filled",
+            "taste_adjusted",
+            "scenario_adjusted",
+            "ai_estimated",
+            "verified"
+          ]
+        },
+        "value": {
+          "type": "string",
+          "minLength": 1
+        },
+        "original_value": {
+          "type": "string",
+          "minLength": 1,
+          "description": "换算/调整前的原值；没有发生换算时不出现这个字段。"
+        },
+        "basis": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["reason_code", "text"],
+          "properties": {
+            "reason_code": { "type": "string", "minLength": 1 },
+            "text": {
+              "type": "string",
+              "minLength": 1,
+              "description": "一句大白话说明，只用等级、日期这类用户看得懂的信息，不含内部分数或精确统计。"
+            },
+            "citation": {
+              "type": "string",
+              "minLength": 1,
+              "description": "来源引用，例如记录日期、口味档案变更、菜谱原文。"
+            }
+          }
+        }
+      }
+    }
+  }
+}

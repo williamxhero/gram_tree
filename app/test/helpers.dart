@@ -25,6 +25,8 @@ import 'package:gram_tree/platform/timezone_source.dart';
 import 'package:gram_tree/privacy/policy.dart';
 import 'package:gram_tree/storage/local_store.dart';
 import 'package:gram_tree/storage/secure_store.dart';
+import 'package:gram_tree/ui_protocol/composition_cache.dart';
+import 'package:gram_tree/ui_protocol/page_types.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
 
 /// 页面测试共用的启动和操作方法。
@@ -199,6 +201,67 @@ class FakeServer extends Interceptor {
         {
           'results': [
             for (final e in events) {'id': e['id'], 'status': 'accepted'},
+          ],
+        },
+      );
+    });
+    on('POST', '/v1/ui/compositions', (r) {
+      final body = r.body as Map;
+      if (body['page_type'] != 'today') {
+        return error(404, 'unknown_page_type', '没有这个页面类型');
+      }
+      final supported = ((body['supported_components'] as List?) ?? const [])
+          .cast<String>()
+          .toSet();
+      final all = [
+        {
+          'type': 'hint_bar',
+          'id': 'c1',
+          'detail': 'brief',
+          'data': {'conclusion': '先添加一道你常做的菜'},
+          'actions': [
+            {
+              'intent': 'open_page',
+              'params': {'page': 'create'},
+            },
+          ],
+          'reason': {'code': 'default', 'text': '默认组合'},
+          'required': false,
+        },
+        {
+          'type': 'empty_state',
+          'id': 'c2',
+          'detail': 'standard',
+          'data': {
+            'conclusion': '今天还没有安排',
+            'basis': {'text': '这里会显示今天要做的菜'},
+            'action_label': '添加第一道菜谱',
+          },
+          'actions': [
+            {
+              'intent': 'open_page',
+              'params': {'page': 'create'},
+            },
+          ],
+          'reason': {'code': 'default', 'text': '默认组合'},
+          'required': false,
+        },
+      ];
+      return (
+        200,
+        {
+          'protocol': '1.0',
+          'page_type': 'today',
+          'composition_id': '7c9e6679-7425-40de-944b-e07fc1f90ae7',
+          'generated_at': '2026-09-28T10:30:00Z',
+          'cache': {
+            'depends_on': {'plan': 'v0'},
+            'ttl_s': 600,
+          },
+          'experiment': null,
+          'components': [
+            for (final c in all)
+              if (supported.contains(c['type'])) c,
           ],
         },
       );
@@ -381,6 +444,10 @@ class TestEnv {
     FakeEventReportBackend? eventReports,
     this.timezone = 'Asia/Shanghai',
     this.features = const {},
+    this.params = const {},
+    this.requiredComponentTypes,
+    this.localDependencyVersions,
+    this.offline = false,
   }) : server = server ?? FakeServer(),
        local = local ?? MemoryLocalStore(),
        secure = secure ?? MemorySecureStore(),
@@ -394,13 +461,22 @@ class TestEnv {
   factory TestEnv.signedIn({
     FakeServer? server,
     Map<String, bool> features = const {},
+    Map<String, Object?> params = const {},
+    Map<String, Set<String>>? requiredComponentTypes,
+    Map<String, String>? localDependencyVersions,
+    MemoryLocalStore? local,
+    bool offline = false,
   }) {
     final s = server ?? FakeServer();
     return TestEnv(
       server: s,
-      local: MemoryLocalStore(consentedStore()),
+      local: local ?? MemoryLocalStore(consentedStore()),
       secure: MemorySecureStore(signedInSecure(s.user)),
       features: features,
+      params: params,
+      requiredComponentTypes: requiredComponentTypes,
+      localDependencyVersions: localDependencyVersions,
+      offline: offline,
     );
   }
 
@@ -416,6 +492,26 @@ class TestEnv {
   final String? timezone;
   final Map<String, bool> features;
 
+  /// 覆盖 `/v1/client-config` 的 `params`（例如
+  /// `ui.composition_timeout_ms`），测试组合服务等待时限之类"App 按下发的值执行"
+  /// 的行为时用（SPEC-009.1 #79）。
+  final Map<String, Object?> params;
+
+  /// 覆盖 `requiredComponentTypesProvider`，测试"缺必显组件时整页退回标准布局"这个
+  /// 机制本身时用（SPEC-009.1 #79）；`null` 表示不覆盖，用 App 里登记的默认值
+  /// （现在都是空集合）。
+  final Map<String, Set<String>>? requiredComponentTypes;
+
+  /// 覆盖 `localDependencyVersionsProvider`，测试"本机缓存的 depends_on 和这个值
+  /// 一致才用缓存"这条机制时用（SPEC-009.1 票 7，#83）；`null` 表示不覆盖，用 App
+  /// 里的默认值（空 Map，见该 provider 的文档）。
+  final Map<String, String>? localDependencyVersions;
+
+  /// 让每个请求从一开始就被 [offlineSimulationProvider] 拒绝成
+  /// `DioException.connectionError`——测试"离线时使用本机缓存"（SPEC-009.1 票 7，
+  /// #83）时用；默认 false（正常联网）。
+  final bool offline;
+
   List<Override> get overrides => [
     localStoreProvider.overrideWithValue(local),
     secureStoreProvider.overrideWithValue(secure),
@@ -429,9 +525,16 @@ class TestEnv {
     eventQueueProvider.overrideWithValue(eventQueue),
     eventReportBackendProvider.overrideWithValue(eventReports),
     appVersionProvider.overrideWith((ref) async => '0.1.0-test'),
-    if (features.isNotEmpty)
+    if (offline) offlineSimulationProvider.overrideWith(_AlwaysOffline.new),
+    if (features.isNotEmpty || params.isNotEmpty)
       clientConfigProvider.overrideWith(
-        (ref) async => ClientConfig(features: features, params: const {}),
+        (ref) async => ClientConfig(features: features, params: params),
+      ),
+    if (requiredComponentTypes != null)
+      requiredComponentTypesProvider.overrideWithValue(requiredComponentTypes!),
+    if (localDependencyVersions != null)
+      localDependencyVersionsProvider.overrideWithValue(
+        localDependencyVersions!,
       ),
   ];
 }
@@ -471,6 +574,15 @@ Future<TestEnv> pumpApp(
   );
   await tester.pumpAndSettle();
   return e;
+}
+
+/// [TestEnv.offline] 用：请求从 `pumpApp` 第一次渲染开始就被拒绝，不用先联网成功
+/// 一次再手动调用 `.set(true)`——这样"离线且本机有缓存"的测试可以直接控制
+/// [TestEnv.local] 里预先存好什么，不用先走一遍真实成功的组合请求（那样会覆盖掉
+/// 预先存的缓存，见 `composition_cache_test.dart`）。
+class _AlwaysOffline extends OfflineSimulation {
+  @override
+  bool build() => true;
 }
 
 /// 模拟杀掉进程重新打开：本机存储保留，内存里的状态全部重建。

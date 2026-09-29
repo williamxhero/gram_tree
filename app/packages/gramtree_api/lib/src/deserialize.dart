@@ -1,10 +1,15 @@
+import 'package:gramtree_api/src/model/action_descriptor.dart';
 import 'package:gramtree_api/src/model/analytics_event_in.dart';
 import 'package:gramtree_api/src/model/analytics_upload_request.dart';
 import 'package:gramtree_api/src/model/apple_login_request.dart';
 import 'package:gramtree_api/src/model/apple_reauth_request.dart';
 import 'package:gramtree_api/src/model/bind_apple_request.dart';
 import 'package:gramtree_api/src/model/bind_email_request.dart';
+import 'package:gramtree_api/src/model/cache_info.dart';
 import 'package:gramtree_api/src/model/client_config.dart';
+import 'package:gramtree_api/src/model/component_descriptor.dart';
+import 'package:gramtree_api/src/model/component_reason.dart';
+import 'package:gramtree_api/src/model/compose_request.dart';
 import 'package:gramtree_api/src/model/consent_record_input.dart';
 import 'package:gramtree_api/src/model/consent_record_output.dart';
 import 'package:gramtree_api/src/model/consent_upload.dart';
@@ -20,12 +25,19 @@ import 'package:gramtree_api/src/model/event_upload_item.dart';
 import 'package:gramtree_api/src/model/event_upload_request.dart';
 import 'package:gramtree_api/src/model/event_upload_response.dart';
 import 'package:gramtree_api/src/model/event_upload_result_item.dart';
+import 'package:gramtree_api/src/model/experiment_info.dart';
+import 'package:gramtree_api/src/model/fallback_info.dart';
 import 'package:gramtree_api/src/model/health_checks.dart';
 import 'package:gramtree_api/src/model/health_response.dart';
 import 'package:gramtree_api/src/model/identity_out.dart';
+import 'package:gramtree_api/src/model/page_description.dart';
 import 'package:gramtree_api/src/model/profile_update.dart';
 import 'package:gramtree_api/src/model/refresh_request.dart';
 import 'package:gramtree_api/src/model/rejection_reason.dart';
+import 'package:gramtree_api/src/model/skip_adjustment_request.dart';
+import 'package:gramtree_api/src/model/skip_adjustment_result.dart';
+import 'package:gramtree_api/src/model/source_basis.dart';
+import 'package:gramtree_api/src/model/sourced_value.dart';
 import 'package:gramtree_api/src/model/token_pair.dart';
 import 'package:gramtree_api/src/model/user_out.dart';
 
@@ -51,6 +63,9 @@ ReturnType deserialize<ReturnType, BaseType>(
       return (valueString == 'true' || valueString == '1') as ReturnType;
     case 'double':
       return (value is double ? value : double.parse('$value')) as ReturnType;
+    case 'ActionDescriptor':
+      return ActionDescriptor.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
     case 'AnalyticsEventIn':
       return AnalyticsEventIn.fromJson(value as Map<String, dynamic>)
           as ReturnType;
@@ -69,8 +84,19 @@ ReturnType deserialize<ReturnType, BaseType>(
     case 'BindEmailRequest':
       return BindEmailRequest.fromJson(value as Map<String, dynamic>)
           as ReturnType;
+    case 'CacheInfo':
+      return CacheInfo.fromJson(value as Map<String, dynamic>) as ReturnType;
     case 'ClientConfig':
       return ClientConfig.fromJson(value as Map<String, dynamic>) as ReturnType;
+    case 'ComponentDescriptor':
+      return ComponentDescriptor.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'ComponentReason':
+      return ComponentReason.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'ComposeRequest':
+      return ComposeRequest.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
     case 'ConsentRecordInput':
       return ConsentRecordInput.fromJson(value as Map<String, dynamic>)
           as ReturnType;
@@ -114,6 +140,11 @@ ReturnType deserialize<ReturnType, BaseType>(
     case 'EventUploadResultItem':
       return EventUploadResultItem.fromJson(value as Map<String, dynamic>)
           as ReturnType;
+    case 'ExperimentInfo':
+      return ExperimentInfo.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'FallbackInfo':
+      return FallbackInfo.fromJson(value as Map<String, dynamic>) as ReturnType;
     case 'HealthChecks':
       return HealthChecks.fromJson(value as Map<String, dynamic>) as ReturnType;
     case 'HealthResponse':
@@ -121,6 +152,9 @@ ReturnType deserialize<ReturnType, BaseType>(
           as ReturnType;
     case 'IdentityOut':
       return IdentityOut.fromJson(value as Map<String, dynamic>) as ReturnType;
+    case 'PageDescription':
+      return PageDescription.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
     case 'ProfileUpdate':
       return ProfileUpdate.fromJson(value as Map<String, dynamic>)
           as ReturnType;
@@ -130,6 +164,16 @@ ReturnType deserialize<ReturnType, BaseType>(
     case 'RejectionReason':
       return RejectionReason.fromJson(value as Map<String, dynamic>)
           as ReturnType;
+    case 'SkipAdjustmentRequest':
+      return SkipAdjustmentRequest.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'SkipAdjustmentResult':
+      return SkipAdjustmentResult.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'SourceBasis':
+      return SourceBasis.fromJson(value as Map<String, dynamic>) as ReturnType;
+    case 'SourcedValue':
+      return SourcedValue.fromJson(value as Map<String, dynamic>) as ReturnType;
     case 'TokenPair':
       return TokenPair.fromJson(value as Map<String, dynamic>) as ReturnType;
     case 'UserOut':
