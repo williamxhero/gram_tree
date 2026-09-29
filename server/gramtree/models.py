@@ -3,6 +3,7 @@
 from gramtree.accounts import models as _accounts  # noqa: F401
 from gramtree.db import Base
 from gramtree.examples import models as _examples  # noqa: F401
+from gramtree.ingredients import models as _ingredients  # noqa: F401
 from gramtree.runtime_config import models as _runtime_config  # noqa: F401
 
 metadata = Base.metadata
