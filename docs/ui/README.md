@@ -5,6 +5,7 @@
 | 文件 | 内容 | 对应 SPEC | 原 Artifact |
 |---|---|---|---|
 | [`UI规范.md`](UI规范.md) | UI 规范正文：配色、字体、来源标记、三层结构、“为什么”面板、意图、兜底规则 | #18 SPEC-009.1、#34 SPEC-009.2 | 由 CLAUDE.md 第 6 节、`app/lib/app/theme.dart` 和组件库样稿整理 |
+| [`UI使用指南.md`](UI使用指南.md) | 怎么用：主题取色、新增组件和意图、来源标记、兜底、画新样稿并存进仓库、合并前自查清单 | #18 SPEC-009.1 | 无（仓库里的文档） |
 | [`component-library.html`](component-library.html) | 组件库样稿（可直接用浏览器打开，自带全部样式和脚本） | #18 SPEC-009.1 | https://claude.ai/artifact/EN6F9QAL5Qy3JMmK9VjdvW |
 | [`account-privacy.html`](account-privacy.html) | 账号与隐私样稿（可直接用浏览器打开） | SPEC-013.2 账号与隐私 | claude.ai Project 里的“账号与隐私”样稿 |
 | [`recipe-detail/`](recipe-detail/) | 菜谱详情页样稿（熟手常做）的源文件：`index.html` 和 `project/` 下的组件（`Kit`、`Main`、`Pro`、`Why`、`canvas.json`） | 菜谱详情页 | claude.ai Project 里的“菜谱详情页”画布 |
