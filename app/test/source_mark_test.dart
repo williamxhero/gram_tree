@@ -27,11 +27,11 @@ void main() {
       'source': {
         'source_type': sourceType,
         'value': value,
-        if (originalValue != null) 'original_value': originalValue,
+        'original_value': ?originalValue,
         'basis': {
           'reason_code': 'demo',
           'text': basisText,
-          if (citation != null) 'citation': citation,
+          'citation': ?citation,
         },
       },
     },
@@ -115,9 +115,7 @@ void main() {
     );
   });
 
-  testWidgets('点任何来源标记都打开同一个为什么面板，显示原值、依据、来源引用和两个反馈动作，并记录打开事件', (
-    tester,
-  ) async {
+  testWidgets('点任何来源标记都打开同一个为什么面板，显示原值、依据、来源引用和两个反馈动作，并记录打开事件', (tester) async {
     final server = FakeServer();
     server.on(
       'POST',
@@ -185,78 +183,78 @@ void main() {
     expect(find.text('以后别这样'), findsNothing);
   });
 
-  testWidgets(
-    '"这次不用"：走票 5 的意图派发，记来源反馈事件，调用服务端接口拿到去掉调整后的结果并更新显示',
-    (tester) async {
-      final server = FakeServer();
-      server.on(
-        'POST',
-        '/v1/ui/compositions',
-        (r) => (
-          200,
-          composition([
-            sourceDemoComponent(
-              id: 'c3',
-              conclusion: '建议用盐 3 g',
-              sourceType: 'taste_adjusted',
-            ),
-          ]),
-        ),
-      );
-      server.on('POST', '/v1/ui/compositions/skip-adjustment', (r) {
-        expect((r.body as Map)['component_id'], 'c3');
-        return (
-          200,
-          {
-            'component_id': 'c3',
-            'source': {
-              'source_type': 'author_filled',
-              'value': '5 g',
-              'basis': {
-                'reason_code': 'skip_adjustment',
-                'text': '已去掉按你的口味换算的调整，显示菜谱原文用量',
-              },
-            },
-          },
-        );
-      });
-      final env = await pumpApp(tester, env: TestEnv.signedIn(server: server));
-
-      await tester.tap(find.text('按你的口味换算'));
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('这次不用'));
-      await tester.pumpAndSettle();
-
-      // 面板关闭，标记按服务端退回的结果变成"作者填写"（不再显示标记）。
-      expect(find.text('这次不用'), findsNothing);
-      expect(find.text('按你的口味换算'), findsNothing);
-
-      expect(server.calls('POST', '/v1/ui/compositions/skip-adjustment'), hasLength(1));
-
-      final actions = uploadedEvents(env, 'ui.component_action');
-      expect(actions, hasLength(1));
-      expect(actions.single['content'], {
-        'component_id': 'c3',
-        'intent': 'skip_this_time',
-      });
-
-      final feedback = uploadedEvents(env, 'ui.source_feedback');
-      expect(feedback, hasLength(1));
-      expect(feedback.single['content'], {
-        'component_id': 'c3',
-        'source_type': 'taste_adjusted',
-        'feedback': 'skip_once',
-      });
-      expect(
-        (feedback.single['correlation'] as Map)['ui_composition_id'],
-        '11111111-1111-4111-8111-111111111111',
-      );
-    },
-  );
-
-  testWidgets('"以后别这样"：走票 5 的意图派发，只记来源反馈事件，不调用服务端接口、不改变显示', (
+  testWidgets('"这次不用"：走票 5 的意图派发，记来源反馈事件，调用服务端接口拿到去掉调整后的结果并更新显示', (
     tester,
   ) async {
+    final server = FakeServer();
+    server.on(
+      'POST',
+      '/v1/ui/compositions',
+      (r) => (
+        200,
+        composition([
+          sourceDemoComponent(
+            id: 'c3',
+            conclusion: '建议用盐 3 g',
+            sourceType: 'taste_adjusted',
+          ),
+        ]),
+      ),
+    );
+    server.on('POST', '/v1/ui/compositions/skip-adjustment', (r) {
+      expect((r.body as Map)['component_id'], 'c3');
+      return (
+        200,
+        {
+          'component_id': 'c3',
+          'source': {
+            'source_type': 'author_filled',
+            'value': '5 g',
+            'basis': {
+              'reason_code': 'skip_adjustment',
+              'text': '已去掉按你的口味换算的调整，显示菜谱原文用量',
+            },
+          },
+        },
+      );
+    });
+    final env = await pumpApp(tester, env: TestEnv.signedIn(server: server));
+
+    await tester.tap(find.text('按你的口味换算'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('这次不用'));
+    await tester.pumpAndSettle();
+
+    // 面板关闭，标记按服务端退回的结果变成"作者填写"（不再显示标记）。
+    expect(find.text('这次不用'), findsNothing);
+    expect(find.text('按你的口味换算'), findsNothing);
+
+    expect(
+      server.calls('POST', '/v1/ui/compositions/skip-adjustment'),
+      hasLength(1),
+    );
+
+    final actions = uploadedEvents(env, 'ui.component_action');
+    expect(actions, hasLength(1));
+    expect(actions.single['content'], {
+      'component_id': 'c3',
+      'intent': 'skip_this_time',
+    });
+
+    final feedback = uploadedEvents(env, 'ui.source_feedback');
+    expect(feedback, hasLength(1));
+    expect(feedback.single['content'], {
+      'component_id': 'c3',
+      'source_type': 'taste_adjusted',
+      'feedback': 'skip_once',
+    });
+    expect(
+      (feedback.single['correlation'] as Map)['ui_composition_id'],
+      '11111111-1111-4111-8111-111111111111',
+    );
+  });
+
+  testWidgets('"以后别这样"：走票 5 的意图派发，只记来源反馈事件，不调用服务端接口、不改变显示', (tester) async {
     final server = FakeServer();
     server.on(
       'POST',
@@ -281,7 +279,10 @@ void main() {
 
     // 标记显示不变——"以后别这样"不重算这次查看的内容。
     expect(find.text('按你的口味换算'), findsOneWidget);
-    expect(server.calls('POST', '/v1/ui/compositions/skip-adjustment'), isEmpty);
+    expect(
+      server.calls('POST', '/v1/ui/compositions/skip-adjustment'),
+      isEmpty,
+    );
 
     final actions = uploadedEvents(env, 'ui.component_action');
     expect(actions, hasLength(1));
