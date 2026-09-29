@@ -152,6 +152,8 @@ tool/gen_api_client.sh                 # 服务端接口改了就跑，把 api/o
 - **配色**：纸 #F7F4EE（页面底色），卡片 #FFFDF9，墨 #1B1813（主按钮），强调色酱红 #B0441E **只用在“系统替你改了”的地方**，已验证用绿 #4E6B48。
 - **字体**：标题 Noto Serif SC，正文 Noto Sans SC，数字 DM Mono。
 
+UI 规范正文（`docs/ui/UI规范.md`）、怎么用（`docs/ui/UI使用指南.md`）和已设计出来的界面样稿都存在仓库的 `docs/ui/`（入口 `docs/ui/README.md`）；以后新出的界面样稿也要同步存进这里，不能只留在 claude.ai。
+
 App 里这些颜色和字体在 `app/lib/app/theme.dart`（`GramTreePalette`、`GramTreeColors`），组件里从主题取，不要写死颜色值。深色配色和字体文件打包还没定，由 #18 定稿。
 
 ## 环境实测记录（2026-09-27）

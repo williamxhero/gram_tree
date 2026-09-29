@@ -1,0 +1,386 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>菜谱详情</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&amp;family=Noto+Sans+SC:wght@400;500;700&amp;family=Noto+Serif+SC:wght@600;700&amp;display=swap">
+<style>
+body{margin:0;background:#F7F4EE;font-family:"Noto Sans SC","PingFang SC",sans-serif;color:#1B1813}
+a{color:#B0441E;text-decoration:none}a:hover{color:#8A3214}
+button{font-family:inherit;cursor:pointer}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; position: relative; display: flex; flex-direction: column; overflow: hidden; background: #F7F4EE; font-family: 'Noto Sans SC', 'PingFang SC', sans-serif; color: #1B1813">
+
+<div style="flex-grow: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column">
+
+<!-- 成品图 -->
+<div style="position: relative; height: 220px; flex-shrink: 0; background: #E8DCC8; display: flex; align-items: center; justify-content: center">
+<svg width="180" height="120" viewBox="0 0 220 150" fill="none" stroke="#B89A76" stroke-width="2" aria-hidden="true">
+<ellipse cx="110" cy="62" rx="96" ry="26"></ellipse>
+<path d="M14 62c6 46 44 72 96 72s90-26 96-72"></path>
+<circle cx="80" cy="56" r="7"></circle><circle cx="104" cy="50" r="7"></circle><circle cx="128" cy="58" r="7"></circle><circle cx="94" cy="68" r="6"></circle><circle cx="140" cy="46" r="5"></circle>
+</svg>
+<span style="position: absolute; bottom: 12px; right: 16px; font-size: 11px; color: #6B5037">[成品图]</span>
+<div style="position: absolute; top: 14px; left: 14px; right: 14px; display: flex; justify-content: space-between">
+<button aria-label="返回" style="width: 44px; height: 44px; border-radius: 22px; border: none; background: rgba(247,244,238,0.94); display: flex; align-items: center; justify-content: center; color: #1B1813">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"></path></svg>
+</button>
+<button aria-label="分享" style="width: 44px; height: 44px; border-radius: 22px; border: none; background: rgba(247,244,238,0.94); display: flex; align-items: center; justify-content: center; color: #1B1813">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 8l5-5 5 5M5 14v6h14v-6"></path></svg>
+</button>
+</div>
+</div>
+
+<!-- 结论层：这道菜是什么、对你意味着什么 -->
+<div style="padding: 20px 20px 0; display: flex; flex-direction: column; gap: 8px">
+<div style="display: flex; align-items: center; gap: 6px; font-size: 12px; color: #6E655A; letter-spacing: 0.5px">
+<span>{{contextLine}}</span>
+<span style="width: 6px; height: 6px; border-radius: 3px; background: #B0441E"></span>
+<span style="color: #B0441E">已按你的口味</span>
+</div>
+<h1 style="margin: 0; font-family: 'Noto Serif SC', serif; font-weight: 700; font-size: 28px; line-height: 1.25">少辣版宫保鸡丁</h1>
+<div style="font-size: 14px; line-height: 1.6; color: #4A4238">辣椒减半、碗汁多点醋，糊辣香还在，小孩也能吃。</div>
+<a href="#" style="display: flex; align-items: center; gap: 0; font-size: 13px; color: #1B1813; padding: 6px 0">
+<span>常被做</span><span style="color: #C9BFB0; padding: 0 8px">·</span><span>口碑很好</span><span style="color: #C9BFB0; padding: 0 8px">·</span><span>好复刻</span><span style="color: #C9BFB0; padding: 0 8px">·</span><span>10+ 改良版</span>
+<span style="flex-grow: 1"></span>
+<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6E655A" stroke-width="2" stroke-linecap="round"><path d="M9 6l6 6-6 6"></path></svg>
+</a>
+<div style="font-size: 12px; color: #6E655A">阿杰 · 基于 @老周 的第 3 版改良 · 35 分钟 · 含花生</div>
+</div>
+
+<!-- 熟手常做：和上次的差别 -->
+<sc-if value="{{isPro}}" hint-placeholder-val="{{ false }}">
+<div style="margin: 18px 20px 0; padding: 14px 16px; background: #FFFDF9; border: 1px solid #E6DFD3; border-radius: 14px; display: flex; flex-direction: column; gap: 8px">
+<div style="display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 700">
+<span style="width: 7px; height: 7px; border-radius: 4px; border: 1.5px solid #B0441E"></span>
+和你上次（9 月 24 日）比
+</div>
+<div style="display: flex; justify-content: space-between; font-size: 13px"><span style="color: #4A4238">份数</span><span style="font-family: 'DM Mono', monospace">2 → 3 人份</span></div>
+<div style="display: flex; justify-content: space-between; font-size: 13px"><span style="color: #4A4238">咸度</span><span style="color: #B0441E">按新口味少 15%</span></div>
+<div style="display: flex; justify-content: space-between; font-size: 13px"><span style="color: #4A4238">第 4 步</span><span>上次肉柴，这次有提醒</span></div>
+</div>
+</sc-if>
+
+<!-- 控制：视图 + 份数 -->
+<div style="margin: 22px 20px 0; display: flex; align-items: center; justify-content: space-between; gap: 12px">
+<div role="group" aria-label="用量视图" style="display: flex; padding: 3px; background: #ECE5D9; border-radius: 10px">
+<button onClick="{{setMine}}" aria-pressed="{{isMine}}" style="{{mineStyle}}">我的口味</button>
+<button onClick="{{setOrig}}" aria-pressed="{{isOrig}}" style="{{origStyle}}">原版</button>
+</div>
+<div style="display: flex; align-items: center; gap: 2px">
+<button onClick="{{dec}}" aria-label="减少一份" style="width: 44px; height: 44px; border-radius: 22px; border: 1px solid #E6DFD3; background: #FFFDF9; font-size: 18px; color: #1B1813">−</button>
+<span style="min-width: 64px; text-align: center; font-size: 14px"><span style="font-family: 'DM Mono', monospace; font-size: 16px; font-weight: 500">{{servings}}</span> 人份</span>
+<button onClick="{{inc}}" aria-label="增加一份" style="width: 44px; height: 44px; border-radius: 22px; border: 1px solid #E6DFD3; background: #FFFDF9; font-size: 18px; color: #1B1813">+</button>
+</div>
+</div>
+
+<!-- 食材 -->
+<div style="margin: 26px 20px 0; display: flex; flex-direction: column">
+<div style="display: flex; align-items: baseline; justify-content: space-between; padding-bottom: 4px">
+<h2 style="margin: 0; font-family: 'Noto Serif SC', serif; font-size: 20px; font-weight: 700">食材</h2>
+<a href="#" style="font-size: 13px">加入采购清单</a>
+</div>
+<sc-for list="{{groups}}" as="g" hint-placeholder-count="5">
+<div style="display: flex; flex-direction: column">
+<div style="padding: 14px 0 2px; font-size: 11px; letter-spacing: 1.5px; color: #8F8474">{{g.name}}</div>
+<sc-for list="{{g.items}}" as="it" hint-placeholder-count="3">
+<div style="{{it.rowStyle}}">
+<div style="flex-grow: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px">
+<span style="font-size: 15px">{{it.name}}</span>
+<sc-if value="{{it.showPrep}}" hint-placeholder-val="{{ true }}"><span style="font-size: 12px; color: #6E655A">{{it.prep}}</span></sc-if>
+</div>
+<sc-if value="{{it.marked}}" hint-placeholder-val="{{ false }}">
+<button onClick="{{it.open}}" aria-label="{{it.aria}}" style="flex-shrink: 0; min-height: 40px; display: flex; align-items: center; gap: 6px; border: none; background: none; padding: 0 0 0 8px; color: {{it.qtyColor}}">
+<span style="font-family: 'DM Mono', monospace; font-size: 16px; font-weight: 500; text-decoration: {{it.deco}}; text-underline-offset: 4px">{{it.qty}}</span>
+<span style="font-size: 13px">{{it.unit}}</span>
+<sc-if value="{{it.kTaste}}" hint-placeholder-val="{{ false }}"><span style="width: 7px; height: 7px; border-radius: 4px; background: #B0441E"></span></sc-if>
+<sc-if value="{{it.kEst}}" hint-placeholder-val="{{ false }}"><span style="width: 7px; height: 7px; border-radius: 4px; border: 1.5px dashed #8F8474; box-sizing: border-box"></span></sc-if>
+<sc-if value="{{it.kVer}}" hint-placeholder-val="{{ false }}"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#4E6B48" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12l5 5L20 6"></path></svg></sc-if>
+</button>
+</sc-if>
+<sc-if value="{{it.plain}}" hint-placeholder-val="{{ true }}">
+<div style="flex-shrink: 0; display: flex; align-items: center; gap: 6px; padding-left: 8px">
+<span style="font-family: 'DM Mono', monospace; font-size: 16px; font-weight: 500">{{it.qty}}</span>
+<span style="font-size: 13px">{{it.unit}}</span>
+<span style="width: 7px"></span>
+</div>
+</sc-if>
+</div>
+</sc-for>
+</div>
+</sc-for>
+</div>
+
+<!-- 步骤 -->
+<div style="margin: 30px 20px 0; display: flex; flex-direction: column">
+<div style="display: flex; align-items: center; justify-content: space-between; padding-bottom: 8px">
+<h2 style="margin: 0; font-family: 'Noto Serif SC', serif; font-size: 20px; font-weight: 700">步骤</h2>
+<div role="group" aria-label="详略" style="display: flex; padding: 3px; background: #ECE5D9; border-radius: 10px">
+<button onClick="{{setBrief}}" aria-pressed="{{isBrief}}" style="{{briefStyle}}">简洁</button>
+<button onClick="{{setFull}}" aria-pressed="{{isFull}}" style="{{fullStyle}}">详细</button>
+</div>
+</div>
+
+<sc-if value="{{isFull}}" hint-placeholder-val="{{ true }}">
+<sc-for list="{{steps}}" as="s" hint-placeholder-count="5">
+<div style="display: flex; gap: 14px; padding: 16px 0; border-top: 1px solid #E6DFD3">
+<span style="flex-shrink: 0; width: 24px; font-family: 'DM Mono', monospace; font-size: 15px; color: #8F8474; padding-top: 1px">{{s.n}}</span>
+<div style="flex-grow: 1; display: flex; flex-direction: column; gap: 6px">
+<span style="font-size: 16px; font-weight: 700">{{s.title}}</span>
+<span style="font-size: 14px; line-height: 1.65; color: #3A332B">{{s.text}}</span>
+<span style="font-size: 12px; color: #6E655A">{{s.meta}}</span>
+<span style="font-size: 13px; color: #1B1813"><span style="color: #6E655A">看到这样就好　</span>{{s.done}}</span>
+<sc-if value="{{s.hasWarn}}" hint-placeholder-val="{{ false }}">
+<button onClick="{{s.openWarn}}" style="align-self: flex-start; display: flex; align-items: center; gap: 6px; border: none; background: #F6E6DC; color: #7A2E12; border-radius: 8px; padding: 6px 10px; min-height: 32px; font-size: 12px; text-align: left">
+<span style="flex-shrink: 0; width: 7px; height: 7px; border-radius: 4px; border: 1.5px solid #B0441E; box-sizing: border-box"></span>{{s.warn}}
+</button>
+</sc-if>
+<sc-if value="{{s.showWhy}}" hint-placeholder-val="{{ true }}">
+<span style="font-size: 12px; line-height: 1.7; color: #6E655A; padding-top: 2px">为什么：{{s.why}}</span>
+</sc-if>
+</div>
+</div>
+</sc-for>
+</sc-if>
+
+<sc-if value="{{isBrief}}" hint-placeholder-val="{{ false }}">
+<sc-for list="{{steps}}" as="s" hint-placeholder-count="5">
+<div style="display: flex; flex-direction: column; gap: 6px; padding: 12px 0; border-top: 1px solid #E6DFD3">
+<div style="display: flex; align-items: baseline; gap: 12px">
+<span style="flex-shrink: 0; width: 20px; font-family: 'DM Mono', monospace; font-size: 14px; color: #8F8474">{{s.n}}</span>
+<span style="flex-grow: 1; font-size: 15px; font-weight: 500">{{s.title}}</span>
+<span style="font-size: 12px; color: #6E655A">{{s.short}}</span>
+</div>
+<sc-if value="{{s.hasWarn}}" hint-placeholder-val="{{ false }}">
+<button onClick="{{s.openWarn}}" style="margin-left: 32px; align-self: flex-start; display: flex; align-items: center; gap: 6px; border: none; background: #F6E6DC; color: #7A2E12; border-radius: 8px; padding: 6px 10px; min-height: 32px; font-size: 12px; text-align: left">
+<span style="flex-shrink: 0; width: 7px; height: 7px; border-radius: 4px; border: 1.5px solid #B0441E; box-sizing: border-box"></span>{{s.warn}}
+</button>
+</sc-if>
+</div>
+</sc-for>
+</sc-if>
+</div>
+
+<!-- 明细入口 -->
+<div style="margin: 18px 20px 0; border-top: 1px solid #E6DFD3; display: flex; flex-direction: column">
+<a href="#" style="display: flex; align-items: center; justify-content: space-between; min-height: 52px; color: #1B1813; font-size: 15px; border-bottom: 1px solid #E6DFD3">
+<span>进化树<span style="color: #6E655A; font-size: 12px">　3 个流派，你在看“少辣家常派”</span></span>
+<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6E655A" stroke-width="2" stroke-linecap="round"><path d="M9 6l6 6-6 6"></path></svg>
+</a>
+<a href="#" style="display: flex; align-items: center; justify-content: space-between; min-height: 52px; color: #1B1813; font-size: 15px; border-bottom: 1px solid #E6DFD3">
+<span>做过的人说<span style="color: #6E655A; font-size: 12px">　大多觉得刚好，少数说肉柴</span></span>
+<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6E655A" stroke-width="2" stroke-linecap="round"><path d="M9 6l6 6-6 6"></path></svg>
+</a>
+<a href="#" style="display: flex; align-items: center; justify-content: space-between; min-height: 52px; color: #1B1813; font-size: 15px">
+<span>版本历史<span style="color: #6E655A; font-size: 12px">　第 2 版，9 月 20 日</span></span>
+<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6E655A" stroke-width="2" stroke-linecap="round"><path d="M9 6l6 6-6 6"></path></svg>
+</a>
+</div>
+<div style="height: 24px; flex-shrink: 0"></div>
+</div>
+
+<!-- 提示：反馈已记下 -->
+<sc-if value="{{hasToast}}" hint-placeholder-val="{{ false }}">
+<div role="status" style="position: absolute; left: 16px; right: 16px; bottom: 138px; padding: 12px 14px; border-radius: 12px; background: #1B1813; color: #F7F4EE; font-size: 13px; line-height: 1.5; display: flex; justify-content: space-between; gap: 12px">
+<span>{{toast}}</span>
+<button onClick="{{closeToast}}" style="border: none; background: none; color: #E9B89F; font-size: 13px; padding: 0">撤销</button>
+</div>
+</sc-if>
+
+<!-- 底部：一句话 + 固定操作 -->
+<div style="flex-shrink: 0; display: flex; flex-direction: column; gap: 10px; padding: 10px 16px 20px; background: #FFFDF9; border-top: 1px solid #E6DFD3">
+<label style="display: flex; align-items: center; gap: 10px; height: 44px; padding: 0 6px 0 14px; border-radius: 22px; background: #F1ECE3">
+<span style="position: absolute; width: 1px; height: 1px; overflow: hidden">对这道菜说一句</span>
+<input placeholder="问一句，或说“少放点糖”“换空气炸锅”" style="flex-grow: 1; min-width: 0; border: none; background: transparent; font-family: inherit; font-size: 14px; color: #1B1813; outline: none">
+<button aria-label="语音输入" style="width: 36px; height: 36px; border-radius: 18px; border: none; background: #FFFDF9; display: flex; align-items: center; justify-content: center; color: #1B1813">
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="9" y="3" width="6" height="11" rx="3"></rect><path d="M5 11a7 7 0 0 0 14 0M12 18v3"></path></svg>
+</button>
+</label>
+<div style="display: flex; align-items: center; gap: 4px">
+<button onClick="{{toggleFav}}" aria-pressed="{{fav}}" style="width: 52px; height: 48px; border: none; background: none; color: {{favColor}}; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; font-size: 11px">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="{{favFill}}" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M6 3h12v18l-6-4-6 4z"></path></svg>收藏
+</button>
+<button style="width: 52px; height: 48px; border: none; background: none; color: #3A332B; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; font-size: 11px">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16v11H9l-5 4z"></path></svg>提建议
+</button>
+<button style="width: 52px; height: 48px; border: none; background: none; color: #3A332B; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; font-size: 11px">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="5" r="2"></circle><circle cx="6" cy="19" r="2"></circle><circle cx="18" cy="9" r="2"></circle><path d="M6 7v10M18 11c0 4-6 3-12 6"></path></svg>改一版
+</button>
+<button style="flex-grow: 1; height: 48px; margin-left: 6px; border-radius: 24px; border: none; background: #1B1813; color: #F7F4EE; font-size: 16px; font-weight: 700">开始做</button>
+</div>
+</div>
+
+<!-- “为什么”面板 -->
+<sc-if value="{{hasSheet}}" hint-placeholder-val="{{ false }}">
+<div style="position: absolute; inset: 0; display: flex; flex-direction: column; justify-content: flex-end">
+<button onClick="{{closeSheet}}" aria-label="关闭" style="flex-grow: 1; border: none; background: rgba(27,24,19,0.42)"></button>
+<div role="dialog" aria-label="为什么是这个数" style="background: #FFFDF9; border-radius: 22px 22px 0 0; padding: 10px 20px 26px; display: flex; flex-direction: column; gap: 14px">
+<div style="align-self: center; width: 36px; height: 4px; border-radius: 2px; background: #D8CFC1"></div>
+<div style="display: flex; flex-direction: column; gap: 4px">
+<span style="font-size: 12px; color: #6E655A">{{sh.kicker}}</span>
+<div style="display: flex; align-items: baseline; gap: 10px">
+<span style="font-size: 22px; font-weight: 700">{{sh.name}}</span>
+<span style="font-family: 'DM Mono', monospace; font-size: 24px; font-weight: 500; color: {{sh.color}}">{{sh.value}}</span>
+</div>
+<sc-if value="{{sh.hasOrig}}" hint-placeholder-val="{{ true }}"><span style="font-size: 13px; color: #6E655A">原版 <span style="font-family: 'DM Mono', monospace">{{sh.orig}}</span></span></sc-if>
+</div>
+<div style="display: flex; flex-direction: column; gap: 10px; padding: 14px 0; border-top: 1px solid #E6DFD3; border-bottom: 1px solid #E6DFD3">
+<span style="font-size: 12px; letter-spacing: 1px; color: #8F8474">依据</span>
+<sc-for list="{{sh.basis}}" as="b" hint-placeholder-count="2">
+<div style="display: flex; gap: 10px; font-size: 14px; line-height: 1.6; color: #3A332B"><span style="flex-shrink: 0; color: #B0441E">·</span><span>{{b}}</span></div>
+</sc-for>
+</div>
+<sc-if value="{{sh.canFeedback}}" hint-placeholder-val="{{ true }}">
+<div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px">
+<button onClick="{{skipOnce}}" style="height: 48px; border-radius: 24px; border: 1px solid #1B1813; background: none; font-size: 15px; color: #1B1813">这次不用</button>
+<button onClick="{{never}}" style="height: 48px; border-radius: 24px; border: none; background: #1B1813; font-size: 15px; color: #F7F4EE">以后别这样</button>
+</div>
+</sc-if>
+<a href="#" style="font-size: 14px; text-align: center; min-height: 32px; display: flex; align-items: center; justify-content: center">{{sh.detail}}</a>
+</div>
+</div>
+</sc-if>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"persona":{"editor":"enum","options":["novice","pro"],"default":"novice"},"sheet":{"editor":null,"tsType":"string","default":""},"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    const pro = props.persona === 'pro';
+    this.state = { mode: 'mine', servings: pro ? 3 : 2, detail: pro ? 'brief' : 'full', sheet: props.sheet || null, skip: {}, toast: '', fav: false };
+  }
+  fmt(q, step) {
+    if (step) return Math.max(1, Math.round(q));
+    if (q < 10) return Math.round(q * 2) / 2;
+    return Math.round(q);
+  }
+  renderVals() {
+    const st = this.state;
+    const pro = this.props.persona === 'pro';
+    const mine = st.mode === 'mine';
+    const k = st.servings / 2;
+    const full = st.detail === 'full';
+    const data = [
+      { name: '主料', items: [
+        { id: 'a1', name: '鸡腿肉', prep: '去皮，切 1.5cm 丁', q: 300, unit: 'g', kind: 'ver' },
+        { id: 'a2', name: '熟花生米', prep: '去红衣', q: 50, unit: 'g' }
+      ]},
+      { name: '腌料', items: [
+        { id: 'b1', name: '生抽', prep: '', q: 10, my: 8.5, unit: 'ml', kind: 'taste' },
+        { id: 'b2', name: '料酒', prep: '', q: 10, unit: 'ml' },
+        { id: 'b3', name: '玉米淀粉', prep: '', q: 5, unit: 'g' }
+      ]},
+      { name: '香料', items: [
+        { id: 'c1', name: '干辣椒', prep: '剪 2cm 段，去籽', q: 6, my: 3, unit: '个', step: true, kind: 'taste' },
+        { id: 'c2', name: '花椒', prep: '', q: 2, unit: 'g', kind: 'est' },
+        { id: 'c3', name: '葱白', prep: '切 1cm 段', q: 30, unit: 'g' },
+        { id: 'c4', name: '姜', prep: '切片', q: 10, unit: 'g', kind: 'est' },
+        { id: 'c5', name: '蒜', prep: '切片', q: 3, unit: '瓣', step: true }
+      ]},
+      { name: '碗汁', items: [
+        { id: 'd1', name: '生抽', prep: '', q: 15, my: 13, unit: 'ml', kind: 'taste' },
+        { id: 'd2', name: '香醋', prep: '', q: 15, unit: 'ml', kind: 'ver' },
+        { id: 'd3', name: '白糖', prep: '', q: 12, unit: 'g' },
+        { id: 'd4', name: '玉米淀粉', prep: '', q: 5, unit: 'g' },
+        { id: 'd5', name: '清水', prep: '', q: 30, unit: 'ml' }
+      ]},
+      { name: '其他', items: [ { id: 'e1', name: '食用油', prep: '', q: 25, unit: 'ml' } ] }
+    ];
+    const byId = {};
+    const groups = data.map((g) => ({
+      name: g.name,
+      items: g.items.map((it) => {
+        let kind = it.kind || '';
+        if (kind === 'taste' && (!mine || st.skip[it.id])) kind = '';
+        const base = kind === 'taste' ? it.my : it.q;
+        const qty = this.fmt(base * k, it.step);
+        const orig = this.fmt(it.q * k, it.step);
+        byId[it.id] = { it, qty, orig, kind };
+        const marked = !!kind;
+        return {
+          name: it.name, prep: it.prep, showPrep: full && !!it.prep, unit: it.unit, qty,
+          marked, plain: !marked, kTaste: kind === 'taste', kEst: kind === 'est', kVer: kind === 'ver',
+          qtyColor: kind === 'taste' ? '#B0441E' : '#1B1813',
+          deco: kind === 'est' ? 'underline dotted #8F8474' : 'none',
+          aria: it.name + ' ' + qty + ' ' + it.unit + '，查看依据',
+          rowStyle: 'display: flex; align-items: center; gap: 10px; border-bottom: 1px solid #EFE9DF; ' + (full ? 'min-height: 52px; padding: 6px 0' : 'min-height: 42px; padding: 0'),
+          open: () => this.setState({ sheet: it.id })
+        };
+      })
+    }));
+    const failNote = '上次你反馈“肉柴”：看到表面变白就停，别超过 2 分钟';
+    const stepData = [
+      { title: '腌鸡丁', text: '鸡丁加腌料抓匀，静置。', meta: '15 分钟 · 可以走开', short: '15 分钟', done: '表面有一层薄浆，不再出水', why: '淀粉在表面形成薄膜，爆炒时锁住水分，鸡丁才嫩。' },
+      { title: '调碗汁', text: '碗汁的五样放进小碗，搅到没有颗粒。', meta: '1 分钟', short: '1 分钟', done: '汁水均匀，碗底没沉淀', why: '提前调好，最后 30 秒一次倒入，不会手忙脚乱把肉炒老。' },
+      { title: '炸香料', text: '冷油下花椒和干辣椒，小火慢慢炸。', meta: '小火 · 约 40 秒 · 需要守着', short: '小火 40 秒', done: '辣椒暗红，还没发黑', why: '冷油小火让辣和麻慢慢进油，就是“糊辣香”；火大了辣椒一黑就苦。' },
+      { title: '滑炒鸡丁', text: '转大火，下鸡丁、葱白、姜、蒜快速翻炒。', meta: '大火 · 2 分钟 · 需要守着', short: '大火 2 分钟', done: '鸡丁表面全部变白', why: '大火短时间让表面定型，里面还留着汁；时间长了水分跑掉就柴。', warn: pro ? failNote : '' },
+      { title: '收汁出锅', text: '碗汁搅一下倒入，下花生米，大火翻匀出锅。', meta: '大火 · 30 秒', short: '大火 30 秒', done: '汁浓稠发亮，裹住鸡丁', why: '花生最后放才脆；淀粉遇热 30 秒就糊化变稠，再炒会结块。' }
+    ];
+    const steps = stepData.map((s, i) => ({
+      n: i + 1, title: s.title, text: s.text, meta: s.meta, short: s.short, done: s.done,
+      why: s.why, showWhy: !pro, hasWarn: !!s.warn && !st.skip.fail, warn: s.warn || '',
+      openWarn: () => this.setState({ sheet: 'fail' })
+    }));
+
+    const kindLabel = { taste: '按你的口味换算', est: 'AI 估算', ver: '已验证' };
+    let sh = null;
+    if (st.sheet === 'fail') {
+      sh = { kicker: '按场景调整 · 第 4 步提醒', name: '滑炒别超过', value: '2 分钟', color: '#B0441E', hasOrig: false, orig: '',
+        basis: ['9 月 24 日你做这道菜，记录里标了“肉柴”。', '那次在这一步多炒了大约 1 分钟（你的计时器记录）。'],
+        canFeedback: true, detail: '看那次做菜记录' };
+    } else if (st.sheet && byId[st.sheet]) {
+      const r = byId[st.sheet];
+      const kind = r.it.kind;
+      const basis = {
+        b1: ['你最近 6 次做咸口的菜，有 4 次反馈“偏咸”，最近一次在 9 月 24 日。', '所以你的口味档案从 9 月 20 日起咸度 −15%，生抽、蚝油、盐一起按比例减。'],
+        d1: ['和腌料的生抽一样，按你的咸度 −15% 换算。', '醋和糖不跟着变，酸甜比例保持原样。'],
+        c1: ['你的口味档案里辣度是“微辣”。', '辣椒减到一半，花椒不变，保留麻香。'],
+        c2: ['原文写的是“一小撮”。', 'AI 按这道菜的做法估成每 2 人份 2 g；已经有一些人照这个量做过，还没出现集中反馈。'],
+        c4: ['原文写的是“一小块”，约拇指大小。', 'AI 估成每 2 人份 10 g，做过的人越多会越准。'],
+        a1: ['很多人照这个量做过，反馈一致，已验证。'],
+        d2: ['很多人照这个量做过，反馈一致，已验证。']
+      }[st.sheet] || [];
+      sh = { kicker: kindLabel[kind] || '', name: r.it.name, value: r.qty + ' ' + r.it.unit,
+        color: kind === 'taste' ? '#B0441E' : '#1B1813', hasOrig: kind === 'taste', orig: r.orig + ' ' + r.it.unit,
+        basis, canFeedback: kind === 'taste',
+        detail: kind === 'taste' ? '看我的口味档案' : (kind === 'est' ? '看菜谱原文' : '看做过的人的反馈') };
+    }
+    const segOn = 'border: none; border-radius: 8px; min-height: 36px; padding: 0 14px; font-size: 13px; font-weight: 700; background: #FFFDF9; color: #1B1813';
+    const segOff = 'border: none; border-radius: 8px; min-height: 36px; padding: 0 14px; font-size: 13px; font-weight: 500; background: transparent; color: #6E655A';
+    const cur = st.sheet;
+    return {
+      isPro: pro,
+      contextLine: pro ? '第 4 次做' : '第一次做',
+      isMine: mine, isOrig: !mine,
+      mineStyle: mine ? segOn : segOff, origStyle: mine ? segOff : segOn,
+      setMine: () => this.setState({ mode: 'mine' }),
+      setOrig: () => this.setState({ mode: 'orig' }),
+      isFull: full, isBrief: !full,
+      fullStyle: full ? segOn : segOff, briefStyle: full ? segOff : segOn,
+      setFull: () => this.setState({ detail: 'full' }),
+      setBrief: () => this.setState({ detail: 'brief' }),
+      servings: st.servings,
+      dec: () => this.setState({ servings: Math.max(1, st.servings - 1) }),
+      inc: () => this.setState({ servings: Math.min(8, st.servings + 1) }),
+      groups, steps,
+      hasSheet: !!sh, sh: sh || { basis: [] },
+      closeSheet: () => this.setState({ sheet: null }),
+      skipOnce: () => this.setState({ sheet: null, skip: Object.assign({}, st.skip, { [cur]: true }), toast: '这次先不用，只影响这一次查看。' }),
+      never: () => this.setState({ sheet: null, skip: Object.assign({}, st.skip, { [cur]: true }), toast: cur === 'fail' ? '记下了，这道菜以后不再提醒这一条。' : '记下了，会反馈到你的口味档案。' }),
+      hasToast: !!st.toast, toast: st.toast,
+      closeToast: () => this.setState({ toast: '', skip: {} }),
+      fav: st.fav, favColor: st.fav ? '#B0441E' : '#3A332B', favFill: st.fav ? 'currentColor' : 'none',
+      toggleFav: () => this.setState({ fav: !st.fav })
+    };
+  }
+}
+</script>
+</body>
+</html>

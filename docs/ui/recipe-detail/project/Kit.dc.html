@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>组件目录</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&amp;family=Noto+Sans+SC:wght@400;500;700&amp;family=Noto+Serif+SC:wght@600;700&amp;display=swap">
+<style>
+body{margin:0;background:#F7F4EE;font-family:"Noto Sans SC","PingFang SC",sans-serif;color:#1B1813}
+a{color:#B0441E;text-decoration:none}a:hover{color:#8A3214}
+</style>
+</helmet>
+<div style="width: 1280px; height: 1180px; box-sizing: border-box; padding: 56px 64px; background: #F7F4EE; display: flex; flex-direction: column; gap: 36px; font-family: 'Noto Sans SC', sans-serif; color: #1B1813">
+
+<div style="display: flex; flex-direction: column; gap: 8px">
+<span style="font-size: 13px; letter-spacing: 2px; color: #8F8474">味谱 · 组件目录</span>
+<h1 style="margin: 0; font-family: 'Noto Serif SC', serif; font-size: 40px; font-weight: 700">界面只做三件事：给结论、给依据、给明细</h1>
+<p style="margin: 0; font-size: 16px; line-height: 1.7; color: #4A4238; max-width: 880px">复杂的都在内核：换算、估算、场景判断和学习。每个组件是内核数据的一个投影，服务端决定用哪些、什么顺序、多详细，App 只负责画出来。</p>
+</div>
+
+<div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 28px; flex-grow: 1">
+
+<!-- 第一列 -->
+<div style="display: flex; flex-direction: column; gap: 28px">
+<div style="display: flex; flex-direction: column; gap: 12px">
+<h2 style="margin: 0; font-size: 15px; font-weight: 700">三层结构</h2>
+<div style="background: #FFFDF9; border: 1px solid #E6DFD3; border-radius: 14px; padding: 14px 16px; display: flex; flex-direction: column; gap: 4px">
+<span style="font-size: 11px; letter-spacing: 1px; color: #8F8474">① 结论 · 一眼看完</span>
+<div style="display: flex; align-items: center; justify-content: space-between; min-height: 40px">
+<span style="font-size: 15px">生抽</span>
+<span style="display: flex; align-items: center; gap: 6px; color: #B0441E"><span style="font-family: 'DM Mono', monospace; font-size: 16px; font-weight: 500">8.5</span><span style="font-size: 13px">ml</span><span style="width: 7px; height: 7px; border-radius: 4px; background: #B0441E"></span></span>
+</div>
+</div>
+<div style="background: #FFFDF9; border: 1px solid #E6DFD3; border-radius: 14px; padding: 14px 16px; display: flex; flex-direction: column; gap: 6px">
+<span style="font-size: 11px; letter-spacing: 1px; color: #8F8474">② 依据 · 点一下，“为什么”面板</span>
+<span style="font-size: 13px; color: #6E655A">原版 <span style="font-family: 'DM Mono', monospace">10 ml</span></span>
+<span style="font-size: 13px; line-height: 1.6; color: #3A332B">你最近 6 次做咸口的菜，4 次反馈“偏咸”。</span>
+<div style="display: flex; gap: 8px; padding-top: 4px">
+<span style="padding: 6px 12px; border-radius: 16px; border: 1px solid #1B1813; font-size: 12px">这次不用</span>
+<span style="padding: 6px 12px; border-radius: 16px; background: #1B1813; color: #F7F4EE; font-size: 12px">以后别这样</span>
+</div>
+</div>
+<div style="background: #FFFDF9; border: 1px solid #E6DFD3; border-radius: 14px; padding: 14px 16px; display: flex; flex-direction: column; gap: 4px">
+<span style="font-size: 11px; letter-spacing: 1px; color: #8F8474">③ 明细 · 进入一个已登记的页面</span>
+<div style="display: flex; align-items: center; justify-content: space-between; min-height: 32px; font-size: 14px"><span>我的口味档案</span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6E655A" stroke-width="2" stroke-linecap="round"><path d="M9 6l6 6-6 6"></path></svg></div>
+</div>
+</div>
+
+<div style="display: flex; flex-direction: column; gap: 12px">
+<h2 style="margin: 0; font-size: 15px; font-weight: 700">来源标记（全 App 同一套）</h2>
+<div style="display: flex; flex-direction: column; background: #FFFDF9; border: 1px solid #E6DFD3; border-radius: 14px; padding: 4px 16px">
+<div style="display: flex; align-items: center; justify-content: space-between; min-height: 44px; border-bottom: 1px solid #EFE9DF"><span style="font-size: 13px">作者填写</span><span style="font-family: 'DM Mono', monospace; font-size: 15px">30 g<span style="display: inline-block; width: 13px"></span></span></div>
+<div style="display: flex; align-items: center; justify-content: space-between; min-height: 44px; border-bottom: 1px solid #EFE9DF"><span style="font-size: 13px">按你的口味换算</span><span style="display: flex; align-items: center; gap: 6px; font-family: 'DM Mono', monospace; font-size: 15px; color: #B0441E">8.5 ml<span style="width: 7px; height: 7px; border-radius: 4px; background: #B0441E"></span></span></div>
+<div style="display: flex; align-items: center; justify-content: space-between; min-height: 44px; border-bottom: 1px solid #EFE9DF"><span style="font-size: 13px">按场景调整</span><span style="display: flex; align-items: center; gap: 6px; font-size: 13px">失败提醒、详略<span style="width: 7px; height: 7px; border-radius: 4px; border: 1.5px solid #B0441E; box-sizing: border-box"></span></span></div>
+<div style="display: flex; align-items: center; justify-content: space-between; min-height: 44px; border-bottom: 1px solid #EFE9DF"><span style="font-size: 13px">AI 估算</span><span style="display: flex; align-items: center; gap: 6px; font-family: 'DM Mono', monospace; font-size: 15px"><span style="text-decoration: underline dotted #8F8474; text-underline-offset: 4px">2 g</span><span style="width: 7px; height: 7px; border-radius: 4px; border: 1.5px dashed #8F8474; box-sizing: border-box"></span></span></div>
+<div style="display: flex; align-items: center; justify-content: space-between; min-height: 44px"><span style="font-size: 13px">已验证</span><span style="display: flex; align-items: center; gap: 6px; font-family: 'DM Mono', monospace; font-size: 15px">15 ml<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#4E6B48" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12l5 5L20 6"></path></svg></span></div>
+</div>
+<span style="font-size: 12px; line-height: 1.6; color: #6E655A">酱红只留给“系统替你改过的”。看到红色，就知道点开能看为什么。</span>
+</div>
+</div>
+
+<!-- 第二列：步骤卡三种详略 -->
+<div style="display: flex; flex-direction: column; gap: 12px">
+<h2 style="margin: 0; font-size: 15px; font-weight: 700">步骤卡 · 三种详略（服务端选，页面可切）</h2>
+<div style="background: #FFFDF9; border: 1px solid #E6DFD3; border-radius: 14px; padding: 14px 16px; display: flex; flex-direction: column; gap: 6px">
+<span style="font-size: 11px; letter-spacing: 1px; color: #8F8474">简略 · 熟手、常做</span>
+<div style="display: flex; align-items: baseline; gap: 12px"><span style="font-family: 'DM Mono', monospace; color: #8F8474">4</span><span style="flex-grow: 1; font-weight: 500">滑炒鸡丁</span><span style="font-size: 12px; color: #6E655A">大火 2 分钟</span></div>
+</div>
+<div style="background: #FFFDF9; border: 1px solid #E6DFD3; border-radius: 14px; padding: 14px 16px; display: flex; flex-direction: column; gap: 6px">
+<span style="font-size: 11px; letter-spacing: 1px; color: #8F8474">标准</span>
+<div style="display: flex; gap: 12px"><span style="font-family: 'DM Mono', monospace; color: #8F8474">4</span>
+<div style="display: flex; flex-direction: column; gap: 4px"><span style="font-weight: 700">滑炒鸡丁</span><span style="font-size: 13px; line-height: 1.6; color: #3A332B">转大火，下鸡丁、葱白、姜、蒜快速翻炒。</span><span style="font-size: 12px; color: #6E655A">大火 · 2 分钟 · 需要守着</span></div></div>
+</div>
+<div style="background: #FFFDF9; border: 1px solid #E6DFD3; border-radius: 14px; padding: 14px 16px; display: flex; flex-direction: column; gap: 6px">
+<span style="font-size: 11px; letter-spacing: 1px; color: #8F8474">详细 · 新手、第一次做</span>
+<div style="display: flex; gap: 12px"><span style="font-family: 'DM Mono', monospace; color: #8F8474">4</span>
+<div style="display: flex; flex-direction: column; gap: 5px"><span style="font-weight: 700">滑炒鸡丁</span><span style="font-size: 13px; line-height: 1.6; color: #3A332B">转大火，下鸡丁、葱白、姜、蒜快速翻炒。</span><span style="font-size: 12px; color: #6E655A">大火 · 2 分钟 · 需要守着</span><span style="font-size: 13px"><span style="color: #6E655A">看到这样就好　</span>表面全部变白</span><span style="font-size: 12px; line-height: 1.7; color: #6E655A">为什么：大火短时间让表面定型，里面还留着汁。</span></div></div>
+</div>
+<div style="background: #FFFDF9; border: 1px solid #E6DFD3; border-radius: 14px; padding: 14px 16px; display: flex; flex-direction: column; gap: 8px">
+<span style="font-size: 11px; letter-spacing: 1px; color: #8F8474">附加：失败提醒（按场景调整）</span>
+<span style="align-self: flex-start; display: flex; align-items: center; gap: 6px; background: #F6E6DC; color: #7A2E12; border-radius: 8px; padding: 6px 10px; font-size: 12px"><span style="flex-shrink: 0; width: 7px; height: 7px; border-radius: 4px; border: 1.5px solid #B0441E; box-sizing: border-box"></span>上次你反馈“肉柴”：看到表面变白就停</span>
+</div>
+</div>
+
+<!-- 第三列 -->
+<div style="display: flex; flex-direction: column; gap: 28px">
+<div style="display: flex; flex-direction: column; gap: 12px">
+<h2 style="margin: 0; font-size: 15px; font-weight: 700">提示条 · 差异卡 · 等级</h2>
+<div style="background: #F6E6DC; border-radius: 14px; padding: 14px 16px; display: flex; flex-direction: column; gap: 10px; color: #5A2410">
+<span style="font-size: 14px; line-height: 1.6">已按你最近的口味调整：咸度 −15%。</span>
+<div style="display: flex; gap: 16px; font-size: 13px; font-weight: 500"><a href="#">按调整前显示</a><a href="#">撤销这个变化</a></div>
+</div>
+<div style="background: #FFFDF9; border: 1px solid #E6DFD3; border-radius: 14px; padding: 14px 16px; display: flex; flex-direction: column; gap: 8px">
+<span style="font-size: 13px; font-weight: 700">和你上次比</span>
+<div style="display: flex; justify-content: space-between; font-size: 13px"><span style="color: #4A4238">份数</span><span style="font-family: 'DM Mono', monospace">2 → 3 人份</span></div>
+<div style="display: flex; justify-content: space-between; font-size: 13px"><span style="color: #4A4238">咸度</span><span style="color: #B0441E">少 15%</span></div>
+</div>
+<div style="font-size: 13px; padding: 4px 0">常被做<span style="color: #C9BFB0; padding: 0 8px">·</span>口碑很好<span style="color: #C9BFB0; padding: 0 8px">·</span>好复刻<span style="color: #C9BFB0; padding: 0 8px">·</span>10+ 改良版</div>
+<span style="font-size: 12px; color: #6E655A">等级只显示档位，精确数字留在内核。</span>
+</div>
+
+<div style="display: flex; flex-direction: column; gap: 12px">
+<h2 style="margin: 0; font-size: 15px; font-weight: 700">动作都是意图：按一下和说一句，结果一样</h2>
+<div style="background: #FFFDF9; border: 1px solid #E6DFD3; border-radius: 14px; padding: 6px 16px; display: flex; flex-direction: column">
+<div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; min-height: 40px; align-items: center; border-bottom: 1px solid #EFE9DF; font-size: 13px"><span>按“开始做”</span><span style="color: #6E655A">说“开始吧”</span></div>
+<div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; min-height: 40px; align-items: center; border-bottom: 1px solid #EFE9DF; font-size: 13px"><span>点“以后别这样”</span><span style="color: #6E655A">说“别给我减盐了”</span></div>
+<div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; min-height: 40px; align-items: center; font-size: 13px"><span>按“改一版”</span><span style="color: #6E655A">说“换成空气炸锅”</span></div>
+</div>
+<div style="display: flex; align-items: center; gap: 10px; height: 44px; padding: 0 6px 0 14px; border-radius: 22px; background: #ECE5D9; font-size: 13px; color: #6E655A">
+<span style="flex-grow: 1">问一句，或说“少放点糖”</span>
+<span style="width: 32px; height: 32px; border-radius: 16px; background: #FFFDF9; display: flex; align-items: center; justify-content: center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1B1813" stroke-width="2" stroke-linecap="round"><rect x="9" y="3" width="6" height="11" rx="3"></rect><path d="M5 11a7 7 0 0 0 14 0M12 18v3"></path></svg></span>
+</div>
+<span style="font-size: 12px; line-height: 1.6; color: #6E655A">改菜谱的意图都先出差异预览，逐条确认才生效。</span>
+</div>
+</div>
+
+</div>
+
+<!-- 设计令牌 -->
+<div style="display: flex; gap: 28px; align-items: center; padding-top: 20px; border-top: 1px solid #E6DFD3">
+<div style="display: flex; gap: 10px; align-items: center">
+<span style="width: 36px; height: 36px; border-radius: 10px; background: #F7F4EE; border: 1px solid #E6DFD3"></span>
+<span style="width: 36px; height: 36px; border-radius: 10px; background: #FFFDF9; border: 1px solid #E6DFD3"></span>
+<span style="width: 36px; height: 36px; border-radius: 10px; background: #1B1813"></span>
+<span style="width: 36px; height: 36px; border-radius: 10px; background: #B0441E"></span>
+<span style="width: 36px; height: 36px; border-radius: 10px; background: #F6E6DC"></span>
+<span style="width: 36px; height: 36px; border-radius: 10px; background: #4E6B48"></span>
+</div>
+<span style="font-size: 12px; line-height: 1.6; color: #6E655A; max-width: 300px">纸底、卡片、墨色（主按钮）、酱红（系统替你改的）、酱红浅底（提醒）、墨绿（已验证）</span>
+<span style="font-family: 'Noto Serif SC', serif; font-size: 24px; font-weight: 700">标题用宋体</span>
+<span style="font-size: 16px">正文用黑体</span>
+<span style="font-family: 'DM Mono', monospace; font-size: 18px">8.5 ml 用等宽数字</span>
+</div>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1280,"height":1180}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

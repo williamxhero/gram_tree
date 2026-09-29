@@ -1,0 +1,313 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#faf9f5;color:#141413}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>味谱账号与隐私样稿</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Noto+Sans+SC:wght@400;500;700&family=Noto+Serif+SC:wght@600;700&display=swap">
+<style>
+:root{
+  --paper:#F7F4EE;--card:#FFFDF9;--ink:#1B1813;--sauce:#B0441E;--sauce-soft:#F6E6DC;--green:#4E6B48;
+  --line:#E6DFD3;--line2:#EFE9DF;--muted:#6E655A;--faint:#8F8474;--body:#3A332B;--field:#ECE5D9;
+  --serif:"Noto Serif SC","Songti SC",serif;--sans:"Noto Sans SC","PingFang SC","Microsoft YaHei",sans-serif;--mono:"DM Mono",ui-monospace,monospace;
+}
+*{box-sizing:border-box}
+body{background:var(--paper);color:var(--ink);font-family:var(--sans);font-size:14px;padding:32px 16px 64px}
+.wrap{max-width:1240px;margin:0 auto;display:flex;flex-direction:column;gap:40px}
+header{display:flex;flex-direction:column;gap:8px;max-width:760px}
+.eyebrow{font-size:12px;letter-spacing:2px;color:var(--faint)}
+h1{margin:0;font-family:var(--serif);font-size:32px;text-wrap:balance}
+header p{margin:0;line-height:1.7;color:#4A4238}
+section{display:flex;flex-direction:column;gap:16px}
+section>h2{margin:0;font-size:15px;font-weight:700}
+section>p.lead{margin:0;font-size:13px;color:var(--muted);line-height:1.6;max-width:760px}
+.row{display:flex;flex-wrap:wrap;gap:28px}
+figure{margin:0;display:flex;flex-direction:column;gap:10px;width:320px;max-width:100%}
+figcaption{font-size:12px;color:var(--muted);line-height:1.6}
+figcaption b{color:var(--ink);font-weight:500}
+.phone{width:320px;max-width:100%;height:620px;border-radius:28px;border:1px solid var(--line);background:var(--paper);overflow:hidden;display:flex;flex-direction:column;position:relative;box-shadow:0 1px 0 rgba(27,24,19,.04)}
+.scr{flex:1;display:flex;flex-direction:column;gap:16px;padding:28px 20px 20px;overflow:hidden}
+.bar{display:flex;align-items:center;gap:10px;min-height:44px;padding:8px 12px 0}
+.bar .t{font-weight:700;font-size:16px}
+.back{width:36px;height:36px;display:flex;align-items:center;justify-content:center}
+.title{font-family:var(--serif);font-size:24px;font-weight:700;margin:0;line-height:1.35}
+.sub{font-size:13px;line-height:1.7;color:var(--body);margin:0}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px 16px;display:flex;flex-direction:column;gap:6px}
+.card .k{font-size:11px;letter-spacing:1px;color:var(--faint)}
+.li{display:flex;align-items:flex-start;gap:10px;font-size:13px;line-height:1.6;color:var(--body)}
+.dot{flex-shrink:0;width:5px;height:5px;border-radius:3px;background:var(--faint);margin-top:9px}
+.spacer{flex:1}
+.btn{display:flex;align-items:center;justify-content:center;min-height:48px;border-radius:24px;font-size:15px;font-weight:500;border:1px solid var(--ink);background:transparent;color:var(--ink);font-family:inherit;width:100%}
+.btn.primary{background:var(--ink);color:var(--paper)}
+.btn.quiet{border-color:transparent;color:var(--muted)}
+.btn.danger{border-color:var(--sauce);color:var(--sauce)}
+.actions{display:flex;flex-direction:column;gap:8px}
+.link{color:var(--ink);text-decoration:underline;text-underline-offset:3px;text-decoration-color:var(--faint)}
+.field{display:flex;flex-direction:column;gap:6px}
+.field label{font-size:12px;color:var(--muted)}
+.input{height:48px;border-radius:12px;background:var(--card);border:1px solid var(--line);padding:0 14px;display:flex;align-items:center;font-size:15px}
+.input.focus{border-color:var(--ink)}
+.code{display:flex;gap:8px}
+.code span{flex:1;height:52px;border-radius:12px;background:var(--card);border:1px solid var(--line);display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:22px}
+.code span.on{border-color:var(--ink)}
+.hint{font-size:12px;color:var(--muted);line-height:1.6}
+.err{font-size:12px;color:var(--sauce);line-height:1.6}
+.mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
+.or{display:flex;align-items:center;gap:10px;font-size:12px;color:var(--faint)}
+.or::before,.or::after{content:"";flex:1;height:1px;background:var(--line)}
+.apple{background:#000;color:#fff;border-color:#000;gap:8px}
+.list{background:var(--card);border:1px solid var(--line);border-radius:14px;display:flex;flex-direction:column;padding:0 16px}
+.item{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:48px;border-bottom:1px solid var(--line2);font-size:14px}
+.item:last-child{border-bottom:0}
+.item .v{font-size:13px;color:var(--muted);display:flex;align-items:center;gap:6px}
+.grp{font-size:12px;color:var(--faint);padding:0 4px;margin-top:4px}
+.nav{display:grid;grid-template-columns:repeat(5,1fr);align-items:center;height:60px;border-top:1px solid var(--line);background:var(--card);font-size:11px;color:var(--muted);text-align:center}
+.nav .on{color:var(--ink);font-weight:700}
+.plus{width:40px;height:40px;border-radius:20px;background:var(--ink);color:var(--paper);display:flex;align-items:center;justify-content:center;margin:0 auto;font-size:22px}
+.who{display:flex;flex-direction:column;gap:4px}
+.who .n{font-family:var(--serif);font-size:22px;font-weight:700;display:flex;align-items:center;gap:8px}
+.scrim{position:absolute;inset:0;background:rgba(27,24,19,.35);display:flex;align-items:flex-end}
+.sheet{background:var(--card);width:100%;border-radius:20px 20px 0 0;padding:20px 20px 24px;display:flex;flex-direction:column;gap:12px}
+.grab{width:36px;height:4px;border-radius:2px;background:var(--line);align-self:center}
+.icon-c{width:44px;height:44px;border-radius:22px;background:var(--paper);display:flex;align-items:center;justify-content:center}
+.muted-tile{background:var(--card);border:1px dashed var(--line);border-radius:14px;padding:14px 16px;display:flex;flex-direction:column;gap:8px}
+.diff{display:flex;flex-direction:column;gap:8px}
+.diff .li b{font-weight:500;color:var(--ink)}
+.ver{font-family:var(--mono);font-size:12px;color:var(--faint)}
+.steps{display:flex;gap:6px}
+.steps span{flex:1;height:3px;border-radius:2px;background:var(--line)}
+.steps span.on{background:var(--ink)}
+.check{display:flex;gap:10px;align-items:flex-start;font-size:13px;line-height:1.6}
+.box{flex-shrink:0;width:18px;height:18px;border-radius:5px;border:1.5px solid var(--ink);margin-top:2px;display:flex;align-items:center;justify-content:center}
+.notes{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px 20px;display:flex;flex-direction:column;gap:8px;max-width:760px}
+.notes h2{margin:0;font-size:15px}
+.notes .li{font-size:13px}
+@media (max-width:420px){.phone,figure{width:100%}}
+</style>
+
+<div class="wrap">
+<header>
+<span class="eyebrow">味谱 · SPEC-013.2 样稿</span>
+<h1>账号、登录与隐私同意</h1>
+<p>按 UI 规范画的 14 屏：纸底、卡片、墨色主按钮；酱红只用在“系统替你改了”和不可撤回的操作上；标题宋体，正文黑体，数字等宽。这一组页面没有换算和估算，所以不出现来源标记和“为什么”面板；账号是隐私控制类的必显内容，结构上仍是“结论一行 → 点进去看依据和明细”。</p>
+</header>
+
+<section>
+<h2>一、首次打开：同意在一切之前</h2>
+<p class="lead">同意前不联网、不启动崩溃上报、不申请权限。全文链接打开静态网页。不同意只再说明一次，仍不同意就退出，下次打开再问。</p>
+<div class="row">
+
+<figure><div class="phone"><div class="scr">
+<span class="eyebrow">欢迎使用味谱</span>
+<h3 class="title">开始之前，先说清楚我们会用到什么</h3>
+<div class="card">
+<span class="k">我们会收集</span>
+<div class="li"><span class="dot"></span><span>登录用的邮箱，或 Apple 提供的中转邮箱</span></div>
+<div class="li"><span class="dot"></span><span>你写的菜谱、做菜记录和口味设置，用来给你推荐和换算</span></div>
+<div class="li"><span class="dot"></span><span>出错时的崩溃信息，不含菜谱和口味内容</span></div>
+</div>
+<div class="card">
+<span class="k">我们不会</span>
+<div class="li"><span class="dot"></span><span>放广告，或把你的数据卖给别人</span></div>
+<div class="li"><span class="dot"></span><span>在你用到相机、麦克风之前申请权限</span></div>
+</div>
+<p class="sub">完整内容见 <a class="link" href="#">用户协议</a> 和 <a class="link" href="#">隐私政策</a>。</p>
+<div class="spacer"></div>
+<div class="actions"><button class="btn primary">同意并继续</button><button class="btn quiet">不同意</button></div>
+</div></div>
+<figcaption><b>同意页。</b>摘要三五条，全文走链接。主按钮墨色，“不同意”是低调的文字按钮，但同样可点。</figcaption></figure>
+
+<figure><div class="phone"><div class="scr">
+<h3 class="title">不同意的话，味谱没法工作</h3>
+<p class="sub">这几项是最少需要的：</p>
+<div class="card">
+<div class="li"><span class="dot"></span><span><b style="font-weight:500">邮箱</b>：登录和找回账号</span></div>
+<div class="li"><span class="dot"></span><span><b style="font-weight:500">你的菜谱和记录</b>：保存到云端，换手机不丢</span></div>
+<div class="li"><span class="dot"></span><span><b style="font-weight:500">崩溃信息</b>：修复闪退，可以随时在设置里撤回</span></div>
+</div>
+<p class="sub">如果仍不同意，App 会退出，不保存任何信息。下次打开时会再问你。</p>
+<div class="spacer"></div>
+<div class="actions"><button class="btn primary">同意并继续</button><button class="btn">仍不同意，退出</button></div>
+</div></div>
+<figcaption><b>再说明一次。</b>只出现这一次，不循环弹窗。网页测试版里“退出”显示为“已退出，可以关闭页面”。</figcaption></figure>
+
+<figure><div class="phone"><div class="scr">
+<span class="eyebrow">隐私政策已更新</span>
+<h3 class="title">这次改了什么</h3>
+<div class="card diff">
+<span class="ver">v1 → v2 · 2026-10-15</span>
+<div class="li"><span class="dot"></span><span><b>新增</b>：用 Apple 登录时保存 Apple 的授权，用来在注销时解除关联</span></div>
+<div class="li"><span class="dot"></span><span><b>修改</b>：注销后个人数据的删除期限写明为 15 个工作日</span></div>
+</div>
+<p class="sub">重新同意后才能继续使用。你也可以先看 <a class="link" href="#">完整政策</a>。</p>
+<div class="spacer"></div>
+<div class="actions"><button class="btn primary">同意新版本</button><button class="btn quiet">不同意</button></div>
+</div></div>
+<figcaption><b>改版后重新同意。</b>先给变更摘要（结论），全文是明细。示例里的版本和日期是占位。</figcaption></figure>
+
+</div>
+</section>
+
+<section>
+<h2>二、登录：邮箱验证码，iPhone 另有 Apple</h2>
+<p class="lead">首次登录即注册，没有单独的注册页。验证码 6 位，10 分钟有效，60 秒后可重发（都是服务端配置项）。</p>
+<div class="row">
+
+<figure><div class="phone"><div class="scr">
+<h3 class="title">登录味谱</h3>
+<p class="sub">第一次用会自动创建账号。</p>
+<div class="field"><label for="m-email">邮箱</label><div class="input focus" id="m-email">cook@example.com</div></div>
+<button class="btn primary">发送验证码</button>
+<div class="or">或</div>
+<button class="btn apple"><svg width="14" height="16" viewBox="0 0 14 17" fill="#fff" aria-hidden="true"><path d="M11.6 9c0-2 1.7-3 1.7-3-1-1.4-2.5-1.6-3-1.6-1.3-.1-2.5.8-3.1.8-.7 0-1.7-.8-2.8-.7C3 4.5 1.7 5.3 1 6.6c-1.5 2.6-.4 6.4 1 8.5.7 1 1.5 2.1 2.6 2.1 1 0 1.4-.7 2.7-.7s1.6.7 2.7.6c1.1 0 1.8-1 2.5-2 .8-1.2 1.1-2.3 1.1-2.4 0 0-2.1-.8-2.1-3.7zM9.5 3c.6-.7 1-1.6.9-2.6-.8 0-1.9.6-2.5 1.3-.5.6-1 1.6-.9 2.5.9.1 1.9-.5 2.5-1.2z"/></svg>通过 Apple 登录</button>
+<div class="spacer"></div>
+<p class="hint">登录即表示你已同意 <a class="link" href="#">用户协议</a> 和 <a class="link" href="#">隐私政策</a>。</p>
+</div></div>
+<figcaption><b>登录页。</b>Apple 按钮只在 iPhone 上出现，用 Apple 规定的黑底样式；安卓和网页只有邮箱。</figcaption></figure>
+
+<figure><div class="phone"><div class="bar"><span class="back"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1B1813" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg></span></div><div class="scr" style="padding-top:8px">
+<h3 class="title">输入验证码</h3>
+<p class="sub">已发到 <span class="mono">cook@example.com</span>，<span class="mono">10</span> 分钟内有效。</p>
+<div class="code"><span>4</span><span>8</span><span>2</span><span class="on">0</span><span></span><span></span></div>
+<p class="err">验证码不对，还可以再试 <span class="mono">3</span> 次。</p>
+<p class="hint"><span class="mono">42</span> 秒后可以重新发送</p>
+<div class="spacer"></div>
+<p class="hint">收不到？看看垃圾邮件，或返回检查邮箱是否填对。</p>
+</div></div>
+<figcaption><b>验证码。</b>输满 6 位自动提交。错误提示用酱红是例外：这里的红表示“需要你处理”，属于错误状态，不是来源标记。</figcaption></figure>
+
+<figure><div class="phone"><div class="scr">
+<h3 class="title">登录味谱</h3>
+<div class="field"><label for="m-email2">邮箱</label><div class="input" id="m-email2">cook@example.com</div></div>
+<button class="btn primary" style="opacity:.45">发送验证码</button>
+<p class="err">今天发送次数已达上限，请明天再试，或用其他方式登录。</p>
+<div class="spacer"></div>
+</div></div>
+<figcaption><b>频率限制。</b>按邮箱、设备、IP 各自每天上限；提示说清下一步能做什么。</figcaption></figure>
+
+</div>
+</section>
+
+<section>
+<h2>三、我的 → 设置</h2>
+<p class="lead">“我的”第一眼只有昵称（结论）；账号、登录方式、隐私入口都收在设置里（明细）。退出登录只影响这台设备。</p>
+<div class="row">
+
+<figure><div class="phone"><div class="scr">
+<div class="who"><span class="n">味友 3847<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6E655A" stroke-width="2" stroke-linecap="round" aria-label="改昵称"><path d="M4 20h4L19 9l-4-4L4 16v4z"/></svg></span><span class="hint">cook@example.com</span></div>
+<div class="muted-tile"><span class="sub">做过的菜、口味档案会出现在这里。</span></div>
+<div class="spacer"></div>
+<div class="list"><div class="item"><span>设置</span><span class="v"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6E655A" stroke-width="2" stroke-linecap="round"><path d="M9 6l6 6-6 6"/></svg></span></div></div>
+</div>
+<div class="nav"><span>今天</span><span>发现</span><span><span class="plus">+</span></span><span>记录</span><span class="on">我的</span></div>
+</div>
+<figcaption><b>我的。</b>点昵称旁的笔就地改昵称，上限 20 字（配置项）。默认昵称“味友＋4 位数字”，用 Apple 登录时用 Apple 给的名字。</figcaption></figure>
+
+<figure><div class="phone"><div class="bar"><span class="back"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1B1813" stroke-width="2" stroke-linecap="round"><path d="M15 6l-6 6 6 6"/></svg></span><span class="t">设置</span></div><div class="scr" style="padding-top:8px;gap:10px">
+<span class="grp">账号</span>
+<div class="list">
+<div class="item"><span>登录方式</span><span class="v">邮箱</span></div>
+<div class="item"><span>时区</span><span class="v mono">Asia/Shanghai</span></div>
+</div>
+<span class="grp">隐私</span>
+<div class="list">
+<div class="item"><span>隐私政策</span><span class="v ver">v1</span></div>
+<div class="item"><span>个人信息收集清单</span><span class="v"></span></div>
+<div class="item"><span>第三方 SDK 共享清单</span><span class="v"></span></div>
+<div class="item"><span>撤回同意</span><span class="v"></span></div>
+</div>
+<div class="list">
+<div class="item"><span>退出登录</span></div>
+<div class="item"><span style="color:var(--sauce)">注销账号</span></div>
+</div>
+</div></div>
+<figcaption><b>设置。</b>时区跟随手机自动更新，只展示不让改。注销用酱红文字，表示不可撤回。</figcaption></figure>
+
+<figure><div class="phone"><div class="bar"><span class="back"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1B1813" stroke-width="2" stroke-linecap="round"><path d="M15 6l-6 6 6 6"/></svg></span><span class="t">登录方式</span></div><div class="scr" style="padding-top:8px">
+<div class="list">
+<div class="item"><span>邮箱</span><span class="v mono">cook@example.com</span></div>
+<div class="item"><span>Apple</span><span class="v">未绑定</span></div>
+</div>
+<p class="sub">多绑一种方式，原来的方式不能用时还能登录。以后加手机号、微信也不影响你的菜谱和记录。</p>
+<button class="btn">绑定 Apple</button>
+<p class="err">这个 Apple 账号已经属于另一个味谱账号，不能绑定。</p>
+</div></div>
+<figcaption><b>登录方式。</b>一个账号可以有多种方式；身份已被别人占用时直接提示，不做合并。</figcaption></figure>
+
+</div>
+</section>
+
+<section>
+<h2>四、权限：用到才问，先说用途</h2>
+<p class="lead">统一的申请方式，本期只做框架和文案；相机、麦克风等在用到的功能里接入。示例是 SPEC-002.2 的“拍一张成品照”。</p>
+<div class="row">
+
+<figure><div class="phone"><div class="scr" style="opacity:.5"><h3 class="title">番茄炒蛋</h3><div class="card"><span class="sub">做好了？</span></div></div>
+<div class="scrim"><div class="sheet">
+<span class="grab"></span>
+<span class="icon-c"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1B1813" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg></span>
+<strong style="font-size:16px">需要使用相机</strong>
+<p class="sub">用来拍这道菜的成品照，照片只存在你的记录里。</p>
+<div class="actions"><button class="btn primary">继续</button><button class="btn quiet">暂不</button></div>
+</div></div></div>
+<figcaption><b>用途说明。</b>点“继续”才弹系统申请；点“暂不”什么都不申请。</figcaption></figure>
+
+<figure><div class="phone"><div class="scr">
+<h3 class="title">番茄炒蛋</h3>
+<div class="card"><span class="k">做过记录</span><span class="sub">口味刚好 · 用时 <span class="mono">18</span> 分钟</span></div>
+<div class="muted-tile">
+<span style="font-size:14px;font-weight:500">拍照不可用</span>
+<span class="sub">你没有允许使用相机。其他功能不受影响。</span>
+<a class="link" href="#" style="font-size:13px">去系统设置打开</a>
+</div>
+</div></div>
+<figcaption><b>拒绝之后。</b>只有这个功能变成不可用，并给出去设置的入口；不会再次弹出申请。</figcaption></figure>
+
+</div>
+</section>
+
+<section>
+<h2>五、撤回同意与注销账号</h2>
+<p class="lead">撤回：停止采集、退出登录、回到同意页。注销：重新验证 → 看清删什么 → 确认；账号进入“注销中”，15 个工作日内删除个人数据（配置项）。</p>
+<div class="row">
+
+<figure><div class="phone"><div class="bar"><span class="back"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1B1813" stroke-width="2" stroke-linecap="round"><path d="M15 6l-6 6 6 6"/></svg></span><span class="t">撤回同意</span></div><div class="scr" style="padding-top:8px">
+<p class="sub">撤回后，味谱会立刻停止收集信息、关闭崩溃上报，并退出登录。</p>
+<div class="card"><span class="k">已存的数据</span><span class="sub">撤回不会删除已保存的菜谱和记录。想拿走数据，可以先导出；想彻底删除，请注销账号。</span></div>
+<div class="spacer"></div>
+<div class="actions"><button class="btn primary">撤回并退出</button><button class="btn quiet">取消</button></div>
+</div></div>
+<figcaption><b>撤回同意。</b>导出在 SPEC-010.2 上线前显示为“即将提供”。</figcaption></figure>
+
+<figure><div class="phone"><div class="bar"><span class="back"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1B1813" stroke-width="2" stroke-linecap="round"><path d="M15 6l-6 6 6 6"/></svg></span><span class="t">注销账号</span></div><div class="scr" style="padding-top:8px">
+<div class="steps"><span class="on"></span><span></span><span></span></div>
+<h3 class="title">先确认是你本人</h3>
+<p class="sub">验证码会发到 <span class="mono">cook@example.com</span>。</p>
+<div class="code"><span>7</span><span>1</span><span>0</span><span>5</span><span>9</span><span class="on">3</span></div>
+<p class="hint">验证后 <span class="mono">10</span> 分钟内完成注销。</p>
+</div></div>
+<figcaption><b>第 1 步 重新验证。</b>用 Apple 登录的账号这里是“通过 Apple 重新验证”。</figcaption></figure>
+
+<figure><div class="phone"><div class="bar"><span class="back"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1B1813" stroke-width="2" stroke-linecap="round"><path d="M15 6l-6 6 6 6"/></svg></span><span class="t">注销账号</span></div><div class="scr" style="padding-top:8px">
+<div class="steps"><span class="on"></span><span class="on"></span><span class="on"></span></div>
+<h3 class="title">这些会被删除</h3>
+<div class="card">
+<div class="li"><span class="dot"></span><span>昵称和登录方式（邮箱、Apple）</span></div>
+<div class="li"><span class="dot"></span><span>你的同意记录</span></div>
+<div class="li"><span class="dot"></span><span>和 Apple 账号的授权关联会被解除</span></div>
+</div>
+<p class="sub">确认后立即退出，账号不能再登录；<span class="mono">15</span> 个工作日内删除完毕，无法恢复。</p>
+<label class="check"><span class="box"></span><span>我已了解，确认注销</span></label>
+<div class="spacer"></div>
+<button class="btn danger">注销账号</button>
+</div></div>
+<figcaption><b>第 2、3 步 删除说明和确认。</b>勾选后按钮才可点。唯一用酱红实心边框的按钮。</figcaption></figure>
+
+</div>
+</section>
+
+<div class="notes">
+<h2>还没定、先用占位的</h2>
+<div class="li"><span class="dot"></span><span>用户协议、隐私政策、两份清单的正文：占位文本，上线前由你提供或请律师审阅（SPEC-011）。</span></div>
+<div class="li"><span class="dot"></span><span>深色模式配色沿用 #59 的临时值，这组样稿只画了浅色。</span></div>
+<div class="li"><span class="dot"></span><span>字体不打包进 App，设备上没装思源宋体时标题会退回系统宋体。</span></div>
+</div>
+</div>
+
+</body></html>
