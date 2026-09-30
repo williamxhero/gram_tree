@@ -1,7 +1,7 @@
 """按名称找食材：搜索（#99）和归一（#100）共用的匹配规则。
 
 两者都用 `find_matches` 在同一组名称列（标准名、别名、拼音首字母、完整拼音）上查：搜索按
-前缀查、只看没被合并的食材；归一按整名查，也看已合并的旧食材，再转到合并后的新 ID。
+前缀查并把旧食材命中转到当前身份；归一按整名查，也看已合并的旧食材，再转到合并后的新 ID。
 """
 
 import re
@@ -11,7 +11,7 @@ from dataclasses import dataclass, field
 from enum import StrEnum
 from typing import Literal
 
-from sqlalchemy import or_, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session
 
 from gramtree.ingredients.models import Ingredient, IngredientAlias
@@ -40,6 +40,8 @@ class NameMatch:
     text: str
     # 命中的那条记录本身，可能是已合并的旧食材
     ingredient: Ingredient
+    # 命中列的原始叫法，搜索返回它，而不是用户输入的前缀
+    value: str
 
 
 def find_matches(
@@ -49,9 +51,10 @@ def find_matches(
     *,
     prefix: bool = False,
     include_merged: bool = True,
+    case_insensitive: bool = False,
 ) -> list[NameMatch]:
     """在一种名称列上查一批文本；`prefix` 为真时按前缀匹配，否则按整名匹配。"""
-    queries = [t.lower() if kind in _PINYIN_KINDS else t for t in texts]
+    queries = [t.lower() if case_insensitive or kind in _PINYIN_KINDS else t for t in texts]
     queries = list(dict.fromkeys(q for q in queries if q))
     if not queries:
         return []
@@ -62,16 +65,18 @@ def find_matches(
         stmt = stmt.join(IngredientAlias, IngredientAlias.ingredient_id == Ingredient.id)
     if not include_merged:
         stmt = stmt.where(Ingredient.merged_into.is_(None))
+    compared = func.lower(column) if case_insensitive else column
     if prefix:
-        stmt = stmt.where(or_(*(column.startswith(q) for q in queries)))
+        stmt = stmt.where(or_(*(compared.startswith(q) for q in queries)))
     else:
-        stmt = stmt.where(column.in_(queries))
+        stmt = stmt.where(compared.in_(queries))
 
     matches: list[NameMatch] = []
     for ingredient, value in db.execute(stmt):
+        compared_value = value.lower() if case_insensitive else value
         for q in queries:
-            if value.startswith(q) if prefix else value == q:
-                matches.append(NameMatch(kind, q, ingredient))
+            if compared_value.startswith(q) if prefix else compared_value == q:
+                matches.append(NameMatch(kind, q, ingredient, value))
     return matches
 
 
@@ -83,15 +88,65 @@ _SEARCH_ORDER = (
     MatchKind.PINYIN,
 )
 
+# 搜索结果的排序（#99）：标准名完全一致 > 别名完全一致 > 前缀（标准名 > 别名）> 拼音
+# （拼音首字母 > 完整拼音）。第一层是整名命中还是前缀命中，第二层才是命中在哪一列，
+# 这样“番茄”查出来的“西红柿”（它的别名就叫番茄）排在“番茄酱”这种前缀命中前面。
+_MATCH_TIER = {
+    (MatchKind.STANDARD_NAME, True): 0,
+    (MatchKind.ALIAS, True): 1,
+    (MatchKind.STANDARD_NAME, False): 2,
+    (MatchKind.ALIAS, False): 3,
+    (MatchKind.PINYIN_INITIALS, False): 4,
+    (MatchKind.PINYIN, False): 5,
+}
 
-def search(db: Session, query: str, limit: int) -> list[Ingredient]:
-    """按前缀搜索没被合并的食材，同一种食材按最好的一种命中方式排序。"""
-    best: dict[uuid.UUID, tuple[int, Ingredient]] = {}
-    for priority, kind in enumerate(_SEARCH_ORDER):
-        for m in find_matches(db, kind, [query], prefix=True, include_merged=False):
-            best.setdefault(m.ingredient.id, (priority, m.ingredient))
-    ranked = sorted(best.values(), key=lambda x: (x[0], x[1].standard_name))
-    return [ingredient for _, ingredient in ranked[:limit]]
+
+def _search_priority(m: NameMatch) -> int:
+    """命中的档位，数字越小排得越前。"""
+    if m.kind in _PINYIN_KINDS:
+        return _MATCH_TIER[(m.kind, False)]
+    return _MATCH_TIER[(m.kind, m.text == m.value.lower())]
+
+
+@dataclass(frozen=True)
+class SearchMatch:
+    ingredient: Ingredient
+    matched_name: str
+    rank: int
+
+    @property
+    def key(self) -> tuple[int, str, str]:
+        return self.rank, self.ingredient.standard_name, str(self.ingredient.id)
+
+
+def search(
+    db: Session,
+    query: str,
+    limit: int,
+    *,
+    after: tuple[int, str, str] | None = None,
+) -> tuple[list[SearchMatch], bool]:
+    """按匹配质量和现行身份定序，保留最佳命中的原始叫法，按排序键续页。"""
+    matches = [
+        m
+        for kind in _SEARCH_ORDER
+        for m in find_matches(db, kind, [query.strip()], prefix=True, case_insensitive=True)
+    ]
+    targets = _resolve_merged(db, matches)
+    best: dict[uuid.UUID, SearchMatch] = {}
+    for m in matches:
+        ingredient = targets[m.ingredient.merged_into] if m.ingredient.merged_into else m.ingredient
+        hit = SearchMatch(ingredient, m.value, _search_priority(m))
+        current = best.get(ingredient.id)
+        if current is None or (hit.rank, hit.matched_name) < (
+            current.rank,
+            current.matched_name,
+        ):
+            best[ingredient.id] = hit
+    ranked = sorted(best.values(), key=lambda hit: hit.key)
+    if after is not None:
+        ranked = [hit for hit in ranked if hit.key > after]
+    return ranked[:limit], len(ranked) > limit
 
 
 Confidence = Literal["exact", "alias", "fuzzy", "ambiguous", "unrecorded"]

@@ -52,6 +52,28 @@ def decode_cursor(cursor: str) -> tuple[datetime, uuid.UUID]:
         raise ApiError(422, "invalid_cursor", "请求参数有误", "cursor 无法解析") from exc
 
 
+def encode_parts(parts: list[int | str]) -> str:
+    """把一组标量编成不透明游标。
+
+    按创建时间倒序的列表用 `encode_cursor`（它带上完整的时间戳）；排序键不是时间的列表
+    （例如按出现次数排的统计、排名后切页的搜索结果）用这一对：把排序键的最后一个值放进
+    `parts`，下一页从它之后接着取。客户端只负责原样带回，内容的形状属于服务端私有约定。
+    """
+    raw = json.dumps(parts, separators=(",", ":")).encode()
+    return base64.urlsafe_b64encode(raw).decode().rstrip("=")
+
+
+def decode_parts(cursor: str) -> list[object]:
+    try:
+        padded = cursor + "=" * (-len(cursor) % 4)
+        parts = json.loads(base64.b64decode(padded, altchars=b"-_", validate=True))
+    except (ValueError, TypeError) as exc:
+        raise ApiError(422, "invalid_cursor", "请求参数有误", "cursor 无法解析") from exc
+    if not isinstance(parts, list) or not parts or any(type(p) not in (int, str) for p in parts):
+        raise ApiError(422, "invalid_cursor", "请求参数有误", "cursor 无法解析")
+    return parts
+
+
 def check_limit(limit: int, maximum: int) -> None:
     if limit > maximum:
         raise ApiError(422, "invalid_request", "请求参数有误", f"limit 不能超过 {maximum}")

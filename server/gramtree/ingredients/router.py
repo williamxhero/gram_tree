@@ -5,16 +5,31 @@
 下面的顺序就是这个顺序，加新接口时插在 `get_ingredient` 之前。
 """
 
+import logging
+import unicodedata
 import uuid
+from collections import Counter
 from datetime import UTC, datetime
+from typing import Annotated
 
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel, Field, TypeAdapter, ValidationError, field_validator
 from sqlalchemy import select
+from sqlalchemy.dialects.postgresql import insert as pg_insert
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
+from gramtree.accounts.deps import CurrentAuth
 from gramtree.core.errors import ERROR_RESPONSES, ApiError, NotFound
 from gramtree.core.ids import IdV4
+from gramtree.core.pagination import (
+    Page,
+    PageParams,
+    check_limit,
+    decode_parts,
+    encode_parts,
+    page_params,
+)
 from gramtree.deps import SessionDep
 from gramtree.ingredients import matching, versioning
 from gramtree.ingredients.attributes import IngredientAttributes
@@ -25,11 +40,15 @@ from gramtree.ingredients.models import (
     IngredientVersion,
     UnrecordedIngredient,
 )
+from gramtree.runtime_config import service as config
+
+logger = logging.getLogger("gramtree.ingredients")
 
 router = APIRouter(prefix="/ingredients", tags=["ingredients"])
 
 # 一次批量读取的 ID 数量上限，超过按 ADR 0002 返回 422 invalid_request
 BATCH_MAX_IDS = 100
+PageDep = Annotated[PageParams, Depends(page_params)]
 
 
 class IngredientOut(BaseModel):
@@ -64,8 +83,13 @@ class SearchQuery(BaseModel):
         return v
 
 
+class SearchIngredientOut(IngredientOut):
+    matched_name: str = Field(description="实际命中的叫法；已合并食材保留旧叫法")
+
+
 class SearchResult(BaseModel):
-    items: list[IngredientOut]
+    items: list[SearchIngredientOut]
+    next_cursor: str | None = None
 
 
 def _to_out(db: Session, row: Ingredient) -> IngredientOut:
@@ -160,27 +184,101 @@ class UnrecordedIngredientItem(BaseModel):
     last_seen_at: datetime
 
 
-@router.get("/unrecorded", response_model=list[UnrecordedIngredientItem], responses=ERROR_RESPONSES)
+def _search_after(cursor: str | None, query: str) -> tuple[int, str, str] | None:
+    if not cursor:
+        return None
+    parts = decode_parts(cursor)
+    normalized_query = query.strip().casefold()
+    if (
+        len(parts) != 5
+        or parts[0] != "search"
+        or parts[1] != normalized_query
+        or type(parts[2]) is not int
+        or not 0 <= parts[2] <= 5
+        or not isinstance(parts[3], str)
+        or not parts[3]
+        or not isinstance(parts[4], str)
+    ):
+        raise ApiError(422, "invalid_cursor", "请求参数有误", "cursor 无法解析")
+    try:
+        ingredient_id = uuid.UUID(parts[4])
+        if ingredient_id.version != 4:
+            raise ValueError("ID 必须是 UUID v4")
+    except ValueError as exc:
+        raise ApiError(422, "invalid_cursor", "请求参数有误", "cursor 无法解析") from exc
+    return parts[2], parts[3], str(ingredient_id)
+
+
+def _unrecorded_after(cursor: str | None) -> tuple[int, str] | None:
+    if not cursor:
+        return None
+    parts = decode_parts(cursor)
+    if (
+        len(parts) != 3
+        or parts[0] != "unrecorded"
+        or type(parts[1]) is not int
+        or parts[1] < 1
+        or not isinstance(parts[2], str)
+        or not parts[2]
+    ):
+        raise ApiError(422, "invalid_cursor", "请求参数有误", "cursor 无法解析")
+    return parts[1], parts[2]
+
+
+def _normalize_unrecorded_name(name: str) -> str:
+    return unicodedata.normalize("NFKC", name).strip()
+
+
+def _still_unrecorded(db: Session, names: list[str]) -> set[str]:
+    normalized = matching.normalize(db, names)
+    return {
+        name
+        for name, result in zip(names, normalized, strict=True)
+        if result.confidence == "unrecorded"
+    }
+
+
+@router.get(
+    "/unrecorded",
+    response_model=Page[UnrecordedIngredientItem],
+    responses=ERROR_RESPONSES,
+)
 def list_unrecorded_ingredients(
-    db: SessionDep,
-    limit: int = Query(50, ge=1, le=500, description="最多返回多少条记录"),
-) -> list[UnrecordedIngredientItem]:
-    """查询未收录食材列表，按出现次数降序排列 (#102)。"""
-    stmt = (
-        select(UnrecordedIngredient)
-        .order_by(UnrecordedIngredient.occurrence_count.desc())
-        .limit(limit)
-    )
-    records = db.scalars(stmt).all()
-    return [
-        UnrecordedIngredientItem(
-            name=r.name,
-            occurrence_count=r.occurrence_count,
-            first_seen_at=r.first_seen_at,
-            last_seen_at=r.last_seen_at,
+    db: SessionDep, page: PageDep, auth: CurrentAuth
+) -> Page[UnrecordedIngredientItem]:
+    """按出现次数降序查询仍未收录的食材，使用稳定游标分页 (#102)。"""
+    del auth
+    check_limit(page.limit, config.get(db, "api.page_size_max"))
+    after = _unrecorded_after(page.cursor)
+    rows = list(
+        db.scalars(
+            select(UnrecordedIngredient).order_by(
+                UnrecordedIngredient.occurrence_count.desc(),
+                UnrecordedIngredient.name.asc(),
+            )
         )
-        for r in records
+    )
+    active_names = _still_unrecorded(db, [row.name for row in rows])
+    items = [
+        UnrecordedIngredientItem(
+            name=row.name,
+            occurrence_count=row.occurrence_count,
+            first_seen_at=row.first_seen_at,
+            last_seen_at=row.last_seen_at,
+        )
+        for row in rows
+        if row.name in active_names
     ]
+    items.sort(key=lambda item: (-item.occurrence_count, item.name))
+    if after is not None:
+        count, name = after
+        items = [item for item in items if (-item.occurrence_count, item.name) > (-count, name)]
+    next_cursor = None
+    if len(items) > page.limit:
+        items = items[: page.limit]
+        last = items[-1]
+        next_cursor = encode_parts(["unrecorded", last.occurrence_count, last.name])
+    return Page[UnrecordedIngredientItem](items=items, next_cursor=next_cursor)
 
 
 @router.get("/changes", response_model=ChangesResponse, responses=ERROR_RESPONSES)
@@ -346,14 +444,26 @@ def get_ingredient(ingredient_id: IdV4, db: SessionDep) -> IngredientDetail:
 
 
 @router.post("/search", response_model=SearchResult, responses=ERROR_RESPONSES)
-def search_ingredients(query: SearchQuery, db: SessionDep) -> SearchResult:
-    """搜索食材。支持标准名、别名、拼音首字母、完整拼音前缀匹配。最多返回 20 个结果。"""
-    q = query.query.strip()
-
-    if not q:
-        raise ApiError(400, "invalid_request", "查询不能为空")
-
-    return SearchResult(items=[_to_out(db, ing) for ing in matching.search(db, q, limit=20)])
+def search_ingredients(query: SearchQuery, db: SessionDep, page: PageDep) -> SearchResult:
+    """搜索食材并按匹配质量返回稳定分页结果。"""
+    check_limit(page.limit, config.get(db, "api.page_size_max"))
+    after = _search_after(page.cursor, query.query)
+    hits, has_more = matching.search(db, query.query, page.limit, after=after)
+    next_cursor = (
+        encode_parts(["search", query.query.strip().casefold(), *hits[-1].key])
+        if has_more
+        else None
+    )
+    return SearchResult(
+        items=[
+            SearchIngredientOut(
+                **_to_out(db, hit.ingredient).model_dump(),
+                matched_name=hit.matched_name,
+            )
+            for hit in hits
+        ],
+        next_cursor=next_cursor,
+    )
 
 
 # 一次归一的名称数量上限，超过按 ADR 0002 返回 422 invalid_request
@@ -405,39 +515,56 @@ class NormalizeResponse(BaseModel):
 
 @router.post("/normalize", response_model=NormalizeResponse, responses=ERROR_RESPONSES)
 def normalize_ingredients(body: NormalizeRequest, db: SessionDep) -> NormalizeResponse:
-    """把一批食材名称归一到标准 ID（只用规则匹配），结果按输入顺序返回。"""
+    """把一批食材名称归一到标准 ID，并尽力记录未收录名称。"""
     names = [item.name for item in body.items]
-    results = []
-    now = datetime.now(UTC)
-
-    for name, n in zip(names, matching.normalize(db, names), strict=True):
-        # 当返回 unrecorded 时，记录到未收录统计表 (#102)
-        if n.confidence == "unrecorded":
-            stmt = select(UnrecordedIngredient).where(UnrecordedIngredient.name == name)
-            existing = db.scalars(stmt).first()
-            if existing:
-                existing.occurrence_count += 1
-                existing.last_seen_at = now
-            else:
-                new_record = UnrecordedIngredient(
-                    name=name,
-                    occurrence_count=1,
-                    first_seen_at=now,
-                    last_seen_at=now,
-                )
-                db.add(new_record)
-            db.commit()
-
-        results.append(
-            NormalizeResultItem(
-                name=name,
-                confidence=n.confidence,
-                ingredient_id=n.ingredient.id if n.ingredient else None,
-                standard_name=n.ingredient.standard_name if n.ingredient else None,
-                candidates=[
-                    NormalizeCandidate(ingredient_id=c.id, standard_name=c.standard_name)
-                    for c in n.candidates
-                ],
-            )
+    normalized = matching.normalize(db, names)
+    results = [
+        NormalizeResultItem(
+            name=name,
+            confidence=result.confidence,
+            ingredient_id=result.ingredient.id if result.ingredient else None,
+            standard_name=result.ingredient.standard_name if result.ingredient else None,
+            candidates=[
+                NormalizeCandidate(ingredient_id=c.id, standard_name=c.standard_name)
+                for c in result.candidates
+            ],
         )
+        for name, result in zip(names, normalized, strict=True)
+    ]
+
+    # 统计不是归一化主链路：先构造完整响应，再用 savepoint 尽力写入，写失败不能改变响应。
+    counts = Counter(
+        _normalize_unrecorded_name(name)
+        for name, result in zip(names, normalized, strict=True)
+        if result.confidence == "unrecorded"
+    )
+    if counts:
+        now = datetime.now(UTC)
+        values = [
+            {
+                "id": uuid.uuid4(),
+                "name": name,
+                "occurrence_count": count,
+                "first_seen_at": now,
+                "last_seen_at": now,
+            }
+            for name, count in counts.items()
+        ]
+        statement = pg_insert(UnrecordedIngredient).values(values)
+        statement = statement.on_conflict_do_update(
+            index_elements=[UnrecordedIngredient.name],
+            set_={
+                "occurrence_count": UnrecordedIngredient.occurrence_count
+                + statement.excluded.occurrence_count,
+                "last_seen_at": statement.excluded.last_seen_at,
+            },
+        )
+        try:
+            with db.begin_nested():
+                db.execute(statement)
+                db.flush()
+            db.commit()
+        except SQLAlchemyError as exc:
+            logger.warning("unrecorded ingredient statistics write failed", exc_info=exc)
+            db.rollback()
     return NormalizeResponse(results=results)

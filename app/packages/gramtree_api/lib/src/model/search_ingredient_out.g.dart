@@ -1,36 +1,39 @@
 // GENERATED CODE - DO NOT MODIFY BY HAND
 
-part of 'ingredient_out.dart';
+part of 'search_ingredient_out.dart';
 
 // **************************************************************************
 // CopyWithGenerator
 // **************************************************************************
 
-abstract class _$IngredientOutCWProxy {
-  IngredientOut aliases(List<String> aliases);
+abstract class _$SearchIngredientOutCWProxy {
+  SearchIngredientOut aliases(List<String> aliases);
 
-  IngredientOut category(String category);
+  SearchIngredientOut category(String category);
 
-  IngredientOut id(String id);
+  SearchIngredientOut id(String id);
 
-  IngredientOut pinyin(String pinyin);
+  SearchIngredientOut matchedName(String matchedName);
 
-  IngredientOut pinyinInitials(String pinyinInitials);
+  SearchIngredientOut pinyin(String pinyin);
 
-  IngredientOut standardName(String standardName);
+  SearchIngredientOut pinyinInitials(String pinyinInitials);
 
-  IngredientOut version(String version);
+  SearchIngredientOut standardName(String standardName);
 
-  /// This function **does support** nullification of nullable fields. All `null` values passed to `non-nullable` fields will be ignored. You can also use `IngredientOut(...).copyWith.fieldName(...)` to override fields one at a time with nullification support.
+  SearchIngredientOut version(String version);
+
+  /// This function **does support** nullification of nullable fields. All `null` values passed to `non-nullable` fields will be ignored. You can also use `SearchIngredientOut(...).copyWith.fieldName(...)` to override fields one at a time with nullification support.
   ///
   /// Usage
   /// ```dart
-  /// IngredientOut(...).copyWith(id: 12, name: "My name")
+  /// SearchIngredientOut(...).copyWith(id: 12, name: "My name")
   /// ````
-  IngredientOut call({
+  SearchIngredientOut call({
     List<String> aliases,
     String category,
     String id,
+    String matchedName,
     String pinyin,
     String pinyinInitials,
     String standardName,
@@ -38,52 +41,57 @@ abstract class _$IngredientOutCWProxy {
   });
 }
 
-/// Proxy class for `copyWith` functionality. This is a callable class and can be used as follows: `instanceOfIngredientOut.copyWith(...)`. Additionally contains functions for specific fields e.g. `instanceOfIngredientOut.copyWith.fieldName(...)`
-class _$IngredientOutCWProxyImpl implements _$IngredientOutCWProxy {
-  const _$IngredientOutCWProxyImpl(this._value);
+/// Proxy class for `copyWith` functionality. This is a callable class and can be used as follows: `instanceOfSearchIngredientOut.copyWith(...)`. Additionally contains functions for specific fields e.g. `instanceOfSearchIngredientOut.copyWith.fieldName(...)`
+class _$SearchIngredientOutCWProxyImpl implements _$SearchIngredientOutCWProxy {
+  const _$SearchIngredientOutCWProxyImpl(this._value);
 
-  final IngredientOut _value;
-
-  @override
-  IngredientOut aliases(List<String> aliases) => this(aliases: aliases);
+  final SearchIngredientOut _value;
 
   @override
-  IngredientOut category(String category) => this(category: category);
+  SearchIngredientOut aliases(List<String> aliases) => this(aliases: aliases);
 
   @override
-  IngredientOut id(String id) => this(id: id);
+  SearchIngredientOut category(String category) => this(category: category);
 
   @override
-  IngredientOut pinyin(String pinyin) => this(pinyin: pinyin);
+  SearchIngredientOut id(String id) => this(id: id);
 
   @override
-  IngredientOut pinyinInitials(String pinyinInitials) =>
+  SearchIngredientOut matchedName(String matchedName) =>
+      this(matchedName: matchedName);
+
+  @override
+  SearchIngredientOut pinyin(String pinyin) => this(pinyin: pinyin);
+
+  @override
+  SearchIngredientOut pinyinInitials(String pinyinInitials) =>
       this(pinyinInitials: pinyinInitials);
 
   @override
-  IngredientOut standardName(String standardName) =>
+  SearchIngredientOut standardName(String standardName) =>
       this(standardName: standardName);
 
   @override
-  IngredientOut version(String version) => this(version: version);
+  SearchIngredientOut version(String version) => this(version: version);
 
   @override
-  /// This function **does support** nullification of nullable fields. All `null` values passed to `non-nullable` fields will be ignored. You can also use `IngredientOut(...).copyWith.fieldName(...)` to override fields one at a time with nullification support.
+  /// This function **does support** nullification of nullable fields. All `null` values passed to `non-nullable` fields will be ignored. You can also use `SearchIngredientOut(...).copyWith.fieldName(...)` to override fields one at a time with nullification support.
   ///
   /// Usage
   /// ```dart
-  /// IngredientOut(...).copyWith(id: 12, name: "My name")
+  /// SearchIngredientOut(...).copyWith(id: 12, name: "My name")
   /// ````
-  IngredientOut call({
+  SearchIngredientOut call({
     Object? aliases = const $CopyWithPlaceholder(),
     Object? category = const $CopyWithPlaceholder(),
     Object? id = const $CopyWithPlaceholder(),
+    Object? matchedName = const $CopyWithPlaceholder(),
     Object? pinyin = const $CopyWithPlaceholder(),
     Object? pinyinInitials = const $CopyWithPlaceholder(),
     Object? standardName = const $CopyWithPlaceholder(),
     Object? version = const $CopyWithPlaceholder(),
   }) {
-    return IngredientOut(
+    return SearchIngredientOut(
       aliases: aliases == const $CopyWithPlaceholder()
           ? _value.aliases
           // ignore: cast_nullable_to_non_nullable
@@ -96,6 +104,10 @@ class _$IngredientOutCWProxyImpl implements _$IngredientOutCWProxy {
           ? _value.id
           // ignore: cast_nullable_to_non_nullable
           : id as String,
+      matchedName: matchedName == const $CopyWithPlaceholder()
+          ? _value.matchedName
+          // ignore: cast_nullable_to_non_nullable
+          : matchedName as String,
       pinyin: pinyin == const $CopyWithPlaceholder()
           ? _value.pinyin
           // ignore: cast_nullable_to_non_nullable
@@ -116,19 +128,20 @@ class _$IngredientOutCWProxyImpl implements _$IngredientOutCWProxy {
   }
 }
 
-extension $IngredientOutCopyWith on IngredientOut {
-  /// Returns a callable class that can be used as follows: `instanceOfIngredientOut.copyWith(...)` or like so:`instanceOfIngredientOut.copyWith.fieldName(...)`.
+extension $SearchIngredientOutCopyWith on SearchIngredientOut {
+  /// Returns a callable class that can be used as follows: `instanceOfSearchIngredientOut.copyWith(...)` or like so:`instanceOfSearchIngredientOut.copyWith.fieldName(...)`.
   // ignore: library_private_types_in_public_api
-  _$IngredientOutCWProxy get copyWith => _$IngredientOutCWProxyImpl(this);
+  _$SearchIngredientOutCWProxy get copyWith =>
+      _$SearchIngredientOutCWProxyImpl(this);
 }
 
 // **************************************************************************
 // JsonSerializableGenerator
 // **************************************************************************
 
-IngredientOut _$IngredientOutFromJson(Map<String, dynamic> json) =>
+SearchIngredientOut _$SearchIngredientOutFromJson(Map<String, dynamic> json) =>
     $checkedCreate(
-      'IngredientOut',
+      'SearchIngredientOut',
       json,
       ($checkedConvert) {
         $checkKeys(
@@ -137,19 +150,21 @@ IngredientOut _$IngredientOutFromJson(Map<String, dynamic> json) =>
             'aliases',
             'category',
             'id',
+            'matched_name',
             'pinyin',
             'pinyin_initials',
             'standard_name',
             'version',
           ],
         );
-        final val = IngredientOut(
+        final val = SearchIngredientOut(
           aliases: $checkedConvert(
             'aliases',
             (v) => (v as List<dynamic>).map((e) => e as String).toList(),
           ),
           category: $checkedConvert('category', (v) => v as String),
           id: $checkedConvert('id', (v) => v as String),
+          matchedName: $checkedConvert('matched_name', (v) => v as String),
           pinyin: $checkedConvert('pinyin', (v) => v as String),
           pinyinInitials: $checkedConvert(
             'pinyin_initials',
@@ -161,18 +176,21 @@ IngredientOut _$IngredientOutFromJson(Map<String, dynamic> json) =>
         return val;
       },
       fieldKeyMap: const {
+        'matchedName': 'matched_name',
         'pinyinInitials': 'pinyin_initials',
         'standardName': 'standard_name',
       },
     );
 
-Map<String, dynamic> _$IngredientOutToJson(IngredientOut instance) =>
-    <String, dynamic>{
-      'aliases': instance.aliases,
-      'category': instance.category,
-      'id': instance.id,
-      'pinyin': instance.pinyin,
-      'pinyin_initials': instance.pinyinInitials,
-      'standard_name': instance.standardName,
-      'version': instance.version,
-    };
+Map<String, dynamic> _$SearchIngredientOutToJson(
+  SearchIngredientOut instance,
+) => <String, dynamic>{
+  'aliases': instance.aliases,
+  'category': instance.category,
+  'id': instance.id,
+  'matched_name': instance.matchedName,
+  'pinyin': instance.pinyin,
+  'pinyin_initials': instance.pinyinInitials,
+  'standard_name': instance.standardName,
+  'version': instance.version,
+};

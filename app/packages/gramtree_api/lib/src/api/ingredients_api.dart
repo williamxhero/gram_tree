@@ -16,9 +16,9 @@ import 'package:gramtree_api/src/model/error_response.dart';
 import 'package:gramtree_api/src/model/ingredient_detail.dart';
 import 'package:gramtree_api/src/model/normalize_request.dart';
 import 'package:gramtree_api/src/model/normalize_response.dart';
+import 'package:gramtree_api/src/model/page_unrecorded_ingredient_item.dart';
 import 'package:gramtree_api/src/model/search_query.dart';
 import 'package:gramtree_api/src/model/search_result.dart';
-import 'package:gramtree_api/src/model/unrecorded_ingredient_item.dart';
 
 class IngredientsApi {
   final Dio _dio;
@@ -340,10 +340,11 @@ class IngredientsApi {
   }
 
   /// List Unrecorded Ingredients
-  /// 查询未收录食材列表，按出现次数降序排列 (#102)。
+  /// 按出现次数降序查询仍未收录的食材，使用稳定游标分页 (#102)。
   ///
   /// Parameters:
-  /// * [limit] - 最多返回多少条记录
+  /// * [cursor] - 上一页返回的 next_cursor
+  /// * [limit] - 每页条数，上限见配置项 api.page_size_max
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -351,10 +352,11 @@ class IngredientsApi {
   /// * [onSendProgress] - A [ProgressCallback] that can be used to get the send progress
   /// * [onReceiveProgress] - A [ProgressCallback] that can be used to get the receive progress
   ///
-  /// Returns a [Future] containing a [Response] with a [List<UnrecordedIngredientItem>] as data
+  /// Returns a [Future] containing a [Response] with a [PageUnrecordedIngredientItem] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<List<UnrecordedIngredientItem>>> listUnrecordedIngredients({
-    int? limit = 50,
+  Future<Response<PageUnrecordedIngredientItem>> listUnrecordedIngredients({
+    String? cursor,
+    int? limit = 20,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
     Map<String, dynamic>? extra,
@@ -366,11 +368,17 @@ class IngredientsApi {
     final _options = Options(
       method: r'GET',
       headers: <String, dynamic>{...?headers},
-      extra: <String, dynamic>{'secure': <Map<String, String>>[], ...?extra},
+      extra: <String, dynamic>{
+        'secure': <Map<String, String>>[
+          {'type': 'http', 'scheme': 'bearer', 'name': 'HTTPBearer'},
+        ],
+        ...?extra,
+      },
       validateStatus: validateStatus,
     );
 
     final _queryParameters = <String, dynamic>{
+      r'cursor': cursor,
       if (limit != null) r'limit': limit,
     };
 
@@ -383,16 +391,16 @@ class IngredientsApi {
       onReceiveProgress: onReceiveProgress,
     );
 
-    List<UnrecordedIngredientItem>? _responseData;
+    PageUnrecordedIngredientItem? _responseData;
 
     try {
       final rawData = _response.data;
       _responseData = rawData == null
           ? null
           : deserialize<
-              List<UnrecordedIngredientItem>,
-              UnrecordedIngredientItem
-            >(rawData, 'List<UnrecordedIngredientItem>', growable: true);
+              PageUnrecordedIngredientItem,
+              PageUnrecordedIngredientItem
+            >(rawData, 'PageUnrecordedIngredientItem', growable: true);
     } catch (error, stackTrace) {
       throw DioException(
         requestOptions: _response.requestOptions,
@@ -403,7 +411,7 @@ class IngredientsApi {
       );
     }
 
-    return Response<List<UnrecordedIngredientItem>>(
+    return Response<PageUnrecordedIngredientItem>(
       data: _responseData,
       headers: _response.headers,
       isRedirect: _response.isRedirect,
@@ -416,7 +424,7 @@ class IngredientsApi {
   }
 
   /// Normalize Ingredients
-  /// 把一批食材名称归一到标准 ID（只用规则匹配），结果按输入顺序返回。
+  /// 把一批食材名称归一到标准 ID，并尽力记录未收录名称。
   ///
   /// Parameters:
   /// * [normalizeRequest]
@@ -503,10 +511,12 @@ class IngredientsApi {
   }
 
   /// Search Ingredients
-  /// 搜索食材。支持标准名、别名、拼音首字母、完整拼音前缀匹配。最多返回 20 个结果。
+  /// 搜索食材并按匹配质量返回稳定分页结果。
   ///
   /// Parameters:
   /// * [searchQuery]
+  /// * [cursor] - 上一页返回的 next_cursor
+  /// * [limit] - 每页条数，上限见配置项 api.page_size_max
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -518,6 +528,8 @@ class IngredientsApi {
   /// Throws [DioException] if API call or serialization fails
   Future<Response<SearchResult>> searchIngredients({
     required SearchQuery searchQuery,
+    String? cursor,
+    int? limit = 20,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
     Map<String, dynamic>? extra,
@@ -534,13 +546,22 @@ class IngredientsApi {
       validateStatus: validateStatus,
     );
 
+    final _queryParameters = <String, dynamic>{
+      r'cursor': cursor,
+      if (limit != null) r'limit': limit,
+    };
+
     dynamic _bodyData;
 
     try {
       _bodyData = jsonEncode(searchQuery);
     } catch (error, stackTrace) {
       throw DioException(
-        requestOptions: _options.compose(_dio.options, _path),
+        requestOptions: _options.compose(
+          _dio.options,
+          _path,
+          queryParameters: _queryParameters,
+        ),
         type: DioExceptionType.unknown,
         error: error,
         stackTrace: stackTrace,
@@ -551,6 +572,7 @@ class IngredientsApi {
       _path,
       data: _bodyData,
       options: _options,
+      queryParameters: _queryParameters,
       cancelToken: cancelToken,
       onSendProgress: onSendProgress,
       onReceiveProgress: onReceiveProgress,
