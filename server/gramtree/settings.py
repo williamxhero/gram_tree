@@ -44,6 +44,11 @@ class Settings(BaseSettings):
     apple_key_id: str = ""
     apple_private_key: str = ""
 
+    # —— 菜谱图片（私有本地/S3 兼容适配器的最小配置） ——
+    # 本地开发和测试写入此目录；部署时由对象存储适配器替换，不把公开 URL 存进数据库。
+    recipe_media_dir: str = ".data/recipe-media"
+    image_signing_secret: str = "dev-recipe-image-signing-secret"
+
     @property
     def cors_origin_regex(self) -> str | None:
         """开发和测试环境放行本机任意端口，方便网页版连本机服务端。"""
