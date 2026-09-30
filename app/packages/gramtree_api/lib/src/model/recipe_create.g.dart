@@ -11,13 +11,11 @@ abstract class _$RecipeCreateCWProxy {
 
   RecipeCreate changeNote(String? changeNote);
 
-  RecipeCreate dish(DishInput dish);
+  RecipeCreate dish(DishInput? dish);
 
   RecipeCreate dishAliases(List<String>? dishAliases);
 
-  RecipeCreate dishName(String dishName);
-
-  RecipeCreate imageIds(List<String>? imageIds);
+  RecipeCreate dishName(String? dishName);
 
   RecipeCreate snapshot(RecipeSnapshot snapshot);
 
@@ -30,10 +28,9 @@ abstract class _$RecipeCreateCWProxy {
   RecipeCreate call({
     bool? aiAssisted,
     String? changeNote,
-    DishInput dish,
+    DishInput? dish,
     List<String>? dishAliases,
-    String dishName,
-    List<String>? imageIds,
+    String? dishName,
     RecipeSnapshot snapshot,
   });
 }
@@ -51,17 +48,14 @@ class _$RecipeCreateCWProxyImpl implements _$RecipeCreateCWProxy {
   RecipeCreate changeNote(String? changeNote) => this(changeNote: changeNote);
 
   @override
-  RecipeCreate dish(DishInput dish) => this(dish: dish);
+  RecipeCreate dish(DishInput? dish) => this(dish: dish);
 
   @override
   RecipeCreate dishAliases(List<String>? dishAliases) =>
       this(dishAliases: dishAliases);
 
   @override
-  RecipeCreate dishName(String dishName) => this(dishName: dishName);
-
-  @override
-  RecipeCreate imageIds(List<String>? imageIds) => this(imageIds: imageIds);
+  RecipeCreate dishName(String? dishName) => this(dishName: dishName);
 
   @override
   RecipeCreate snapshot(RecipeSnapshot snapshot) => this(snapshot: snapshot);
@@ -79,7 +73,6 @@ class _$RecipeCreateCWProxyImpl implements _$RecipeCreateCWProxy {
     Object? dish = const $CopyWithPlaceholder(),
     Object? dishAliases = const $CopyWithPlaceholder(),
     Object? dishName = const $CopyWithPlaceholder(),
-    Object? imageIds = const $CopyWithPlaceholder(),
     Object? snapshot = const $CopyWithPlaceholder(),
   }) {
     return RecipeCreate(
@@ -94,7 +87,7 @@ class _$RecipeCreateCWProxyImpl implements _$RecipeCreateCWProxy {
       dish: dish == const $CopyWithPlaceholder()
           ? _value.dish
           // ignore: cast_nullable_to_non_nullable
-          : dish as DishInput,
+          : dish as DishInput?,
       dishAliases: dishAliases == const $CopyWithPlaceholder()
           ? _value.dishAliases
           // ignore: cast_nullable_to_non_nullable
@@ -102,11 +95,7 @@ class _$RecipeCreateCWProxyImpl implements _$RecipeCreateCWProxy {
       dishName: dishName == const $CopyWithPlaceholder()
           ? _value.dishName
           // ignore: cast_nullable_to_non_nullable
-          : dishName as String,
-      imageIds: imageIds == const $CopyWithPlaceholder()
-          ? _value.imageIds
-          // ignore: cast_nullable_to_non_nullable
-          : imageIds as List<String>?,
+          : dishName as String?,
       snapshot: snapshot == const $CopyWithPlaceholder()
           ? _value.snapshot
           // ignore: cast_nullable_to_non_nullable
@@ -125,54 +114,46 @@ extension $RecipeCreateCopyWith on RecipeCreate {
 // JsonSerializableGenerator
 // **************************************************************************
 
-RecipeCreate _$RecipeCreateFromJson(Map<String, dynamic> json) =>
-    $checkedCreate(
-      'RecipeCreate',
-      json,
-      ($checkedConvert) {
-        $checkKeys(json, requiredKeys: const ['dish', 'dish_name', 'snapshot']);
-        final val = RecipeCreate(
-          aiAssisted: $checkedConvert(
-            'ai_assisted',
-            (v) => v as bool? ?? false,
-          ),
-          changeNote: $checkedConvert('change_note', (v) => v as String? ?? ''),
-          dish: $checkedConvert(
-            'dish',
-            (v) => DishInput.fromJson(v as Map<String, dynamic>),
-          ),
-          dishAliases: $checkedConvert(
-            'dish_aliases',
-            (v) => (v as List<dynamic>?)?.map((e) => e as String).toList(),
-          ),
-          dishName: $checkedConvert('dish_name', (v) => v as String),
-          imageIds: $checkedConvert(
-            'image_ids',
-            (v) => (v as List<dynamic>?)?.map((e) => e as String).toList(),
-          ),
-          snapshot: $checkedConvert(
-            'snapshot',
-            (v) => RecipeSnapshot.fromJson(v as Map<String, dynamic>),
-          ),
-        );
-        return val;
-      },
-      fieldKeyMap: const {
-        'aiAssisted': 'ai_assisted',
-        'changeNote': 'change_note',
-        'dishAliases': 'dish_aliases',
-        'dishName': 'dish_name',
-        'imageIds': 'image_ids',
-      },
+RecipeCreate _$RecipeCreateFromJson(
+  Map<String, dynamic> json,
+) => $checkedCreate(
+  'RecipeCreate',
+  json,
+  ($checkedConvert) {
+    $checkKeys(json, requiredKeys: const ['snapshot']);
+    final val = RecipeCreate(
+      aiAssisted: $checkedConvert('ai_assisted', (v) => v as bool? ?? false),
+      changeNote: $checkedConvert('change_note', (v) => v as String? ?? ''),
+      dish: $checkedConvert(
+        'dish',
+        (v) => v == null ? null : DishInput.fromJson(v as Map<String, dynamic>),
+      ),
+      dishAliases: $checkedConvert(
+        'dish_aliases',
+        (v) => (v as List<dynamic>?)?.map((e) => e as String).toList(),
+      ),
+      dishName: $checkedConvert('dish_name', (v) => v as String?),
+      snapshot: $checkedConvert(
+        'snapshot',
+        (v) => RecipeSnapshot.fromJson(v as Map<String, dynamic>),
+      ),
     );
+    return val;
+  },
+  fieldKeyMap: const {
+    'aiAssisted': 'ai_assisted',
+    'changeNote': 'change_note',
+    'dishAliases': 'dish_aliases',
+    'dishName': 'dish_name',
+  },
+);
 
 Map<String, dynamic> _$RecipeCreateToJson(RecipeCreate instance) =>
     <String, dynamic>{
       'ai_assisted': ?instance.aiAssisted,
       'change_note': ?instance.changeNote,
-      'dish': instance.dish.toJson(),
+      'dish': ?instance.dish?.toJson(),
       'dish_aliases': ?instance.dishAliases,
-      'dish_name': instance.dishName,
-      'image_ids': ?instance.imageIds,
+      'dish_name': ?instance.dishName,
       'snapshot': instance.snapshot.toJson(),
     };

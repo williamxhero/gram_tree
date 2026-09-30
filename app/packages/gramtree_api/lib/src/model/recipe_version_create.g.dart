@@ -13,8 +13,6 @@ abstract class _$RecipeVersionCreateCWProxy {
 
   RecipeVersionCreate changeNote(String? changeNote);
 
-  RecipeVersionCreate imageIds(List<String>? imageIds);
-
   RecipeVersionCreate snapshot(RecipeSnapshot snapshot);
 
   /// This function **does support** nullification of nullable fields. All `null` values passed to `non-nullable` fields will be ignored. You can also use `RecipeVersionCreate(...).copyWith.fieldName(...)` to override fields one at a time with nullification support.
@@ -27,7 +25,6 @@ abstract class _$RecipeVersionCreateCWProxy {
     bool? aiAssisted,
     String? baseVersionId,
     String? changeNote,
-    List<String>? imageIds,
     RecipeSnapshot snapshot,
   });
 }
@@ -51,10 +48,6 @@ class _$RecipeVersionCreateCWProxyImpl implements _$RecipeVersionCreateCWProxy {
       this(changeNote: changeNote);
 
   @override
-  RecipeVersionCreate imageIds(List<String>? imageIds) =>
-      this(imageIds: imageIds);
-
-  @override
   RecipeVersionCreate snapshot(RecipeSnapshot snapshot) =>
       this(snapshot: snapshot);
 
@@ -69,7 +62,6 @@ class _$RecipeVersionCreateCWProxyImpl implements _$RecipeVersionCreateCWProxy {
     Object? aiAssisted = const $CopyWithPlaceholder(),
     Object? baseVersionId = const $CopyWithPlaceholder(),
     Object? changeNote = const $CopyWithPlaceholder(),
-    Object? imageIds = const $CopyWithPlaceholder(),
     Object? snapshot = const $CopyWithPlaceholder(),
   }) {
     return RecipeVersionCreate(
@@ -85,10 +77,6 @@ class _$RecipeVersionCreateCWProxyImpl implements _$RecipeVersionCreateCWProxy {
           ? _value.changeNote
           // ignore: cast_nullable_to_non_nullable
           : changeNote as String?,
-      imageIds: imageIds == const $CopyWithPlaceholder()
-          ? _value.imageIds
-          // ignore: cast_nullable_to_non_nullable
-          : imageIds as List<String>?,
       snapshot: snapshot == const $CopyWithPlaceholder()
           ? _value.snapshot
           // ignore: cast_nullable_to_non_nullable
@@ -119,10 +107,6 @@ RecipeVersionCreate _$RecipeVersionCreateFromJson(
       aiAssisted: $checkedConvert('ai_assisted', (v) => v as bool? ?? false),
       baseVersionId: $checkedConvert('base_version_id', (v) => v as String?),
       changeNote: $checkedConvert('change_note', (v) => v as String? ?? ''),
-      imageIds: $checkedConvert(
-        'image_ids',
-        (v) => (v as List<dynamic>?)?.map((e) => e as String).toList(),
-      ),
       snapshot: $checkedConvert(
         'snapshot',
         (v) => RecipeSnapshot.fromJson(v as Map<String, dynamic>),
@@ -134,7 +118,6 @@ RecipeVersionCreate _$RecipeVersionCreateFromJson(
     'aiAssisted': 'ai_assisted',
     'baseVersionId': 'base_version_id',
     'changeNote': 'change_note',
-    'imageIds': 'image_ids',
   },
 );
 
@@ -144,6 +127,5 @@ Map<String, dynamic> _$RecipeVersionCreateToJson(
   'ai_assisted': ?instance.aiAssisted,
   'base_version_id': ?instance.baseVersionId,
   'change_note': ?instance.changeNote,
-  'image_ids': ?instance.imageIds,
   'snapshot': instance.snapshot.toJson(),
 };

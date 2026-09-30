@@ -7,11 +7,11 @@ part of 'value_source.dart';
 // **************************************************************************
 
 abstract class _$ValueSourceCWProxy {
-  ValueSource basis(String basis);
+  ValueSource basis(String? basis);
 
-  ValueSource confidence(num confidence);
+  ValueSource confidence(num? confidence);
 
-  ValueSource original(String original);
+  ValueSource original(String? original);
 
   ValueSource source_(ValueSourceSource_Enum source_);
 
@@ -22,9 +22,9 @@ abstract class _$ValueSourceCWProxy {
   /// ValueSource(...).copyWith(id: 12, name: "My name")
   /// ````
   ValueSource call({
-    String basis,
-    num confidence,
-    String original,
+    String? basis,
+    num? confidence,
+    String? original,
     ValueSourceSource_Enum source_,
   });
 }
@@ -36,13 +36,13 @@ class _$ValueSourceCWProxyImpl implements _$ValueSourceCWProxy {
   final ValueSource _value;
 
   @override
-  ValueSource basis(String basis) => this(basis: basis);
+  ValueSource basis(String? basis) => this(basis: basis);
 
   @override
-  ValueSource confidence(num confidence) => this(confidence: confidence);
+  ValueSource confidence(num? confidence) => this(confidence: confidence);
 
   @override
-  ValueSource original(String original) => this(original: original);
+  ValueSource original(String? original) => this(original: original);
 
   @override
   ValueSource source_(ValueSourceSource_Enum source_) => this(source_: source_);
@@ -64,15 +64,15 @@ class _$ValueSourceCWProxyImpl implements _$ValueSourceCWProxy {
       basis: basis == const $CopyWithPlaceholder()
           ? _value.basis
           // ignore: cast_nullable_to_non_nullable
-          : basis as String,
+          : basis as String?,
       confidence: confidence == const $CopyWithPlaceholder()
           ? _value.confidence
           // ignore: cast_nullable_to_non_nullable
-          : confidence as num,
+          : confidence as num?,
       original: original == const $CopyWithPlaceholder()
           ? _value.original
           // ignore: cast_nullable_to_non_nullable
-          : original as String,
+          : original as String?,
       source_: source_ == const $CopyWithPlaceholder()
           ? _value.source_
           // ignore: cast_nullable_to_non_nullable
@@ -93,14 +93,11 @@ extension $ValueSourceCopyWith on ValueSource {
 
 ValueSource _$ValueSourceFromJson(Map<String, dynamic> json) =>
     $checkedCreate('ValueSource', json, ($checkedConvert) {
-      $checkKeys(
-        json,
-        requiredKeys: const ['basis', 'confidence', 'original', 'source'],
-      );
+      $checkKeys(json, requiredKeys: const ['source']);
       final val = ValueSource(
-        basis: $checkedConvert('basis', (v) => v as String),
-        confidence: $checkedConvert('confidence', (v) => v as num),
-        original: $checkedConvert('original', (v) => v as String),
+        basis: $checkedConvert('basis', (v) => v as String?),
+        confidence: $checkedConvert('confidence', (v) => v as num?),
+        original: $checkedConvert('original', (v) => v as String?),
         source_: $checkedConvert(
           'source',
           (v) => $enumDecode(_$ValueSourceSource_EnumEnumMap, v),
@@ -111,9 +108,9 @@ ValueSource _$ValueSourceFromJson(Map<String, dynamic> json) =>
 
 Map<String, dynamic> _$ValueSourceToJson(ValueSource instance) =>
     <String, dynamic>{
-      'basis': instance.basis,
-      'confidence': instance.confidence,
-      'original': instance.original,
+      'basis': ?instance.basis,
+      'confidence': ?instance.confidence,
+      'original': ?instance.original,
       'source': _$ValueSourceSource_EnumEnumMap[instance.source_]!,
     };
 

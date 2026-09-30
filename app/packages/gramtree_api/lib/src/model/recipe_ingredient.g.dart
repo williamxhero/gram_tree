@@ -7,29 +7,29 @@ part of 'recipe_ingredient.dart';
 // **************************************************************************
 
 abstract class _$RecipeIngredientCWProxy {
-  RecipeIngredient baseQuantity(num baseQuantity);
+  RecipeIngredient baseQuantity(num? baseQuantity);
 
-  RecipeIngredient baseUnit(RecipeIngredientBaseUnitEnum baseUnit);
+  RecipeIngredient baseUnit(RecipeIngredientBaseUnitEnum? baseUnit);
 
   RecipeIngredient displayName(String displayName);
 
   RecipeIngredient functional(bool? functional);
 
-  RecipeIngredient group(String group);
+  RecipeIngredient group(String? group);
 
   RecipeIngredient id(String id);
 
-  RecipeIngredient ingredientId(String ingredientId);
+  RecipeIngredient ingredientId(String? ingredientId);
 
   RecipeIngredient optional(bool? optional);
 
-  RecipeIngredient preparation(String preparation);
+  RecipeIngredient preparation(String? preparation);
 
   RecipeIngredient quantity(num quantity);
 
   RecipeIngredient quantitySource(ValueSource? quantitySource);
 
-  RecipeIngredient replacement(RecipeIngredientReplacement? replacement);
+  RecipeIngredient replacement(Object? replacement);
 
   RecipeIngredient scalingMode(RecipeIngredientScalingModeEnum scalingMode);
 
@@ -42,18 +42,18 @@ abstract class _$RecipeIngredientCWProxy {
   /// RecipeIngredient(...).copyWith(id: 12, name: "My name")
   /// ````
   RecipeIngredient call({
-    num baseQuantity,
-    RecipeIngredientBaseUnitEnum baseUnit,
+    num? baseQuantity,
+    RecipeIngredientBaseUnitEnum? baseUnit,
     String displayName,
     bool? functional,
-    String group,
+    String? group,
     String id,
-    String ingredientId,
+    String? ingredientId,
     bool? optional,
-    String preparation,
+    String? preparation,
     num quantity,
     ValueSource? quantitySource,
-    RecipeIngredientReplacement? replacement,
+    Object? replacement,
     RecipeIngredientScalingModeEnum scalingMode,
     String unit,
   });
@@ -66,11 +66,11 @@ class _$RecipeIngredientCWProxyImpl implements _$RecipeIngredientCWProxy {
   final RecipeIngredient _value;
 
   @override
-  RecipeIngredient baseQuantity(num baseQuantity) =>
+  RecipeIngredient baseQuantity(num? baseQuantity) =>
       this(baseQuantity: baseQuantity);
 
   @override
-  RecipeIngredient baseUnit(RecipeIngredientBaseUnitEnum baseUnit) =>
+  RecipeIngredient baseUnit(RecipeIngredientBaseUnitEnum? baseUnit) =>
       this(baseUnit: baseUnit);
 
   @override
@@ -81,20 +81,20 @@ class _$RecipeIngredientCWProxyImpl implements _$RecipeIngredientCWProxy {
   RecipeIngredient functional(bool? functional) => this(functional: functional);
 
   @override
-  RecipeIngredient group(String group) => this(group: group);
+  RecipeIngredient group(String? group) => this(group: group);
 
   @override
   RecipeIngredient id(String id) => this(id: id);
 
   @override
-  RecipeIngredient ingredientId(String ingredientId) =>
+  RecipeIngredient ingredientId(String? ingredientId) =>
       this(ingredientId: ingredientId);
 
   @override
   RecipeIngredient optional(bool? optional) => this(optional: optional);
 
   @override
-  RecipeIngredient preparation(String preparation) =>
+  RecipeIngredient preparation(String? preparation) =>
       this(preparation: preparation);
 
   @override
@@ -105,7 +105,7 @@ class _$RecipeIngredientCWProxyImpl implements _$RecipeIngredientCWProxy {
       this(quantitySource: quantitySource);
 
   @override
-  RecipeIngredient replacement(RecipeIngredientReplacement? replacement) =>
+  RecipeIngredient replacement(Object? replacement) =>
       this(replacement: replacement);
 
   @override
@@ -142,11 +142,11 @@ class _$RecipeIngredientCWProxyImpl implements _$RecipeIngredientCWProxy {
       baseQuantity: baseQuantity == const $CopyWithPlaceholder()
           ? _value.baseQuantity
           // ignore: cast_nullable_to_non_nullable
-          : baseQuantity as num,
+          : baseQuantity as num?,
       baseUnit: baseUnit == const $CopyWithPlaceholder()
           ? _value.baseUnit
           // ignore: cast_nullable_to_non_nullable
-          : baseUnit as RecipeIngredientBaseUnitEnum,
+          : baseUnit as RecipeIngredientBaseUnitEnum?,
       displayName: displayName == const $CopyWithPlaceholder()
           ? _value.displayName
           // ignore: cast_nullable_to_non_nullable
@@ -158,7 +158,7 @@ class _$RecipeIngredientCWProxyImpl implements _$RecipeIngredientCWProxy {
       group: group == const $CopyWithPlaceholder()
           ? _value.group
           // ignore: cast_nullable_to_non_nullable
-          : group as String,
+          : group as String?,
       id: id == const $CopyWithPlaceholder()
           ? _value.id
           // ignore: cast_nullable_to_non_nullable
@@ -166,7 +166,7 @@ class _$RecipeIngredientCWProxyImpl implements _$RecipeIngredientCWProxy {
       ingredientId: ingredientId == const $CopyWithPlaceholder()
           ? _value.ingredientId
           // ignore: cast_nullable_to_non_nullable
-          : ingredientId as String,
+          : ingredientId as String?,
       optional: optional == const $CopyWithPlaceholder()
           ? _value.optional
           // ignore: cast_nullable_to_non_nullable
@@ -174,7 +174,7 @@ class _$RecipeIngredientCWProxyImpl implements _$RecipeIngredientCWProxy {
       preparation: preparation == const $CopyWithPlaceholder()
           ? _value.preparation
           // ignore: cast_nullable_to_non_nullable
-          : preparation as String,
+          : preparation as String?,
       quantity: quantity == const $CopyWithPlaceholder()
           ? _value.quantity
           // ignore: cast_nullable_to_non_nullable
@@ -186,7 +186,7 @@ class _$RecipeIngredientCWProxyImpl implements _$RecipeIngredientCWProxy {
       replacement: replacement == const $CopyWithPlaceholder()
           ? _value.replacement
           // ignore: cast_nullable_to_non_nullable
-          : replacement as RecipeIngredientReplacement?,
+          : replacement as Object?,
       scalingMode: scalingMode == const $CopyWithPlaceholder()
           ? _value.scalingMode
           // ignore: cast_nullable_to_non_nullable
@@ -209,84 +209,75 @@ extension $RecipeIngredientCopyWith on RecipeIngredient {
 // JsonSerializableGenerator
 // **************************************************************************
 
-RecipeIngredient _$RecipeIngredientFromJson(
-  Map<String, dynamic> json,
-) => $checkedCreate(
-  'RecipeIngredient',
-  json,
-  ($checkedConvert) {
-    $checkKeys(
+RecipeIngredient _$RecipeIngredientFromJson(Map<String, dynamic> json) =>
+    $checkedCreate(
+      'RecipeIngredient',
       json,
-      requiredKeys: const [
-        'base_quantity',
-        'base_unit',
-        'display_name',
-        'group',
-        'id',
-        'ingredient_id',
-        'preparation',
-        'quantity',
-        'scaling_mode',
-        'unit',
-      ],
+      ($checkedConvert) {
+        $checkKeys(
+          json,
+          requiredKeys: const [
+            'display_name',
+            'id',
+            'quantity',
+            'scaling_mode',
+            'unit',
+          ],
+        );
+        final val = RecipeIngredient(
+          baseQuantity: $checkedConvert('base_quantity', (v) => v as num?),
+          baseUnit: $checkedConvert(
+            'base_unit',
+            (v) =>
+                $enumDecodeNullable(_$RecipeIngredientBaseUnitEnumEnumMap, v),
+          ),
+          displayName: $checkedConvert('display_name', (v) => v as String),
+          functional: $checkedConvert('functional', (v) => v as bool? ?? false),
+          group: $checkedConvert('group', (v) => v as String?),
+          id: $checkedConvert('id', (v) => v as String),
+          ingredientId: $checkedConvert('ingredient_id', (v) => v as String?),
+          optional: $checkedConvert('optional', (v) => v as bool? ?? false),
+          preparation: $checkedConvert('preparation', (v) => v as String?),
+          quantity: $checkedConvert('quantity', (v) => v as num),
+          quantitySource: $checkedConvert(
+            'quantity_source',
+            (v) => v == null
+                ? null
+                : ValueSource.fromJson(v as Map<String, dynamic>),
+          ),
+          replacement: $checkedConvert('replacement', (v) => v),
+          scalingMode: $checkedConvert(
+            'scaling_mode',
+            (v) => $enumDecode(_$RecipeIngredientScalingModeEnumEnumMap, v),
+          ),
+          unit: $checkedConvert('unit', (v) => v as String),
+        );
+        return val;
+      },
+      fieldKeyMap: const {
+        'baseQuantity': 'base_quantity',
+        'baseUnit': 'base_unit',
+        'displayName': 'display_name',
+        'ingredientId': 'ingredient_id',
+        'quantitySource': 'quantity_source',
+        'scalingMode': 'scaling_mode',
+      },
     );
-    final val = RecipeIngredient(
-      baseQuantity: $checkedConvert('base_quantity', (v) => v as num),
-      baseUnit: $checkedConvert(
-        'base_unit',
-        (v) => $enumDecode(_$RecipeIngredientBaseUnitEnumEnumMap, v),
-      ),
-      displayName: $checkedConvert('display_name', (v) => v as String),
-      functional: $checkedConvert('functional', (v) => v as bool? ?? false),
-      group: $checkedConvert('group', (v) => v as String),
-      id: $checkedConvert('id', (v) => v as String),
-      ingredientId: $checkedConvert('ingredient_id', (v) => v as String),
-      optional: $checkedConvert('optional', (v) => v as bool? ?? false),
-      preparation: $checkedConvert('preparation', (v) => v as String),
-      quantity: $checkedConvert('quantity', (v) => v as num),
-      quantitySource: $checkedConvert(
-        'quantity_source',
-        (v) =>
-            v == null ? null : ValueSource.fromJson(v as Map<String, dynamic>),
-      ),
-      replacement: $checkedConvert(
-        'replacement',
-        (v) => v == null
-            ? null
-            : RecipeIngredientReplacement.fromJson(v as Map<String, dynamic>),
-      ),
-      scalingMode: $checkedConvert(
-        'scaling_mode',
-        (v) => $enumDecode(_$RecipeIngredientScalingModeEnumEnumMap, v),
-      ),
-      unit: $checkedConvert('unit', (v) => v as String),
-    );
-    return val;
-  },
-  fieldKeyMap: const {
-    'baseQuantity': 'base_quantity',
-    'baseUnit': 'base_unit',
-    'displayName': 'display_name',
-    'ingredientId': 'ingredient_id',
-    'quantitySource': 'quantity_source',
-    'scalingMode': 'scaling_mode',
-  },
-);
 
 Map<String, dynamic> _$RecipeIngredientToJson(RecipeIngredient instance) =>
     <String, dynamic>{
-      'base_quantity': instance.baseQuantity,
-      'base_unit': _$RecipeIngredientBaseUnitEnumEnumMap[instance.baseUnit]!,
+      'base_quantity': ?instance.baseQuantity,
+      'base_unit': ?_$RecipeIngredientBaseUnitEnumEnumMap[instance.baseUnit],
       'display_name': instance.displayName,
       'functional': ?instance.functional,
-      'group': instance.group,
+      'group': ?instance.group,
       'id': instance.id,
-      'ingredient_id': instance.ingredientId,
+      'ingredient_id': ?instance.ingredientId,
       'optional': ?instance.optional,
-      'preparation': instance.preparation,
+      'preparation': ?instance.preparation,
       'quantity': instance.quantity,
       'quantity_source': ?instance.quantitySource?.toJson(),
-      'replacement': ?instance.replacement?.toJson(),
+      'replacement': ?instance.replacement,
       'scaling_mode':
           _$RecipeIngredientScalingModeEnumEnumMap[instance.scalingMode]!,
       'unit': instance.unit,

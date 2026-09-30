@@ -9,9 +9,9 @@ part of 'recipe_replacement.dart';
 abstract class _$RecipeReplacementCWProxy {
   RecipeReplacement displayName(String displayName);
 
-  RecipeReplacement ingredientId(String ingredientId);
+  RecipeReplacement ingredientId(String? ingredientId);
 
-  RecipeReplacement note(String note);
+  RecipeReplacement note(String? note);
 
   RecipeReplacement ratio(num? ratio);
 
@@ -23,8 +23,8 @@ abstract class _$RecipeReplacementCWProxy {
   /// ````
   RecipeReplacement call({
     String displayName,
-    String ingredientId,
-    String note,
+    String? ingredientId,
+    String? note,
     num? ratio,
   });
 }
@@ -40,11 +40,11 @@ class _$RecipeReplacementCWProxyImpl implements _$RecipeReplacementCWProxy {
       this(displayName: displayName);
 
   @override
-  RecipeReplacement ingredientId(String ingredientId) =>
+  RecipeReplacement ingredientId(String? ingredientId) =>
       this(ingredientId: ingredientId);
 
   @override
-  RecipeReplacement note(String note) => this(note: note);
+  RecipeReplacement note(String? note) => this(note: note);
 
   @override
   RecipeReplacement ratio(num? ratio) => this(ratio: ratio);
@@ -70,11 +70,11 @@ class _$RecipeReplacementCWProxyImpl implements _$RecipeReplacementCWProxy {
       ingredientId: ingredientId == const $CopyWithPlaceholder()
           ? _value.ingredientId
           // ignore: cast_nullable_to_non_nullable
-          : ingredientId as String,
+          : ingredientId as String?,
       note: note == const $CopyWithPlaceholder()
           ? _value.note
           // ignore: cast_nullable_to_non_nullable
-          : note as String,
+          : note as String?,
       ratio: ratio == const $CopyWithPlaceholder()
           ? _value.ratio
           // ignore: cast_nullable_to_non_nullable
@@ -99,14 +99,11 @@ RecipeReplacement _$RecipeReplacementFromJson(Map<String, dynamic> json) =>
       'RecipeReplacement',
       json,
       ($checkedConvert) {
-        $checkKeys(
-          json,
-          requiredKeys: const ['display_name', 'ingredient_id', 'note'],
-        );
+        $checkKeys(json, requiredKeys: const ['display_name']);
         final val = RecipeReplacement(
           displayName: $checkedConvert('display_name', (v) => v as String),
-          ingredientId: $checkedConvert('ingredient_id', (v) => v as String),
-          note: $checkedConvert('note', (v) => v as String),
+          ingredientId: $checkedConvert('ingredient_id', (v) => v as String?),
+          note: $checkedConvert('note', (v) => v as String?),
           ratio: $checkedConvert('ratio', (v) => v as num? ?? 1),
         );
         return val;
@@ -120,7 +117,7 @@ RecipeReplacement _$RecipeReplacementFromJson(Map<String, dynamic> json) =>
 Map<String, dynamic> _$RecipeReplacementToJson(RecipeReplacement instance) =>
     <String, dynamic>{
       'display_name': instance.displayName,
-      'ingredient_id': instance.ingredientId,
-      'note': instance.note,
+      'ingredient_id': ?instance.ingredientId,
+      'note': ?instance.note,
       'ratio': ?instance.ratio,
     };

@@ -9,9 +9,9 @@ part of 'recipe_snapshot.dart';
 abstract class _$RecipeSnapshotCWProxy {
   RecipeSnapshot activeTimeSeconds(int? activeTimeSeconds);
 
-  RecipeSnapshot difficulty(String difficulty);
+  RecipeSnapshot difficulty(String? difficulty);
 
-  RecipeSnapshot dishType(String dishType);
+  RecipeSnapshot dishType(String? dishType);
 
   RecipeSnapshot formatVersion(RecipeSnapshotFormatVersionEnum formatVersion);
 
@@ -33,8 +33,8 @@ abstract class _$RecipeSnapshotCWProxy {
   /// ````
   RecipeSnapshot call({
     int? activeTimeSeconds,
-    String difficulty,
-    String dishType,
+    String? difficulty,
+    String? dishType,
     RecipeSnapshotFormatVersionEnum formatVersion,
     List<RecipeIngredient>? ingredients,
     int servings,
@@ -55,10 +55,10 @@ class _$RecipeSnapshotCWProxyImpl implements _$RecipeSnapshotCWProxy {
       this(activeTimeSeconds: activeTimeSeconds);
 
   @override
-  RecipeSnapshot difficulty(String difficulty) => this(difficulty: difficulty);
+  RecipeSnapshot difficulty(String? difficulty) => this(difficulty: difficulty);
 
   @override
-  RecipeSnapshot dishType(String dishType) => this(dishType: dishType);
+  RecipeSnapshot dishType(String? dishType) => this(dishType: dishType);
 
   @override
   RecipeSnapshot formatVersion(RecipeSnapshotFormatVersionEnum formatVersion) =>
@@ -107,11 +107,11 @@ class _$RecipeSnapshotCWProxyImpl implements _$RecipeSnapshotCWProxy {
       difficulty: difficulty == const $CopyWithPlaceholder()
           ? _value.difficulty
           // ignore: cast_nullable_to_non_nullable
-          : difficulty as String,
+          : difficulty as String?,
       dishType: dishType == const $CopyWithPlaceholder()
           ? _value.dishType
           // ignore: cast_nullable_to_non_nullable
-          : dishType as String,
+          : dishType as String?,
       formatVersion: formatVersion == const $CopyWithPlaceholder()
           ? _value.formatVersion
           // ignore: cast_nullable_to_non_nullable
@@ -155,22 +155,14 @@ RecipeSnapshot _$RecipeSnapshotFromJson(Map<String, dynamic> json) =>
       'RecipeSnapshot',
       json,
       ($checkedConvert) {
-        $checkKeys(
-          json,
-          requiredKeys: const [
-            'difficulty',
-            'dish_type',
-            'format_version',
-            'servings',
-          ],
-        );
+        $checkKeys(json, requiredKeys: const ['format_version', 'servings']);
         final val = RecipeSnapshot(
           activeTimeSeconds: $checkedConvert(
             'active_time_seconds',
             (v) => (v as num?)?.toInt() ?? 0,
           ),
-          difficulty: $checkedConvert('difficulty', (v) => v as String),
-          dishType: $checkedConvert('dish_type', (v) => v as String),
+          difficulty: $checkedConvert('difficulty', (v) => v as String?),
+          dishType: $checkedConvert('dish_type', (v) => v as String?),
           formatVersion: $checkedConvert(
             'format_version',
             (v) => $enumDecode(_$RecipeSnapshotFormatVersionEnumEnumMap, v),
@@ -212,8 +204,8 @@ RecipeSnapshot _$RecipeSnapshotFromJson(Map<String, dynamic> json) =>
 Map<String, dynamic> _$RecipeSnapshotToJson(RecipeSnapshot instance) =>
     <String, dynamic>{
       'active_time_seconds': ?instance.activeTimeSeconds,
-      'difficulty': instance.difficulty,
-      'dish_type': instance.dishType,
+      'difficulty': ?instance.difficulty,
+      'dish_type': ?instance.dishType,
       'format_version':
           _$RecipeSnapshotFormatVersionEnumEnumMap[instance.formatVersion]!,
       'ingredients': ?instance.ingredients?.map((e) => e.toJson()).toList(),

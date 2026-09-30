@@ -7,19 +7,19 @@ part of 'recipe_step.dart';
 // **************************************************************************
 
 abstract class _$RecipeStepCWProxy {
-  RecipeStep action(String action);
+  RecipeStep action(String? action);
 
-  RecipeStep cookware(String cookware);
+  RecipeStep cookware(String? cookware);
 
   RecipeStep dependsOn(List<String>? dependsOn);
 
-  RecipeStep doneness(String doneness);
+  RecipeStep doneness(String? doneness);
 
   RecipeStep durationSeconds(int? durationSeconds);
 
   RecipeStep durationSource(ValueSource? durationSource);
 
-  RecipeStep heat(String heat);
+  RecipeStep heat(String? heat);
 
   RecipeStep heatSource(ValueSource? heatSource);
 
@@ -29,15 +29,15 @@ abstract class _$RecipeStepCWProxy {
 
   RecipeStep instruction(String instruction);
 
-  RecipeStep notes(String notes);
+  RecipeStep notes(String? notes);
 
-  RecipeStep temperatureCelsius(num temperatureCelsius);
+  RecipeStep temperatureCelsius(num? temperatureCelsius);
 
   RecipeStep temperatureSource(ValueSource? temperatureSource);
 
   RecipeStep unattended(bool? unattended);
 
-  RecipeStep why(String why);
+  RecipeStep why(String? why);
 
   /// This function **does support** nullification of nullable fields. All `null` values passed to `non-nullable` fields will be ignored. You can also use `RecipeStep(...).copyWith.fieldName(...)` to override fields one at a time with nullification support.
   ///
@@ -46,22 +46,22 @@ abstract class _$RecipeStepCWProxy {
   /// RecipeStep(...).copyWith(id: 12, name: "My name")
   /// ````
   RecipeStep call({
-    String action,
-    String cookware,
+    String? action,
+    String? cookware,
     List<String>? dependsOn,
-    String doneness,
+    String? doneness,
     int? durationSeconds,
     ValueSource? durationSource,
-    String heat,
+    String? heat,
     ValueSource? heatSource,
     String id,
     List<String>? ingredientIds,
     String instruction,
-    String notes,
-    num temperatureCelsius,
+    String? notes,
+    num? temperatureCelsius,
     ValueSource? temperatureSource,
     bool? unattended,
-    String why,
+    String? why,
   });
 }
 
@@ -72,16 +72,16 @@ class _$RecipeStepCWProxyImpl implements _$RecipeStepCWProxy {
   final RecipeStep _value;
 
   @override
-  RecipeStep action(String action) => this(action: action);
+  RecipeStep action(String? action) => this(action: action);
 
   @override
-  RecipeStep cookware(String cookware) => this(cookware: cookware);
+  RecipeStep cookware(String? cookware) => this(cookware: cookware);
 
   @override
   RecipeStep dependsOn(List<String>? dependsOn) => this(dependsOn: dependsOn);
 
   @override
-  RecipeStep doneness(String doneness) => this(doneness: doneness);
+  RecipeStep doneness(String? doneness) => this(doneness: doneness);
 
   @override
   RecipeStep durationSeconds(int? durationSeconds) =>
@@ -92,7 +92,7 @@ class _$RecipeStepCWProxyImpl implements _$RecipeStepCWProxy {
       this(durationSource: durationSource);
 
   @override
-  RecipeStep heat(String heat) => this(heat: heat);
+  RecipeStep heat(String? heat) => this(heat: heat);
 
   @override
   RecipeStep heatSource(ValueSource? heatSource) =>
@@ -109,10 +109,10 @@ class _$RecipeStepCWProxyImpl implements _$RecipeStepCWProxy {
   RecipeStep instruction(String instruction) => this(instruction: instruction);
 
   @override
-  RecipeStep notes(String notes) => this(notes: notes);
+  RecipeStep notes(String? notes) => this(notes: notes);
 
   @override
-  RecipeStep temperatureCelsius(num temperatureCelsius) =>
+  RecipeStep temperatureCelsius(num? temperatureCelsius) =>
       this(temperatureCelsius: temperatureCelsius);
 
   @override
@@ -123,7 +123,7 @@ class _$RecipeStepCWProxyImpl implements _$RecipeStepCWProxy {
   RecipeStep unattended(bool? unattended) => this(unattended: unattended);
 
   @override
-  RecipeStep why(String why) => this(why: why);
+  RecipeStep why(String? why) => this(why: why);
 
   @override
   /// This function **does support** nullification of nullable fields. All `null` values passed to `non-nullable` fields will be ignored. You can also use `RecipeStep(...).copyWith.fieldName(...)` to override fields one at a time with nullification support.
@@ -154,11 +154,11 @@ class _$RecipeStepCWProxyImpl implements _$RecipeStepCWProxy {
       action: action == const $CopyWithPlaceholder()
           ? _value.action
           // ignore: cast_nullable_to_non_nullable
-          : action as String,
+          : action as String?,
       cookware: cookware == const $CopyWithPlaceholder()
           ? _value.cookware
           // ignore: cast_nullable_to_non_nullable
-          : cookware as String,
+          : cookware as String?,
       dependsOn: dependsOn == const $CopyWithPlaceholder()
           ? _value.dependsOn
           // ignore: cast_nullable_to_non_nullable
@@ -166,7 +166,7 @@ class _$RecipeStepCWProxyImpl implements _$RecipeStepCWProxy {
       doneness: doneness == const $CopyWithPlaceholder()
           ? _value.doneness
           // ignore: cast_nullable_to_non_nullable
-          : doneness as String,
+          : doneness as String?,
       durationSeconds: durationSeconds == const $CopyWithPlaceholder()
           ? _value.durationSeconds
           // ignore: cast_nullable_to_non_nullable
@@ -178,7 +178,7 @@ class _$RecipeStepCWProxyImpl implements _$RecipeStepCWProxy {
       heat: heat == const $CopyWithPlaceholder()
           ? _value.heat
           // ignore: cast_nullable_to_non_nullable
-          : heat as String,
+          : heat as String?,
       heatSource: heatSource == const $CopyWithPlaceholder()
           ? _value.heatSource
           // ignore: cast_nullable_to_non_nullable
@@ -198,11 +198,11 @@ class _$RecipeStepCWProxyImpl implements _$RecipeStepCWProxy {
       notes: notes == const $CopyWithPlaceholder()
           ? _value.notes
           // ignore: cast_nullable_to_non_nullable
-          : notes as String,
+          : notes as String?,
       temperatureCelsius: temperatureCelsius == const $CopyWithPlaceholder()
           ? _value.temperatureCelsius
           // ignore: cast_nullable_to_non_nullable
-          : temperatureCelsius as num,
+          : temperatureCelsius as num?,
       temperatureSource: temperatureSource == const $CopyWithPlaceholder()
           ? _value.temperatureSource
           // ignore: cast_nullable_to_non_nullable
@@ -214,7 +214,7 @@ class _$RecipeStepCWProxyImpl implements _$RecipeStepCWProxy {
       why: why == const $CopyWithPlaceholder()
           ? _value.why
           // ignore: cast_nullable_to_non_nullable
-          : why as String,
+          : why as String?,
     );
   }
 }
@@ -233,28 +233,15 @@ RecipeStep _$RecipeStepFromJson(Map<String, dynamic> json) => $checkedCreate(
   'RecipeStep',
   json,
   ($checkedConvert) {
-    $checkKeys(
-      json,
-      requiredKeys: const [
-        'action',
-        'cookware',
-        'doneness',
-        'heat',
-        'id',
-        'instruction',
-        'notes',
-        'temperature_celsius',
-        'why',
-      ],
-    );
+    $checkKeys(json, requiredKeys: const ['id', 'instruction']);
     final val = RecipeStep(
-      action: $checkedConvert('action', (v) => v as String),
-      cookware: $checkedConvert('cookware', (v) => v as String),
+      action: $checkedConvert('action', (v) => v as String?),
+      cookware: $checkedConvert('cookware', (v) => v as String?),
       dependsOn: $checkedConvert(
         'depends_on',
         (v) => (v as List<dynamic>?)?.map((e) => e as String).toList(),
       ),
-      doneness: $checkedConvert('doneness', (v) => v as String),
+      doneness: $checkedConvert('doneness', (v) => v as String?),
       durationSeconds: $checkedConvert(
         'duration_seconds',
         (v) => (v as num?)?.toInt() ?? 0,
@@ -264,7 +251,7 @@ RecipeStep _$RecipeStepFromJson(Map<String, dynamic> json) => $checkedCreate(
         (v) =>
             v == null ? null : ValueSource.fromJson(v as Map<String, dynamic>),
       ),
-      heat: $checkedConvert('heat', (v) => v as String),
+      heat: $checkedConvert('heat', (v) => v as String?),
       heatSource: $checkedConvert(
         'heat_source',
         (v) =>
@@ -276,10 +263,10 @@ RecipeStep _$RecipeStepFromJson(Map<String, dynamic> json) => $checkedCreate(
         (v) => (v as List<dynamic>?)?.map((e) => e as String).toList(),
       ),
       instruction: $checkedConvert('instruction', (v) => v as String),
-      notes: $checkedConvert('notes', (v) => v as String),
+      notes: $checkedConvert('notes', (v) => v as String?),
       temperatureCelsius: $checkedConvert(
         'temperature_celsius',
-        (v) => v as num,
+        (v) => v as num?,
       ),
       temperatureSource: $checkedConvert(
         'temperature_source',
@@ -287,7 +274,7 @@ RecipeStep _$RecipeStepFromJson(Map<String, dynamic> json) => $checkedCreate(
             v == null ? null : ValueSource.fromJson(v as Map<String, dynamic>),
       ),
       unattended: $checkedConvert('unattended', (v) => v as bool? ?? false),
-      why: $checkedConvert('why', (v) => v as String),
+      why: $checkedConvert('why', (v) => v as String?),
     );
     return val;
   },
@@ -304,20 +291,20 @@ RecipeStep _$RecipeStepFromJson(Map<String, dynamic> json) => $checkedCreate(
 
 Map<String, dynamic> _$RecipeStepToJson(RecipeStep instance) =>
     <String, dynamic>{
-      'action': instance.action,
-      'cookware': instance.cookware,
+      'action': ?instance.action,
+      'cookware': ?instance.cookware,
       'depends_on': ?instance.dependsOn,
-      'doneness': instance.doneness,
+      'doneness': ?instance.doneness,
       'duration_seconds': ?instance.durationSeconds,
       'duration_source': ?instance.durationSource?.toJson(),
-      'heat': instance.heat,
+      'heat': ?instance.heat,
       'heat_source': ?instance.heatSource?.toJson(),
       'id': instance.id,
       'ingredient_ids': ?instance.ingredientIds,
       'instruction': instance.instruction,
-      'notes': instance.notes,
-      'temperature_celsius': instance.temperatureCelsius,
+      'notes': ?instance.notes,
+      'temperature_celsius': ?instance.temperatureCelsius,
       'temperature_source': ?instance.temperatureSource?.toJson(),
       'unattended': ?instance.unattended,
-      'why': instance.why,
+      'why': ?instance.why,
     };
