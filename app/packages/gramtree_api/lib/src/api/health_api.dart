@@ -12,13 +12,12 @@ import 'package:dio/dio.dart';
 import 'package:gramtree_api/src/model/health_response.dart';
 
 class HealthApi {
-
   final Dio _dio;
 
   const HealthApi(this._dio);
 
   /// 健康检查：服务、数据库、Redis 是否可用
-  /// 
+  ///
   ///
   /// Parameters:
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
@@ -30,7 +29,7 @@ class HealthApi {
   ///
   /// Returns a [Future] containing a [Response] with a [HealthResponse] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<HealthResponse>> health({ 
+  Future<Response<HealthResponse>> health({
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
     Map<String, dynamic>? extra,
@@ -41,13 +40,8 @@ class HealthApi {
     final _path = r'/v1/health';
     final _options = Options(
       method: r'GET',
-      headers: <String, dynamic>{
-        ...?headers,
-      },
-      extra: <String, dynamic>{
-        'secure': <Map<String, String>>[],
-        ...?extra,
-      },
+      headers: <String, dynamic>{...?headers},
+      extra: <String, dynamic>{'secure': <Map<String, String>>[], ...?extra},
       validateStatus: validateStatus,
     );
 
@@ -62,9 +56,14 @@ class HealthApi {
     HealthResponse? _responseData;
 
     try {
-final rawData = _response.data;
-_responseData = rawData == null ? null : deserialize<HealthResponse, HealthResponse>(rawData, 'HealthResponse', growable: true);
-
+      final rawData = _response.data;
+      _responseData = rawData == null
+          ? null
+          : deserialize<HealthResponse, HealthResponse>(
+              rawData,
+              'HealthResponse',
+              growable: true,
+            );
     } catch (error, stackTrace) {
       throw DioException(
         requestOptions: _response.requestOptions,
@@ -86,5 +85,4 @@ _responseData = rawData == null ? null : deserialize<HealthResponse, HealthRespo
       extra: _response.extra,
     );
   }
-
 }

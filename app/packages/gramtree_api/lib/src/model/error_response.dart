@@ -9,7 +9,6 @@ import 'package:json_annotation/json_annotation.dart';
 
 part 'error_response.g.dart';
 
-
 @CopyWith()
 @JsonSerializable(
   checked: true,
@@ -19,34 +18,20 @@ part 'error_response.g.dart';
 )
 class ErrorResponse {
   /// Returns a new [ErrorResponse] instance.
-  ErrorResponse({
+  ErrorResponse({required this.error});
 
-    required  this.error,
-  });
-
-  @JsonKey(
-    
-    name: r'error',
-    required: true,
-    includeIfNull: false,
-  )
-
-
+  @JsonKey(name: r'error', required: true, includeIfNull: false)
   final ErrorBody error;
 
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) || other is ErrorResponse && other.error == error;
 
+  @override
+  int get hashCode => error.hashCode;
 
-
-
-    @override
-    bool operator ==(Object other) => identical(this, other) || other is ErrorResponse &&
-      other.error == error;
-
-    @override
-    int get hashCode =>
-        error.hashCode;
-
-  factory ErrorResponse.fromJson(Map<String, dynamic> json) => _$ErrorResponseFromJson(json);
+  factory ErrorResponse.fromJson(Map<String, dynamic> json) =>
+      _$ErrorResponseFromJson(json);
 
   Map<String, dynamic> toJson() => _$ErrorResponseToJson(this);
 
@@ -54,6 +39,4 @@ class ErrorResponse {
   String toString() {
     return toJson().toString();
   }
-
 }
-

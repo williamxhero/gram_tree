@@ -8,7 +8,6 @@ import 'package:json_annotation/json_annotation.dart';
 
 part 'email_code_sent.g.dart';
 
-
 @CopyWith()
 @JsonSerializable(
   checked: true,
@@ -19,49 +18,29 @@ part 'email_code_sent.g.dart';
 class EmailCodeSent {
   /// Returns a new [EmailCodeSent] instance.
   EmailCodeSent({
+    required this.expiresInSeconds,
 
-    required  this.expiresInSeconds,
-
-    required  this.resendAfterSeconds,
+    required this.resendAfterSeconds,
   });
 
-  @JsonKey(
-    
-    name: r'expires_in_seconds',
-    required: true,
-    includeIfNull: false,
-  )
-
-
+  @JsonKey(name: r'expires_in_seconds', required: true, includeIfNull: false)
   final int expiresInSeconds;
 
-
-
-  @JsonKey(
-    
-    name: r'resend_after_seconds',
-    required: true,
-    includeIfNull: false,
-  )
-
-
+  @JsonKey(name: r'resend_after_seconds', required: true, includeIfNull: false)
   final int resendAfterSeconds;
 
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is EmailCodeSent &&
+          other.expiresInSeconds == expiresInSeconds &&
+          other.resendAfterSeconds == resendAfterSeconds;
 
+  @override
+  int get hashCode => expiresInSeconds.hashCode + resendAfterSeconds.hashCode;
 
-
-
-    @override
-    bool operator ==(Object other) => identical(this, other) || other is EmailCodeSent &&
-      other.expiresInSeconds == expiresInSeconds &&
-      other.resendAfterSeconds == resendAfterSeconds;
-
-    @override
-    int get hashCode =>
-        expiresInSeconds.hashCode +
-        resendAfterSeconds.hashCode;
-
-  factory EmailCodeSent.fromJson(Map<String, dynamic> json) => _$EmailCodeSentFromJson(json);
+  factory EmailCodeSent.fromJson(Map<String, dynamic> json) =>
+      _$EmailCodeSentFromJson(json);
 
   Map<String, dynamic> toJson() => _$EmailCodeSentToJson(this);
 
@@ -69,6 +48,4 @@ class EmailCodeSent {
   String toString() {
     return toJson().toString();
   }
-
 }
-

@@ -8,7 +8,6 @@ import 'package:json_annotation/json_annotation.dart';
 
 part 'email_code_request.g.dart';
 
-
 @CopyWith()
 @JsonSerializable(
   checked: true,
@@ -18,50 +17,26 @@ part 'email_code_request.g.dart';
 )
 class EmailCodeRequest {
   /// Returns a new [EmailCodeRequest] instance.
-  EmailCodeRequest({
+  EmailCodeRequest({required this.email, required this.purpose});
 
-    required  this.email,
-
-    required  this.purpose,
-  });
-
-  @JsonKey(
-    
-    name: r'email',
-    required: true,
-    includeIfNull: false,
-  )
-
-
+  @JsonKey(name: r'email', required: true, includeIfNull: false)
   final String email;
 
-
-
-  @JsonKey(
-    
-    name: r'purpose',
-    required: true,
-    includeIfNull: false,
-  )
-
-
+  @JsonKey(name: r'purpose', required: true, includeIfNull: false)
   final EmailCodeRequestPurposeEnum purpose;
 
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is EmailCodeRequest &&
+          other.email == email &&
+          other.purpose == purpose;
 
+  @override
+  int get hashCode => email.hashCode + purpose.hashCode;
 
-
-
-    @override
-    bool operator ==(Object other) => identical(this, other) || other is EmailCodeRequest &&
-      other.email == email &&
-      other.purpose == purpose;
-
-    @override
-    int get hashCode =>
-        email.hashCode +
-        purpose.hashCode;
-
-  factory EmailCodeRequest.fromJson(Map<String, dynamic> json) => _$EmailCodeRequestFromJson(json);
+  factory EmailCodeRequest.fromJson(Map<String, dynamic> json) =>
+      _$EmailCodeRequestFromJson(json);
 
   Map<String, dynamic> toJson() => _$EmailCodeRequestToJson(this);
 
@@ -69,24 +44,20 @@ class EmailCodeRequest {
   String toString() {
     return toJson().toString();
   }
-
 }
-
 
 enum EmailCodeRequestPurposeEnum {
-@JsonValue(r'login')
-login(r'login'),
-@JsonValue(r'bind')
-bind(r'bind'),
-@JsonValue(r'reauth')
-reauth(r'reauth');
+  @JsonValue(r'login')
+  login(r'login'),
+  @JsonValue(r'bind')
+  bind(r'bind'),
+  @JsonValue(r'reauth')
+  reauth(r'reauth');
 
-const EmailCodeRequestPurposeEnum(this.value);
+  const EmailCodeRequestPurposeEnum(this.value);
 
-final String value;
+  final String value;
 
-@override
-String toString() => value;
+  @override
+  String toString() => value;
 }
-
-

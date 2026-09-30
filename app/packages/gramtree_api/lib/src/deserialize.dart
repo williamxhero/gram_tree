@@ -70,180 +70,254 @@ final _regList = RegExp(r'^List<(.*)>$');
 final _regSet = RegExp(r'^Set<(.*)>$');
 final _regMap = RegExp(r'^Map<String,(.*)>$');
 
-  ReturnType deserialize<ReturnType, BaseType>(dynamic value, String targetType, {bool growable= true}) {
-      switch (targetType) {
-        case 'String':
-          return '$value' as ReturnType;
-        case 'int':
-          return (value is int ? value : int.parse('$value')) as ReturnType;
-        case 'bool':
-          if (value is bool) {
-            return value as ReturnType;
-          }
-          final valueString = '$value'.toLowerCase();
-          return (valueString == 'true' || valueString == '1') as ReturnType;
-        case 'double':
-          return (value is double ? value : double.parse('$value')) as ReturnType;
-        case 'ActionDescriptor':
-          return ActionDescriptor.fromJson(value as Map<String, dynamic>) as ReturnType;
-        case 'AllergensAttribute':
-          return AllergensAttribute.fromJson(value as Map<String, dynamic>) as ReturnType;
-        case 'AnalyticsEventIn':
-          return AnalyticsEventIn.fromJson(value as Map<String, dynamic>) as ReturnType;
-        case 'AnalyticsUploadRequest':
-          return AnalyticsUploadRequest.fromJson(value as Map<String, dynamic>) as ReturnType;
-        case 'AppleLoginRequest':
-          return AppleLoginRequest.fromJson(value as Map<String, dynamic>) as ReturnType;
-        case 'AppleReauthRequest':
-          return AppleReauthRequest.fromJson(value as Map<String, dynamic>) as ReturnType;
-        case 'AttributeStatus':
-          
-          
-        case 'BindAppleRequest':
-          return BindAppleRequest.fromJson(value as Map<String, dynamic>) as ReturnType;
-        case 'BindEmailRequest':
-          return BindEmailRequest.fromJson(value as Map<String, dynamic>) as ReturnType;
-        case 'BoolAttribute':
-          return BoolAttribute.fromJson(value as Map<String, dynamic>) as ReturnType;
-        case 'CacheInfo':
-          return CacheInfo.fromJson(value as Map<String, dynamic>) as ReturnType;
-        case 'ClientConfig':
-          return ClientConfig.fromJson(value as Map<String, dynamic>) as ReturnType;
-        case 'ComponentDescriptor':
-          return ComponentDescriptor.fromJson(value as Map<String, dynamic>) as ReturnType;
-        case 'ComponentReason':
-          return ComponentReason.fromJson(value as Map<String, dynamic>) as ReturnType;
-        case 'ComposeRequest':
-          return ComposeRequest.fromJson(value as Map<String, dynamic>) as ReturnType;
-        case 'ConsentRecordInput':
-          return ConsentRecordInput.fromJson(value as Map<String, dynamic>) as ReturnType;
-        case 'ConsentRecordOutput':
-          return ConsentRecordOutput.fromJson(value as Map<String, dynamic>) as ReturnType;
-        case 'ConsentUpload':
-          return ConsentUpload.fromJson(value as Map<String, dynamic>) as ReturnType;
-        case 'CountUnit':
-          return CountUnit.fromJson(value as Map<String, dynamic>) as ReturnType;
-        case 'CountUnitsAttribute':
-          return CountUnitsAttribute.fromJson(value as Map<String, dynamic>) as ReturnType;
-        case 'DeletionOut':
-          return DeletionOut.fromJson(value as Map<String, dynamic>) as ReturnType;
-        case 'DensityAttribute':
-          return DensityAttribute.fromJson(value as Map<String, dynamic>) as ReturnType;
-        case 'EmailCodeRequest':
-          return EmailCodeRequest.fromJson(value as Map<String, dynamic>) as ReturnType;
-        case 'EmailCodeSent':
-          return EmailCodeSent.fromJson(value as Map<String, dynamic>) as ReturnType;
-        case 'EmailLoginRequest':
-          return EmailLoginRequest.fromJson(value as Map<String, dynamic>) as ReturnType;
-        case 'EmailReauthRequest':
-          return EmailReauthRequest.fromJson(value as Map<String, dynamic>) as ReturnType;
-        case 'ErrorBody':
-          return ErrorBody.fromJson(value as Map<String, dynamic>) as ReturnType;
-        case 'ErrorResponse':
-          return ErrorResponse.fromJson(value as Map<String, dynamic>) as ReturnType;
-        case 'EventCorrelationIds':
-          return EventCorrelationIds.fromJson(value as Map<String, dynamic>) as ReturnType;
-        case 'EventUploadItem':
-          return EventUploadItem.fromJson(value as Map<String, dynamic>) as ReturnType;
-        case 'EventUploadRequest':
-          return EventUploadRequest.fromJson(value as Map<String, dynamic>) as ReturnType;
-        case 'EventUploadResponse':
-          return EventUploadResponse.fromJson(value as Map<String, dynamic>) as ReturnType;
-        case 'EventUploadResultItem':
-          return EventUploadResultItem.fromJson(value as Map<String, dynamic>) as ReturnType;
-        case 'ExperimentInfo':
-          return ExperimentInfo.fromJson(value as Map<String, dynamic>) as ReturnType;
-        case 'FallbackInfo':
-          return FallbackInfo.fromJson(value as Map<String, dynamic>) as ReturnType;
-        case 'FlavorAttribute':
-          return FlavorAttribute.fromJson(value as Map<String, dynamic>) as ReturnType;
-        case 'FlavorProfile':
-          return FlavorProfile.fromJson(value as Map<String, dynamic>) as ReturnType;
-        case 'HealthChecks':
-          return HealthChecks.fromJson(value as Map<String, dynamic>) as ReturnType;
-        case 'HealthResponse':
-          return HealthResponse.fromJson(value as Map<String, dynamic>) as ReturnType;
-        case 'IdentityOut':
-          return IdentityOut.fromJson(value as Map<String, dynamic>) as ReturnType;
-        case 'IngredientAttributes':
-          return IngredientAttributes.fromJson(value as Map<String, dynamic>) as ReturnType;
-        case 'IngredientDetail':
-          return IngredientDetail.fromJson(value as Map<String, dynamic>) as ReturnType;
-        case 'IngredientOut':
-          return IngredientOut.fromJson(value as Map<String, dynamic>) as ReturnType;
-        case 'NormalizeCandidate':
-          return NormalizeCandidate.fromJson(value as Map<String, dynamic>) as ReturnType;
-        case 'NormalizeItem':
-          return NormalizeItem.fromJson(value as Map<String, dynamic>) as ReturnType;
-        case 'NormalizeRequest':
-          return NormalizeRequest.fromJson(value as Map<String, dynamic>) as ReturnType;
-        case 'NormalizeResponse':
-          return NormalizeResponse.fromJson(value as Map<String, dynamic>) as ReturnType;
-        case 'NormalizeResultItem':
-          return NormalizeResultItem.fromJson(value as Map<String, dynamic>) as ReturnType;
-        case 'Nutrition':
-          return Nutrition.fromJson(value as Map<String, dynamic>) as ReturnType;
-        case 'NutritionAttribute':
-          return NutritionAttribute.fromJson(value as Map<String, dynamic>) as ReturnType;
-        case 'PageDescription':
-          return PageDescription.fromJson(value as Map<String, dynamic>) as ReturnType;
-        case 'ProfileUpdate':
-          return ProfileUpdate.fromJson(value as Map<String, dynamic>) as ReturnType;
-        case 'PurchaseUnit':
-          return PurchaseUnit.fromJson(value as Map<String, dynamic>) as ReturnType;
-        case 'PurchaseUnitsAttribute':
-          return PurchaseUnitsAttribute.fromJson(value as Map<String, dynamic>) as ReturnType;
-        case 'RefreshRequest':
-          return RefreshRequest.fromJson(value as Map<String, dynamic>) as ReturnType;
-        case 'RejectionReason':
-          return RejectionReason.fromJson(value as Map<String, dynamic>) as ReturnType;
-        case 'SearchQuery':
-          return SearchQuery.fromJson(value as Map<String, dynamic>) as ReturnType;
-        case 'SearchResult':
-          return SearchResult.fromJson(value as Map<String, dynamic>) as ReturnType;
-        case 'SkipAdjustmentRequest':
-          return SkipAdjustmentRequest.fromJson(value as Map<String, dynamic>) as ReturnType;
-        case 'SkipAdjustmentResult':
-          return SkipAdjustmentResult.fromJson(value as Map<String, dynamic>) as ReturnType;
-        case 'SourceBasis':
-          return SourceBasis.fromJson(value as Map<String, dynamic>) as ReturnType;
-        case 'SourcedValue':
-          return SourcedValue.fromJson(value as Map<String, dynamic>) as ReturnType;
-        case 'StorageAdvice':
-          return StorageAdvice.fromJson(value as Map<String, dynamic>) as ReturnType;
-        case 'StorageAttribute':
-          return StorageAttribute.fromJson(value as Map<String, dynamic>) as ReturnType;
-        case 'TextAttribute':
-          return TextAttribute.fromJson(value as Map<String, dynamic>) as ReturnType;
-        case 'TokenPair':
-          return TokenPair.fromJson(value as Map<String, dynamic>) as ReturnType;
-        case 'UnrecordedIngredientItem':
-          return UnrecordedIngredientItem.fromJson(value as Map<String, dynamic>) as ReturnType;
-        case 'UserOut':
-          return UserOut.fromJson(value as Map<String, dynamic>) as ReturnType;
-        default:
-          RegExpMatch? match;
+ReturnType deserialize<ReturnType, BaseType>(
+  dynamic value,
+  String targetType, {
+  bool growable = true,
+}) {
+  switch (targetType) {
+    case 'String':
+      return '$value' as ReturnType;
+    case 'int':
+      return (value is int ? value : int.parse('$value')) as ReturnType;
+    case 'bool':
+      if (value is bool) {
+        return value as ReturnType;
+      }
+      final valueString = '$value'.toLowerCase();
+      return (valueString == 'true' || valueString == '1') as ReturnType;
+    case 'double':
+      return (value is double ? value : double.parse('$value')) as ReturnType;
+    case 'ActionDescriptor':
+      return ActionDescriptor.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'AllergensAttribute':
+      return AllergensAttribute.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'AnalyticsEventIn':
+      return AnalyticsEventIn.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'AnalyticsUploadRequest':
+      return AnalyticsUploadRequest.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'AppleLoginRequest':
+      return AppleLoginRequest.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'AppleReauthRequest':
+      return AppleReauthRequest.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'AttributeStatus':
+    case 'BindAppleRequest':
+      return BindAppleRequest.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'BindEmailRequest':
+      return BindEmailRequest.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'BoolAttribute':
+      return BoolAttribute.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'CacheInfo':
+      return CacheInfo.fromJson(value as Map<String, dynamic>) as ReturnType;
+    case 'ClientConfig':
+      return ClientConfig.fromJson(value as Map<String, dynamic>) as ReturnType;
+    case 'ComponentDescriptor':
+      return ComponentDescriptor.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'ComponentReason':
+      return ComponentReason.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'ComposeRequest':
+      return ComposeRequest.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'ConsentRecordInput':
+      return ConsentRecordInput.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'ConsentRecordOutput':
+      return ConsentRecordOutput.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'ConsentUpload':
+      return ConsentUpload.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'CountUnit':
+      return CountUnit.fromJson(value as Map<String, dynamic>) as ReturnType;
+    case 'CountUnitsAttribute':
+      return CountUnitsAttribute.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'DeletionOut':
+      return DeletionOut.fromJson(value as Map<String, dynamic>) as ReturnType;
+    case 'DensityAttribute':
+      return DensityAttribute.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'EmailCodeRequest':
+      return EmailCodeRequest.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'EmailCodeSent':
+      return EmailCodeSent.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'EmailLoginRequest':
+      return EmailLoginRequest.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'EmailReauthRequest':
+      return EmailReauthRequest.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'ErrorBody':
+      return ErrorBody.fromJson(value as Map<String, dynamic>) as ReturnType;
+    case 'ErrorResponse':
+      return ErrorResponse.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'EventCorrelationIds':
+      return EventCorrelationIds.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'EventUploadItem':
+      return EventUploadItem.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'EventUploadRequest':
+      return EventUploadRequest.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'EventUploadResponse':
+      return EventUploadResponse.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'EventUploadResultItem':
+      return EventUploadResultItem.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'ExperimentInfo':
+      return ExperimentInfo.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'FallbackInfo':
+      return FallbackInfo.fromJson(value as Map<String, dynamic>) as ReturnType;
+    case 'FlavorAttribute':
+      return FlavorAttribute.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'FlavorProfile':
+      return FlavorProfile.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'HealthChecks':
+      return HealthChecks.fromJson(value as Map<String, dynamic>) as ReturnType;
+    case 'HealthResponse':
+      return HealthResponse.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'IdentityOut':
+      return IdentityOut.fromJson(value as Map<String, dynamic>) as ReturnType;
+    case 'IngredientAttributes':
+      return IngredientAttributes.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'IngredientDetail':
+      return IngredientDetail.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'IngredientOut':
+      return IngredientOut.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'NormalizeCandidate':
+      return NormalizeCandidate.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'NormalizeItem':
+      return NormalizeItem.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'NormalizeRequest':
+      return NormalizeRequest.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'NormalizeResponse':
+      return NormalizeResponse.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'NormalizeResultItem':
+      return NormalizeResultItem.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'Nutrition':
+      return Nutrition.fromJson(value as Map<String, dynamic>) as ReturnType;
+    case 'NutritionAttribute':
+      return NutritionAttribute.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'PageDescription':
+      return PageDescription.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'ProfileUpdate':
+      return ProfileUpdate.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'PurchaseUnit':
+      return PurchaseUnit.fromJson(value as Map<String, dynamic>) as ReturnType;
+    case 'PurchaseUnitsAttribute':
+      return PurchaseUnitsAttribute.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'RefreshRequest':
+      return RefreshRequest.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'RejectionReason':
+      return RejectionReason.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'SearchQuery':
+      return SearchQuery.fromJson(value as Map<String, dynamic>) as ReturnType;
+    case 'SearchResult':
+      return SearchResult.fromJson(value as Map<String, dynamic>) as ReturnType;
+    case 'SkipAdjustmentRequest':
+      return SkipAdjustmentRequest.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'SkipAdjustmentResult':
+      return SkipAdjustmentResult.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'SourceBasis':
+      return SourceBasis.fromJson(value as Map<String, dynamic>) as ReturnType;
+    case 'SourcedValue':
+      return SourcedValue.fromJson(value as Map<String, dynamic>) as ReturnType;
+    case 'StorageAdvice':
+      return StorageAdvice.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'StorageAttribute':
+      return StorageAttribute.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'TextAttribute':
+      return TextAttribute.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'TokenPair':
+      return TokenPair.fromJson(value as Map<String, dynamic>) as ReturnType;
+    case 'UnrecordedIngredientItem':
+      return UnrecordedIngredientItem.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'UserOut':
+      return UserOut.fromJson(value as Map<String, dynamic>) as ReturnType;
+    default:
+      RegExpMatch? match;
 
-          if (value is List && (match = _regList.firstMatch(targetType)) != null) {
-            targetType = match![1]!; // ignore: parameter_assignments
-            return value
-              .map<BaseType>((dynamic v) => deserialize<BaseType, BaseType>(v, targetType, growable: growable))
-              .toList(growable: growable) as ReturnType;
-          }
-          if (value is Set && (match = _regSet.firstMatch(targetType)) != null) {
-            targetType = match![1]!; // ignore: parameter_assignments
-            return value
-              .map<BaseType>((dynamic v) => deserialize<BaseType, BaseType>(v, targetType, growable: growable))
-              .toSet() as ReturnType;
-          }
-          if (value is Map && (match = _regMap.firstMatch(targetType)) != null) {
-            targetType = match![1]!.trim(); // ignore: parameter_assignments
-            return Map<String, BaseType>.fromIterables(
+      if (value is List && (match = _regList.firstMatch(targetType)) != null) {
+        targetType = match![1]!; // ignore: parameter_assignments
+        return value
+                .map<BaseType>(
+                  (dynamic v) => deserialize<BaseType, BaseType>(
+                    v,
+                    targetType,
+                    growable: growable,
+                  ),
+                )
+                .toList(growable: growable)
+            as ReturnType;
+      }
+      if (value is Set && (match = _regSet.firstMatch(targetType)) != null) {
+        targetType = match![1]!; // ignore: parameter_assignments
+        return value
+                .map<BaseType>(
+                  (dynamic v) => deserialize<BaseType, BaseType>(
+                    v,
+                    targetType,
+                    growable: growable,
+                  ),
+                )
+                .toSet()
+            as ReturnType;
+      }
+      if (value is Map && (match = _regMap.firstMatch(targetType)) != null) {
+        targetType = match![1]!.trim(); // ignore: parameter_assignments
+        return Map<String, BaseType>.fromIterables(
               value.keys as Iterable<String>,
-              value.values.map((dynamic v) => deserialize<BaseType, BaseType>(v, targetType, growable: growable)),
-            ) as ReturnType;
-          }
-          break;
-    }
-    throw Exception('Cannot deserialize');
+              value.values.map(
+                (dynamic v) => deserialize<BaseType, BaseType>(
+                  v,
+                  targetType,
+                  growable: growable,
+                ),
+              ),
+            )
+            as ReturnType;
+      }
+      break;
   }
+  throw Exception('Cannot deserialize');
+}
