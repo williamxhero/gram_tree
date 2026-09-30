@@ -19,7 +19,8 @@
 
 import json
 import uuid
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
@@ -30,7 +31,7 @@ from sqlalchemy.orm import Session
 
 from gramtree.core.ids import IdV4
 from gramtree.ingredients import versioning
-from gramtree.ingredients.attributes import IngredientAttributes
+from gramtree.ingredients.attributes import GB_ALLERGENS, IngredientAttributes
 from gramtree.ingredients.models import (
     Ingredient,
     IngredientAlias,
@@ -128,8 +129,24 @@ def _read_json(path: Path) -> object:
         raise IngredientImportError(f"{path.name}：读不出来（{exc}）") from exc
 
 
-def load_directory(data_dir: Path) -> tuple[ManifestFile, list[IngredientRecord]]:
-    """读取并校验整个数据目录，不碰数据库。"""
+@dataclass(frozen=True)
+class _RecordLocation:
+    file: str
+    index: int
+    standard_name: str | None
+
+    def describe(self, field: str | None = None) -> str:
+        label = f"{self.file} 第 {self.index + 1} 条"
+        if self.standard_name:
+            label += f"（{self.standard_name}）"
+        if field:
+            label += f" {field}"
+        return label
+
+
+def _load_directory_with_locations(
+    data_dir: Path,
+) -> tuple[ManifestFile, list[IngredientRecord], list[_RecordLocation]]:
     manifest_path = data_dir / "manifest.json"
     if not manifest_path.is_file():
         raise IngredientImportError(f"缺少 {manifest_path}")
@@ -139,6 +156,7 @@ def load_directory(data_dir: Path) -> tuple[ManifestFile, list[IngredientRecord]
         raise IngredientImportError(f"manifest.json 不合格：{exc}") from exc
 
     records: list[IngredientRecord] = []
+    locations: list[_RecordLocation] = []
     for path in sorted(data_dir.glob("*.json")):
         if path.name == "manifest.json":
             continue
@@ -150,40 +168,127 @@ def load_directory(data_dir: Path) -> tuple[ManifestFile, list[IngredientRecord]
                 records.append(IngredientRecord.model_validate(item))
             except ValidationError as exc:
                 raise IngredientImportError(_record_error(path.name, index, item, exc)) from exc
+            locations.append(
+                _RecordLocation(
+                    file=path.name,
+                    index=index,
+                    standard_name=(
+                        item.get("standard_name")
+                        if isinstance(item, dict) and isinstance(item.get("standard_name"), str)
+                        else None
+                    ),
+                )
+            )
 
-    _check_consistency(records, set(manifest.ambiguous_names))
+    _check_consistency(records, set(manifest.ambiguous_names), locations)
+    return manifest, records, locations
+
+
+def load_directory(data_dir: Path) -> tuple[ManifestFile, list[IngredientRecord]]:
+    """读取并校验整个数据目录，不碰数据库。"""
+    manifest, records, _ = _load_directory_with_locations(data_dir)
     return manifest, records
 
 
-def _check_consistency(records: list[IngredientRecord], ambiguous: set[str]) -> None:
-    ids = {r.id for r in records}
-    if len(ids) != len(records):
-        raise IngredientImportError("有重复的标准 ID")
-    owner: dict[str, str] = {}
+def _check_consistency(
+    records: list[IngredientRecord],
+    ambiguous: set[str],
+    locations: Sequence[_RecordLocation],
+) -> None:
+    ids: dict[object, _RecordLocation] = {}
+    for location, record in zip(locations, records, strict=True):
+        previous = ids.get(record.id)
+        if previous is not None:
+            raise IngredientImportError(
+                f"{location.describe('id')}：标准 ID 重复（也见 {previous.describe('id')}）"
+            )
+        ids[record.id] = location
+
+    owner: dict[str, tuple[object, _RecordLocation, str]] = {}
     ambiguous_owners: dict[str, set[str]] = {name: set() for name in ambiguous}
-    for r in records:
-        if r.category not in CATEGORIES:
-            raise IngredientImportError(f"{r.standard_name}：分类“{r.category}”不在登记的分类里")
-        if r.standard_name in ambiguous:
-            raise IngredientImportError(f"“{r.standard_name}”是标准名，不能登记成歧义名")
-        for name in (r.standard_name, *r.aliases):
+    for location, record in zip(locations, records, strict=True):
+        if record.category not in CATEGORIES:
+            raise IngredientImportError(
+                f"{location.describe('category')}：分类“{record.category}”不在登记的分类里"
+            )
+        if record.standard_name in ambiguous:
+            raise IngredientImportError(
+                f"{location.describe('standard_name')}：标准名不能登记成歧义名“{record.standard_name}”"
+            )
+        names = [("standard_name", record.standard_name)] + [
+            ("aliases", name) for name in record.aliases
+        ]
+        for field, name in names:
             if name in ambiguous:
-                ambiguous_owners[name].add(str(r.id))
+                ambiguous_owners[name].add(str(record.id))
                 continue
-            other = owner.get(name)
-            if other is not None and other != str(r.id):
-                raise IngredientImportError(f"名称“{name}”同时指向两种食材")
-            owner[name] = str(r.id)
-        if r.merged_into is not None and (r.merged_into == r.id or r.merged_into not in ids):
-            raise IngredientImportError(f"{r.standard_name}：merged_into 指向的食材不存在")
+            previous = owner.get(name)
+            if previous is not None and previous[0] != record.id:
+                raise IngredientImportError(
+                    f"{location.describe(field)}：名称“{name}”同时指向两种食材"
+                    f"（也见 {previous[1].describe(previous[2])}）"
+                )
+            owner[name] = (record.id, location, field)
+
     for name, owners in ambiguous_owners.items():
         if len(owners) < 2:
-            raise IngredientImportError(f"歧义名“{name}”只有 {len(owners)} 种食材在用，请删掉登记")
-    targets = {r.id: r.merged_into for r in records}
-    for r in records:
-        # 合并只能指向一个没有再被合并的食材，读取时一步就能跳到位
-        if r.merged_into is not None and targets[r.merged_into] is not None:
-            raise IngredientImportError(f"{r.standard_name}：合并目标自己也被合并了")
+            raise IngredientImportError(
+                f"manifest.json ambiguous_names[{name}]：歧义名“{name}”只有 "
+                f"{len(owners)} 种食材在用"
+            )
+
+    targets = {record.id: record.merged_into for record in records}
+    for location, record in zip(locations, records, strict=True):
+        if record.merged_into is not None:
+            if record.merged_into == record.id:
+                raise IngredientImportError(f"{location.describe('merged_into')}：不能合并到自己")
+            if record.merged_into not in ids:
+                raise IngredientImportError(
+                    f"{location.describe('merged_into')}：合并目标食材不存在"
+                )
+            # 合并只能指向一个没有再被合并的食材，读取时一步就能跳到位。
+            if targets[record.merged_into] is not None:
+                raise IngredientImportError(
+                    f"{location.describe('merged_into')}：合并目标自己也被合并了"
+                )
+
+
+def _check_allergen_coverage(
+    records: Sequence[IngredientRecord], locations: Sequence[_RecordLocation]
+) -> None:
+    found: set[str] = set()
+    for record in records:
+        if record.attributes.allergens is not None:
+            found.update(record.attributes.allergens.value)
+    missing = [name for name in GB_ALLERGENS if name not in found]
+    if missing:
+        missing_text = "、".join(missing)
+        location = (
+            locations[0].describe("attributes.allergens")
+            if locations
+            else "manifest.json attributes.allergens"
+        )
+        raise IngredientImportError(f"{location}：全库缺少 GB 7718 过敏原覆盖：{missing_text}")
+
+
+def validate_directory(
+    data_dir: Path, baseline_dir: Path | None = None
+) -> tuple[ManifestFile, list[IngredientRecord]]:
+    """校验食材库文件及其可选的历史基线，不连接数据库。"""
+    manifest, records, locations = _load_directory_with_locations(data_dir)
+    _check_allergen_coverage(records, locations)
+
+    if baseline_dir is not None and (baseline_dir / "manifest.json").is_file():
+        _, baseline_records, baseline_locations = _load_directory_with_locations(baseline_dir)
+        current_ids = {record.id for record in records}
+        for location, record in zip(baseline_locations, baseline_records, strict=True):
+            if record.id not in current_ids:
+                raise IngredientImportError(
+                    f"{location.describe('id')}：标准 ID 不能删除（基线 ID {record.id} "
+                    "不在当前数据里）"
+                )
+
+    return manifest, records
 
 
 def _library_matches(

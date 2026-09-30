@@ -21,8 +21,8 @@ BASE_UNITS = ("克", "毫升")
 COUNT_UNITS = ("个", "只", "颗", "粒", "瓣", "头", "根", "条", "片", "块", "张", "棵", "朵", "枚")
 MARKET_ZONES = ("蔬果", "肉禽", "水产", "冷藏", "冷冻", "粮油调味", "干货", "烘焙")
 STORAGE_METHODS = ("常温", "冷藏", "冷冻")
-# GB 7718 列出的 8 类致敏物质，外加可扩展的芝麻
-ALLERGENS = (
+# GB 7718 列出的 8 类致敏物质；芝麻作为可扩展分类登记，但不计入 GB 八类覆盖门槛。
+GB_ALLERGENS = (
     "含麸质的谷物",
     "甲壳纲类动物",
     "鱼类",
@@ -31,8 +31,8 @@ ALLERGENS = (
     "大豆",
     "乳及乳制品",
     "坚果及其果仁",
-    "芝麻",
 )
+ALLERGENS = (*GB_ALLERGENS, "芝麻")
 
 
 def _check_registered(value: str, allowed: tuple[str, ...], what: str) -> str:

@@ -52,6 +52,36 @@ jobs:
           GRAMTREE_DATABASE_URL: postgresql+psycopg://postgres:postgres@localhost:5432/postgres
       - run: uv run pytest -q
 
+  ingredient-data:
+    name: 食材库数据校验
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: server
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: astral-sh/setup-uv@v6
+        with:
+          version: "0.8.17"
+      - run: uv sync --frozen
+      - name: 校验食材库数据（含 origin/main 标准 ID 基线）
+        shell: bash
+        run: |
+          baseline_dir="$(mktemp -d)"
+          while IFS= read -r path; do
+            target="$baseline_dir/${path#server/data/ingredients/}"
+            mkdir -p "$(dirname "$target")"
+            git show "origin/main:$path" > "$target"
+          done < <(git ls-tree -r --name-only origin/main server/data/ingredients | grep '\.json$' || true)
+          if [[ -f "$baseline_dir/manifest.json" ]]; then
+            uv run gramtree ingredients validate data/ingredients --baseline-dir "$baseline_dir"
+          else
+            # 第一次把食材库引入基线时没有可比较的历史目录。
+            uv run gramtree ingredients validate data/ingredients
+          fi
+
   server-image:
     name: 服务端镜像能构建
     runs-on: ubuntu-24.04
