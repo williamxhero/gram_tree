@@ -1543,8 +1543,7 @@ class _StepDetailTile extends StatelessWidget {
       if ((step.durationSeconds ?? 0) > 0)
         l10n.recipeSeconds(step.durationSeconds ?? 0),
       if (step.unattended == true) l10n.recipeStepUnattended,
-      if (step.heat?.isNotEmpty == true)
-        '${l10n.recipeStepHeat}：${step.heat}',
+      if (step.heat?.isNotEmpty == true) '${l10n.recipeStepHeat}：${step.heat}',
       if ((step.temperatureCelsius ?? 0) != 0)
         '${l10n.recipeStepTemperature}：${step.temperatureCelsius}',
       if (step.cookware?.isNotEmpty == true)
@@ -1558,7 +1557,9 @@ class _StepDetailTile extends StatelessWidget {
       key: ValueKey('recipe-step-$index'),
       title: Text('${index + 1}. ${step.instruction}'),
       subtitle: Text(
-        details.isEmpty ? (step.action ?? '') : '${step.action ?? ''} · $details',
+        details.isEmpty
+            ? (step.action ?? '')
+            : '${step.action ?? ''} · $details',
       ),
       children: [
         if (step.notes?.isNotEmpty == true)
