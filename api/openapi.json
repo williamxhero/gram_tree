@@ -801,6 +801,56 @@
         "title": "DensityAttribute",
         "type": "object"
       },
+      "DishInput": {
+        "properties": {
+          "aliases": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 20,
+            "title": "Aliases",
+            "type": "array"
+          },
+          "name": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "title": "DishInput",
+        "type": "object"
+      },
+      "DishOut": {
+        "properties": {
+          "aliases": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Aliases",
+            "type": "array"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "aliases"
+        ],
+        "title": "DishOut",
+        "type": "object"
+      },
       "EmailCodeRequest": {
         "properties": {
           "email": {
@@ -1871,6 +1921,49 @@
         "title": "NutritionAttribute",
         "type": "object"
       },
+      "NutritionEstimate": {
+        "properties": {
+          "carbohydrate_g": {
+            "nullable": true,
+            "type": "number"
+          },
+          "energy_kcal": {
+            "nullable": true,
+            "type": "number"
+          },
+          "estimated": {
+            "default": true,
+            "title": "Estimated",
+            "type": "boolean"
+          },
+          "fat_g": {
+            "nullable": true,
+            "type": "number"
+          },
+          "incomplete": {
+            "default": false,
+            "title": "Incomplete",
+            "type": "boolean"
+          },
+          "protein_g": {
+            "nullable": true,
+            "type": "number"
+          },
+          "sodium_mg": {
+            "nullable": true,
+            "type": "number"
+          }
+        },
+        "required": [
+          "energy_kcal",
+          "protein_g",
+          "fat_g",
+          "carbohydrate_g",
+          "sodium_mg"
+        ],
+        "title": "NutritionEstimate",
+        "type": "object"
+      },
       "PageDescription": {
         "properties": {
           "cache": {
@@ -2049,6 +2142,764 @@
           "estimate"
         ],
         "title": "PurchaseUnitsAttribute",
+        "type": "object"
+      },
+      "RecipeAuthor": {
+        "properties": {
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "nickname": {
+            "title": "Nickname",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "nickname"
+        ],
+        "title": "RecipeAuthor",
+        "type": "object"
+      },
+      "RecipeCreate": {
+        "description": "创建菜谱并保存第 1 版。",
+        "properties": {
+          "ai_assisted": {
+            "default": false,
+            "title": "Ai Assisted",
+            "type": "boolean"
+          },
+          "change_note": {
+            "default": "",
+            "maxLength": 2000,
+            "title": "Change Note",
+            "type": "string"
+          },
+          "dish": {
+            "$ref": "#/components/schemas/DishInput",
+            "nullable": true
+          },
+          "dish_aliases": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 20,
+            "title": "Dish Aliases",
+            "type": "array"
+          },
+          "dish_name": {
+            "nullable": true,
+            "type": "string"
+          },
+          "snapshot": {
+            "$ref": "#/components/schemas/RecipeSnapshot"
+          }
+        },
+        "required": [
+          "dish_name",
+          "dish",
+          "snapshot"
+        ],
+        "title": "RecipeCreate",
+        "type": "object"
+      },
+      "RecipeDerived": {
+        "properties": {
+          "active_time_seconds": {
+            "title": "Active Time Seconds",
+            "type": "integer"
+          },
+          "allergens": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Allergens",
+            "type": "array"
+          },
+          "allergens_incomplete": {
+            "default": false,
+            "title": "Allergens Incomplete",
+            "type": "boolean"
+          },
+          "cookware": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Cookware",
+            "type": "array"
+          },
+          "nutrition_per_serving": {
+            "$ref": "#/components/schemas/NutritionEstimate",
+            "nullable": true
+          },
+          "total_time_seconds": {
+            "title": "Total Time Seconds",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "total_time_seconds",
+          "active_time_seconds"
+        ],
+        "title": "RecipeDerived",
+        "type": "object"
+      },
+      "RecipeDetail": {
+        "properties": {
+          "author": {
+            "$ref": "#/components/schemas/RecipeAuthor"
+          },
+          "created_at": {
+            "title": "Created At",
+            "type": "string"
+          },
+          "dish": {
+            "$ref": "#/components/schemas/DishOut"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "root_recipe_id": {
+            "format": "uuid",
+            "nullable": true,
+            "type": "string"
+          },
+          "source_version_id": {
+            "format": "uuid",
+            "nullable": true,
+            "type": "string"
+          },
+          "updated_at": {
+            "title": "Updated At",
+            "type": "string"
+          },
+          "version": {
+            "$ref": "#/components/schemas/RecipeVersionOut"
+          },
+          "visibility": {
+            "const": "private",
+            "title": "Visibility",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "dish",
+          "author",
+          "visibility",
+          "created_at",
+          "updated_at",
+          "version"
+        ],
+        "title": "RecipeDetail",
+        "type": "object"
+      },
+      "RecipeImageOut": {
+        "properties": {
+          "byte_size": {
+            "title": "Byte Size",
+            "type": "integer"
+          },
+          "content_type": {
+            "title": "Content Type",
+            "type": "string"
+          },
+          "expires_in_seconds": {
+            "title": "Expires In Seconds",
+            "type": "integer"
+          },
+          "height": {
+            "nullable": true,
+            "type": "integer"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "url": {
+            "title": "Url",
+            "type": "string"
+          },
+          "version_id": {
+            "format": "uuid",
+            "title": "Version Id",
+            "type": "string"
+          },
+          "width": {
+            "nullable": true,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "version_id",
+          "content_type",
+          "byte_size",
+          "url",
+          "expires_in_seconds"
+        ],
+        "title": "RecipeImageOut",
+        "type": "object"
+      },
+      "RecipeImageUpload": {
+        "description": "JSON 上传替身，供网页端和无法使用 multipart 的客户端使用。",
+        "properties": {
+          "content_base64": {
+            "maxLength": 20000000,
+            "minLength": 1,
+            "title": "Content Base64",
+            "type": "string"
+          },
+          "content_type": {
+            "pattern": "^image/(jpeg|png|webp)$",
+            "title": "Content Type",
+            "type": "string"
+          },
+          "filename": {
+            "nullable": true,
+            "type": "string"
+          }
+        },
+        "required": [
+          "content_base64",
+          "content_type"
+        ],
+        "title": "RecipeImageUpload",
+        "type": "object"
+      },
+      "RecipeIngredient": {
+        "additionalProperties": false,
+        "properties": {
+          "base_quantity": {
+            "description": "换算后的基础数量",
+            "nullable": true,
+            "type": "number"
+          },
+          "base_unit": {
+            "description": "换算后的基础单位",
+            "enum": [
+              "g",
+              "ml",
+              "count"
+            ],
+            "nullable": true,
+            "type": "string"
+          },
+          "display_name": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Display Name",
+            "type": "string"
+          },
+          "functional": {
+            "default": false,
+            "title": "Functional",
+            "type": "boolean"
+          },
+          "group": {
+            "description": "食材分组",
+            "nullable": true,
+            "type": "string"
+          },
+          "id": {
+            "description": "菜谱内食材 ID",
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Id",
+            "type": "string"
+          },
+          "ingredient_id": {
+            "description": "标准食材 UUID；为空表示未收录",
+            "format": "uuid",
+            "nullable": true,
+            "type": "string"
+          },
+          "optional": {
+            "default": false,
+            "title": "Optional",
+            "type": "boolean"
+          },
+          "preparation": {
+            "description": "处理方式",
+            "nullable": true,
+            "type": "string"
+          },
+          "quantity": {
+            "maximum": 10000000.0,
+            "minimum": 0.0,
+            "title": "Quantity",
+            "type": "number"
+          },
+          "quantity_source": {
+            "$ref": "#/components/schemas/ValueSource",
+            "nullable": true
+          },
+          "replacement": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RecipeReplacement"
+              },
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "scaling_mode": {
+            "enum": [
+              "proportional",
+              "unchanged",
+              "round"
+            ],
+            "title": "Scaling Mode",
+            "type": "string"
+          },
+          "unit": {
+            "maxLength": 20,
+            "minLength": 1,
+            "title": "Unit",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "ingredient_id",
+          "display_name",
+          "quantity",
+          "unit",
+          "base_quantity",
+          "base_unit",
+          "preparation",
+          "group",
+          "scaling_mode"
+        ],
+        "title": "RecipeIngredient",
+        "type": "object"
+      },
+      "RecipeList": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/RecipeListItem"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "next_cursor": {
+            "nullable": true,
+            "title": "Next Cursor",
+            "type": "string"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "title": "RecipeList",
+        "type": "object"
+      },
+      "RecipeListItem": {
+        "properties": {
+          "active_time_seconds": {
+            "title": "Active Time Seconds",
+            "type": "integer"
+          },
+          "difficulty": {
+            "nullable": true,
+            "type": "string"
+          },
+          "dish": {
+            "$ref": "#/components/schemas/DishOut"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "servings": {
+            "title": "Servings",
+            "type": "integer"
+          },
+          "total_time_seconds": {
+            "title": "Total Time Seconds",
+            "type": "integer"
+          },
+          "updated_at": {
+            "title": "Updated At",
+            "type": "string"
+          },
+          "version_number": {
+            "title": "Version Number",
+            "type": "integer"
+          },
+          "visibility": {
+            "const": "private",
+            "title": "Visibility",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "dish",
+          "visibility",
+          "version_number",
+          "servings",
+          "total_time_seconds",
+          "active_time_seconds",
+          "updated_at"
+        ],
+        "title": "RecipeListItem",
+        "type": "object"
+      },
+      "RecipeReplacement": {
+        "additionalProperties": false,
+        "properties": {
+          "display_name": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Display Name",
+            "type": "string"
+          },
+          "ingredient_id": {
+            "format": "uuid",
+            "nullable": true,
+            "type": "string"
+          },
+          "note": {
+            "nullable": true,
+            "type": "string"
+          },
+          "ratio": {
+            "default": 1,
+            "exclusiveMinimum": 0.0,
+            "maximum": 100.0,
+            "title": "Ratio",
+            "type": "number"
+          }
+        },
+        "required": [
+          "ingredient_id",
+          "display_name",
+          "note"
+        ],
+        "title": "RecipeReplacement",
+        "type": "object"
+      },
+      "RecipeSnapshot": {
+        "additionalProperties": false,
+        "properties": {
+          "active_time_seconds": {
+            "default": 0,
+            "maximum": 604800.0,
+            "minimum": 0.0,
+            "title": "Active Time Seconds",
+            "type": "integer"
+          },
+          "difficulty": {
+            "nullable": true,
+            "type": "string"
+          },
+          "dish_type": {
+            "nullable": true,
+            "type": "string"
+          },
+          "format_version": {
+            "const": 1,
+            "description": "快照格式版本",
+            "title": "Format Version",
+            "type": "integer"
+          },
+          "ingredients": {
+            "items": {
+              "$ref": "#/components/schemas/RecipeIngredient"
+            },
+            "maxItems": 500,
+            "title": "Ingredients",
+            "type": "array"
+          },
+          "servings": {
+            "maximum": 1000.0,
+            "minimum": 1.0,
+            "title": "Servings",
+            "type": "integer"
+          },
+          "steps": {
+            "items": {
+              "$ref": "#/components/schemas/RecipeStep"
+            },
+            "maxItems": 200,
+            "title": "Steps",
+            "type": "array"
+          },
+          "tags": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 50,
+            "title": "Tags",
+            "type": "array"
+          },
+          "total_time_seconds": {
+            "default": 0,
+            "maximum": 604800.0,
+            "minimum": 0.0,
+            "title": "Total Time Seconds",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "format_version",
+          "servings",
+          "difficulty",
+          "dish_type"
+        ],
+        "title": "RecipeSnapshot",
+        "type": "object"
+      },
+      "RecipeStep": {
+        "additionalProperties": false,
+        "properties": {
+          "action": {
+            "nullable": true,
+            "type": "string"
+          },
+          "cookware": {
+            "nullable": true,
+            "type": "string"
+          },
+          "depends_on": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 100,
+            "title": "Depends On",
+            "type": "array"
+          },
+          "doneness": {
+            "nullable": true,
+            "type": "string"
+          },
+          "duration_seconds": {
+            "default": 0,
+            "maximum": 86400.0,
+            "minimum": 0.0,
+            "title": "Duration Seconds",
+            "type": "integer"
+          },
+          "duration_source": {
+            "$ref": "#/components/schemas/ValueSource",
+            "nullable": true
+          },
+          "heat": {
+            "nullable": true,
+            "type": "string"
+          },
+          "heat_source": {
+            "$ref": "#/components/schemas/ValueSource",
+            "nullable": true
+          },
+          "id": {
+            "description": "步骤 ID",
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Id",
+            "type": "string"
+          },
+          "ingredient_ids": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 100,
+            "title": "Ingredient Ids",
+            "type": "array"
+          },
+          "instruction": {
+            "maxLength": 2000,
+            "minLength": 1,
+            "title": "Instruction",
+            "type": "string"
+          },
+          "notes": {
+            "nullable": true,
+            "type": "string"
+          },
+          "temperature_celsius": {
+            "nullable": true,
+            "type": "number"
+          },
+          "temperature_source": {
+            "$ref": "#/components/schemas/ValueSource",
+            "nullable": true
+          },
+          "unattended": {
+            "default": false,
+            "title": "Unattended",
+            "type": "boolean"
+          },
+          "why": {
+            "nullable": true,
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "action",
+          "instruction",
+          "heat",
+          "temperature_celsius",
+          "cookware",
+          "doneness",
+          "notes",
+          "why"
+        ],
+        "title": "RecipeStep",
+        "type": "object"
+      },
+      "RecipeVersionCreate": {
+        "properties": {
+          "ai_assisted": {
+            "default": false,
+            "title": "Ai Assisted",
+            "type": "boolean"
+          },
+          "change_note": {
+            "default": "",
+            "maxLength": 2000,
+            "title": "Change Note",
+            "type": "string"
+          },
+          "snapshot": {
+            "$ref": "#/components/schemas/RecipeSnapshot"
+          }
+        },
+        "required": [
+          "snapshot"
+        ],
+        "title": "RecipeVersionCreate",
+        "type": "object"
+      },
+      "RecipeVersionHistory": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/RecipeVersionSummary"
+            },
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "title": "RecipeVersionHistory",
+        "type": "object"
+      },
+      "RecipeVersionOut": {
+        "properties": {
+          "ai_assisted": {
+            "title": "Ai Assisted",
+            "type": "boolean"
+          },
+          "change_note": {
+            "title": "Change Note",
+            "type": "string"
+          },
+          "created_at": {
+            "title": "Created At",
+            "type": "string"
+          },
+          "derived": {
+            "$ref": "#/components/schemas/RecipeDerived"
+          },
+          "edit_operations": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Edit Operations",
+            "type": "array"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "images": {
+            "items": {
+              "$ref": "#/components/schemas/RecipeImageOut"
+            },
+            "title": "Images",
+            "type": "array"
+          },
+          "previous_version_id": {
+            "format": "uuid",
+            "nullable": true,
+            "type": "string"
+          },
+          "snapshot": {
+            "$ref": "#/components/schemas/RecipeSnapshot"
+          },
+          "version_number": {
+            "title": "Version Number",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "version_number",
+          "snapshot",
+          "derived",
+          "edit_operations",
+          "change_note",
+          "ai_assisted",
+          "created_at"
+        ],
+        "title": "RecipeVersionOut",
+        "type": "object"
+      },
+      "RecipeVersionSummary": {
+        "properties": {
+          "ai_assisted": {
+            "title": "Ai Assisted",
+            "type": "boolean"
+          },
+          "change_note": {
+            "title": "Change Note",
+            "type": "string"
+          },
+          "created_at": {
+            "title": "Created At",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "previous_version_id": {
+            "format": "uuid",
+            "nullable": true,
+            "type": "string"
+          },
+          "version_number": {
+            "title": "Version Number",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "version_number",
+          "change_note",
+          "ai_assisted",
+          "created_at"
+        ],
+        "title": "RecipeVersionSummary",
         "type": "object"
       },
       "RefreshRequest": {
@@ -2517,6 +3368,40 @@
           "created_at"
         ],
         "title": "UserOut",
+        "type": "object"
+      },
+      "ValueSource": {
+        "additionalProperties": false,
+        "properties": {
+          "basis": {
+            "nullable": true,
+            "type": "string"
+          },
+          "confidence": {
+            "nullable": true,
+            "type": "number"
+          },
+          "original": {
+            "nullable": true,
+            "type": "string"
+          },
+          "source": {
+            "enum": [
+              "author_filled",
+              "ai_estimated",
+              "verified"
+            ],
+            "title": "Source",
+            "type": "string"
+          }
+        },
+        "required": [
+          "source",
+          "original",
+          "confidence",
+          "basis"
+        ],
+        "title": "ValueSource",
         "type": "object"
       }
     },
@@ -4280,6 +5165,755 @@
         "summary": "绑定邮箱",
         "tags": [
           "account"
+        ]
+      }
+    },
+    "/v1/recipes": {
+      "get": {
+        "operationId": "list_recipes",
+        "parameters": [
+          {
+            "description": "上一页返回的 next_cursor",
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "上一页返回的 next_cursor",
+              "title": "Cursor"
+            }
+          },
+          {
+            "description": "每页条数，上限见配置项 api.page_size_max",
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "description": "每页条数，上限见配置项 api.page_size_max",
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecipeList"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "参数错误"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "服务端错误"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Recipes",
+        "tags": [
+          "recipes"
+        ]
+      },
+      "post": {
+        "operationId": "create_recipe",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RecipeCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecipeDetail"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "参数错误"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "服务端错误"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Create Recipe",
+        "tags": [
+          "recipes"
+        ]
+      }
+    },
+    "/v1/recipes/{recipe_id}": {
+      "delete": {
+        "operationId": "delete_recipe",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "recipe_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Recipe Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "参数错误"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "服务端错误"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Delete Recipe",
+        "tags": [
+          "recipes"
+        ]
+      },
+      "get": {
+        "operationId": "get_recipe",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "recipe_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Recipe Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecipeDetail"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "参数错误"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "服务端错误"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Recipe",
+        "tags": [
+          "recipes"
+        ]
+      }
+    },
+    "/v1/recipes/{recipe_id}/images": {
+      "post": {
+        "operationId": "upload_recipe_image",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "recipe_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Recipe Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RecipeImageUpload"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecipeImageOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "参数错误"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "服务端错误"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Upload Recipe Image",
+        "tags": [
+          "recipes"
+        ]
+      }
+    },
+    "/v1/recipes/{recipe_id}/images/{image_id}": {
+      "get": {
+        "operationId": "read_recipe_image",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "recipe_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Recipe Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "image_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Image Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "expires",
+            "required": true,
+            "schema": {
+              "title": "Expires",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "signature",
+            "required": true,
+            "schema": {
+              "title": "Signature",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "参数错误"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "服务端错误"
+          }
+        },
+        "summary": "Read Recipe Image",
+        "tags": [
+          "recipes"
+        ]
+      }
+    },
+    "/v1/recipes/{recipe_id}/versions": {
+      "get": {
+        "operationId": "list_recipe_versions",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "recipe_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Recipe Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecipeVersionHistory"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "参数错误"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "服务端错误"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Recipe Versions",
+        "tags": [
+          "recipes"
+        ]
+      },
+      "post": {
+        "operationId": "save_recipe_version",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "recipe_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Recipe Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RecipeVersionCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecipeDetail"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "参数错误"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "服务端错误"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Save Recipe Version",
+        "tags": [
+          "recipes"
+        ]
+      }
+    },
+    "/v1/recipes/{recipe_id}/versions/{version_id}": {
+      "get": {
+        "operationId": "get_recipe_version",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "recipe_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Recipe Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "version_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Version Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecipeDetail"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "参数错误"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "服务端错误"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Recipe Version",
+        "tags": [
+          "recipes"
         ]
       }
     },

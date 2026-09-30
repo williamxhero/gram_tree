@@ -22,6 +22,8 @@ import 'package:gramtree_api/src/model/count_unit.dart';
 import 'package:gramtree_api/src/model/count_units_attribute.dart';
 import 'package:gramtree_api/src/model/deletion_out.dart';
 import 'package:gramtree_api/src/model/density_attribute.dart';
+import 'package:gramtree_api/src/model/dish_input.dart';
+import 'package:gramtree_api/src/model/dish_out.dart';
 import 'package:gramtree_api/src/model/email_code_request.dart';
 import 'package:gramtree_api/src/model/email_code_sent.dart';
 import 'package:gramtree_api/src/model/email_login_request.dart';
@@ -50,11 +52,29 @@ import 'package:gramtree_api/src/model/normalize_response.dart';
 import 'package:gramtree_api/src/model/normalize_result_item.dart';
 import 'package:gramtree_api/src/model/nutrition.dart';
 import 'package:gramtree_api/src/model/nutrition_attribute.dart';
+import 'package:gramtree_api/src/model/nutrition_estimate.dart';
 import 'package:gramtree_api/src/model/page_description.dart';
 import 'package:gramtree_api/src/model/page_unrecorded_ingredient_item.dart';
 import 'package:gramtree_api/src/model/profile_update.dart';
 import 'package:gramtree_api/src/model/purchase_unit.dart';
 import 'package:gramtree_api/src/model/purchase_units_attribute.dart';
+import 'package:gramtree_api/src/model/recipe_author.dart';
+import 'package:gramtree_api/src/model/recipe_create.dart';
+import 'package:gramtree_api/src/model/recipe_derived.dart';
+import 'package:gramtree_api/src/model/recipe_detail.dart';
+import 'package:gramtree_api/src/model/recipe_image_out.dart';
+import 'package:gramtree_api/src/model/recipe_image_upload.dart';
+import 'package:gramtree_api/src/model/recipe_ingredient.dart';
+import 'package:gramtree_api/src/model/recipe_ingredient_replacement.dart';
+import 'package:gramtree_api/src/model/recipe_list.dart';
+import 'package:gramtree_api/src/model/recipe_list_item.dart';
+import 'package:gramtree_api/src/model/recipe_replacement.dart';
+import 'package:gramtree_api/src/model/recipe_snapshot.dart';
+import 'package:gramtree_api/src/model/recipe_step.dart';
+import 'package:gramtree_api/src/model/recipe_version_create.dart';
+import 'package:gramtree_api/src/model/recipe_version_history.dart';
+import 'package:gramtree_api/src/model/recipe_version_out.dart';
+import 'package:gramtree_api/src/model/recipe_version_summary.dart';
 import 'package:gramtree_api/src/model/refresh_request.dart';
 import 'package:gramtree_api/src/model/rejection_reason.dart';
 import 'package:gramtree_api/src/model/release_note.dart';
@@ -71,6 +91,7 @@ import 'package:gramtree_api/src/model/text_attribute.dart';
 import 'package:gramtree_api/src/model/token_pair.dart';
 import 'package:gramtree_api/src/model/unrecorded_ingredient_item.dart';
 import 'package:gramtree_api/src/model/user_out.dart';
+import 'package:gramtree_api/src/model/value_source.dart';
 
 final _regList = RegExp(r'^List<(.*)>$');
 final _regSet = RegExp(r'^Set<(.*)>$');
@@ -162,6 +183,10 @@ ReturnType deserialize<ReturnType, BaseType>(
     case 'DensityAttribute':
       return DensityAttribute.fromJson(value as Map<String, dynamic>)
           as ReturnType;
+    case 'DishInput':
+      return DishInput.fromJson(value as Map<String, dynamic>) as ReturnType;
+    case 'DishOut':
+      return DishOut.fromJson(value as Map<String, dynamic>) as ReturnType;
     case 'EmailCodeRequest':
       return EmailCodeRequest.fromJson(value as Map<String, dynamic>)
           as ReturnType;
@@ -241,6 +266,9 @@ ReturnType deserialize<ReturnType, BaseType>(
     case 'NutritionAttribute':
       return NutritionAttribute.fromJson(value as Map<String, dynamic>)
           as ReturnType;
+    case 'NutritionEstimate':
+      return NutritionEstimate.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
     case 'PageDescription':
       return PageDescription.fromJson(value as Map<String, dynamic>)
           as ReturnType;
@@ -256,6 +284,52 @@ ReturnType deserialize<ReturnType, BaseType>(
       return PurchaseUnit.fromJson(value as Map<String, dynamic>) as ReturnType;
     case 'PurchaseUnitsAttribute':
       return PurchaseUnitsAttribute.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'RecipeAuthor':
+      return RecipeAuthor.fromJson(value as Map<String, dynamic>) as ReturnType;
+    case 'RecipeCreate':
+      return RecipeCreate.fromJson(value as Map<String, dynamic>) as ReturnType;
+    case 'RecipeDerived':
+      return RecipeDerived.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'RecipeDetail':
+      return RecipeDetail.fromJson(value as Map<String, dynamic>) as ReturnType;
+    case 'RecipeImageOut':
+      return RecipeImageOut.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'RecipeImageUpload':
+      return RecipeImageUpload.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'RecipeIngredient':
+      return RecipeIngredient.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'RecipeIngredientReplacement':
+      return RecipeIngredientReplacement.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'RecipeList':
+      return RecipeList.fromJson(value as Map<String, dynamic>) as ReturnType;
+    case 'RecipeListItem':
+      return RecipeListItem.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'RecipeReplacement':
+      return RecipeReplacement.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'RecipeSnapshot':
+      return RecipeSnapshot.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'RecipeStep':
+      return RecipeStep.fromJson(value as Map<String, dynamic>) as ReturnType;
+    case 'RecipeVersionCreate':
+      return RecipeVersionCreate.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'RecipeVersionHistory':
+      return RecipeVersionHistory.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'RecipeVersionOut':
+      return RecipeVersionOut.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'RecipeVersionSummary':
+      return RecipeVersionSummary.fromJson(value as Map<String, dynamic>)
           as ReturnType;
     case 'RefreshRequest':
       return RefreshRequest.fromJson(value as Map<String, dynamic>)
@@ -298,6 +372,8 @@ ReturnType deserialize<ReturnType, BaseType>(
           as ReturnType;
     case 'UserOut':
       return UserOut.fromJson(value as Map<String, dynamic>) as ReturnType;
+    case 'ValueSource':
+      return ValueSource.fromJson(value as Map<String, dynamic>) as ReturnType;
     default:
       RegExpMatch? match;
 

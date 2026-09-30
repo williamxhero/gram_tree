@@ -1,0 +1,93 @@
+//
+// AUTO-GENERATED FILE, DO NOT MODIFY!
+//
+
+// ignore_for_file: unused_element
+import 'package:gramtree_api/src/model/recipe_snapshot.dart';
+import 'package:gramtree_api/src/model/dish_input.dart';
+import 'package:copy_with_extension/copy_with_extension.dart';
+import 'package:json_annotation/json_annotation.dart';
+
+part 'recipe_create.g.dart';
+
+@CopyWith()
+@JsonSerializable(
+  checked: true,
+  createToJson: true,
+  disallowUnrecognizedKeys: false,
+  explicitToJson: true,
+)
+class RecipeCreate {
+  /// Returns a new [RecipeCreate] instance.
+  RecipeCreate({
+    this.aiAssisted = false,
+
+    this.changeNote = '',
+
+    required this.dish,
+
+    this.dishAliases,
+
+    required this.dishName,
+
+    required this.snapshot,
+  });
+
+  @JsonKey(
+    defaultValue: false,
+    name: r'ai_assisted',
+    required: false,
+    includeIfNull: false,
+  )
+  final bool? aiAssisted;
+
+  @JsonKey(
+    defaultValue: '',
+    name: r'change_note',
+    required: false,
+    includeIfNull: false,
+  )
+  final String? changeNote;
+
+  @JsonKey(name: r'dish', required: true, includeIfNull: false)
+  final DishInput dish;
+
+  @JsonKey(name: r'dish_aliases', required: false, includeIfNull: false)
+  final List<String>? dishAliases;
+
+  @JsonKey(name: r'dish_name', required: true, includeIfNull: false)
+  final String dishName;
+
+  @JsonKey(name: r'snapshot', required: true, includeIfNull: false)
+  final RecipeSnapshot snapshot;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is RecipeCreate &&
+          other.aiAssisted == aiAssisted &&
+          other.changeNote == changeNote &&
+          other.dish == dish &&
+          other.dishAliases == dishAliases &&
+          other.dishName == dishName &&
+          other.snapshot == snapshot;
+
+  @override
+  int get hashCode =>
+      aiAssisted.hashCode +
+      changeNote.hashCode +
+      dish.hashCode +
+      dishAliases.hashCode +
+      dishName.hashCode +
+      snapshot.hashCode;
+
+  factory RecipeCreate.fromJson(Map<String, dynamic> json) =>
+      _$RecipeCreateFromJson(json);
+
+  Map<String, dynamic> toJson() => _$RecipeCreateToJson(this);
+
+  @override
+  String toString() {
+    return toJson().toString();
+  }
+}
