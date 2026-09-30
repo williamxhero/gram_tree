@@ -76,7 +76,9 @@ void main() {
     await tester.ensureVisible(step);
     await tester.enterText(step, '完成默认步骤');
     await settle(tester);
-    await tester.ensureVisible(find.byKey(const ValueKey('save-recipe-button')));
+    await tester.ensureVisible(
+      find.byKey(const ValueKey('save-recipe-button')),
+    );
     await tester.tap(find.byKey(const ValueKey('save-recipe-button')));
     await waitFor(tester, find.byKey(const ValueKey('recipe-history-button')));
     expect(find.text('网页版验收菜谱'), findsWidgets);
