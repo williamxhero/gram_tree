@@ -1055,6 +1055,150 @@
         "title": "IngredientOut",
         "type": "object"
       },
+      "NormalizeCandidate": {
+        "properties": {
+          "ingredient_id": {
+            "format": "uuid",
+            "title": "Ingredient Id",
+            "type": "string"
+          },
+          "standard_name": {
+            "title": "Standard Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "ingredient_id",
+          "standard_name"
+        ],
+        "title": "NormalizeCandidate",
+        "type": "object"
+      },
+      "NormalizeItem": {
+        "properties": {
+          "context": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "上下文，如所在菜名。规则匹配不使用，留给 SPEC-003.1 的 AI 判断",
+            "title": "Context"
+          },
+          "name": {
+            "description": "菜谱里写的食材名称",
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "title": "NormalizeItem",
+        "type": "object"
+      },
+      "NormalizeRequest": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/NormalizeItem"
+            },
+            "maxItems": 100,
+            "minItems": 1,
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "title": "NormalizeRequest",
+        "type": "object"
+      },
+      "NormalizeResponse": {
+        "properties": {
+          "results": {
+            "items": {
+              "$ref": "#/components/schemas/NormalizeResultItem"
+            },
+            "title": "Results",
+            "type": "array"
+          }
+        },
+        "required": [
+          "results"
+        ],
+        "title": "NormalizeResponse",
+        "type": "object"
+      },
+      "NormalizeResultItem": {
+        "properties": {
+          "candidates": {
+            "description": "只有 ambiguous 时非空",
+            "items": {
+              "$ref": "#/components/schemas/NormalizeCandidate"
+            },
+            "title": "Candidates",
+            "type": "array"
+          },
+          "confidence": {
+            "description": "exact 标准名精确匹配；alias 别名匹配（含已合并食材的旧名）；fuzzy 去掉修饰词或按拼音后唯一命中；ambiguous 歧义名，见 candidates；unrecorded 未收录",
+            "enum": [
+              "exact",
+              "alias",
+              "fuzzy",
+              "ambiguous",
+              "unrecorded"
+            ],
+            "title": "Confidence",
+            "type": "string"
+          },
+          "ingredient_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "合并后的标准 ID；歧义和未收录时为空",
+            "title": "Ingredient Id"
+          },
+          "name": {
+            "description": "原样返回输入的名称",
+            "title": "Name",
+            "type": "string"
+          },
+          "standard_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Standard Name"
+          }
+        },
+        "required": [
+          "name",
+          "confidence",
+          "ingredient_id",
+          "standard_name",
+          "candidates"
+        ],
+        "title": "NormalizeResultItem",
+        "type": "object"
+      },
       "PageDescription": {
         "properties": {
           "cache": {
@@ -2116,6 +2260,58 @@
         "summary": "健康检查：服务、数据库、Redis 是否可用",
         "tags": [
           "health"
+        ]
+      }
+    },
+    "/v1/ingredients/normalize": {
+      "post": {
+        "description": "把一批食材名称归一到标准 ID（只用规则匹配），结果按输入顺序返回。",
+        "operationId": "normalize_ingredients",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NormalizeRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NormalizeResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "参数错误"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "服务端错误"
+          }
+        },
+        "summary": "Normalize Ingredients",
+        "tags": [
+          "ingredients"
         ]
       }
     },

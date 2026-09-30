@@ -52,6 +52,11 @@ lib/src/model/health_checks.dart
 lib/src/model/health_response.dart
 lib/src/model/identity_out.dart
 lib/src/model/ingredient_out.dart
+lib/src/model/normalize_candidate.dart
+lib/src/model/normalize_item.dart
+lib/src/model/normalize_request.dart
+lib/src/model/normalize_response.dart
+lib/src/model/normalize_result_item.dart
 lib/src/model/page_description.dart
 lib/src/model/profile_update.dart
 lib/src/model/refresh_request.dart

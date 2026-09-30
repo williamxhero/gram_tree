@@ -31,6 +31,11 @@ import 'package:gramtree_api/src/model/health_checks.dart';
 import 'package:gramtree_api/src/model/health_response.dart';
 import 'package:gramtree_api/src/model/identity_out.dart';
 import 'package:gramtree_api/src/model/ingredient_out.dart';
+import 'package:gramtree_api/src/model/normalize_candidate.dart';
+import 'package:gramtree_api/src/model/normalize_item.dart';
+import 'package:gramtree_api/src/model/normalize_request.dart';
+import 'package:gramtree_api/src/model/normalize_response.dart';
+import 'package:gramtree_api/src/model/normalize_result_item.dart';
 import 'package:gramtree_api/src/model/page_description.dart';
 import 'package:gramtree_api/src/model/profile_update.dart';
 import 'package:gramtree_api/src/model/refresh_request.dart';
@@ -157,6 +162,21 @@ ReturnType deserialize<ReturnType, BaseType>(
       return IdentityOut.fromJson(value as Map<String, dynamic>) as ReturnType;
     case 'IngredientOut':
       return IngredientOut.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'NormalizeCandidate':
+      return NormalizeCandidate.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'NormalizeItem':
+      return NormalizeItem.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'NormalizeRequest':
+      return NormalizeRequest.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'NormalizeResponse':
+      return NormalizeResponse.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'NormalizeResultItem':
+      return NormalizeResultItem.fromJson(value as Map<String, dynamic>)
           as ReturnType;
     case 'PageDescription':
       return PageDescription.fromJson(value as Map<String, dynamic>)
