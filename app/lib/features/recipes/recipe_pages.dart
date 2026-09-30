@@ -1503,7 +1503,9 @@ class _IngredientDetailRow extends StatelessWidget {
             componentId: 'recipe-ingredient-${ingredient.id}-quantity',
             value: quantity,
             originalValue: ingredient.quantitySource?.original,
-            basisText: ingredient.quantitySource?.basis ?? '作者填写',
+            basisText:
+                ingredient.quantitySource?.basis ??
+                l10n.recipeSourceAuthorFilled,
             required: true,
             onAction: (_) {},
           ),

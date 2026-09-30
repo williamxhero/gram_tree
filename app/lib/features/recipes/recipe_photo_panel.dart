@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../app/theme.dart';
+import '../../l10n/app_localizations.dart';
 import '../../platform/permissions.dart';
 import '../../platform/recipe_photo.dart';
 import '../../platform/recipe_photo_api.dart';
@@ -97,18 +98,25 @@ class _RecipePhotoPanelState extends ConsumerState<RecipePhotoPanel> {
       if (!mounted) return;
       setState(() {
         _status = RecipePhotoPanelStatus.error;
-        _error = _message(error);
+        _error = _message(error, AppLocalizations.of(context));
       });
     }
   }
 
-  String _message(Object error) {
-    if (error is RecipePhotoProcessingException) return error.message;
-    return '图片上传失败，请稍后重试。';
+  String _message(Object error, AppLocalizations l10n) {
+    if (error is RecipePhotoProcessingException) {
+      return switch (error.code) {
+        RecipePhotoError.unreadable => l10n.recipePhotoReadError,
+        RecipePhotoError.tooLarge => l10n.recipePhotoTooLarge,
+        RecipePhotoError.unsafe => l10n.recipePhotoUnsafe,
+      };
+    }
+    return l10n.recipePhotoUploadError;
   }
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final theme = Theme.of(context);
     return Card(
       child: Padding(
@@ -116,12 +124,12 @@ class _RecipePhotoPanelState extends ConsumerState<RecipePhotoPanel> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text('成品图', style: theme.textTheme.titleMedium),
+            Text(l10n.recipePhotoTitle, style: theme.textTheme.titleMedium),
             const SizedBox(height: 6),
             Text(
               widget.recipeId == null
-                  ? '先选图，保存菜谱时会把它放进第 1 版。'
-                  : '照片会生成新的菜谱版本，不会改动旧版本。',
+                  ? l10n.recipePhotoStageHint
+                  : l10n.recipePhotoVersionHint,
               style: theme.textTheme.bodyMedium,
             ),
             if (_preview != null) ...[
@@ -132,7 +140,7 @@ class _RecipePhotoPanelState extends ConsumerState<RecipePhotoPanel> {
                   _preview!,
                   height: 180,
                   fit: BoxFit.cover,
-                  semanticLabel: '已选择的成品图',
+                  semanticLabel: l10n.recipePhotoSelected,
                 ),
               ),
             ],
@@ -142,13 +150,13 @@ class _RecipePhotoPanelState extends ConsumerState<RecipePhotoPanel> {
                 value: _status == RecipePhotoPanelStatus.uploading ? null : 1,
               ),
               const SizedBox(height: 6),
-              Text(_statusLabel, style: theme.textTheme.bodySmall),
+              Text(_statusLabel(l10n), style: theme.textTheme.bodySmall),
             ],
             if (_status == RecipePhotoPanelStatus.success &&
                 _uploaded != null) ...[
               const SizedBox(height: 8),
               Text(
-                '已上传，图片会以短期私有地址读取。',
+                l10n.recipePhotoSuccess,
                 style: theme.textTheme.bodyMedium?.copyWith(
                   color: Theme.of(context)
                       .extension<GramTreeColors>()
@@ -174,14 +182,14 @@ class _RecipePhotoPanelState extends ConsumerState<RecipePhotoPanel> {
                       ? null
                       : () => _choose(RecipePhotoSource.camera),
                   icon: const Icon(Icons.camera_alt_outlined),
-                  label: const Text('拍照'),
+                  label: Text(l10n.recipeCameraButton),
                 ),
                 OutlinedButton.icon(
                   onPressed: _busy
                       ? null
                       : () => _choose(RecipePhotoSource.gallery),
                   icon: const Icon(Icons.photo_library_outlined),
-                  label: const Text('从相册选图'),
+                  label: Text(l10n.recipeGalleryButton),
                 ),
               ],
             ),
@@ -191,10 +199,10 @@ class _RecipePhotoPanelState extends ConsumerState<RecipePhotoPanel> {
     );
   }
 
-  String get _statusLabel => switch (_status) {
-    RecipePhotoPanelStatus.picking => '正在打开照片选择器…',
-    RecipePhotoPanelStatus.processing => '正在压缩并清除照片元数据…',
-    RecipePhotoPanelStatus.uploading => '正在安全上传…',
+  String _statusLabel(AppLocalizations l10n) => switch (_status) {
+    RecipePhotoPanelStatus.picking => l10n.recipePhotoPicking,
+    RecipePhotoPanelStatus.processing => l10n.recipePhotoProcessing,
+    RecipePhotoPanelStatus.uploading => l10n.recipePhotoUploading,
     _ => '',
   };
 }

@@ -563,6 +563,63 @@ class AppLocalizationsZh extends AppLocalizations {
   String get recipeBaseOnVersion => '基于这一版继续编辑';
 
   @override
+  String get recipePhotoTitle => '成品图';
+
+  @override
+  String get recipePhotoStageHint => '先选图，保存菜谱时会把它放进第 1 版。';
+
+  @override
+  String get recipePhotoVersionHint => '照片会生成新的菜谱版本，不会改动旧版本。';
+
+  @override
+  String get recipePhotoSelected => '已选择的成品图';
+
+  @override
+  String get recipePhotoSuccess => '已上传，图片会以短期私有地址读取。';
+
+  @override
+  String get recipePhotoPicking => '正在打开照片选择器…';
+
+  @override
+  String get recipePhotoProcessing => '正在压缩并清除照片元数据…';
+
+  @override
+  String get recipePhotoUploading => '正在安全上传…';
+
+  @override
+  String get recipePhotoUploadError => '图片上传失败，请稍后重试。';
+
+  @override
+  String get recipePhotoReadError => '图片无法读取，请换一张图片。';
+
+  @override
+  String get recipePhotoTooLarge => '图片尺寸过大，无法安全处理。';
+
+  @override
+  String get recipePhotoUnsafe => '图片无法安全处理，请换一张图片。';
+
+  @override
+  String get recipeCameraButton => '拍照';
+
+  @override
+  String get recipeGalleryButton => '从相册选图';
+
+  @override
+  String get recipeSourceAuthorFilled => '作者填写';
+
+  @override
+  String get recipeEmptyRecipeHeader => '没有菜谱头部';
+
+  @override
+  String get recipeEmptyIngredients => '没有食材';
+
+  @override
+  String get recipeEmptySteps => '没有步骤';
+
+  @override
+  String get recipeEmptyCard => '没有菜谱卡';
+
+  @override
   String recipeListSummary(int version, int servings, int minutes) {
     return '第 $version 版 · $servings 份 · $minutes 分钟';
   }

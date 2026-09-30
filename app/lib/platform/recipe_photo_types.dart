@@ -37,11 +37,10 @@ abstract interface class RecipePhotoProcessor {
   ProcessedRecipePhoto process(RecipePhotoAsset asset);
 }
 
+enum RecipePhotoError { unreadable, tooLarge, unsafe }
+
 class RecipePhotoProcessingException implements Exception {
-  const RecipePhotoProcessingException(this.message);
+  const RecipePhotoProcessingException(this.code);
 
-  final String message;
-
-  @override
-  String toString() => message;
+  final RecipePhotoError code;
 }

@@ -16,10 +16,10 @@ class DefaultRecipePhotoProcessor implements RecipePhotoProcessor {
     try {
       final decoded = img.decodeImage(asset.bytes);
       if (decoded == null) {
-        throw const RecipePhotoProcessingException('图片无法读取，请换一张图片。');
+        throw const RecipePhotoProcessingException(RecipePhotoError.unreadable);
       }
       if (decoded.width * decoded.height > _maxPixels) {
-        throw const RecipePhotoProcessingException('图片尺寸过大，无法安全处理。');
+        throw const RecipePhotoProcessingException(RecipePhotoError.tooLarge);
       }
       // bakeOrientation reads EXIF orientation, then the JPEG encoder below
       // writes a fresh image with no EXIF/GPS/application metadata.
@@ -42,7 +42,7 @@ class DefaultRecipePhotoProcessor implements RecipePhotoProcessor {
     } on RecipePhotoProcessingException {
       rethrow;
     } catch (_) {
-      throw const RecipePhotoProcessingException('图片无法安全处理，请换一张图片。');
+      throw const RecipePhotoProcessingException(RecipePhotoError.unsafe);
     }
   }
 }

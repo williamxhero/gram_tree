@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:gramtree_api/gramtree_api.dart';
 
+import '../l10n/app_localizations.dart';
 import '../ui_protocol/component_registry.dart';
 import '../ui_protocol/source_mark.dart';
 import 'components/component_scaffold.dart';
@@ -42,10 +43,11 @@ Widget _buildRecipeTextComponent(
   ComponentEmptyState emptyState,
   void Function(ActionDescriptor action) onAction,
 ) {
+  final localizedEmpty = _recipeEmptyState(context, component, emptyState);
   final data = _data(component);
   final conclusion = data['conclusion'];
   if (conclusion is! String || conclusion.isEmpty) {
-    return ComponentEmptyCard(emptyState: emptyState);
+    return ComponentEmptyCard(emptyState: localizedEmpty);
   }
   final actions = resolveComponentActions(component.actions);
   final primary = actions.primary;
@@ -87,11 +89,12 @@ Widget _buildRecipeListComponent(
   ComponentEmptyState emptyState,
   void Function(ActionDescriptor action) onAction,
 ) {
+  final localizedEmpty = _recipeEmptyState(context, component, emptyState);
   final data = _data(component);
   final conclusion = data['conclusion'];
   final items = data['items'];
   if (conclusion is! String || items is! List || items.isEmpty) {
-    return ComponentEmptyCard(emptyState: emptyState);
+    return ComponentEmptyCard(emptyState: localizedEmpty);
   }
   final rows = [
     for (final item in items)
@@ -111,6 +114,22 @@ Widget _buildRecipeListComponent(
     standardExtra: Column(children: rows),
     basisText: parseBasisText(data),
   );
+}
+
+ComponentEmptyState _recipeEmptyState(
+  BuildContext context,
+  ComponentDescriptor component,
+  ComponentEmptyState fallback,
+) {
+  final l10n = AppLocalizations.of(context);
+  final title = switch (component.type) {
+    'recipe_header' => l10n.recipeEmptyRecipeHeader,
+    'recipe_ingredients' => l10n.recipeEmptyIngredients,
+    'recipe_steps' => l10n.recipeEmptySteps,
+    'recipe_card' => l10n.recipeEmptyCard,
+    _ => fallback.title,
+  };
+  return ComponentEmptyState(title: title, message: fallback.message);
 }
 
 Map<String, dynamic> _data(ComponentDescriptor component) {

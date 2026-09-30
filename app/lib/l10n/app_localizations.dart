@@ -1120,6 +1120,120 @@ abstract class AppLocalizations {
   /// **'基于这一版继续编辑'**
   String get recipeBaseOnVersion;
 
+  /// No description provided for @recipePhotoTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'成品图'**
+  String get recipePhotoTitle;
+
+  /// No description provided for @recipePhotoStageHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'先选图，保存菜谱时会把它放进第 1 版。'**
+  String get recipePhotoStageHint;
+
+  /// No description provided for @recipePhotoVersionHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'照片会生成新的菜谱版本，不会改动旧版本。'**
+  String get recipePhotoVersionHint;
+
+  /// No description provided for @recipePhotoSelected.
+  ///
+  /// In zh, this message translates to:
+  /// **'已选择的成品图'**
+  String get recipePhotoSelected;
+
+  /// No description provided for @recipePhotoSuccess.
+  ///
+  /// In zh, this message translates to:
+  /// **'已上传，图片会以短期私有地址读取。'**
+  String get recipePhotoSuccess;
+
+  /// No description provided for @recipePhotoPicking.
+  ///
+  /// In zh, this message translates to:
+  /// **'正在打开照片选择器…'**
+  String get recipePhotoPicking;
+
+  /// No description provided for @recipePhotoProcessing.
+  ///
+  /// In zh, this message translates to:
+  /// **'正在压缩并清除照片元数据…'**
+  String get recipePhotoProcessing;
+
+  /// No description provided for @recipePhotoUploading.
+  ///
+  /// In zh, this message translates to:
+  /// **'正在安全上传…'**
+  String get recipePhotoUploading;
+
+  /// No description provided for @recipePhotoUploadError.
+  ///
+  /// In zh, this message translates to:
+  /// **'图片上传失败，请稍后重试。'**
+  String get recipePhotoUploadError;
+
+  /// No description provided for @recipePhotoReadError.
+  ///
+  /// In zh, this message translates to:
+  /// **'图片无法读取，请换一张图片。'**
+  String get recipePhotoReadError;
+
+  /// No description provided for @recipePhotoTooLarge.
+  ///
+  /// In zh, this message translates to:
+  /// **'图片尺寸过大，无法安全处理。'**
+  String get recipePhotoTooLarge;
+
+  /// No description provided for @recipePhotoUnsafe.
+  ///
+  /// In zh, this message translates to:
+  /// **'图片无法安全处理，请换一张图片。'**
+  String get recipePhotoUnsafe;
+
+  /// No description provided for @recipeCameraButton.
+  ///
+  /// In zh, this message translates to:
+  /// **'拍照'**
+  String get recipeCameraButton;
+
+  /// No description provided for @recipeGalleryButton.
+  ///
+  /// In zh, this message translates to:
+  /// **'从相册选图'**
+  String get recipeGalleryButton;
+
+  /// No description provided for @recipeSourceAuthorFilled.
+  ///
+  /// In zh, this message translates to:
+  /// **'作者填写'**
+  String get recipeSourceAuthorFilled;
+
+  /// No description provided for @recipeEmptyRecipeHeader.
+  ///
+  /// In zh, this message translates to:
+  /// **'没有菜谱头部'**
+  String get recipeEmptyRecipeHeader;
+
+  /// No description provided for @recipeEmptyIngredients.
+  ///
+  /// In zh, this message translates to:
+  /// **'没有食材'**
+  String get recipeEmptyIngredients;
+
+  /// No description provided for @recipeEmptySteps.
+  ///
+  /// In zh, this message translates to:
+  /// **'没有步骤'**
+  String get recipeEmptySteps;
+
+  /// No description provided for @recipeEmptyCard.
+  ///
+  /// In zh, this message translates to:
+  /// **'没有菜谱卡'**
+  String get recipeEmptyCard;
+
   /// No description provided for @recipeListSummary.
   ///
   /// In zh, this message translates to:

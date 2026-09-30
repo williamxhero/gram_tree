@@ -111,22 +111,22 @@ final defaultComponentRegistry = ComponentRegistry(const [
   ComponentSpec(
     type: 'recipe_header',
     builder: buildRecipeHeaderComponent,
-    emptyState: ComponentEmptyState(title: '没有菜谱头部'),
+    emptyState: ComponentEmptyState(title: ''),
   ),
   ComponentSpec(
     type: 'recipe_ingredients',
     builder: buildRecipeIngredientsComponent,
-    emptyState: ComponentEmptyState(title: '没有食材'),
+    emptyState: ComponentEmptyState(title: ''),
   ),
   ComponentSpec(
     type: 'recipe_steps',
     builder: buildRecipeStepsComponent,
-    emptyState: ComponentEmptyState(title: '没有步骤'),
+    emptyState: ComponentEmptyState(title: ''),
   ),
   ComponentSpec(
     type: 'recipe_card',
     builder: buildRecipeCardComponent,
-    emptyState: ComponentEmptyState(title: '没有菜谱卡'),
+    emptyState: ComponentEmptyState(title: ''),
   ),
   ComponentSpec(
     type: 'source_demo',
