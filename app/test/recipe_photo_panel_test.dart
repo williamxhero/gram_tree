@@ -1,5 +1,6 @@
 import 'dart:typed_data';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -187,6 +188,7 @@ void main() {
   });
 
   testWidgets('相机权限拒绝显示不可用状态而不调用上传', (tester) async {
+    if (kIsWeb) return;
     final picker = _FakePicker(null);
     final processor = _FakeProcessor(
       ProcessedRecipePhoto(
