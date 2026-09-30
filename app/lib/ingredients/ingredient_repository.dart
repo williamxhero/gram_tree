@@ -292,7 +292,7 @@ class IngredientRepository {
           for (final detail in fetched) detail.id: detail,
         };
         if (before != null) {
-          final merged = <String, String>{...?before.merged};
+          final merged = <String, String>{...before.merged};
           for (final detail in fetched) {
             final requestedId = detail.requestedId;
             if (requestedId != null && requestedId != detail.id) {
