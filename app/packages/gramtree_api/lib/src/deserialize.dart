@@ -30,10 +30,13 @@ import 'package:gramtree_api/src/model/fallback_info.dart';
 import 'package:gramtree_api/src/model/health_checks.dart';
 import 'package:gramtree_api/src/model/health_response.dart';
 import 'package:gramtree_api/src/model/identity_out.dart';
+import 'package:gramtree_api/src/model/ingredient_out.dart';
 import 'package:gramtree_api/src/model/page_description.dart';
 import 'package:gramtree_api/src/model/profile_update.dart';
 import 'package:gramtree_api/src/model/refresh_request.dart';
 import 'package:gramtree_api/src/model/rejection_reason.dart';
+import 'package:gramtree_api/src/model/search_query.dart';
+import 'package:gramtree_api/src/model/search_result.dart';
 import 'package:gramtree_api/src/model/skip_adjustment_request.dart';
 import 'package:gramtree_api/src/model/skip_adjustment_result.dart';
 import 'package:gramtree_api/src/model/source_basis.dart';
@@ -152,6 +155,9 @@ ReturnType deserialize<ReturnType, BaseType>(
           as ReturnType;
     case 'IdentityOut':
       return IdentityOut.fromJson(value as Map<String, dynamic>) as ReturnType;
+    case 'IngredientOut':
+      return IngredientOut.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
     case 'PageDescription':
       return PageDescription.fromJson(value as Map<String, dynamic>)
           as ReturnType;
@@ -164,6 +170,10 @@ ReturnType deserialize<ReturnType, BaseType>(
     case 'RejectionReason':
       return RejectionReason.fromJson(value as Map<String, dynamic>)
           as ReturnType;
+    case 'SearchQuery':
+      return SearchQuery.fromJson(value as Map<String, dynamic>) as ReturnType;
+    case 'SearchResult':
+      return SearchResult.fromJson(value as Map<String, dynamic>) as ReturnType;
     case 'SkipAdjustmentRequest':
       return SkipAdjustmentRequest.fromJson(value as Map<String, dynamic>)
           as ReturnType;

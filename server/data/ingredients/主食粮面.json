@@ -1,0 +1,162 @@
+[
+  {
+    "id": "be84919b-67a2-475a-9a18-9fdc5f54baad",
+    "standard_name": "大米",
+    "aliases": [],
+    "pinyin": "dami",
+    "pinyin_initials": "dm",
+    "category": "主食粮面"
+  },
+  {
+    "id": "43120a7e-1a4b-46f4-a672-384293f60a58",
+    "standard_name": "糯米",
+    "aliases": [],
+    "pinyin": "nuomi",
+    "pinyin_initials": "nm",
+    "category": "主食粮面"
+  },
+  {
+    "id": "7f768ad9-e486-4360-8fac-cdb28d173994",
+    "standard_name": "小米",
+    "aliases": [],
+    "pinyin": "xiaomi",
+    "pinyin_initials": "xm",
+    "category": "主食粮面"
+  },
+  {
+    "id": "bf72138b-1dd8-4482-9d9e-a8b99432729f",
+    "standard_name": "黑米",
+    "aliases": [],
+    "pinyin": "heimi",
+    "pinyin_initials": "hm",
+    "category": "主食粮面"
+  },
+  {
+    "id": "b9af4cb5-17bf-4c35-9f20-cbdcc6b826ea",
+    "standard_name": "面粉",
+    "aliases": [],
+    "pinyin": "mianfen",
+    "pinyin_initials": "mf",
+    "category": "主食粮面"
+  },
+  {
+    "id": "6f1de9a1-3399-401a-add0-d123c312f1a7",
+    "standard_name": "饺子皮",
+    "aliases": [],
+    "pinyin": "jiaozipi",
+    "pinyin_initials": "jzp",
+    "category": "主食粮面"
+  },
+  {
+    "id": "5bc1f5ac-9297-4d32-b36c-cb6562efdd13",
+    "standard_name": "馄饨皮",
+    "aliases": [],
+    "pinyin": "huntunpi",
+    "pinyin_initials": "htp",
+    "category": "主食粮面"
+  },
+  {
+    "id": "72966fa4-1218-4700-8006-4a3657e139c4",
+    "standard_name": "面条",
+    "aliases": [],
+    "pinyin": "miantiao",
+    "pinyin_initials": "mt",
+    "category": "主食粮面"
+  },
+  {
+    "id": "6fbafce7-d8a4-47a3-bb55-767dda3cbbc5",
+    "standard_name": "挂面",
+    "aliases": [],
+    "pinyin": "guamian",
+    "pinyin_initials": "gm",
+    "category": "主食粮面"
+  },
+  {
+    "id": "14bb4c8e-6283-45ee-933a-9c4a43cb5b08",
+    "standard_name": "意面",
+    "aliases": [],
+    "pinyin": "yimian",
+    "pinyin_initials": "ym",
+    "category": "主食粮面"
+  },
+  {
+    "id": "7a81634b-3140-4fc7-a2fc-8aff356f73dc",
+    "standard_name": "米粉",
+    "aliases": [],
+    "pinyin": "mifen",
+    "pinyin_initials": "mf",
+    "category": "主食粮面"
+  },
+  {
+    "id": "d04409dc-506c-4972-ba10-282c1d25ddde",
+    "standard_name": "米线",
+    "aliases": [],
+    "pinyin": "mixian",
+    "pinyin_initials": "mx",
+    "category": "主食粮面"
+  },
+  {
+    "id": "d179cedb-b4d7-4ad0-98a9-d00f0578e75f",
+    "standard_name": "粉丝",
+    "aliases": [],
+    "pinyin": "fensi",
+    "pinyin_initials": "fs",
+    "category": "主食粮面"
+  },
+  {
+    "id": "93c203c6-e2a9-4822-8a93-f3eaddb03e9a",
+    "standard_name": "粉条",
+    "aliases": [],
+    "pinyin": "fentiao",
+    "pinyin_initials": "ft",
+    "category": "主食粮面"
+  },
+  {
+    "id": "222c110e-fac8-463b-9588-6d729cabc98e",
+    "standard_name": "年糕",
+    "aliases": [],
+    "pinyin": "niangao",
+    "pinyin_initials": "ng",
+    "category": "主食粮面"
+  },
+  {
+    "id": "2513da83-b248-4433-9cd6-c0e9f40b0666",
+    "standard_name": "面包",
+    "aliases": [],
+    "pinyin": "mianbao",
+    "pinyin_initials": "mb",
+    "category": "主食粮面"
+  },
+  {
+    "id": "1ff38ff0-8902-4022-8980-2891d00edf31",
+    "standard_name": "馒头",
+    "aliases": [],
+    "pinyin": "mantou",
+    "pinyin_initials": "mt",
+    "category": "主食粮面"
+  },
+  {
+    "id": "acdacd59-892a-465c-83ce-b5df77ec3d08",
+    "standard_name": "包子",
+    "aliases": [],
+    "pinyin": "baozi",
+    "pinyin_initials": "bz",
+    "category": "主食粮面"
+  },
+  {
+    "id": "53ae1d02-6e82-4c79-810a-5c9f7fa7aaa1",
+    "standard_name": "花卷",
+    "aliases": [],
+    "pinyin": "huajuan",
+    "pinyin_initials": "hj",
+    "category": "主食粮面"
+  },
+  {
+    "id": "79b4546e-bba8-44be-884f-6bc846ba882d",
+    "standard_name": "饼干",
+    "aliases": [],
+    "pinyin": "binggan",
+    "pinyin_initials": "bg",
+    "category": "主食粮面"
+  }
+]

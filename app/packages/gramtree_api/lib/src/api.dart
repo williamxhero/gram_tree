@@ -13,6 +13,7 @@ import 'package:gramtree_api/src/api/auth_api.dart';
 import 'package:gramtree_api/src/api/config_api.dart';
 import 'package:gramtree_api/src/api/events_api.dart';
 import 'package:gramtree_api/src/api/health_api.dart';
+import 'package:gramtree_api/src/api/ingredients_api.dart';
 import 'package:gramtree_api/src/api/ui_protocol_api.dart';
 
 class GramtreeApi {
@@ -118,6 +119,12 @@ class GramtreeApi {
   /// by doing that all interceptors will not be executed
   HealthApi getHealthApi() {
     return HealthApi(dio);
+  }
+
+  /// Get IngredientsApi instance, base route and serializer can be overridden by a given but be careful,
+  /// by doing that all interceptors will not be executed
+  IngredientsApi getIngredientsApi() {
+    return IngredientsApi(dio);
   }
 
   /// Get UiProtocolApi instance, base route and serializer can be overridden by a given but be careful,
