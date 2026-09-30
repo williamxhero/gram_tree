@@ -35,7 +35,12 @@ def _normalize_nullable(value: Any) -> Any:
 
 def export() -> str:
     app = create_app(
-        Settings(env="prod", auth_secret="export-only-" + "x" * 32, mail_backend="smtp")
+        Settings(
+            env="prod",
+            auth_secret="export-only-" + "x" * 32,
+            image_signing_secret="export-image-secret-" + "x" * 32,
+            mail_backend="smtp",
+        )
     )
     document = app.openapi()
     schemas = document.get("components", {}).get("schemas", {})

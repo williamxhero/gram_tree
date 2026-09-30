@@ -338,9 +338,7 @@ def _image_secret(settings: Settings) -> str:
 def _signed_url(settings: Settings, recipe_id: uuid.UUID, image_id: uuid.UUID) -> str:
     expires = int((datetime.now(UTC) + timedelta(seconds=_SIGNED_URL_TTL)).timestamp())
     payload = f"{recipe_id}:{image_id}:{expires}".encode()
-    signature = hmac.new(
-        _image_secret(settings).encode(), payload, hashlib.sha256
-    ).hexdigest()
+    signature = hmac.new(_image_secret(settings).encode(), payload, hashlib.sha256).hexdigest()
     return f"/v1/recipes/{recipe_id}/images/{image_id}?expires={expires}&signature={signature}"
 
 
@@ -409,7 +407,9 @@ def _snapshot_json(snapshot: RecipeSnapshot) -> dict[str, Any]:
     return snapshot.model_dump(mode="json")
 
 
-def _enqueue_save_event(session: Session, owner: User, recipe: Recipe, version: RecipeVersion) -> None:
+def _enqueue_save_event(
+    session: Session, owner: User, recipe: Recipe, version: RecipeVersion
+) -> None:
     session.add(
         RecipeSaveOutbox(
             recipe_id=recipe.id,
@@ -689,7 +689,9 @@ def list_versions(
         )
     rows = list(
         session.scalars(
-            query.order_by(RecipeVersion.created_at.desc(), RecipeVersion.id.desc()).limit(limit + 1)
+            query.order_by(RecipeVersion.created_at.desc(), RecipeVersion.id.desc()).limit(
+                limit + 1
+            )
         )
     )
     has_more = len(rows) > limit
@@ -706,9 +708,7 @@ def list_versions(
             )
             for row in rows
         ],
-        next_cursor=encode_cursor(rows[-1].created_at, rows[-1].id)
-        if has_more and rows
-        else None,
+        next_cursor=encode_cursor(rows[-1].created_at, rows[-1].id) if has_more and rows else None,
     )
 
 

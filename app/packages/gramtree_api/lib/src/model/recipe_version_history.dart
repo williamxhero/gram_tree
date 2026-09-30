@@ -18,18 +18,23 @@ part 'recipe_version_history.g.dart';
 )
 class RecipeVersionHistory {
   /// Returns a new [RecipeVersionHistory] instance.
-  RecipeVersionHistory({required this.items});
+  RecipeVersionHistory({required this.items, this.nextCursor});
 
   @JsonKey(name: r'items', required: true, includeIfNull: false)
   final List<RecipeVersionSummary> items;
 
+  @JsonKey(name: r'next_cursor', required: false, includeIfNull: false)
+  final String? nextCursor;
+
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
-      other is RecipeVersionHistory && other.items == items;
+      other is RecipeVersionHistory &&
+          other.items == items &&
+          other.nextCursor == nextCursor;
 
   @override
-  int get hashCode => items.hashCode;
+  int get hashCode => items.hashCode + nextCursor.hashCode;
 
   factory RecipeVersionHistory.fromJson(Map<String, dynamic> json) =>
       _$RecipeVersionHistoryFromJson(json);

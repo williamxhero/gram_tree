@@ -345,6 +345,8 @@ class RecipesApi {
   ///
   /// Parameters:
   /// * [recipeId]
+  /// * [cursor] - 上一页返回的 next_cursor
+  /// * [limit] - 每页条数，上限见配置项 api.page_size_max
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -356,6 +358,8 @@ class RecipesApi {
   /// Throws [DioException] if API call or serialization fails
   Future<Response<RecipeVersionHistory>> listRecipeVersions({
     required String recipeId,
+    String? cursor,
+    int? limit = 20,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
     Map<String, dynamic>? extra,
@@ -381,9 +385,15 @@ class RecipesApi {
       validateStatus: validateStatus,
     );
 
+    final _queryParameters = <String, dynamic>{
+      r'cursor': cursor,
+      if (limit != null) r'limit': limit,
+    };
+
     final _response = await _dio.request<Object>(
       _path,
       options: _options,
+      queryParameters: _queryParameters,
       cancelToken: cancelToken,
       onSendProgress: onSendProgress,
       onReceiveProgress: onReceiveProgress,

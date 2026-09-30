@@ -177,10 +177,38 @@ def test_versions_are_immutable_and_history_can_branch_from_old_version(api: Api
     branch = recipe_input()
     branch["snapshot"]["servings"] = 3
     branch["change_note"] = "从第一版重新开始"
+    branch["base_version_id"] = first_id
     response = api.client.post(f"/v1/recipes/{recipe_id}/versions", json=branch, headers=headers)
     assert response.status_code == 201
-    assert response.json()["version"]["version_number"] == 3
-    assert response.json()["version"]["previous_version_id"] == second["version"]["id"]
+    branched = response.json()
+    assert branched["version"]["version_number"] == 3
+    assert branched["version"]["previous_version_id"] == second["version"]["id"]
+    assert branched["version"]["snapshot"]["servings"] == 3
+    assert branched["version"]["snapshot"]["ingredients"][0]["quantity"] == 300
+
+
+def test_version_history_uses_cursor_pagination(api: Api) -> None:
+    saved, headers = _create(api, "history@example.com")
+    recipe_id = saved["id"]
+    for servings in (3, 4, 5):
+        body = recipe_input()
+        body["snapshot"]["servings"] = servings
+        response = api.client.post(f"/v1/recipes/{recipe_id}/versions", json=body, headers=headers)
+        assert response.status_code == 201
+    first = api.client.get(f"/v1/recipes/{recipe_id}/versions?limit=2", headers=headers)
+    assert first.status_code == 200
+    page = first.json()
+    assert len(page["items"]) == 2
+    assert page["next_cursor"]
+    second = api.client.get(
+        f"/v1/recipes/{recipe_id}/versions?limit=2&cursor={page['next_cursor']}",
+        headers=headers,
+    )
+    assert second.status_code == 200
+    assert len(second.json()["items"]) == 2
+    assert {item["version_number"] for item in page["items"]}.isdisjoint(
+        {item["version_number"] for item in second.json()["items"]}
+    )
 
 
 def test_invalid_references_and_dependency_cycles_are_rejected(api: Api) -> None:

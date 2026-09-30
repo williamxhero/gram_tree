@@ -9,6 +9,8 @@ part of 'recipe_version_create.dart';
 abstract class _$RecipeVersionCreateCWProxy {
   RecipeVersionCreate aiAssisted(bool? aiAssisted);
 
+  RecipeVersionCreate baseVersionId(String? baseVersionId);
+
   RecipeVersionCreate changeNote(String? changeNote);
 
   RecipeVersionCreate snapshot(RecipeSnapshot snapshot);
@@ -21,6 +23,7 @@ abstract class _$RecipeVersionCreateCWProxy {
   /// ````
   RecipeVersionCreate call({
     bool? aiAssisted,
+    String? baseVersionId,
     String? changeNote,
     RecipeSnapshot snapshot,
   });
@@ -35,6 +38,10 @@ class _$RecipeVersionCreateCWProxyImpl implements _$RecipeVersionCreateCWProxy {
   @override
   RecipeVersionCreate aiAssisted(bool? aiAssisted) =>
       this(aiAssisted: aiAssisted);
+
+  @override
+  RecipeVersionCreate baseVersionId(String? baseVersionId) =>
+      this(baseVersionId: baseVersionId);
 
   @override
   RecipeVersionCreate changeNote(String? changeNote) =>
@@ -53,6 +60,7 @@ class _$RecipeVersionCreateCWProxyImpl implements _$RecipeVersionCreateCWProxy {
   /// ````
   RecipeVersionCreate call({
     Object? aiAssisted = const $CopyWithPlaceholder(),
+    Object? baseVersionId = const $CopyWithPlaceholder(),
     Object? changeNote = const $CopyWithPlaceholder(),
     Object? snapshot = const $CopyWithPlaceholder(),
   }) {
@@ -61,6 +69,10 @@ class _$RecipeVersionCreateCWProxyImpl implements _$RecipeVersionCreateCWProxy {
           ? _value.aiAssisted
           // ignore: cast_nullable_to_non_nullable
           : aiAssisted as bool?,
+      baseVersionId: baseVersionId == const $CopyWithPlaceholder()
+          ? _value.baseVersionId
+          // ignore: cast_nullable_to_non_nullable
+          : baseVersionId as String?,
       changeNote: changeNote == const $CopyWithPlaceholder()
           ? _value.changeNote
           // ignore: cast_nullable_to_non_nullable
@@ -93,6 +105,7 @@ RecipeVersionCreate _$RecipeVersionCreateFromJson(
     $checkKeys(json, requiredKeys: const ['snapshot']);
     final val = RecipeVersionCreate(
       aiAssisted: $checkedConvert('ai_assisted', (v) => v as bool? ?? false),
+      baseVersionId: $checkedConvert('base_version_id', (v) => v as String?),
       changeNote: $checkedConvert('change_note', (v) => v as String? ?? ''),
       snapshot: $checkedConvert(
         'snapshot',
@@ -101,13 +114,18 @@ RecipeVersionCreate _$RecipeVersionCreateFromJson(
     );
     return val;
   },
-  fieldKeyMap: const {'aiAssisted': 'ai_assisted', 'changeNote': 'change_note'},
+  fieldKeyMap: const {
+    'aiAssisted': 'ai_assisted',
+    'baseVersionId': 'base_version_id',
+    'changeNote': 'change_note',
+  },
 );
 
 Map<String, dynamic> _$RecipeVersionCreateToJson(
   RecipeVersionCreate instance,
 ) => <String, dynamic>{
   'ai_assisted': ?instance.aiAssisted,
+  'base_version_id': ?instance.baseVersionId,
   'change_note': ?instance.changeNote,
   'snapshot': instance.snapshot.toJson(),
 };

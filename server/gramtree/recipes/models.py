@@ -97,7 +97,9 @@ class RecipeSaveOutbox(Base):
 
     id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=new_id)
     recipe_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("recipes.id", ondelete="CASCADE"))
-    version_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("recipe_versions.id", ondelete="CASCADE"))
+    version_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("recipe_versions.id", ondelete="CASCADE")
+    )
     owner_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
     previous_version_id: Mapped[uuid.UUID | None] = mapped_column(default=None)
     edit_operations: Mapped[list[dict[str, Any]]] = mapped_column(JSONB, default=list)

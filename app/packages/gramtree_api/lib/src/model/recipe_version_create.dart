@@ -21,6 +21,8 @@ class RecipeVersionCreate {
   RecipeVersionCreate({
     this.aiAssisted = false,
 
+    this.baseVersionId,
+
     this.changeNote = '',
 
     required this.snapshot,
@@ -33,6 +35,9 @@ class RecipeVersionCreate {
     includeIfNull: false,
   )
   final bool? aiAssisted;
+
+  @JsonKey(name: r'base_version_id', required: false, includeIfNull: false)
+  final String? baseVersionId;
 
   @JsonKey(
     defaultValue: '',
@@ -50,12 +55,16 @@ class RecipeVersionCreate {
       identical(this, other) ||
       other is RecipeVersionCreate &&
           other.aiAssisted == aiAssisted &&
+          other.baseVersionId == baseVersionId &&
           other.changeNote == changeNote &&
           other.snapshot == snapshot;
 
   @override
   int get hashCode =>
-      aiAssisted.hashCode + changeNote.hashCode + snapshot.hashCode;
+      aiAssisted.hashCode +
+      baseVersionId.hashCode +
+      changeNote.hashCode +
+      snapshot.hashCode;
 
   factory RecipeVersionCreate.fromJson(Map<String, dynamic> json) =>
       _$RecipeVersionCreateFromJson(json);
