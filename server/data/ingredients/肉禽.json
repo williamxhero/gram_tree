@@ -8,7 +8,82 @@
     ],
     "pinyin": "zhurou",
     "pinyin_initials": "zr",
-    "category": "肉禽"
+    "category": "肉禽",
+    "attributes": {
+      "flavor": {
+        "value": {
+          "umami": 1,
+          "oily": 1
+        },
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "functional": {
+        "value": false,
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "scaling": {
+        "value": "线性",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "base_unit": {
+        "value": "克",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "allergens": {
+        "value": [],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "nutrition": {
+        "value": {
+          "energy_kcal": 263,
+          "protein_g": 16.9,
+          "fat_g": 21.2,
+          "carbohydrate_g": 0,
+          "sodium_mg": 56
+        },
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "purchase_units": {
+        "value": [
+          {
+            "name": "盒",
+            "grams": 500
+          }
+        ],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "market_zone": {
+        "value": "肉禽",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "storage": {
+        "value": [
+          {
+            "method": "冷藏",
+            "days": 2
+          },
+          {
+            "method": "冷冻",
+            "days": 90
+          }
+        ],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "pantry_staple": {
+        "value": false,
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      }
+    }
   },
   {
     "id": "fe5e7c32-f150-40f9-818f-a6938313ef5b",

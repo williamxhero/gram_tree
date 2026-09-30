@@ -5,7 +5,93 @@
     "aliases": [],
     "pinyin": "huasheng",
     "pinyin_initials": "hs",
-    "category": "坚果干货"
+    "category": "坚果干货",
+    "attributes": {
+      "flavor": {
+        "value": {
+          "oily": 1
+        },
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "functional": {
+        "value": false,
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "scaling": {
+        "value": "线性",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "base_unit": {
+        "value": "克",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "count_units": {
+        "value": [
+          {
+            "unit": "粒",
+            "grams": 1
+          }
+        ],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "allergens": {
+        "value": [
+          "花生"
+        ],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "nutrition": {
+        "value": {
+          "energy_kcal": 567,
+          "protein_g": 25.8,
+          "fat_g": 49.2,
+          "carbohydrate_g": 16.1,
+          "sodium_mg": 18
+        },
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "purchase_units": {
+        "value": [
+          {
+            "name": "袋",
+            "grams": 500
+          }
+        ],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "market_zone": {
+        "value": "干货",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "storage": {
+        "value": [
+          {
+            "method": "常温",
+            "days": 90
+          },
+          {
+            "method": "冷藏",
+            "days": 180
+          }
+        ],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "pantry_staple": {
+        "value": false,
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      }
+    }
   },
   {
     "id": "8aaf1d91-2b35-4602-acae-201def307853",
@@ -13,7 +99,93 @@
     "aliases": [],
     "pinyin": "hetao",
     "pinyin_initials": "ht",
-    "category": "坚果干货"
+    "category": "坚果干货",
+    "attributes": {
+      "flavor": {
+        "value": {
+          "oily": 1
+        },
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "functional": {
+        "value": false,
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "scaling": {
+        "value": "线性",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "base_unit": {
+        "value": "克",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "count_units": {
+        "value": [
+          {
+            "unit": "个",
+            "grams": 10
+          }
+        ],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "allergens": {
+        "value": [
+          "坚果及其果仁"
+        ],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "nutrition": {
+        "value": {
+          "energy_kcal": 654,
+          "protein_g": 15.2,
+          "fat_g": 65.2,
+          "carbohydrate_g": 13.7,
+          "sodium_mg": 2
+        },
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "purchase_units": {
+        "value": [
+          {
+            "name": "袋",
+            "grams": 500
+          }
+        ],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "market_zone": {
+        "value": "干货",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "storage": {
+        "value": [
+          {
+            "method": "常温",
+            "days": 90
+          },
+          {
+            "method": "冷藏",
+            "days": 180
+          }
+        ],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "pantry_staple": {
+        "value": false,
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      }
+    }
   },
   {
     "id": "2b4c10d7-5fc4-43d3-900c-8d9e64387985",

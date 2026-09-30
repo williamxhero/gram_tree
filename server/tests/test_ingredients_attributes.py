@@ -1,434 +1,286 @@
-"""测试食材详细属性（票 #97）。
+"""食材详细属性（ticket #97，SPEC-002.1）。
 
-按 TDD 流程：先写失败的测试，再实现让它通过。测试只通过 CLI 导入 + HTTP 接口读取，
-不直接访问数据库（遵守"只测外部行为"原则）。
+只通过外部接口测试：命令行导入（`gramtree ingredients import`）+ HTTP 读取。
 """
 
+import copy
 import json
-import uuid
 from pathlib import Path
+from typing import Any
 
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy.orm import Session
 
-from gramtree.ingredients.importer import import_directory
+from gramtree.cli import main as cli
+
+FIXTURES = Path(__file__).parent / "data" / "ingredients"
+SEED = Path(__file__).parent.parent / "data" / "ingredients"
+
+FULL_ID = "00000000-0000-4000-8000-000000000101"
+OTHER_ID = "00000000-0000-4000-8000-000000000102"
+
+AI = {"source": "AI 起草、待核对", "status": "ai_draft"}
+CHECKED = {"source": "人工整理", "status": "verified"}
+
+FULL_ATTRIBUTES: dict[str, Any] = {
+    "flavor": {"value": {"salty": 3, "umami": 2}, **CHECKED},
+    "functional": {"value": False, **AI},
+    "scaling": {"value": "线性", **AI},
+    "base_unit": {"value": "毫升", **CHECKED},
+    "density": {"value": 1.15, **AI},
+    "count_units": {"value": [{"unit": "片", "grams": 5}], **AI},
+    "allergens": {"value": ["大豆", "含麸质的谷物"], **CHECKED},
+    "nutrition": {
+        "value": {"energy_kcal": 63, "protein_g": 5.6, "sodium_mg": 5757},
+        "source": "USDA FoodData Central（测试用）",
+        "status": "verified",
+    },
+    "purchase_units": {"value": [{"name": "瓶", "grams": 580}, {"name": "袋", "grams": 400}], **AI},
+    "market_zone": {"value": "粮油调味", **AI},
+    "storage": {"value": [{"method": "常温", "days": 180}, {"method": "冷藏", "days": 365}], **AI},
+    "pantry_staple": {"value": True, **CHECKED},
+}
+
+EST = {"source": "AI 起草、待核对", "status": "ai_draft", "estimate": True}
+OK = {"source": "人工整理", "status": "verified", "estimate": False}
+
+# 按 #97 期望的接口输出，逐项手写：没写的味型是 0，没写的营养项是 null
+FULL_EXPECTED: dict[str, Any] = {
+    "flavor": {
+        "value": {
+            "salty": 3,
+            "sweet": 0,
+            "sour": 0,
+            "spicy": 0,
+            "umami": 2,
+            "numbing": 0,
+            "oily": 0,
+        },
+        **OK,
+    },
+    "functional": {"value": False, **EST},
+    "scaling": {"value": "线性", **EST},
+    "base_unit": {"value": "毫升", **OK},
+    "density": {"value": 1.15, **EST},
+    "count_units": {"value": [{"unit": "片", "grams": 5.0}], **EST},
+    "allergens": {"value": ["大豆", "含麸质的谷物"], **OK},
+    "nutrition": {
+        "value": {
+            "energy_kcal": 63.0,
+            "protein_g": 5.6,
+            "fat_g": None,
+            "carbohydrate_g": None,
+            "sodium_mg": 5757.0,
+        },
+        "source": "USDA FoodData Central（测试用）",
+        "status": "verified",
+        "estimate": False,
+    },
+    "purchase_units": {
+        "value": [{"name": "瓶", "grams": 580.0}, {"name": "袋", "grams": 400.0}],
+        **EST,
+    },
+    "market_zone": {"value": "粮油调味", **EST},
+    "storage": {
+        "value": [{"method": "常温", "days": 180}, {"method": "冷藏", "days": 365}],
+        **EST,
+    },
+    "pantry_staple": {"value": True, **OK},
+}
+
+ALL_NULL = dict.fromkeys(FULL_EXPECTED)
 
 
-@pytest.fixture
-def test_data_dir(tmp_path: Path) -> Path:
-    """创建临时测试数据目录。"""
-    return tmp_path / "test_ingredients"
+def _record(id_: str, name: str, pinyin: str, attributes: dict[str, Any] | None = None) -> dict:
+    record: dict[str, Any] = {
+        "id": id_,
+        "standard_name": name,
+        "aliases": [],
+        "pinyin": pinyin,
+        "pinyin_initials": pinyin[0],
+        "category": "调料",
+    }
+    if attributes is not None:
+        record["attributes"] = attributes
+    return record
 
 
-def test_flavor_profiles_import_and_read(test_data_dir: Path, engine, client):
-    """味型贡献：七项（咸甜酸辣鲜麻油），每项 0～3 强度，带来源和校对状态。"""
-    test_data_dir.mkdir()
-    ingredient_id = str(uuid.uuid4())
-
-    # 数据文件包含完整味型信息
-    (test_data_dir / "manifest.json").write_text(
-        json.dumps({"version": "1.0.0", "changelog": "测试味型"}), encoding="utf-8"
+def _write(directory: Path, version: str, records: list[dict]) -> Path:
+    directory.mkdir(parents=True, exist_ok=True)
+    (directory / "manifest.json").write_text(
+        json.dumps({"version": version, "changelog": "测试"}), encoding="utf-8"
     )
-    (test_data_dir / "test.json").write_text(
-        json.dumps([
-            {
-                "id": ingredient_id,
-                "standard_name": "生抽",
-                "pinyin": "shengchou",
-                "pinyin_initials": "sc",
-                "category": "调料",
-                "flavor_profiles": {
-                    "salty": {"strength": 3, "source": "manual", "verified": True},
-                    "sweet": {"strength": 0, "source": "manual", "verified": True},
-                    "sour": {"strength": 0, "source": "manual", "verified": True},
-                    "spicy": {"strength": 0, "source": "manual", "verified": True},
-                    "umami": {"strength": 2, "source": "manual", "verified": True},
-                    "numbing": {"strength": 0, "source": "manual", "verified": True},
-                    "oily": {"strength": 0, "source": "manual", "verified": True}
-                }
-            }
-        ]), encoding="utf-8"
-    )
-
-    # 导入
-    with Session(engine) as db_session:
-        result = import_directory(db_session, test_data_dir)
-        assert result["added"] == 1
-
-    # HTTP 读取
-    response = client.get(f"/v1/ingredients/{ingredient_id}")
-    assert response.status_code == 200
-    data = response.json()
-
-    # 验证味型数据
-    assert "flavor_profiles" in data
-    flavors = data["flavor_profiles"]
-    assert flavors["salty"]["strength"] == 3
-    assert flavors["salty"]["verified"] is True
-    assert flavors["umami"]["strength"] == 2
-    assert flavors["sweet"]["strength"] == 0
+    (directory / "data.json").write_text(json.dumps(records, ensure_ascii=False), encoding="utf-8")
+    return directory
 
 
-def test_flavor_strength_validation(test_data_dir: Path, engine):
-    """味型强度只能 0～3，超出范围时导入失败。"""
-    test_data_dir.mkdir()
-    ingredient_id = str(uuid.uuid4())
-
-    (test_data_dir / "manifest.json").write_text(
-        json.dumps({"version": "1.0.0", "changelog": "测试"}), encoding="utf-8"
-    )
-    (test_data_dir / "test.json").write_text(
-        json.dumps([
-            {
-                "id": ingredient_id,
-                "standard_name": "测试",
-                "pinyin": "test",
-                "pinyin_initials": "t",
-                "category": "其他",
-                "flavor_profiles": {
-                    "salty": {"strength": 5, "source": "manual", "verified": False}  # 非法强度
-                }
-            }
-        ]), encoding="utf-8"
-    )
-
-    # 导入应该失败
-    from gramtree.ingredients.importer import IngredientImportError
-    with Session(engine) as db_session:
-        with pytest.raises(IngredientImportError, match="strength"):
-            import_directory(db_session, test_data_dir)
+def _import(directory: Path) -> int:
+    return cli(["ingredients", "import", str(directory)])
 
 
-def test_functional_ingredient_and_scaling(test_data_dir: Path, engine, client):
-    """功能性食材标记和默认缩放方式（linear/fixed/stepped）。"""
-    test_data_dir.mkdir()
-    ingredient_id = str(uuid.uuid4())
-
-    (test_data_dir / "manifest.json").write_text(
-        json.dumps({"version": "1.0.0", "changelog": "测试功能性食材"}), encoding="utf-8"
-    )
-    (test_data_dir / "test.json").write_text(
-        json.dumps([
-            {
-                "id": ingredient_id,
-                "standard_name": "盐",
-                "pinyin": "yan",
-                "pinyin_initials": "y",
-                "category": "调料",
-                "is_functional": {"value": True, "source": "manual", "verified": True},
-                "default_scaling": {"value": "fixed", "source": "manual", "verified": True}
-            }
-        ]), encoding="utf-8"
-    )
-
-    with Session(engine) as db_session:
-        result = import_directory(db_session, test_data_dir)
-        assert result["added"] == 1
-
-    response = client.get(f"/v1/ingredients/{ingredient_id}")
-    assert response.status_code == 200
-    data = response.json()
-
-    assert data["is_functional"]["value"] is True
-    assert data["is_functional"]["verified"] is True
-    assert data["default_scaling"]["value"] == "fixed"
-    assert data["default_scaling"]["verified"] is True
+def _attributes(client: TestClient, id_: str) -> dict[str, Any]:
+    resp = client.get(f"/v1/ingredients/{id_}")
+    assert resp.status_code == 200
+    return resp.json()["attributes"]
 
 
-def test_scaling_method_validation(test_data_dir: Path, engine):
-    """缩放方式只能是 linear/fixed/stepped 之一。"""
-    test_data_dir.mkdir()
-    ingredient_id = str(uuid.uuid4())
+def test_full_attributes_read_back(client: TestClient, tmp_path: Path) -> None:
+    """数据文件里写的全部属性，按 ID 读取时原样返回，并带来源、校对状态和估算标记。"""
+    _write(tmp_path, "1.0.0", [_record(FULL_ID, "测试酱油", "ceshijiangyou", FULL_ATTRIBUTES)])
+    assert _import(tmp_path) == 0
 
-    (test_data_dir / "manifest.json").write_text(
-        json.dumps({"version": "1.0.0", "changelog": "测试"}), encoding="utf-8"
-    )
-    (test_data_dir / "test.json").write_text(
-        json.dumps([
-            {
-                "id": ingredient_id,
-                "standard_name": "测试",
-                "pinyin": "test",
-                "pinyin_initials": "t",
-                "category": "其他",
-                "default_scaling": {"value": "invalid_method", "source": "manual", "verified": False}
-            }
-        ]), encoding="utf-8"
-    )
-
-    from gramtree.ingredients.importer import IngredientImportError
-    with Session(engine) as db_session:
-        with pytest.raises(IngredientImportError, match="scaling"):
-            import_directory(db_session, test_data_dir)
+    assert _attributes(client, FULL_ID) == FULL_EXPECTED
 
 
-def test_unit_conversions(test_data_dir: Path, engine, client):
-    """单位换算：密度（g/ml）、个体重量（g）、计数单位（个/瓣/根/片）。"""
-    test_data_dir.mkdir()
-    ingredient_id = str(uuid.uuid4())
+def test_identity_only_records_still_import(client: TestClient) -> None:
+    """只有身份信息的旧数据照样能导入，属性全是 null。"""
+    assert _import(FIXTURES) == 0
 
-    (test_data_dir / "manifest.json").write_text(
-        json.dumps({"version": "1.0.0", "changelog": "测试单位换算"}), encoding="utf-8"
-    )
-    (test_data_dir / "test.json").write_text(
-        json.dumps([
-            {
-                "id": ingredient_id,
-                "standard_name": "鸡蛋",
-                "pinyin": "jidan",
-                "pinyin_initials": "jd",
-                "category": "蛋奶",
-                "density_g_ml": {"value": 1.03, "source": "manual", "verified": True},
-                "individual_weight_g": {"value": 50.0, "source": "manual", "verified": True},
-                "counting_units": [
-                    {"unit": "个", "count": 1, "source": "manual", "verified": True},
-                    {"unit": "打", "count": 12, "source": "manual", "verified": True}
-                ]
-            }
-        ]), encoding="utf-8"
-    )
-
-    with Session(engine) as db_session:
-        result = import_directory(db_session, test_data_dir)
-        assert result["added"] == 1
-
-    response = client.get(f"/v1/ingredients/{ingredient_id}")
-    assert response.status_code == 200
-    data = response.json()
-
-    assert data["density_g_ml"]["value"] == 1.03
-    assert data["individual_weight_g"]["value"] == 50.0
-    assert len(data["counting_units"]) == 2
-    units_by_name = {cu["unit"]: cu for cu in data["counting_units"]}
-    assert units_by_name["个"]["count"] == 1
-    assert units_by_name["打"]["count"] == 12
+    assert _attributes(client, "00000000-0000-4000-8000-000000000001") == ALL_NULL
 
 
-def test_allergens(test_data_dir: Path, engine, client):
-    """过敏原：GB 7718 八类，可多选。"""
-    test_data_dir.mkdir()
-    ingredient_id = str(uuid.uuid4())
+def test_estimate_marker_follows_verification(client: TestClient, tmp_path: Path) -> None:
+    """同一种食材里，未校对的字段标为估算，人工校对过的不标。"""
+    attrs = {
+        "density": {"value": 1.2, "source": "AI 起草", "status": "ai_draft"},
+        "base_unit": {"value": "克", "source": "人工核对", "status": "verified"},
+    }
+    _write(tmp_path, "1.0.0", [_record(FULL_ID, "测试醋", "ceshicu", attrs)])
+    assert _import(tmp_path) == 0
 
-    (test_data_dir / "manifest.json").write_text(
-        json.dumps({"version": "1.0.0", "changelog": "测试过敏原"}), encoding="utf-8"
-    )
-    (test_data_dir / "test.json").write_text(
-        json.dumps([
-            {
-                "id": ingredient_id,
-                "standard_name": "花生酱",
-                "pinyin": "huashengjiang",
-                "pinyin_initials": "hsj",
-                "category": "调料",
-                "allergens": [
-                    {"allergen_class": "peanuts", "source": "manual", "verified": True},
-                    {"allergen_class": "tree_nuts", "source": "ai_estimate", "verified": False}
-                ]
-            }
-        ]), encoding="utf-8"
-    )
-
-    with Session(engine) as db_session:
-        result = import_directory(db_session, test_data_dir)
-        assert result["added"] == 1
-
-    response = client.get(f"/v1/ingredients/{ingredient_id}")
-    assert response.status_code == 200
-    data = response.json()
-
-    assert len(data["allergens"]) == 2
-    allergen_classes = {a["allergen_class"]: a for a in data["allergens"]}
-    assert allergen_classes["peanuts"]["verified"] is True
-    assert allergen_classes["tree_nuts"]["verified"] is False
+    got = _attributes(client, FULL_ID)
+    assert got["density"]["estimate"] is True
+    assert got["base_unit"]["estimate"] is False
+    assert got["nutrition"] is None
 
 
-def test_allergen_class_validation(test_data_dir: Path, engine):
-    """过敏原类别必须是 GB 7718 登记的八类之一。"""
-    test_data_dir.mkdir()
-    ingredient_id = str(uuid.uuid4())
-
-    (test_data_dir / "manifest.json").write_text(
-        json.dumps({"version": "1.0.0", "changelog": "测试"}), encoding="utf-8"
-    )
-    (test_data_dir / "test.json").write_text(
-        json.dumps([
-            {
-                "id": ingredient_id,
-                "standard_name": "测试",
-                "pinyin": "test",
-                "pinyin_initials": "t",
-                "category": "其他",
-                "allergens": [
-                    {"allergen_class": "invalid_allergen", "source": "manual", "verified": False}
-                ]
-            }
-        ]), encoding="utf-8"
-    )
-
-    from gramtree.ingredients.importer import IngredientImportError
-    with Session(engine) as db_session:
-        with pytest.raises(IngredientImportError, match="allergen_class"):
-            import_directory(db_session, test_data_dir)
+INVALID_CASES = [
+    ("flavor", {"value": {"salty": 4}, **AI}, "flavor"),
+    ("flavor", {"value": {"sweet": -1}, **AI}, "flavor"),
+    ("flavor", {"value": {"bitter": 1}, **AI}, "flavor"),
+    ("flavor", {"value": {"salty": 1.5}, **AI}, "flavor"),
+    ("allergens", {"value": ["小麦"], **AI}, "过敏原分类“小麦”没有登记"),
+    ("allergens", {"value": ["大豆", "大豆"], **AI}, "重复"),
+    ("scaling", {"value": "按比例", **AI}, "缩放方式“按比例”没有登记"),
+    ("base_unit", {"value": "斤", **AI}, "基础单位“斤”没有登记"),
+    ("market_zone", {"value": "生鲜", **AI}, "超市分区“生鲜”没有登记"),
+    ("storage", {"value": [{"method": "阴凉", "days": 3}], **AI}, "存放方式“阴凉”没有登记"),
+    ("storage", {"value": [{"method": "冷藏", "days": 0}], **AI}, "storage"),
+    ("density", {"value": 0, **AI}, "density"),
+    ("density", {"value": -1.0, **AI}, "density"),
+    ("count_units", {"value": [{"unit": "坨", "grams": 10}], **AI}, "计数单位“坨”没有登记"),
+    ("count_units", {"value": [{"unit": "个", "grams": 0}], **AI}, "count_units"),
+    ("purchase_units", {"value": [{"name": "盒", "grams": -5}], **AI}, "purchase_units"),
+    ("nutrition", {"value": {"fat_g": -1}, **AI}, "nutrition"),
+    ("functional", {"value": "是", **AI}, "functional"),
+    ("density", {"value": 1.0, "status": "ai_draft"}, "有值却缺少来源"),
+    ("density", {"value": 1.0, "source": "", "status": "ai_draft"}, "density.source"),
+    ("density", {"value": 1.0, "source": "AI"}, "density.status"),
+    ("density", {"value": 1.0, "source": "AI", "status": "checked"}, "density.status"),
+    ("color", {"value": "红", **AI}, "color"),
+]
 
 
-def test_nutrition_per_100g(test_data_dir: Path, engine, client):
-    """营养成分：每 100g 的能量、蛋白质、脂肪、碳水、钠。"""
-    test_data_dir.mkdir()
-    ingredient_id = str(uuid.uuid4())
+@pytest.mark.parametrize(("field", "attr", "expected"), INVALID_CASES)
+def test_invalid_attribute_rejects_whole_import(
+    client: TestClient,
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+    field: str,
+    attr: dict,
+    expected: str,
+) -> None:
+    """不合格的属性值让整次导入失败，错误里指出哪条、哪个字段，一条都不写。"""
+    records = [
+        _record(OTHER_ID, "测试好食材", "ceshihao", {"density": {"value": 1.0, **AI}}),
+        _record(FULL_ID, "测试坏食材", "ceshihuai", {field: attr}),
+    ]
+    _write(tmp_path, "1.0.0", records)
 
-    (test_data_dir / "manifest.json").write_text(
-        json.dumps({"version": "1.0.0", "changelog": "测试营养成分"}), encoding="utf-8"
-    )
-    (test_data_dir / "test.json").write_text(
-        json.dumps([
-            {
-                "id": ingredient_id,
-                "standard_name": "鸡胸肉",
-                "pinyin": "jixiongrou",
-                "pinyin_initials": "jxr",
-                "category": "肉禽",
-                "nutrition_per_100g": {
-                    "energy_kj": {"value": 490.0, "source": "manual", "verified": True},
-                    "protein_g": {"value": 23.3, "source": "manual", "verified": True},
-                    "fat_g": {"value": 1.2, "source": "manual", "verified": True},
-                    "carbohydrate_g": {"value": 0.0, "source": "manual", "verified": True},
-                    "sodium_mg": {"value": 65.0, "source": "ai_estimate", "verified": False}
-                }
-            }
-        ]), encoding="utf-8"
-    )
+    assert _import(tmp_path) == 1
 
-    with Session(engine) as db_session:
-        result = import_directory(db_session, test_data_dir)
-        assert result["added"] == 1
-
-    response = client.get(f"/v1/ingredients/{ingredient_id}")
-    assert response.status_code == 200
-    data = response.json()
-
-    nutrition = data["nutrition_per_100g"]
-    assert nutrition["energy_kj"]["value"] == 490.0
-    assert nutrition["protein_g"]["value"] == 23.3
-    assert nutrition["sodium_mg"]["verified"] is False  # AI 估算未校对
+    err = capsys.readouterr().err
+    assert "第 2 条" in err
+    assert "测试坏食材" in err
+    assert f"attributes.{field}" in err
+    assert expected in err
+    assert client.get(f"/v1/ingredients/{OTHER_ID}").status_code == 404
 
 
-def test_purchase_units_and_storage(test_data_dir: Path, engine, client):
-    """购买单位（袋/盒/瓶）、存储方式（常温/冷藏/冷冻）、常备调料标记。"""
-    test_data_dir.mkdir()
-    ingredient_id = str(uuid.uuid4())
-
-    (test_data_dir / "manifest.json").write_text(
-        json.dumps({"version": "1.0.0", "changelog": "测试购买和存储"}), encoding="utf-8"
-    )
-    (test_data_dir / "test.json").write_text(
-        json.dumps([
-            {
-                "id": ingredient_id,
-                "standard_name": "牛奶",
-                "pinyin": "niunai",
-                "pinyin_initials": "nn",
-                "category": "蛋奶",
-                "is_staple_condiment": {"value": False, "source": "manual", "verified": True},
-                "supermarket_zone": {"value": "冷藏柜", "source": "manual", "verified": True},
-                "purchase_units": [
-                    {"unit": "盒", "approx_weight_g": 250.0, "source": "manual", "verified": True},
-                    {"unit": "瓶", "approx_weight_g": 1000.0, "source": "manual", "verified": True}
-                ],
-                "storage": [
-                    {"method": "refrigerated", "days": 7, "source": "manual", "verified": True}
-                ]
-            }
-        ]), encoding="utf-8"
-    )
-
-    with Session(engine) as db_session:
-        result = import_directory(db_session, test_data_dir)
-        assert result["added"] == 1
-
-    response = client.get(f"/v1/ingredients/{ingredient_id}")
-    assert response.status_code == 200
-    data = response.json()
-
-    assert data["is_staple_condiment"]["value"] is False
-    assert data["supermarket_zone"]["value"] == "冷藏柜"
-    assert len(data["purchase_units"]) == 2
-    assert len(data["storage"]) == 1
-    assert data["storage"][0]["method"] == "refrigerated"
-    assert data["storage"][0]["days"] == 7
+def _two_records(attrs: dict[str, Any]) -> list[dict]:
+    return [
+        _record(FULL_ID, "测试酱油", "ceshijiangyou", attrs),
+        _record(OTHER_ID, "测试盐", "ceshiyan", {"pantry_staple": {"value": True, **AI}}),
+    ]
 
 
-def test_storage_method_validation(test_data_dir: Path, engine):
-    """存储方式只能是 room_temp/refrigerated/frozen 之一。"""
-    test_data_dir.mkdir()
-    ingredient_id = str(uuid.uuid4())
-
-    (test_data_dir / "manifest.json").write_text(
-        json.dumps({"version": "1.0.0", "changelog": "测试"}), encoding="utf-8"
-    )
-    (test_data_dir / "test.json").write_text(
-        json.dumps([
-            {
-                "id": ingredient_id,
-                "standard_name": "测试",
-                "pinyin": "test",
-                "pinyin_initials": "t",
-                "category": "其他",
-                "storage": [
-                    {"method": "invalid_storage", "days": 7, "source": "manual", "verified": False}
-                ]
-            }
-        ]), encoding="utf-8"
-    )
-
-    from gramtree.ingredients.importer import IngredientImportError
-    with Session(engine) as db_session:
-        with pytest.raises(IngredientImportError, match="method"):
-            import_directory(db_session, test_data_dir)
+def _versions(client: TestClient) -> tuple[str, str]:
+    a = client.get(f"/v1/ingredients/{FULL_ID}").json()["version"]
+    b = client.get(f"/v1/ingredients/{OTHER_ID}").json()["version"]
+    return a, b
 
 
-def test_version_change_on_attribute_modification(test_data_dir: Path, engine):
-    """属性变化时更新食材版本号。"""
-    test_data_dir.mkdir()
-    ingredient_id = str(uuid.uuid4())
+def test_attribute_value_change_bumps_version(
+    client: TestClient, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """只改了属性的食材，版本号变成新版本；没改的保持原版本。"""
+    assert _import(_write(tmp_path / "v1", "1.0.0", _two_records(FULL_ATTRIBUTES))) == 0
 
-    # 版本 1.0.0：初始数据
-    (test_data_dir / "manifest.json").write_text(
-        json.dumps({"version": "1.0.0", "changelog": "初始版本"}), encoding="utf-8"
-    )
-    (test_data_dir / "test.json").write_text(
-        json.dumps([
-            {
-                "id": ingredient_id,
-                "standard_name": "测试食材",
-                "pinyin": "test",
-                "pinyin_initials": "t",
-                "category": "其他",
-                "is_functional": {"value": False, "source": "manual", "verified": True}
-            }
-        ]), encoding="utf-8"
-    )
+    changed = copy.deepcopy(FULL_ATTRIBUTES)
+    changed["density"]["value"] = 1.2
+    capsys.readouterr()
+    assert _import(_write(tmp_path / "v2", "1.1.0", _two_records(changed))) == 0
 
-    with Session(engine) as db_session:
-        import_directory(db_session, test_data_dir)
+    assert "内容有变化 1 种" in capsys.readouterr().out
+    assert _versions(client) == ("1.1.0", "1.0.0")
+    assert _attributes(client, FULL_ID)["density"]["value"] == 1.2
 
-    # 版本 1.1.0：修改属性
-    (test_data_dir / "manifest.json").write_text(
-        json.dumps({"version": "1.1.0", "changelog": "更新功能性标记"}), encoding="utf-8"
-    )
-    (test_data_dir / "test.json").write_text(
-        json.dumps([
-            {
-                "id": ingredient_id,
-                "standard_name": "测试食材",
-                "pinyin": "test",
-                "pinyin_initials": "t",
-                "category": "其他",
-                "is_functional": {"value": True, "source": "manual", "verified": True}  # 改了
-            }
-        ]), encoding="utf-8"
-    )
 
-    with Session(engine) as db_session:
-        result = import_directory(db_session, test_data_dir)
-        assert result["changed"] == 1
+def test_verification_change_bumps_version(client: TestClient, tmp_path: Path) -> None:
+    """值没变、只是改成人工校对过，也算内容变化（估算标记跟着变）。"""
+    assert _import(_write(tmp_path / "v1", "1.0.0", _two_records(FULL_ATTRIBUTES))) == 0
+
+    changed = copy.deepcopy(FULL_ATTRIBUTES)
+    changed["density"] = {"value": 1.15, "source": "人工称量", "status": "verified"}
+    assert _import(_write(tmp_path / "v2", "1.1.0", _two_records(changed))) == 0
+
+    assert _versions(client) == ("1.1.0", "1.0.0")
+    assert _attributes(client, FULL_ID)["density"]["estimate"] is False
+
+
+def test_removed_attribute_bumps_version(client: TestClient, tmp_path: Path) -> None:
+    """数据文件里删掉的属性，读取时变回 null，版本号也更新。"""
+    assert _import(_write(tmp_path / "v1", "1.0.0", _two_records(FULL_ATTRIBUTES))) == 0
+
+    changed = copy.deepcopy(FULL_ATTRIBUTES)
+    del changed["allergens"]
+    assert _import(_write(tmp_path / "v2", "1.1.0", _two_records(changed))) == 0
+
+    assert _versions(client) == ("1.1.0", "1.0.0")
+    assert _attributes(client, FULL_ID)["allergens"] is None
+
+
+def test_unchanged_attributes_keep_version(
+    client: TestClient, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """属性没变（整数和小数写法不同也算没变）时，新版本导入不改版本号。"""
+    assert _import(_write(tmp_path / "v1", "1.0.0", _two_records(FULL_ATTRIBUTES))) == 0
+
+    same = copy.deepcopy(FULL_ATTRIBUTES)
+    same["count_units"]["value"] = [{"unit": "片", "grams": 5.0}]
+    capsys.readouterr()
+    assert _import(_write(tmp_path / "v2", "1.1.0", _two_records(same))) == 0
+
+    assert "内容有变化 0 种" in capsys.readouterr().out
+    assert _versions(client) == ("1.0.0", "1.0.0")
+
+
+def test_seed_library_imports_with_attributes(client: TestClient) -> None:
+    """仓库里的正式种子数据能导入；带了属性的种子食材按估算返回。"""
+    assert _import(SEED) == 0
+
+    soy = _attributes(client, "06cf20af-aebb-4693-b673-e8f4b5a1845c")  # 生抽
+    assert soy["flavor"]["value"]["salty"] == 3
+    assert soy["flavor"]["estimate"] is True
+    assert set(soy["allergens"]["value"]) == {"大豆", "含麸质的谷物"}
+    assert soy["pantry_staple"]["value"] is True
