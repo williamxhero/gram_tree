@@ -387,5 +387,36 @@
     "pinyin": "xiebang",
     "pinyin_initials": "xb",
     "category": "水产"
+  },
+  {
+    "id": "caa516e6-411e-45d5-a613-356885913346",
+    "standard_name": "鲳鱼",
+    "aliases": [
+      "平鱼"
+    ],
+    "pinyin": "changyu",
+    "pinyin_initials": "cy",
+    "category": "水产"
+  },
+  {
+    "id": "a75a6d0d-4d2e-4714-b4c8-084b710804d4",
+    "standard_name": "黄鱼",
+    "aliases": [
+      "大黄鱼",
+      "小黄鱼"
+    ],
+    "pinyin": "huangyu",
+    "pinyin_initials": "hy",
+    "category": "水产"
+  },
+  {
+    "id": "124f5344-9fc5-4a29-b7dc-103a2ffc0a1a",
+    "standard_name": "秋刀鱼",
+    "aliases": [
+      "竹刀鱼"
+    ],
+    "pinyin": "qiudaoyu",
+    "pinyin_initials": "qdy",
+    "category": "水产"
   }
 ]

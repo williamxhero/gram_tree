@@ -89,8 +89,7 @@
     "id": "fe5e7c32-f150-40f9-818f-a6938313ef5b",
     "standard_name": "牛肉",
     "aliases": [
-      "牛肉片",
-      "牛腩"
+      "牛肉片"
     ],
     "pinyin": "niurou",
     "pinyin_initials": "nr",
@@ -143,7 +142,6 @@
     "id": "dd257871-5de6-4804-91ff-11f4e652d8bb",
     "standard_name": "鸡翅",
     "aliases": [
-      "鸡翅中",
       "鸡翅根"
     ],
     "pinyin": "jichi",
@@ -164,7 +162,6 @@
     "id": "6b99ea8f-60a3-46da-9449-0f24c1764c73",
     "standard_name": "鸭肉",
     "aliases": [
-      "鸭腿",
       "鸭胸"
     ],
     "pinyin": "yarou",
@@ -312,6 +309,56 @@
     ],
     "pinyin": "niubaiye",
     "pinyin_initials": "nby",
+    "category": "肉禽"
+  },
+  {
+    "id": "4b5cdda8-cc21-42e1-9c6c-ab2c8a859167",
+    "standard_name": "牛腩",
+    "aliases": [
+      "牛肋条肉"
+    ],
+    "pinyin": "niunan",
+    "pinyin_initials": "nn",
+    "category": "肉禽"
+  },
+  {
+    "id": "a25ff476-dc7f-4662-b900-3ec442e214f3",
+    "standard_name": "鸡翅中",
+    "aliases": [
+      "翅中"
+    ],
+    "pinyin": "jichizhong",
+    "pinyin_initials": "jcz",
+    "category": "肉禽"
+  },
+  {
+    "id": "494e686f-f745-4bfb-9291-d1122277f373",
+    "standard_name": "鸭腿",
+    "aliases": [
+      "鸭全腿"
+    ],
+    "pinyin": "yatui",
+    "pinyin_initials": "yt",
+    "category": "肉禽"
+  },
+  {
+    "id": "1166a76d-df7f-444d-b8a7-67a826426558",
+    "standard_name": "羊排",
+    "aliases": [
+      "羊肋排"
+    ],
+    "pinyin": "yangpai",
+    "pinyin_initials": "yp",
+    "category": "肉禽"
+  },
+  {
+    "id": "f9df6563-03e5-4c67-bf08-0105145fc41e",
+    "standard_name": "鸡胗",
+    "aliases": [
+      "鸡肫"
+    ],
+    "pinyin": "jizhen",
+    "pinyin_initials": "jz",
     "category": "肉禽"
   }
 ]

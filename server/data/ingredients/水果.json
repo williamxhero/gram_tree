@@ -250,5 +250,25 @@
     "pinyin": "niuyouguo",
     "pinyin_initials": "nyg",
     "category": "水果"
+  },
+  {
+    "id": "5271a4a7-6c9e-4c11-88be-8bab5de9a744",
+    "standard_name": "杨梅",
+    "aliases": [
+      "乌梅"
+    ],
+    "pinyin": "yangmei",
+    "pinyin_initials": "ym",
+    "category": "水果"
+  },
+  {
+    "id": "9a7199da-4676-4b97-b5c2-3b6ddfe65971",
+    "standard_name": "无花果",
+    "aliases": [
+      "映日果"
+    ],
+    "pinyin": "wuhuaguo",
+    "pinyin_initials": "whg",
+    "category": "水果"
   }
 ]

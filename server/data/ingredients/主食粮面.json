@@ -233,5 +233,76 @@
     "pinyin": "binggan",
     "pinyin_initials": "bg",
     "category": "主食粮面"
+  },
+  {
+    "id": "d5281546-56f0-4da4-b19d-2b8cee471206",
+    "standard_name": "燕麦",
+    "aliases": [
+      "莜麦"
+    ],
+    "pinyin": "yanmai",
+    "pinyin_initials": "ym",
+    "category": "主食粮面"
+  },
+  {
+    "id": "63b8ccaf-fae0-451c-853f-fbd7d5702100",
+    "standard_name": "荞麦",
+    "aliases": [
+      "荞麦面"
+    ],
+    "pinyin": "qiaomai",
+    "pinyin_initials": "qm",
+    "category": "主食粮面"
+  },
+  {
+    "id": "6df5e148-073e-46c2-b8b5-328d5ccbb2de",
+    "standard_name": "薏米",
+    "aliases": [
+      "薏仁",
+      "苡米"
+    ],
+    "pinyin": "yimi",
+    "pinyin_initials": "ym",
+    "category": "主食粮面"
+  },
+  {
+    "id": "83c75955-de69-434b-b894-2442745c52f0",
+    "standard_name": "红豆",
+    "aliases": [
+      "赤小豆"
+    ],
+    "pinyin": "hongdou",
+    "pinyin_initials": "hd",
+    "category": "主食粮面"
+  },
+  {
+    "id": "14aa3633-76b3-423b-bc3e-5fd141276c8b",
+    "standard_name": "绿豆",
+    "aliases": [
+      "青豆"
+    ],
+    "pinyin": "lvdou",
+    "pinyin_initials": "ld",
+    "category": "主食粮面"
+  },
+  {
+    "id": "f5b2dd27-8d0c-468d-913e-ceedde735d3e",
+    "standard_name": "黑豆",
+    "aliases": [
+      "乌豆"
+    ],
+    "pinyin": "heidou",
+    "pinyin_initials": "hd",
+    "category": "主食粮面"
+  },
+  {
+    "id": "b76aef21-aa62-40f3-a390-c667c1a0cfb1",
+    "standard_name": "黄豆",
+    "aliases": [
+      "大豆"
+    ],
+    "pinyin": "huangdou",
+    "pinyin_initials": "hd",
+    "category": "主食粮面"
   }
 ]
