@@ -729,7 +729,7 @@ class _IngredientEditorCardState extends State<_IngredientEditorCard> {
               ],
             ),
             _text(
-              key: ValueKey('recipe-ingredient-search-$id'),
+              key: _ingredientKey(id, 'search'),
               label: l10n.recipeSearchStandard,
               value: item.displayName,
               controller: _displayController,
@@ -740,7 +740,7 @@ class _IngredientEditorCardState extends State<_IngredientEditorCard> {
                 onChanged();
               },
               suffixIcon: IconButton(
-                key: ValueKey('recipe-search-ingredient-$id'),
+                key: _ingredientKey(id, 'search-button'),
                 onPressed: searching ? null : onSearch,
                 icon: searching
                     ? const SizedBox(
@@ -766,7 +766,7 @@ class _IngredientEditorCardState extends State<_IngredientEditorCard> {
               children: [
                 Expanded(
                   child: _number(
-                    key: ValueKey('recipe-ingredient-quantity-$id'),
+                    key: _ingredientKey(id, 'quantity'),
                     label: l10n.recipeQuantity,
                     value: item.quantity,
                     onChanged: (value) {
@@ -778,7 +778,7 @@ class _IngredientEditorCardState extends State<_IngredientEditorCard> {
                 const SizedBox(width: 8),
                 Expanded(
                   child: _text(
-                    key: ValueKey('recipe-ingredient-unit-$id'),
+                    key: _ingredientKey(id, 'unit'),
                     label: l10n.recipeUnit,
                     value: item.unit,
                     onChanged: (value) {
@@ -791,7 +791,7 @@ class _IngredientEditorCardState extends State<_IngredientEditorCard> {
             ),
             const SizedBox(height: 8),
             _text(
-              key: ValueKey('recipe-ingredient-preparation-$id'),
+              key: _ingredientKey(id, 'preparation'),
               label: l10n.recipePreparationGroup,
               value: item.preparation,
               onChanged: (value) {
@@ -1062,7 +1062,7 @@ class _StepEditorCard extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             _text(
-              key: ValueKey('recipe-step-instruction-$id'),
+              key: _stepKey(id, 'instruction'),
               label: l10n.recipeInstruction,
               value: item.instruction,
               maxLines: 3,
@@ -1198,7 +1198,7 @@ class _StepEditorCard extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             _text(
-              key: ValueKey('recipe-step-why-$id'),
+              key: _stepKey(id, 'why'),
               label: l10n.recipeStepWhy,
               value: item.why,
               maxLines: 2,
@@ -1696,6 +1696,24 @@ class _RecipeError extends StatelessWidget {
     ),
   );
 }
+
+Key _ingredientKey(String id, String field) {
+  if (id == 'ingredient-1') {
+    return ValueKey(
+      field == 'search-button'
+          ? 'recipe-search-ingredient'
+          : 'recipe-ingredient-$field',
+    );
+  }
+  return ValueKey(
+    field == 'search-button'
+        ? 'recipe-search-ingredient-$id'
+        : 'recipe-ingredient-$field-$id',
+  );
+}
+
+Key _stepKey(String id, String field) =>
+    ValueKey(id == 'step-1' ? 'recipe-step-$field' : 'recipe-step-$field-$id');
 
 Widget _text({
   Key? key,
