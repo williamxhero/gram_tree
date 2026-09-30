@@ -1,6 +1,5 @@
 """Tests for the no-database ingredient data validator (issue #104)."""
 
-import copy
 import json
 from pathlib import Path
 
@@ -8,7 +7,6 @@ import pytest
 
 from gramtree.cli import main as cli
 from gramtree.ingredients.attributes import GB_ALLERGENS
-from gramtree.ingredients.importer import validate_directory
 
 SEED = Path(__file__).parent.parent / "data" / "ingredients"
 UUID_A = "00000000-0000-4000-8000-000000000101"
@@ -59,6 +57,10 @@ def _write(directory: Path, records: list[dict[str, object]]) -> Path:
     return directory
 
 
+def _assert_accepted(directory: Path) -> None:
+    assert cli(["ingredients", "validate", str(directory)]) == 0
+
+
 def _assert_rejected(directory: Path, capsys: pytest.CaptureFixture[str], *expected: str) -> None:
     assert cli(["ingredients", "validate", str(directory)]) == 1
     error = capsys.readouterr().err
@@ -67,8 +69,8 @@ def _assert_rejected(directory: Path, capsys: pytest.CaptureFixture[str], *expec
 
 
 def test_seed_library_validates_without_database() -> None:
-    """The complete repository data passes the validator without opening a DB."""
-    validate_directory(SEED)
+    """The complete repository data passes the public offline command without a DB."""
+    _assert_accepted(SEED)
 
 
 def test_identity_only_record_does_not_need_every_optional_attribute(tmp_path: Path) -> None:
@@ -77,7 +79,7 @@ def test_identity_only_record_does_not_need_every_optional_attribute(tmp_path: P
         [_record(attributes={"allergens": _allergen_attribute()})],
     )
 
-    validate_directory(directory)
+    _assert_accepted(directory)
 
 
 def test_validator_reports_missing_identity_field(
@@ -214,11 +216,4 @@ def test_validator_accepts_explicit_ambiguous_alias(tmp_path: Path) -> None:
         json.dumps(manifest, ensure_ascii=False), encoding="utf-8"
     )
 
-    validate_directory(directory)
-
-
-def test_validator_does_not_mutate_input(tmp_path: Path) -> None:
-    records = [_record(attributes={"allergens": _allergen_attribute()})]
-    before = copy.deepcopy(records)
-    validate_directory(_write(tmp_path, records))
-    assert records == before
+    _assert_accepted(directory)
