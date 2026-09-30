@@ -284,3 +284,113 @@ def test_seed_library_imports_with_attributes(client: TestClient) -> None:
     assert soy["flavor"]["estimate"] is True
     assert set(soy["allergens"]["value"]) == {"大豆", "含麸质的谷物"}
     assert soy["pantry_staple"]["value"] is True
+
+
+# #98 requires a complete draft for every seeded identity, not only representative examples.
+REQUIRED_SEED_FIELDS = {
+    "flavor",
+    "functional",
+    "scaling",
+    "base_unit",
+    "allergens",
+    "nutrition",
+    "purchase_units",
+    "market_zone",
+    "storage",
+    "pantry_staple",
+}
+CORE_ALLERGENS = {
+    "含麸质的谷物",
+    "甲壳纲类动物",
+    "鱼类",
+    "蛋类",
+    "花生",
+    "大豆",
+    "乳及乳制品",
+    "坚果及其果仁",
+}
+
+
+def _seed_details(client: TestClient) -> dict[str, dict[str, Any]]:
+    assert _import(SEED) == 0
+    records = [
+        record
+        for path in sorted(SEED.glob("*.json"))
+        if path.name != "manifest.json"
+        for record in json.loads(path.read_text(encoding="utf-8"))
+    ]
+    details = {}
+    for record in records:
+        response = client.get(f"/v1/ingredients/{record['id']}")
+        assert response.status_code == 200, record["standard_name"]
+        details[record["standard_name"]] = response.json()
+    assert len(details) == len(records)
+    return details
+
+
+def test_seed_library_complete_drafts_and_eight_allergens(client: TestClient) -> None:
+    """Real seed data imports, all ingredients read as sourced estimates, all 8 allergens exist."""
+    details = _seed_details(client)
+    assert len(details) >= 290
+    covered = set()
+    for name, detail in details.items():
+        attrs = detail["attributes"]
+        for field in REQUIRED_SEED_FIELDS:
+            assert attrs[field] is not None, (name, field)
+        for field, attr in attrs.items():
+            if attr is not None:
+                assert attr["status"] == "ai_draft", (name, field)
+                assert attr["estimate"] is True, (name, field)
+                assert "AI 起草" in attr["source"], (name, field)
+                assert "待核对" in attr["source"], (name, field)
+        assert detail["version"] == "2.3.0", name
+        covered.update(attrs["allergens"]["value"])
+    assert covered >= CORE_ALLERGENS
+    assert details["白菜"]["attributes"]["allergens"]["value"] == []
+
+
+def test_seed_library_units_and_culinary_roles(client: TestClient) -> None:
+    """Common ingredients expose useful units, pantry flags and functional ingredient roles."""
+    details = _seed_details(client)
+    for name in ("生抽", "盐", "牛奶", "豆浆", "面粉", "大米", "白糖", "酵母", "泡打粉"):
+        assert details[name]["attributes"]["density"]["value"] > 0, name
+    for name, unit, grams in (("鸡蛋", "个", 50), ("大蒜", "瓣", 5)):
+        assert {"unit": unit, "grams": grams} in details[name]["attributes"]["count_units"]["value"]
+    assert {"name": "盒", "grams": 400} in details["豆腐"]["attributes"]["purchase_units"]["value"]
+    assert {"name": "把", "grams": 100} in details["葱"]["attributes"]["purchase_units"]["value"]
+    for name in ("酵母", "泡打粉", "小苏打"):
+        assert details[name]["attributes"]["functional"]["value"] is True, name
+    for name in ("盐", "生抽", "大豆油", "菜籽油", "玉米油"):
+        assert details[name]["attributes"]["pantry_staple"]["value"] is True, name
+    soy = details["生抽"]["attributes"]
+    assert soy["flavor"]["value"]["salty"] == 3
+    assert soy["flavor"]["value"]["umami"] == 2
+    assert details["白糖"]["attributes"]["flavor"]["value"]["sweet"] == 3
+    assert details["米醋"]["attributes"]["flavor"]["value"]["sour"] == 3
+    assert details["花椒"]["attributes"]["flavor"]["value"]["numbing"] == 3
+    assert details["辣椒粉"]["attributes"]["flavor"]["value"]["spicy"] == 3
+
+
+def test_seed_library_compound_allergens_and_idempotence(
+    client: TestClient, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """Compound ingredients retain constituent allergens and reimport does not change them."""
+    details = _seed_details(client)
+    expected = {
+        "生抽": {"大豆", "含麸质的谷物"},
+        "老抽": {"大豆", "含麸质的谷物"},
+        "甜面酱": {"含麸质的谷物"},
+        "鱼露": {"鱼类"},
+        "沙拉酱": {"蛋类", "大豆"},
+        "花生酱": {"花生"},
+        "芝麻酱": {"芝麻"},
+    }
+    for name, allergens in expected.items():
+        assert allergens <= set(details[name]["attributes"]["allergens"]["value"]), name
+    capsys.readouterr()
+    assert _import(SEED) == 0
+    assert "新增 0 种，内容有变化 0 种" in capsys.readouterr().out
+    for name in expected:
+        response = client.get(f"/v1/ingredients/{details[name]['id']}")
+        assert response.status_code == 200
+        assert response.json() == details[name]
