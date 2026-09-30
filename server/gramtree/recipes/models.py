@@ -121,7 +121,7 @@ class RecipeImage(Base):
     version_id: Mapped[uuid.UUID] = mapped_column(
         ForeignKey("recipe_versions.id", ondelete="CASCADE"), index=True
     )
-    storage_key: Mapped[str] = mapped_column(String(500), unique=True)
+    storage_key: Mapped[str] = mapped_column(String(500))
     content_type: Mapped[str] = mapped_column(String(64))
     byte_size: Mapped[int] = mapped_column(Integer)
     width: Mapped[int | None] = mapped_column(Integer, default=None)

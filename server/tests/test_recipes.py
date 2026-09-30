@@ -289,7 +289,7 @@ def test_staged_image_attaches_to_create_and_does_not_mutate_old_version(api: Ap
     ).json()
     current = api.client.get(f"/v1/recipes/{first['id']}", headers=headers).json()
     assert len(old["version"]["images"]) == 1
-    assert len(current["version"]["images"]) == 1
+    assert len(current["version"]["images"]) == 2
     assert current["version"]["version_number"] == 2
 
 

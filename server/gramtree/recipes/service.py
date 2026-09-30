@@ -712,6 +712,25 @@ def _operations(previous: RecipeSnapshot, current: RecipeSnapshot) -> list[dict[
     return operations
 
 
+def _copy_version_images(
+    session: Session, recipe: Recipe, source: RecipeVersion, target: RecipeVersion
+) -> None:
+    for image in session.scalars(select(RecipeImage).where(RecipeImage.version_id == source.id)):
+        session.add(
+            RecipeImage(
+                id=uuid.uuid4(),
+                recipe_id=recipe.id,
+                version_id=target.id,
+                storage_key=image.storage_key,
+                content_type=image.content_type,
+                byte_size=image.byte_size,
+                width=image.width,
+                height=image.height,
+                created_at=image.created_at,
+            )
+        )
+
+
 def save_version(
     session: Session,
     redis: Redis,
@@ -742,6 +761,7 @@ def save_version(
     )
     session.add(version)
     session.flush()
+    _copy_version_images(session, recipe, previous, version)
     _attach_staged_images(session, owner, recipe, version, [row.id for row in staged])
     recipe.current_version_id = version.id
     recipe.updated_at = version.created_at

@@ -137,7 +137,10 @@ class _RecipeEditorPageState extends ConsumerState<RecipeEditorPage> {
         _form = RecipeForm.fromSnapshot(
           _loaded!.version.snapshot,
           _loaded!.dish.name,
-        );
+        )
+          ..imageIds = [
+            for (final image in _loaded!.version.images ?? const []) image.id,
+          ];
       }
       _draft = _draftStore.read(
         recipeKey: _recipeKey,

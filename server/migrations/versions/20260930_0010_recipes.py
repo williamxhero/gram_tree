@@ -135,7 +135,6 @@ def upgrade() -> None:
         sa.ForeignKeyConstraint(["recipe_id"], ["recipes.id"], ondelete="CASCADE"),
         sa.ForeignKeyConstraint(["version_id"], ["recipe_versions.id"], ondelete="CASCADE"),
         sa.PrimaryKeyConstraint("id"),
-        sa.UniqueConstraint("storage_key"),
     )
     op.create_index("ix_recipe_images_recipe_id", "recipe_images", ["recipe_id"])
     op.create_index("ix_recipe_images_version_id", "recipe_images", ["version_id"])

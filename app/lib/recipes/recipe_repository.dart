@@ -180,7 +180,7 @@ class RecipeIngredientDraft {
     functional: functional,
     group: group.trim().isEmpty ? '主料' : group.trim(),
     id: id,
-    ingredientId: ingredientId ?? '',
+    ingredientId: ingredientId,
     optional: optional,
     preparation: preparation.trim(),
     quantity: quantity,
@@ -217,13 +217,13 @@ class RecipeReplacementDraft {
 
   factory RecipeReplacementDraft.fromJson(Map<String, dynamic> value) =>
       RecipeReplacementDraft(
-        ingredientId: _string(value['ingredient_id']) ?? '',
+        ingredientId: _nonEmpty(value['ingredient_id']),
         displayName: _string(value['display_name']) ?? '',
         ratio: _number(value['ratio'], fallback: 1),
         note: _string(value['note']) ?? '',
       );
 
-  String ingredientId;
+  String? ingredientId;
   String displayName;
   double ratio;
   String note;
