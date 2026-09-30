@@ -2421,12 +2421,10 @@
         "description": "未收录食材统计项 (#102)",
         "properties": {
           "first_seen_at": {
-            "format": "date-time",
             "title": "First Seen At",
             "type": "string"
           },
           "last_seen_at": {
-            "format": "date-time",
             "title": "Last Seen At",
             "type": "string"
           },
@@ -3250,6 +3248,16 @@
             },
             "description": "Successful Response"
           },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "资源不存在"
+          },
           "422": {
             "content": {
               "application/json": {
@@ -3299,6 +3307,16 @@
               }
             },
             "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "资源不存在"
           },
           "422": {
             "content": {
@@ -3362,6 +3380,16 @@
             },
             "description": "Successful Response"
           },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "资源不存在"
+          },
           "422": {
             "content": {
               "application/json": {
@@ -3413,6 +3441,16 @@
               }
             },
             "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "资源不存在"
           },
           "422": {
             "content": {
@@ -3499,6 +3537,16 @@
             },
             "description": "Successful Response"
           },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "资源不存在"
+          },
           "422": {
             "content": {
               "application/json": {
@@ -3574,6 +3622,16 @@
             },
             "description": "Successful Response"
           },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "资源不存在"
+          },
           "422": {
             "content": {
               "application/json": {
@@ -3632,6 +3690,16 @@
               }
             },
             "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "资源不存在"
           },
           "422": {
             "content": {

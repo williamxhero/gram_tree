@@ -28,10 +28,10 @@ class UnrecordedIngredientItem {
   });
 
   @JsonKey(name: r'first_seen_at', required: true, includeIfNull: false)
-  final DateTime firstSeenAt;
+  final String firstSeenAt;
 
   @JsonKey(name: r'last_seen_at', required: true, includeIfNull: false)
-  final DateTime lastSeenAt;
+  final String lastSeenAt;
 
   @JsonKey(name: r'name', required: true, includeIfNull: false)
   final String name;

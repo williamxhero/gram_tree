@@ -5,9 +5,10 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 SPEC="$ROOT/api/openapi.json"
 OUT="$ROOT/app/packages/gramtree_api"
 "$ROOT/tool/gen_api_client.sh"
-# Windows Git Bash can leave CRLF in the two top-level generated text files. Normalize those
-# before comparing so the contract check tests content rather than the host line-ending policy.
+# Windows Git Bash can leave CRLF in generated text files. Normalize them before comparing so
+# the contract check tests content rather than the host line-ending policy.
 sed -i 's/\r$//' "$SPEC" "$OUT/.openapi-generator/FILES"
+find "$OUT/lib" -type f -name '*.dart' -exec sed -i 's/\r$//' {} +
 
 cd "$ROOT"
 changes="$(git status --porcelain -- api/openapi.json app/packages/gramtree_api)"

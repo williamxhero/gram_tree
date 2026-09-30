@@ -5,9 +5,9 @@ import tempfile
 from pathlib import Path
 
 from fastapi.testclient import TestClient
-from sqlalchemy import text
 
 from gramtree.cli import main as cli
+from gramtree.ingredients.router import get_unrecorded_statistics_writer
 from tests.accounts_support import Api, bearer
 from tests.test_conventions import assert_error_shape
 
@@ -196,31 +196,17 @@ def test_unrecorded_name_disappears_after_library_import(api: Api) -> None:
     assert response.json()["items"] == []
 
 
-def test_statistics_write_failure_does_not_break_normalization(client: TestClient, engine) -> None:
-    with engine.begin() as connection:
-        connection.execute(
-            text(
-                "CREATE OR REPLACE FUNCTION reject_unrecorded_stats() "
-                "RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN "
-                "RAISE EXCEPTION 'statistics disabled'; END; $$"
-            )
-        )
-        connection.execute(
-            text(
-                "CREATE TRIGGER reject_unrecorded_stats_trigger "
-                "BEFORE INSERT OR UPDATE ON unrecorded_ingredients "
-                "FOR EACH ROW EXECUTE FUNCTION reject_unrecorded_stats()"
-            )
-        )
+def test_statistics_write_failure_does_not_break_normalization(api: Api) -> None:
+    def failed_writer(_db, _counts) -> None:
+        raise RuntimeError("statistics disabled")
+
+    api.client.app.dependency_overrides[get_unrecorded_statistics_writer] = lambda: failed_writer
     try:
-        response = client.post(
+        response = api.client.post(
             "/v1/ingredients/normalize", json={"items": [{"name": "写入失败但仍返回"}]}
         )
-        assert response.status_code == 200
-        assert response.json()["results"][0]["confidence"] == "unrecorded"
     finally:
-        with engine.begin() as connection:
-            connection.execute(
-                text("DROP TRIGGER reject_unrecorded_stats_trigger ON unrecorded_ingredients")
-            )
-            connection.execute(text("DROP FUNCTION reject_unrecorded_stats()"))
+        api.client.app.dependency_overrides.pop(get_unrecorded_statistics_writer, None)
+
+    assert response.status_code == 200
+    assert response.json()["results"][0]["confidence"] == "unrecorded"

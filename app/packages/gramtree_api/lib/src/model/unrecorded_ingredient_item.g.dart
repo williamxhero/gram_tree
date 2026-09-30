@@ -7,9 +7,9 @@ part of 'unrecorded_ingredient_item.dart';
 // **************************************************************************
 
 abstract class _$UnrecordedIngredientItemCWProxy {
-  UnrecordedIngredientItem firstSeenAt(DateTime firstSeenAt);
+  UnrecordedIngredientItem firstSeenAt(String firstSeenAt);
 
-  UnrecordedIngredientItem lastSeenAt(DateTime lastSeenAt);
+  UnrecordedIngredientItem lastSeenAt(String lastSeenAt);
 
   UnrecordedIngredientItem name(String name);
 
@@ -22,8 +22,8 @@ abstract class _$UnrecordedIngredientItemCWProxy {
   /// UnrecordedIngredientItem(...).copyWith(id: 12, name: "My name")
   /// ````
   UnrecordedIngredientItem call({
-    DateTime firstSeenAt,
-    DateTime lastSeenAt,
+    String firstSeenAt,
+    String lastSeenAt,
     String name,
     int occurrenceCount,
   });
@@ -37,11 +37,11 @@ class _$UnrecordedIngredientItemCWProxyImpl
   final UnrecordedIngredientItem _value;
 
   @override
-  UnrecordedIngredientItem firstSeenAt(DateTime firstSeenAt) =>
+  UnrecordedIngredientItem firstSeenAt(String firstSeenAt) =>
       this(firstSeenAt: firstSeenAt);
 
   @override
-  UnrecordedIngredientItem lastSeenAt(DateTime lastSeenAt) =>
+  UnrecordedIngredientItem lastSeenAt(String lastSeenAt) =>
       this(lastSeenAt: lastSeenAt);
 
   @override
@@ -68,11 +68,11 @@ class _$UnrecordedIngredientItemCWProxyImpl
       firstSeenAt: firstSeenAt == const $CopyWithPlaceholder()
           ? _value.firstSeenAt
           // ignore: cast_nullable_to_non_nullable
-          : firstSeenAt as DateTime,
+          : firstSeenAt as String,
       lastSeenAt: lastSeenAt == const $CopyWithPlaceholder()
           ? _value.lastSeenAt
           // ignore: cast_nullable_to_non_nullable
-          : lastSeenAt as DateTime,
+          : lastSeenAt as String,
       name: name == const $CopyWithPlaceholder()
           ? _value.name
           // ignore: cast_nullable_to_non_nullable
@@ -112,14 +112,8 @@ UnrecordedIngredientItem _$UnrecordedIngredientItemFromJson(
       ],
     );
     final val = UnrecordedIngredientItem(
-      firstSeenAt: $checkedConvert(
-        'first_seen_at',
-        (v) => DateTime.parse(v as String),
-      ),
-      lastSeenAt: $checkedConvert(
-        'last_seen_at',
-        (v) => DateTime.parse(v as String),
-      ),
+      firstSeenAt: $checkedConvert('first_seen_at', (v) => v as String),
+      lastSeenAt: $checkedConvert('last_seen_at', (v) => v as String),
       name: $checkedConvert('name', (v) => v as String),
       occurrenceCount: $checkedConvert(
         'occurrence_count',
@@ -138,8 +132,8 @@ UnrecordedIngredientItem _$UnrecordedIngredientItemFromJson(
 Map<String, dynamic> _$UnrecordedIngredientItemToJson(
   UnrecordedIngredientItem instance,
 ) => <String, dynamic>{
-  'first_seen_at': instance.firstSeenAt.toIso8601String(),
-  'last_seen_at': instance.lastSeenAt.toIso8601String(),
+  'first_seen_at': instance.firstSeenAt,
+  'last_seen_at': instance.lastSeenAt,
   'name': instance.name,
   'occurrence_count': instance.occurrenceCount,
 };

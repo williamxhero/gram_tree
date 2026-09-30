@@ -293,37 +293,50 @@ def validate_directory(
     return manifest, records
 
 
-def _library_matches(
-    existing: Mapping[uuid.UUID, Ingredient],
-    records: list[IngredientRecord],
-    aliases_by_id: Mapping[uuid.UUID, set[str]],
-    attrs_by_id: Mapping[uuid.UUID, Mapping[str, tuple[Any, str, str]]],
-    new_attrs: Mapping[uuid.UUID, Mapping[str, tuple[Any, str, str]]],
+def _record_matches(
+    row: Ingredient,
+    record: IngredientRecord,
+    aliases: set[str],
+    attributes: Mapping[str, tuple[Any, str, str]],
 ) -> bool:
-    """比较食材内容，不比较版本元数据（用于同版本幂等重放）。"""
-    if set(existing) != {record.id for record in records}:
-        return False
-    for record in records:
-        row = existing[record.id]
-        if (
+    return (
+        (
             row.standard_name,
             row.pinyin,
             row.pinyin_initials,
             row.category,
             row.merged_into,
-        ) != (
+        )
+        == (
             record.standard_name,
             record.pinyin,
             record.pinyin_initials,
             record.category,
             record.merged_into,
-        ):
-            return False
-        if aliases_by_id.get(record.id, set()) != set(record.aliases):
-            return False
-        if attrs_by_id.get(record.id, {}) != new_attrs[record.id]:
-            return False
-    return True
+        )
+        and aliases == set(record.aliases)
+        and attributes == record.attributes.stored_fields()
+    )
+
+
+def _library_matches(
+    existing: Mapping[uuid.UUID, Ingredient],
+    records: list[IngredientRecord],
+    aliases_by_id: Mapping[uuid.UUID, set[str]],
+    attrs_by_id: Mapping[uuid.UUID, Mapping[str, tuple[Any, str, str]]],
+) -> bool:
+    """比较食材内容，不比较版本元数据（用于同版本幂等重放）。"""
+    if set(existing) != {record.id for record in records}:
+        return False
+    return all(
+        _record_matches(
+            existing[record.id],
+            record,
+            aliases_by_id.get(record.id, set()),
+            attrs_by_id.get(record.id, {}),
+        )
+        for record in records
+    )
 
 
 def import_directory(session: Session, data_dir: Path) -> dict[str, int | str]:
@@ -364,7 +377,7 @@ def import_directory(session: Session, data_dir: Path) -> dict[str, int | str]:
     if existing_release is not None:
         # 同一版本重放是幂等的；即使调用方带了不同的说明，也不能改写已发布版本的说明。
         # 但同一版本的食材内容一旦变化必须报错，不能让客户端缓存悄悄失效。
-        if _library_matches(existing, records, aliases_by_id, attrs_by_id, new_attrs):
+        if _library_matches(existing, records, aliases_by_id, attrs_by_id):
             return {"version": manifest.version, "added": 0, "changed": 0}
         raise IngredientImportError(
             f"食材库版本 {manifest.version} 已存在，不能修改已发布的食材内容"
@@ -394,17 +407,11 @@ def import_directory(session: Session, data_dir: Path) -> dict[str, int | str]:
             )
             session.add(row)
             added += 1
-        elif (
-            (
-                row.standard_name,
-                row.pinyin,
-                row.pinyin_initials,
-                row.category,
-                row.merged_into,
-            )
-            != (r.standard_name, r.pinyin, r.pinyin_initials, r.category, r.merged_into)
-            or aliases_by_id.get(r.id, set()) != set(r.aliases)
-            or attrs_by_id.get(r.id, {}) != new_attrs[r.id]
+        elif not _record_matches(
+            row,
+            r,
+            aliases_by_id.get(r.id, set()),
+            attrs_by_id.get(r.id, {}),
         ):
             row.version = manifest.version
             changed += 1
