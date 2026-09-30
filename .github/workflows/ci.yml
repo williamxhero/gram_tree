@@ -50,10 +50,10 @@ jobs:
       - run: uv run alembic heads | tee /dev/stderr | wc -l | grep -qx 1
         env:
           GRAMTREE_DATABASE_URL: postgresql+psycopg://postgres:postgres@localhost:5432/postgres
+      - run: uv run pytest -q
       - run: uv run alembic check
         env:
-          GRAMTREE_DATABASE_URL: postgresql+psycopg://postgres:postgres@localhost:5432/postgres
-      - run: uv run pytest -q
+          GRAMTREE_DATABASE_URL: postgresql+psycopg://postgres:postgres@localhost:5432/gramtree_test
 
   ingredient-data:
     name: 食材库数据校验
