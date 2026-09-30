@@ -3,124 +3,74 @@
 //
 
 // ignore_for_file: unused_element
-import 'package:built_collection/built_collection.dart';
-import 'package:built_value/json_object.dart';
-import 'package:built_value/built_value.dart';
-import 'package:built_value/serializer.dart';
+import 'package:copy_with_extension/copy_with_extension.dart';
+import 'package:json_annotation/json_annotation.dart';
 
 part 'purchase_unit.g.dart';
 
-/// PurchaseUnit
-///
-/// Properties:
-/// * [name] - 购买单位，例如 盒、把、瓶
-/// * [grams] - 一个购买单位大约多少克
-@BuiltValue()
-abstract class PurchaseUnit implements Built<PurchaseUnit, PurchaseUnitBuilder> {
-  /// 购买单位，例如 盒、把、瓶
-  @BuiltValueField(wireName: r'name')
-  String get name;
 
-  /// 一个购买单位大约多少克
-  @BuiltValueField(wireName: r'grams')
-  num get grams;
+@CopyWith()
+@JsonSerializable(
+  checked: true,
+  createToJson: true,
+  disallowUnrecognizedKeys: false,
+  explicitToJson: true,
+)
+class PurchaseUnit {
+  /// Returns a new [PurchaseUnit] instance.
+  PurchaseUnit({
 
-  PurchaseUnit._();
+    required  this.grams,
 
-  factory PurchaseUnit([void updates(PurchaseUnitBuilder b)]) = _$PurchaseUnit;
+    required  this.name,
+  });
 
-  @BuiltValueHook(initializeBuilder: true)
-  static void _defaults(PurchaseUnitBuilder b) => b;
+      /// 一个购买单位大约多少克
+  @JsonKey(
+    
+    name: r'grams',
+    required: true,
+    includeIfNull: false,
+  )
 
-  @BuiltValueSerializer(custom: true)
-  static Serializer<PurchaseUnit> get serializer => _$PurchaseUnitSerializer();
-}
 
-class _$PurchaseUnitSerializer implements PrimitiveSerializer<PurchaseUnit> {
-  @override
-  final Iterable<Type> types = const [PurchaseUnit, _$PurchaseUnit];
+  final num grams;
 
-  @override
-  final String wireName = r'PurchaseUnit';
 
-  Iterable<Object?> _serializeProperties(
-    Serializers serializers,
-    PurchaseUnit object, {
-    FullType specifiedType = FullType.unspecified,
-  }) sync* {
-    yield r'name';
-    yield serializers.serialize(
-      object.name,
-      specifiedType: const FullType(String),
-    );
-    yield r'grams';
-    yield serializers.serialize(
-      object.grams,
-      specifiedType: const FullType(num),
-    );
-  }
 
-  @override
-  Object serialize(
-    Serializers serializers,
-    PurchaseUnit object, {
-    FullType specifiedType = FullType.unspecified,
-  }) {
-    return _serializeProperties(serializers, object, specifiedType: specifiedType).toList();
-  }
+      /// 购买单位，例如 盒、把、瓶
+  @JsonKey(
+    
+    name: r'name',
+    required: true,
+    includeIfNull: false,
+  )
 
-  void _deserializeProperties(
-    Serializers serializers,
-    Object serialized, {
-    FullType specifiedType = FullType.unspecified,
-    required List<Object?> serializedList,
-    required PurchaseUnitBuilder result,
-    required List<Object?> unhandled,
-  }) {
-    for (var i = 0; i < serializedList.length; i += 2) {
-      final key = serializedList[i] as String;
-      final value = serializedList[i + 1];
-      switch (key) {
-        case r'name':
-          final valueDes = serializers.deserialize(
-            value,
-            specifiedType: const FullType(String),
-          ) as String;
-          result.name = valueDes;
-          break;
-        case r'grams':
-          final valueDes = serializers.deserialize(
-            value,
-            specifiedType: const FullType(num),
-          ) as num;
-          result.grams = valueDes;
-          break;
-        default:
-          unhandled.add(key);
-          unhandled.add(value);
-          break;
-      }
-    }
-  }
+
+  final String name;
+
+
+
+
+
+    @override
+    bool operator ==(Object other) => identical(this, other) || other is PurchaseUnit &&
+      other.grams == grams &&
+      other.name == name;
+
+    @override
+    int get hashCode =>
+        grams.hashCode +
+        name.hashCode;
+
+  factory PurchaseUnit.fromJson(Map<String, dynamic> json) => _$PurchaseUnitFromJson(json);
+
+  Map<String, dynamic> toJson() => _$PurchaseUnitToJson(this);
 
   @override
-  PurchaseUnit deserialize(
-    Serializers serializers,
-    Object serialized, {
-    FullType specifiedType = FullType.unspecified,
-  }) {
-    final result = PurchaseUnitBuilder();
-    final serializedList = (serialized as Iterable<Object?>).toList();
-    final unhandled = <Object?>[];
-    _deserializeProperties(
-      serializers,
-      serialized,
-      specifiedType: specifiedType,
-      serializedList: serializedList,
-      unhandled: unhandled,
-      result: result,
-    );
-    return result.build();
+  String toString() {
+    return toJson().toString();
   }
+
 }
 

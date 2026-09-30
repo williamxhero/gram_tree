@@ -3,159 +3,108 @@
 //
 
 // ignore_for_file: unused_element
-import 'package:built_collection/built_collection.dart';
 import 'package:gramtree_api/src/model/attribute_status.dart';
-import 'package:built_value/json_object.dart';
-import 'package:built_value/built_value.dart';
-import 'package:built_value/serializer.dart';
+import 'package:copy_with_extension/copy_with_extension.dart';
+import 'package:json_annotation/json_annotation.dart';
 
 part 'allergens_attribute.g.dart';
 
-/// 所属过敏原分类；空列表表示不含已登记的过敏原。
-///
-/// Properties:
-/// * [source_] - 这项数据的来源
-/// * [status] - ai_draft：AI 起草；verified：人工校对过
-/// * [value] 
-/// * [estimate] - 没经人工校对的字段按估算处理
-@BuiltValue()
-abstract class AllergensAttribute implements Built<AllergensAttribute, AllergensAttributeBuilder> {
-  /// 这项数据的来源
-  @BuiltValueField(wireName: r'source')
-  String get source_;
 
-  /// ai_draft：AI 起草；verified：人工校对过
-  @BuiltValueField(wireName: r'status')
-  AttributeStatus get status;
-  // enum statusEnum {  ai_draft,  verified,  };
+@CopyWith()
+@JsonSerializable(
+  checked: true,
+  createToJson: true,
+  disallowUnrecognizedKeys: false,
+  explicitToJson: true,
+)
+class AllergensAttribute {
+  /// Returns a new [AllergensAttribute] instance.
+  AllergensAttribute({
 
-  @BuiltValueField(wireName: r'value')
-  BuiltList<String> get value;
+    required  this.estimate,
 
-  /// 没经人工校对的字段按估算处理
-  @BuiltValueField(wireName: r'estimate')
-  bool get estimate;
+    required  this.source_,
 
-  AllergensAttribute._();
+    required  this.status,
 
-  factory AllergensAttribute([void updates(AllergensAttributeBuilder b)]) = _$AllergensAttribute;
+    required  this.value,
+  });
 
-  @BuiltValueHook(initializeBuilder: true)
-  static void _defaults(AllergensAttributeBuilder b) => b;
+      /// 没经人工校对的字段按估算处理
+  @JsonKey(
+    
+    name: r'estimate',
+    required: true,
+    includeIfNull: false,
+  )
 
-  @BuiltValueSerializer(custom: true)
-  static Serializer<AllergensAttribute> get serializer => _$AllergensAttributeSerializer();
-}
 
-class _$AllergensAttributeSerializer implements PrimitiveSerializer<AllergensAttribute> {
-  @override
-  final Iterable<Type> types = const [AllergensAttribute, _$AllergensAttribute];
+  final bool estimate;
 
-  @override
-  final String wireName = r'AllergensAttribute';
 
-  Iterable<Object?> _serializeProperties(
-    Serializers serializers,
-    AllergensAttribute object, {
-    FullType specifiedType = FullType.unspecified,
-  }) sync* {
-    yield r'source';
-    yield serializers.serialize(
-      object.source_,
-      specifiedType: const FullType(String),
-    );
-    yield r'status';
-    yield serializers.serialize(
-      object.status,
-      specifiedType: const FullType(AttributeStatus),
-    );
-    yield r'value';
-    yield serializers.serialize(
-      object.value,
-      specifiedType: const FullType(BuiltList, [FullType(String)]),
-    );
-    yield r'estimate';
-    yield serializers.serialize(
-      object.estimate,
-      specifiedType: const FullType(bool),
-    );
-  }
 
-  @override
-  Object serialize(
-    Serializers serializers,
-    AllergensAttribute object, {
-    FullType specifiedType = FullType.unspecified,
-  }) {
-    return _serializeProperties(serializers, object, specifiedType: specifiedType).toList();
-  }
+      /// 这项数据的来源
+  @JsonKey(
+    
+    name: r'source',
+    required: true,
+    includeIfNull: false,
+  )
 
-  void _deserializeProperties(
-    Serializers serializers,
-    Object serialized, {
-    FullType specifiedType = FullType.unspecified,
-    required List<Object?> serializedList,
-    required AllergensAttributeBuilder result,
-    required List<Object?> unhandled,
-  }) {
-    for (var i = 0; i < serializedList.length; i += 2) {
-      final key = serializedList[i] as String;
-      final value = serializedList[i + 1];
-      switch (key) {
-        case r'source':
-          final valueDes = serializers.deserialize(
-            value,
-            specifiedType: const FullType(String),
-          ) as String;
-          result.source_ = valueDes;
-          break;
-        case r'status':
-          final valueDes = serializers.deserialize(
-            value,
-            specifiedType: const FullType(AttributeStatus),
-          ) as AttributeStatus;
-          result.status = valueDes;
-          break;
-        case r'value':
-          final valueDes = serializers.deserialize(
-            value,
-            specifiedType: const FullType(BuiltList, [FullType(String)]),
-          ) as BuiltList<String>;
-          result.value.replace(valueDes);
-          break;
-        case r'estimate':
-          final valueDes = serializers.deserialize(
-            value,
-            specifiedType: const FullType(bool),
-          ) as bool;
-          result.estimate = valueDes;
-          break;
-        default:
-          unhandled.add(key);
-          unhandled.add(value);
-          break;
-      }
-    }
-  }
+
+  final String source_;
+
+
+
+      /// ai_draft：AI 起草；verified：人工校对过
+  @JsonKey(
+    
+    name: r'status',
+    required: true,
+    includeIfNull: false,
+  )
+
+
+  final AttributeStatus status;
+
+
+
+  @JsonKey(
+    
+    name: r'value',
+    required: true,
+    includeIfNull: false,
+  )
+
+
+  final List<String> value;
+
+
+
+
+
+    @override
+    bool operator ==(Object other) => identical(this, other) || other is AllergensAttribute &&
+      other.estimate == estimate &&
+      other.source_ == source_ &&
+      other.status == status &&
+      other.value == value;
+
+    @override
+    int get hashCode =>
+        estimate.hashCode +
+        source_.hashCode +
+        status.hashCode +
+        value.hashCode;
+
+  factory AllergensAttribute.fromJson(Map<String, dynamic> json) => _$AllergensAttributeFromJson(json);
+
+  Map<String, dynamic> toJson() => _$AllergensAttributeToJson(this);
 
   @override
-  AllergensAttribute deserialize(
-    Serializers serializers,
-    Object serialized, {
-    FullType specifiedType = FullType.unspecified,
-  }) {
-    final result = AllergensAttributeBuilder();
-    final serializedList = (serialized as Iterable<Object?>).toList();
-    final unhandled = <Object?>[];
-    _deserializeProperties(
-      serializers,
-      serialized,
-      specifiedType: specifiedType,
-      serializedList: serializedList,
-      unhandled: unhandled,
-      result: result,
-    );
-    return result.build();
+  String toString() {
+    return toJson().toString();
   }
+
 }
 

@@ -3,230 +3,173 @@
 //
 
 // ignore_for_file: unused_element
-import 'package:built_collection/built_collection.dart';
 import 'package:gramtree_api/src/model/cache_info.dart';
 import 'package:gramtree_api/src/model/component_descriptor.dart';
 import 'package:gramtree_api/src/model/fallback_info.dart';
 import 'package:gramtree_api/src/model/experiment_info.dart';
-import 'package:built_value/built_value.dart';
-import 'package:built_value/serializer.dart';
+import 'package:copy_with_extension/copy_with_extension.dart';
+import 'package:json_annotation/json_annotation.dart';
 
 part 'page_description.g.dart';
 
-/// PageDescription
-///
-/// Properties:
-/// * [protocol] - 协议版本，大版本.小版本，例如 1.0
-/// * [pageType] 
-/// * [compositionId] 
-/// * [generatedAt] 
-/// * [cache] 
-/// * [experiment] 
-/// * [fallback] 
-/// * [components] 
-@BuiltValue()
-abstract class PageDescription implements Built<PageDescription, PageDescriptionBuilder> {
-  /// 协议版本，大版本.小版本，例如 1.0
-  @BuiltValueField(wireName: r'protocol')
-  String get protocol;
 
-  @BuiltValueField(wireName: r'page_type')
-  String get pageType;
+@CopyWith()
+@JsonSerializable(
+  checked: true,
+  createToJson: true,
+  disallowUnrecognizedKeys: false,
+  explicitToJson: true,
+)
+class PageDescription {
+  /// Returns a new [PageDescription] instance.
+  PageDescription({
 
-  @BuiltValueField(wireName: r'composition_id')
-  String get compositionId;
+    required  this.cache,
 
-  @BuiltValueField(wireName: r'generated_at')
-  String get generatedAt;
+     this.components,
 
-  @BuiltValueField(wireName: r'cache')
-  CacheInfo get cache;
+    required  this.compositionId,
 
-  @BuiltValueField(wireName: r'experiment')
-  ExperimentInfo? get experiment;
+     this.experiment,
 
-  @BuiltValueField(wireName: r'fallback')
-  FallbackInfo? get fallback;
+     this.fallback,
 
-  @BuiltValueField(wireName: r'components')
-  BuiltList<ComponentDescriptor>? get components;
+    required  this.generatedAt,
 
-  PageDescription._();
+    required  this.pageType,
 
-  factory PageDescription([void updates(PageDescriptionBuilder b)]) = _$PageDescription;
+    required  this.protocol,
+  });
 
-  @BuiltValueHook(initializeBuilder: true)
-  static void _defaults(PageDescriptionBuilder b) => b;
+  @JsonKey(
+    
+    name: r'cache',
+    required: true,
+    includeIfNull: false,
+  )
 
-  @BuiltValueSerializer(custom: true)
-  static Serializer<PageDescription> get serializer => _$PageDescriptionSerializer();
-}
 
-class _$PageDescriptionSerializer implements PrimitiveSerializer<PageDescription> {
-  @override
-  final Iterable<Type> types = const [PageDescription, _$PageDescription];
+  final CacheInfo cache;
 
-  @override
-  final String wireName = r'PageDescription';
 
-  Iterable<Object?> _serializeProperties(
-    Serializers serializers,
-    PageDescription object, {
-    FullType specifiedType = FullType.unspecified,
-  }) sync* {
-    yield r'protocol';
-    yield serializers.serialize(
-      object.protocol,
-      specifiedType: const FullType(String),
-    );
-    yield r'page_type';
-    yield serializers.serialize(
-      object.pageType,
-      specifiedType: const FullType(String),
-    );
-    yield r'composition_id';
-    yield serializers.serialize(
-      object.compositionId,
-      specifiedType: const FullType(String),
-    );
-    yield r'generated_at';
-    yield serializers.serialize(
-      object.generatedAt,
-      specifiedType: const FullType(String),
-    );
-    yield r'cache';
-    yield serializers.serialize(
-      object.cache,
-      specifiedType: const FullType(CacheInfo),
-    );
-    if (object.experiment != null) {
-      yield r'experiment';
-      yield serializers.serialize(
-        object.experiment,
-        specifiedType: const FullType.nullable(ExperimentInfo),
-      );
-    }
-    if (object.fallback != null) {
-      yield r'fallback';
-      yield serializers.serialize(
-        object.fallback,
-        specifiedType: const FullType.nullable(FallbackInfo),
-      );
-    }
-    if (object.components != null) {
-      yield r'components';
-      yield serializers.serialize(
-        object.components,
-        specifiedType: const FullType(BuiltList, [FullType(ComponentDescriptor)]),
-      );
-    }
-  }
 
-  @override
-  Object serialize(
-    Serializers serializers,
-    PageDescription object, {
-    FullType specifiedType = FullType.unspecified,
-  }) {
-    return _serializeProperties(serializers, object, specifiedType: specifiedType).toList();
-  }
+  @JsonKey(
+    
+    name: r'components',
+    required: false,
+    includeIfNull: false,
+  )
 
-  void _deserializeProperties(
-    Serializers serializers,
-    Object serialized, {
-    FullType specifiedType = FullType.unspecified,
-    required List<Object?> serializedList,
-    required PageDescriptionBuilder result,
-    required List<Object?> unhandled,
-  }) {
-    for (var i = 0; i < serializedList.length; i += 2) {
-      final key = serializedList[i] as String;
-      final value = serializedList[i + 1];
-      switch (key) {
-        case r'protocol':
-          final valueDes = serializers.deserialize(
-            value,
-            specifiedType: const FullType(String),
-          ) as String;
-          result.protocol = valueDes;
-          break;
-        case r'page_type':
-          final valueDes = serializers.deserialize(
-            value,
-            specifiedType: const FullType(String),
-          ) as String;
-          result.pageType = valueDes;
-          break;
-        case r'composition_id':
-          final valueDes = serializers.deserialize(
-            value,
-            specifiedType: const FullType(String),
-          ) as String;
-          result.compositionId = valueDes;
-          break;
-        case r'generated_at':
-          final valueDes = serializers.deserialize(
-            value,
-            specifiedType: const FullType(String),
-          ) as String;
-          result.generatedAt = valueDes;
-          break;
-        case r'cache':
-          final valueDes = serializers.deserialize(
-            value,
-            specifiedType: const FullType(CacheInfo),
-          ) as CacheInfo;
-          result.cache.replace(valueDes);
-          break;
-        case r'experiment':
-          final valueDes = serializers.deserialize(
-            value,
-            specifiedType: const FullType.nullable(ExperimentInfo),
-          ) as ExperimentInfo?;
-          if (valueDes == null) continue;
-          result.experiment.replace(valueDes);
-          break;
-        case r'fallback':
-          final valueDes = serializers.deserialize(
-            value,
-            specifiedType: const FullType.nullable(FallbackInfo),
-          ) as FallbackInfo?;
-          if (valueDes == null) continue;
-          result.fallback.replace(valueDes);
-          break;
-        case r'components':
-          final valueDes = serializers.deserialize(
-            value,
-            specifiedType: const FullType(BuiltList, [FullType(ComponentDescriptor)]),
-          ) as BuiltList<ComponentDescriptor>;
-          result.components.replace(valueDes);
-          break;
-        default:
-          unhandled.add(key);
-          unhandled.add(value);
-          break;
-      }
-    }
-  }
+
+  final List<ComponentDescriptor>? components;
+
+
+
+  @JsonKey(
+    
+    name: r'composition_id',
+    required: true,
+    includeIfNull: false,
+  )
+
+
+  final String compositionId;
+
+
+
+  @JsonKey(
+    
+    name: r'experiment',
+    required: false,
+    includeIfNull: false,
+  )
+
+
+  final ExperimentInfo? experiment;
+
+
+
+  @JsonKey(
+    
+    name: r'fallback',
+    required: false,
+    includeIfNull: false,
+  )
+
+
+  final FallbackInfo? fallback;
+
+
+
+  @JsonKey(
+    
+    name: r'generated_at',
+    required: true,
+    includeIfNull: false,
+  )
+
+
+  final String generatedAt;
+
+
+
+  @JsonKey(
+    
+    name: r'page_type',
+    required: true,
+    includeIfNull: false,
+  )
+
+
+  final String pageType;
+
+
+
+      /// 协议版本，大版本.小版本，例如 1.0
+  @JsonKey(
+    
+    name: r'protocol',
+    required: true,
+    includeIfNull: false,
+  )
+
+
+  final String protocol;
+
+
+
+
+
+    @override
+    bool operator ==(Object other) => identical(this, other) || other is PageDescription &&
+      other.cache == cache &&
+      other.components == components &&
+      other.compositionId == compositionId &&
+      other.experiment == experiment &&
+      other.fallback == fallback &&
+      other.generatedAt == generatedAt &&
+      other.pageType == pageType &&
+      other.protocol == protocol;
+
+    @override
+    int get hashCode =>
+        cache.hashCode +
+        components.hashCode +
+        compositionId.hashCode +
+        (experiment == null ? 0 : experiment.hashCode) +
+        (fallback == null ? 0 : fallback.hashCode) +
+        generatedAt.hashCode +
+        pageType.hashCode +
+        protocol.hashCode;
+
+  factory PageDescription.fromJson(Map<String, dynamic> json) => _$PageDescriptionFromJson(json);
+
+  Map<String, dynamic> toJson() => _$PageDescriptionToJson(this);
 
   @override
-  PageDescription deserialize(
-    Serializers serializers,
-    Object serialized, {
-    FullType specifiedType = FullType.unspecified,
-  }) {
-    final result = PageDescriptionBuilder();
-    final serializedList = (serialized as Iterable<Object?>).toList();
-    final unhandled = <Object?>[];
-    _deserializeProperties(
-      serializers,
-      serialized,
-      specifiedType: specifiedType,
-      serializedList: serializedList,
-      unhandled: unhandled,
-      result: result,
-    );
-    return result.build();
+  String toString() {
+    return toJson().toString();
   }
+
 }
 

@@ -3,120 +3,72 @@
 //
 
 // ignore_for_file: unused_element
-import 'package:built_value/built_value.dart';
-import 'package:built_value/serializer.dart';
+import 'package:copy_with_extension/copy_with_extension.dart';
+import 'package:json_annotation/json_annotation.dart';
 
 part 'email_login_request.g.dart';
 
-/// EmailLoginRequest
-///
-/// Properties:
-/// * [email] 
-/// * [code] 
-@BuiltValue()
-abstract class EmailLoginRequest implements Built<EmailLoginRequest, EmailLoginRequestBuilder> {
-  @BuiltValueField(wireName: r'email')
-  String get email;
 
-  @BuiltValueField(wireName: r'code')
-  String get code;
+@CopyWith()
+@JsonSerializable(
+  checked: true,
+  createToJson: true,
+  disallowUnrecognizedKeys: false,
+  explicitToJson: true,
+)
+class EmailLoginRequest {
+  /// Returns a new [EmailLoginRequest] instance.
+  EmailLoginRequest({
 
-  EmailLoginRequest._();
+    required  this.code,
 
-  factory EmailLoginRequest([void updates(EmailLoginRequestBuilder b)]) = _$EmailLoginRequest;
+    required  this.email,
+  });
 
-  @BuiltValueHook(initializeBuilder: true)
-  static void _defaults(EmailLoginRequestBuilder b) => b;
+  @JsonKey(
+    
+    name: r'code',
+    required: true,
+    includeIfNull: false,
+  )
 
-  @BuiltValueSerializer(custom: true)
-  static Serializer<EmailLoginRequest> get serializer => _$EmailLoginRequestSerializer();
-}
 
-class _$EmailLoginRequestSerializer implements PrimitiveSerializer<EmailLoginRequest> {
-  @override
-  final Iterable<Type> types = const [EmailLoginRequest, _$EmailLoginRequest];
+  final String code;
 
-  @override
-  final String wireName = r'EmailLoginRequest';
 
-  Iterable<Object?> _serializeProperties(
-    Serializers serializers,
-    EmailLoginRequest object, {
-    FullType specifiedType = FullType.unspecified,
-  }) sync* {
-    yield r'email';
-    yield serializers.serialize(
-      object.email,
-      specifiedType: const FullType(String),
-    );
-    yield r'code';
-    yield serializers.serialize(
-      object.code,
-      specifiedType: const FullType(String),
-    );
-  }
 
-  @override
-  Object serialize(
-    Serializers serializers,
-    EmailLoginRequest object, {
-    FullType specifiedType = FullType.unspecified,
-  }) {
-    return _serializeProperties(serializers, object, specifiedType: specifiedType).toList();
-  }
+  @JsonKey(
+    
+    name: r'email',
+    required: true,
+    includeIfNull: false,
+  )
 
-  void _deserializeProperties(
-    Serializers serializers,
-    Object serialized, {
-    FullType specifiedType = FullType.unspecified,
-    required List<Object?> serializedList,
-    required EmailLoginRequestBuilder result,
-    required List<Object?> unhandled,
-  }) {
-    for (var i = 0; i < serializedList.length; i += 2) {
-      final key = serializedList[i] as String;
-      final value = serializedList[i + 1];
-      switch (key) {
-        case r'email':
-          final valueDes = serializers.deserialize(
-            value,
-            specifiedType: const FullType(String),
-          ) as String;
-          result.email = valueDes;
-          break;
-        case r'code':
-          final valueDes = serializers.deserialize(
-            value,
-            specifiedType: const FullType(String),
-          ) as String;
-          result.code = valueDes;
-          break;
-        default:
-          unhandled.add(key);
-          unhandled.add(value);
-          break;
-      }
-    }
-  }
+
+  final String email;
+
+
+
+
+
+    @override
+    bool operator ==(Object other) => identical(this, other) || other is EmailLoginRequest &&
+      other.code == code &&
+      other.email == email;
+
+    @override
+    int get hashCode =>
+        code.hashCode +
+        email.hashCode;
+
+  factory EmailLoginRequest.fromJson(Map<String, dynamic> json) => _$EmailLoginRequestFromJson(json);
+
+  Map<String, dynamic> toJson() => _$EmailLoginRequestToJson(this);
 
   @override
-  EmailLoginRequest deserialize(
-    Serializers serializers,
-    Object serialized, {
-    FullType specifiedType = FullType.unspecified,
-  }) {
-    final result = EmailLoginRequestBuilder();
-    final serializedList = (serialized as Iterable<Object?>).toList();
-    final unhandled = <Object?>[];
-    _deserializeProperties(
-      serializers,
-      serialized,
-      specifiedType: specifiedType,
-      serializedList: serializedList,
-      unhandled: unhandled,
-      result: result,
-    );
-    return result.build();
+  String toString() {
+    return toJson().toString();
   }
+
 }
 

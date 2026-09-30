@@ -4,10 +4,11 @@
 
 import 'dart:async';
 
-import 'package:built_value/serializer.dart';
+// ignore: unused_import
+import 'dart:convert';
+import 'package:gramtree_api/src/deserialize.dart';
 import 'package:dio/dio.dart';
 
-import 'package:built_collection/built_collection.dart';
 import 'package:gramtree_api/src/model/bind_apple_request.dart';
 import 'package:gramtree_api/src/model/bind_email_request.dart';
 import 'package:gramtree_api/src/model/consent_record_output.dart';
@@ -22,9 +23,7 @@ class AccountApi {
 
   final Dio _dio;
 
-  final Serializers _serializers;
-
-  const AccountApi(this._dio, this._serializers);
+  const AccountApi(this._dio);
 
   /// 绑定 Apple
   /// 
@@ -38,9 +37,9 @@ class AccountApi {
   /// * [onSendProgress] - A [ProgressCallback] that can be used to get the send progress
   /// * [onReceiveProgress] - A [ProgressCallback] that can be used to get the receive progress
   ///
-  /// Returns a [Future] containing a [Response] with a [BuiltList<IdentityOut>] as data
+  /// Returns a [Future] containing a [Response] with a [List<IdentityOut>] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<BuiltList<IdentityOut>>> bindApple({ 
+  Future<Response<List<IdentityOut>>> bindApple({ 
     required BindAppleRequest bindAppleRequest,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -72,9 +71,7 @@ class AccountApi {
     dynamic _bodyData;
 
     try {
-      const _type = FullType(BindAppleRequest);
-      _bodyData = _serializers.serialize(bindAppleRequest, specifiedType: _type);
-
+_bodyData=jsonEncode(bindAppleRequest);
     } catch(error, stackTrace) {
       throw DioException(
          requestOptions: _options.compose(
@@ -96,14 +93,11 @@ class AccountApi {
       onReceiveProgress: onReceiveProgress,
     );
 
-    BuiltList<IdentityOut>? _responseData;
+    List<IdentityOut>? _responseData;
 
     try {
-      final rawResponse = _response.data;
-      _responseData = rawResponse == null ? null : _serializers.deserialize(
-        rawResponse,
-        specifiedType: const FullType(BuiltList, [FullType(IdentityOut)]),
-      ) as BuiltList<IdentityOut>;
+final rawData = _response.data;
+_responseData = rawData == null ? null : deserialize<List<IdentityOut>, IdentityOut>(rawData, 'List<IdentityOut>', growable: true);
 
     } catch (error, stackTrace) {
       throw DioException(
@@ -115,7 +109,7 @@ class AccountApi {
       );
     }
 
-    return Response<BuiltList<IdentityOut>>(
+    return Response<List<IdentityOut>>(
       data: _responseData,
       headers: _response.headers,
       isRedirect: _response.isRedirect,
@@ -139,9 +133,9 @@ class AccountApi {
   /// * [onSendProgress] - A [ProgressCallback] that can be used to get the send progress
   /// * [onReceiveProgress] - A [ProgressCallback] that can be used to get the receive progress
   ///
-  /// Returns a [Future] containing a [Response] with a [BuiltList<IdentityOut>] as data
+  /// Returns a [Future] containing a [Response] with a [List<IdentityOut>] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<BuiltList<IdentityOut>>> bindEmail({ 
+  Future<Response<List<IdentityOut>>> bindEmail({ 
     required BindEmailRequest bindEmailRequest,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -173,9 +167,7 @@ class AccountApi {
     dynamic _bodyData;
 
     try {
-      const _type = FullType(BindEmailRequest);
-      _bodyData = _serializers.serialize(bindEmailRequest, specifiedType: _type);
-
+_bodyData=jsonEncode(bindEmailRequest);
     } catch(error, stackTrace) {
       throw DioException(
          requestOptions: _options.compose(
@@ -197,14 +189,11 @@ class AccountApi {
       onReceiveProgress: onReceiveProgress,
     );
 
-    BuiltList<IdentityOut>? _responseData;
+    List<IdentityOut>? _responseData;
 
     try {
-      final rawResponse = _response.data;
-      _responseData = rawResponse == null ? null : _serializers.deserialize(
-        rawResponse,
-        specifiedType: const FullType(BuiltList, [FullType(IdentityOut)]),
-      ) as BuiltList<IdentityOut>;
+final rawData = _response.data;
+_responseData = rawData == null ? null : deserialize<List<IdentityOut>, IdentityOut>(rawData, 'List<IdentityOut>', growable: true);
 
     } catch (error, stackTrace) {
       throw DioException(
@@ -216,7 +205,7 @@ class AccountApi {
       );
     }
 
-    return Response<BuiltList<IdentityOut>>(
+    return Response<List<IdentityOut>>(
       data: _responseData,
       headers: _response.headers,
       isRedirect: _response.isRedirect,
@@ -279,11 +268,8 @@ class AccountApi {
     UserOut? _responseData;
 
     try {
-      final rawResponse = _response.data;
-      _responseData = rawResponse == null ? null : _serializers.deserialize(
-        rawResponse,
-        specifiedType: const FullType(UserOut),
-      ) as UserOut;
+final rawData = _response.data;
+_responseData = rawData == null ? null : deserialize<UserOut, UserOut>(rawData, 'UserOut', growable: true);
 
     } catch (error, stackTrace) {
       throw DioException(
@@ -318,9 +304,9 @@ class AccountApi {
   /// * [onSendProgress] - A [ProgressCallback] that can be used to get the send progress
   /// * [onReceiveProgress] - A [ProgressCallback] that can be used to get the receive progress
   ///
-  /// Returns a [Future] containing a [Response] with a [BuiltList<ConsentRecordOutput>] as data
+  /// Returns a [Future] containing a [Response] with a [List<ConsentRecordOutput>] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<BuiltList<ConsentRecordOutput>>> listConsents({ 
+  Future<Response<List<ConsentRecordOutput>>> listConsents({ 
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
     Map<String, dynamic>? extra,
@@ -355,14 +341,11 @@ class AccountApi {
       onReceiveProgress: onReceiveProgress,
     );
 
-    BuiltList<ConsentRecordOutput>? _responseData;
+    List<ConsentRecordOutput>? _responseData;
 
     try {
-      final rawResponse = _response.data;
-      _responseData = rawResponse == null ? null : _serializers.deserialize(
-        rawResponse,
-        specifiedType: const FullType(BuiltList, [FullType(ConsentRecordOutput)]),
-      ) as BuiltList<ConsentRecordOutput>;
+final rawData = _response.data;
+_responseData = rawData == null ? null : deserialize<List<ConsentRecordOutput>, ConsentRecordOutput>(rawData, 'List<ConsentRecordOutput>', growable: true);
 
     } catch (error, stackTrace) {
       throw DioException(
@@ -374,7 +357,7 @@ class AccountApi {
       );
     }
 
-    return Response<BuiltList<ConsentRecordOutput>>(
+    return Response<List<ConsentRecordOutput>>(
       data: _responseData,
       headers: _response.headers,
       isRedirect: _response.isRedirect,
@@ -397,9 +380,9 @@ class AccountApi {
   /// * [onSendProgress] - A [ProgressCallback] that can be used to get the send progress
   /// * [onReceiveProgress] - A [ProgressCallback] that can be used to get the receive progress
   ///
-  /// Returns a [Future] containing a [Response] with a [BuiltList<IdentityOut>] as data
+  /// Returns a [Future] containing a [Response] with a [List<IdentityOut>] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<BuiltList<IdentityOut>>> listIdentities({ 
+  Future<Response<List<IdentityOut>>> listIdentities({ 
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
     Map<String, dynamic>? extra,
@@ -434,14 +417,11 @@ class AccountApi {
       onReceiveProgress: onReceiveProgress,
     );
 
-    BuiltList<IdentityOut>? _responseData;
+    List<IdentityOut>? _responseData;
 
     try {
-      final rawResponse = _response.data;
-      _responseData = rawResponse == null ? null : _serializers.deserialize(
-        rawResponse,
-        specifiedType: const FullType(BuiltList, [FullType(IdentityOut)]),
-      ) as BuiltList<IdentityOut>;
+final rawData = _response.data;
+_responseData = rawData == null ? null : deserialize<List<IdentityOut>, IdentityOut>(rawData, 'List<IdentityOut>', growable: true);
 
     } catch (error, stackTrace) {
       throw DioException(
@@ -453,7 +433,7 @@ class AccountApi {
       );
     }
 
-    return Response<BuiltList<IdentityOut>>(
+    return Response<List<IdentityOut>>(
       data: _responseData,
       headers: _response.headers,
       isRedirect: _response.isRedirect,
@@ -516,11 +496,8 @@ class AccountApi {
     DeletionOut? _responseData;
 
     try {
-      final rawResponse = _response.data;
-      _responseData = rawResponse == null ? null : _serializers.deserialize(
-        rawResponse,
-        specifiedType: const FullType(DeletionOut),
-      ) as DeletionOut;
+final rawData = _response.data;
+_responseData = rawData == null ? null : deserialize<DeletionOut, DeletionOut>(rawData, 'DeletionOut', growable: true);
 
     } catch (error, stackTrace) {
       throw DioException(
@@ -590,9 +567,7 @@ class AccountApi {
     dynamic _bodyData;
 
     try {
-      const _type = FullType(ProfileUpdate);
-      _bodyData = _serializers.serialize(profileUpdate, specifiedType: _type);
-
+_bodyData=jsonEncode(profileUpdate);
     } catch(error, stackTrace) {
       throw DioException(
          requestOptions: _options.compose(
@@ -617,11 +592,8 @@ class AccountApi {
     UserOut? _responseData;
 
     try {
-      final rawResponse = _response.data;
-      _responseData = rawResponse == null ? null : _serializers.deserialize(
-        rawResponse,
-        specifiedType: const FullType(UserOut),
-      ) as UserOut;
+final rawData = _response.data;
+_responseData = rawData == null ? null : deserialize<UserOut, UserOut>(rawData, 'UserOut', growable: true);
 
     } catch (error, stackTrace) {
       throw DioException(
@@ -691,9 +663,7 @@ class AccountApi {
     dynamic _bodyData;
 
     try {
-      const _type = FullType(ConsentUpload);
-      _bodyData = _serializers.serialize(consentUpload, specifiedType: _type);
-
+_bodyData=jsonEncode(consentUpload);
     } catch(error, stackTrace) {
       throw DioException(
          requestOptions: _options.compose(

@@ -3,131 +3,82 @@
 //
 
 // ignore_for_file: unused_element
-import 'package:built_collection/built_collection.dart';
-import 'package:built_value/built_value.dart';
-import 'package:built_value/serializer.dart';
+import 'package:copy_with_extension/copy_with_extension.dart';
+import 'package:json_annotation/json_annotation.dart';
 
 part 'fallback_info.g.dart';
 
-/// FallbackInfo
-///
-/// Properties:
-/// * [reasonCode] 
-@BuiltValue()
-abstract class FallbackInfo implements Built<FallbackInfo, FallbackInfoBuilder> {
-  @BuiltValueField(wireName: r'reason_code')
-  FallbackInfoReasonCodeEnum get reasonCode;
-  // enum reasonCodeEnum {  unknown_major,  unknown_component,  illegal_action,  invalid_data,  missing_required,  server_error,  timeout,  };
 
-  FallbackInfo._();
+@CopyWith()
+@JsonSerializable(
+  checked: true,
+  createToJson: true,
+  disallowUnrecognizedKeys: false,
+  explicitToJson: true,
+)
+class FallbackInfo {
+  /// Returns a new [FallbackInfo] instance.
+  FallbackInfo({
 
-  factory FallbackInfo([void updates(FallbackInfoBuilder b)]) = _$FallbackInfo;
+    required  this.reasonCode,
+  });
 
-  @BuiltValueHook(initializeBuilder: true)
-  static void _defaults(FallbackInfoBuilder b) => b;
+  @JsonKey(
+    
+    name: r'reason_code',
+    required: true,
+    includeIfNull: false,
+  )
 
-  @BuiltValueSerializer(custom: true)
-  static Serializer<FallbackInfo> get serializer => _$FallbackInfoSerializer();
+
+  final FallbackInfoReasonCodeEnum reasonCode;
+
+
+
+
+
+    @override
+    bool operator ==(Object other) => identical(this, other) || other is FallbackInfo &&
+      other.reasonCode == reasonCode;
+
+    @override
+    int get hashCode =>
+        reasonCode.hashCode;
+
+  factory FallbackInfo.fromJson(Map<String, dynamic> json) => _$FallbackInfoFromJson(json);
+
+  Map<String, dynamic> toJson() => _$FallbackInfoToJson(this);
+
+  @override
+  String toString() {
+    return toJson().toString();
+  }
+
 }
 
-class _$FallbackInfoSerializer implements PrimitiveSerializer<FallbackInfo> {
-  @override
-  final Iterable<Type> types = const [FallbackInfo, _$FallbackInfo];
 
-  @override
-  final String wireName = r'FallbackInfo';
+enum FallbackInfoReasonCodeEnum {
+@JsonValue(r'unknown_major')
+unknownMajor(r'unknown_major'),
+@JsonValue(r'unknown_component')
+unknownComponent(r'unknown_component'),
+@JsonValue(r'illegal_action')
+illegalAction(r'illegal_action'),
+@JsonValue(r'invalid_data')
+invalidData(r'invalid_data'),
+@JsonValue(r'missing_required')
+missingRequired(r'missing_required'),
+@JsonValue(r'server_error')
+serverError(r'server_error'),
+@JsonValue(r'timeout')
+timeout(r'timeout');
 
-  Iterable<Object?> _serializeProperties(
-    Serializers serializers,
-    FallbackInfo object, {
-    FullType specifiedType = FullType.unspecified,
-  }) sync* {
-    yield r'reason_code';
-    yield serializers.serialize(
-      object.reasonCode,
-      specifiedType: const FullType(FallbackInfoReasonCodeEnum),
-    );
-  }
+const FallbackInfoReasonCodeEnum(this.value);
 
-  @override
-  Object serialize(
-    Serializers serializers,
-    FallbackInfo object, {
-    FullType specifiedType = FullType.unspecified,
-  }) {
-    return _serializeProperties(serializers, object, specifiedType: specifiedType).toList();
-  }
+final String value;
 
-  void _deserializeProperties(
-    Serializers serializers,
-    Object serialized, {
-    FullType specifiedType = FullType.unspecified,
-    required List<Object?> serializedList,
-    required FallbackInfoBuilder result,
-    required List<Object?> unhandled,
-  }) {
-    for (var i = 0; i < serializedList.length; i += 2) {
-      final key = serializedList[i] as String;
-      final value = serializedList[i + 1];
-      switch (key) {
-        case r'reason_code':
-          final valueDes = serializers.deserialize(
-            value,
-            specifiedType: const FullType(FallbackInfoReasonCodeEnum),
-          ) as FallbackInfoReasonCodeEnum;
-          result.reasonCode = valueDes;
-          break;
-        default:
-          unhandled.add(key);
-          unhandled.add(value);
-          break;
-      }
-    }
-  }
-
-  @override
-  FallbackInfo deserialize(
-    Serializers serializers,
-    Object serialized, {
-    FullType specifiedType = FullType.unspecified,
-  }) {
-    final result = FallbackInfoBuilder();
-    final serializedList = (serialized as Iterable<Object?>).toList();
-    final unhandled = <Object?>[];
-    _deserializeProperties(
-      serializers,
-      serialized,
-      specifiedType: specifiedType,
-      serializedList: serializedList,
-      unhandled: unhandled,
-      result: result,
-    );
-    return result.build();
-  }
+@override
+String toString() => value;
 }
 
-class FallbackInfoReasonCodeEnum extends EnumClass {
-
-  @BuiltValueEnumConst(wireName: r'unknown_major')
-  static const FallbackInfoReasonCodeEnum unknownMajor = _$fallbackInfoReasonCodeEnum_unknownMajor;
-  @BuiltValueEnumConst(wireName: r'unknown_component')
-  static const FallbackInfoReasonCodeEnum unknownComponent = _$fallbackInfoReasonCodeEnum_unknownComponent;
-  @BuiltValueEnumConst(wireName: r'illegal_action')
-  static const FallbackInfoReasonCodeEnum illegalAction = _$fallbackInfoReasonCodeEnum_illegalAction;
-  @BuiltValueEnumConst(wireName: r'invalid_data')
-  static const FallbackInfoReasonCodeEnum invalidData = _$fallbackInfoReasonCodeEnum_invalidData;
-  @BuiltValueEnumConst(wireName: r'missing_required')
-  static const FallbackInfoReasonCodeEnum missingRequired = _$fallbackInfoReasonCodeEnum_missingRequired;
-  @BuiltValueEnumConst(wireName: r'server_error')
-  static const FallbackInfoReasonCodeEnum serverError = _$fallbackInfoReasonCodeEnum_serverError;
-  @BuiltValueEnumConst(wireName: r'timeout')
-  static const FallbackInfoReasonCodeEnum timeout = _$fallbackInfoReasonCodeEnum_timeout;
-
-  static Serializer<FallbackInfoReasonCodeEnum> get serializer => _$fallbackInfoReasonCodeEnumSerializer;
-
-  const FallbackInfoReasonCodeEnum._(String name): super(name);
-
-  static BuiltSet<FallbackInfoReasonCodeEnum> get values => _$fallbackInfoReasonCodeEnumValues;
-  static FallbackInfoReasonCodeEnum valueOf(String name) => _$fallbackInfoReasonCodeEnumValueOf(name);
-}
 

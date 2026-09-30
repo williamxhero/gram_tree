@@ -3,212 +3,158 @@
 //
 
 // ignore_for_file: unused_element
-import 'package:built_collection/built_collection.dart';
-import 'package:built_value/json_object.dart';
-import 'package:built_value/built_value.dart';
-import 'package:built_value/serializer.dart';
+import 'package:copy_with_extension/copy_with_extension.dart';
+import 'package:json_annotation/json_annotation.dart';
 
 part 'analytics_event_in.g.dart';
 
-/// 只允许这些字段：事件类型、页面/入口标识、可选耗时、发生时间、设备 ID。  不含菜谱内容、口味档案、过敏和健康信息；也不接受用户 ID（服务端按登录状态填入）。
-///
-/// Properties:
-/// * [id] - 客户端生成的 UUID v4，用于去重
-/// * [eventType] 
-/// * [target] - 页面或入口标识
-/// * [durationMs] 
-/// * [occurredAt] 
-/// * [deviceId] 
-@BuiltValue()
-abstract class AnalyticsEventIn implements Built<AnalyticsEventIn, AnalyticsEventInBuilder> {
-  /// 客户端生成的 UUID v4，用于去重
-  @BuiltValueField(wireName: r'id')
-  String get id;
 
-  @BuiltValueField(wireName: r'event_type')
-  AnalyticsEventInEventTypeEnum get eventType;
-  // enum eventTypeEnum {  page_view,  tap,  load_duration,  };
+@CopyWith()
+@JsonSerializable(
+  checked: true,
+  createToJson: true,
+  disallowUnrecognizedKeys: false,
+  explicitToJson: true,
+)
+class AnalyticsEventIn {
+  /// Returns a new [AnalyticsEventIn] instance.
+  AnalyticsEventIn({
 
-  /// 页面或入口标识
-  @BuiltValueField(wireName: r'target')
-  String get target;
+     this.deviceId,
 
-  @BuiltValueField(wireName: r'duration_ms')
-  int? get durationMs;
+     this.durationMs,
 
-  @BuiltValueField(wireName: r'occurred_at')
-  DateTime get occurredAt;
+    required  this.eventType,
 
-  @BuiltValueField(wireName: r'device_id')
-  String? get deviceId;
+    required  this.id,
 
-  AnalyticsEventIn._();
+    required  this.occurredAt,
 
-  factory AnalyticsEventIn([void updates(AnalyticsEventInBuilder b)]) = _$AnalyticsEventIn;
+    required  this.target,
+  });
 
-  @BuiltValueHook(initializeBuilder: true)
-  static void _defaults(AnalyticsEventInBuilder b) => b;
+  @JsonKey(
+    
+    name: r'device_id',
+    required: false,
+    includeIfNull: false,
+  )
 
-  @BuiltValueSerializer(custom: true)
-  static Serializer<AnalyticsEventIn> get serializer => _$AnalyticsEventInSerializer();
+
+  final String? deviceId;
+
+
+
+          // minimum: 0
+          // maximum: 600000
+  @JsonKey(
+    
+    name: r'duration_ms',
+    required: false,
+    includeIfNull: false,
+  )
+
+
+  final int? durationMs;
+
+
+
+  @JsonKey(
+    
+    name: r'event_type',
+    required: true,
+    includeIfNull: false,
+  )
+
+
+  final AnalyticsEventInEventTypeEnum eventType;
+
+
+
+      /// 客户端生成的 UUID v4，用于去重
+  @JsonKey(
+    
+    name: r'id',
+    required: true,
+    includeIfNull: false,
+  )
+
+
+  final String id;
+
+
+
+  @JsonKey(
+    
+    name: r'occurred_at',
+    required: true,
+    includeIfNull: false,
+  )
+
+
+  final DateTime occurredAt;
+
+
+
+      /// 页面或入口标识
+  @JsonKey(
+    
+    name: r'target',
+    required: true,
+    includeIfNull: false,
+  )
+
+
+  final String target;
+
+
+
+
+
+    @override
+    bool operator ==(Object other) => identical(this, other) || other is AnalyticsEventIn &&
+      other.deviceId == deviceId &&
+      other.durationMs == durationMs &&
+      other.eventType == eventType &&
+      other.id == id &&
+      other.occurredAt == occurredAt &&
+      other.target == target;
+
+    @override
+    int get hashCode =>
+        (deviceId == null ? 0 : deviceId.hashCode) +
+        (durationMs == null ? 0 : durationMs.hashCode) +
+        eventType.hashCode +
+        id.hashCode +
+        occurredAt.hashCode +
+        target.hashCode;
+
+  factory AnalyticsEventIn.fromJson(Map<String, dynamic> json) => _$AnalyticsEventInFromJson(json);
+
+  Map<String, dynamic> toJson() => _$AnalyticsEventInToJson(this);
+
+  @override
+  String toString() {
+    return toJson().toString();
+  }
+
 }
 
-class _$AnalyticsEventInSerializer implements PrimitiveSerializer<AnalyticsEventIn> {
-  @override
-  final Iterable<Type> types = const [AnalyticsEventIn, _$AnalyticsEventIn];
 
-  @override
-  final String wireName = r'AnalyticsEventIn';
+enum AnalyticsEventInEventTypeEnum {
+@JsonValue(r'page_view')
+pageView(r'page_view'),
+@JsonValue(r'tap')
+tap(r'tap'),
+@JsonValue(r'load_duration')
+loadDuration(r'load_duration');
 
-  Iterable<Object?> _serializeProperties(
-    Serializers serializers,
-    AnalyticsEventIn object, {
-    FullType specifiedType = FullType.unspecified,
-  }) sync* {
-    yield r'id';
-    yield serializers.serialize(
-      object.id,
-      specifiedType: const FullType(String),
-    );
-    yield r'event_type';
-    yield serializers.serialize(
-      object.eventType,
-      specifiedType: const FullType(AnalyticsEventInEventTypeEnum),
-    );
-    yield r'target';
-    yield serializers.serialize(
-      object.target,
-      specifiedType: const FullType(String),
-    );
-    if (object.durationMs != null) {
-      yield r'duration_ms';
-      yield serializers.serialize(
-        object.durationMs,
-        specifiedType: const FullType.nullable(int),
-      );
-    }
-    yield r'occurred_at';
-    yield serializers.serialize(
-      object.occurredAt,
-      specifiedType: const FullType(DateTime),
-    );
-    if (object.deviceId != null) {
-      yield r'device_id';
-      yield serializers.serialize(
-        object.deviceId,
-        specifiedType: const FullType.nullable(String),
-      );
-    }
-  }
+const AnalyticsEventInEventTypeEnum(this.value);
 
-  @override
-  Object serialize(
-    Serializers serializers,
-    AnalyticsEventIn object, {
-    FullType specifiedType = FullType.unspecified,
-  }) {
-    return _serializeProperties(serializers, object, specifiedType: specifiedType).toList();
-  }
+final String value;
 
-  void _deserializeProperties(
-    Serializers serializers,
-    Object serialized, {
-    FullType specifiedType = FullType.unspecified,
-    required List<Object?> serializedList,
-    required AnalyticsEventInBuilder result,
-    required List<Object?> unhandled,
-  }) {
-    for (var i = 0; i < serializedList.length; i += 2) {
-      final key = serializedList[i] as String;
-      final value = serializedList[i + 1];
-      switch (key) {
-        case r'id':
-          final valueDes = serializers.deserialize(
-            value,
-            specifiedType: const FullType(String),
-          ) as String;
-          result.id = valueDes;
-          break;
-        case r'event_type':
-          final valueDes = serializers.deserialize(
-            value,
-            specifiedType: const FullType(AnalyticsEventInEventTypeEnum),
-          ) as AnalyticsEventInEventTypeEnum;
-          result.eventType = valueDes;
-          break;
-        case r'target':
-          final valueDes = serializers.deserialize(
-            value,
-            specifiedType: const FullType(String),
-          ) as String;
-          result.target = valueDes;
-          break;
-        case r'duration_ms':
-          final valueDes = serializers.deserialize(
-            value,
-            specifiedType: const FullType.nullable(int),
-          ) as int?;
-          if (valueDes == null) continue;
-          result.durationMs = valueDes;
-          break;
-        case r'occurred_at':
-          final valueDes = serializers.deserialize(
-            value,
-            specifiedType: const FullType(DateTime),
-          ) as DateTime;
-          result.occurredAt = valueDes;
-          break;
-        case r'device_id':
-          final valueDes = serializers.deserialize(
-            value,
-            specifiedType: const FullType.nullable(String),
-          ) as String?;
-          if (valueDes == null) continue;
-          result.deviceId = valueDes;
-          break;
-        default:
-          unhandled.add(key);
-          unhandled.add(value);
-          break;
-      }
-    }
-  }
-
-  @override
-  AnalyticsEventIn deserialize(
-    Serializers serializers,
-    Object serialized, {
-    FullType specifiedType = FullType.unspecified,
-  }) {
-    final result = AnalyticsEventInBuilder();
-    final serializedList = (serialized as Iterable<Object?>).toList();
-    final unhandled = <Object?>[];
-    _deserializeProperties(
-      serializers,
-      serialized,
-      specifiedType: specifiedType,
-      serializedList: serializedList,
-      unhandled: unhandled,
-      result: result,
-    );
-    return result.build();
-  }
+@override
+String toString() => value;
 }
 
-class AnalyticsEventInEventTypeEnum extends EnumClass {
-
-  @BuiltValueEnumConst(wireName: r'page_view')
-  static const AnalyticsEventInEventTypeEnum pageView = _$analyticsEventInEventTypeEnum_pageView;
-  @BuiltValueEnumConst(wireName: r'tap')
-  static const AnalyticsEventInEventTypeEnum tap = _$analyticsEventInEventTypeEnum_tap;
-  @BuiltValueEnumConst(wireName: r'load_duration')
-  static const AnalyticsEventInEventTypeEnum loadDuration = _$analyticsEventInEventTypeEnum_loadDuration;
-
-  static Serializer<AnalyticsEventInEventTypeEnum> get serializer => _$analyticsEventInEventTypeEnumSerializer;
-
-  const AnalyticsEventInEventTypeEnum._(String name): super(name);
-
-  static BuiltSet<AnalyticsEventInEventTypeEnum> get values => _$analyticsEventInEventTypeEnumValues;
-  static AnalyticsEventInEventTypeEnum valueOf(String name) => _$analyticsEventInEventTypeEnumValueOf(name);
-}
 

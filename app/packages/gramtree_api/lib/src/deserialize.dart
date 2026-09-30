@@ -63,6 +63,7 @@ import 'package:gramtree_api/src/model/storage_advice.dart';
 import 'package:gramtree_api/src/model/storage_attribute.dart';
 import 'package:gramtree_api/src/model/text_attribute.dart';
 import 'package:gramtree_api/src/model/token_pair.dart';
+import 'package:gramtree_api/src/model/unrecorded_ingredient_item.dart';
 import 'package:gramtree_api/src/model/user_out.dart';
 
 final _regList = RegExp(r'^List<(.*)>$');
@@ -216,6 +217,8 @@ final _regMap = RegExp(r'^Map<String,(.*)>$');
           return TextAttribute.fromJson(value as Map<String, dynamic>) as ReturnType;
         case 'TokenPair':
           return TokenPair.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'UnrecordedIngredientItem':
+          return UnrecordedIngredientItem.fromJson(value as Map<String, dynamic>) as ReturnType;
         case 'UserOut':
           return UserOut.fromJson(value as Map<String, dynamic>) as ReturnType;
         default:

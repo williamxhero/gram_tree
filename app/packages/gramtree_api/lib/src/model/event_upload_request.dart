@@ -3,106 +3,57 @@
 //
 
 // ignore_for_file: unused_element
-import 'package:built_collection/built_collection.dart';
 import 'package:gramtree_api/src/model/event_upload_item.dart';
-import 'package:built_value/built_value.dart';
-import 'package:built_value/serializer.dart';
+import 'package:copy_with_extension/copy_with_extension.dart';
+import 'package:json_annotation/json_annotation.dart';
 
 part 'event_upload_request.g.dart';
 
-/// EventUploadRequest
-///
-/// Properties:
-/// * [events] 
-@BuiltValue()
-abstract class EventUploadRequest implements Built<EventUploadRequest, EventUploadRequestBuilder> {
-  @BuiltValueField(wireName: r'events')
-  BuiltList<EventUploadItem> get events;
 
-  EventUploadRequest._();
+@CopyWith()
+@JsonSerializable(
+  checked: true,
+  createToJson: true,
+  disallowUnrecognizedKeys: false,
+  explicitToJson: true,
+)
+class EventUploadRequest {
+  /// Returns a new [EventUploadRequest] instance.
+  EventUploadRequest({
 
-  factory EventUploadRequest([void updates(EventUploadRequestBuilder b)]) = _$EventUploadRequest;
+    required  this.events,
+  });
 
-  @BuiltValueHook(initializeBuilder: true)
-  static void _defaults(EventUploadRequestBuilder b) => b;
+  @JsonKey(
+    
+    name: r'events',
+    required: true,
+    includeIfNull: false,
+  )
 
-  @BuiltValueSerializer(custom: true)
-  static Serializer<EventUploadRequest> get serializer => _$EventUploadRequestSerializer();
-}
 
-class _$EventUploadRequestSerializer implements PrimitiveSerializer<EventUploadRequest> {
-  @override
-  final Iterable<Type> types = const [EventUploadRequest, _$EventUploadRequest];
+  final List<EventUploadItem> events;
 
-  @override
-  final String wireName = r'EventUploadRequest';
 
-  Iterable<Object?> _serializeProperties(
-    Serializers serializers,
-    EventUploadRequest object, {
-    FullType specifiedType = FullType.unspecified,
-  }) sync* {
-    yield r'events';
-    yield serializers.serialize(
-      object.events,
-      specifiedType: const FullType(BuiltList, [FullType(EventUploadItem)]),
-    );
-  }
 
-  @override
-  Object serialize(
-    Serializers serializers,
-    EventUploadRequest object, {
-    FullType specifiedType = FullType.unspecified,
-  }) {
-    return _serializeProperties(serializers, object, specifiedType: specifiedType).toList();
-  }
 
-  void _deserializeProperties(
-    Serializers serializers,
-    Object serialized, {
-    FullType specifiedType = FullType.unspecified,
-    required List<Object?> serializedList,
-    required EventUploadRequestBuilder result,
-    required List<Object?> unhandled,
-  }) {
-    for (var i = 0; i < serializedList.length; i += 2) {
-      final key = serializedList[i] as String;
-      final value = serializedList[i + 1];
-      switch (key) {
-        case r'events':
-          final valueDes = serializers.deserialize(
-            value,
-            specifiedType: const FullType(BuiltList, [FullType(EventUploadItem)]),
-          ) as BuiltList<EventUploadItem>;
-          result.events.replace(valueDes);
-          break;
-        default:
-          unhandled.add(key);
-          unhandled.add(value);
-          break;
-      }
-    }
-  }
+
+    @override
+    bool operator ==(Object other) => identical(this, other) || other is EventUploadRequest &&
+      other.events == events;
+
+    @override
+    int get hashCode =>
+        events.hashCode;
+
+  factory EventUploadRequest.fromJson(Map<String, dynamic> json) => _$EventUploadRequestFromJson(json);
+
+  Map<String, dynamic> toJson() => _$EventUploadRequestToJson(this);
 
   @override
-  EventUploadRequest deserialize(
-    Serializers serializers,
-    Object serialized, {
-    FullType specifiedType = FullType.unspecified,
-  }) {
-    final result = EventUploadRequestBuilder();
-    final serializedList = (serialized as Iterable<Object?>).toList();
-    final unhandled = <Object?>[];
-    _deserializeProperties(
-      serializers,
-      serialized,
-      specifiedType: specifiedType,
-      serializedList: serializedList,
-      unhandled: unhandled,
-      result: result,
-    );
-    return result.build();
+  String toString() {
+    return toJson().toString();
   }
+
 }
 

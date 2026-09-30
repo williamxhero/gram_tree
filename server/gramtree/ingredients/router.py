@@ -1,6 +1,8 @@
 """食材库 HTTP 接口（SPEC-002.1 #19）。"""
 
-from fastapi import APIRouter
+from datetime import UTC, datetime
+
+from fastapi import APIRouter, Query
 from pydantic import BaseModel, Field, field_validator
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -10,7 +12,12 @@ from gramtree.core.ids import IdV4
 from gramtree.deps import SessionDep
 from gramtree.ingredients import matching
 from gramtree.ingredients.attributes import IngredientAttributes
-from gramtree.ingredients.models import Ingredient, IngredientAlias, IngredientAttribute
+from gramtree.ingredients.models import (
+    Ingredient,
+    IngredientAlias,
+    IngredientAttribute,
+    UnrecordedIngredient,
+)
 
 router = APIRouter(prefix="/ingredients", tags=["ingredients"])
 
@@ -81,6 +88,38 @@ def _to_detail(db: Session, row: Ingredient) -> IngredientDetail:
         version=row.version,
         attributes=attributes,
     )
+
+
+class UnrecordedIngredientItem(BaseModel):
+    """未收录食材统计项 (#102)"""
+
+    name: str
+    occurrence_count: int
+    first_seen_at: datetime
+    last_seen_at: datetime
+
+
+@router.get("/unrecorded", response_model=list[UnrecordedIngredientItem], responses=ERROR_RESPONSES)
+def list_unrecorded_ingredients(
+    db: SessionDep,
+    limit: int = Query(50, ge=1, le=500, description="最多返回多少条记录"),
+) -> list[UnrecordedIngredientItem]:
+    """查询未收录食材列表，按出现次数降序排列 (#102)。"""
+    stmt = (
+        select(UnrecordedIngredient)
+        .order_by(UnrecordedIngredient.occurrence_count.desc())
+        .limit(limit)
+    )
+    records = db.scalars(stmt).all()
+    return [
+        UnrecordedIngredientItem(
+            name=r.name,
+            occurrence_count=r.occurrence_count,
+            first_seen_at=r.first_seen_at,
+            last_seen_at=r.last_seen_at,
+        )
+        for r in records
+    ]
 
 
 @router.get("/{ingredient_id}", response_model=IngredientDetail, responses=ERROR_RESPONSES)
@@ -166,7 +205,26 @@ def normalize_ingredients(body: NormalizeRequest, db: SessionDep) -> NormalizeRe
     """把一批食材名称归一到标准 ID（只用规则匹配），结果按输入顺序返回。"""
     names = [item.name for item in body.items]
     results = []
+    now = datetime.now(UTC)
+
     for name, n in zip(names, matching.normalize(db, names), strict=True):
+        # 当返回 unrecorded 时，记录到未收录统计表 (#102)
+        if n.confidence == "unrecorded":
+            stmt = select(UnrecordedIngredient).where(UnrecordedIngredient.name == name)
+            existing = db.scalars(stmt).first()
+            if existing:
+                existing.occurrence_count += 1
+                existing.last_seen_at = now
+            else:
+                new_record = UnrecordedIngredient(
+                    name=name,
+                    occurrence_count=1,
+                    first_seen_at=now,
+                    last_seen_at=now,
+                )
+                db.add(new_record)
+            db.commit()
+
         results.append(
             NormalizeResultItem(
                 name=name,

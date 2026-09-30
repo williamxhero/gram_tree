@@ -66,3 +66,15 @@ class IngredientVersion(Base):
     version: Mapped[str] = mapped_column(String(20), primary_key=True)
     changelog: Mapped[str] = mapped_column(String(2000))
     imported_at: Mapped[datetime] = mapped_column(server_default=func.now())
+
+
+class UnrecordedIngredient(Base):
+    """未收录食材统计（#102）：归一化接口返回 unrecorded 时自动记录。"""
+
+    __tablename__ = "unrecorded_ingredients"
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
+    name: Mapped[str] = mapped_column(String(200), unique=True)
+    occurrence_count: Mapped[int] = mapped_column(default=1, index=True)
+    first_seen_at: Mapped[datetime] = mapped_column(server_default=func.now())
+    last_seen_at: Mapped[datetime] = mapped_column(server_default=func.now())
