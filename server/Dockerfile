@@ -17,5 +17,5 @@ RUN uv sync --frozen --no-dev
 
 ENV PATH="/srv/.venv/bin:$PATH"
 EXPOSE 8000
-# 启动时先跑迁移再起服务；数据库结构只能通过迁移修改
-CMD ["sh", "-c", "alembic upgrade head && uvicorn gramtree.asgi:app --host 0.0.0.0 --port 8000 --proxy-headers --forwarded-allow-ips='*'"]
+# 启动时先跑迁移、导入食材库,再起服务；数据库结构只能通过迁移修改
+CMD ["sh", "-c", "alembic upgrade head && gramtree ingredients import data/ingredients && uvicorn gramtree.asgi:app --host 0.0.0.0 --port 8000 --proxy-headers --forwarded-allow-ips='*'"]
