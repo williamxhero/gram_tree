@@ -186,6 +186,16 @@
     "category": "豆制品"
   },
   {
+    "id": "5b58a0b4-75c8-4f82-8f63-ae19442361a5",
+    "standard_name": "豌豆",
+    "aliases": [
+      "青豌豆"
+    ],
+    "pinyin": "wandou",
+    "pinyin_initials": "wd",
+    "category": "豆制品"
+  },
+  {
     "id": "3d45b19f-cf2b-46ca-8fec-23e269d2bac6",
     "standard_name": "豆浆",
     "aliases": [],

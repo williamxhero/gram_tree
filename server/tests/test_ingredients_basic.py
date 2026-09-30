@@ -13,6 +13,21 @@ from gramtree.cli import main as cli
 from tests.test_conventions import assert_error_shape
 
 FIXTURES = Path(__file__).parent / "data" / "ingredients"
+SEED = Path(__file__).parent.parent / "data" / "ingredients"
+
+# 已对外发布、不能再变的旧标准 ID：#86 最初的 3 种，加上 #96 扩库时被换掉/删掉的 7 种。
+LEGACY_IDS = [
+    ("06cf20af-aebb-4693-b673-e8f4b5a1845c", "生抽"),
+    ("3e68ce21-e6bd-41a1-96f1-7cae8d795b09", "盐"),
+    ("b097f5a9-0641-4f00-9666-dad68756638c", "鸡蛋"),
+    ("11504360-1509-478d-91c1-98efbf3ad3ec", "薏米"),
+    ("fdc37eeb-7d0f-446a-8ecd-d67822f998b9", "黄豆"),
+    ("22f38782-2b56-4832-9cb7-0ef62d0de19f", "黑豆"),
+    ("83d5fbb6-c7cf-4f6f-89a5-26fba7f447c9", "绿豆"),
+    ("04aba61b-273f-415c-85e1-828c90a1d05e", "红豆"),
+    ("b6c3ce46-4776-489b-a67e-ec749a383108", "五香粉"),
+    ("5b58a0b4-75c8-4f82-8f63-ae19442361a5", "豌豆"),
+]
 
 
 def test_import_and_read(client: TestClient) -> None:
@@ -29,6 +44,20 @@ def test_import_and_read(client: TestClient) -> None:
     assert ing["pinyin_initials"] == "csjy"
     assert ing["category"] == "调料"
     assert ing["version"] == "1.0.0"
+
+
+def test_seed_library_keeps_published_ids(client: TestClient) -> None:
+    """正式种子数据改版后，已发布的标准 ID 仍然读得到同一个食材。
+
+    标准 ID 永不删除、不重用，所以改分类、换文件、加别名都只能就地改，不能新造一个 ID
+    把老的顶掉；被误删的食材也必须按原 ID 补回来，否则库里已经导入过旧数据的实例会读不到。
+    """
+    assert cli(["ingredients", "import", str(SEED)]) == 0
+
+    for id_, name in LEGACY_IDS:
+        resp = client.get(f"/v1/ingredients/{id_}")
+        assert resp.status_code == 200, f"{name}（{id_}）读不到"
+        assert resp.json()["standard_name"] == name
 
 
 def test_import_is_idempotent(client: TestClient) -> None:

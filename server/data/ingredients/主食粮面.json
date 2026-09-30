@@ -255,7 +255,7 @@
     "category": "主食粮面"
   },
   {
-    "id": "6df5e148-073e-46c2-b8b5-328d5ccbb2de",
+    "id": "11504360-1509-478d-91c1-98efbf3ad3ec",
     "standard_name": "薏米",
     "aliases": [
       "薏仁",
@@ -266,7 +266,7 @@
     "category": "主食粮面"
   },
   {
-    "id": "83c75955-de69-434b-b894-2442745c52f0",
+    "id": "04aba61b-273f-415c-85e1-828c90a1d05e",
     "standard_name": "红豆",
     "aliases": [
       "赤小豆"
@@ -276,7 +276,7 @@
     "category": "主食粮面"
   },
   {
-    "id": "14aa3633-76b3-423b-bc3e-5fd141276c8b",
+    "id": "83d5fbb6-c7cf-4f6f-89a5-26fba7f447c9",
     "standard_name": "绿豆",
     "aliases": [
       "青豆"
@@ -286,7 +286,7 @@
     "category": "主食粮面"
   },
   {
-    "id": "f5b2dd27-8d0c-468d-913e-ceedde735d3e",
+    "id": "22f38782-2b56-4832-9cb7-0ef62d0de19f",
     "standard_name": "黑豆",
     "aliases": [
       "乌豆"
@@ -296,7 +296,7 @@
     "category": "主食粮面"
   },
   {
-    "id": "b76aef21-aa62-40f3-a390-c667c1a0cfb1",
+    "id": "fdc37eeb-7d0f-446a-8ecd-d67822f998b9",
     "standard_name": "黄豆",
     "aliases": [
       "大豆"
