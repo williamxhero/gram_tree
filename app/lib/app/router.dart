@@ -109,8 +109,10 @@ final routerProvider = Provider<GoRouter>((ref) {
         routes: [
           GoRoute(
             path: 'edit',
-            builder: (_, state) =>
-                RecipeEditorPage(recipeId: state.pathParameters['recipeId']!),
+            builder: (_, state) => RecipeEditorPage(
+              recipeId: state.pathParameters['recipeId']!,
+              versionId: state.uri.queryParameters['versionId'],
+            ),
           ),
           GoRoute(
             path: 'history',

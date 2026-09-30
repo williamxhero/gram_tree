@@ -43,12 +43,17 @@ class RecipeRepository {
     return response.data!;
   }
 
-  Future<RecipeDetail> saveVersion(String recipeId, RecipeForm form) async {
+  Future<RecipeDetail> saveVersion(
+    String recipeId,
+    RecipeForm form, {
+    String? baseVersionId,
+  }) async {
     final response = await _recipes.saveRecipeVersion(
       recipeId: recipeId,
       recipeVersionCreate: RecipeVersionCreate(
         snapshot: form.snapshot,
         changeNote: form.changeNote,
+        baseVersionId: baseVersionId,
       ),
     );
     return response.data!;

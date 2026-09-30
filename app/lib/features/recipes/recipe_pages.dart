@@ -261,12 +261,18 @@ class _RecipeEditorPageState extends ConsumerState<RecipeEditorPage> {
       final repo = ref.read(recipeRepositoryProvider);
       final detail = _loaded == null
           ? await repo.create(_form)
-          : await repo.saveVersion(widget.recipeId!, _form);
+          : await repo.saveVersion(
+              widget.recipeId!,
+              _form,
+              baseVersionId: widget.versionId,
+            );
       await RecipeDraftStore(ref.read(localStoreProvider)).discard(_recipeKey);
       if (!mounted) return;
       context.go('/recipes/${detail.id}');
     } catch (error) {
-      if (mounted) setState(() => _error = l10n.recipeSaveFailed(_message(error)));
+      if (mounted) {
+        setState(() => _error = l10n.recipeSaveFailed(_message(error)));
+      }
     } finally {
       if (mounted) setState(() => _saving = false);
     }
@@ -307,7 +313,7 @@ class _RecipeEditorPageState extends ConsumerState<RecipeEditorPage> {
             key: const ValueKey('recipe-dish-name'),
             controller: _dish,
             onChanged: (_) => _changed(),
-            decoration: const InputDecoration(
+            decoration: InputDecoration(
               labelText: l10n.recipeName,
               border: OutlineInputBorder(),
             ),
@@ -345,7 +351,7 @@ class _RecipeEditorPageState extends ConsumerState<RecipeEditorPage> {
             controller: _quantity,
             keyboardType: TextInputType.number,
             onChanged: (_) => _changed(),
-            decoration: const InputDecoration(
+            decoration: InputDecoration(
               labelText: l10n.recipeQuantity,
               border: OutlineInputBorder(),
             ),
@@ -355,7 +361,7 @@ class _RecipeEditorPageState extends ConsumerState<RecipeEditorPage> {
             key: const ValueKey('recipe-ingredient-unit'),
             controller: _unit,
             onChanged: (_) => _changed(),
-            decoration: const InputDecoration(
+            decoration: InputDecoration(
               labelText: l10n.recipeUnit,
               border: OutlineInputBorder(),
             ),
@@ -365,7 +371,7 @@ class _RecipeEditorPageState extends ConsumerState<RecipeEditorPage> {
             key: const ValueKey('recipe-ingredient-preparation'),
             controller: _preparation,
             onChanged: (_) => _changed(),
-            decoration: const InputDecoration(
+            decoration: InputDecoration(
               labelText: l10n.recipePreparationGroup,
               border: OutlineInputBorder(),
             ),
@@ -378,7 +384,7 @@ class _RecipeEditorPageState extends ConsumerState<RecipeEditorPage> {
             controller: _step,
             maxLines: 3,
             onChanged: (_) => _changed(),
-            decoration: const InputDecoration(
+            decoration: InputDecoration(
               labelText: l10n.recipeInstruction,
               border: OutlineInputBorder(),
             ),
@@ -389,7 +395,7 @@ class _RecipeEditorPageState extends ConsumerState<RecipeEditorPage> {
             controller: _why,
             maxLines: 2,
             onChanged: (_) => _changed(),
-            decoration: const InputDecoration(
+            decoration: InputDecoration(
               labelText: l10n.recipeWhy,
               border: OutlineInputBorder(),
             ),
@@ -399,7 +405,7 @@ class _RecipeEditorPageState extends ConsumerState<RecipeEditorPage> {
             key: const ValueKey('recipe-change-note'),
             controller: _note,
             onChanged: (_) => _changed(),
-            decoration: const InputDecoration(
+            decoration: InputDecoration(
               labelText: l10n.recipeChangeNote,
               border: OutlineInputBorder(),
             ),
@@ -479,7 +485,9 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final detail = _detail;
-    if (_error != null) return Scaffold(body: Center(child: Text(l10n.recipeNotFound)));
+    if (_error != null) {
+      return Scaffold(body: Center(child: Text(l10n.recipeNotFound)));
+    }
     if (detail == null) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
@@ -524,7 +532,9 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
             Text(
               l10n.recipeAllergens(
                 (derived.allergens ?? const []).join('、'),
-                derived.allergensIncomplete == true ? l10n.recipeIncomplete : '',
+                derived.allergensIncomplete == true
+                    ? l10n.recipeIncomplete
+                    : '',
               ),
             ),
           ],
@@ -545,7 +555,9 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
               subtitle: Text(
                 '${ingredient.quantity} ${ingredient.unit}${ingredient.preparation.isEmpty ? '' : ' · ${ingredient.preparation}'}',
               ),
-              trailing: ingredient.optional == true ? Text(l10n.recipeOptional) : null,
+              trailing: ingredient.optional == true
+                  ? Text(l10n.recipeOptional)
+                  : null,
             ),
           Text(l10n.recipeSteps, style: Theme.of(context).textTheme.titleLarge),
           for (final (index, step) in (snapshot.steps ?? const []).indexed)
@@ -556,9 +568,13 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
                 '${step.action} · ${l10n.recipeSeconds(step.durationSeconds ?? 0)}',
               ),
               children: [
-                if (step.why.isNotEmpty) _RationalePanel(why: step.why, title: l10n.recipeRationale),
+                if (step.why.isNotEmpty)
+                  _RationalePanel(why: step.why, title: l10n.recipeRationale),
                 if (step.notes.isNotEmpty)
-                  ListTile(title: Text(l10n.recipeKeyPoint), subtitle: Text(step.notes)),
+                  ListTile(
+                    title: Text(l10n.recipeKeyPoint),
+                    subtitle: Text(step.notes),
+                  ),
               ],
             ),
           const SizedBox(height: 12),
@@ -657,7 +673,9 @@ class RecipeHistoryPage extends ConsumerWidget {
                   ),
                 ),
                 subtitle: Text(
-                  item.changeNote.isEmpty ? l10n.recipeNoChangeNote : item.changeNote,
+                  item.changeNote.isEmpty
+                      ? l10n.recipeNoChangeNote
+                      : item.changeNote,
                 ),
                 trailing: const Icon(Icons.chevron_right),
                 onTap: () =>
@@ -704,6 +722,6 @@ class _RecipeError extends StatelessWidget {
   }
 }
 
-String _minutes(int? seconds) => ((seconds ?? 0) / 60).ceil().toString();
+int _minutes(int? seconds) => ((seconds ?? 0) / 60).ceil();
 String _message(Object error) =>
     error.toString().replaceFirst('Exception: ', '');
