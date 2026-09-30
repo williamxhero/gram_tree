@@ -7,6 +7,7 @@ import 'package:gramtree_api/gramtree_api.dart';
 
 import '../../api/api_client.dart';
 import '../../ingredients/ingredient_provider.dart';
+import '../../l10n/app_localizations.dart';
 import '../../platform/permissions.dart';
 import '../../storage/local_store.dart';
 import '../../widgets/empty_state.dart';
@@ -27,25 +28,26 @@ class RecipeListPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context);
     final recipes = ref.watch(myRecipesProvider);
     return Scaffold(
-      appBar: AppBar(title: const Text('我的菜谱')),
+      appBar: AppBar(title: Text(l10n.myRecipes)),
       body: recipes.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (error, _) => _RecipeError(
-          message: '菜谱暂时加载不了',
+          message: l10n.recipeLoadError,
           onRetry: () => ref.invalidate(myRecipesProvider),
         ),
         data: (page) => page.items.isEmpty
             ? EmptyState(
                 icon: Icons.menu_book_outlined,
-                title: '还没有菜谱',
-                message: '把常做的一道菜写下来，之后可以继续改良。',
+                title: l10n.recipeEmptyTitle,
+                message: l10n.recipeEmptyBody,
                 footer: FilledButton.icon(
                   key: const ValueKey('new-recipe-button'),
                   onPressed: () => context.push(RecipeEditorPage.path),
                   icon: const Icon(Icons.add),
-                  label: const Text('新建菜谱'),
+                  label: Text(l10n.newRecipe),
                 ),
               )
             : RefreshIndicator(
@@ -57,7 +59,7 @@ class RecipeListPage extends ConsumerWidget {
                       key: const ValueKey('new-recipe-button'),
                       onPressed: () => context.push(RecipeEditorPage.path),
                       icon: const Icon(Icons.add),
-                      label: const Text('新建菜谱'),
+                      label: Text(l10n.newRecipe),
                     ),
                     const SizedBox(height: 12),
                     for (final item in page.items)
@@ -184,20 +186,21 @@ class _RecipeEditorPageState extends ConsumerState<RecipeEditorPage> {
   }
 
   Future<void> _askRestore() async {
+    final l10n = AppLocalizations.of(context);
     if (!mounted || _draft == null) return;
     final restore = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('恢复未保存修改？'),
-        content: const Text('上次编辑还有未保存内容。要恢复这份草稿吗？'),
+        title: Text(l10n.recipeRestoreTitle),
+        content: Text(l10n.recipeRestoreBody),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('放弃草稿'),
+            child: Text(l10n.recipeDiscardDraftAction),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('恢复'),
+            child: Text(l10n.recipeRestore),
           ),
         ],
       ),
@@ -244,9 +247,10 @@ class _RecipeEditorPageState extends ConsumerState<RecipeEditorPage> {
   }
 
   Future<void> _save() async {
+    final l10n = AppLocalizations.of(context);
     _changed();
     if (_form.dishName.isEmpty) {
-      setState(() => _error = '请先填写菜名');
+      setState(() => _error = l10n.recipeDishRequired);
       return;
     }
     setState(() {
@@ -262,7 +266,7 @@ class _RecipeEditorPageState extends ConsumerState<RecipeEditorPage> {
       if (!mounted) return;
       context.go('/recipes/${detail.id}');
     } catch (error) {
-      if (mounted) setState(() => _error = '保存失败：${_message(error)}');
+      if (mounted) setState(() => _error = l10n.recipeSaveFailed(_message(error)));
     } finally {
       if (mounted) setState(() => _saving = false);
     }
@@ -288,11 +292,14 @@ class _RecipeEditorPageState extends ConsumerState<RecipeEditorPage> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     if (_loading) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
     return Scaffold(
-      appBar: AppBar(title: Text(_loaded == null ? '新建菜谱' : '继续编辑菜谱')),
+      appBar: AppBar(
+        title: Text(_loaded == null ? l10n.newRecipe : l10n.recipeContinueEdit),
+      ),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
         children: [
@@ -301,19 +308,19 @@ class _RecipeEditorPageState extends ConsumerState<RecipeEditorPage> {
             controller: _dish,
             onChanged: (_) => _changed(),
             decoration: const InputDecoration(
-              labelText: '菜名',
+              labelText: l10n.recipeName,
               border: OutlineInputBorder(),
             ),
           ),
           const SizedBox(height: 16),
-          Text('食材', style: Theme.of(context).textTheme.titleLarge),
+          Text(l10n.recipeFood, style: Theme.of(context).textTheme.titleLarge),
           const SizedBox(height: 8),
           TextField(
             key: const ValueKey('recipe-ingredient-search'),
             controller: _ingredient,
             onChanged: (_) => _changed(),
             decoration: InputDecoration(
-              labelText: '搜索或填写食材',
+              labelText: l10n.recipeSearchOrFill,
               border: const OutlineInputBorder(),
               suffixIcon: IconButton(
                 key: const ValueKey('recipe-search-ingredient'),
@@ -339,7 +346,7 @@ class _RecipeEditorPageState extends ConsumerState<RecipeEditorPage> {
             keyboardType: TextInputType.number,
             onChanged: (_) => _changed(),
             decoration: const InputDecoration(
-              labelText: '用量',
+              labelText: l10n.recipeQuantity,
               border: OutlineInputBorder(),
             ),
           ),
@@ -349,7 +356,7 @@ class _RecipeEditorPageState extends ConsumerState<RecipeEditorPage> {
             controller: _unit,
             onChanged: (_) => _changed(),
             decoration: const InputDecoration(
-              labelText: '单位（克、毫升、个、勺）',
+              labelText: l10n.recipeUnit,
               border: OutlineInputBorder(),
             ),
           ),
@@ -359,12 +366,12 @@ class _RecipeEditorPageState extends ConsumerState<RecipeEditorPage> {
             controller: _preparation,
             onChanged: (_) => _changed(),
             decoration: const InputDecoration(
-              labelText: '处理方式和分组',
+              labelText: l10n.recipePreparationGroup,
               border: OutlineInputBorder(),
             ),
           ),
           const SizedBox(height: 20),
-          Text('步骤', style: Theme.of(context).textTheme.titleLarge),
+          Text(l10n.recipeSteps, style: Theme.of(context).textTheme.titleLarge),
           const SizedBox(height: 8),
           TextField(
             key: const ValueKey('recipe-step-instruction'),
@@ -372,7 +379,7 @@ class _RecipeEditorPageState extends ConsumerState<RecipeEditorPage> {
             maxLines: 3,
             onChanged: (_) => _changed(),
             decoration: const InputDecoration(
-              labelText: '步骤说明',
+              labelText: l10n.recipeInstruction,
               border: OutlineInputBorder(),
             ),
           ),
@@ -383,7 +390,7 @@ class _RecipeEditorPageState extends ConsumerState<RecipeEditorPage> {
             maxLines: 2,
             onChanged: (_) => _changed(),
             decoration: const InputDecoration(
-              labelText: '为什么这样做（可选）',
+              labelText: l10n.recipeWhy,
               border: OutlineInputBorder(),
             ),
           ),
@@ -393,7 +400,7 @@ class _RecipeEditorPageState extends ConsumerState<RecipeEditorPage> {
             controller: _note,
             onChanged: (_) => _changed(),
             decoration: const InputDecoration(
-              labelText: '这次改了什么',
+              labelText: l10n.recipeChangeNote,
               border: OutlineInputBorder(),
             ),
           ),
@@ -409,7 +416,7 @@ class _RecipeEditorPageState extends ConsumerState<RecipeEditorPage> {
           FilledButton(
             key: const ValueKey('save-recipe-button'),
             onPressed: _saving ? null : _save,
-            child: Text(_saving ? '保存中…' : '保存为新版本'),
+            child: Text(_saving ? l10n.recipeSaving : l10n.recipeSaveVersion),
           ),
           const SizedBox(height: 8),
           OutlinedButton(
@@ -421,7 +428,7 @@ class _RecipeEditorPageState extends ConsumerState<RecipeEditorPage> {
               if (!mounted) return;
               router.pop();
             },
-            child: const Text('放弃草稿'),
+            child: Text(l10n.recipeDiscardDraftAction),
           ),
         ],
       ),
@@ -470,8 +477,9 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final detail = _detail;
-    if (_error != null) return Scaffold(body: Center(child: Text(_error!)));
+    if (_error != null) return Scaffold(body: Center(child: Text(l10n.recipeNotFound)));
     if (detail == null) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
@@ -484,7 +492,7 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
           if (widget.versionId == null)
             IconButton(
               key: const ValueKey('edit-recipe-button'),
-              tooltip: '我来改一版',
+              tooltip: l10n.recipeEditAction,
               icon: const Icon(Icons.edit_outlined),
               onPressed: () => context.push('/recipes/${widget.recipeId}/edit'),
             ),
@@ -499,24 +507,37 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
           ),
           const SizedBox(height: 8),
           Text(
-            '第 ${detail.version.versionNumber} 版 · ${snapshot.servings} 份',
+            l10n.recipeAuthorVersion(
+              detail.version.versionNumber,
+              snapshot.servings,
+            ),
             style: Theme.of(context).textTheme.titleMedium,
           ),
           Text(
-            '总时长 ${_minutes(derived.totalTimeSeconds)} 分钟 · 动手 ${_minutes(derived.activeTimeSeconds)} 分钟',
+            l10n.recipeDuration(
+              _minutes(derived.totalTimeSeconds),
+              _minutes(derived.activeTimeSeconds),
+            ),
           ),
           if ((derived.allergens ?? const []).isNotEmpty) ...[
             const SizedBox(height: 12),
             Text(
-              '过敏原：${(derived.allergens ?? const []).join('、')}${derived.allergensIncomplete == true ? '（可能不完整）' : ''}',
+              l10n.recipeAllergens(
+                (derived.allergens ?? const []).join('、'),
+                derived.allergensIncomplete == true ? l10n.recipeIncomplete : '',
+              ),
             ),
           ],
           if (derived.nutritionPerServing != null)
             Text(
-              '每份营养：估算值${detail.version.derived.nutritionPerServing!.incomplete == true ? '（可能不完整）' : ''}',
+              l10n.recipeNutrition(
+                detail.version.derived.nutritionPerServing!.incomplete == true
+                    ? l10n.recipeIncomplete
+                    : '',
+              ),
             ),
           const SizedBox(height: 20),
-          Text('食材', style: Theme.of(context).textTheme.titleLarge),
+          Text(l10n.recipeFood, style: Theme.of(context).textTheme.titleLarge),
           for (final ingredient in snapshot.ingredients ?? const [])
             ListTile(
               contentPadding: EdgeInsets.zero,
@@ -524,44 +545,46 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
               subtitle: Text(
                 '${ingredient.quantity} ${ingredient.unit}${ingredient.preparation.isEmpty ? '' : ' · ${ingredient.preparation}'}',
               ),
-              trailing: ingredient.optional == true ? const Text('可选') : null,
+              trailing: ingredient.optional == true ? Text(l10n.recipeOptional) : null,
             ),
-          Text('步骤', style: Theme.of(context).textTheme.titleLarge),
+          Text(l10n.recipeSteps, style: Theme.of(context).textTheme.titleLarge),
           for (final (index, step) in (snapshot.steps ?? const []).indexed)
             ExpansionTile(
               key: ValueKey('recipe-step-$index'),
               title: Text('${index + 1}. ${step.instruction}'),
-              subtitle: Text('${step.action} · ${step.durationSeconds ?? 0} 秒'),
+              subtitle: Text(
+                '${step.action} · ${l10n.recipeSeconds(step.durationSeconds ?? 0)}',
+              ),
               children: [
-                if (step.why.isNotEmpty) _RationalePanel(why: step.why),
+                if (step.why.isNotEmpty) _RationalePanel(why: step.why, title: l10n.recipeRationale),
                 if (step.notes.isNotEmpty)
-                  ListTile(title: const Text('要点'), subtitle: Text(step.notes)),
+                  ListTile(title: Text(l10n.recipeKeyPoint), subtitle: Text(step.notes)),
               ],
             ),
           const SizedBox(height: 12),
           OutlinedButton.icon(
             key: const ValueKey('recipe-image-permission'),
             icon: const Icon(Icons.photo_camera_outlined),
-            label: const Text('添加成品图'),
+            label: Text(l10n.recipeAddPhoto),
             onPressed: () => _requestPhotoPermission(context),
           ),
           OutlinedButton.icon(
             key: const ValueKey('recipe-camera-permission'),
             icon: const Icon(Icons.camera_alt_outlined),
-            label: const Text('拍一张成品图'),
+            label: Text(l10n.recipeTakePhoto),
             onPressed: () => _requestCameraPermission(context),
           ),
           TextButton(
             key: const ValueKey('recipe-history-button'),
             onPressed: () =>
                 context.push('/recipes/${widget.recipeId}/history'),
-            child: const Text('查看版本历史'),
+            child: Text(l10n.recipeHistory),
           ),
           if (widget.versionId == null)
             TextButton(
               key: const ValueKey('delete-recipe-button'),
               onPressed: _delete,
-              child: const Text('删除这份私有菜谱'),
+              child: Text(l10n.recipeDelete),
             ),
         ],
       ),
@@ -569,6 +592,7 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
   }
 
   Future<void> _requestCameraPermission(BuildContext context) async {
+    final l10n = AppLocalizations.of(context);
     final state = await ref
         .read(permissionServiceProvider)
         .request(AppPermission.camera);
@@ -576,13 +600,16 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
-          state == PermissionState.granted ? '可以拍摄成品图' : '相机权限未开启，菜谱编辑不受影响',
+          state == PermissionState.granted
+              ? l10n.recipeCameraAvailable
+              : l10n.recipeCameraDenied,
         ),
       ),
     );
   }
 
   Future<void> _requestPhotoPermission(BuildContext context) async {
+    final l10n = AppLocalizations.of(context);
     final state = await ref
         .read(permissionServiceProvider)
         .request(AppPermission.photos);
@@ -590,7 +617,9 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
-          state == PermissionState.granted ? '可以从相册选择成品图' : '相册权限未开启，菜谱编辑不受影响',
+          state == PermissionState.granted
+              ? l10n.recipePhotoAvailable
+              : l10n.recipePhotoDenied,
         ),
       ),
     );
@@ -604,8 +633,9 @@ class RecipeHistoryPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context);
     return Scaffold(
-      appBar: AppBar(title: const Text('版本历史')),
+      appBar: AppBar(title: Text(l10n.recipeHistory)),
       body: FutureBuilder<RecipeVersionHistory>(
         future: ref.read(recipeRepositoryProvider).history(recipeId),
         builder: (context, snapshot) {
@@ -613,7 +643,7 @@ class RecipeHistoryPage extends ConsumerWidget {
             return const Center(child: CircularProgressIndicator());
           }
           final items = snapshot.data!.items;
-          if (items.isEmpty) return const Center(child: Text('还没有版本历史'));
+          if (items.isEmpty) return Center(child: Text(l10n.recipeNoHistory));
           return ListView.builder(
             itemCount: items.length,
             itemBuilder: (context, index) {
@@ -621,10 +651,13 @@ class RecipeHistoryPage extends ConsumerWidget {
               return ListTile(
                 key: ValueKey('recipe-version-${item.versionNumber}'),
                 title: Text(
-                  '第 ${item.versionNumber} 版${item.aiAssisted == true ? ' · AI 协助' : ''}',
+                  l10n.recipeVersionTitle(
+                    item.versionNumber,
+                    item.aiAssisted == true ? l10n.recipeAi : '',
+                  ),
                 ),
                 subtitle: Text(
-                  item.changeNote.isEmpty ? '未填写修改说明' : item.changeNote,
+                  item.changeNote.isEmpty ? l10n.recipeNoChangeNote : item.changeNote,
                 ),
                 trailing: const Icon(Icons.chevron_right),
                 onTap: () =>
@@ -639,12 +672,13 @@ class RecipeHistoryPage extends ConsumerWidget {
 }
 
 class _RationalePanel extends StatelessWidget {
-  const _RationalePanel({required this.why});
+  const _RationalePanel({required this.why, required this.title});
   final String why;
+  final String title;
 
   @override
   Widget build(BuildContext context) => ListTile(
-    title: const Text('为什么这样做'),
+    title: Text(title),
     subtitle: Text(why),
     leading: const Icon(Icons.lightbulb_outline),
   );
@@ -656,15 +690,18 @@ class _RecipeError extends StatelessWidget {
   final VoidCallback onRetry;
 
   @override
-  Widget build(BuildContext context) => Center(
-    child: Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Text(message),
-        TextButton(onPressed: onRetry, child: const Text('重试')),
-      ],
-    ),
-  );
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(message),
+          TextButton(onPressed: onRetry, child: Text(l10n.recipeRetry)),
+        ],
+      ),
+    );
+  }
 }
 
 String _minutes(int? seconds) => ((seconds ?? 0) / 60).ceil().toString();

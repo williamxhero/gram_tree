@@ -307,6 +307,7 @@ class RecipeVersionCreate(BaseModel):
     snapshot: RecipeSnapshot
     change_note: str = Field(default="", max_length=2000)
     ai_assisted: bool = False
+    base_version_id: IdV4 | None = Field(default=None, json_schema_extra={"title": None})
 
 
 class RecipeAuthor(BaseModel):
@@ -367,6 +368,7 @@ class RecipeVersionSummary(BaseModel):
 
 class RecipeVersionHistory(BaseModel):
     items: list[RecipeVersionSummary]
+    next_cursor: str | None = None
 
 
 class RecipeListItem(BaseModel):

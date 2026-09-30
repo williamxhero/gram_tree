@@ -362,4 +362,200 @@ class AppLocalizationsZh extends AppLocalizations {
   String compositionLastUpdatedAt(String time) {
     return '上次更新于 $time';
   }
+
+  @override
+  String get myRecipes => '我的菜谱';
+
+  @override
+  String get myRecipesSubtitle => '管理私有菜谱和版本历史';
+
+  @override
+  String get newRecipe => '新建菜谱';
+
+  @override
+  String get viewMyRecipes => '查看我的菜谱';
+
+  @override
+  String get recipeEmptyTitle => '还没有菜谱';
+
+  @override
+  String get recipeEmptyBody => '把常做的一道菜写下来，之后可以继续改良。';
+
+  @override
+  String get recipeLoadError => '菜谱暂时加载不了';
+
+  @override
+  String get recipeRetry => '重试';
+
+  @override
+  String get recipeName => '菜名';
+
+  @override
+  String get recipeContinueEdit => '继续编辑菜谱';
+
+  @override
+  String get recipeFood => '食材';
+
+  @override
+  String get recipeSearchOrFill => '搜索或填写食材';
+
+  @override
+  String get recipeQuantity => '用量';
+
+  @override
+  String get recipeUnit => '单位（克、毫升、个、勺）';
+
+  @override
+  String get recipePreparationGroup => '处理方式和分组';
+
+  @override
+  String get recipeSteps => '步骤';
+
+  @override
+  String get recipeInstruction => '步骤说明';
+
+  @override
+  String get recipeWhy => '为什么这样做（可选）';
+
+  @override
+  String get recipeChangeNote => '这次改了什么';
+
+  @override
+  String get recipeSaveVersion => '保存为新版本';
+
+  @override
+  String get recipeSaving => '保存中…';
+
+  @override
+  String get recipeDiscardDraft => '放弃草稿';
+
+  @override
+  String get recipeDishRequired => '请先填写菜名';
+
+  @override
+  String recipeSaveFailed(String error) {
+    return '保存失败：$error';
+  }
+
+  @override
+  String get recipeRestoreTitle => '恢复未保存修改？';
+
+  @override
+  String get recipeRestoreBody => '上次编辑还有未保存内容。要恢复这份草稿吗？';
+
+  @override
+  String get recipeDiscardDraftAction => '放弃草稿';
+
+  @override
+  String get recipeRestore => '恢复';
+
+  @override
+  String recipeAuthorVersion(int version, int servings) {
+    return '第 $version 版 · $servings 份';
+  }
+
+  @override
+  String recipeDuration(int total, int active) {
+    return '总时长 $total 分钟 · 动手 $active 分钟';
+  }
+
+  @override
+  String recipeAllergens(String items, String incomplete) {
+    return '过敏原：$items$incomplete';
+  }
+
+  @override
+  String recipeNutrition(String incomplete) {
+    return '每份营养：估算值$incomplete';
+  }
+
+  @override
+  String get recipeIngredients => '食材';
+
+  @override
+  String get recipeStepsTitle => '步骤';
+
+  @override
+  String get recipeOptional => '可选';
+
+  @override
+  String get recipeAddPhoto => '添加成品图';
+
+  @override
+  String get recipeTakePhoto => '拍一张成品图';
+
+  @override
+  String get recipePhotoAvailable => '可以从相册选择成品图';
+
+  @override
+  String get recipePhotoDenied => '相册权限未开启，菜谱编辑不受影响';
+
+  @override
+  String get recipeCameraAvailable => '可以拍摄成品图';
+
+  @override
+  String get recipeCameraDenied => '相机权限未开启，菜谱编辑不受影响';
+
+  @override
+  String get recipeHistory => '查看版本历史';
+
+  @override
+  String get recipeDelete => '删除这份私有菜谱';
+
+  @override
+  String get recipeNoHistory => '还没有版本历史';
+
+  @override
+  String recipeVersionTitle(int version, String ai) {
+    return '第 $version 版$ai';
+  }
+
+  @override
+  String get recipeNoChangeNote => '未填写修改说明';
+
+  @override
+  String get recipeRationale => '为什么这样做';
+
+  @override
+  String get recipeKeyPoint => '要点';
+
+  @override
+  String get recipeUnnamedIngredient => '未收录食材';
+
+  @override
+  String get recipeCompleteStep => '完成这一步';
+
+  @override
+  String get recipeNotFound => '菜谱不存在或你没有权限查看';
+
+  @override
+  String recipeMinutes(int minutes) {
+    return '$minutes 分钟';
+  }
+
+  @override
+  String get recipeDraftSaved => '草稿已保存';
+
+  @override
+  String get recipeCameraPermission => '拍照';
+
+  @override
+  String get recipePhotoPermission => '从相册选图';
+
+  @override
+  String get recipeComingSoon => '图片选择功能正在准备中';
+
+  @override
+  String get recipeIncomplete => '（可能不完整）';
+
+  @override
+  String recipeSeconds(int seconds) {
+    return '$seconds 秒';
+  }
+
+  @override
+  String get recipeAi => ' · AI 协助';
+
+  @override
+  String get recipeEditAction => '我来改一版';
 }

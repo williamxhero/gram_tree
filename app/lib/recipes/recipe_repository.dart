@@ -104,6 +104,9 @@ class RecipeForm {
     this.stepDurationSeconds = 0,
     this.stepAction = '炒',
     this.stepWhy = '',
+    this.ingredientId,
+    this.extraIngredients = const [],
+    this.extraSteps = const [],
   });
 
   String dishName;
@@ -121,6 +124,9 @@ class RecipeForm {
   int stepDurationSeconds;
   String stepAction;
   String stepWhy;
+  String? ingredientId;
+  List<RecipeIngredient> extraIngredients;
+  List<RecipeStep> extraSteps;
 
   RecipeSnapshot get snapshot => RecipeSnapshot(
     formatVersion: RecipeSnapshotFormatVersionEnum.number1,
@@ -136,12 +142,13 @@ class RecipeForm {
         displayName: ingredientName.isEmpty ? '未收录食材' : ingredientName,
         group: ingredientGroup,
         id: 'ingredient-1',
-        ingredientId: '',
+        ingredientId: ingredientId ?? '',
         preparation: preparation,
         quantity: ingredientQuantity,
         scalingMode: RecipeIngredientScalingModeEnum.proportional,
         unit: ingredientUnit,
       ),
+      ...extraIngredients,
     ],
     steps: [
       RecipeStep(
@@ -159,6 +166,7 @@ class RecipeForm {
         unattended: false,
         why: stepWhy,
       ),
+      ...extraSteps,
     ],
   );
 
@@ -174,10 +182,13 @@ class RecipeForm {
     'ingredient_unit': ingredientUnit,
     'preparation': preparation,
     'ingredient_group': ingredientGroup,
+    'ingredient_id': ingredientId,
     'step_instruction': stepInstruction,
     'step_duration_seconds': stepDurationSeconds,
     'step_action': stepAction,
     'step_why': stepWhy,
+    'extra_ingredients': extraIngredients.map((item) => item.toJson()).toList(),
+    'extra_steps': extraSteps.map((item) => item.toJson()).toList(),
   };
 
   static RecipeForm fromDraft(Map<String, dynamic> value) => RecipeForm(

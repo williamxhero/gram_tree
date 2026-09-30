@@ -17,19 +17,19 @@ class CreatePage extends StatelessWidget {
       child: EmptyState(
         icon: Icons.edit_note_outlined,
         title: l10n.createEmptyTitle,
-        message: '把菜名、食材和步骤写下来，每次保存都会留下一个新版本。',
+        message: l10n.createEmptyBody,
         footer: Column(
           children: [
             FilledButton.icon(
               key: const ValueKey('create-recipe-entry'),
               onPressed: () => context.push(RecipeEditorPage.path),
               icon: const Icon(Icons.menu_book_outlined),
-              label: const Text('新建菜谱'),
+              label: Text(l10n.newRecipe),
             ),
             TextButton(
               key: const ValueKey('my-recipes-entry'),
               onPressed: () => context.push(RecipeListPage.path),
-              child: const Text('查看我的菜谱'),
+              child: Text(l10n.viewMyRecipes),
             ),
             FeatureGate(
               feature: Feature.receiptScan,

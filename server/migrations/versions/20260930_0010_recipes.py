@@ -102,6 +102,26 @@ def upgrade() -> None:
         ondelete="SET NULL",
     )
     op.create_table(
+        "recipe_save_outbox",
+        sa.Column("id", sa.Uuid(), nullable=False),
+        sa.Column("recipe_id", sa.Uuid(), nullable=False),
+        sa.Column("version_id", sa.Uuid(), nullable=False),
+        sa.Column("owner_id", sa.Uuid(), nullable=False),
+        sa.Column("previous_version_id", sa.Uuid(), nullable=True),
+        sa.Column("edit_operations", postgresql.JSONB(astext_type=sa.Text()), nullable=False),
+        sa.Column("ai_assisted", sa.Boolean(), nullable=False),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("delivered_at", sa.DateTime(timezone=True), nullable=True),
+        sa.ForeignKeyConstraint(["recipe_id"], ["recipes.id"], ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(["version_id"], ["recipe_versions.id"], ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(["owner_id"], ["users.id"], ondelete="CASCADE"),
+        sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint("version_id", name="uq_recipe_save_outbox_version"),
+    )
+    op.create_index("ix_recipe_save_outbox_recipe_id", "recipe_save_outbox", ["recipe_id"])
+    op.create_index("ix_recipe_save_outbox_version_id", "recipe_save_outbox", ["version_id"])
+    op.create_index("ix_recipe_save_outbox_owner_id", "recipe_save_outbox", ["owner_id"])
+    op.create_table(
         "recipe_images",
         sa.Column("id", sa.Uuid(), nullable=False),
         sa.Column("recipe_id", sa.Uuid(), nullable=False),
@@ -129,6 +149,10 @@ def downgrade() -> None:
     op.drop_index("ix_recipe_images_version_id", table_name="recipe_images")
     op.drop_index("ix_recipe_images_recipe_id", table_name="recipe_images")
     op.drop_table("recipe_images")
+    op.drop_index("ix_recipe_save_outbox_owner_id", table_name="recipe_save_outbox")
+    op.drop_index("ix_recipe_save_outbox_version_id", table_name="recipe_save_outbox")
+    op.drop_index("ix_recipe_save_outbox_recipe_id", table_name="recipe_save_outbox")
+    op.drop_table("recipe_save_outbox")
     op.drop_constraint("fk_recipes_source_version_id", "recipes", type_="foreignkey")
     op.drop_constraint("fk_recipes_current_version_id", "recipes", type_="foreignkey")
     op.drop_index("ix_recipe_versions_recipe_created_at", table_name="recipe_versions")

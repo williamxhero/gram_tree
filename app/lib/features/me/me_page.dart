@@ -63,8 +63,8 @@ class MePage extends ConsumerWidget {
           ListTile(
             key: const ValueKey('my-recipes-list-entry'),
             contentPadding: EdgeInsets.zero,
-            title: const Text('我的菜谱'),
-            subtitle: const Text('管理私有菜谱和版本历史'),
+            title: Text(l10n.myRecipes),
+            subtitle: Text(l10n.myRecipesSubtitle),
             trailing: const Icon(Icons.chevron_right),
             onTap: () => context.push(RecipeListPage.path),
           ),

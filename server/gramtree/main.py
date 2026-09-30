@@ -90,3 +90,5 @@ def check_settings(settings: Settings) -> None:
             raise RuntimeError("GRAMTREE_AUTH_SECRET 必须设置成至少 32 位的随机串")
         if settings.mail_backend != "smtp":
             raise RuntimeError("正式环境的 GRAMTREE_MAIL_BACKEND 必须是 smtp")
+        if len(settings.image_signing_secret) < 32:
+            raise RuntimeError("GRAMTREE_IMAGE_SIGNING_SECRET 必须设置成至少 32 位的随机串")

@@ -84,6 +84,28 @@ class RecipeVersion(Base):
     created_at: Mapped[datetime] = mapped_column(default=utcnow)
 
 
+class RecipeSaveOutbox(Base):
+    """Durable handoff from a committed recipe save to the experience pipeline."""
+
+    __tablename__ = "recipe_save_outbox"
+    __table_args__ = (
+        UniqueConstraint("version_id", name="uq_recipe_save_outbox_version"),
+        Index("ix_recipe_save_outbox_recipe_id", "recipe_id"),
+        Index("ix_recipe_save_outbox_version_id", "version_id"),
+        Index("ix_recipe_save_outbox_owner_id", "owner_id"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=new_id)
+    recipe_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("recipes.id", ondelete="CASCADE"))
+    version_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("recipe_versions.id", ondelete="CASCADE"))
+    owner_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
+    previous_version_id: Mapped[uuid.UUID | None] = mapped_column(default=None)
+    edit_operations: Mapped[list[dict[str, Any]]] = mapped_column(JSONB, default=list)
+    ai_assisted: Mapped[bool] = mapped_column(default=False)
+    created_at: Mapped[datetime] = mapped_column(default=utcnow)
+    delivered_at: Mapped[datetime | None] = mapped_column(default=None)
+
+
 class RecipeImage(Base):
     """私有对象存储中的成品图元数据；公开地址永不落库。"""
 

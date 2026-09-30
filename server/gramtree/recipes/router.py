@@ -88,9 +88,16 @@ def save_recipe_version(
     "/{recipe_id}/versions", response_model=RecipeVersionHistory, responses=_errors(401, 404)
 )
 def list_recipe_versions(
-    recipe_id: IdV4, auth: CurrentAuth, session: SessionDep
+    recipe_id: IdV4, auth: CurrentAuth, session: SessionDep, page: PageDep
 ) -> RecipeVersionHistory:
-    return service.list_versions(session, auth.user, recipe_id)
+    return service.list_versions(
+        session,
+        auth.user,
+        recipe_id,
+        cursor=page.cursor,
+        limit=page.limit,
+        maximum=int(config.get(session, "api.page_size_max")),
+    )
 
 
 @router.get(

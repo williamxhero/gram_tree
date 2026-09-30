@@ -748,11 +748,371 @@ abstract class AppLocalizations {
   /// **'去系统设置打开'**
   String get permissionOpenSettings;
 
-  /// SPEC-009.1 票 7（#83）：离线/超时用本机缓存的描述时，显示它是什么时候存下来的。
+  /// 上次更新时间
   ///
   /// In zh, this message translates to:
   /// **'上次更新于 {time}'**
   String compositionLastUpdatedAt(String time);
+
+  /// No description provided for @myRecipes.
+  ///
+  /// In zh, this message translates to:
+  /// **'我的菜谱'**
+  String get myRecipes;
+
+  /// No description provided for @myRecipesSubtitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'管理私有菜谱和版本历史'**
+  String get myRecipesSubtitle;
+
+  /// No description provided for @newRecipe.
+  ///
+  /// In zh, this message translates to:
+  /// **'新建菜谱'**
+  String get newRecipe;
+
+  /// No description provided for @viewMyRecipes.
+  ///
+  /// In zh, this message translates to:
+  /// **'查看我的菜谱'**
+  String get viewMyRecipes;
+
+  /// No description provided for @recipeEmptyTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'还没有菜谱'**
+  String get recipeEmptyTitle;
+
+  /// No description provided for @recipeEmptyBody.
+  ///
+  /// In zh, this message translates to:
+  /// **'把常做的一道菜写下来，之后可以继续改良。'**
+  String get recipeEmptyBody;
+
+  /// No description provided for @recipeLoadError.
+  ///
+  /// In zh, this message translates to:
+  /// **'菜谱暂时加载不了'**
+  String get recipeLoadError;
+
+  /// No description provided for @recipeRetry.
+  ///
+  /// In zh, this message translates to:
+  /// **'重试'**
+  String get recipeRetry;
+
+  /// No description provided for @recipeName.
+  ///
+  /// In zh, this message translates to:
+  /// **'菜名'**
+  String get recipeName;
+
+  /// No description provided for @recipeContinueEdit.
+  ///
+  /// In zh, this message translates to:
+  /// **'继续编辑菜谱'**
+  String get recipeContinueEdit;
+
+  /// No description provided for @recipeFood.
+  ///
+  /// In zh, this message translates to:
+  /// **'食材'**
+  String get recipeFood;
+
+  /// No description provided for @recipeSearchOrFill.
+  ///
+  /// In zh, this message translates to:
+  /// **'搜索或填写食材'**
+  String get recipeSearchOrFill;
+
+  /// No description provided for @recipeQuantity.
+  ///
+  /// In zh, this message translates to:
+  /// **'用量'**
+  String get recipeQuantity;
+
+  /// No description provided for @recipeUnit.
+  ///
+  /// In zh, this message translates to:
+  /// **'单位（克、毫升、个、勺）'**
+  String get recipeUnit;
+
+  /// No description provided for @recipePreparationGroup.
+  ///
+  /// In zh, this message translates to:
+  /// **'处理方式和分组'**
+  String get recipePreparationGroup;
+
+  /// No description provided for @recipeSteps.
+  ///
+  /// In zh, this message translates to:
+  /// **'步骤'**
+  String get recipeSteps;
+
+  /// No description provided for @recipeInstruction.
+  ///
+  /// In zh, this message translates to:
+  /// **'步骤说明'**
+  String get recipeInstruction;
+
+  /// No description provided for @recipeWhy.
+  ///
+  /// In zh, this message translates to:
+  /// **'为什么这样做（可选）'**
+  String get recipeWhy;
+
+  /// No description provided for @recipeChangeNote.
+  ///
+  /// In zh, this message translates to:
+  /// **'这次改了什么'**
+  String get recipeChangeNote;
+
+  /// No description provided for @recipeSaveVersion.
+  ///
+  /// In zh, this message translates to:
+  /// **'保存为新版本'**
+  String get recipeSaveVersion;
+
+  /// No description provided for @recipeSaving.
+  ///
+  /// In zh, this message translates to:
+  /// **'保存中…'**
+  String get recipeSaving;
+
+  /// No description provided for @recipeDiscardDraft.
+  ///
+  /// In zh, this message translates to:
+  /// **'放弃草稿'**
+  String get recipeDiscardDraft;
+
+  /// No description provided for @recipeDishRequired.
+  ///
+  /// In zh, this message translates to:
+  /// **'请先填写菜名'**
+  String get recipeDishRequired;
+
+  /// No description provided for @recipeSaveFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'保存失败：{error}'**
+  String recipeSaveFailed(String error);
+
+  /// No description provided for @recipeRestoreTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'恢复未保存修改？'**
+  String get recipeRestoreTitle;
+
+  /// No description provided for @recipeRestoreBody.
+  ///
+  /// In zh, this message translates to:
+  /// **'上次编辑还有未保存内容。要恢复这份草稿吗？'**
+  String get recipeRestoreBody;
+
+  /// No description provided for @recipeDiscardDraftAction.
+  ///
+  /// In zh, this message translates to:
+  /// **'放弃草稿'**
+  String get recipeDiscardDraftAction;
+
+  /// No description provided for @recipeRestore.
+  ///
+  /// In zh, this message translates to:
+  /// **'恢复'**
+  String get recipeRestore;
+
+  /// No description provided for @recipeAuthorVersion.
+  ///
+  /// In zh, this message translates to:
+  /// **'第 {version} 版 · {servings} 份'**
+  String recipeAuthorVersion(int version, int servings);
+
+  /// No description provided for @recipeDuration.
+  ///
+  /// In zh, this message translates to:
+  /// **'总时长 {total} 分钟 · 动手 {active} 分钟'**
+  String recipeDuration(int total, int active);
+
+  /// No description provided for @recipeAllergens.
+  ///
+  /// In zh, this message translates to:
+  /// **'过敏原：{items}{incomplete}'**
+  String recipeAllergens(String items, String incomplete);
+
+  /// No description provided for @recipeNutrition.
+  ///
+  /// In zh, this message translates to:
+  /// **'每份营养：估算值{incomplete}'**
+  String recipeNutrition(String incomplete);
+
+  /// No description provided for @recipeIngredients.
+  ///
+  /// In zh, this message translates to:
+  /// **'食材'**
+  String get recipeIngredients;
+
+  /// No description provided for @recipeStepsTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'步骤'**
+  String get recipeStepsTitle;
+
+  /// No description provided for @recipeOptional.
+  ///
+  /// In zh, this message translates to:
+  /// **'可选'**
+  String get recipeOptional;
+
+  /// No description provided for @recipeAddPhoto.
+  ///
+  /// In zh, this message translates to:
+  /// **'添加成品图'**
+  String get recipeAddPhoto;
+
+  /// No description provided for @recipeTakePhoto.
+  ///
+  /// In zh, this message translates to:
+  /// **'拍一张成品图'**
+  String get recipeTakePhoto;
+
+  /// No description provided for @recipePhotoAvailable.
+  ///
+  /// In zh, this message translates to:
+  /// **'可以从相册选择成品图'**
+  String get recipePhotoAvailable;
+
+  /// No description provided for @recipePhotoDenied.
+  ///
+  /// In zh, this message translates to:
+  /// **'相册权限未开启，菜谱编辑不受影响'**
+  String get recipePhotoDenied;
+
+  /// No description provided for @recipeCameraAvailable.
+  ///
+  /// In zh, this message translates to:
+  /// **'可以拍摄成品图'**
+  String get recipeCameraAvailable;
+
+  /// No description provided for @recipeCameraDenied.
+  ///
+  /// In zh, this message translates to:
+  /// **'相机权限未开启，菜谱编辑不受影响'**
+  String get recipeCameraDenied;
+
+  /// No description provided for @recipeHistory.
+  ///
+  /// In zh, this message translates to:
+  /// **'查看版本历史'**
+  String get recipeHistory;
+
+  /// No description provided for @recipeDelete.
+  ///
+  /// In zh, this message translates to:
+  /// **'删除这份私有菜谱'**
+  String get recipeDelete;
+
+  /// No description provided for @recipeNoHistory.
+  ///
+  /// In zh, this message translates to:
+  /// **'还没有版本历史'**
+  String get recipeNoHistory;
+
+  /// No description provided for @recipeVersionTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'第 {version} 版{ai}'**
+  String recipeVersionTitle(int version, String ai);
+
+  /// No description provided for @recipeNoChangeNote.
+  ///
+  /// In zh, this message translates to:
+  /// **'未填写修改说明'**
+  String get recipeNoChangeNote;
+
+  /// No description provided for @recipeRationale.
+  ///
+  /// In zh, this message translates to:
+  /// **'为什么这样做'**
+  String get recipeRationale;
+
+  /// No description provided for @recipeKeyPoint.
+  ///
+  /// In zh, this message translates to:
+  /// **'要点'**
+  String get recipeKeyPoint;
+
+  /// No description provided for @recipeUnnamedIngredient.
+  ///
+  /// In zh, this message translates to:
+  /// **'未收录食材'**
+  String get recipeUnnamedIngredient;
+
+  /// No description provided for @recipeCompleteStep.
+  ///
+  /// In zh, this message translates to:
+  /// **'完成这一步'**
+  String get recipeCompleteStep;
+
+  /// No description provided for @recipeNotFound.
+  ///
+  /// In zh, this message translates to:
+  /// **'菜谱不存在或你没有权限查看'**
+  String get recipeNotFound;
+
+  /// No description provided for @recipeMinutes.
+  ///
+  /// In zh, this message translates to:
+  /// **'{minutes} 分钟'**
+  String recipeMinutes(int minutes);
+
+  /// No description provided for @recipeDraftSaved.
+  ///
+  /// In zh, this message translates to:
+  /// **'草稿已保存'**
+  String get recipeDraftSaved;
+
+  /// No description provided for @recipeCameraPermission.
+  ///
+  /// In zh, this message translates to:
+  /// **'拍照'**
+  String get recipeCameraPermission;
+
+  /// No description provided for @recipePhotoPermission.
+  ///
+  /// In zh, this message translates to:
+  /// **'从相册选图'**
+  String get recipePhotoPermission;
+
+  /// No description provided for @recipeComingSoon.
+  ///
+  /// In zh, this message translates to:
+  /// **'图片选择功能正在准备中'**
+  String get recipeComingSoon;
+
+  /// No description provided for @recipeIncomplete.
+  ///
+  /// In zh, this message translates to:
+  /// **'（可能不完整）'**
+  String get recipeIncomplete;
+
+  /// No description provided for @recipeSeconds.
+  ///
+  /// In zh, this message translates to:
+  /// **'{seconds} 秒'**
+  String recipeSeconds(int seconds);
+
+  /// No description provided for @recipeAi.
+  ///
+  /// In zh, this message translates to:
+  /// **' · AI 协助'**
+  String get recipeAi;
+
+  /// No description provided for @recipeEditAction.
+  ///
+  /// In zh, this message translates to:
+  /// **'我来改一版'**
+  String get recipeEditAction;
 }
 
 class _AppLocalizationsDelegate

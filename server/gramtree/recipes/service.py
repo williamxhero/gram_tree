@@ -19,10 +19,18 @@ from sqlalchemy.orm import Session
 from gramtree.accounts.models import User
 from gramtree.core.errors import ApiError, NotFound
 from gramtree.core.pagination import decode_cursor, encode_cursor
+from gramtree.core.time import utcnow
 from gramtree.events import service as event_service
 from gramtree.ingredients.attributes import IngredientAttributes
 from gramtree.ingredients.models import Ingredient, IngredientAttribute
-from gramtree.recipes.models import Dish, DishAlias, Recipe, RecipeImage, RecipeVersion
+from gramtree.recipes.models import (
+    Dish,
+    DishAlias,
+    Recipe,
+    RecipeImage,
+    RecipeSaveOutbox,
+    RecipeVersion,
+)
 from gramtree.recipes.schemas import (
     DishInput,
     DishOut,
@@ -274,11 +282,17 @@ def _derived(session: Session, snapshot: RecipeSnapshot) -> RecipeDerived:
             allergens_incomplete = True
         else:
             allergens.update(attrs.allergens.value)
-        if attrs.nutrition is None or item.base_unit != "g":
+        if attrs.nutrition is None:
+            nutrition_incomplete = True
+            continue
+        if item.base_unit == "g":
+            grams = item.base_quantity
+        elif item.base_unit == "ml" and attrs.density is not None:
+            grams = item.base_quantity * attrs.density.value
+        else:
             nutrition_incomplete = True
             continue
         nutrition_available = True
-        grams = item.base_quantity
         nutrition = attrs.nutrition.value
         for field in nutrition_totals:
             value = getattr(nutrition, field)
@@ -316,11 +330,16 @@ def _dish_out(session: Session, dish: Dish) -> DishOut:
     return DishOut(id=dish.id, name=dish.name, aliases=aliases)
 
 
+def _image_secret(settings: Settings) -> str:
+    """Use an explicit image secret in deployed environments; dev derives it safely."""
+    return settings.image_signing_secret or settings.auth_secret
+
+
 def _signed_url(settings: Settings, recipe_id: uuid.UUID, image_id: uuid.UUID) -> str:
     expires = int((datetime.now(UTC) + timedelta(seconds=_SIGNED_URL_TTL)).timestamp())
     payload = f"{recipe_id}:{image_id}:{expires}".encode()
     signature = hmac.new(
-        settings.image_signing_secret.encode(), payload, hashlib.sha256
+        _image_secret(settings).encode(), payload, hashlib.sha256
     ).hexdigest()
     return f"/v1/recipes/{recipe_id}/images/{image_id}?expires={expires}&signature={signature}"
 
@@ -390,27 +409,46 @@ def _snapshot_json(snapshot: RecipeSnapshot) -> dict[str, Any]:
     return snapshot.model_dump(mode="json")
 
 
-def _record_save_event(
-    session: Session,
-    redis: Redis,
-    owner: User,
-    version: RecipeVersion,
-) -> None:
-    """Record the save after the recipe transaction; event failure is non-blocking."""
-    try:
-        event_service.record_recipe_version_saved(
-            session,
-            redis,
-            owner.id,
-            version.id,
-            version.previous_version_id,
-            version.edit_operations,
-            version.ai_assisted,
-            now=version.created_at,
+def _enqueue_save_event(session: Session, owner: User, recipe: Recipe, version: RecipeVersion) -> None:
+    session.add(
+        RecipeSaveOutbox(
+            recipe_id=recipe.id,
+            version_id=version.id,
+            owner_id=owner.id,
+            previous_version_id=version.previous_version_id,
+            edit_operations=version.edit_operations,
+            ai_assisted=version.ai_assisted,
         )
-    except Exception:
-        logger.warning("recipe save event failed", exc_info=True)
-        session.rollback()
+    )
+
+
+def _drain_save_events(session: Session, redis: Redis, owner: User) -> None:
+    """Best-effort delivery with a durable row left for the next save to retry."""
+    pending = list(
+        session.scalars(
+            select(RecipeSaveOutbox)
+            .where(RecipeSaveOutbox.owner_id == owner.id, RecipeSaveOutbox.delivered_at.is_(None))
+            .order_by(RecipeSaveOutbox.created_at)
+        )
+    )
+    for outbox in pending:
+        try:
+            event_service.record_recipe_version_saved(
+                session,
+                redis,
+                owner.id,
+                outbox.version_id,
+                outbox.previous_version_id,
+                outbox.edit_operations,
+                outbox.ai_assisted,
+                now=outbox.created_at,
+            )
+            outbox.delivered_at = utcnow()
+            session.commit()
+        except Exception:
+            logger.warning("recipe save event delivery deferred", exc_info=True)
+            session.rollback()
+            return
 
 
 def create_recipe(
@@ -434,8 +472,9 @@ def create_recipe(
     session.flush()
     recipe.current_version_id = version.id
     recipe.updated_at = version.created_at
+    _enqueue_save_event(session, owner, recipe, version)
     session.commit()
-    _record_save_event(session, redis, owner, version)
+    _drain_save_events(session, redis, owner)
     return _detail(session, settings, recipe, version)
 
 
@@ -577,7 +616,10 @@ def save_version(
     previous = session.get(RecipeVersion, recipe.current_version_id)
     if previous is None:
         raise NotFound("菜谱当前版本不存在")
-    previous_snapshot = RecipeSnapshot.model_validate(previous.snapshot)
+    baseline = session.get(RecipeVersion, body.base_version_id or previous.id)
+    if baseline is None or baseline.recipe_id != recipe.id:
+        raise NotFound("菜谱基准版本不存在")
+    previous_snapshot = RecipeSnapshot.model_validate(baseline.snapshot)
     version = RecipeVersion(
         recipe_id=recipe.id,
         version_number=previous.version_number + 1,
@@ -592,8 +634,9 @@ def save_version(
     session.flush()
     recipe.current_version_id = version.id
     recipe.updated_at = version.created_at
+    _enqueue_save_event(session, owner, recipe, version)
     session.commit()
-    _record_save_event(session, redis, owner, version)
+    _drain_save_events(session, redis, owner)
     return _detail(session, settings, recipe, version)
 
 
@@ -622,13 +665,35 @@ def get_version(
     return _detail(session, settings, recipe, version)
 
 
-def list_versions(session: Session, owner: User, recipe_id: uuid.UUID) -> RecipeVersionHistory:
+def list_versions(
+    session: Session,
+    owner: User,
+    recipe_id: uuid.UUID,
+    *,
+    cursor: str | None,
+    limit: int,
+    maximum: int,
+) -> RecipeVersionHistory:
+    if limit > maximum:
+        raise ApiError(422, "invalid_request", "请求参数有误", f"limit 不能超过 {maximum}")
     recipe = _owned_recipe(session, owner, recipe_id)
-    rows = session.scalars(
-        select(RecipeVersion)
-        .where(RecipeVersion.recipe_id == recipe.id)
-        .order_by(RecipeVersion.version_number.desc())
+    after = decode_cursor(cursor) if cursor else None
+    query = select(RecipeVersion).where(RecipeVersion.recipe_id == recipe.id)
+    if after is not None:
+        timestamp, row_id = after
+        query = query.where(
+            or_(
+                RecipeVersion.created_at < timestamp,
+                (RecipeVersion.created_at == timestamp) & (RecipeVersion.id < row_id),
+            )
+        )
+    rows = list(
+        session.scalars(
+            query.order_by(RecipeVersion.created_at.desc(), RecipeVersion.id.desc()).limit(limit + 1)
+        )
     )
+    has_more = len(rows) > limit
+    rows = rows[:limit]
     return RecipeVersionHistory(
         items=[
             RecipeVersionSummary(
@@ -640,7 +705,10 @@ def list_versions(session: Session, owner: User, recipe_id: uuid.UUID) -> Recipe
                 created_at=row.created_at,
             )
             for row in rows
-        ]
+        ],
+        next_cursor=encode_cursor(rows[-1].created_at, rows[-1].id)
+        if has_more and rows
+        else None,
     )
 
 
@@ -794,7 +862,7 @@ def signed_image_file(
     signature: str,
 ) -> tuple[Path, str]:
     payload = f"{recipe_id}:{image_id}:{expires}".encode()
-    expected = hmac.new(settings.image_signing_secret.encode(), payload, hashlib.sha256).hexdigest()
+    expected = hmac.new(_image_secret(settings).encode(), payload, hashlib.sha256).hexdigest()
     if expires < int(datetime.now(UTC).timestamp()) or not hmac.compare_digest(signature, expected):
         raise NotFound()
     image = session.scalar(
