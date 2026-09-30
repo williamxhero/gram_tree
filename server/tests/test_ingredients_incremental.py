@@ -67,6 +67,8 @@ def test_changes_returns_full_interval_and_numeric_versions(
     assert _import(v210) == 0
 
     v211_records = copy.deepcopy(v210_records)
+    v211_records[1]["standard_name"] = "食材乙旧名"
+    v211_records[1]["aliases"] = ["旧乙"]
     v211_records[1]["merged_into"] = A
     v211_records[2]["attributes"] = {"density": AI_DENSITY | {"value": 1.2}}
     v211 = _library_at("2.11.0", v211_records, tmp_path, "v211")
@@ -78,7 +80,11 @@ def test_changes_returns_full_interval_and_numeric_versions(
     assert full_data["current_version"] == "2.11.0"
     assert [note["version"] for note in full_data["releases"]] == ["2.9.0", "2.10.0", "2.11.0"]
     assert {item["id"] for item in full_data["added"]} == {A, C}
-    assert full_data["merged"] == [{"from_id": B, "to_id": A}]
+    assert [{item["from_id"], item["to_id"]} for item in full_data["merged"]] == [{B, A}]
+    assert full_data["merged"][0]["identity"]["id"] == B
+    assert full_data["merged"][0]["identity"]["standard_name"] == "食材乙旧名"
+    assert full_data["merged"][0]["identity"]["aliases"] == ["旧乙"]
+    assert full_data["merged"][0]["identity"]["pinyin"] == "shicaiyi"
     assert full_data["modified"] == []
     assert full_data["added"][0]["attributes"]["density"]["estimate"] is True
 
@@ -88,14 +94,18 @@ def test_changes_returns_full_interval_and_numeric_versions(
     assert [note["version"] for note in data_29["releases"]] == ["2.10.0", "2.11.0"]
     assert {item["id"] for item in data_29["added"]} == {C}
     assert {item["id"] for item in data_29["modified"]} == {A}
-    assert data_29["merged"] == [{"from_id": B, "to_id": A}]
+    assert [{item["from_id"], item["to_id"]} for item in data_29["merged"]] == [{B, A}]
+    assert data_29["merged"][0]["identity"]["id"] == B
+    assert data_29["merged"][0]["identity"]["standard_name"] == "食材乙旧名"
 
     since_210 = client.get("/v1/ingredients/changes?since_version=2.10.0")
     assert since_210.status_code == 200
     data_210 = since_210.json()
     assert data_210["added"] == []
     assert {item["id"] for item in data_210["modified"]} == {C}
-    assert data_210["merged"] == [{"from_id": B, "to_id": A}]
+    assert [{item["from_id"], item["to_id"]} for item in data_210["merged"]] == [{B, A}]
+    assert data_210["merged"][0]["identity"]["id"] == B
+    assert data_210["merged"][0]["identity"]["standard_name"] == "食材乙旧名"
     assert [note["version"] for note in data_210["releases"]] == ["2.11.0"]
 
     latest = client.get("/v1/ingredients/changes?since_version=2.11.0")

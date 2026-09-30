@@ -127,6 +127,46 @@ void main() {
     expect(await repository.get('missing'), isNull);
   });
 
+  test('首次同步合并关系保留旧身份供离线别名和拼音搜索', () async {
+    final api = FakeIngredientSyncApi()
+      ..changesResponses.add(
+        changes(
+          version: 'v2',
+          added: [
+            ingredient(
+              id: newId,
+              name: '新食材',
+              aliases: ['青萝卜'],
+              pinyin: 'xinshicai',
+              initials: 'xsc',
+              version: 'v2',
+            ),
+          ],
+          modified: [
+            ingredient(
+              id: oldId,
+              name: '旧食材',
+              aliases: ['红萝卜'],
+              pinyin: 'jiushicai',
+              initials: 'jsc',
+              version: 'v1',
+            ),
+          ],
+          merged: {oldId: newId},
+        ),
+      );
+    final repository = IngredientRepository(
+      api: api,
+      cache: LocalStoreIngredientCache(MemoryLocalStore()),
+    );
+
+    expect(await repository.sync(), isTrue);
+    expect((await repository.get(oldId))!.id, newId);
+    expect((await repository.search('  红萝卜  ')).single.id, newId);
+    expect((await repository.search('JSC')).single.id, newId);
+    expect((await repository.search('JIUSHI')).single.id, newId);
+  });
+
   test('离线搜索按服务端的精确、别名、前缀和拼音优先级排序', () async {
     final api = FakeIngredientSyncApi()
       ..changesResponses.add(

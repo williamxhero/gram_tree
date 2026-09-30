@@ -38,7 +38,13 @@ void main() {
                       currentVersion: 'v2',
                       added: [detail(id: 'new', name: '青萝卜')],
                       modified: const [],
-                      merged: [MergeRelation(fromId: 'old', toId: 'new')],
+                      merged: [
+                        MergeRelation(
+                          fromId: 'old',
+                          toId: 'new',
+                          identity: detail(id: 'old', name: '旧食材'),
+                        ),
+                      ],
                       releases: [
                         ReleaseNote(version: 'v2', changelog: '补充青萝卜'),
                       ],
@@ -69,6 +75,8 @@ void main() {
 
       expect(changes.currentVersion, 'v2');
       expect(changes.added.single.id, 'new');
+      expect(changes.modified.single.id, 'old');
+      expect(changes.modified.single.standardName, '旧食材');
       expect(changes.merged, {'old': 'new'});
       expect(batch.single.requestedId, 'old');
       expect(calls.map((call) => call.path), [

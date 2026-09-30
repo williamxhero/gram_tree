@@ -141,10 +141,14 @@ def _to_detail(
 
 
 class MergeRelation(BaseModel):
-    """一次合并：旧 ID 指向新 ID（#101）。"""
+    """一次合并：旧 ID 指向新 ID，并保留旧记录的身份信息（#101）。"""
 
     from_id: IdV4 = Field(description="被合并掉的旧标准 ID")
     to_id: IdV4 = Field(description="合并后的标准 ID")
+    identity: IngredientDetail | None = Field(
+        None,
+        description="被合并掉的旧食材完整身份信息；客户端用它保留旧叫法的离线搜索",
+    )
 
 
 class ReleaseNote(BaseModel):
@@ -345,8 +349,14 @@ def get_ingredient_changes(
     merged: list[MergeRelation] = []
     for row in rows:
         if row.merged_into is not None:
-            # 已合并的食材只报合并关系；客户端保留本地旧详情并改写 ID 映射。
-            merged.append(MergeRelation(from_id=row.id, to_id=row.merged_into))
+            # 合并的食材保持 active-only 数组语义，但附带旧身份供首次同步建索引。
+            merged.append(
+                MergeRelation(
+                    from_id=row.id,
+                    to_id=row.merged_into,
+                    identity=_to_detail(db, row),
+                )
+            )
             continue
         # 首次出现的版本晚于客户端手上的版本才是新增，否则是修改。
         # 首次出现的版本为空表示这条早于 #101 的版本追踪，一律按修改处理（多报不漏报）。

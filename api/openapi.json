@@ -1588,13 +1588,24 @@
         "type": "object"
       },
       "MergeRelation": {
-        "description": "一次合并：旧 ID 指向新 ID（#101）。",
+        "description": "一次合并：旧 ID 指向新 ID，并保留旧记录的身份信息（#101）。",
         "properties": {
           "from_id": {
             "description": "被合并掉的旧标准 ID",
             "format": "uuid",
             "title": "From Id",
             "type": "string"
+          },
+          "identity": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/IngredientDetail"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "被合并掉的旧食材完整身份信息；客户端用它保留旧叫法的离线搜索"
           },
           "to_id": {
             "description": "合并后的标准 ID",

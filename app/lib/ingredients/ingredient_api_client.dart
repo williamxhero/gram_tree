@@ -18,7 +18,13 @@ class GeneratedIngredientSyncApi implements IngredientSyncApi {
     return IngredientChanges(
       currentVersion: data.currentVersion,
       added: data.added,
-      modified: data.modified,
+      // Retired identities are carried by merge relations rather than the
+      // server's active-only modified array. Keep them in the cache's detail
+      // collection so old names, aliases and pinyin remain searchable.
+      modified: [
+        ...data.modified,
+        for (final relation in data.merged) ?relation.identity,
+      ],
       merged: {
         for (final relation in data.merged) relation.fromId: relation.toId,
       },
