@@ -45,7 +45,7 @@
     .ingredient-line, .recipe-row { display: flex; justify-content: space-between; gap: 12px; align-items: baseline; }
     .amount { font-family: "DM Mono", ui-monospace, monospace; white-space: nowrap; }
     .tag { display: inline-flex; align-items: center; gap: 5px; border: 1px solid var(--line); color: var(--muted); border-radius: 999px; padding: 4px 9px; font-size: 12px; }
-    .tag.unrecorded { color: var(--sauce); border-color: color-mix(in srgb, var(--sauce), white 60%); }
+    .tag.unrecorded { color: var(--muted); border-style: dashed; }
     .tag.verified { color: var(--verified); border-color: color-mix(in srgb, var(--verified), white 55%); }
     .why { border-left: 3px solid var(--verified); padding: 10px 12px; margin-top: 12px; background: color-mix(in srgb, var(--verified), white 92%); color: var(--muted); font-size: 13px; }
     .subtle { color: var(--muted); font-size: 13px; line-height: 1.6; }
@@ -74,7 +74,7 @@
         <p class="subtle">结论：先把食材和步骤写成字段，保存时会生成一个新的不可修改版本。</p>
         <div class="row"><div class="field"><label for="servings">份数</label><input id="servings" value="2"></div><div class="field"><label for="difficulty">难度</label><select id="difficulty"><option>家常</option><option>进阶</option></select></div></div>
         <div class="section-head"><h3>食材</h3><button class="secondary">+ 添加食材</button></div>
-        <div class="ingredient"><div class="ingredient-line"><strong>鸡腿肉</strong><span class="amount">300 克</span></div><div class="meta"><span class="tag">主料 · 切 1.5 厘米丁</span><span class="tag verified">已选标准食材</span></div></div>
+        <div class="ingredient"><div class="ingredient-line"><strong>鸡腿肉</strong><span class="amount">300 克</span></div><div class="meta"><span class="tag">主料 · 切 1.5 厘米丁</span><span class="tag">已选标准食材</span></div></div>
         <div class="ingredient"><div class="ingredient-line"><strong>干辣椒</strong><span class="amount">3 个</span></div><div class="meta"><span class="tag">调味 · 可选</span><span class="tag unrecorded">未收录</span></div></div>
         <div class="section-head"><h3>步骤</h3><button class="secondary">+ 添加步骤</button></div>
         <div class="step"><strong>腌 · 鸡腿肉</strong><p class="subtle">加入生抽，抓匀后静置。</p><div class="meta"><span class="tag">15 分钟</span><span class="tag">需要守着：否</span></div></div>
@@ -92,7 +92,7 @@
         <h3 style="margin-top:15px">步骤</h3>
         <div class="step"><strong>1 · 腌</strong><p class="subtle">加入生抽，抓匀后静置 15 分钟。</p><button class="secondary" onclick="this.nextElementSibling.hidden=!this.nextElementSibling.hidden">为什么这样做</button><div class="why" hidden>让调味先进入肉的表面；这条依据来自作者填写的步骤原理。</div></div>
         <div class="step"><strong>2 · 炒</strong><p class="subtle">大火炒 2 分钟，至表面变白。</p></div>
-        <div class="meta"><span class="tag verified">过敏原：大豆（估算）</span><span class="tag">营养：每份估算</span></div>
+        <div class="meta"><span class="tag">过敏原：大豆（可能不完整）</span><span class="tag">营养：每份估算</span></div>
       </article>
       <article class="card history" data-view="history">
         <div class="section-head"><h2>版本历史</h2><span class="subtle">旧版本只读</span></div>
