@@ -1499,8 +1499,9 @@ class _IngredientDetailRow extends StatelessWidget {
             value: quantity,
             originalValue: ingredient.quantitySource?.original,
             basisText:
-                ingredient.quantitySource?.basis ??
-                l10n.recipeSourceAuthorFilled,
+                ingredient.quantitySource?.basis?.isNotEmpty == true
+                    ? ingredient.quantitySource!.basis!
+                    : l10n.recipeSourceAuthorFilled,
             required: true,
             onAction: (_) {},
           ),

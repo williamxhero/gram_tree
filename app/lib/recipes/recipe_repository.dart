@@ -318,7 +318,7 @@ class RecipeStepDraft {
     heatSource: _authorSource(heat),
     id: id,
     ingredientIds: [...ingredientIds],
-    instruction: instruction.trim().isEmpty ? '完成这一步' : instruction.trim(),
+    instruction: instruction.trim(),
     notes: notes.trim(),
     temperatureCelsius: temperatureCelsius,
     temperatureSource: _authorSource(temperatureCelsius.toString()),
@@ -434,7 +434,7 @@ class RecipeForm {
 }
 
 ValueSource _authorSource(String original) => ValueSource(
-  basis: '作者填写',
+  basis: '',
   confidence: 1,
   original: original,
   source_: ValueSourceSource_Enum.authorFilled,
