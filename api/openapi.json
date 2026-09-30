@@ -213,6 +213,55 @@
         "title": "AttributeStatus",
         "type": "string"
       },
+      "BatchRequest": {
+        "description": "批量读取的请求体（#101）。",
+        "properties": {
+          "ids": {
+            "description": "要读取的标准 ID，最多 100 个",
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "maxItems": 100,
+            "minItems": 1,
+            "title": "Ids",
+            "type": "array"
+          }
+        },
+        "required": [
+          "ids"
+        ],
+        "title": "BatchRequest",
+        "type": "object"
+      },
+      "BatchResponse": {
+        "description": "批量读取的结果（#101）。",
+        "properties": {
+          "items": {
+            "description": "读到完整数据的食材，按请求里的顺序；已合并的旧 ID 返回合并后的新食材",
+            "items": {
+              "$ref": "#/components/schemas/IngredientDetail"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "missing_ids": {
+            "description": "库里没有的 ID，单独列出，不影响整次请求",
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "title": "Missing Ids",
+            "type": "array"
+          }
+        },
+        "required": [
+          "items",
+          "missing_ids"
+        ],
+        "title": "BatchResponse",
+        "type": "object"
+      },
       "BindAppleRequest": {
         "properties": {
           "authorization_code": {
@@ -312,6 +361,57 @@
           "ttl_s"
         ],
         "title": "CacheInfo",
+        "type": "object"
+      },
+      "ChangesResponse": {
+        "description": "某个版本之后的食材变化（#101），App 用它增量更新本机缓存。",
+        "properties": {
+          "added": {
+            "description": "这个区间里新增的食材，含全部详细属性",
+            "items": {
+              "$ref": "#/components/schemas/IngredientDetail"
+            },
+            "title": "Added",
+            "type": "array"
+          },
+          "current_version": {
+            "description": "服务端当前的食材库版本，App 存下来当下次请求的 since_version",
+            "title": "Current Version",
+            "type": "string"
+          },
+          "merged": {
+            "description": "这个区间里生效的合并关系，旧 ID → 新 ID",
+            "items": {
+              "$ref": "#/components/schemas/MergeRelation"
+            },
+            "title": "Merged",
+            "type": "array"
+          },
+          "modified": {
+            "description": "这个区间里改动过的食材，含全部详细属性",
+            "items": {
+              "$ref": "#/components/schemas/IngredientDetail"
+            },
+            "title": "Modified",
+            "type": "array"
+          },
+          "releases": {
+            "description": "这个区间内每次发布的版本号和变更说明，按版本从早到晚",
+            "items": {
+              "$ref": "#/components/schemas/ReleaseNote"
+            },
+            "title": "Releases",
+            "type": "array"
+          }
+        },
+        "required": [
+          "current_version",
+          "added",
+          "modified",
+          "merged",
+          "releases"
+        ],
+        "title": "ChangesResponse",
         "type": "object"
       },
       "ClientConfig": {
@@ -1423,7 +1523,7 @@
         "type": "object"
       },
       "IngredientDetail": {
-        "description": "按 ID 读取时的完整数据：身份信息加全部详细属性（#97）。",
+        "description": "按 ID 读取时的完整数据：身份信息加全部详细属性（#97），每个属性带估算标记。",
         "properties": {
           "aliases": {
             "items": {
@@ -1451,6 +1551,19 @@
           "pinyin_initials": {
             "title": "Pinyin Initials",
             "type": "string"
+          },
+          "requested_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "请求里写的 ID；和 id 不同时说明这个 ID 已经合并，只批量读取会带上",
+            "title": "Requested Id"
           },
           "standard_name": {
             "title": "Standard Name",
@@ -1519,6 +1632,29 @@
           "version"
         ],
         "title": "IngredientOut",
+        "type": "object"
+      },
+      "MergeRelation": {
+        "description": "一次合并：旧 ID 指向新 ID（#101）。",
+        "properties": {
+          "from_id": {
+            "description": "被合并掉的旧标准 ID",
+            "format": "uuid",
+            "title": "From Id",
+            "type": "string"
+          },
+          "to_id": {
+            "description": "合并后的标准 ID",
+            "format": "uuid",
+            "title": "To Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "from_id",
+          "to_id"
+        ],
+        "title": "MergeRelation",
         "type": "object"
       },
       "NormalizeCandidate": {
@@ -1955,6 +2091,25 @@
           "message"
         ],
         "title": "RejectionReason",
+        "type": "object"
+      },
+      "ReleaseNote": {
+        "description": "一次发布的版本号和变更说明（#101）。",
+        "properties": {
+          "changelog": {
+            "title": "Changelog",
+            "type": "string"
+          },
+          "version": {
+            "title": "Version",
+            "type": "string"
+          }
+        },
+        "required": [
+          "version",
+          "changelog"
+        ],
+        "title": "ReleaseNote",
         "type": "object"
       },
       "SearchQuery": {
@@ -3020,6 +3175,173 @@
         "summary": "健康检查：服务、数据库、Redis 是否可用",
         "tags": [
           "health"
+        ]
+      }
+    },
+    "/v1/ingredients/batch": {
+      "get": {
+        "description": "批量读取的 GET 版本，参数是逗号分隔的 ID；除此之外和 POST 完全一样。\n\n给不方便发请求体的客户端用。ID 数量、格式不对时按 ADR 0002 返回 422。",
+        "operationId": "batch_get_ingredients_by_query",
+        "parameters": [
+          {
+            "description": "逗号分隔的标准 ID，最多 100 个",
+            "in": "query",
+            "name": "ids",
+            "required": true,
+            "schema": {
+              "description": "逗号分隔的标准 ID，最多 100 个",
+              "title": "Ids",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BatchResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "参数错误"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "服务端错误"
+          }
+        },
+        "summary": "Batch Get Ingredients By Query",
+        "tags": [
+          "ingredients"
+        ]
+      },
+      "post": {
+        "description": "按一组 ID 读取多种食材的完整数据（含详细属性和估算标记）。\n\n命中已合并的旧 ID 时返回合并后的新食材，并在 `requested_id` 里标明是从哪个旧 ID 转过来的；\n库里没有的 ID 收在 `missing_ids` 里单独返回，不让整次请求失败。",
+        "operationId": "batch_get_ingredients",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BatchRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BatchResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "参数错误"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "服务端错误"
+          }
+        },
+        "summary": "Batch Get Ingredients",
+        "tags": [
+          "ingredients"
+        ]
+      }
+    },
+    "/v1/ingredients/changes": {
+      "get": {
+        "description": "返回指定版本之后的全部变化：新增、修改的食材完整数据，合并关系，以及每次发布的说明。\n\n版本号是 `主.次.修`，按数字比大小，不看导入时间。不给 `since_version` 时返回整份食材库\n（App 首次下载用，全部算“新增”）；给最新版本时返回空变化；给不存在的版本返回 404。",
+        "operationId": "get_ingredient_changes",
+        "parameters": [
+          {
+            "description": "App 手上食材库的版本号；不给表示首次下载，返回整份食材库",
+            "in": "query",
+            "name": "since_version",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "App 手上食材库的版本号；不给表示首次下载，返回整份食材库",
+              "title": "Since Version"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChangesResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "参数错误"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "服务端错误"
+          }
+        },
+        "summary": "Get Ingredient Changes",
+        "tags": [
+          "ingredients"
         ]
       }
     },

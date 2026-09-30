@@ -26,10 +26,13 @@ lib/src/model/analytics_upload_request.dart
 lib/src/model/apple_login_request.dart
 lib/src/model/apple_reauth_request.dart
 lib/src/model/attribute_status.dart
+lib/src/model/batch_request.dart
+lib/src/model/batch_response.dart
 lib/src/model/bind_apple_request.dart
 lib/src/model/bind_email_request.dart
 lib/src/model/bool_attribute.dart
 lib/src/model/cache_info.dart
+lib/src/model/changes_response.dart
 lib/src/model/client_config.dart
 lib/src/model/component_descriptor.dart
 lib/src/model/component_reason.dart
@@ -62,6 +65,7 @@ lib/src/model/identity_out.dart
 lib/src/model/ingredient_attributes.dart
 lib/src/model/ingredient_detail.dart
 lib/src/model/ingredient_out.dart
+lib/src/model/merge_relation.dart
 lib/src/model/normalize_candidate.dart
 lib/src/model/normalize_item.dart
 lib/src/model/normalize_request.dart
@@ -75,6 +79,7 @@ lib/src/model/purchase_unit.dart
 lib/src/model/purchase_units_attribute.dart
 lib/src/model/refresh_request.dart
 lib/src/model/rejection_reason.dart
+lib/src/model/release_note.dart
 lib/src/model/search_query.dart
 lib/src/model/search_result.dart
 lib/src/model/skip_adjustment_request.dart

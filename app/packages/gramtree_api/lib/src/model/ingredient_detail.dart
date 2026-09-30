@@ -31,6 +31,8 @@ class IngredientDetail {
 
     required this.pinyinInitials,
 
+    this.requestedId,
+
     required this.standardName,
 
     required this.version,
@@ -54,6 +56,9 @@ class IngredientDetail {
   @JsonKey(name: r'pinyin_initials', required: true, includeIfNull: false)
   final String pinyinInitials;
 
+  @JsonKey(name: r'requested_id', required: false, includeIfNull: false)
+  final String? requestedId;
+
   @JsonKey(name: r'standard_name', required: true, includeIfNull: false)
   final String standardName;
 
@@ -70,6 +75,7 @@ class IngredientDetail {
           other.id == id &&
           other.pinyin == pinyin &&
           other.pinyinInitials == pinyinInitials &&
+          other.requestedId == requestedId &&
           other.standardName == standardName &&
           other.version == version;
 
@@ -81,6 +87,7 @@ class IngredientDetail {
       id.hashCode +
       pinyin.hashCode +
       pinyinInitials.hashCode +
+      (requestedId == null ? 0 : requestedId.hashCode) +
       standardName.hashCode +
       version.hashCode;
 

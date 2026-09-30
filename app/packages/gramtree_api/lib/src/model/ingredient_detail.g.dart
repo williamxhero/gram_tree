@@ -19,6 +19,8 @@ abstract class _$IngredientDetailCWProxy {
 
   IngredientDetail pinyinInitials(String pinyinInitials);
 
+  IngredientDetail requestedId(String? requestedId);
+
   IngredientDetail standardName(String standardName);
 
   IngredientDetail version(String version);
@@ -36,6 +38,7 @@ abstract class _$IngredientDetailCWProxy {
     String id,
     String pinyin,
     String pinyinInitials,
+    String? requestedId,
     String standardName,
     String version,
   });
@@ -68,6 +71,10 @@ class _$IngredientDetailCWProxyImpl implements _$IngredientDetailCWProxy {
       this(pinyinInitials: pinyinInitials);
 
   @override
+  IngredientDetail requestedId(String? requestedId) =>
+      this(requestedId: requestedId);
+
+  @override
   IngredientDetail standardName(String standardName) =>
       this(standardName: standardName);
 
@@ -88,6 +95,7 @@ class _$IngredientDetailCWProxyImpl implements _$IngredientDetailCWProxy {
     Object? id = const $CopyWithPlaceholder(),
     Object? pinyin = const $CopyWithPlaceholder(),
     Object? pinyinInitials = const $CopyWithPlaceholder(),
+    Object? requestedId = const $CopyWithPlaceholder(),
     Object? standardName = const $CopyWithPlaceholder(),
     Object? version = const $CopyWithPlaceholder(),
   }) {
@@ -116,6 +124,10 @@ class _$IngredientDetailCWProxyImpl implements _$IngredientDetailCWProxy {
           ? _value.pinyinInitials
           // ignore: cast_nullable_to_non_nullable
           : pinyinInitials as String,
+      requestedId: requestedId == const $CopyWithPlaceholder()
+          ? _value.requestedId
+          // ignore: cast_nullable_to_non_nullable
+          : requestedId as String?,
       standardName: standardName == const $CopyWithPlaceholder()
           ? _value.standardName
           // ignore: cast_nullable_to_non_nullable
@@ -172,6 +184,7 @@ IngredientDetail _$IngredientDetailFromJson(Map<String, dynamic> json) =>
             'pinyin_initials',
             (v) => v as String,
           ),
+          requestedId: $checkedConvert('requested_id', (v) => v as String?),
           standardName: $checkedConvert('standard_name', (v) => v as String),
           version: $checkedConvert('version', (v) => v as String),
         );
@@ -179,6 +192,7 @@ IngredientDetail _$IngredientDetailFromJson(Map<String, dynamic> json) =>
       },
       fieldKeyMap: const {
         'pinyinInitials': 'pinyin_initials',
+        'requestedId': 'requested_id',
         'standardName': 'standard_name',
       },
     );
@@ -191,6 +205,7 @@ Map<String, dynamic> _$IngredientDetailToJson(IngredientDetail instance) =>
       'id': instance.id,
       'pinyin': instance.pinyin,
       'pinyin_initials': instance.pinyinInitials,
+      'requested_id': ?instance.requestedId,
       'standard_name': instance.standardName,
       'version': instance.version,
     };

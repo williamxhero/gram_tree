@@ -11,11 +11,15 @@
 
 导入是幂等的：同一份数据导入多次结果不变。只有内容真的变了的食材（身份信息、别名，或者
 任何一个属性的值、来源、校对状态），`version` 才改成本次的版本号（增量更新靠它找出变化，
-见 SPEC-002.1）。标准 ID 永不删除：数据库里已有、数据文件里却没有的 ID 会让整次导入失败，
-一条都不写。任何一条记录不合格，也是整次失败，错误里写明哪个文件第几条、哪个字段。
+见 SPEC-002.1）。新增的食材还会记下首次出现的版本（`added_in_version`，只在插入时写一次），
+增量接口靠它区分“新增”和“修改”。标准 ID 永不删除：数据库里已有、数据文件里却没有的 ID
+会让整次导入失败，一条都不写。任何一条记录不合格，也是整次失败，错误里写明哪个文件第几条、
+哪个字段。
 """
 
 import json
+import uuid
+from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
 
@@ -25,6 +29,7 @@ from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
 
 from gramtree.core.ids import IdV4
+from gramtree.ingredients import versioning
 from gramtree.ingredients.attributes import IngredientAttributes
 from gramtree.ingredients.models import (
     Ingredient,
@@ -181,20 +186,52 @@ def _check_consistency(records: list[IngredientRecord], ambiguous: set[str]) -> 
             raise IngredientImportError(f"{r.standard_name}：合并目标自己也被合并了")
 
 
+def _library_matches(
+    existing: Mapping[uuid.UUID, Ingredient],
+    records: list[IngredientRecord],
+    aliases_by_id: Mapping[uuid.UUID, set[str]],
+    attrs_by_id: Mapping[uuid.UUID, Mapping[str, tuple[Any, str, str]]],
+    new_attrs: Mapping[uuid.UUID, Mapping[str, tuple[Any, str, str]]],
+) -> bool:
+    """比较食材内容，不比较版本元数据（用于同版本幂等重放）。"""
+    if set(existing) != {record.id for record in records}:
+        return False
+    for record in records:
+        row = existing[record.id]
+        if (
+            row.standard_name,
+            row.pinyin,
+            row.pinyin_initials,
+            row.category,
+            row.merged_into,
+        ) != (
+            record.standard_name,
+            record.pinyin,
+            record.pinyin_initials,
+            record.category,
+            record.merged_into,
+        ):
+            return False
+        if aliases_by_id.get(record.id, set()) != set(record.aliases):
+            return False
+        if attrs_by_id.get(record.id, {}) != new_attrs[record.id]:
+            return False
+    return True
+
+
 def import_directory(session: Session, data_dir: Path) -> dict[str, int | str]:
     manifest, records = load_directory(data_dir)
+    manifest_key = versioning.parse_version(manifest.version)
+
+    releases = list(session.scalars(select(IngredientVersion)))
+    latest = versioning.latest_version(release.version for release in releases)
 
     existing = {i.id: i for i in session.scalars(select(Ingredient))}
-    missing = set(existing) - {r.id for r in records}
-    if missing:
-        sample = ", ".join(sorted(str(m) for m in missing)[:5])
-        raise IngredientImportError(f"标准 ID 不能删除，数据文件里少了 {len(missing)} 个：{sample}")
-
-    aliases_by_id: dict[object, set[str]] = {}
+    aliases_by_id: dict[uuid.UUID, set[str]] = {}
     for row in session.scalars(select(IngredientAlias)):
         aliases_by_id.setdefault(row.ingredient_id, set()).add(row.alias)
 
-    attrs_by_id: dict[object, dict[str, tuple[Any, str, str]]] = {}
+    attrs_by_id: dict[uuid.UUID, dict[str, tuple[Any, str, str]]] = {}
     for row in session.scalars(select(IngredientAttribute)):
         attrs_by_id.setdefault(row.ingredient_id, {})[row.field] = (
             row.value,
@@ -203,13 +240,51 @@ def import_directory(session: Session, data_dir: Path) -> dict[str, int | str]:
         )
     new_attrs = {r.id: r.attributes.stored_fields() for r in records}
 
+    equivalent_release = next(
+        (
+            release
+            for release in releases
+            if versioning.parse_version(release.version) == manifest_key
+        ),
+        None,
+    )
+    if equivalent_release is not None and equivalent_release.version != manifest.version:
+        raise IngredientImportError(
+            f"食材库版本 {manifest.version} 与已发布版本 {equivalent_release.version} 重复"
+        )
+
+    existing_release = session.get(IngredientVersion, manifest.version)
+    if existing_release is not None:
+        # 同一版本重放是幂等的；即使调用方带了不同的说明，也不能改写已发布版本的说明。
+        # 但同一版本的食材内容一旦变化必须报错，不能让客户端缓存悄悄失效。
+        if _library_matches(existing, records, aliases_by_id, attrs_by_id, new_attrs):
+            return {"version": manifest.version, "added": 0, "changed": 0}
+        raise IngredientImportError(
+            f"食材库版本 {manifest.version} 已存在，不能修改已发布的食材内容"
+        )
+
+    if latest is not None and manifest_key < versioning.parse_version(latest):
+        raise IngredientImportError(
+            f"食材库版本 {manifest.version} 早于当前最新版本 {latest}，不能回退"
+        )
+
+    missing = set(existing) - {r.id for r in records}
+    if missing:
+        sample = ", ".join(sorted(str(m) for m in missing)[:5])
+        raise IngredientImportError(f"标准 ID 不能删除，数据文件里少了 {len(missing)} 个：{sample}")
+
     added = changed = 0
-    rows: dict[object, Ingredient] = {}
+    rows: dict[uuid.UUID, Ingredient] = {}
     # 先写不带合并关系的内容，再补 merged_into，避免外键引用还没写进去的食材
     for r in records:
         row = existing.get(r.id)
         if row is None:
-            row = Ingredient(id=r.id, version=manifest.version)
+            # 新增：第一次出现的版本就是这一版，之后不再改，增量接口靠它区分新增和修改
+            row = Ingredient(
+                id=r.id,
+                version=manifest.version,
+                added_in_version=manifest.version,
+            )
             session.add(row)
             added += 1
         elif (
@@ -248,7 +323,6 @@ def import_directory(session: Session, data_dir: Path) -> dict[str, int | str]:
                 for field, (value, source, status) in new_attrs[r.id].items()
             )
 
-    if session.get(IngredientVersion, manifest.version) is None:
-        session.add(IngredientVersion(version=manifest.version, changelog=manifest.changelog))
+    session.add(IngredientVersion(version=manifest.version, changelog=manifest.changelog))
     session.commit()
     return {"version": manifest.version, "added": added, "changed": changed}

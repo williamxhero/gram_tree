@@ -4,10 +4,13 @@ import 'package:gramtree_api/src/model/analytics_event_in.dart';
 import 'package:gramtree_api/src/model/analytics_upload_request.dart';
 import 'package:gramtree_api/src/model/apple_login_request.dart';
 import 'package:gramtree_api/src/model/apple_reauth_request.dart';
+import 'package:gramtree_api/src/model/batch_request.dart';
+import 'package:gramtree_api/src/model/batch_response.dart';
 import 'package:gramtree_api/src/model/bind_apple_request.dart';
 import 'package:gramtree_api/src/model/bind_email_request.dart';
 import 'package:gramtree_api/src/model/bool_attribute.dart';
 import 'package:gramtree_api/src/model/cache_info.dart';
+import 'package:gramtree_api/src/model/changes_response.dart';
 import 'package:gramtree_api/src/model/client_config.dart';
 import 'package:gramtree_api/src/model/component_descriptor.dart';
 import 'package:gramtree_api/src/model/component_reason.dart';
@@ -40,6 +43,7 @@ import 'package:gramtree_api/src/model/identity_out.dart';
 import 'package:gramtree_api/src/model/ingredient_attributes.dart';
 import 'package:gramtree_api/src/model/ingredient_detail.dart';
 import 'package:gramtree_api/src/model/ingredient_out.dart';
+import 'package:gramtree_api/src/model/merge_relation.dart';
 import 'package:gramtree_api/src/model/normalize_candidate.dart';
 import 'package:gramtree_api/src/model/normalize_item.dart';
 import 'package:gramtree_api/src/model/normalize_request.dart';
@@ -53,6 +57,7 @@ import 'package:gramtree_api/src/model/purchase_unit.dart';
 import 'package:gramtree_api/src/model/purchase_units_attribute.dart';
 import 'package:gramtree_api/src/model/refresh_request.dart';
 import 'package:gramtree_api/src/model/rejection_reason.dart';
+import 'package:gramtree_api/src/model/release_note.dart';
 import 'package:gramtree_api/src/model/search_query.dart';
 import 'package:gramtree_api/src/model/search_result.dart';
 import 'package:gramtree_api/src/model/skip_adjustment_request.dart';
@@ -107,6 +112,11 @@ ReturnType deserialize<ReturnType, BaseType>(
       return AppleReauthRequest.fromJson(value as Map<String, dynamic>)
           as ReturnType;
     case 'AttributeStatus':
+    case 'BatchRequest':
+      return BatchRequest.fromJson(value as Map<String, dynamic>) as ReturnType;
+    case 'BatchResponse':
+      return BatchResponse.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
     case 'BindAppleRequest':
       return BindAppleRequest.fromJson(value as Map<String, dynamic>)
           as ReturnType;
@@ -118,6 +128,9 @@ ReturnType deserialize<ReturnType, BaseType>(
           as ReturnType;
     case 'CacheInfo':
       return CacheInfo.fromJson(value as Map<String, dynamic>) as ReturnType;
+    case 'ChangesResponse':
+      return ChangesResponse.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
     case 'ClientConfig':
       return ClientConfig.fromJson(value as Map<String, dynamic>) as ReturnType;
     case 'ComponentDescriptor':
@@ -207,6 +220,9 @@ ReturnType deserialize<ReturnType, BaseType>(
     case 'IngredientOut':
       return IngredientOut.fromJson(value as Map<String, dynamic>)
           as ReturnType;
+    case 'MergeRelation':
+      return MergeRelation.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
     case 'NormalizeCandidate':
       return NormalizeCandidate.fromJson(value as Map<String, dynamic>)
           as ReturnType;
@@ -244,6 +260,8 @@ ReturnType deserialize<ReturnType, BaseType>(
     case 'RejectionReason':
       return RejectionReason.fromJson(value as Map<String, dynamic>)
           as ReturnType;
+    case 'ReleaseNote':
+      return ReleaseNote.fromJson(value as Map<String, dynamic>) as ReturnType;
     case 'SearchQuery':
       return SearchQuery.fromJson(value as Map<String, dynamic>) as ReturnType;
     case 'SearchResult':

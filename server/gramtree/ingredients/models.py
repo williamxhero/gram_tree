@@ -28,6 +28,10 @@ class Ingredient(Base):
     merged_into: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("ingredients.id"))
     # 这条记录最后一次内容有变化的食材库版本
     version: Mapped[str] = mapped_column(String(20))
+    # 这条记录第一次出现的食材库版本，只在插入时写一次。增量接口靠它区分“新增”和“修改”：
+    # `added_in_version` 晚于客户端手上的版本就是新增，否则是修改。
+    # 空表示这条记录早于版本追踪（#101 之前的迁移留下的数据），一律按“修改”处理。
+    added_in_version: Mapped[str | None] = mapped_column(String(20))
 
 
 class IngredientAlias(Base):
