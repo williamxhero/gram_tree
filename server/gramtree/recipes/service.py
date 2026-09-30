@@ -7,9 +7,9 @@ import hmac
 import io
 import logging
 import uuid
+import warnings
 from collections.abc import Iterable
 from datetime import UTC, datetime, timedelta
-from pathlib import Path
 from typing import Any
 
 from redis import Redis
@@ -28,6 +28,7 @@ from gramtree.recipes.models import (
     DishAlias,
     Recipe,
     RecipeImage,
+    RecipeImageStaging,
     RecipeSaveOutbox,
     RecipeVersion,
 )
@@ -40,6 +41,7 @@ from gramtree.recipes.schemas import (
     RecipeDerived,
     RecipeDetail,
     RecipeImageOut,
+    RecipeImageStagedOut,
     RecipeIngredient,
     RecipeList,
     RecipeListItem,
@@ -49,6 +51,7 @@ from gramtree.recipes.schemas import (
     RecipeVersionOut,
     RecipeVersionSummary,
 )
+from gramtree.recipes.storage import make_recipe_storage
 from gramtree.settings import Settings
 
 logger = logging.getLogger("gramtree.recipes")
@@ -67,6 +70,7 @@ _VOLUME_SPOONS = {
     "tsp": 5.0,
 }
 _MAX_IMAGE_BYTES = 15 * 1024 * 1024
+_MAX_IMAGE_PIXELS = 40_000_000
 _SIGNED_URL_TTL = 900
 
 
@@ -335,14 +339,28 @@ def _image_secret(settings: Settings) -> str:
     return settings.image_signing_secret or settings.auth_secret
 
 
-def _signed_url(settings: Settings, recipe_id: uuid.UUID, image_id: uuid.UUID) -> str:
-    expires = int((datetime.now(UTC) + timedelta(seconds=_SIGNED_URL_TTL)).timestamp())
+def _signed_url(
+    settings: Settings,
+    recipe_id: uuid.UUID,
+    image_id: uuid.UUID,
+    storage_key: str,
+) -> tuple[str, int]:
+    expires_in = settings.recipe_image_url_ttl_seconds or _SIGNED_URL_TTL
+    storage = make_recipe_storage(settings)
+    object_url = storage.signed_get_url(storage_key, expires_in)
+    if object_url is not None:
+        return object_url, expires_in
+    expires = int((datetime.now(UTC) + timedelta(seconds=expires_in)).timestamp())
     payload = f"{recipe_id}:{image_id}:{expires}".encode()
     signature = hmac.new(_image_secret(settings).encode(), payload, hashlib.sha256).hexdigest()
-    return f"/v1/recipes/{recipe_id}/images/{image_id}?expires={expires}&signature={signature}"
+    return (
+        f"/v1/recipes/{recipe_id}/images/{image_id}?expires={expires}&signature={signature}",
+        expires_in,
+    )
 
 
 def _image_out(settings: Settings, row: RecipeImage) -> RecipeImageOut:
+    url, expires_in = _signed_url(settings, row.recipe_id, row.id, row.storage_key)
     return RecipeImageOut(
         id=row.id,
         version_id=row.version_id,
@@ -350,8 +368,39 @@ def _image_out(settings: Settings, row: RecipeImage) -> RecipeImageOut:
         byte_size=row.byte_size,
         width=row.width,
         height=row.height,
-        url=_signed_url(settings, row.recipe_id, row.id),
-        expires_in_seconds=_SIGNED_URL_TTL,
+        url=url,
+        expires_in_seconds=expires_in,
+    )
+
+
+def _staged_image_out(settings: Settings, row: RecipeImageStaging) -> RecipeImageStagedOut:
+    # Staged URLs are only previews for the owner; the object remains private.
+    url, expires_in = _staged_signed_url(settings, row.id, row.storage_key)
+    return RecipeImageStagedOut(
+        id=row.id,
+        content_type=row.content_type,
+        byte_size=row.byte_size,
+        width=row.width,
+        height=row.height,
+        url=url,
+        expires_in_seconds=expires_in,
+    )
+
+
+def _staged_signed_url(
+    settings: Settings, image_id: uuid.UUID, storage_key: str
+) -> tuple[str, int]:
+    expires_in = settings.recipe_image_url_ttl_seconds or _SIGNED_URL_TTL
+    storage = make_recipe_storage(settings)
+    object_url = storage.signed_get_url(storage_key, expires_in)
+    if object_url is not None:
+        return object_url, expires_in
+    expires = int((datetime.now(UTC) + timedelta(seconds=expires_in)).timestamp())
+    payload = f"staged:{image_id}:{expires}".encode()
+    signature = hmac.new(_image_secret(settings).encode(), payload, hashlib.sha256).hexdigest()
+    return (
+        f"/v1/recipes/images/staging/{image_id}?expires={expires}&signature={signature}",
+        expires_in,
     )
 
 
@@ -407,6 +456,64 @@ def _snapshot_json(snapshot: RecipeSnapshot) -> dict[str, Any]:
     return snapshot.model_dump(mode="json")
 
 
+def _staged_rows(
+    session: Session, owner: User, image_ids: Iterable[uuid.UUID]
+) -> list[RecipeImageStaging]:
+    ids = list(dict.fromkeys(image_ids))
+    if len(ids) > 10:
+        raise ApiError(422, "invalid_image", "图片数量不能超过 10 张")
+    if not ids:
+        return []
+    rows = list(
+        session.scalars(
+            select(RecipeImageStaging).where(
+                RecipeImageStaging.owner_id == owner.id,
+                RecipeImageStaging.id.in_(ids),
+            )
+        )
+    )
+    if len(rows) != len(ids):
+        # Do not disclose whether an ID exists under another account.
+        raise NotFound("图片暂存记录不存在")
+    by_id = {row.id: row for row in rows}
+    return [by_id[image_id] for image_id in ids]
+
+
+def _attach_staged_images(
+    session: Session,
+    owner: User,
+    recipe: Recipe,
+    version: RecipeVersion,
+    image_ids: Iterable[uuid.UUID],
+) -> list[RecipeImage]:
+    staged = _staged_rows(session, owner, image_ids)
+    attached: list[RecipeImage] = []
+    for row in staged:
+        attached_row = RecipeImage(
+            id=row.id,
+            recipe_id=recipe.id,
+            version_id=version.id,
+            storage_key=row.storage_key,
+            content_type=row.content_type,
+            byte_size=row.byte_size,
+            width=row.width,
+            height=row.height,
+            created_at=row.created_at,
+        )
+        session.add(attached_row)
+        session.delete(row)
+        attached.append(attached_row)
+    return attached
+
+
+def _storage_key(
+    owner_id: uuid.UUID, image_id: uuid.UUID, content_type: str, *, staged: bool
+) -> str:
+    extension = {"image/png": "png", "image/webp": "webp"}.get(content_type, "jpg")
+    prefix = "staging" if staged else "recipes"
+    return f"{prefix}/{owner_id}/{image_id}.{extension}"
+
+
 def _enqueue_save_event(
     session: Session, owner: User, recipe: Recipe, version: RecipeVersion
 ) -> None:
@@ -455,6 +562,7 @@ def create_recipe(
     session: Session, redis: Redis, settings: Settings, owner: User, body: RecipeCreate
 ) -> RecipeDetail:
     snapshot = _validate_snapshot(session, body.snapshot)
+    staged = _staged_rows(session, owner, body.image_ids)
     dish = _dish(session, body.dish_input())
     recipe = Recipe(dish_id=dish.id, owner_id=owner.id, visibility="private")
     session.add(recipe)
@@ -470,6 +578,7 @@ def create_recipe(
     )
     session.add(version)
     session.flush()
+    _attach_staged_images(session, owner, recipe, version, [row.id for row in staged])
     recipe.current_version_id = version.id
     recipe.updated_at = version.created_at
     _enqueue_save_event(session, owner, recipe, version)
@@ -613,6 +722,7 @@ def save_version(
 ) -> RecipeDetail:
     recipe = _owned_recipe(session, owner, recipe_id)
     snapshot = _validate_snapshot(session, body.snapshot)
+    staged = _staged_rows(session, owner, body.image_ids)
     previous = session.get(RecipeVersion, recipe.current_version_id)
     if previous is None:
         raise NotFound("菜谱当前版本不存在")
@@ -632,6 +742,7 @@ def save_version(
     )
     session.add(version)
     session.flush()
+    _attach_staged_images(session, owner, recipe, version, [row.id for row in staged])
     recipe.current_version_id = version.id
     recipe.updated_at = version.created_at
     _enqueue_save_event(session, owner, recipe, version)
@@ -761,7 +872,7 @@ def delete_recipe(session: Session, owner: User, recipe_id: uuid.UUID, settings:
     recipe = _owned_recipe(session, owner, recipe_id)
     images = list(session.scalars(select(RecipeImage).where(RecipeImage.recipe_id == recipe.id)))
     for image in images:
-        _delete_storage_file(settings, image.storage_key)
+        _delete_storage_object(settings, image.storage_key)
     # current_version_id points into the versions table; clear it before deleting snapshots.
     session.execute(update(Recipe).where(Recipe.id == recipe.id).values(current_version_id=None))
     session.execute(delete(RecipeImage).where(RecipeImage.recipe_id == recipe.id))
@@ -770,40 +881,47 @@ def delete_recipe(session: Session, owner: User, recipe_id: uuid.UUID, settings:
     session.commit()
 
 
-def _storage_path(settings: Settings, key: str) -> Path:
-    root = Path(settings.recipe_media_dir)
-    path = (root / key).resolve()
-    if root.resolve() not in path.parents:
-        raise ApiError(500, "storage_error", "图片存储配置有误")
-    return path
-
-
-def _delete_storage_file(settings: Settings, key: str) -> None:
-    try:
-        _storage_path(settings, key).unlink(missing_ok=True)
-    except OSError:
-        logger.warning("could not delete recipe image", extra={"storage_key": key}, exc_info=True)
+def _delete_storage_object(settings: Settings, key: str) -> None:
+    make_recipe_storage(settings).delete(key)
 
 
 def _sanitize_image(content: bytes, content_type: str) -> tuple[bytes, str, int, int]:
     if len(content) > _MAX_IMAGE_BYTES:
         raise ApiError(422, "image_too_large", "图片太大，请选择 15 MB 以内的图片")
+    if content_type not in {"image/jpeg", "image/png", "image/webp"}:
+        raise ApiError(422, "unsupported_image", "只支持 JPG、PNG 或 WebP 图片")
     try:
         from PIL import Image
+    except ImportError as exc:
+        raise ApiError(500, "image_processing_unavailable", "图片处理服务暂时不可用") from exc
 
-        source = Image.open(io.BytesIO(content))
-        source.verify()
-        source = Image.open(io.BytesIO(content))
-        source.load()
-    except (ImportError, OSError, ValueError) as exc:
+    try:
+        # Treat Pillow's decompression-bomb warning as a hard rejection.  The
+        # second open/load is intentional: verify() consumes the decoder.
+        with warnings.catch_warnings():
+            warnings.simplefilter("error", Image.DecompressionBombWarning)
+            source = Image.open(io.BytesIO(content))
+            source_format = source.format
+            if source_format not in {"JPEG", "PNG", "WEBP"}:
+                raise ApiError(422, "unsupported_image", "只支持 JPG、PNG 或 WebP 图片")
+            if source.width * source.height > _MAX_IMAGE_PIXELS:
+                raise ApiError(422, "unsafe_image", "图片尺寸过大，无法安全处理")
+            source.verify()
+            source = Image.open(io.BytesIO(content))
+            if source.width * source.height > _MAX_IMAGE_PIXELS:
+                raise ApiError(422, "unsafe_image", "图片尺寸过大，无法安全处理")
+            source.load()
+    except ApiError:
+        raise
+    except (ImportError, OSError, ValueError, Image.DecompressionBombError) as exc:
         raise ApiError(422, "unsafe_image", "图片无法安全处理，请换一张图片") from exc
-    if source.format not in {"JPEG", "PNG", "WEBP"}:
-        raise ApiError(422, "unsupported_image", "只支持 JPG、PNG 或 WebP 图片")
+
     source.thumbnail((2048, 2048))
     width, height = source.size
-    # Rebuild the image instead of copying metadata; this removes EXIF GPS and comments.
+    # Rebuild the image instead of copying metadata; this removes EXIF GPS,
+    # comments, ICC profiles, and any application-specific metadata.
     if source.mode not in {"RGB", "RGBA"}:
-        source = source.convert("RGBA")
+        source = source.convert("RGBA" if "transparency" in source.info else "RGB")
     output = io.BytesIO()
     if source.mode == "RGBA":
         source.save(output, format="PNG", optimize=True)
@@ -814,8 +932,60 @@ def _sanitize_image(content: bytes, content_type: str) -> tuple[bytes, str, int,
     return output.getvalue(), result_type, width, height
 
 
+def _stage_image_record(
+    session: Session,
+    settings: Settings,
+    owner: User,
+    normalized: bytes,
+    content_type: str,
+    width: int,
+    height: int,
+) -> RecipeImageStaging:
+    image_id = uuid.uuid4()
+    key = _storage_key(owner.id, image_id, content_type, staged=True)
+    storage = make_recipe_storage(settings)
+    storage.put(key, normalized, content_type)
+    row = RecipeImageStaging(
+        id=image_id,
+        owner_id=owner.id,
+        storage_key=key,
+        content_type=content_type,
+        byte_size=len(normalized),
+        width=width,
+        height=height,
+    )
+    try:
+        session.add(row)
+        session.flush()
+    except Exception:
+        make_recipe_storage(settings).delete(key)
+        raise
+    return row
+
+
+def stage_image(
+    session: Session,
+    settings: Settings,
+    owner: User,
+    content: bytes,
+    content_type: str,
+) -> RecipeImageStagedOut:
+    normalized, actual_type, width, height = _sanitize_image(content, content_type)
+    row: RecipeImageStaging | None = None
+    try:
+        row = _stage_image_record(session, settings, owner, normalized, actual_type, width, height)
+        session.commit()
+    except Exception:
+        session.rollback()
+        if row is not None:
+            _delete_storage_object(settings, row.storage_key)
+        raise
+    return _staged_image_out(settings, row)
+
+
 def save_image(
     session: Session,
+    redis: Redis,
     settings: Settings,
     owner: User,
     recipe_id: uuid.UUID,
@@ -823,34 +993,43 @@ def save_image(
     content_type: str,
     version_id: uuid.UUID | None = None,
 ) -> RecipeImageOut:
+    """Upload a photo as a new immutable recipe version.
+
+    The old version is never mutated.  The temporary object is attached to a
+    newly-created version in the same database transaction as the version save.
+    """
     recipe = _owned_recipe(session, owner, recipe_id)
-    version = session.get(RecipeVersion, version_id or recipe.current_version_id)
-    if version is None or version.recipe_id != recipe.id:
-        raise NotFound("菜谱版本不存在")
+    if version_id is not None and version_id != recipe.current_version_id:
+        raise ApiError(409, "immutable_version", "旧版本不能追加图片，请基于当前版本保存")
+    current = session.get(RecipeVersion, recipe.current_version_id)
+    if current is None:
+        raise NotFound("菜谱当前版本不存在")
     normalized, actual_type, width, height = _sanitize_image(content, content_type)
-    image_id = uuid.uuid4()
-    extension = "png" if actual_type == "image/png" else "jpg"
-    key = f"recipes/{owner.id}/{recipe.id}/{version.id}/{image_id}.{extension}"
-    path = _storage_path(settings, key)
+    staged: RecipeImageStaging | None = None
     try:
-        path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_bytes(normalized)
-        image = RecipeImage(
-            id=image_id,
-            recipe_id=recipe.id,
-            version_id=version.id,
-            storage_key=key,
-            content_type=actual_type,
-            byte_size=len(normalized),
-            width=width,
-            height=height,
+        staged = _stage_image_record(
+            session, settings, owner, normalized, actual_type, width, height
         )
-        session.add(image)
-        session.commit()
-    except OSError as exc:
+        detail = save_version(
+            session,
+            redis,
+            settings,
+            owner,
+            recipe_id,
+            RecipeVersionCreate(
+                snapshot=RecipeSnapshot.model_validate(current.snapshot),
+                change_note="更新成品图",
+                image_ids=[staged.id],
+            ),
+        )
+    except Exception:
         session.rollback()
-        raise ApiError(503, "storage_unavailable", "图片暂时无法保存，请稍后再试") from exc
-    return _image_out(settings, image)
+        if staged is not None:
+            _delete_storage_object(settings, staged.storage_key)
+        raise
+    if not detail.version.images:
+        raise ApiError(500, "storage_error", "图片关联失败")
+    return detail.version.images[-1]
 
 
 def signed_image_file(
@@ -860,7 +1039,7 @@ def signed_image_file(
     image_id: uuid.UUID,
     expires: int,
     signature: str,
-) -> tuple[Path, str]:
+) -> tuple[bytes, str]:
     payload = f"{recipe_id}:{image_id}:{expires}".encode()
     expected = hmac.new(_image_secret(settings).encode(), payload, hashlib.sha256).hexdigest()
     if expires < int(datetime.now(UTC).timestamp()) or not hmac.compare_digest(signature, expected):
@@ -870,7 +1049,21 @@ def signed_image_file(
     )
     if image is None:
         raise NotFound()
-    path = _storage_path(settings, image.storage_key)
-    if not path.is_file():
+    return make_recipe_storage(settings).get(image.storage_key), image.content_type
+
+
+def signed_staged_image_file(
+    session: Session,
+    settings: Settings,
+    image_id: uuid.UUID,
+    expires: int,
+    signature: str,
+) -> tuple[bytes, str]:
+    payload = f"staged:{image_id}:{expires}".encode()
+    expected = hmac.new(_image_secret(settings).encode(), payload, hashlib.sha256).hexdigest()
+    if expires < int(datetime.now(UTC).timestamp()) or not hmac.compare_digest(signature, expected):
         raise NotFound()
-    return path, image.content_type
+    image = session.get(RecipeImageStaging, image_id)
+    if image is None:
+        raise NotFound()
+    return make_recipe_storage(settings).get(image.storage_key), image.content_type

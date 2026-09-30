@@ -19,6 +19,7 @@ dependencies = [
     "tzdata>=2024.1",
     "jsonschema>=4.23",
     "pillow>=10.4",
+    "boto3>=1.35",
 ]
 
 [dependency-groups]

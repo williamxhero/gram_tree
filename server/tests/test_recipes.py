@@ -249,3 +249,66 @@ def test_image_upload_strips_metadata_and_uses_signed_private_url(api: Api, tmp_
     assert file_response.status_code == 200
     assert file_response.headers["content-type"] == "image/jpeg"
     assert b"GPS" not in file_response.content
+
+
+def _image_payload() -> dict[str, str]:
+    image = Image.new("RGB", (640, 480), (32, 96, 144))
+    buffer = io.BytesIO()
+    image.save(buffer, format="JPEG", quality=90)
+    return {
+        "content_base64": base64.b64encode(buffer.getvalue()).decode(),
+        "content_type": "image/jpeg",
+        "filename": "dish.jpg",
+    }
+
+
+def test_staged_image_attaches_to_create_and_does_not_mutate_old_version(api: Api) -> None:
+    _saved, headers = _create(api, "staged-photo@example.com")
+    staged = api.client.post("/v1/recipes/images/staging", json=_image_payload(), headers=headers)
+    assert staged.status_code == 201, staged.text
+    staged_id = staged.json()["id"]
+    staged_url = staged.json()["url"]
+    assert api.client.get(staged_url).status_code == 200
+
+    body = recipe_input("staged-photo-dish")
+    body["image_ids"] = [staged_id]
+    created = api.client.post("/v1/recipes", json=body, headers=headers)
+    assert created.status_code == 201, created.text
+    first = created.json()
+    assert len(first["version"]["images"]) == 1
+
+    # Updating a photo creates version 2; version 1 remains unchanged.
+    uploaded = api.client.post(
+        f"/v1/recipes/{first['id']}/images", json=_image_payload(), headers=headers
+    )
+    assert uploaded.status_code == 201, uploaded.text
+    second = uploaded.json()
+    assert second["version_id"] != first["version"]["id"]
+    old = api.client.get(
+        f"/v1/recipes/{first['id']}/versions/{first['version']['id']}", headers=headers
+    ).json()
+    current = api.client.get(f"/v1/recipes/{first['id']}", headers=headers).json()
+    assert len(old["version"]["images"]) == 1
+    assert len(current["version"]["images"]) == 1
+    assert current["version"]["version_number"] == 2
+
+
+def test_staged_image_is_owner_scoped(api: Api) -> None:
+    _, author_headers = _create(api, "staging-owner@example.com")
+    staged = api.client.post(
+        "/v1/recipes/images/staging", json=_image_payload(), headers=author_headers
+    )
+    assert staged.status_code == 201
+    other_headers = bearer(api.login("staging-other@example.com"))
+    body = recipe_input("other-staging-dish")
+    body["image_ids"] = [staged.json()["id"]]
+    response = api.client.post("/v1/recipes", json=body, headers=other_headers)
+    assert_error_shape(response, 404, "not_found")
+
+
+def test_corrupt_image_is_rejected_with_safe_error(api: Api) -> None:
+    _, headers = _create(api, "corrupt-photo@example.com")
+    body = {**_image_payload(), "content_base64": base64.b64encode(b"not an image").decode()}
+    response = api.client.post("/v1/recipes/images/staging", json=body, headers=headers)
+    error = assert_error_shape(response, 422, "unsafe_image")
+    assert error["message"]

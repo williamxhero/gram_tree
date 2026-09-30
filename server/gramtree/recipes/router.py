@@ -5,7 +5,7 @@ import binascii
 from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, Query, status
-from fastapi.responses import FileResponse
+from fastapi.responses import Response
 
 from gramtree.accounts.deps import CurrentAuth
 from gramtree.core.errors import ERROR_RESPONSES, ApiError, ErrorResponse
@@ -17,6 +17,7 @@ from gramtree.recipes.schemas import (
     RecipeCreate,
     RecipeDetail,
     RecipeImageOut,
+    RecipeImageStagedOut,
     RecipeImageUpload,
     RecipeList,
     RecipeVersionCreate,
@@ -57,6 +58,41 @@ def list_recipes(auth: CurrentAuth, session: SessionDep, page: PageDep) -> Recip
         cursor=page.cursor,
         limit=page.limit,
         maximum=int(config.get(session, "api.page_size_max")),
+    )
+
+
+@router.post(
+    "/images/staging",
+    response_model=RecipeImageStagedOut,
+    status_code=201,
+    responses=_errors(401, 422, 503),
+)
+def stage_recipe_image(
+    body: RecipeImageUpload,
+    auth: CurrentAuth,
+    session: SessionDep,
+    settings: SettingsDep,
+) -> RecipeImageStagedOut:
+    try:
+        content = base64.b64decode(body.content_base64, validate=True)
+    except (binascii.Error, ValueError) as exc:
+        raise ApiError(422, "invalid_image", "图片格式有误") from exc
+    return service.stage_image(session, settings, auth.user, content, body.content_type)
+
+
+@router.get("/images/staging/{image_id}", responses=_errors(404))
+def read_staged_recipe_image(
+    image_id: IdV4,
+    session: SessionDep,
+    settings: SettingsDep,
+    expires: int = Query(),
+    signature: str = Query(),
+) -> Response:
+    content, content_type = service.signed_staged_image_file(
+        session, settings, image_id, expires, signature
+    )
+    return Response(
+        content=content, media_type=content_type, headers={"Cache-Control": "private, no-store"}
     )
 
 
@@ -131,13 +167,16 @@ def upload_recipe_image(
     body: RecipeImageUpload,
     auth: CurrentAuth,
     session: SessionDep,
+    redis: RedisDep,
     settings: SettingsDep,
 ) -> RecipeImageOut:
     try:
         content = base64.b64decode(body.content_base64, validate=True)
     except (binascii.Error, ValueError) as exc:
         raise ApiError(422, "invalid_image", "图片格式有误") from exc
-    return service.save_image(session, settings, auth.user, recipe_id, content, body.content_type)
+    return service.save_image(
+        session, redis, settings, auth.user, recipe_id, content, body.content_type
+    )
 
 
 @router.get("/{recipe_id}/images/{image_id}", responses=_errors(404))
@@ -148,10 +187,12 @@ def read_recipe_image(
     settings: SettingsDep,
     expires: int = Query(),
     signature: str = Query(),
-) -> FileResponse:
-    path, content_type = service.signed_image_file(
+) -> Response:
+    content, content_type = service.signed_image_file(
         session, settings, recipe_id, image_id, expires, signature
     )
-    return FileResponse(
-        path, media_type=content_type, headers={"Cache-Control": "private, no-store"}
+    return Response(
+        content=content,
+        media_type=content_type,
+        headers={"Cache-Control": "private, no-store"},
     )

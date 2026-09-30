@@ -92,3 +92,9 @@ def check_settings(settings: Settings) -> None:
             raise RuntimeError("正式环境的 GRAMTREE_MAIL_BACKEND 必须是 smtp")
         if len(settings.image_signing_secret) < 32:
             raise RuntimeError("GRAMTREE_IMAGE_SIGNING_SECRET 必须设置成至少 32 位的随机串")
+        if settings.recipe_storage_backend != "s3":
+            raise RuntimeError("正式环境的 GRAMTREE_RECIPE_STORAGE_BACKEND 必须是 s3")
+        if not settings.recipe_s3_bucket or not settings.recipe_s3_access_key_id:
+            raise RuntimeError("正式环境必须配置 GRAMTREE_RECIPE_S3_BUCKET 和访问密钥")
+        if not settings.recipe_s3_secret_access_key:
+            raise RuntimeError("正式环境必须配置 GRAMTREE_RECIPE_S3_SECRET_ACCESS_KEY")

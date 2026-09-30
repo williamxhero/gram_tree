@@ -38,8 +38,12 @@ def export() -> str:
         Settings(
             env="prod",
             auth_secret="export-only-" + "x" * 32,
-            image_signing_secret="export-image-secret-" + "x" * 32,
+            image_signing_secret="export-only-image-" + "x" * 32,
             mail_backend="smtp",
+            recipe_storage_backend="s3",
+            recipe_s3_bucket="openapi-export-only",
+            recipe_s3_access_key_id="export-only",
+            recipe_s3_secret_access_key="export-only",
         )
     )
     document = app.openapi()

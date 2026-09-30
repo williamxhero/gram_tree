@@ -8,6 +8,10 @@
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
 	<string>味谱</string>
+	<key>NSCameraUsageDescription</key>
+	<string>用来拍这道菜的成品照，照片只存在你的记录里。</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>用来从相册选一张菜谱截图或成品照。</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>

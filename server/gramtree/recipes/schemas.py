@@ -269,6 +269,8 @@ class RecipeCreate(BaseModel):
     snapshot: RecipeSnapshot
     change_note: str = Field(default="", max_length=2000)
     ai_assisted: bool = False
+    # Images are staged first, then atomically attached to this immutable version.
+    image_ids: list[IdV4] = Field(default_factory=list, max_length=10)
 
     @model_validator(mode="before")
     @classmethod
@@ -308,6 +310,7 @@ class RecipeVersionCreate(BaseModel):
     change_note: str = Field(default="", max_length=2000)
     ai_assisted: bool = False
     base_version_id: IdV4 | None = Field(default=None, json_schema_extra={"title": None})
+    image_ids: list[IdV4] = Field(default_factory=list, max_length=10)
 
 
 class RecipeAuthor(BaseModel):
@@ -324,6 +327,18 @@ class DishOut(BaseModel):
 class RecipeImageOut(BaseModel):
     id: IdV4
     version_id: IdV4
+    content_type: str
+    byte_size: int
+    width: int | None = Field(default=None, json_schema_extra={"title": None})
+    height: int | None = Field(default=None, json_schema_extra={"title": None})
+    url: str
+    expires_in_seconds: int
+
+
+class RecipeImageStagedOut(BaseModel):
+    """Image uploaded before a recipe version is created."""
+
+    id: IdV4
     content_type: str
     byte_size: int
     width: int | None = Field(default=None, json_schema_extra={"title": None})

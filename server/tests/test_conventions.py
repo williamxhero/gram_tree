@@ -127,7 +127,18 @@ def test_examples_not_mounted_in_prod(database_url: str) -> None:
     from tests.conftest import make_settings
 
     with TestClient(
-        create_app(make_settings(env="prod", auth_secret="s" * 40, mail_backend="smtp"))
+        create_app(
+            make_settings(
+                env="prod",
+                auth_secret="s" * 40,
+                image_signing_secret="i" * 40,
+                mail_backend="smtp",
+                recipe_storage_backend="s3",
+                recipe_s3_bucket="test",
+                recipe_s3_access_key_id="test",
+                recipe_s3_secret_access_key="test",
+            )
+        )
     ) as c:
         assert c.get("/v1/examples/samples").status_code == 404
 
@@ -152,7 +163,18 @@ def test_other_origins_not_allowed_in_prod(database_url: str) -> None:
     from tests.conftest import make_settings
 
     with TestClient(
-        create_app(make_settings(env="prod", auth_secret="s" * 40, mail_backend="smtp"))
+        create_app(
+            make_settings(
+                env="prod",
+                auth_secret="s" * 40,
+                image_signing_secret="i" * 40,
+                mail_backend="smtp",
+                recipe_storage_backend="s3",
+                recipe_s3_bucket="test",
+                recipe_s3_access_key_id="test",
+                recipe_s3_secret_access_key="test",
+            )
+        )
     ) as c:
         resp = c.get("/v1/health", headers={"Origin": "http://localhost:54321"})
     assert "access-control-allow-origin" not in resp.headers
