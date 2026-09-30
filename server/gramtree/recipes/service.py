@@ -603,6 +603,54 @@ def _value_for_diff(value: Any) -> Any:
     return value
 
 
+def _field_operations(
+    before: dict[str, Any], after: dict[str, Any], *, item_id: str, kind: str
+) -> list[dict[str, Any]]:
+    if kind == "ingredient":
+        type_by_field = {
+            "ingredient_id": "replace_ingredient",
+            "quantity": "change_quantity",
+            "unit": "change_quantity",
+            "base_quantity": "change_quantity",
+            "base_unit": "change_quantity",
+            "preparation": "change_preparation",
+            "group": "change_group_or_optional",
+            "optional": "change_group_or_optional",
+            "functional": "change_functional",
+            "scaling_mode": "change_scaling",
+            "replacement": "change_replacement",
+        }
+    else:
+        type_by_field = {
+            "action": "change_step_field",
+            "instruction": "change_step_field",
+            "ingredient_ids": "change_step_ingredients",
+            "duration_seconds": "change_step_duration",
+            "unattended": "change_step_field",
+            "heat": "change_step_heat",
+            "temperature_celsius": "change_step_heat",
+            "cookware": "change_step_field",
+            "doneness": "change_step_field",
+            "depends_on": "change_step_dependencies",
+            "notes": "change_step_field",
+            "why": "change_step_field",
+        }
+    operations = []
+    for field, operation_type in type_by_field.items():
+        if before.get(field) != after.get(field):
+            operations.append(
+                {
+                    "type": operation_type,
+                    "id": item_id,
+                    "field": field,
+                    "before": before.get(field),
+                    "after": after.get(field),
+                    "intent": "作者手动修改",
+                }
+            )
+    return operations
+
+
 def _operations(previous: RecipeSnapshot, current: RecipeSnapshot) -> list[dict[str, Any]]:
     operations: list[dict[str, Any]] = []
     previous_ingredients = {item.id: item for item in previous.ingredients}
@@ -626,18 +674,14 @@ def _operations(previous: RecipeSnapshot, current: RecipeSnapshot) -> list[dict[
             }
         )
     for item_id in previous_ingredients.keys() & current_ingredients.keys():
-        before = _value_for_diff(previous_ingredients[item_id])
-        after = _value_for_diff(current_ingredients[item_id])
-        if before != after:
-            operations.append(
-                {
-                    "type": "change_ingredient",
-                    "id": item_id,
-                    "before": before,
-                    "after": after,
-                    "intent": "作者手动修改",
-                }
+        operations.extend(
+            _field_operations(
+                _value_for_diff(previous_ingredients[item_id]),
+                _value_for_diff(current_ingredients[item_id]),
+                item_id=item_id,
+                kind="ingredient",
             )
+        )
     previous_steps = {item.id: item for item in previous.steps}
     current_steps = {item.id: item for item in current.steps}
     for item_id in previous_steps.keys() - current_steps.keys():
@@ -659,18 +703,14 @@ def _operations(previous: RecipeSnapshot, current: RecipeSnapshot) -> list[dict[
             }
         )
     for item_id in previous_steps.keys() & current_steps.keys():
-        before = _value_for_diff(previous_steps[item_id])
-        after = _value_for_diff(current_steps[item_id])
-        if before != after:
-            operations.append(
-                {
-                    "type": "change_step",
-                    "id": item_id,
-                    "before": before,
-                    "after": after,
-                    "intent": "作者手动修改",
-                }
+        operations.extend(
+            _field_operations(
+                _value_for_diff(previous_steps[item_id]),
+                _value_for_diff(current_steps[item_id]),
+                item_id=item_id,
+                kind="step",
             )
+        )
     if [item.id for item in previous.ingredients] != [item.id for item in current.ingredients]:
         operations.append(
             {

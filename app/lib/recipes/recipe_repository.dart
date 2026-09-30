@@ -106,7 +106,7 @@ class RecipeIngredientDraft {
     this.baseQuantity = 0,
     this.baseUnit = 'g',
     this.preparation = '',
-    this.group = '主料',
+    this.group = '',
     this.scalingMode = RecipeIngredientScalingModeEnum.proportional,
     this.optional = false,
     this.functional = false,
@@ -125,7 +125,7 @@ class RecipeIngredientDraft {
         baseQuantity: value.baseQuantity?.toDouble() ?? 0,
         baseUnit: value.baseUnit?.value ?? 'g',
         preparation: value.preparation ?? '',
-        group: value.group ?? '主料',
+        group: value.group ?? '',
         scalingMode: value.scalingMode,
         optional: value.optional == true,
         functional: value.functional == true,
@@ -147,7 +147,7 @@ class RecipeIngredientDraft {
       baseQuantity: _number(value['base_quantity']),
       baseUnit: _string(value['base_unit']) ?? 'g',
       preparation: _string(value['preparation']) ?? '',
-      group: _string(value['group']) ?? '主料',
+      group: _string(value['group']) ?? '',
       scalingMode: _scalingMode(value['scaling_mode']),
       optional: value['optional'] == true,
       functional: value['functional'] == true,
@@ -176,9 +176,9 @@ class RecipeIngredientDraft {
   RecipeIngredient toModel() => RecipeIngredient(
     baseQuantity: baseQuantity,
     baseUnit: _baseUnit(baseUnit),
-    displayName: displayName.trim().isEmpty ? '未收录食材' : displayName.trim(),
+    displayName: displayName.trim(),
     functional: functional,
-    group: group.trim().isEmpty ? '主料' : group.trim(),
+    group: group.trim(),
     id: id,
     ingredientId: ingredientId,
     optional: optional,
@@ -246,7 +246,7 @@ class RecipeReplacementDraft {
 class RecipeStepDraft {
   RecipeStepDraft({
     required this.id,
-    this.action = '其他',
+    this.action = '',
     this.instruction = '',
     this.ingredientIds = const [],
     this.durationSeconds = 0,
@@ -262,7 +262,7 @@ class RecipeStepDraft {
 
   factory RecipeStepDraft.fromModel(RecipeStep value) => RecipeStepDraft(
     id: value.id,
-    action: value.action ?? '其他',
+    action: value.action ?? '',
     instruction: value.instruction,
     ingredientIds: [...?value.ingredientIds],
     durationSeconds: value.durationSeconds ?? 0,
@@ -279,7 +279,7 @@ class RecipeStepDraft {
   factory RecipeStepDraft.fromJson(Map<String, dynamic> value) =>
       RecipeStepDraft(
         id: _string(value['id']) ?? 'step-${_nextId()}',
-        action: _string(value['action']) ?? '其他',
+        action: _string(value['action']) ?? '',
         instruction: _string(value['instruction']) ?? '',
         ingredientIds: _strings(value['ingredient_ids']),
         durationSeconds: _number(value['duration_seconds']).toInt(),
