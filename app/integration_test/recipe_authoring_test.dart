@@ -32,6 +32,15 @@ void main() {
     expect(finder, findsWidgets);
   }
 
+  Future<void> reveal(WidgetTester tester, Finder finder) async {
+    final list = find.byType(ListView).last;
+    for (var i = 0; i < 30 && finder.evaluate().isEmpty; i++) {
+      await tester.drag(list, const Offset(0, -500));
+      await tester.pump(const Duration(milliseconds: 100));
+    }
+    await tester.ensureVisible(finder);
+  }
+
   Future<void> tapText(WidgetTester tester, String text) async {
     final finder = find.text(text).last;
     await tester.ensureVisible(finder);
@@ -70,10 +79,10 @@ void main() {
       '网页版验收菜谱',
     );
     final ingredient = find.byKey(const ValueKey('recipe-ingredient-search'));
-    await tester.ensureVisible(ingredient);
+    await reveal(tester, ingredient);
     await tester.enterText(ingredient, '默认食材');
     final step = find.byKey(const ValueKey('recipe-step-instruction'));
-    await tester.ensureVisible(step);
+    await reveal(tester, step);
     await tester.enterText(step, '完成默认步骤');
     await settle(tester);
     await tester.ensureVisible(
