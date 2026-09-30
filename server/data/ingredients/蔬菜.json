@@ -598,5 +598,15 @@
     "pinyin": "xiqin",
     "pinyin_initials": "xq",
     "category": "蔬菜"
+  },
+  {
+    "id": "22aa5b46-326f-45c9-a16e-7e8f1310e32a",
+    "standard_name": "豇豆",
+    "aliases": [
+      "长豆角"
+    ],
+    "pinyin": "jiangdou",
+    "pinyin_initials": "jd",
+    "category": "蔬菜"
   }
 ]

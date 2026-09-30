@@ -206,9 +206,7 @@
   {
     "id": "72b760e6-c490-4123-9e80-48f0bf500aa6",
     "standard_name": "米醋",
-    "aliases": [
-      "白醋"
-    ],
+    "aliases": [],
     "pinyin": "micu",
     "pinyin_initials": "mc",
     "category": "调料"
@@ -493,5 +491,148 @@
     "pinyin": "zhuyou",
     "pinyin_initials": "zy",
     "category": "调料"
+  },
+  {
+    "id": "8e4c2f57-683b-4029-b030-55fb6262df04",
+    "standard_name": "酵母",
+    "aliases": [
+      "干酵母",
+      "活性干酵母",
+      "酵母粉"
+    ],
+    "pinyin": "jiaomu",
+    "pinyin_initials": "jm",
+    "category": "调料",
+    "attributes": {
+      "functional": {
+        "value": true,
+        "source": "人工填写",
+        "status": "verified"
+      }
+    }
+  },
+  {
+    "id": "dc145260-f4c2-4ed3-b9fc-9fcf19897561",
+    "standard_name": "泡打粉",
+    "aliases": [
+      "发酵粉",
+      "baking powder"
+    ],
+    "pinyin": "paodafen",
+    "pinyin_initials": "pdf",
+    "category": "调料",
+    "attributes": {
+      "functional": {
+        "value": true,
+        "source": "人工填写",
+        "status": "verified"
+      }
+    }
+  },
+  {
+    "id": "16e959b8-9893-400e-8619-54c874b69590",
+    "standard_name": "小苏打",
+    "aliases": [
+      "碳酸氢钠",
+      "食用碱"
+    ],
+    "pinyin": "xiaosuda",
+    "pinyin_initials": "xsd",
+    "category": "调料",
+    "attributes": {
+      "functional": {
+        "value": true,
+        "source": "人工填写",
+        "status": "verified"
+      }
+    }
+  },
+  {
+    "id": "d4555fc7-b04f-4e46-935d-41a710e285b0",
+    "standard_name": "白砂糖",
+    "aliases": [
+      "砂糖"
+    ],
+    "pinyin": "baishatang",
+    "pinyin_initials": "bst",
+    "category": "调料"
+  },
+  {
+    "id": "e9c57d91-7df5-41e6-9025-709e478f286b",
+    "standard_name": "蜂蜜",
+    "aliases": [
+      "洋槐蜜",
+      "百花蜜"
+    ],
+    "pinyin": "fengmi",
+    "pinyin_initials": "fm",
+    "category": "调料"
+  },
+  {
+    "id": "532ff6f6-7469-4536-908c-a39daaa6f8f4",
+    "standard_name": "白醋",
+    "aliases": [],
+    "pinyin": "baicu",
+    "pinyin_initials": "bc",
+    "category": "调料"
+  },
+  {
+    "id": "231c1664-3c6b-4d02-a8d5-8966d9f99236",
+    "standard_name": "黄酒",
+    "aliases": [
+      "绍兴黄酒"
+    ],
+    "pinyin": "huangjiu",
+    "pinyin_initials": "hj",
+    "category": "调料"
+  },
+  {
+    "id": "014f2684-1abb-431a-958c-e95cdf8ebaeb",
+    "standard_name": "鱼露",
+    "aliases": [
+      "fish sauce"
+    ],
+    "pinyin": "yulu",
+    "pinyin_initials": "yl",
+    "category": "调料"
+  },
+  {
+    "id": "83a29dba-06e9-4944-b017-16cf8e1af549",
+    "standard_name": "沙拉酱",
+    "aliases": [
+      "蛋黄酱",
+      "美乃滋"
+    ],
+    "pinyin": "shalajiang",
+    "pinyin_initials": "slj",
+    "category": "调料"
+  },
+  {
+    "id": "d0de2738-99f1-4413-aa5c-3d9ef5657af2",
+    "standard_name": "五香粉",
+    "aliases": [
+      "五香",
+      "混合香料"
+    ],
+    "pinyin": "wuxiangfen",
+    "pinyin_initials": "wxf",
+    "category": "调料",
+    "attributes": {
+      "functional": {
+        "value": false,
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "scaling": {
+        "value": "线性",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "base_unit": {
+        "value": "克",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      }
+    }
   }
 ]

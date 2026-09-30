@@ -100,9 +100,7 @@
   {
     "id": "d7d1b043-a385-4e49-b2e0-514223a2893d",
     "standard_name": "木耳",
-    "aliases": [
-      "黑木耳"
-    ],
+    "aliases": [],
     "pinyin": "muer",
     "pinyin_initials": "me",
     "category": "菌菇"
@@ -155,6 +153,14 @@
     "aliases": [],
     "pinyin": "niuganjun",
     "pinyin_initials": "ngj",
+    "category": "菌菇"
+  },
+  {
+    "id": "4d43db8d-6a4e-4d4a-9da0-81344c3fb024",
+    "standard_name": "黑木耳",
+    "aliases": [],
+    "pinyin": "heimuer",
+    "pinyin_initials": "hme",
     "category": "菌菇"
   }
 ]
