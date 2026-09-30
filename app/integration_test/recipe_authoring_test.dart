@@ -69,7 +69,14 @@ void main() {
       find.byKey(const ValueKey('recipe-dish-name')),
       '网页版验收菜谱',
     );
+    final ingredient = find.byKey(const ValueKey('recipe-ingredient-search'));
+    await tester.ensureVisible(ingredient);
+    await tester.enterText(ingredient, '默认食材');
+    final step = find.byKey(const ValueKey('recipe-step-instruction'));
+    await tester.ensureVisible(step);
+    await tester.enterText(step, '完成默认步骤');
     await settle(tester);
+    await tester.ensureVisible(find.byKey(const ValueKey('save-recipe-button')));
     await tester.tap(find.byKey(const ValueKey('save-recipe-button')));
     await waitFor(tester, find.byKey(const ValueKey('recipe-history-button')));
     expect(find.text('网页版验收菜谱'), findsWidgets);
