@@ -1,0 +1,158 @@
+[
+  {
+    "id": "551cfc70-006c-44b5-9168-0b972108a49e",
+    "standard_name": "花生",
+    "aliases": [],
+    "pinyin": "huasheng",
+    "pinyin_initials": "hs",
+    "category": "坚果干货"
+  },
+  {
+    "id": "8aaf1d91-2b35-4602-acae-201def307853",
+    "standard_name": "核桃",
+    "aliases": [],
+    "pinyin": "hetao",
+    "pinyin_initials": "ht",
+    "category": "坚果干货"
+  },
+  {
+    "id": "2b4c10d7-5fc4-43d3-900c-8d9e64387985",
+    "standard_name": "杏仁",
+    "aliases": [],
+    "pinyin": "xingren",
+    "pinyin_initials": "xr",
+    "category": "坚果干货"
+  },
+  {
+    "id": "c5330e37-284c-407d-97d2-acf4f88e5e3a",
+    "standard_name": "腰果",
+    "aliases": [],
+    "pinyin": "yaoguo",
+    "pinyin_initials": "yg",
+    "category": "坚果干货"
+  },
+  {
+    "id": "9eaa2200-7a3c-4914-a428-58028595793c",
+    "standard_name": "开心果",
+    "aliases": [],
+    "pinyin": "kaixinguo",
+    "pinyin_initials": "kxg",
+    "category": "坚果干货"
+  },
+  {
+    "id": "fa690939-1a44-40cc-8f19-41ad95e2e39a",
+    "standard_name": "夏威夷果",
+    "aliases": [],
+    "pinyin": "xiaweiyiguo",
+    "pinyin_initials": "xwyg",
+    "category": "坚果干货"
+  },
+  {
+    "id": "f8b52424-0d2a-4405-a1ce-463e9fa989a4",
+    "standard_name": "松子",
+    "aliases": [],
+    "pinyin": "songzi",
+    "pinyin_initials": "sz",
+    "category": "坚果干货"
+  },
+  {
+    "id": "0755d1c6-b140-4401-8574-609fbc8c3b62",
+    "standard_name": "瓜子",
+    "aliases": [],
+    "pinyin": "guazi",
+    "pinyin_initials": "gz",
+    "category": "坚果干货"
+  },
+  {
+    "id": "756b67d1-83e8-4191-869a-eef1be2fb0ef",
+    "standard_name": "南瓜子",
+    "aliases": [],
+    "pinyin": "nanguazi",
+    "pinyin_initials": "ngz",
+    "category": "坚果干货"
+  },
+  {
+    "id": "56a4d2b9-0871-4db3-b56b-7a65c2d5ec6c",
+    "standard_name": "葵花籽",
+    "aliases": [],
+    "pinyin": "kuihuazi",
+    "pinyin_initials": "khz",
+    "category": "坚果干货"
+  },
+  {
+    "id": "f3696486-e699-462c-8a97-824480364266",
+    "standard_name": "芝麻",
+    "aliases": [
+      "白芝麻"
+    ],
+    "pinyin": "zhima",
+    "pinyin_initials": "zm",
+    "category": "坚果干货"
+  },
+  {
+    "id": "d33c8f7d-d57d-4346-a438-2053805596a9",
+    "standard_name": "黑芝麻",
+    "aliases": [],
+    "pinyin": "heizhima",
+    "pinyin_initials": "hzm",
+    "category": "坚果干货"
+  },
+  {
+    "id": "58e43d9c-7f0e-491f-b289-18e912ea3a4e",
+    "standard_name": "红枣",
+    "aliases": [],
+    "pinyin": "hongzao",
+    "pinyin_initials": "hz",
+    "category": "坚果干货"
+  },
+  {
+    "id": "207030ca-747c-45a4-a3c4-ebc8a7f3c89c",
+    "standard_name": "桂圆",
+    "aliases": [
+      "龙眼干"
+    ],
+    "pinyin": "guiyuan",
+    "pinyin_initials": "gy",
+    "category": "坚果干货"
+  },
+  {
+    "id": "fcfcafa0-7c3d-494e-abe4-7339f1ed8424",
+    "standard_name": "葡萄干",
+    "aliases": [],
+    "pinyin": "putaogan",
+    "pinyin_initials": "ptg",
+    "category": "坚果干货"
+  },
+  {
+    "id": "1c70e357-1902-4a0e-b660-dcb401529e9c",
+    "standard_name": "枸杞",
+    "aliases": [],
+    "pinyin": "gouqi",
+    "pinyin_initials": "gq",
+    "category": "坚果干货"
+  },
+  {
+    "id": "2b8e796f-9621-4281-93a8-aeb986dc7e56",
+    "standard_name": "莲子",
+    "aliases": [],
+    "pinyin": "lianzi",
+    "pinyin_initials": "lz",
+    "category": "坚果干货"
+  },
+  {
+    "id": "93c42e84-bb3d-4067-a134-6daa4f21f103",
+    "standard_name": "百合",
+    "aliases": [],
+    "pinyin": "baihe",
+    "pinyin_initials": "bh",
+    "category": "坚果干货"
+  },
+  {
+    "id": "11504360-1509-478d-91c1-98efbf3ad3ec",
+    "standard_name": "薏米",
+    "aliases": [],
+    "pinyin": "yimi",
+    "pinyin_initials": "ym",
+    "category": "坚果干货"
+  }
+]

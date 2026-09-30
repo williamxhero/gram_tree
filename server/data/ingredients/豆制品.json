@@ -1,0 +1,161 @@
+[
+  {
+    "id": "876fe8b8-7e96-4b43-b388-7bab381fe16a",
+    "standard_name": "豆腐",
+    "aliases": [],
+    "pinyin": "doufu",
+    "pinyin_initials": "df",
+    "category": "豆制品"
+  },
+  {
+    "id": "671e70a7-9c1a-4e7f-81ba-996f550028e3",
+    "standard_name": "嫩豆腐",
+    "aliases": [
+      "内酯豆腐"
+    ],
+    "pinyin": "nendoufu",
+    "pinyin_initials": "ndf",
+    "category": "豆制品"
+  },
+  {
+    "id": "31930ef0-7b7d-43f6-9331-5b8dbfcd7607",
+    "standard_name": "老豆腐",
+    "aliases": [
+      "北豆腐"
+    ],
+    "pinyin": "laodoufu",
+    "pinyin_initials": "ldf",
+    "category": "豆制品"
+  },
+  {
+    "id": "73e6c6f5-13dc-42d8-9883-9931b7c0a305",
+    "standard_name": "豆腐干",
+    "aliases": [],
+    "pinyin": "doufugan",
+    "pinyin_initials": "dfg",
+    "category": "豆制品"
+  },
+  {
+    "id": "bce8d303-0e2c-453e-aa29-7c5e948d3fd9",
+    "standard_name": "千张",
+    "aliases": [
+      "豆腐皮",
+      "千页豆腐"
+    ],
+    "pinyin": "qianzhang",
+    "pinyin_initials": "qz",
+    "category": "豆制品"
+  },
+  {
+    "id": "ae32936c-5d9f-42b2-9dd4-19f2d4ba3b8a",
+    "standard_name": "腐竹",
+    "aliases": [],
+    "pinyin": "fuzhu",
+    "pinyin_initials": "fz",
+    "category": "豆制品"
+  },
+  {
+    "id": "ab030e20-a417-4762-9b08-0f52a6e50c1b",
+    "standard_name": "豆皮",
+    "aliases": [
+      "油豆皮"
+    ],
+    "pinyin": "doupi",
+    "pinyin_initials": "dp",
+    "category": "豆制品"
+  },
+  {
+    "id": "33571efa-efc5-4205-9b41-c2dcf8acd27d",
+    "standard_name": "豆腐泡",
+    "aliases": [
+      "油豆腐"
+    ],
+    "pinyin": "doufupao",
+    "pinyin_initials": "dfp",
+    "category": "豆制品"
+  },
+  {
+    "id": "012b8c70-f045-49f0-9a6e-c919771f866c",
+    "standard_name": "豆腐丝",
+    "aliases": [],
+    "pinyin": "doufusi",
+    "pinyin_initials": "dfs",
+    "category": "豆制品"
+  },
+  {
+    "id": "f8fa53ba-c5cb-4b72-8426-2951ffab33b6",
+    "standard_name": "臭豆腐",
+    "aliases": [],
+    "pinyin": "choudoufu",
+    "pinyin_initials": "cdf",
+    "category": "豆制品"
+  },
+  {
+    "id": "e9671524-1b1c-4ba2-9a58-936790dc6083",
+    "standard_name": "毛豆",
+    "aliases": [],
+    "pinyin": "maodou",
+    "pinyin_initials": "md",
+    "category": "豆制品"
+  },
+  {
+    "id": "fdc37eeb-7d0f-446a-8ecd-d67822f998b9",
+    "standard_name": "黄豆",
+    "aliases": [
+      "大豆"
+    ],
+    "pinyin": "huangdou",
+    "pinyin_initials": "hd",
+    "category": "豆制品"
+  },
+  {
+    "id": "22f38782-2b56-4832-9cb7-0ef62d0de19f",
+    "standard_name": "黑豆",
+    "aliases": [],
+    "pinyin": "heidou",
+    "pinyin_initials": "hd",
+    "category": "豆制品"
+  },
+  {
+    "id": "83d5fbb6-c7cf-4f6f-89a5-26fba7f447c9",
+    "standard_name": "绿豆",
+    "aliases": [],
+    "pinyin": "lvdou",
+    "pinyin_initials": "ld",
+    "category": "豆制品"
+  },
+  {
+    "id": "04aba61b-273f-415c-85e1-828c90a1d05e",
+    "standard_name": "红豆",
+    "aliases": [
+      "赤豆"
+    ],
+    "pinyin": "hongdou",
+    "pinyin_initials": "hd",
+    "category": "豆制品"
+  },
+  {
+    "id": "5b58a0b4-75c8-4f82-8f63-ae19442361a5",
+    "standard_name": "豌豆",
+    "aliases": [],
+    "pinyin": "wandou",
+    "pinyin_initials": "wd",
+    "category": "豆制品"
+  },
+  {
+    "id": "29f379aa-6c6f-4ab8-94cc-c4f6ead977c8",
+    "standard_name": "蚕豆",
+    "aliases": [],
+    "pinyin": "candou",
+    "pinyin_initials": "cd",
+    "category": "豆制品"
+  },
+  {
+    "id": "3d45b19f-cf2b-46ca-8fec-23e269d2bac6",
+    "standard_name": "豆浆",
+    "aliases": [],
+    "pinyin": "doujiang",
+    "pinyin_initials": "dj",
+    "category": "豆制品"
+  }
+]

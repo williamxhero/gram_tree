@@ -1,0 +1,219 @@
+[
+  {
+    "id": "179cfc99-b2b4-459d-90ac-e23751e9f66e",
+    "standard_name": "草鱼",
+    "aliases": [],
+    "pinyin": "caoyu",
+    "pinyin_initials": "cy",
+    "category": "水产"
+  },
+  {
+    "id": "6c143b63-0ac9-4f94-b1d8-60f85a54c356",
+    "standard_name": "鲈鱼",
+    "aliases": [],
+    "pinyin": "luyu",
+    "pinyin_initials": "ly",
+    "category": "水产"
+  },
+  {
+    "id": "c9e91444-1c44-42a6-82b8-5fc6aa620350",
+    "standard_name": "鲫鱼",
+    "aliases": [],
+    "pinyin": "jiyu",
+    "pinyin_initials": "jy",
+    "category": "水产"
+  },
+  {
+    "id": "adea6c1d-8a9a-40ed-94d0-35db2719b3b0",
+    "standard_name": "带鱼",
+    "aliases": [],
+    "pinyin": "daiyu",
+    "pinyin_initials": "dy",
+    "category": "水产"
+  },
+  {
+    "id": "ea55f48e-bee5-4d8f-9739-8ec50c2ce48e",
+    "standard_name": "三文鱼",
+    "aliases": [
+      "salmon"
+    ],
+    "pinyin": "sanwenyu",
+    "pinyin_initials": "swy",
+    "category": "水产"
+  },
+  {
+    "id": "de745c88-5bc7-487c-bca3-e4ffde3566c4",
+    "standard_name": "鳕鱼",
+    "aliases": [],
+    "pinyin": "xueyu",
+    "pinyin_initials": "xy",
+    "category": "水产"
+  },
+  {
+    "id": "61099546-1784-47e2-a563-fa830e3f994e",
+    "standard_name": "虾",
+    "aliases": [
+      "大虾",
+      "明虾"
+    ],
+    "pinyin": "xia",
+    "pinyin_initials": "x",
+    "category": "水产"
+  },
+  {
+    "id": "a2b37cf1-74eb-40b5-a7d5-3a86f1df5aa9",
+    "standard_name": "虾仁",
+    "aliases": [],
+    "pinyin": "xiaren",
+    "pinyin_initials": "xr",
+    "category": "水产"
+  },
+  {
+    "id": "76a89b91-7733-42c2-a010-b550be5eccdd",
+    "standard_name": "基围虾",
+    "aliases": [],
+    "pinyin": "jiweixia",
+    "pinyin_initials": "jwx",
+    "category": "水产"
+  },
+  {
+    "id": "176ebc70-bec2-4b88-9eaf-fd7b85d963ec",
+    "standard_name": "龙虾",
+    "aliases": [],
+    "pinyin": "longxia",
+    "pinyin_initials": "lx",
+    "category": "水产"
+  },
+  {
+    "id": "f585d266-4108-4fda-9f94-a21762273642",
+    "standard_name": "螃蟹",
+    "aliases": [
+      "大闸蟹"
+    ],
+    "pinyin": "pangxie",
+    "pinyin_initials": "px",
+    "category": "水产"
+  },
+  {
+    "id": "7c0ddd2d-cd09-46d6-acf8-477311247f40",
+    "standard_name": "鱿鱼",
+    "aliases": [],
+    "pinyin": "youyu",
+    "pinyin_initials": "yy",
+    "category": "水产"
+  },
+  {
+    "id": "28a08409-9fd4-4063-89dd-912139e6b011",
+    "standard_name": "墨鱼",
+    "aliases": [
+      "乌贼"
+    ],
+    "pinyin": "moyu",
+    "pinyin_initials": "my",
+    "category": "水产"
+  },
+  {
+    "id": "c7121700-898b-41f6-8948-73616e0d1d3b",
+    "standard_name": "章鱼",
+    "aliases": [
+      "八爪鱼"
+    ],
+    "pinyin": "zhangyu",
+    "pinyin_initials": "zy",
+    "category": "水产"
+  },
+  {
+    "id": "f720dbf5-0e1b-4390-8d01-81dae7e4f9ef",
+    "standard_name": "扇贝",
+    "aliases": [],
+    "pinyin": "shanbei",
+    "pinyin_initials": "sb",
+    "category": "水产"
+  },
+  {
+    "id": "de5ea956-16f2-46c6-a0ea-c55ad033aff4",
+    "standard_name": "蛤蜊",
+    "aliases": [
+      "花蛤"
+    ],
+    "pinyin": "geli",
+    "pinyin_initials": "gl",
+    "category": "水产"
+  },
+  {
+    "id": "4e69b67d-4245-4ffc-a778-824c69586c8f",
+    "standard_name": "生蚝",
+    "aliases": [
+      "牡蛎"
+    ],
+    "pinyin": "shenhao",
+    "pinyin_initials": "sh",
+    "category": "水产"
+  },
+  {
+    "id": "1ddde746-5e61-4e25-8132-cd7cebe6fbde",
+    "standard_name": "鲍鱼",
+    "aliases": [],
+    "pinyin": "baoyu",
+    "pinyin_initials": "by",
+    "category": "水产"
+  },
+  {
+    "id": "d524e978-3310-4cc0-b498-4d8c6b6e447a",
+    "standard_name": "海参",
+    "aliases": [],
+    "pinyin": "haishen",
+    "pinyin_initials": "hs",
+    "category": "水产"
+  },
+  {
+    "id": "289de683-c599-4fe5-b691-336b3f668d1b",
+    "standard_name": "海带",
+    "aliases": [],
+    "pinyin": "haidai",
+    "pinyin_initials": "hd",
+    "category": "水产"
+  },
+  {
+    "id": "3afa2860-2a12-4362-93b7-a73cbfacd161",
+    "standard_name": "紫菜",
+    "aliases": [],
+    "pinyin": "zicai",
+    "pinyin_initials": "zc",
+    "category": "水产"
+  },
+  {
+    "id": "84f6bd2c-d4b1-420c-b4dd-0420a9fda4fb",
+    "standard_name": "虾皮",
+    "aliases": [],
+    "pinyin": "xiapi",
+    "pinyin_initials": "xp",
+    "category": "水产"
+  },
+  {
+    "id": "e0065856-d3c7-40dc-9450-fbe2fa2269e1",
+    "standard_name": "鱼丸",
+    "aliases": [],
+    "pinyin": "yuwan",
+    "pinyin_initials": "yw",
+    "category": "水产"
+  },
+  {
+    "id": "03242513-7967-4d7e-ac5e-aa1b4b993a0c",
+    "standard_name": "虾滑",
+    "aliases": [],
+    "pinyin": "xiahua",
+    "pinyin_initials": "xh",
+    "category": "水产"
+  },
+  {
+    "id": "811ee19b-5aa8-4295-a4b4-01c794c45cc5",
+    "standard_name": "蟹棒",
+    "aliases": [
+      "蟹肉棒"
+    ],
+    "pinyin": "xiebang",
+    "pinyin_initials": "xb",
+    "category": "水产"
+  }
+]
