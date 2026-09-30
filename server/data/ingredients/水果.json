@@ -1,0 +1,2834 @@
+[
+  {
+    "id": "0ea7df5b-5073-408f-9064-d12d210630be",
+    "standard_name": "苹果",
+    "aliases": [
+      "红富士"
+    ],
+    "pinyin": "pingguo",
+    "pinyin_initials": "pg",
+    "category": "水果",
+    "attributes": {
+      "flavor": {
+        "value": {
+          "sweet": 1
+        },
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "functional": {
+        "value": false,
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "scaling": {
+        "value": "线性",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "base_unit": {
+        "value": "克",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "allergens": {
+        "value": [],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "nutrition": {
+        "value": {
+          "energy_kcal": 55,
+          "protein_g": 0.7,
+          "fat_g": 0.3,
+          "carbohydrate_g": 14,
+          "sodium_mg": 3
+        },
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "purchase_units": {
+        "value": [
+          {
+            "name": "袋",
+            "grams": 500
+          }
+        ],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "market_zone": {
+        "value": "蔬果",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "storage": {
+        "value": [
+          {
+            "method": "冷藏",
+            "days": 7
+          }
+        ],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "pantry_staple": {
+        "value": false,
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "count_units": {
+        "value": [
+          {
+            "unit": "个",
+            "grams": 150
+          }
+        ],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      }
+    }
+  },
+  {
+    "id": "b2b2dbe9-3195-4a45-8079-68009c9fae56",
+    "standard_name": "香蕉",
+    "aliases": [],
+    "pinyin": "xiangjiao",
+    "pinyin_initials": "xj",
+    "category": "水果",
+    "attributes": {
+      "flavor": {
+        "value": {
+          "sweet": 1
+        },
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "functional": {
+        "value": false,
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "scaling": {
+        "value": "线性",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "base_unit": {
+        "value": "克",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "allergens": {
+        "value": [],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "nutrition": {
+        "value": {
+          "energy_kcal": 55,
+          "protein_g": 0.7,
+          "fat_g": 0.3,
+          "carbohydrate_g": 14,
+          "sodium_mg": 3
+        },
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "purchase_units": {
+        "value": [
+          {
+            "name": "袋",
+            "grams": 500
+          }
+        ],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "market_zone": {
+        "value": "蔬果",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "storage": {
+        "value": [
+          {
+            "method": "冷藏",
+            "days": 7
+          }
+        ],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "pantry_staple": {
+        "value": false,
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "count_units": {
+        "value": [
+          {
+            "unit": "个",
+            "grams": 150
+          }
+        ],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      }
+    }
+  },
+  {
+    "id": "18ab87e7-de60-4c20-8e81-6edc4536c718",
+    "standard_name": "橙子",
+    "aliases": [],
+    "pinyin": "chengzi",
+    "pinyin_initials": "cz",
+    "category": "水果",
+    "attributes": {
+      "flavor": {
+        "value": {
+          "sweet": 1
+        },
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "functional": {
+        "value": false,
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "scaling": {
+        "value": "线性",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "base_unit": {
+        "value": "克",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "allergens": {
+        "value": [],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "nutrition": {
+        "value": {
+          "energy_kcal": 55,
+          "protein_g": 0.7,
+          "fat_g": 0.3,
+          "carbohydrate_g": 14,
+          "sodium_mg": 3
+        },
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "purchase_units": {
+        "value": [
+          {
+            "name": "袋",
+            "grams": 500
+          }
+        ],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "market_zone": {
+        "value": "蔬果",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "storage": {
+        "value": [
+          {
+            "method": "冷藏",
+            "days": 7
+          }
+        ],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "pantry_staple": {
+        "value": false,
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "count_units": {
+        "value": [
+          {
+            "unit": "个",
+            "grams": 150
+          }
+        ],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      }
+    }
+  },
+  {
+    "id": "0b0e2bed-3b3d-44c2-a1a1-e6ce65999125",
+    "standard_name": "橘子",
+    "aliases": [
+      "桔子"
+    ],
+    "pinyin": "juzi",
+    "pinyin_initials": "jz",
+    "category": "水果",
+    "attributes": {
+      "flavor": {
+        "value": {
+          "sweet": 1
+        },
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "functional": {
+        "value": false,
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "scaling": {
+        "value": "线性",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "base_unit": {
+        "value": "克",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "allergens": {
+        "value": [],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "nutrition": {
+        "value": {
+          "energy_kcal": 55,
+          "protein_g": 0.7,
+          "fat_g": 0.3,
+          "carbohydrate_g": 14,
+          "sodium_mg": 3
+        },
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "purchase_units": {
+        "value": [
+          {
+            "name": "袋",
+            "grams": 500
+          }
+        ],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "market_zone": {
+        "value": "蔬果",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "storage": {
+        "value": [
+          {
+            "method": "冷藏",
+            "days": 7
+          }
+        ],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "pantry_staple": {
+        "value": false,
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "count_units": {
+        "value": [
+          {
+            "unit": "个",
+            "grams": 150
+          }
+        ],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      }
+    }
+  },
+  {
+    "id": "8198f79c-d01c-44d7-b78d-4d2ed09051a9",
+    "standard_name": "柚子",
+    "aliases": [],
+    "pinyin": "youzi",
+    "pinyin_initials": "yz",
+    "category": "水果",
+    "attributes": {
+      "flavor": {
+        "value": {
+          "sweet": 1
+        },
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "functional": {
+        "value": false,
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "scaling": {
+        "value": "线性",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "base_unit": {
+        "value": "克",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "allergens": {
+        "value": [],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "nutrition": {
+        "value": {
+          "energy_kcal": 55,
+          "protein_g": 0.7,
+          "fat_g": 0.3,
+          "carbohydrate_g": 14,
+          "sodium_mg": 3
+        },
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "purchase_units": {
+        "value": [
+          {
+            "name": "袋",
+            "grams": 500
+          }
+        ],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "market_zone": {
+        "value": "蔬果",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "storage": {
+        "value": [
+          {
+            "method": "冷藏",
+            "days": 7
+          }
+        ],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "pantry_staple": {
+        "value": false,
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "count_units": {
+        "value": [
+          {
+            "unit": "个",
+            "grams": 150
+          }
+        ],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      }
+    }
+  },
+  {
+    "id": "aeca1489-8431-4f3e-9230-1e8845c1601d",
+    "standard_name": "柠檬",
+    "aliases": [],
+    "pinyin": "ningmeng",
+    "pinyin_initials": "nm",
+    "category": "水果",
+    "attributes": {
+      "flavor": {
+        "value": {
+          "sweet": 1
+        },
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "functional": {
+        "value": false,
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "scaling": {
+        "value": "线性",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "base_unit": {
+        "value": "克",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "allergens": {
+        "value": [],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "nutrition": {
+        "value": {
+          "energy_kcal": 55,
+          "protein_g": 0.7,
+          "fat_g": 0.3,
+          "carbohydrate_g": 14,
+          "sodium_mg": 3
+        },
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "purchase_units": {
+        "value": [
+          {
+            "name": "袋",
+            "grams": 500
+          }
+        ],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "market_zone": {
+        "value": "蔬果",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "storage": {
+        "value": [
+          {
+            "method": "冷藏",
+            "days": 7
+          }
+        ],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "pantry_staple": {
+        "value": false,
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "count_units": {
+        "value": [
+          {
+            "unit": "个",
+            "grams": 150
+          }
+        ],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      }
+    }
+  },
+  {
+    "id": "3e4013ea-5bcc-45c0-ab1c-95e462e4b813",
+    "standard_name": "葡萄",
+    "aliases": [],
+    "pinyin": "putao",
+    "pinyin_initials": "pt",
+    "category": "水果",
+    "attributes": {
+      "flavor": {
+        "value": {
+          "sweet": 1
+        },
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "functional": {
+        "value": false,
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "scaling": {
+        "value": "线性",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "base_unit": {
+        "value": "克",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "allergens": {
+        "value": [],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "nutrition": {
+        "value": {
+          "energy_kcal": 55,
+          "protein_g": 0.7,
+          "fat_g": 0.3,
+          "carbohydrate_g": 14,
+          "sodium_mg": 3
+        },
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "purchase_units": {
+        "value": [
+          {
+            "name": "袋",
+            "grams": 500
+          }
+        ],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "market_zone": {
+        "value": "蔬果",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "storage": {
+        "value": [
+          {
+            "method": "冷藏",
+            "days": 7
+          }
+        ],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "pantry_staple": {
+        "value": false,
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "count_units": {
+        "value": [
+          {
+            "unit": "颗",
+            "grams": 12
+          }
+        ],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      }
+    }
+  },
+  {
+    "id": "3cdde7e2-fca7-40e7-a1ad-a08e56146f79",
+    "standard_name": "西瓜",
+    "aliases": [],
+    "pinyin": "xigua",
+    "pinyin_initials": "xg",
+    "category": "水果",
+    "attributes": {
+      "flavor": {
+        "value": {
+          "sweet": 1
+        },
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "functional": {
+        "value": false,
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "scaling": {
+        "value": "线性",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "base_unit": {
+        "value": "克",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "allergens": {
+        "value": [],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "nutrition": {
+        "value": {
+          "energy_kcal": 55,
+          "protein_g": 0.7,
+          "fat_g": 0.3,
+          "carbohydrate_g": 14,
+          "sodium_mg": 3
+        },
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "purchase_units": {
+        "value": [
+          {
+            "name": "袋",
+            "grams": 500
+          }
+        ],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "market_zone": {
+        "value": "蔬果",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "storage": {
+        "value": [
+          {
+            "method": "冷藏",
+            "days": 7
+          }
+        ],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "pantry_staple": {
+        "value": false,
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "count_units": {
+        "value": [
+          {
+            "unit": "个",
+            "grams": 150
+          }
+        ],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      }
+    }
+  },
+  {
+    "id": "fca73626-8dea-42e4-ad39-b2275cda77b0",
+    "standard_name": "哈密瓜",
+    "aliases": [],
+    "pinyin": "hamigua",
+    "pinyin_initials": "hmg",
+    "category": "水果",
+    "attributes": {
+      "flavor": {
+        "value": {
+          "sweet": 1
+        },
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "functional": {
+        "value": false,
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "scaling": {
+        "value": "线性",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "base_unit": {
+        "value": "克",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "allergens": {
+        "value": [],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "nutrition": {
+        "value": {
+          "energy_kcal": 55,
+          "protein_g": 0.7,
+          "fat_g": 0.3,
+          "carbohydrate_g": 14,
+          "sodium_mg": 3
+        },
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "purchase_units": {
+        "value": [
+          {
+            "name": "袋",
+            "grams": 500
+          }
+        ],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "market_zone": {
+        "value": "蔬果",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "storage": {
+        "value": [
+          {
+            "method": "冷藏",
+            "days": 7
+          }
+        ],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "pantry_staple": {
+        "value": false,
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "count_units": {
+        "value": [
+          {
+            "unit": "个",
+            "grams": 150
+          }
+        ],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      }
+    }
+  },
+  {
+    "id": "aaed2659-a741-414a-843d-370c15245882",
+    "standard_name": "草莓",
+    "aliases": [],
+    "pinyin": "caomei",
+    "pinyin_initials": "cm",
+    "category": "水果",
+    "attributes": {
+      "flavor": {
+        "value": {
+          "sweet": 1
+        },
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "functional": {
+        "value": false,
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "scaling": {
+        "value": "线性",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "base_unit": {
+        "value": "克",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "allergens": {
+        "value": [],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "nutrition": {
+        "value": {
+          "energy_kcal": 55,
+          "protein_g": 0.7,
+          "fat_g": 0.3,
+          "carbohydrate_g": 14,
+          "sodium_mg": 3
+        },
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "purchase_units": {
+        "value": [
+          {
+            "name": "袋",
+            "grams": 500
+          }
+        ],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "market_zone": {
+        "value": "蔬果",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "storage": {
+        "value": [
+          {
+            "method": "冷藏",
+            "days": 7
+          }
+        ],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "pantry_staple": {
+        "value": false,
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "count_units": {
+        "value": [
+          {
+            "unit": "个",
+            "grams": 150
+          }
+        ],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      }
+    }
+  },
+  {
+    "id": "613bb7ee-1acb-4a37-9a3d-a6305770c9d1",
+    "standard_name": "蓝莓",
+    "aliases": [],
+    "pinyin": "lanmei",
+    "pinyin_initials": "lm",
+    "category": "水果",
+    "attributes": {
+      "flavor": {
+        "value": {
+          "sweet": 1
+        },
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "functional": {
+        "value": false,
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "scaling": {
+        "value": "线性",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "base_unit": {
+        "value": "克",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "allergens": {
+        "value": [],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "nutrition": {
+        "value": {
+          "energy_kcal": 55,
+          "protein_g": 0.7,
+          "fat_g": 0.3,
+          "carbohydrate_g": 14,
+          "sodium_mg": 3
+        },
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "purchase_units": {
+        "value": [
+          {
+            "name": "袋",
+            "grams": 500
+          }
+        ],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "market_zone": {
+        "value": "蔬果",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "storage": {
+        "value": [
+          {
+            "method": "冷藏",
+            "days": 7
+          }
+        ],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "pantry_staple": {
+        "value": false,
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "count_units": {
+        "value": [
+          {
+            "unit": "个",
+            "grams": 150
+          }
+        ],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      }
+    }
+  },
+  {
+    "id": "e5bf824d-a5c6-4b84-8014-ec2d47c92825",
+    "standard_name": "樱桃",
+    "aliases": [],
+    "pinyin": "yingtao",
+    "pinyin_initials": "yt",
+    "category": "水果",
+    "attributes": {
+      "flavor": {
+        "value": {
+          "sweet": 1
+        },
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "functional": {
+        "value": false,
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "scaling": {
+        "value": "线性",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "base_unit": {
+        "value": "克",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "allergens": {
+        "value": [],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "nutrition": {
+        "value": {
+          "energy_kcal": 55,
+          "protein_g": 0.7,
+          "fat_g": 0.3,
+          "carbohydrate_g": 14,
+          "sodium_mg": 3
+        },
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "purchase_units": {
+        "value": [
+          {
+            "name": "袋",
+            "grams": 500
+          }
+        ],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "market_zone": {
+        "value": "蔬果",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "storage": {
+        "value": [
+          {
+            "method": "冷藏",
+            "days": 7
+          }
+        ],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "pantry_staple": {
+        "value": false,
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "count_units": {
+        "value": [
+          {
+            "unit": "颗",
+            "grams": 12
+          }
+        ],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      }
+    }
+  },
+  {
+    "id": "7a3776ad-55c9-4b28-a16e-fb9dad716d8b",
+    "standard_name": "梨",
+    "aliases": [
+      "雪梨"
+    ],
+    "pinyin": "li",
+    "pinyin_initials": "l",
+    "category": "水果",
+    "attributes": {
+      "flavor": {
+        "value": {
+          "sweet": 1
+        },
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "functional": {
+        "value": false,
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "scaling": {
+        "value": "线性",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "base_unit": {
+        "value": "克",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "allergens": {
+        "value": [],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "nutrition": {
+        "value": {
+          "energy_kcal": 55,
+          "protein_g": 0.7,
+          "fat_g": 0.3,
+          "carbohydrate_g": 14,
+          "sodium_mg": 3
+        },
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "purchase_units": {
+        "value": [
+          {
+            "name": "袋",
+            "grams": 500
+          }
+        ],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "market_zone": {
+        "value": "蔬果",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "storage": {
+        "value": [
+          {
+            "method": "冷藏",
+            "days": 7
+          }
+        ],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "pantry_staple": {
+        "value": false,
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "count_units": {
+        "value": [
+          {
+            "unit": "个",
+            "grams": 150
+          }
+        ],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      }
+    }
+  },
+  {
+    "id": "30d460ec-2b74-4ba2-9d73-9515fd8795cc",
+    "standard_name": "桃子",
+    "aliases": [],
+    "pinyin": "taozi",
+    "pinyin_initials": "tz",
+    "category": "水果",
+    "attributes": {
+      "flavor": {
+        "value": {
+          "sweet": 1
+        },
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "functional": {
+        "value": false,
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "scaling": {
+        "value": "线性",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "base_unit": {
+        "value": "克",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "allergens": {
+        "value": [],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "nutrition": {
+        "value": {
+          "energy_kcal": 55,
+          "protein_g": 0.7,
+          "fat_g": 0.3,
+          "carbohydrate_g": 14,
+          "sodium_mg": 3
+        },
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "purchase_units": {
+        "value": [
+          {
+            "name": "袋",
+            "grams": 500
+          }
+        ],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "market_zone": {
+        "value": "蔬果",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "storage": {
+        "value": [
+          {
+            "method": "冷藏",
+            "days": 7
+          }
+        ],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "pantry_staple": {
+        "value": false,
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "count_units": {
+        "value": [
+          {
+            "unit": "个",
+            "grams": 150
+          }
+        ],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      }
+    }
+  },
+  {
+    "id": "5d9d9bb1-bb77-4b55-953f-991c2fe167b6",
+    "standard_name": "李子",
+    "aliases": [],
+    "pinyin": "lizi",
+    "pinyin_initials": "lz",
+    "category": "水果",
+    "attributes": {
+      "flavor": {
+        "value": {
+          "sweet": 1
+        },
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "functional": {
+        "value": false,
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "scaling": {
+        "value": "线性",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "base_unit": {
+        "value": "克",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "allergens": {
+        "value": [],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "nutrition": {
+        "value": {
+          "energy_kcal": 55,
+          "protein_g": 0.7,
+          "fat_g": 0.3,
+          "carbohydrate_g": 14,
+          "sodium_mg": 3
+        },
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "purchase_units": {
+        "value": [
+          {
+            "name": "袋",
+            "grams": 500
+          }
+        ],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "market_zone": {
+        "value": "蔬果",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "storage": {
+        "value": [
+          {
+            "method": "冷藏",
+            "days": 7
+          }
+        ],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "pantry_staple": {
+        "value": false,
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "count_units": {
+        "value": [
+          {
+            "unit": "个",
+            "grams": 150
+          }
+        ],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      }
+    }
+  },
+  {
+    "id": "d870de57-743b-4ccb-8b51-11118be74366",
+    "standard_name": "杏",
+    "aliases": [
+      "杏子"
+    ],
+    "pinyin": "xing",
+    "pinyin_initials": "x",
+    "category": "水果",
+    "attributes": {
+      "flavor": {
+        "value": {
+          "sweet": 1
+        },
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "functional": {
+        "value": false,
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "scaling": {
+        "value": "线性",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "base_unit": {
+        "value": "克",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "allergens": {
+        "value": [],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "nutrition": {
+        "value": {
+          "energy_kcal": 55,
+          "protein_g": 0.7,
+          "fat_g": 0.3,
+          "carbohydrate_g": 14,
+          "sodium_mg": 3
+        },
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "purchase_units": {
+        "value": [
+          {
+            "name": "袋",
+            "grams": 500
+          }
+        ],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "market_zone": {
+        "value": "蔬果",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "storage": {
+        "value": [
+          {
+            "method": "冷藏",
+            "days": 7
+          }
+        ],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "pantry_staple": {
+        "value": false,
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "count_units": {
+        "value": [
+          {
+            "unit": "个",
+            "grams": 150
+          }
+        ],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      }
+    }
+  },
+  {
+    "id": "e682424e-b538-4982-9e1b-94fcd15fb2ca",
+    "standard_name": "芒果",
+    "aliases": [],
+    "pinyin": "mangguo",
+    "pinyin_initials": "mg",
+    "category": "水果",
+    "attributes": {
+      "flavor": {
+        "value": {
+          "sweet": 1
+        },
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "functional": {
+        "value": false,
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "scaling": {
+        "value": "线性",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "base_unit": {
+        "value": "克",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "allergens": {
+        "value": [],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "nutrition": {
+        "value": {
+          "energy_kcal": 55,
+          "protein_g": 0.7,
+          "fat_g": 0.3,
+          "carbohydrate_g": 14,
+          "sodium_mg": 3
+        },
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "purchase_units": {
+        "value": [
+          {
+            "name": "袋",
+            "grams": 500
+          }
+        ],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "market_zone": {
+        "value": "蔬果",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "storage": {
+        "value": [
+          {
+            "method": "冷藏",
+            "days": 7
+          }
+        ],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "pantry_staple": {
+        "value": false,
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "count_units": {
+        "value": [
+          {
+            "unit": "个",
+            "grams": 150
+          }
+        ],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      }
+    }
+  },
+  {
+    "id": "34b65278-48a3-4fe4-af74-4f8126c2331c",
+    "standard_name": "菠萝",
+    "aliases": [
+      "凤梨"
+    ],
+    "pinyin": "boluo",
+    "pinyin_initials": "bl",
+    "category": "水果",
+    "attributes": {
+      "flavor": {
+        "value": {
+          "sweet": 1
+        },
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "functional": {
+        "value": false,
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "scaling": {
+        "value": "线性",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "base_unit": {
+        "value": "克",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "allergens": {
+        "value": [],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "nutrition": {
+        "value": {
+          "energy_kcal": 55,
+          "protein_g": 0.7,
+          "fat_g": 0.3,
+          "carbohydrate_g": 14,
+          "sodium_mg": 3
+        },
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "purchase_units": {
+        "value": [
+          {
+            "name": "袋",
+            "grams": 500
+          }
+        ],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "market_zone": {
+        "value": "蔬果",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "storage": {
+        "value": [
+          {
+            "method": "冷藏",
+            "days": 7
+          }
+        ],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "pantry_staple": {
+        "value": false,
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "count_units": {
+        "value": [
+          {
+            "unit": "个",
+            "grams": 150
+          }
+        ],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      }
+    }
+  },
+  {
+    "id": "a5923b10-e258-4162-8914-8edca7349394",
+    "standard_name": "猕猴桃",
+    "aliases": [
+      "奇异果"
+    ],
+    "pinyin": "mihoutao",
+    "pinyin_initials": "mht",
+    "category": "水果",
+    "attributes": {
+      "flavor": {
+        "value": {
+          "sweet": 1
+        },
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "functional": {
+        "value": false,
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "scaling": {
+        "value": "线性",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "base_unit": {
+        "value": "克",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "allergens": {
+        "value": [],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "nutrition": {
+        "value": {
+          "energy_kcal": 55,
+          "protein_g": 0.7,
+          "fat_g": 0.3,
+          "carbohydrate_g": 14,
+          "sodium_mg": 3
+        },
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "purchase_units": {
+        "value": [
+          {
+            "name": "袋",
+            "grams": 500
+          }
+        ],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "market_zone": {
+        "value": "蔬果",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "storage": {
+        "value": [
+          {
+            "method": "冷藏",
+            "days": 7
+          }
+        ],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "pantry_staple": {
+        "value": false,
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "count_units": {
+        "value": [
+          {
+            "unit": "个",
+            "grams": 150
+          }
+        ],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      }
+    }
+  },
+  {
+    "id": "fe2b80f3-ebf1-4b89-807d-c4edfff8d204",
+    "standard_name": "火龙果",
+    "aliases": [],
+    "pinyin": "huolongguo",
+    "pinyin_initials": "hlg",
+    "category": "水果",
+    "attributes": {
+      "flavor": {
+        "value": {
+          "sweet": 1
+        },
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "functional": {
+        "value": false,
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "scaling": {
+        "value": "线性",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "base_unit": {
+        "value": "克",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "allergens": {
+        "value": [],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "nutrition": {
+        "value": {
+          "energy_kcal": 55,
+          "protein_g": 0.7,
+          "fat_g": 0.3,
+          "carbohydrate_g": 14,
+          "sodium_mg": 3
+        },
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "purchase_units": {
+        "value": [
+          {
+            "name": "袋",
+            "grams": 500
+          }
+        ],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "market_zone": {
+        "value": "蔬果",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "storage": {
+        "value": [
+          {
+            "method": "冷藏",
+            "days": 7
+          }
+        ],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "pantry_staple": {
+        "value": false,
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "count_units": {
+        "value": [
+          {
+            "unit": "个",
+            "grams": 150
+          }
+        ],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      }
+    }
+  },
+  {
+    "id": "672f7c9d-19e9-470b-8132-a59c801f36fb",
+    "standard_name": "榴莲",
+    "aliases": [],
+    "pinyin": "liulian",
+    "pinyin_initials": "ll",
+    "category": "水果",
+    "attributes": {
+      "flavor": {
+        "value": {
+          "sweet": 1
+        },
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "functional": {
+        "value": false,
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "scaling": {
+        "value": "线性",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "base_unit": {
+        "value": "克",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "allergens": {
+        "value": [],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "nutrition": {
+        "value": {
+          "energy_kcal": 55,
+          "protein_g": 0.7,
+          "fat_g": 0.3,
+          "carbohydrate_g": 14,
+          "sodium_mg": 3
+        },
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "purchase_units": {
+        "value": [
+          {
+            "name": "袋",
+            "grams": 500
+          }
+        ],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "market_zone": {
+        "value": "蔬果",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "storage": {
+        "value": [
+          {
+            "method": "冷藏",
+            "days": 7
+          }
+        ],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "pantry_staple": {
+        "value": false,
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "count_units": {
+        "value": [
+          {
+            "unit": "个",
+            "grams": 150
+          }
+        ],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      }
+    }
+  },
+  {
+    "id": "12a0aa0d-68cd-4626-97f8-b788f920cd73",
+    "standard_name": "山竹",
+    "aliases": [],
+    "pinyin": "shanzhu",
+    "pinyin_initials": "sz",
+    "category": "水果",
+    "attributes": {
+      "flavor": {
+        "value": {
+          "sweet": 1
+        },
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "functional": {
+        "value": false,
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "scaling": {
+        "value": "线性",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "base_unit": {
+        "value": "克",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "allergens": {
+        "value": [],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "nutrition": {
+        "value": {
+          "energy_kcal": 55,
+          "protein_g": 0.7,
+          "fat_g": 0.3,
+          "carbohydrate_g": 14,
+          "sodium_mg": 3
+        },
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "purchase_units": {
+        "value": [
+          {
+            "name": "袋",
+            "grams": 500
+          }
+        ],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "market_zone": {
+        "value": "蔬果",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "storage": {
+        "value": [
+          {
+            "method": "冷藏",
+            "days": 7
+          }
+        ],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "pantry_staple": {
+        "value": false,
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "count_units": {
+        "value": [
+          {
+            "unit": "个",
+            "grams": 150
+          }
+        ],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      }
+    }
+  },
+  {
+    "id": "ef9d03a7-cd32-4cd9-b9d1-9294f562c4ea",
+    "standard_name": "荔枝",
+    "aliases": [],
+    "pinyin": "lizhi",
+    "pinyin_initials": "lz",
+    "category": "水果",
+    "attributes": {
+      "flavor": {
+        "value": {
+          "sweet": 1
+        },
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "functional": {
+        "value": false,
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "scaling": {
+        "value": "线性",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "base_unit": {
+        "value": "克",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "allergens": {
+        "value": [],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "nutrition": {
+        "value": {
+          "energy_kcal": 55,
+          "protein_g": 0.7,
+          "fat_g": 0.3,
+          "carbohydrate_g": 14,
+          "sodium_mg": 3
+        },
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "purchase_units": {
+        "value": [
+          {
+            "name": "袋",
+            "grams": 500
+          }
+        ],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "market_zone": {
+        "value": "蔬果",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "storage": {
+        "value": [
+          {
+            "method": "冷藏",
+            "days": 7
+          }
+        ],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "pantry_staple": {
+        "value": false,
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "count_units": {
+        "value": [
+          {
+            "unit": "颗",
+            "grams": 12
+          }
+        ],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      }
+    }
+  },
+  {
+    "id": "ff0cbbf2-0ec3-4f7d-b731-c965fc4d98e4",
+    "standard_name": "龙眼",
+    "aliases": [],
+    "pinyin": "longyan",
+    "pinyin_initials": "ly",
+    "category": "水果",
+    "attributes": {
+      "flavor": {
+        "value": {
+          "sweet": 1
+        },
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "functional": {
+        "value": false,
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "scaling": {
+        "value": "线性",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "base_unit": {
+        "value": "克",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "allergens": {
+        "value": [],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "nutrition": {
+        "value": {
+          "energy_kcal": 55,
+          "protein_g": 0.7,
+          "fat_g": 0.3,
+          "carbohydrate_g": 14,
+          "sodium_mg": 3
+        },
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "purchase_units": {
+        "value": [
+          {
+            "name": "袋",
+            "grams": 500
+          }
+        ],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "market_zone": {
+        "value": "蔬果",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "storage": {
+        "value": [
+          {
+            "method": "冷藏",
+            "days": 7
+          }
+        ],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "pantry_staple": {
+        "value": false,
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "count_units": {
+        "value": [
+          {
+            "unit": "颗",
+            "grams": 12
+          }
+        ],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      }
+    }
+  },
+  {
+    "id": "92ca924b-974e-4db0-8cba-d1ca237d9467",
+    "standard_name": "鲜枣",
+    "aliases": [],
+    "pinyin": "xianzao",
+    "pinyin_initials": "xz",
+    "category": "水果",
+    "attributes": {
+      "flavor": {
+        "value": {
+          "sweet": 1
+        },
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "functional": {
+        "value": false,
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "scaling": {
+        "value": "线性",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "base_unit": {
+        "value": "克",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "allergens": {
+        "value": [],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "nutrition": {
+        "value": {
+          "energy_kcal": 55,
+          "protein_g": 0.7,
+          "fat_g": 0.3,
+          "carbohydrate_g": 14,
+          "sodium_mg": 3
+        },
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "purchase_units": {
+        "value": [
+          {
+            "name": "袋",
+            "grams": 500
+          }
+        ],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "market_zone": {
+        "value": "蔬果",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "storage": {
+        "value": [
+          {
+            "method": "冷藏",
+            "days": 7
+          }
+        ],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "pantry_staple": {
+        "value": false,
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "count_units": {
+        "value": [
+          {
+            "unit": "颗",
+            "grams": 12
+          }
+        ],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      }
+    }
+  },
+  {
+    "id": "8f78e3ae-787d-4b92-a2d2-e616f5d9c855",
+    "standard_name": "石榴",
+    "aliases": [],
+    "pinyin": "shiliu",
+    "pinyin_initials": "sl",
+    "category": "水果",
+    "attributes": {
+      "flavor": {
+        "value": {
+          "sweet": 1
+        },
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "functional": {
+        "value": false,
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "scaling": {
+        "value": "线性",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "base_unit": {
+        "value": "克",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "allergens": {
+        "value": [],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "nutrition": {
+        "value": {
+          "energy_kcal": 55,
+          "protein_g": 0.7,
+          "fat_g": 0.3,
+          "carbohydrate_g": 14,
+          "sodium_mg": 3
+        },
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "purchase_units": {
+        "value": [
+          {
+            "name": "袋",
+            "grams": 500
+          }
+        ],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "market_zone": {
+        "value": "蔬果",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "storage": {
+        "value": [
+          {
+            "method": "冷藏",
+            "days": 7
+          }
+        ],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "pantry_staple": {
+        "value": false,
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "count_units": {
+        "value": [
+          {
+            "unit": "个",
+            "grams": 150
+          }
+        ],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      }
+    }
+  },
+  {
+    "id": "f2ac617a-99c2-4617-908f-1f4bd77671af",
+    "standard_name": "枇杷",
+    "aliases": [],
+    "pinyin": "pipa",
+    "pinyin_initials": "pp",
+    "category": "水果",
+    "attributes": {
+      "flavor": {
+        "value": {
+          "sweet": 1
+        },
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "functional": {
+        "value": false,
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "scaling": {
+        "value": "线性",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "base_unit": {
+        "value": "克",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "allergens": {
+        "value": [],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "nutrition": {
+        "value": {
+          "energy_kcal": 55,
+          "protein_g": 0.7,
+          "fat_g": 0.3,
+          "carbohydrate_g": 14,
+          "sodium_mg": 3
+        },
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "purchase_units": {
+        "value": [
+          {
+            "name": "袋",
+            "grams": 500
+          }
+        ],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "market_zone": {
+        "value": "蔬果",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "storage": {
+        "value": [
+          {
+            "method": "冷藏",
+            "days": 7
+          }
+        ],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "pantry_staple": {
+        "value": false,
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "count_units": {
+        "value": [
+          {
+            "unit": "个",
+            "grams": 150
+          }
+        ],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      }
+    }
+  },
+  {
+    "id": "d7000537-9748-4a92-ad13-74f6fd2175ac",
+    "standard_name": "柿子",
+    "aliases": [],
+    "pinyin": "shizi",
+    "pinyin_initials": "sz",
+    "category": "水果",
+    "attributes": {
+      "flavor": {
+        "value": {
+          "sweet": 1
+        },
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "functional": {
+        "value": false,
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "scaling": {
+        "value": "线性",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "base_unit": {
+        "value": "克",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "allergens": {
+        "value": [],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "nutrition": {
+        "value": {
+          "energy_kcal": 55,
+          "protein_g": 0.7,
+          "fat_g": 0.3,
+          "carbohydrate_g": 14,
+          "sodium_mg": 3
+        },
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "purchase_units": {
+        "value": [
+          {
+            "name": "袋",
+            "grams": 500
+          }
+        ],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "market_zone": {
+        "value": "蔬果",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "storage": {
+        "value": [
+          {
+            "method": "冷藏",
+            "days": 7
+          }
+        ],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "pantry_staple": {
+        "value": false,
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "count_units": {
+        "value": [
+          {
+            "unit": "个",
+            "grams": 150
+          }
+        ],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      }
+    }
+  },
+  {
+    "id": "4ca6c641-bded-4cda-a0c4-66ff3d905d45",
+    "standard_name": "椰子",
+    "aliases": [],
+    "pinyin": "yezi",
+    "pinyin_initials": "yz",
+    "category": "水果",
+    "attributes": {
+      "flavor": {
+        "value": {
+          "sweet": 1
+        },
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "functional": {
+        "value": false,
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "scaling": {
+        "value": "线性",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "base_unit": {
+        "value": "克",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "allergens": {
+        "value": [],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "nutrition": {
+        "value": {
+          "energy_kcal": 55,
+          "protein_g": 0.7,
+          "fat_g": 0.3,
+          "carbohydrate_g": 14,
+          "sodium_mg": 3
+        },
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "purchase_units": {
+        "value": [
+          {
+            "name": "袋",
+            "grams": 500
+          }
+        ],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "market_zone": {
+        "value": "蔬果",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "storage": {
+        "value": [
+          {
+            "method": "冷藏",
+            "days": 7
+          }
+        ],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "pantry_staple": {
+        "value": false,
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "count_units": {
+        "value": [
+          {
+            "unit": "个",
+            "grams": 150
+          }
+        ],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      }
+    }
+  },
+  {
+    "id": "13f8d8a1-fb09-4ed0-b4b3-2349cc4e3554",
+    "standard_name": "牛油果",
+    "aliases": [],
+    "pinyin": "niuyouguo",
+    "pinyin_initials": "nyg",
+    "category": "水果",
+    "attributes": {
+      "flavor": {
+        "value": {
+          "sweet": 1
+        },
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "functional": {
+        "value": false,
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "scaling": {
+        "value": "线性",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "base_unit": {
+        "value": "克",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "allergens": {
+        "value": [],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "nutrition": {
+        "value": {
+          "energy_kcal": 55,
+          "protein_g": 0.7,
+          "fat_g": 0.3,
+          "carbohydrate_g": 14,
+          "sodium_mg": 3
+        },
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "purchase_units": {
+        "value": [
+          {
+            "name": "袋",
+            "grams": 500
+          }
+        ],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "market_zone": {
+        "value": "蔬果",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "storage": {
+        "value": [
+          {
+            "method": "冷藏",
+            "days": 7
+          }
+        ],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "pantry_staple": {
+        "value": false,
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "count_units": {
+        "value": [
+          {
+            "unit": "个",
+            "grams": 150
+          }
+        ],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      }
+    }
+  },
+  {
+    "id": "5271a4a7-6c9e-4c11-88be-8bab5de9a744",
+    "standard_name": "杨梅",
+    "aliases": [
+      "乌梅"
+    ],
+    "pinyin": "yangmei",
+    "pinyin_initials": "ym",
+    "category": "水果",
+    "attributes": {
+      "flavor": {
+        "value": {
+          "sweet": 1
+        },
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "functional": {
+        "value": false,
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "scaling": {
+        "value": "线性",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "base_unit": {
+        "value": "克",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "allergens": {
+        "value": [],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "nutrition": {
+        "value": {
+          "energy_kcal": 55,
+          "protein_g": 0.7,
+          "fat_g": 0.3,
+          "carbohydrate_g": 14,
+          "sodium_mg": 3
+        },
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "purchase_units": {
+        "value": [
+          {
+            "name": "袋",
+            "grams": 500
+          }
+        ],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "market_zone": {
+        "value": "蔬果",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "storage": {
+        "value": [
+          {
+            "method": "冷藏",
+            "days": 7
+          }
+        ],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "pantry_staple": {
+        "value": false,
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "count_units": {
+        "value": [
+          {
+            "unit": "个",
+            "grams": 150
+          }
+        ],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      }
+    }
+  },
+  {
+    "id": "9a7199da-4676-4b97-b5c2-3b6ddfe65971",
+    "standard_name": "无花果",
+    "aliases": [
+      "映日果"
+    ],
+    "pinyin": "wuhuaguo",
+    "pinyin_initials": "whg",
+    "category": "水果",
+    "attributes": {
+      "flavor": {
+        "value": {
+          "sweet": 1
+        },
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "functional": {
+        "value": false,
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "scaling": {
+        "value": "线性",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "base_unit": {
+        "value": "克",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "allergens": {
+        "value": [],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "nutrition": {
+        "value": {
+          "energy_kcal": 55,
+          "protein_g": 0.7,
+          "fat_g": 0.3,
+          "carbohydrate_g": 14,
+          "sodium_mg": 3
+        },
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "purchase_units": {
+        "value": [
+          {
+            "name": "袋",
+            "grams": 500
+          }
+        ],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "market_zone": {
+        "value": "蔬果",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "storage": {
+        "value": [
+          {
+            "method": "冷藏",
+            "days": 7
+          }
+        ],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "pantry_staple": {
+        "value": false,
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "count_units": {
+        "value": [
+          {
+            "unit": "个",
+            "grams": 150
+          }
+        ],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      }
+    }
+  }
+]

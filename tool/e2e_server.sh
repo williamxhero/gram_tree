@@ -42,6 +42,7 @@ with psycopg.connect(url, autocommit=True) as conn:
 redis.Redis.from_url(Settings().redis_url).flushdb()
 EOF
   uv run alembic upgrade head >/dev/null
+  uv run gramtree ingredients import tests/data/ingredients >/dev/null
 
   # 单进程运行：验证码存在进程内存里，多进程时读不到
   nohup uv run uvicorn gramtree.asgi:app --host 0.0.0.0 --port "$PORT" >"$LOG_FILE" 2>&1 &

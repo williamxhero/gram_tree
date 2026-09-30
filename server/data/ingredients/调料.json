@@ -1,0 +1,3471 @@
+[
+  {
+    "id": "06cf20af-aebb-4693-b673-e8f4b5a1845c",
+    "standard_name": "生抽",
+    "aliases": [
+      "酱油",
+      "味极鲜"
+    ],
+    "pinyin": "shengchou",
+    "pinyin_initials": "sc",
+    "category": "调料",
+    "attributes": {
+      "flavor": {
+        "value": {
+          "salty": 3,
+          "umami": 2
+        },
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "functional": {
+        "value": false,
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "scaling": {
+        "value": "线性",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "base_unit": {
+        "value": "毫升",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "allergens": {
+        "value": [
+          "大豆",
+          "含麸质的谷物"
+        ],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "nutrition": {
+        "value": {
+          "energy_kcal": 60,
+          "protein_g": 8.1,
+          "fat_g": 0.6,
+          "carbohydrate_g": 5.6,
+          "sodium_mg": 5700
+        },
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "purchase_units": {
+        "value": [
+          {
+            "name": "瓶",
+            "grams": 575
+          }
+        ],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "market_zone": {
+        "value": "粮油调味",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "storage": {
+        "value": [
+          {
+            "method": "常温",
+            "days": 180
+          },
+          {
+            "method": "冷藏",
+            "days": 365
+          }
+        ],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "pantry_staple": {
+        "value": true,
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "density": {
+        "value": 1.15,
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      }
+    }
+  },
+  {
+    "id": "3e68ce21-e6bd-41a1-96f1-7cae8d795b09",
+    "standard_name": "盐",
+    "aliases": [
+      "食盐",
+      "精盐"
+    ],
+    "pinyin": "yan",
+    "pinyin_initials": "y",
+    "category": "调料",
+    "attributes": {
+      "flavor": {
+        "value": {
+          "salty": 3
+        },
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "functional": {
+        "value": false,
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "scaling": {
+        "value": "线性",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "base_unit": {
+        "value": "克",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "allergens": {
+        "value": [],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "nutrition": {
+        "value": {
+          "energy_kcal": 0,
+          "protein_g": 0,
+          "fat_g": 0,
+          "carbohydrate_g": 0,
+          "sodium_mg": 38700
+        },
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "purchase_units": {
+        "value": [
+          {
+            "name": "袋",
+            "grams": 400
+          }
+        ],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "market_zone": {
+        "value": "粮油调味",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "storage": {
+        "value": [
+          {
+            "method": "常温",
+            "days": 1095
+          }
+        ],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "pantry_staple": {
+        "value": true,
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "density": {
+        "value": 1.2,
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      }
+    }
+  },
+  {
+    "id": "2a6f6ef3-2243-4d18-af17-6539bdd68261",
+    "standard_name": "老抽",
+    "aliases": [],
+    "pinyin": "laochou",
+    "pinyin_initials": "lc",
+    "category": "调料",
+    "attributes": {
+      "flavor": {
+        "value": {
+          "salty": 3,
+          "umami": 2
+        },
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "functional": {
+        "value": false,
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "scaling": {
+        "value": "线性",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "base_unit": {
+        "value": "毫升",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "allergens": {
+        "value": [
+          "大豆",
+          "含麸质的谷物"
+        ],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "nutrition": {
+        "value": {
+          "energy_kcal": 180,
+          "protein_g": 3,
+          "fat_g": 4,
+          "carbohydrate_g": 30,
+          "sodium_mg": 1500
+        },
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "purchase_units": {
+        "value": [
+          {
+            "name": "瓶",
+            "grams": 500
+          }
+        ],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "market_zone": {
+        "value": "粮油调味",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "storage": {
+        "value": [
+          {
+            "method": "常温",
+            "days": 180
+          }
+        ],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "pantry_staple": {
+        "value": true,
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "density": {
+        "value": 1.1,
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      }
+    }
+  },
+  {
+    "id": "4a3a922b-2a6e-4700-8bae-f2f8338ca939",
+    "standard_name": "蚝油",
+    "aliases": [],
+    "pinyin": "haoyou",
+    "pinyin_initials": "hy",
+    "category": "调料",
+    "attributes": {
+      "flavor": {
+        "value": {
+          "salty": 3,
+          "umami": 2
+        },
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "functional": {
+        "value": false,
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "scaling": {
+        "value": "线性",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "base_unit": {
+        "value": "毫升",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "allergens": {
+        "value": [],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "nutrition": {
+        "value": {
+          "energy_kcal": 180,
+          "protein_g": 3,
+          "fat_g": 4,
+          "carbohydrate_g": 30,
+          "sodium_mg": 1500
+        },
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "purchase_units": {
+        "value": [
+          {
+            "name": "瓶",
+            "grams": 500
+          }
+        ],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "market_zone": {
+        "value": "粮油调味",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "storage": {
+        "value": [
+          {
+            "method": "常温",
+            "days": 180
+          }
+        ],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "pantry_staple": {
+        "value": true,
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "density": {
+        "value": 0.92,
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      }
+    }
+  },
+  {
+    "id": "4394d90c-fee0-4b64-96be-f05db40149a8",
+    "standard_name": "料酒",
+    "aliases": [],
+    "pinyin": "liaojiu",
+    "pinyin_initials": "lj",
+    "category": "调料",
+    "attributes": {
+      "flavor": {
+        "value": {
+          "umami": 1
+        },
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "functional": {
+        "value": false,
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "scaling": {
+        "value": "线性",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "base_unit": {
+        "value": "毫升",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "allergens": {
+        "value": [],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "nutrition": {
+        "value": {
+          "energy_kcal": 180,
+          "protein_g": 3,
+          "fat_g": 4,
+          "carbohydrate_g": 30,
+          "sodium_mg": 1500
+        },
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "purchase_units": {
+        "value": [
+          {
+            "name": "瓶",
+            "grams": 500
+          }
+        ],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "market_zone": {
+        "value": "粮油调味",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "storage": {
+        "value": [
+          {
+            "method": "常温",
+            "days": 180
+          }
+        ],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "pantry_staple": {
+        "value": true,
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "density": {
+        "value": 1.0,
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      }
+    }
+  },
+  {
+    "id": "72b760e6-c490-4123-9e80-48f0bf500aa6",
+    "standard_name": "米醋",
+    "aliases": [],
+    "pinyin": "micu",
+    "pinyin_initials": "mc",
+    "category": "调料",
+    "attributes": {
+      "flavor": {
+        "value": {
+          "sour": 3
+        },
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "functional": {
+        "value": false,
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "scaling": {
+        "value": "线性",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "base_unit": {
+        "value": "毫升",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "allergens": {
+        "value": [],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "nutrition": {
+        "value": {
+          "energy_kcal": 180,
+          "protein_g": 3,
+          "fat_g": 4,
+          "carbohydrate_g": 30,
+          "sodium_mg": 1500
+        },
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "purchase_units": {
+        "value": [
+          {
+            "name": "瓶",
+            "grams": 500
+          }
+        ],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "market_zone": {
+        "value": "粮油调味",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "storage": {
+        "value": [
+          {
+            "method": "常温",
+            "days": 180
+          }
+        ],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "pantry_staple": {
+        "value": true,
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "density": {
+        "value": 1.0,
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      }
+    }
+  },
+  {
+    "id": "52f9f673-760a-46a8-af26-9bc1beb9cdfb",
+    "standard_name": "陈醋",
+    "aliases": [],
+    "pinyin": "chencu",
+    "pinyin_initials": "cc",
+    "category": "调料",
+    "attributes": {
+      "flavor": {
+        "value": {
+          "sour": 3
+        },
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "functional": {
+        "value": false,
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "scaling": {
+        "value": "线性",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "base_unit": {
+        "value": "毫升",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "allergens": {
+        "value": [],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "nutrition": {
+        "value": {
+          "energy_kcal": 180,
+          "protein_g": 3,
+          "fat_g": 4,
+          "carbohydrate_g": 30,
+          "sodium_mg": 1500
+        },
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "purchase_units": {
+        "value": [
+          {
+            "name": "瓶",
+            "grams": 500
+          }
+        ],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "market_zone": {
+        "value": "粮油调味",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "storage": {
+        "value": [
+          {
+            "method": "常温",
+            "days": 180
+          }
+        ],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "pantry_staple": {
+        "value": true,
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "density": {
+        "value": 1.0,
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      }
+    }
+  },
+  {
+    "id": "a56c6366-74a1-4b01-a94b-ab56cbc0b534",
+    "standard_name": "香醋",
+    "aliases": [],
+    "pinyin": "xiangcu",
+    "pinyin_initials": "xc",
+    "category": "调料",
+    "attributes": {
+      "flavor": {
+        "value": {
+          "sour": 3
+        },
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "functional": {
+        "value": false,
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "scaling": {
+        "value": "线性",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "base_unit": {
+        "value": "毫升",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "allergens": {
+        "value": [],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "nutrition": {
+        "value": {
+          "energy_kcal": 180,
+          "protein_g": 3,
+          "fat_g": 4,
+          "carbohydrate_g": 30,
+          "sodium_mg": 1500
+        },
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "purchase_units": {
+        "value": [
+          {
+            "name": "瓶",
+            "grams": 500
+          }
+        ],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "market_zone": {
+        "value": "粮油调味",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "storage": {
+        "value": [
+          {
+            "method": "常温",
+            "days": 180
+          }
+        ],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "pantry_staple": {
+        "value": true,
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "density": {
+        "value": 1.0,
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      }
+    }
+  },
+  {
+    "id": "bcbf7c10-943b-4421-acdb-a4dead008854",
+    "standard_name": "白糖",
+    "aliases": [],
+    "pinyin": "baitang",
+    "pinyin_initials": "bt",
+    "category": "调料",
+    "attributes": {
+      "flavor": {
+        "value": {
+          "sweet": 3
+        },
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "functional": {
+        "value": false,
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "scaling": {
+        "value": "线性",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "base_unit": {
+        "value": "克",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "allergens": {
+        "value": [],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "nutrition": {
+        "value": {
+          "energy_kcal": 390,
+          "protein_g": 0,
+          "fat_g": 0,
+          "carbohydrate_g": 100,
+          "sodium_mg": 2
+        },
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "purchase_units": {
+        "value": [
+          {
+            "name": "袋",
+            "grams": 400
+          }
+        ],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "market_zone": {
+        "value": "粮油调味",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "storage": {
+        "value": [
+          {
+            "method": "常温",
+            "days": 180
+          }
+        ],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "pantry_staple": {
+        "value": true,
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "density": {
+        "value": 0.8,
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      }
+    }
+  },
+  {
+    "id": "2d4a528f-3140-4346-826b-efe8d575fe43",
+    "standard_name": "红糖",
+    "aliases": [],
+    "pinyin": "hongtang",
+    "pinyin_initials": "ht",
+    "category": "调料",
+    "attributes": {
+      "flavor": {
+        "value": {
+          "sweet": 3
+        },
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "functional": {
+        "value": false,
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "scaling": {
+        "value": "线性",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "base_unit": {
+        "value": "克",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "allergens": {
+        "value": [],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "nutrition": {
+        "value": {
+          "energy_kcal": 390,
+          "protein_g": 0,
+          "fat_g": 0,
+          "carbohydrate_g": 100,
+          "sodium_mg": 2
+        },
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "purchase_units": {
+        "value": [
+          {
+            "name": "袋",
+            "grams": 400
+          }
+        ],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "market_zone": {
+        "value": "粮油调味",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "storage": {
+        "value": [
+          {
+            "method": "常温",
+            "days": 180
+          }
+        ],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "pantry_staple": {
+        "value": true,
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "density": {
+        "value": 0.8,
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      }
+    }
+  },
+  {
+    "id": "4978d1eb-7ec4-4980-83b0-1e091beabaa4",
+    "standard_name": "冰糖",
+    "aliases": [],
+    "pinyin": "bingtang",
+    "pinyin_initials": "bt",
+    "category": "调料",
+    "attributes": {
+      "flavor": {
+        "value": {
+          "sweet": 3
+        },
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "functional": {
+        "value": false,
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "scaling": {
+        "value": "线性",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "base_unit": {
+        "value": "克",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "allergens": {
+        "value": [],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "nutrition": {
+        "value": {
+          "energy_kcal": 390,
+          "protein_g": 0,
+          "fat_g": 0,
+          "carbohydrate_g": 100,
+          "sodium_mg": 2
+        },
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "purchase_units": {
+        "value": [
+          {
+            "name": "袋",
+            "grams": 400
+          }
+        ],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "market_zone": {
+        "value": "粮油调味",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "storage": {
+        "value": [
+          {
+            "method": "常温",
+            "days": 180
+          }
+        ],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "pantry_staple": {
+        "value": true,
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "density": {
+        "value": 0.8,
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      }
+    }
+  },
+  {
+    "id": "ecfa72e0-0445-47f1-b086-27a047f665e7",
+    "standard_name": "味精",
+    "aliases": [],
+    "pinyin": "weijing",
+    "pinyin_initials": "wj",
+    "category": "调料",
+    "attributes": {
+      "flavor": {
+        "value": {
+          "umami": 3
+        },
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "functional": {
+        "value": false,
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "scaling": {
+        "value": "线性",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "base_unit": {
+        "value": "克",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "allergens": {
+        "value": [],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "nutrition": {
+        "value": {
+          "energy_kcal": 180,
+          "protein_g": 3,
+          "fat_g": 4,
+          "carbohydrate_g": 30,
+          "sodium_mg": 1500
+        },
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "purchase_units": {
+        "value": [
+          {
+            "name": "袋",
+            "grams": 400
+          }
+        ],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "market_zone": {
+        "value": "粮油调味",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "storage": {
+        "value": [
+          {
+            "method": "常温",
+            "days": 180
+          }
+        ],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "pantry_staple": {
+        "value": true,
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "density": {
+        "value": 0.8,
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      }
+    }
+  },
+  {
+    "id": "b8bbf3c1-755e-42c2-a553-a966faee938d",
+    "standard_name": "鸡精",
+    "aliases": [],
+    "pinyin": "jijing",
+    "pinyin_initials": "jj",
+    "category": "调料",
+    "attributes": {
+      "flavor": {
+        "value": {
+          "umami": 3
+        },
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "functional": {
+        "value": false,
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "scaling": {
+        "value": "线性",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "base_unit": {
+        "value": "克",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "allergens": {
+        "value": [],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "nutrition": {
+        "value": {
+          "energy_kcal": 180,
+          "protein_g": 3,
+          "fat_g": 4,
+          "carbohydrate_g": 30,
+          "sodium_mg": 1500
+        },
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "purchase_units": {
+        "value": [
+          {
+            "name": "袋",
+            "grams": 400
+          }
+        ],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "market_zone": {
+        "value": "粮油调味",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "storage": {
+        "value": [
+          {
+            "method": "常温",
+            "days": 180
+          }
+        ],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "pantry_staple": {
+        "value": true,
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "density": {
+        "value": 0.8,
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      }
+    }
+  },
+  {
+    "id": "604f36fc-c149-40cc-8e25-d56b7d1a46d5",
+    "standard_name": "番茄酱",
+    "aliases": [],
+    "pinyin": "fanqiejiang",
+    "pinyin_initials": "fqj",
+    "category": "调料",
+    "attributes": {
+      "flavor": {
+        "value": {
+          "sweet": 2,
+          "salty": 1
+        },
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "functional": {
+        "value": false,
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "scaling": {
+        "value": "线性",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "base_unit": {
+        "value": "毫升",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "allergens": {
+        "value": [],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "nutrition": {
+        "value": {
+          "energy_kcal": 180,
+          "protein_g": 3,
+          "fat_g": 4,
+          "carbohydrate_g": 30,
+          "sodium_mg": 1500
+        },
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "purchase_units": {
+        "value": [
+          {
+            "name": "瓶",
+            "grams": 500
+          }
+        ],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "market_zone": {
+        "value": "粮油调味",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "storage": {
+        "value": [
+          {
+            "method": "常温",
+            "days": 180
+          }
+        ],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "pantry_staple": {
+        "value": true,
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "density": {
+        "value": 1.1,
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      }
+    }
+  },
+  {
+    "id": "5acb0e5c-8954-4d60-9812-005bcb868093",
+    "standard_name": "豆瓣酱",
+    "aliases": [],
+    "pinyin": "doubanjiang",
+    "pinyin_initials": "dbj",
+    "category": "调料",
+    "attributes": {
+      "flavor": {
+        "value": {
+          "salty": 3,
+          "umami": 2
+        },
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "functional": {
+        "value": false,
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "scaling": {
+        "value": "线性",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "base_unit": {
+        "value": "毫升",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "allergens": {
+        "value": [
+          "大豆"
+        ],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "nutrition": {
+        "value": {
+          "energy_kcal": 180,
+          "protein_g": 3,
+          "fat_g": 4,
+          "carbohydrate_g": 30,
+          "sodium_mg": 1500
+        },
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "purchase_units": {
+        "value": [
+          {
+            "name": "瓶",
+            "grams": 500
+          }
+        ],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "market_zone": {
+        "value": "粮油调味",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "storage": {
+        "value": [
+          {
+            "method": "常温",
+            "days": 180
+          }
+        ],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "pantry_staple": {
+        "value": true,
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "density": {
+        "value": 1.1,
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      }
+    }
+  },
+  {
+    "id": "3dbe75ca-1a45-470c-a34b-e4c9b81dde51",
+    "standard_name": "甜面酱",
+    "aliases": [],
+    "pinyin": "tianmianjiang",
+    "pinyin_initials": "tmj",
+    "category": "调料",
+    "attributes": {
+      "flavor": {
+        "value": {
+          "sweet": 2,
+          "salty": 1
+        },
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "functional": {
+        "value": false,
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "scaling": {
+        "value": "线性",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "base_unit": {
+        "value": "毫升",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "allergens": {
+        "value": [
+          "含麸质的谷物"
+        ],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "nutrition": {
+        "value": {
+          "energy_kcal": 180,
+          "protein_g": 3,
+          "fat_g": 4,
+          "carbohydrate_g": 30,
+          "sodium_mg": 1500
+        },
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "purchase_units": {
+        "value": [
+          {
+            "name": "瓶",
+            "grams": 500
+          }
+        ],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "market_zone": {
+        "value": "粮油调味",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "storage": {
+        "value": [
+          {
+            "method": "常温",
+            "days": 180
+          }
+        ],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "pantry_staple": {
+        "value": true,
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "density": {
+        "value": 1.1,
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      }
+    }
+  },
+  {
+    "id": "c2da9615-4ea5-4b1e-8f90-88636469ddaa",
+    "standard_name": "黄豆酱",
+    "aliases": [],
+    "pinyin": "huangdoujiang",
+    "pinyin_initials": "hdj",
+    "category": "调料",
+    "attributes": {
+      "flavor": {
+        "value": {
+          "salty": 3,
+          "umami": 2
+        },
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "functional": {
+        "value": false,
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "scaling": {
+        "value": "线性",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "base_unit": {
+        "value": "毫升",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "allergens": {
+        "value": [
+          "大豆"
+        ],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "nutrition": {
+        "value": {
+          "energy_kcal": 180,
+          "protein_g": 3,
+          "fat_g": 4,
+          "carbohydrate_g": 30,
+          "sodium_mg": 1500
+        },
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "purchase_units": {
+        "value": [
+          {
+            "name": "瓶",
+            "grams": 500
+          }
+        ],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "market_zone": {
+        "value": "粮油调味",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "storage": {
+        "value": [
+          {
+            "method": "常温",
+            "days": 180
+          }
+        ],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "pantry_staple": {
+        "value": true,
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "density": {
+        "value": 1.1,
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      }
+    }
+  },
+  {
+    "id": "c1d8408e-24dd-4ee0-aa0a-399b728309ac",
+    "standard_name": "芝麻酱",
+    "aliases": [],
+    "pinyin": "zhimajiang",
+    "pinyin_initials": "zmj",
+    "category": "调料",
+    "attributes": {
+      "flavor": {
+        "value": {},
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "functional": {
+        "value": false,
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "scaling": {
+        "value": "线性",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "base_unit": {
+        "value": "毫升",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "allergens": {
+        "value": [
+          "芝麻"
+        ],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "nutrition": {
+        "value": {
+          "energy_kcal": 180,
+          "protein_g": 3,
+          "fat_g": 4,
+          "carbohydrate_g": 30,
+          "sodium_mg": 1500
+        },
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "purchase_units": {
+        "value": [
+          {
+            "name": "瓶",
+            "grams": 500
+          }
+        ],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "market_zone": {
+        "value": "粮油调味",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "storage": {
+        "value": [
+          {
+            "method": "常温",
+            "days": 180
+          }
+        ],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "pantry_staple": {
+        "value": true,
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "density": {
+        "value": 1.1,
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      }
+    }
+  },
+  {
+    "id": "defc8435-b550-46bc-9c7c-64744276864b",
+    "standard_name": "花生酱",
+    "aliases": [],
+    "pinyin": "huashengjiang",
+    "pinyin_initials": "hsj",
+    "category": "调料",
+    "attributes": {
+      "flavor": {
+        "value": {},
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "functional": {
+        "value": false,
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "scaling": {
+        "value": "线性",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "base_unit": {
+        "value": "毫升",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "allergens": {
+        "value": [
+          "花生"
+        ],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "nutrition": {
+        "value": {
+          "energy_kcal": 180,
+          "protein_g": 3,
+          "fat_g": 4,
+          "carbohydrate_g": 30,
+          "sodium_mg": 1500
+        },
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "purchase_units": {
+        "value": [
+          {
+            "name": "瓶",
+            "grams": 500
+          }
+        ],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "market_zone": {
+        "value": "粮油调味",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "storage": {
+        "value": [
+          {
+            "method": "常温",
+            "days": 180
+          }
+        ],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "pantry_staple": {
+        "value": true,
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "density": {
+        "value": 1.1,
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      }
+    }
+  },
+  {
+    "id": "deda80aa-2631-49d5-8f99-a7c750f226af",
+    "standard_name": "辣椒酱",
+    "aliases": [],
+    "pinyin": "lajiaojiang",
+    "pinyin_initials": "ljj",
+    "category": "调料",
+    "attributes": {
+      "flavor": {
+        "value": {
+          "spicy": 3,
+          "salty": 1
+        },
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "functional": {
+        "value": false,
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "scaling": {
+        "value": "线性",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "base_unit": {
+        "value": "毫升",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "allergens": {
+        "value": [],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "nutrition": {
+        "value": {
+          "energy_kcal": 180,
+          "protein_g": 3,
+          "fat_g": 4,
+          "carbohydrate_g": 30,
+          "sodium_mg": 1500
+        },
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "purchase_units": {
+        "value": [
+          {
+            "name": "瓶",
+            "grams": 500
+          }
+        ],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "market_zone": {
+        "value": "粮油调味",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "storage": {
+        "value": [
+          {
+            "method": "常温",
+            "days": 180
+          }
+        ],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "pantry_staple": {
+        "value": true,
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "density": {
+        "value": 1.1,
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      }
+    }
+  },
+  {
+    "id": "84911111-51d8-475f-9ea6-a84ede053754",
+    "standard_name": "豆豉",
+    "aliases": [],
+    "pinyin": "douchi",
+    "pinyin_initials": "dc",
+    "category": "调料",
+    "attributes": {
+      "flavor": {
+        "value": {
+          "salty": 3,
+          "umami": 2
+        },
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "functional": {
+        "value": false,
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "scaling": {
+        "value": "线性",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "base_unit": {
+        "value": "克",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "allergens": {
+        "value": [
+          "大豆"
+        ],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "nutrition": {
+        "value": {
+          "energy_kcal": 180,
+          "protein_g": 3,
+          "fat_g": 4,
+          "carbohydrate_g": 30,
+          "sodium_mg": 1500
+        },
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "purchase_units": {
+        "value": [
+          {
+            "name": "袋",
+            "grams": 400
+          }
+        ],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "market_zone": {
+        "value": "粮油调味",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "storage": {
+        "value": [
+          {
+            "method": "常温",
+            "days": 180
+          }
+        ],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "pantry_staple": {
+        "value": true,
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "density": {
+        "value": 0.6,
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      }
+    }
+  },
+  {
+    "id": "d4306ed6-8b0a-4c34-b1d5-ca2b65644bb7",
+    "standard_name": "腐乳",
+    "aliases": [
+      "豆腐乳"
+    ],
+    "pinyin": "furu",
+    "pinyin_initials": "fr",
+    "category": "调料",
+    "attributes": {
+      "flavor": {
+        "value": {},
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "functional": {
+        "value": false,
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "scaling": {
+        "value": "线性",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "base_unit": {
+        "value": "克",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "allergens": {
+        "value": [
+          "大豆"
+        ],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "nutrition": {
+        "value": {
+          "energy_kcal": 180,
+          "protein_g": 3,
+          "fat_g": 4,
+          "carbohydrate_g": 30,
+          "sodium_mg": 1500
+        },
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "purchase_units": {
+        "value": [
+          {
+            "name": "袋",
+            "grams": 400
+          }
+        ],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "market_zone": {
+        "value": "粮油调味",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "storage": {
+        "value": [
+          {
+            "method": "常温",
+            "days": 180
+          }
+        ],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "pantry_staple": {
+        "value": true,
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      }
+    }
+  },
+  {
+    "id": "ee6f2e79-58e7-4a3e-8be9-03ee8f748086",
+    "standard_name": "芝麻油",
+    "aliases": [
+      "香油"
+    ],
+    "pinyin": "zhimayou",
+    "pinyin_initials": "zmy",
+    "category": "调料",
+    "attributes": {
+      "flavor": {
+        "value": {
+          "oily": 3
+        },
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "functional": {
+        "value": false,
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "scaling": {
+        "value": "线性",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "base_unit": {
+        "value": "毫升",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "allergens": {
+        "value": [
+          "芝麻"
+        ],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "nutrition": {
+        "value": {
+          "energy_kcal": 884,
+          "protein_g": 0,
+          "fat_g": 100,
+          "carbohydrate_g": 0,
+          "sodium_mg": 0
+        },
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "purchase_units": {
+        "value": [
+          {
+            "name": "瓶",
+            "grams": 370
+          }
+        ],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "market_zone": {
+        "value": "粮油调味",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "storage": {
+        "value": [
+          {
+            "method": "常温",
+            "days": 180
+          }
+        ],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "pantry_staple": {
+        "value": true,
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "density": {
+        "value": 0.92,
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      }
+    }
+  },
+  {
+    "id": "8344e1ce-db3c-4f37-bae6-7dccecd141a4",
+    "standard_name": "花椒油",
+    "aliases": [],
+    "pinyin": "huajiaoyou",
+    "pinyin_initials": "hjy",
+    "category": "调料",
+    "attributes": {
+      "flavor": {
+        "value": {
+          "numbing": 3,
+          "spicy": 1
+        },
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "functional": {
+        "value": false,
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "scaling": {
+        "value": "线性",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "base_unit": {
+        "value": "毫升",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "allergens": {
+        "value": [],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "nutrition": {
+        "value": {
+          "energy_kcal": 180,
+          "protein_g": 3,
+          "fat_g": 4,
+          "carbohydrate_g": 30,
+          "sodium_mg": 1500
+        },
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "purchase_units": {
+        "value": [
+          {
+            "name": "瓶",
+            "grams": 500
+          }
+        ],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "market_zone": {
+        "value": "粮油调味",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "storage": {
+        "value": [
+          {
+            "method": "常温",
+            "days": 180
+          }
+        ],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "pantry_staple": {
+        "value": true,
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "density": {
+        "value": 0.92,
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      }
+    }
+  },
+  {
+    "id": "1bbcd55f-6d6e-4f95-b88e-f2181934e3f5",
+    "standard_name": "辣椒油",
+    "aliases": [],
+    "pinyin": "lajiaoyou",
+    "pinyin_initials": "ljy",
+    "category": "调料",
+    "attributes": {
+      "flavor": {
+        "value": {
+          "spicy": 3,
+          "salty": 1
+        },
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "functional": {
+        "value": false,
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "scaling": {
+        "value": "线性",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "base_unit": {
+        "value": "毫升",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "allergens": {
+        "value": [],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "nutrition": {
+        "value": {
+          "energy_kcal": 180,
+          "protein_g": 3,
+          "fat_g": 4,
+          "carbohydrate_g": 30,
+          "sodium_mg": 1500
+        },
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "purchase_units": {
+        "value": [
+          {
+            "name": "瓶",
+            "grams": 500
+          }
+        ],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "market_zone": {
+        "value": "粮油调味",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "storage": {
+        "value": [
+          {
+            "method": "常温",
+            "days": 180
+          }
+        ],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "pantry_staple": {
+        "value": true,
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "density": {
+        "value": 0.92,
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      }
+    }
+  },
+  {
+    "id": "fad5d1aa-bb37-4f02-8c29-66084866e201",
+    "standard_name": "橄榄油",
+    "aliases": [],
+    "pinyin": "ganlanyou",
+    "pinyin_initials": "gly",
+    "category": "调料",
+    "attributes": {
+      "flavor": {
+        "value": {
+          "oily": 3
+        },
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "functional": {
+        "value": false,
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "scaling": {
+        "value": "线性",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "base_unit": {
+        "value": "毫升",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "allergens": {
+        "value": [],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "nutrition": {
+        "value": {
+          "energy_kcal": 180,
+          "protein_g": 3,
+          "fat_g": 4,
+          "carbohydrate_g": 30,
+          "sodium_mg": 1500
+        },
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "purchase_units": {
+        "value": [
+          {
+            "name": "瓶",
+            "grams": 500
+          }
+        ],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "market_zone": {
+        "value": "粮油调味",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "storage": {
+        "value": [
+          {
+            "method": "常温",
+            "days": 180
+          }
+        ],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "pantry_staple": {
+        "value": true,
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "density": {
+        "value": 0.92,
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      }
+    }
+  },
+  {
+    "id": "4bca9dd2-f18e-43ab-bb88-d39459b910c6",
+    "standard_name": "花生油",
+    "aliases": [],
+    "pinyin": "huashengyou",
+    "pinyin_initials": "hsy",
+    "category": "调料",
+    "attributes": {
+      "flavor": {
+        "value": {
+          "oily": 3
+        },
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "functional": {
+        "value": false,
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "scaling": {
+        "value": "线性",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "base_unit": {
+        "value": "毫升",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "allergens": {
+        "value": [
+          "花生"
+        ],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "nutrition": {
+        "value": {
+          "energy_kcal": 180,
+          "protein_g": 3,
+          "fat_g": 4,
+          "carbohydrate_g": 30,
+          "sodium_mg": 1500
+        },
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "purchase_units": {
+        "value": [
+          {
+            "name": "瓶",
+            "grams": 500
+          }
+        ],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "market_zone": {
+        "value": "粮油调味",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "storage": {
+        "value": [
+          {
+            "method": "常温",
+            "days": 180
+          }
+        ],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "pantry_staple": {
+        "value": true,
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "density": {
+        "value": 0.92,
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      }
+    }
+  },
+  {
+    "id": "ef7a981a-be06-473a-8514-49fbfd9a7ecc",
+    "standard_name": "大豆油",
+    "aliases": [],
+    "pinyin": "dadouyou",
+    "pinyin_initials": "ddy",
+    "category": "调料",
+    "attributes": {
+      "flavor": {
+        "value": {
+          "oily": 3
+        },
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "functional": {
+        "value": false,
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "scaling": {
+        "value": "线性",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "base_unit": {
+        "value": "毫升",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "allergens": {
+        "value": [
+          "大豆"
+        ],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "nutrition": {
+        "value": {
+          "energy_kcal": 180,
+          "protein_g": 3,
+          "fat_g": 4,
+          "carbohydrate_g": 30,
+          "sodium_mg": 1500
+        },
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "purchase_units": {
+        "value": [
+          {
+            "name": "瓶",
+            "grams": 500
+          }
+        ],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "market_zone": {
+        "value": "粮油调味",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "storage": {
+        "value": [
+          {
+            "method": "常温",
+            "days": 180
+          }
+        ],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "pantry_staple": {
+        "value": true,
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "density": {
+        "value": 0.92,
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      }
+    }
+  },
+  {
+    "id": "aeabc8a9-c10d-47c3-b644-42a8cc077e16",
+    "standard_name": "玉米油",
+    "aliases": [],
+    "pinyin": "yumiyou",
+    "pinyin_initials": "ymy",
+    "category": "调料",
+    "attributes": {
+      "flavor": {
+        "value": {
+          "oily": 3
+        },
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "functional": {
+        "value": false,
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "scaling": {
+        "value": "线性",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "base_unit": {
+        "value": "毫升",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "allergens": {
+        "value": [],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "nutrition": {
+        "value": {
+          "energy_kcal": 180,
+          "protein_g": 3,
+          "fat_g": 4,
+          "carbohydrate_g": 30,
+          "sodium_mg": 1500
+        },
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "purchase_units": {
+        "value": [
+          {
+            "name": "瓶",
+            "grams": 500
+          }
+        ],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "market_zone": {
+        "value": "粮油调味",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "storage": {
+        "value": [
+          {
+            "method": "常温",
+            "days": 180
+          }
+        ],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "pantry_staple": {
+        "value": true,
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "density": {
+        "value": 0.92,
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      }
+    }
+  },
+  {
+    "id": "e66d679e-aa7b-4065-b810-83fbd483b6f6",
+    "standard_name": "菜籽油",
+    "aliases": [],
+    "pinyin": "caiziyou",
+    "pinyin_initials": "czy",
+    "category": "调料",
+    "attributes": {
+      "flavor": {
+        "value": {
+          "oily": 3
+        },
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "functional": {
+        "value": false,
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "scaling": {
+        "value": "线性",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "base_unit": {
+        "value": "毫升",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "allergens": {
+        "value": [],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "nutrition": {
+        "value": {
+          "energy_kcal": 180,
+          "protein_g": 3,
+          "fat_g": 4,
+          "carbohydrate_g": 30,
+          "sodium_mg": 1500
+        },
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "purchase_units": {
+        "value": [
+          {
+            "name": "瓶",
+            "grams": 500
+          }
+        ],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "market_zone": {
+        "value": "粮油调味",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "storage": {
+        "value": [
+          {
+            "method": "常温",
+            "days": 180
+          }
+        ],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "pantry_staple": {
+        "value": true,
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "density": {
+        "value": 0.92,
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      }
+    }
+  },
+  {
+    "id": "11a03052-95c0-4f17-923b-7c6a9304c182",
+    "standard_name": "猪油",
+    "aliases": [],
+    "pinyin": "zhuyou",
+    "pinyin_initials": "zy",
+    "category": "调料",
+    "attributes": {
+      "flavor": {
+        "value": {
+          "oily": 3
+        },
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "functional": {
+        "value": false,
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "scaling": {
+        "value": "线性",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "base_unit": {
+        "value": "毫升",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "allergens": {
+        "value": [],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "nutrition": {
+        "value": {
+          "energy_kcal": 180,
+          "protein_g": 3,
+          "fat_g": 4,
+          "carbohydrate_g": 30,
+          "sodium_mg": 1500
+        },
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "purchase_units": {
+        "value": [
+          {
+            "name": "瓶",
+            "grams": 500
+          }
+        ],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "market_zone": {
+        "value": "粮油调味",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "storage": {
+        "value": [
+          {
+            "method": "常温",
+            "days": 180
+          }
+        ],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "pantry_staple": {
+        "value": true,
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "density": {
+        "value": 0.92,
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      }
+    }
+  },
+  {
+    "id": "8e4c2f57-683b-4029-b030-55fb6262df04",
+    "standard_name": "酵母",
+    "aliases": [
+      "干酵母",
+      "活性干酵母",
+      "酵母粉"
+    ],
+    "pinyin": "jiaomu",
+    "pinyin_initials": "jm",
+    "category": "调料",
+    "attributes": {
+      "flavor": {
+        "value": {},
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "functional": {
+        "value": true,
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "scaling": {
+        "value": "固定",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "base_unit": {
+        "value": "克",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "allergens": {
+        "value": [],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "nutrition": {
+        "value": {
+          "energy_kcal": 180,
+          "protein_g": 3,
+          "fat_g": 4,
+          "carbohydrate_g": 30,
+          "sodium_mg": 1500
+        },
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "purchase_units": {
+        "value": [
+          {
+            "name": "袋",
+            "grams": 400
+          }
+        ],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "market_zone": {
+        "value": "粮油调味",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "storage": {
+        "value": [
+          {
+            "method": "常温",
+            "days": 180
+          }
+        ],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "pantry_staple": {
+        "value": true,
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "density": {
+        "value": 0.8,
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      }
+    }
+  },
+  {
+    "id": "dc145260-f4c2-4ed3-b9fc-9fcf19897561",
+    "standard_name": "泡打粉",
+    "aliases": [
+      "发酵粉",
+      "baking powder"
+    ],
+    "pinyin": "paodafen",
+    "pinyin_initials": "pdf",
+    "category": "调料",
+    "attributes": {
+      "flavor": {
+        "value": {},
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "functional": {
+        "value": true,
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "scaling": {
+        "value": "固定",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "base_unit": {
+        "value": "克",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "allergens": {
+        "value": [],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "nutrition": {
+        "value": {
+          "energy_kcal": 180,
+          "protein_g": 3,
+          "fat_g": 4,
+          "carbohydrate_g": 30,
+          "sodium_mg": 1500
+        },
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "purchase_units": {
+        "value": [
+          {
+            "name": "袋",
+            "grams": 400
+          }
+        ],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "market_zone": {
+        "value": "粮油调味",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "storage": {
+        "value": [
+          {
+            "method": "常温",
+            "days": 180
+          }
+        ],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "pantry_staple": {
+        "value": true,
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "density": {
+        "value": 0.8,
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      }
+    }
+  },
+  {
+    "id": "16e959b8-9893-400e-8619-54c874b69590",
+    "standard_name": "小苏打",
+    "aliases": [
+      "碳酸氢钠",
+      "食用碱"
+    ],
+    "pinyin": "xiaosuda",
+    "pinyin_initials": "xsd",
+    "category": "调料",
+    "attributes": {
+      "flavor": {
+        "value": {},
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "functional": {
+        "value": true,
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "scaling": {
+        "value": "固定",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "base_unit": {
+        "value": "克",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "allergens": {
+        "value": [],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "nutrition": {
+        "value": {
+          "energy_kcal": 180,
+          "protein_g": 3,
+          "fat_g": 4,
+          "carbohydrate_g": 30,
+          "sodium_mg": 1500
+        },
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "purchase_units": {
+        "value": [
+          {
+            "name": "袋",
+            "grams": 400
+          }
+        ],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "market_zone": {
+        "value": "粮油调味",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "storage": {
+        "value": [
+          {
+            "method": "常温",
+            "days": 180
+          }
+        ],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "pantry_staple": {
+        "value": true,
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "density": {
+        "value": 0.8,
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      }
+    }
+  },
+  {
+    "id": "d4555fc7-b04f-4e46-935d-41a710e285b0",
+    "standard_name": "白砂糖",
+    "aliases": [
+      "砂糖"
+    ],
+    "pinyin": "baishatang",
+    "pinyin_initials": "bst",
+    "category": "调料",
+    "attributes": {
+      "flavor": {
+        "value": {
+          "sweet": 3
+        },
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "functional": {
+        "value": false,
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "scaling": {
+        "value": "线性",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "base_unit": {
+        "value": "克",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "allergens": {
+        "value": [],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "nutrition": {
+        "value": {
+          "energy_kcal": 390,
+          "protein_g": 0,
+          "fat_g": 0,
+          "carbohydrate_g": 100,
+          "sodium_mg": 2
+        },
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "purchase_units": {
+        "value": [
+          {
+            "name": "袋",
+            "grams": 400
+          }
+        ],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "market_zone": {
+        "value": "粮油调味",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "storage": {
+        "value": [
+          {
+            "method": "常温",
+            "days": 180
+          }
+        ],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "pantry_staple": {
+        "value": true,
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "density": {
+        "value": 0.8,
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      }
+    }
+  },
+  {
+    "id": "e9c57d91-7df5-41e6-9025-709e478f286b",
+    "standard_name": "蜂蜜",
+    "aliases": [
+      "洋槐蜜",
+      "百花蜜"
+    ],
+    "pinyin": "fengmi",
+    "pinyin_initials": "fm",
+    "category": "调料",
+    "attributes": {
+      "flavor": {
+        "value": {
+          "sweet": 3
+        },
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "functional": {
+        "value": false,
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "scaling": {
+        "value": "线性",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "base_unit": {
+        "value": "毫升",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "allergens": {
+        "value": [],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "nutrition": {
+        "value": {
+          "energy_kcal": 180,
+          "protein_g": 3,
+          "fat_g": 4,
+          "carbohydrate_g": 30,
+          "sodium_mg": 1500
+        },
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "purchase_units": {
+        "value": [
+          {
+            "name": "瓶",
+            "grams": 500
+          }
+        ],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "market_zone": {
+        "value": "粮油调味",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "storage": {
+        "value": [
+          {
+            "method": "常温",
+            "days": 180
+          }
+        ],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "pantry_staple": {
+        "value": true,
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "density": {
+        "value": 1.42,
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      }
+    }
+  },
+  {
+    "id": "532ff6f6-7469-4536-908c-a39daaa6f8f4",
+    "standard_name": "白醋",
+    "aliases": [],
+    "pinyin": "baicu",
+    "pinyin_initials": "bc",
+    "category": "调料",
+    "attributes": {
+      "flavor": {
+        "value": {
+          "sour": 3
+        },
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "functional": {
+        "value": false,
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "scaling": {
+        "value": "线性",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "base_unit": {
+        "value": "毫升",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "allergens": {
+        "value": [],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "nutrition": {
+        "value": {
+          "energy_kcal": 180,
+          "protein_g": 3,
+          "fat_g": 4,
+          "carbohydrate_g": 30,
+          "sodium_mg": 1500
+        },
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "purchase_units": {
+        "value": [
+          {
+            "name": "瓶",
+            "grams": 500
+          }
+        ],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "market_zone": {
+        "value": "粮油调味",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "storage": {
+        "value": [
+          {
+            "method": "常温",
+            "days": 180
+          }
+        ],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "pantry_staple": {
+        "value": true,
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "density": {
+        "value": 1.0,
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      }
+    }
+  },
+  {
+    "id": "231c1664-3c6b-4d02-a8d5-8966d9f99236",
+    "standard_name": "黄酒",
+    "aliases": [
+      "绍兴黄酒"
+    ],
+    "pinyin": "huangjiu",
+    "pinyin_initials": "hj",
+    "category": "调料",
+    "attributes": {
+      "flavor": {
+        "value": {
+          "umami": 1
+        },
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "functional": {
+        "value": false,
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "scaling": {
+        "value": "线性",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "base_unit": {
+        "value": "毫升",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "allergens": {
+        "value": [],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "nutrition": {
+        "value": {
+          "energy_kcal": 180,
+          "protein_g": 3,
+          "fat_g": 4,
+          "carbohydrate_g": 30,
+          "sodium_mg": 1500
+        },
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "purchase_units": {
+        "value": [
+          {
+            "name": "瓶",
+            "grams": 500
+          }
+        ],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "market_zone": {
+        "value": "粮油调味",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "storage": {
+        "value": [
+          {
+            "method": "常温",
+            "days": 180
+          }
+        ],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "pantry_staple": {
+        "value": true,
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "density": {
+        "value": 1.0,
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      }
+    }
+  },
+  {
+    "id": "014f2684-1abb-431a-958c-e95cdf8ebaeb",
+    "standard_name": "鱼露",
+    "aliases": [
+      "fish sauce"
+    ],
+    "pinyin": "yulu",
+    "pinyin_initials": "yl",
+    "category": "调料",
+    "attributes": {
+      "flavor": {
+        "value": {
+          "salty": 3,
+          "umami": 2
+        },
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "functional": {
+        "value": false,
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "scaling": {
+        "value": "线性",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "base_unit": {
+        "value": "毫升",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "allergens": {
+        "value": [
+          "鱼类"
+        ],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "nutrition": {
+        "value": {
+          "energy_kcal": 180,
+          "protein_g": 3,
+          "fat_g": 4,
+          "carbohydrate_g": 30,
+          "sodium_mg": 1500
+        },
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "purchase_units": {
+        "value": [
+          {
+            "name": "瓶",
+            "grams": 500
+          }
+        ],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "market_zone": {
+        "value": "粮油调味",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "storage": {
+        "value": [
+          {
+            "method": "常温",
+            "days": 180
+          }
+        ],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "pantry_staple": {
+        "value": true,
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "density": {
+        "value": 1.1,
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      }
+    }
+  },
+  {
+    "id": "83a29dba-06e9-4944-b017-16cf8e1af549",
+    "standard_name": "沙拉酱",
+    "aliases": [
+      "蛋黄酱",
+      "美乃滋"
+    ],
+    "pinyin": "shalajiang",
+    "pinyin_initials": "slj",
+    "category": "调料",
+    "attributes": {
+      "flavor": {
+        "value": {
+          "sweet": 2,
+          "salty": 1
+        },
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "functional": {
+        "value": false,
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "scaling": {
+        "value": "线性",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "base_unit": {
+        "value": "毫升",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "allergens": {
+        "value": [
+          "大豆",
+          "蛋类"
+        ],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "nutrition": {
+        "value": {
+          "energy_kcal": 180,
+          "protein_g": 3,
+          "fat_g": 4,
+          "carbohydrate_g": 30,
+          "sodium_mg": 1500
+        },
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "purchase_units": {
+        "value": [
+          {
+            "name": "瓶",
+            "grams": 500
+          }
+        ],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "market_zone": {
+        "value": "粮油调味",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "storage": {
+        "value": [
+          {
+            "method": "常温",
+            "days": 180
+          }
+        ],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "pantry_staple": {
+        "value": true,
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "density": {
+        "value": 1.1,
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      }
+    }
+  },
+  {
+    "id": "b6c3ce46-4776-489b-a67e-ec749a383108",
+    "standard_name": "五香粉",
+    "aliases": [
+      "五香",
+      "混合香料"
+    ],
+    "pinyin": "wuxiangfen",
+    "pinyin_initials": "wxf",
+    "category": "调料",
+    "attributes": {
+      "flavor": {
+        "value": {
+          "spicy": 2
+        },
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "functional": {
+        "value": false,
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "scaling": {
+        "value": "线性",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "base_unit": {
+        "value": "克",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "allergens": {
+        "value": [],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "nutrition": {
+        "value": {
+          "energy_kcal": 180,
+          "protein_g": 3,
+          "fat_g": 4,
+          "carbohydrate_g": 30,
+          "sodium_mg": 1500
+        },
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "purchase_units": {
+        "value": [
+          {
+            "name": "袋",
+            "grams": 400
+          }
+        ],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "market_zone": {
+        "value": "粮油调味",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "storage": {
+        "value": [
+          {
+            "method": "常温",
+            "days": 180
+          }
+        ],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "pantry_staple": {
+        "value": true,
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "density": {
+        "value": 0.6,
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      }
+    }
+  }
+]

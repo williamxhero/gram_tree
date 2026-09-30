@@ -1,0 +1,103 @@
+//
+// AUTO-GENERATED FILE, DO NOT MODIFY!
+//
+
+// ignore_for_file: unused_element
+import 'package:gramtree_api/src/model/ingredient_attributes.dart';
+import 'package:copy_with_extension/copy_with_extension.dart';
+import 'package:json_annotation/json_annotation.dart';
+
+part 'ingredient_detail.g.dart';
+
+@CopyWith()
+@JsonSerializable(
+  checked: true,
+  createToJson: true,
+  disallowUnrecognizedKeys: false,
+  explicitToJson: true,
+)
+class IngredientDetail {
+  /// Returns a new [IngredientDetail] instance.
+  IngredientDetail({
+    required this.aliases,
+
+    required this.attributes,
+
+    required this.category,
+
+    required this.id,
+
+    required this.pinyin,
+
+    required this.pinyinInitials,
+
+    this.requestedId,
+
+    required this.standardName,
+
+    required this.version,
+  });
+
+  @JsonKey(name: r'aliases', required: true, includeIfNull: false)
+  final List<String> aliases;
+
+  @JsonKey(name: r'attributes', required: true, includeIfNull: false)
+  final IngredientAttributes attributes;
+
+  @JsonKey(name: r'category', required: true, includeIfNull: false)
+  final String category;
+
+  @JsonKey(name: r'id', required: true, includeIfNull: false)
+  final String id;
+
+  @JsonKey(name: r'pinyin', required: true, includeIfNull: false)
+  final String pinyin;
+
+  @JsonKey(name: r'pinyin_initials', required: true, includeIfNull: false)
+  final String pinyinInitials;
+
+  @JsonKey(name: r'requested_id', required: false, includeIfNull: false)
+  final String? requestedId;
+
+  @JsonKey(name: r'standard_name', required: true, includeIfNull: false)
+  final String standardName;
+
+  @JsonKey(name: r'version', required: true, includeIfNull: false)
+  final String version;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is IngredientDetail &&
+          other.aliases == aliases &&
+          other.attributes == attributes &&
+          other.category == category &&
+          other.id == id &&
+          other.pinyin == pinyin &&
+          other.pinyinInitials == pinyinInitials &&
+          other.requestedId == requestedId &&
+          other.standardName == standardName &&
+          other.version == version;
+
+  @override
+  int get hashCode =>
+      aliases.hashCode +
+      attributes.hashCode +
+      category.hashCode +
+      id.hashCode +
+      pinyin.hashCode +
+      pinyinInitials.hashCode +
+      (requestedId == null ? 0 : requestedId.hashCode) +
+      standardName.hashCode +
+      version.hashCode;
+
+  factory IngredientDetail.fromJson(Map<String, dynamic> json) =>
+      _$IngredientDetailFromJson(json);
+
+  Map<String, dynamic> toJson() => _$IngredientDetailToJson(this);
+
+  @override
+  String toString() {
+    return toJson().toString();
+  }
+}

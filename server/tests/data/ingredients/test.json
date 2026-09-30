@@ -1,0 +1,18 @@
+[
+  {
+    "id": "00000000-0000-4000-8000-000000000001",
+    "standard_name": "测试酱油",
+    "aliases": ["测试生抽", "测试味极鲜"],
+    "pinyin": "ceshijiangyou",
+    "pinyin_initials": "csjy",
+    "category": "调料"
+  },
+  {
+    "id": "00000000-0000-4000-8000-000000000002",
+    "standard_name": "测试盐",
+    "aliases": ["测试食盐"],
+    "pinyin": "ceshiyan",
+    "pinyin_initials": "csy",
+    "category": "调料"
+  }
+]

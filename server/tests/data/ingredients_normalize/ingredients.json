@@ -1,0 +1,67 @@
+[
+  {
+    "id": "00000000-0000-4000-8000-000000000101",
+    "standard_name": "酱油",
+    "aliases": ["生抽", "味极鲜"],
+    "pinyin": "jiangyou",
+    "pinyin_initials": "jy",
+    "category": "调料"
+  },
+  {
+    "id": "00000000-0000-4000-8000-000000000102",
+    "standard_name": "盐",
+    "aliases": ["精盐", "食盐"],
+    "pinyin": "yan",
+    "pinyin_initials": "y",
+    "category": "调料"
+  },
+  {
+    "id": "00000000-0000-4000-8000-000000000103",
+    "standard_name": "姜",
+    "aliases": ["生姜", "老姜"],
+    "pinyin": "jiang",
+    "pinyin_initials": "j",
+    "category": "蔬菜"
+  },
+  {
+    "id": "00000000-0000-4000-8000-000000000104",
+    "standard_name": "小葱",
+    "aliases": ["香葱", "葱"],
+    "pinyin": "xiaocong",
+    "pinyin_initials": "xc",
+    "category": "蔬菜"
+  },
+  {
+    "id": "00000000-0000-4000-8000-000000000105",
+    "standard_name": "大葱",
+    "aliases": ["葱白", "葱"],
+    "pinyin": "dacong",
+    "pinyin_initials": "dc",
+    "category": "蔬菜"
+  },
+  {
+    "id": "00000000-0000-4000-8000-000000000106",
+    "standard_name": "粉丝",
+    "aliases": ["龙口粉丝"],
+    "pinyin": "fensi",
+    "pinyin_initials": "fs",
+    "category": "主食粮面"
+  },
+  {
+    "id": "00000000-0000-4000-8000-000000000107",
+    "standard_name": "番茄",
+    "aliases": ["西红柿"],
+    "pinyin": "fanqie",
+    "pinyin_initials": "fq",
+    "category": "蔬菜"
+  },
+  {
+    "id": "00000000-0000-4000-8000-000000000108",
+    "standard_name": "洋柿子",
+    "aliases": ["洋柿"],
+    "pinyin": "yangshizi",
+    "pinyin_initials": "ysz",
+    "category": "蔬菜",
+    "merged_into": "00000000-0000-4000-8000-000000000107"
+  }
+]

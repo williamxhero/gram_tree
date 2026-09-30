@@ -109,6 +109,38 @@ def cmd_accounts(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_ingredients(args: argparse.Namespace) -> int:
+    from pathlib import Path
+
+    from gramtree.ingredients.importer import (
+        IngredientImportError,
+        import_directory,
+        validate_directory,
+    )
+
+    if args.action == "import":
+        try:
+            with _session() as session:
+                stats = import_directory(session, Path(args.dir))
+        except IngredientImportError as exc:
+            print(f"错误：{exc}", file=sys.stderr)
+            return 1
+        print(
+            f"食材库 {stats['version']}：新增 {stats['added']} 种，内容有变化 {stats['changed']} 种"
+        )
+        return 0
+    if args.action == "validate":
+        baseline = Path(args.baseline_dir) if args.baseline_dir else None
+        try:
+            manifest, records = validate_directory(Path(args.dir), baseline)
+        except IngredientImportError as exc:
+            print(f"错误：{exc}", file=sys.stderr)
+            return 1
+        print(f"食材库 {manifest.version} 校验通过：{len(records)} 种")
+        return 0
+    return 2
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="gramtree")
     sub = parser.add_subparsers(dest="command", required=True)
@@ -140,6 +172,18 @@ def build_parser() -> argparse.ArgumentParser:
     purge = acc_sub.add_parser("purge", help="立刻删除注销到期账号的个人数据（和每日定时任务相同）")
     purge.add_argument("--as-of", help="按这个时间判断是否到期（默认现在），带时区的 ISO 8601")
     acc.set_defaults(func=cmd_accounts)
+
+    ing = sub.add_parser("ingredients", help="食材库管理")
+    ing_sub = ing.add_subparsers(dest="action", required=True)
+    import_cmd = ing_sub.add_parser("import", help="把数据目录里的食材库导入数据库（幂等）")
+    import_cmd.add_argument("dir", help="含 manifest.json 的数据目录，例如 data/ingredients")
+    validate_cmd = ing_sub.add_parser("validate", help="离线校验食材库数据，不连接数据库")
+    validate_cmd.add_argument("dir", help="含 manifest.json 的数据目录，例如 data/ingredients")
+    validate_cmd.add_argument(
+        "--baseline-dir",
+        help="历史食材库目录；其中已有的标准 ID 不得从当前数据删除",
+    )
+    ing.set_defaults(func=cmd_ingredients)
 
     openapi = sub.add_parser("openapi", help="导出 OpenAPI 描述")
     openapi.add_argument("--out")

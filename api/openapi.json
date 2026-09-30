@@ -20,6 +20,44 @@
         "title": "ActionDescriptor",
         "type": "object"
       },
+      "AllergensAttribute": {
+        "additionalProperties": false,
+        "description": "所属过敏原分类；空列表表示不含已登记的过敏原。",
+        "properties": {
+          "estimate": {
+            "description": "没经人工校对的字段按估算处理",
+            "readOnly": true,
+            "title": "Estimate",
+            "type": "boolean"
+          },
+          "source": {
+            "description": "这项数据的来源",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Source",
+            "type": "string"
+          },
+          "status": {
+            "$ref": "#/components/schemas/AttributeStatus",
+            "description": "ai_draft：AI 起草；verified：人工校对过"
+          },
+          "value": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Value",
+            "type": "array"
+          }
+        },
+        "required": [
+          "source",
+          "status",
+          "value",
+          "estimate"
+        ],
+        "title": "AllergensAttribute",
+        "type": "object"
+      },
       "AnalyticsEventIn": {
         "additionalProperties": false,
         "description": "只允许这些字段：事件类型、页面/入口标识、可选耗时、发生时间、设备 ID。\n\n不含菜谱内容、口味档案、过敏和健康信息；也不接受用户 ID（服务端按登录状态填入）。",
@@ -166,6 +204,64 @@
         "title": "AppleReauthRequest",
         "type": "object"
       },
+      "AttributeStatus": {
+        "description": "字段的校对状态。",
+        "enum": [
+          "ai_draft",
+          "verified"
+        ],
+        "title": "AttributeStatus",
+        "type": "string"
+      },
+      "BatchRequest": {
+        "description": "批量读取的请求体（#101）。",
+        "properties": {
+          "ids": {
+            "description": "要读取的标准 ID，最多 100 个",
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "maxItems": 100,
+            "minItems": 1,
+            "title": "Ids",
+            "type": "array"
+          }
+        },
+        "required": [
+          "ids"
+        ],
+        "title": "BatchRequest",
+        "type": "object"
+      },
+      "BatchResponse": {
+        "description": "批量读取的结果（#101）。",
+        "properties": {
+          "items": {
+            "description": "读到完整数据的食材，按请求里的顺序；已合并的旧 ID 返回合并后的新食材",
+            "items": {
+              "$ref": "#/components/schemas/IngredientDetail"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "missing_ids": {
+            "description": "库里没有的 ID，单独列出，不影响整次请求",
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "title": "Missing Ids",
+            "type": "array"
+          }
+        },
+        "required": [
+          "items",
+          "missing_ids"
+        ],
+        "title": "BatchResponse",
+        "type": "object"
+      },
       "BindAppleRequest": {
         "properties": {
           "authorization_code": {
@@ -210,6 +306,40 @@
         "title": "BindEmailRequest",
         "type": "object"
       },
+      "BoolAttribute": {
+        "additionalProperties": false,
+        "properties": {
+          "estimate": {
+            "description": "没经人工校对的字段按估算处理",
+            "readOnly": true,
+            "title": "Estimate",
+            "type": "boolean"
+          },
+          "source": {
+            "description": "这项数据的来源",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Source",
+            "type": "string"
+          },
+          "status": {
+            "$ref": "#/components/schemas/AttributeStatus",
+            "description": "ai_draft：AI 起草；verified：人工校对过"
+          },
+          "value": {
+            "title": "Value",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "source",
+          "status",
+          "value",
+          "estimate"
+        ],
+        "title": "BoolAttribute",
+        "type": "object"
+      },
       "CacheInfo": {
         "properties": {
           "depends_on": {
@@ -231,6 +361,57 @@
           "ttl_s"
         ],
         "title": "CacheInfo",
+        "type": "object"
+      },
+      "ChangesResponse": {
+        "description": "某个版本之后的食材变化（#101），App 用它增量更新本机缓存。",
+        "properties": {
+          "added": {
+            "description": "这个区间里新增的食材，含全部详细属性",
+            "items": {
+              "$ref": "#/components/schemas/IngredientDetail"
+            },
+            "title": "Added",
+            "type": "array"
+          },
+          "current_version": {
+            "description": "服务端当前的食材库版本，App 存下来当下次请求的 since_version",
+            "title": "Current Version",
+            "type": "string"
+          },
+          "merged": {
+            "description": "这个区间里生效的合并关系，旧 ID → 新 ID",
+            "items": {
+              "$ref": "#/components/schemas/MergeRelation"
+            },
+            "title": "Merged",
+            "type": "array"
+          },
+          "modified": {
+            "description": "这个区间里改动过的食材，含全部详细属性",
+            "items": {
+              "$ref": "#/components/schemas/IngredientDetail"
+            },
+            "title": "Modified",
+            "type": "array"
+          },
+          "releases": {
+            "description": "这个区间内每次发布的版本号和变更说明，按版本从早到晚",
+            "items": {
+              "$ref": "#/components/schemas/ReleaseNote"
+            },
+            "title": "Releases",
+            "type": "array"
+          }
+        },
+        "required": [
+          "current_version",
+          "added",
+          "modified",
+          "merged",
+          "releases"
+        ],
+        "title": "ChangesResponse",
         "type": "object"
       },
       "ClientConfig": {
@@ -494,6 +675,66 @@
         "title": "ConsentUpload",
         "type": "object"
       },
+      "CountUnit": {
+        "additionalProperties": false,
+        "properties": {
+          "grams": {
+            "description": "一个这样的单位大约多少克",
+            "exclusiveMinimum": 0.0,
+            "title": "Grams",
+            "type": "number"
+          },
+          "unit": {
+            "description": "计数单位，例如 个、瓣、根、片",
+            "title": "Unit",
+            "type": "string"
+          }
+        },
+        "required": [
+          "unit",
+          "grams"
+        ],
+        "title": "CountUnit",
+        "type": "object"
+      },
+      "CountUnitsAttribute": {
+        "additionalProperties": false,
+        "properties": {
+          "estimate": {
+            "description": "没经人工校对的字段按估算处理",
+            "readOnly": true,
+            "title": "Estimate",
+            "type": "boolean"
+          },
+          "source": {
+            "description": "这项数据的来源",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Source",
+            "type": "string"
+          },
+          "status": {
+            "$ref": "#/components/schemas/AttributeStatus",
+            "description": "ai_draft：AI 起草；verified：人工校对过"
+          },
+          "value": {
+            "items": {
+              "$ref": "#/components/schemas/CountUnit"
+            },
+            "minItems": 1,
+            "title": "Value",
+            "type": "array"
+          }
+        },
+        "required": [
+          "source",
+          "status",
+          "value",
+          "estimate"
+        ],
+        "title": "CountUnitsAttribute",
+        "type": "object"
+      },
       "DeletionOut": {
         "properties": {
           "deletion_due_at": {
@@ -522,6 +763,42 @@
           "deletion_due_at"
         ],
         "title": "DeletionOut",
+        "type": "object"
+      },
+      "DensityAttribute": {
+        "additionalProperties": false,
+        "properties": {
+          "estimate": {
+            "description": "没经人工校对的字段按估算处理",
+            "readOnly": true,
+            "title": "Estimate",
+            "type": "boolean"
+          },
+          "source": {
+            "description": "这项数据的来源",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Source",
+            "type": "string"
+          },
+          "status": {
+            "$ref": "#/components/schemas/AttributeStatus",
+            "description": "ai_draft：AI 起草；verified：人工校对过"
+          },
+          "value": {
+            "description": "克/毫升",
+            "exclusiveMinimum": 0.0,
+            "title": "Value",
+            "type": "number"
+          }
+        },
+        "required": [
+          "source",
+          "status",
+          "value",
+          "estimate"
+        ],
+        "title": "DensityAttribute",
         "type": "object"
       },
       "EmailCodeRequest": {
@@ -916,6 +1193,103 @@
         "title": "FallbackInfo",
         "type": "object"
       },
+      "FlavorAttribute": {
+        "additionalProperties": false,
+        "properties": {
+          "estimate": {
+            "description": "没经人工校对的字段按估算处理",
+            "readOnly": true,
+            "title": "Estimate",
+            "type": "boolean"
+          },
+          "source": {
+            "description": "这项数据的来源",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Source",
+            "type": "string"
+          },
+          "status": {
+            "$ref": "#/components/schemas/AttributeStatus",
+            "description": "ai_draft：AI 起草；verified：人工校对过"
+          },
+          "value": {
+            "$ref": "#/components/schemas/FlavorProfile"
+          }
+        },
+        "required": [
+          "source",
+          "status",
+          "value",
+          "estimate"
+        ],
+        "title": "FlavorAttribute",
+        "type": "object"
+      },
+      "FlavorProfile": {
+        "additionalProperties": false,
+        "description": "味型贡献：单位用量下的相对强度，0～3，没写的项是 0。",
+        "properties": {
+          "numbing": {
+            "default": 0,
+            "description": "麻",
+            "maximum": 3.0,
+            "minimum": 0.0,
+            "title": "Numbing",
+            "type": "integer"
+          },
+          "oily": {
+            "default": 0,
+            "description": "油",
+            "maximum": 3.0,
+            "minimum": 0.0,
+            "title": "Oily",
+            "type": "integer"
+          },
+          "salty": {
+            "default": 0,
+            "description": "咸",
+            "maximum": 3.0,
+            "minimum": 0.0,
+            "title": "Salty",
+            "type": "integer"
+          },
+          "sour": {
+            "default": 0,
+            "description": "酸",
+            "maximum": 3.0,
+            "minimum": 0.0,
+            "title": "Sour",
+            "type": "integer"
+          },
+          "spicy": {
+            "default": 0,
+            "description": "辣",
+            "maximum": 3.0,
+            "minimum": 0.0,
+            "title": "Spicy",
+            "type": "integer"
+          },
+          "sweet": {
+            "default": 0,
+            "description": "甜",
+            "maximum": 3.0,
+            "minimum": 0.0,
+            "title": "Sweet",
+            "type": "integer"
+          },
+          "umami": {
+            "default": 0,
+            "description": "鲜",
+            "maximum": 3.0,
+            "minimum": 0.0,
+            "title": "Umami",
+            "type": "integer"
+          }
+        },
+        "title": "FlavorProfile",
+        "type": "object"
+      },
       "HealthChecks": {
         "properties": {
           "api": {
@@ -1008,6 +1382,495 @@
         "title": "IdentityOut",
         "type": "object"
       },
+      "IngredientAttributes": {
+        "additionalProperties": false,
+        "description": "一种食材的全部详细属性，每项都可选；没有数据的项为 null。",
+        "properties": {
+          "allergens": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AllergensAttribute"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "过敏原分类，可多类"
+          },
+          "base_unit": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TextAttribute"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "基础单位：克或毫升"
+          },
+          "count_units": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CountUnitsAttribute"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "常见计数单位和单个重量"
+          },
+          "density": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DensityAttribute"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "密度（克/毫升），液体和粉粒类"
+          },
+          "flavor": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/FlavorAttribute"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "味型贡献"
+          },
+          "functional": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/BoolAttribute"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "是否常作功能性用料"
+          },
+          "market_zone": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TextAttribute"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "超市分区"
+          },
+          "nutrition": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/NutritionAttribute"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "每 100 克营养"
+          },
+          "pantry_staple": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/BoolAttribute"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "是否常备调料"
+          },
+          "purchase_units": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PurchaseUnitsAttribute"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "购买单位和大约重量"
+          },
+          "scaling": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TextAttribute"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "默认缩放方式：线性、固定、阶梯"
+          },
+          "storage": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/StorageAttribute"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "建议存放方式和天数"
+          }
+        },
+        "title": "IngredientAttributes",
+        "type": "object"
+      },
+      "IngredientDetail": {
+        "description": "按 ID 读取时的完整数据：身份信息加全部详细属性（#97），每个属性带估算标记。",
+        "properties": {
+          "aliases": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Aliases",
+            "type": "array"
+          },
+          "attributes": {
+            "$ref": "#/components/schemas/IngredientAttributes"
+          },
+          "category": {
+            "title": "Category",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "pinyin": {
+            "title": "Pinyin",
+            "type": "string"
+          },
+          "pinyin_initials": {
+            "title": "Pinyin Initials",
+            "type": "string"
+          },
+          "requested_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "请求里写的 ID；和 id 不同时说明这个 ID 已经合并，只批量读取会带上",
+            "title": "Requested Id"
+          },
+          "standard_name": {
+            "title": "Standard Name",
+            "type": "string"
+          },
+          "version": {
+            "title": "Version",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "standard_name",
+          "aliases",
+          "pinyin",
+          "pinyin_initials",
+          "category",
+          "version",
+          "attributes"
+        ],
+        "title": "IngredientDetail",
+        "type": "object"
+      },
+      "MergeRelation": {
+        "description": "一次合并：旧 ID 指向新 ID，并保留旧记录的身份信息（#101）。",
+        "properties": {
+          "from_id": {
+            "description": "被合并掉的旧标准 ID",
+            "format": "uuid",
+            "title": "From Id",
+            "type": "string"
+          },
+          "identity": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/IngredientDetail"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "被合并掉的旧食材完整身份信息；客户端用它保留旧叫法的离线搜索"
+          },
+          "to_id": {
+            "description": "合并后的标准 ID",
+            "format": "uuid",
+            "title": "To Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "from_id",
+          "to_id"
+        ],
+        "title": "MergeRelation",
+        "type": "object"
+      },
+      "NormalizeCandidate": {
+        "properties": {
+          "ingredient_id": {
+            "format": "uuid",
+            "title": "Ingredient Id",
+            "type": "string"
+          },
+          "standard_name": {
+            "title": "Standard Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "ingredient_id",
+          "standard_name"
+        ],
+        "title": "NormalizeCandidate",
+        "type": "object"
+      },
+      "NormalizeItem": {
+        "properties": {
+          "context": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "上下文，如所在菜名。规则匹配不使用，留给 SPEC-003.1 的 AI 判断",
+            "title": "Context"
+          },
+          "name": {
+            "description": "菜谱里写的食材名称",
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "title": "NormalizeItem",
+        "type": "object"
+      },
+      "NormalizeRequest": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/NormalizeItem"
+            },
+            "maxItems": 100,
+            "minItems": 1,
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "title": "NormalizeRequest",
+        "type": "object"
+      },
+      "NormalizeResponse": {
+        "properties": {
+          "results": {
+            "items": {
+              "$ref": "#/components/schemas/NormalizeResultItem"
+            },
+            "title": "Results",
+            "type": "array"
+          }
+        },
+        "required": [
+          "results"
+        ],
+        "title": "NormalizeResponse",
+        "type": "object"
+      },
+      "NormalizeResultItem": {
+        "properties": {
+          "candidates": {
+            "description": "只有 ambiguous 时非空",
+            "items": {
+              "$ref": "#/components/schemas/NormalizeCandidate"
+            },
+            "title": "Candidates",
+            "type": "array"
+          },
+          "confidence": {
+            "description": "exact 标准名精确匹配；alias 别名匹配（含已合并食材的旧名）；fuzzy 去掉修饰词或按拼音后唯一命中；ambiguous 歧义名，见 candidates；unrecorded 未收录",
+            "enum": [
+              "exact",
+              "alias",
+              "fuzzy",
+              "ambiguous",
+              "unrecorded"
+            ],
+            "title": "Confidence",
+            "type": "string"
+          },
+          "ingredient_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "合并后的标准 ID；歧义和未收录时为空",
+            "title": "Ingredient Id"
+          },
+          "name": {
+            "description": "原样返回输入的名称",
+            "title": "Name",
+            "type": "string"
+          },
+          "standard_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Standard Name"
+          }
+        },
+        "required": [
+          "name",
+          "confidence",
+          "ingredient_id",
+          "standard_name",
+          "candidates"
+        ],
+        "title": "NormalizeResultItem",
+        "type": "object"
+      },
+      "Nutrition": {
+        "additionalProperties": false,
+        "description": "每 100 克的营养，缺失的项留空。",
+        "properties": {
+          "carbohydrate_g": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "碳水化合物（克）",
+            "title": "Carbohydrate G"
+          },
+          "energy_kcal": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "能量（千卡）",
+            "title": "Energy Kcal"
+          },
+          "fat_g": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "脂肪（克）",
+            "title": "Fat G"
+          },
+          "protein_g": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "蛋白质（克）",
+            "title": "Protein G"
+          },
+          "sodium_mg": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "钠（毫克）",
+            "title": "Sodium Mg"
+          }
+        },
+        "title": "Nutrition",
+        "type": "object"
+      },
+      "NutritionAttribute": {
+        "additionalProperties": false,
+        "properties": {
+          "estimate": {
+            "description": "没经人工校对的字段按估算处理",
+            "readOnly": true,
+            "title": "Estimate",
+            "type": "boolean"
+          },
+          "source": {
+            "description": "这项数据的来源",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Source",
+            "type": "string"
+          },
+          "status": {
+            "$ref": "#/components/schemas/AttributeStatus",
+            "description": "ai_draft：AI 起草；verified：人工校对过"
+          },
+          "value": {
+            "$ref": "#/components/schemas/Nutrition"
+          }
+        },
+        "required": [
+          "source",
+          "status",
+          "value",
+          "estimate"
+        ],
+        "title": "NutritionAttribute",
+        "type": "object"
+      },
       "PageDescription": {
         "properties": {
           "cache": {
@@ -1070,6 +1933,33 @@
         "title": "PageDescription",
         "type": "object"
       },
+      "Page_UnrecordedIngredientItem_": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/UnrecordedIngredientItem"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Cursor"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "title": "Page[UnrecordedIngredientItem]",
+        "type": "object"
+      },
       "ProfileUpdate": {
         "properties": {
           "nickname": {
@@ -1097,6 +1987,68 @@
           }
         },
         "title": "ProfileUpdate",
+        "type": "object"
+      },
+      "PurchaseUnit": {
+        "additionalProperties": false,
+        "properties": {
+          "grams": {
+            "description": "一个购买单位大约多少克",
+            "exclusiveMinimum": 0.0,
+            "title": "Grams",
+            "type": "number"
+          },
+          "name": {
+            "description": "购买单位，例如 盒、把、瓶",
+            "maxLength": 20,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "grams"
+        ],
+        "title": "PurchaseUnit",
+        "type": "object"
+      },
+      "PurchaseUnitsAttribute": {
+        "additionalProperties": false,
+        "properties": {
+          "estimate": {
+            "description": "没经人工校对的字段按估算处理",
+            "readOnly": true,
+            "title": "Estimate",
+            "type": "boolean"
+          },
+          "source": {
+            "description": "这项数据的来源",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Source",
+            "type": "string"
+          },
+          "status": {
+            "$ref": "#/components/schemas/AttributeStatus",
+            "description": "ai_draft：AI 起草；verified：人工校对过"
+          },
+          "value": {
+            "items": {
+              "$ref": "#/components/schemas/PurchaseUnit"
+            },
+            "minItems": 1,
+            "title": "Value",
+            "type": "array"
+          }
+        },
+        "required": [
+          "source",
+          "status",
+          "value",
+          "estimate"
+        ],
+        "title": "PurchaseUnitsAttribute",
         "type": "object"
       },
       "RefreshRequest": {
@@ -1130,6 +2082,120 @@
           "message"
         ],
         "title": "RejectionReason",
+        "type": "object"
+      },
+      "ReleaseNote": {
+        "description": "一次发布的版本号和变更说明（#101）。",
+        "properties": {
+          "changelog": {
+            "title": "Changelog",
+            "type": "string"
+          },
+          "version": {
+            "title": "Version",
+            "type": "string"
+          }
+        },
+        "required": [
+          "version",
+          "changelog"
+        ],
+        "title": "ReleaseNote",
+        "type": "object"
+      },
+      "SearchIngredientOut": {
+        "properties": {
+          "aliases": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Aliases",
+            "type": "array"
+          },
+          "category": {
+            "title": "Category",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "matched_name": {
+            "description": "实际命中的叫法；已合并食材保留旧叫法",
+            "title": "Matched Name",
+            "type": "string"
+          },
+          "pinyin": {
+            "title": "Pinyin",
+            "type": "string"
+          },
+          "pinyin_initials": {
+            "title": "Pinyin Initials",
+            "type": "string"
+          },
+          "standard_name": {
+            "title": "Standard Name",
+            "type": "string"
+          },
+          "version": {
+            "title": "Version",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "standard_name",
+          "aliases",
+          "pinyin",
+          "pinyin_initials",
+          "category",
+          "version",
+          "matched_name"
+        ],
+        "title": "SearchIngredientOut",
+        "type": "object"
+      },
+      "SearchQuery": {
+        "properties": {
+          "query": {
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Query",
+            "type": "string"
+          }
+        },
+        "required": [
+          "query"
+        ],
+        "title": "SearchQuery",
+        "type": "object"
+      },
+      "SearchResult": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/SearchIngredientOut"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Cursor"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "title": "SearchResult",
         "type": "object"
       },
       "SkipAdjustmentRequest": {
@@ -1238,6 +2304,101 @@
         "title": "SourcedValue",
         "type": "object"
       },
+      "StorageAdvice": {
+        "additionalProperties": false,
+        "properties": {
+          "days": {
+            "description": "建议存放天数",
+            "exclusiveMinimum": 0.0,
+            "title": "Days",
+            "type": "integer"
+          },
+          "method": {
+            "description": "常温、冷藏或冷冻",
+            "title": "Method",
+            "type": "string"
+          }
+        },
+        "required": [
+          "method",
+          "days"
+        ],
+        "title": "StorageAdvice",
+        "type": "object"
+      },
+      "StorageAttribute": {
+        "additionalProperties": false,
+        "properties": {
+          "estimate": {
+            "description": "没经人工校对的字段按估算处理",
+            "readOnly": true,
+            "title": "Estimate",
+            "type": "boolean"
+          },
+          "source": {
+            "description": "这项数据的来源",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Source",
+            "type": "string"
+          },
+          "status": {
+            "$ref": "#/components/schemas/AttributeStatus",
+            "description": "ai_draft：AI 起草；verified：人工校对过"
+          },
+          "value": {
+            "items": {
+              "$ref": "#/components/schemas/StorageAdvice"
+            },
+            "minItems": 1,
+            "title": "Value",
+            "type": "array"
+          }
+        },
+        "required": [
+          "source",
+          "status",
+          "value",
+          "estimate"
+        ],
+        "title": "StorageAttribute",
+        "type": "object"
+      },
+      "TextAttribute": {
+        "additionalProperties": false,
+        "description": "取值为登记值之一的属性（缩放方式、基础单位、超市分区）。",
+        "properties": {
+          "estimate": {
+            "description": "没经人工校对的字段按估算处理",
+            "readOnly": true,
+            "title": "Estimate",
+            "type": "boolean"
+          },
+          "source": {
+            "description": "这项数据的来源",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Source",
+            "type": "string"
+          },
+          "status": {
+            "$ref": "#/components/schemas/AttributeStatus",
+            "description": "ai_draft：AI 起草；verified：人工校对过"
+          },
+          "value": {
+            "title": "Value",
+            "type": "string"
+          }
+        },
+        "required": [
+          "source",
+          "status",
+          "value",
+          "estimate"
+        ],
+        "title": "TextAttribute",
+        "type": "object"
+      },
       "TokenPair": {
         "properties": {
           "access_expires_in": {
@@ -1265,6 +2426,35 @@
           "user"
         ],
         "title": "TokenPair",
+        "type": "object"
+      },
+      "UnrecordedIngredientItem": {
+        "description": "未收录食材统计项 (#102)",
+        "properties": {
+          "first_seen_at": {
+            "title": "First Seen At",
+            "type": "string"
+          },
+          "last_seen_at": {
+            "title": "Last Seen At",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "occurrence_count": {
+            "title": "Occurrence Count",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "name",
+          "occurrence_count",
+          "first_seen_at",
+          "last_seen_at"
+        ],
+        "title": "UnrecordedIngredientItem",
         "type": "object"
       },
       "UserOut": {
@@ -2038,6 +3228,514 @@
         "summary": "健康检查：服务、数据库、Redis 是否可用",
         "tags": [
           "health"
+        ]
+      }
+    },
+    "/v1/ingredients/batch": {
+      "get": {
+        "description": "批量读取的 GET 版本，参数是逗号分隔的 ID；除此之外和 POST 完全一样。\n\n给不方便发请求体的客户端用。ID 数量、格式不对时按 ADR 0002 返回 422。",
+        "operationId": "batch_get_ingredients_by_query",
+        "parameters": [
+          {
+            "description": "逗号分隔的标准 ID，最多 100 个",
+            "in": "query",
+            "name": "ids",
+            "required": true,
+            "schema": {
+              "description": "逗号分隔的标准 ID，最多 100 个",
+              "title": "Ids",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BatchResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "资源不存在"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "参数错误"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "服务端错误"
+          }
+        },
+        "summary": "Batch Get Ingredients By Query",
+        "tags": [
+          "ingredients"
+        ]
+      },
+      "post": {
+        "description": "按一组 ID 读取多种食材的完整数据（含详细属性和估算标记）。\n\n命中已合并的旧 ID 时返回合并后的新食材，并在 `requested_id` 里标明是从哪个旧 ID 转过来的；\n库里没有的 ID 收在 `missing_ids` 里单独返回，不让整次请求失败。",
+        "operationId": "batch_get_ingredients",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BatchRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BatchResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "资源不存在"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "参数错误"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "服务端错误"
+          }
+        },
+        "summary": "Batch Get Ingredients",
+        "tags": [
+          "ingredients"
+        ]
+      }
+    },
+    "/v1/ingredients/changes": {
+      "get": {
+        "description": "返回指定版本之后的全部变化：新增、修改的食材完整数据，合并关系，以及每次发布的说明。\n\n版本号是 `主.次.修`，按数字比大小，不看导入时间。不给 `since_version` 时返回整份食材库\n（App 首次下载用，全部算“新增”）；给最新版本时返回空变化；给不存在的版本返回 404。",
+        "operationId": "get_ingredient_changes",
+        "parameters": [
+          {
+            "description": "App 手上食材库的版本号；不给表示首次下载，返回整份食材库",
+            "in": "query",
+            "name": "since_version",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "App 手上食材库的版本号；不给表示首次下载，返回整份食材库",
+              "title": "Since Version"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChangesResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "资源不存在"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "参数错误"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "服务端错误"
+          }
+        },
+        "summary": "Get Ingredient Changes",
+        "tags": [
+          "ingredients"
+        ]
+      }
+    },
+    "/v1/ingredients/normalize": {
+      "post": {
+        "description": "把一批食材名称归一到标准 ID，并尽力记录未收录名称。",
+        "operationId": "normalize_ingredients",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NormalizeRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NormalizeResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "资源不存在"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "参数错误"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "服务端错误"
+          }
+        },
+        "summary": "Normalize Ingredients",
+        "tags": [
+          "ingredients"
+        ]
+      }
+    },
+    "/v1/ingredients/search": {
+      "post": {
+        "description": "搜索食材并按匹配质量返回稳定分页结果。",
+        "operationId": "search_ingredients",
+        "parameters": [
+          {
+            "description": "上一页返回的 next_cursor",
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "上一页返回的 next_cursor",
+              "title": "Cursor"
+            }
+          },
+          {
+            "description": "每页条数，上限见配置项 api.page_size_max",
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "description": "每页条数，上限见配置项 api.page_size_max",
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SearchQuery"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SearchResult"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "资源不存在"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "参数错误"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "服务端错误"
+          }
+        },
+        "summary": "Search Ingredients",
+        "tags": [
+          "ingredients"
+        ]
+      }
+    },
+    "/v1/ingredients/unrecorded": {
+      "get": {
+        "description": "按出现次数降序查询仍未收录的食材，使用稳定游标分页 (#102)。",
+        "operationId": "list_unrecorded_ingredients",
+        "parameters": [
+          {
+            "description": "上一页返回的 next_cursor",
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "上一页返回的 next_cursor",
+              "title": "Cursor"
+            }
+          },
+          {
+            "description": "每页条数，上限见配置项 api.page_size_max",
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "description": "每页条数，上限见配置项 api.page_size_max",
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page_UnrecordedIngredientItem_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "资源不存在"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "参数错误"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "服务端错误"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Unrecorded Ingredients",
+        "tags": [
+          "ingredients"
+        ]
+      }
+    },
+    "/v1/ingredients/{ingredient_id}": {
+      "get": {
+        "description": "读取一种食材的完整数据。如果这个 ID 已经合并到另一个,自动返回合并后的食材。\n\n没经人工校对的属性带 `estimate: true`，计算和显示时按估算处理。",
+        "operationId": "get_ingredient",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "ingredient_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Ingredient Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IngredientDetail"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "资源不存在"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "参数错误"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "服务端错误"
+          }
+        },
+        "summary": "Get Ingredient",
+        "tags": [
+          "ingredients"
         ]
       }
     },
