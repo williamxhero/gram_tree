@@ -248,17 +248,18 @@ class RecipeStepDraft {
     required this.id,
     this.action = '',
     this.instruction = '',
-    this.ingredientIds = const [],
+    List<String>? ingredientIds,
     this.durationSeconds = 0,
     this.unattended = false,
     this.heat = '',
     this.temperatureCelsius = 0,
     this.cookware = '',
     this.doneness = '',
-    this.dependsOn = const [],
+    List<String>? dependsOn,
     this.notes = '',
     this.why = '',
-  });
+  }) : ingredientIds = [...?ingredientIds],
+       dependsOn = [...?dependsOn];
 
   factory RecipeStepDraft.fromModel(RecipeStep value) => RecipeStepDraft(
     id: value.id,

@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:gramtree_api/gramtree_api.dart';
 
+import '../../api/api_client.dart';
 import '../../auth/auth_controller.dart';
 import '../../ingredients/ingredient_provider.dart';
 import '../../l10n/app_localizations.dart';
@@ -1797,5 +1798,4 @@ String _replacementLabel(Object? value) {
   return '';
 }
 
-String _message(Object error) =>
-    error.toString().replaceFirst('Exception: ', '');
+String _message(Object error) => ApiFailure.from(error).message;

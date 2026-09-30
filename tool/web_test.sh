@@ -12,9 +12,11 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+API_BASE_URL="${API_BASE_URL:-http://localhost:${GRAMTREE_E2E_PORT:-8000}}"
 cd "$ROOT/app"
 
 CHROMEDRIVER="${CHROMEDRIVER:-chromedriver}"
+FLUTTER="${FLUTTER:-flutter}"
 PORT="${CHROMEDRIVER_PORT:-4444}"
 if [[ $# -gt 0 ]]; then
   targets=("$@")
@@ -38,11 +40,12 @@ done
 status=0
 for target in "${targets[@]}"; do
   echo "== $target"
-  flutter drive --profile --no-web-resources-cdn \
+  "$FLUTTER" drive --profile --no-web-resources-cdn \
     --driver=test_driver/integration_test.dart \
     --target="$target" \
     -d web-server --browser-name=chrome --headless \
     ${CHROME_EXECUTABLE:+--chrome-binary="$CHROME_EXECUTABLE"} \
-    --dart-define=APP_ENV=dev || status=1
+    --dart-define=APP_ENV=dev \
+    --dart-define=API_BASE_URL="$API_BASE_URL" || status=1
 done
 exit $status
