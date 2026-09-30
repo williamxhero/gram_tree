@@ -382,15 +382,12 @@ class BatchResponse(BaseModel):
 def _read_batch(db: Session, ids: list[uuid.UUID]) -> BatchResponse:
     items: list[IngredientDetail] = []
     missing: list[uuid.UUID] = []
-    seen: set[uuid.UUID] = set()
     for ingredient_id in ids:
-        if ingredient_id in seen:  # 同一个 ID 只返回一次
-            continue
-        seen.add(ingredient_id)
         row = _resolve(db, ingredient_id)
         if row is None:
             missing.append(ingredient_id)
             continue
+        # 保留输入中的重复 ID 和顺序；调用方可以用 requested_id 对每个请求项逐一对应。
         items.append(_to_detail(db, row, requested_id=ingredient_id))
     return BatchResponse(items=items, missing_ids=missing)
 
@@ -414,7 +411,10 @@ def batch_get_ingredients_by_query(
 
     给不方便发请求体的客户端用。ID 数量、格式不对时按 ADR 0002 返回 422。
     """
-    parts = [p.strip() for p in ids.split(",") if p.strip()]
+    parts = ids.split(",")
+    if not ids.strip() or any(not part.strip() for part in parts):
+        raise ApiError(422, "invalid_request", "请求参数有误", "ids 不能为空且不能包含空项")
+    parts = [part.strip() for part in parts]
     if len(parts) > BATCH_MAX_IDS:
         raise ApiError(
             422, "invalid_request", "请求参数有误", f"一次最多读取 {BATCH_MAX_IDS} 个食材"

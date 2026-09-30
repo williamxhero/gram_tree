@@ -1587,53 +1587,6 @@
         "title": "IngredientDetail",
         "type": "object"
       },
-      "IngredientOut": {
-        "properties": {
-          "aliases": {
-            "items": {
-              "type": "string"
-            },
-            "title": "Aliases",
-            "type": "array"
-          },
-          "category": {
-            "title": "Category",
-            "type": "string"
-          },
-          "id": {
-            "format": "uuid",
-            "title": "Id",
-            "type": "string"
-          },
-          "pinyin": {
-            "title": "Pinyin",
-            "type": "string"
-          },
-          "pinyin_initials": {
-            "title": "Pinyin Initials",
-            "type": "string"
-          },
-          "standard_name": {
-            "title": "Standard Name",
-            "type": "string"
-          },
-          "version": {
-            "title": "Version",
-            "type": "string"
-          }
-        },
-        "required": [
-          "id",
-          "standard_name",
-          "aliases",
-          "pinyin",
-          "pinyin_initials",
-          "category",
-          "version"
-        ],
-        "title": "IngredientOut",
-        "type": "object"
-      },
       "MergeRelation": {
         "description": "一次合并：旧 ID 指向新 ID（#101）。",
         "properties": {
@@ -1969,6 +1922,33 @@
         "title": "PageDescription",
         "type": "object"
       },
+      "Page_UnrecordedIngredientItem_": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/UnrecordedIngredientItem"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Cursor"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "title": "Page[UnrecordedIngredientItem]",
+        "type": "object"
+      },
       "ProfileUpdate": {
         "properties": {
           "nickname": {
@@ -2112,6 +2092,59 @@
         "title": "ReleaseNote",
         "type": "object"
       },
+      "SearchIngredientOut": {
+        "properties": {
+          "aliases": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Aliases",
+            "type": "array"
+          },
+          "category": {
+            "title": "Category",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "matched_name": {
+            "description": "实际命中的叫法；已合并食材保留旧叫法",
+            "title": "Matched Name",
+            "type": "string"
+          },
+          "pinyin": {
+            "title": "Pinyin",
+            "type": "string"
+          },
+          "pinyin_initials": {
+            "title": "Pinyin Initials",
+            "type": "string"
+          },
+          "standard_name": {
+            "title": "Standard Name",
+            "type": "string"
+          },
+          "version": {
+            "title": "Version",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "standard_name",
+          "aliases",
+          "pinyin",
+          "pinyin_initials",
+          "category",
+          "version",
+          "matched_name"
+        ],
+        "title": "SearchIngredientOut",
+        "type": "object"
+      },
       "SearchQuery": {
         "properties": {
           "query": {
@@ -2131,10 +2164,21 @@
         "properties": {
           "items": {
             "items": {
-              "$ref": "#/components/schemas/IngredientOut"
+              "$ref": "#/components/schemas/SearchIngredientOut"
             },
             "title": "Items",
             "type": "array"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Cursor"
           }
         },
         "required": [
@@ -3347,7 +3391,7 @@
     },
     "/v1/ingredients/normalize": {
       "post": {
-        "description": "把一批食材名称归一到标准 ID（只用规则匹配），结果按输入顺序返回。",
+        "description": "把一批食材名称归一到标准 ID，并尽力记录未收录名称。",
         "operationId": "normalize_ingredients",
         "requestBody": {
           "content": {
@@ -3399,8 +3443,41 @@
     },
     "/v1/ingredients/search": {
       "post": {
-        "description": "搜索食材。支持标准名、别名、拼音首字母、完整拼音前缀匹配。最多返回 20 个结果。",
+        "description": "搜索食材并按匹配质量返回稳定分页结果。",
         "operationId": "search_ingredients",
+        "parameters": [
+          {
+            "description": "上一页返回的 next_cursor",
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "上一页返回的 next_cursor",
+              "title": "Cursor"
+            }
+          },
+          {
+            "description": "每页条数，上限见配置项 api.page_size_max",
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "description": "每页条数，上限见配置项 api.page_size_max",
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
         "requestBody": {
           "content": {
             "application/json": {
@@ -3451,18 +3528,35 @@
     },
     "/v1/ingredients/unrecorded": {
       "get": {
-        "description": "查询未收录食材列表，按出现次数降序排列 (#102)。",
+        "description": "按出现次数降序查询仍未收录的食材，使用稳定游标分页 (#102)。",
         "operationId": "list_unrecorded_ingredients",
         "parameters": [
           {
-            "description": "最多返回多少条记录",
+            "description": "上一页返回的 next_cursor",
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "上一页返回的 next_cursor",
+              "title": "Cursor"
+            }
+          },
+          {
+            "description": "每页条数，上限见配置项 api.page_size_max",
             "in": "query",
             "name": "limit",
             "required": false,
             "schema": {
-              "default": 50,
-              "description": "最多返回多少条记录",
-              "maximum": 500,
+              "default": 20,
+              "description": "每页条数，上限见配置项 api.page_size_max",
               "minimum": 1,
               "title": "Limit",
               "type": "integer"
@@ -3474,11 +3568,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "items": {
-                    "$ref": "#/components/schemas/UnrecordedIngredientItem"
-                  },
-                  "title": "Response List Unrecorded Ingredients",
-                  "type": "array"
+                  "$ref": "#/components/schemas/Page_UnrecordedIngredientItem_"
                 }
               }
             },
@@ -3505,6 +3595,11 @@
             "description": "服务端错误"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "List Unrecorded Ingredients",
         "tags": [
           "ingredients"

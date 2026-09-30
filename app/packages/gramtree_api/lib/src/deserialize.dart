@@ -42,7 +42,6 @@ import 'package:gramtree_api/src/model/health_response.dart';
 import 'package:gramtree_api/src/model/identity_out.dart';
 import 'package:gramtree_api/src/model/ingredient_attributes.dart';
 import 'package:gramtree_api/src/model/ingredient_detail.dart';
-import 'package:gramtree_api/src/model/ingredient_out.dart';
 import 'package:gramtree_api/src/model/merge_relation.dart';
 import 'package:gramtree_api/src/model/normalize_candidate.dart';
 import 'package:gramtree_api/src/model/normalize_item.dart';
@@ -52,12 +51,14 @@ import 'package:gramtree_api/src/model/normalize_result_item.dart';
 import 'package:gramtree_api/src/model/nutrition.dart';
 import 'package:gramtree_api/src/model/nutrition_attribute.dart';
 import 'package:gramtree_api/src/model/page_description.dart';
+import 'package:gramtree_api/src/model/page_unrecorded_ingredient_item.dart';
 import 'package:gramtree_api/src/model/profile_update.dart';
 import 'package:gramtree_api/src/model/purchase_unit.dart';
 import 'package:gramtree_api/src/model/purchase_units_attribute.dart';
 import 'package:gramtree_api/src/model/refresh_request.dart';
 import 'package:gramtree_api/src/model/rejection_reason.dart';
 import 'package:gramtree_api/src/model/release_note.dart';
+import 'package:gramtree_api/src/model/search_ingredient_out.dart';
 import 'package:gramtree_api/src/model/search_query.dart';
 import 'package:gramtree_api/src/model/search_result.dart';
 import 'package:gramtree_api/src/model/skip_adjustment_request.dart';
@@ -217,9 +218,6 @@ ReturnType deserialize<ReturnType, BaseType>(
     case 'IngredientDetail':
       return IngredientDetail.fromJson(value as Map<String, dynamic>)
           as ReturnType;
-    case 'IngredientOut':
-      return IngredientOut.fromJson(value as Map<String, dynamic>)
-          as ReturnType;
     case 'MergeRelation':
       return MergeRelation.fromJson(value as Map<String, dynamic>)
           as ReturnType;
@@ -246,6 +244,11 @@ ReturnType deserialize<ReturnType, BaseType>(
     case 'PageDescription':
       return PageDescription.fromJson(value as Map<String, dynamic>)
           as ReturnType;
+    case 'PageUnrecordedIngredientItem':
+      return PageUnrecordedIngredientItem.fromJson(
+            value as Map<String, dynamic>,
+          )
+          as ReturnType;
     case 'ProfileUpdate':
       return ProfileUpdate.fromJson(value as Map<String, dynamic>)
           as ReturnType;
@@ -262,6 +265,9 @@ ReturnType deserialize<ReturnType, BaseType>(
           as ReturnType;
     case 'ReleaseNote':
       return ReleaseNote.fromJson(value as Map<String, dynamic>) as ReturnType;
+    case 'SearchIngredientOut':
+      return SearchIngredientOut.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
     case 'SearchQuery':
       return SearchQuery.fromJson(value as Map<String, dynamic>) as ReturnType;
     case 'SearchResult':

@@ -179,6 +179,17 @@ def test_batch_get_matches_post_and_validates_uuid_version(
             "invalid_request",
         )
 
+    for empty_ids in ("", ",,", f"{A},"):
+        assert_error_shape(
+            client.get("/v1/ingredients/batch", params={"ids": empty_ids}),
+            422,
+            "invalid_request",
+        )
+
+    duplicates = client.post("/v1/ingredients/batch", json={"ids": [A, A]})
+    assert duplicates.status_code == 200
+    assert [item["id"] for item in duplicates.json()["items"]] == [A, A]
+
 
 def test_unchanged_release_has_notes_without_record_changes(
     client: TestClient, tmp_path: Path
