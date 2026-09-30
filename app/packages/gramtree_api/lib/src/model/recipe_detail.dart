@@ -87,8 +87,8 @@ class RecipeDetail {
       createdAt.hashCode +
       dish.hashCode +
       id.hashCode +
-      rootRecipeId.hashCode +
-      sourceVersionId.hashCode +
+      (rootRecipeId == null ? 0 : rootRecipeId.hashCode) +
+      (sourceVersionId == null ? 0 : sourceVersionId.hashCode) +
       updatedAt.hashCode +
       version.hashCode +
       visibility.hashCode;

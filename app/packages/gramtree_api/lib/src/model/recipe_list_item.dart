@@ -82,7 +82,7 @@ class RecipeListItem {
   @override
   int get hashCode =>
       activeTimeSeconds.hashCode +
-      difficulty.hashCode +
+      (difficulty == null ? 0 : difficulty.hashCode) +
       dish.hashCode +
       id.hashCode +
       servings.hashCode +

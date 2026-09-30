@@ -3,7 +3,6 @@
 //
 
 // ignore_for_file: unused_element
-import 'package:gramtree_api/src/model/recipe_ingredient_replacement.dart';
 import 'package:gramtree_api/src/model/value_source.dart';
 import 'package:copy_with_extension/copy_with_extension.dart';
 import 'package:json_annotation/json_annotation.dart';
@@ -20,23 +19,23 @@ part 'recipe_ingredient.g.dart';
 class RecipeIngredient {
   /// Returns a new [RecipeIngredient] instance.
   RecipeIngredient({
-    required this.baseQuantity,
+    this.baseQuantity,
 
-    required this.baseUnit,
+    this.baseUnit,
 
     required this.displayName,
 
     this.functional = false,
 
-    required this.group,
+    this.group,
 
     required this.id,
 
-    required this.ingredientId,
+    this.ingredientId,
 
     this.optional = false,
 
-    required this.preparation,
+    this.preparation,
 
     required this.quantity,
 
@@ -50,12 +49,12 @@ class RecipeIngredient {
   });
 
   /// 换算后的基础数量
-  @JsonKey(name: r'base_quantity', required: true, includeIfNull: false)
-  final num baseQuantity;
+  @JsonKey(name: r'base_quantity', required: false, includeIfNull: false)
+  final num? baseQuantity;
 
   /// 换算后的基础单位
-  @JsonKey(name: r'base_unit', required: true, includeIfNull: false)
-  final RecipeIngredientBaseUnitEnum baseUnit;
+  @JsonKey(name: r'base_unit', required: false, includeIfNull: false)
+  final RecipeIngredientBaseUnitEnum? baseUnit;
 
   @JsonKey(name: r'display_name', required: true, includeIfNull: false)
   final String displayName;
@@ -69,16 +68,16 @@ class RecipeIngredient {
   final bool? functional;
 
   /// 食材分组
-  @JsonKey(name: r'group', required: true, includeIfNull: false)
-  final String group;
+  @JsonKey(name: r'group', required: false, includeIfNull: false)
+  final String? group;
 
   /// 菜谱内食材 ID
   @JsonKey(name: r'id', required: true, includeIfNull: false)
   final String id;
 
   /// 标准食材 UUID；为空表示未收录
-  @JsonKey(name: r'ingredient_id', required: true, includeIfNull: false)
-  final String ingredientId;
+  @JsonKey(name: r'ingredient_id', required: false, includeIfNull: false)
+  final String? ingredientId;
 
   @JsonKey(
     defaultValue: false,
@@ -89,8 +88,8 @@ class RecipeIngredient {
   final bool? optional;
 
   /// 处理方式
-  @JsonKey(name: r'preparation', required: true, includeIfNull: false)
-  final String preparation;
+  @JsonKey(name: r'preparation', required: false, includeIfNull: false)
+  final String? preparation;
 
   // minimum: 0.0
   // maximum: 10000000
@@ -101,7 +100,7 @@ class RecipeIngredient {
   final ValueSource? quantitySource;
 
   @JsonKey(name: r'replacement', required: false, includeIfNull: false)
-  final RecipeIngredientReplacement? replacement;
+  final Object? replacement;
 
   @JsonKey(name: r'scaling_mode', required: true, includeIfNull: false)
   final RecipeIngredientScalingModeEnum scalingMode;
@@ -131,7 +130,7 @@ class RecipeIngredient {
   @override
   int get hashCode =>
       baseQuantity.hashCode +
-      baseUnit.hashCode +
+      (baseUnit == null ? 0 : baseUnit.hashCode) +
       displayName.hashCode +
       functional.hashCode +
       group.hashCode +

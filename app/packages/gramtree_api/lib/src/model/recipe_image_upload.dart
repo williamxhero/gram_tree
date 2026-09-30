@@ -44,7 +44,9 @@ class RecipeImageUpload {
 
   @override
   int get hashCode =>
-      contentBase64.hashCode + contentType.hashCode + filename.hashCode;
+      contentBase64.hashCode +
+      contentType.hashCode +
+      (filename == null ? 0 : filename.hashCode);
 
   factory RecipeImageUpload.fromJson(Map<String, dynamic> json) =>
       _$RecipeImageUploadFromJson(json);

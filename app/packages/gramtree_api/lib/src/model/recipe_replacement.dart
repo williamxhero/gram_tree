@@ -20,9 +20,9 @@ class RecipeReplacement {
   RecipeReplacement({
     required this.displayName,
 
-    required this.ingredientId,
+    this.ingredientId,
 
-    required this.note,
+    this.note,
 
     this.ratio = 1,
   });
@@ -30,11 +30,11 @@ class RecipeReplacement {
   @JsonKey(name: r'display_name', required: true, includeIfNull: false)
   final String displayName;
 
-  @JsonKey(name: r'ingredient_id', required: true, includeIfNull: false)
-  final String ingredientId;
+  @JsonKey(name: r'ingredient_id', required: false, includeIfNull: false)
+  final String? ingredientId;
 
-  @JsonKey(name: r'note', required: true, includeIfNull: false)
-  final String note;
+  @JsonKey(name: r'note', required: false, includeIfNull: false)
+  final String? note;
 
   // maximum: 100.0
   @JsonKey(

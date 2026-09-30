@@ -18,26 +18,26 @@ part 'nutrition_estimate.g.dart';
 class NutritionEstimate {
   /// Returns a new [NutritionEstimate] instance.
   NutritionEstimate({
-    required this.carbohydrateG,
+    this.carbohydrateG,
 
-    required this.energyKcal,
+    this.energyKcal,
 
     this.estimated = true,
 
-    required this.fatG,
+    this.fatG,
 
     this.incomplete = false,
 
-    required this.proteinG,
+    this.proteinG,
 
-    required this.sodiumMg,
+    this.sodiumMg,
   });
 
-  @JsonKey(name: r'carbohydrate_g', required: true, includeIfNull: false)
-  final num carbohydrateG;
+  @JsonKey(name: r'carbohydrate_g', required: false, includeIfNull: false)
+  final num? carbohydrateG;
 
-  @JsonKey(name: r'energy_kcal', required: true, includeIfNull: false)
-  final num energyKcal;
+  @JsonKey(name: r'energy_kcal', required: false, includeIfNull: false)
+  final num? energyKcal;
 
   @JsonKey(
     defaultValue: true,
@@ -47,8 +47,8 @@ class NutritionEstimate {
   )
   final bool? estimated;
 
-  @JsonKey(name: r'fat_g', required: true, includeIfNull: false)
-  final num fatG;
+  @JsonKey(name: r'fat_g', required: false, includeIfNull: false)
+  final num? fatG;
 
   @JsonKey(
     defaultValue: false,
@@ -58,11 +58,11 @@ class NutritionEstimate {
   )
   final bool? incomplete;
 
-  @JsonKey(name: r'protein_g', required: true, includeIfNull: false)
-  final num proteinG;
+  @JsonKey(name: r'protein_g', required: false, includeIfNull: false)
+  final num? proteinG;
 
-  @JsonKey(name: r'sodium_mg', required: true, includeIfNull: false)
-  final num sodiumMg;
+  @JsonKey(name: r'sodium_mg', required: false, includeIfNull: false)
+  final num? sodiumMg;
 
   @override
   bool operator ==(Object other) =>
@@ -78,13 +78,13 @@ class NutritionEstimate {
 
   @override
   int get hashCode =>
-      carbohydrateG.hashCode +
-      energyKcal.hashCode +
+      (carbohydrateG == null ? 0 : carbohydrateG.hashCode) +
+      (energyKcal == null ? 0 : energyKcal.hashCode) +
       estimated.hashCode +
-      fatG.hashCode +
+      (fatG == null ? 0 : fatG.hashCode) +
       incomplete.hashCode +
-      proteinG.hashCode +
-      sodiumMg.hashCode;
+      (proteinG == null ? 0 : proteinG.hashCode) +
+      (sodiumMg == null ? 0 : sodiumMg.hashCode);
 
   factory NutritionEstimate.fromJson(Map<String, dynamic> json) =>
       _$NutritionEstimateFromJson(json);

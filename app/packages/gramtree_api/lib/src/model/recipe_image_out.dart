@@ -77,11 +77,11 @@ class RecipeImageOut {
       byteSize.hashCode +
       contentType.hashCode +
       expiresInSeconds.hashCode +
-      height.hashCode +
+      (height == null ? 0 : height.hashCode) +
       id.hashCode +
       url.hashCode +
       versionId.hashCode +
-      width.hashCode;
+      (width == null ? 0 : width.hashCode);
 
   factory RecipeImageOut.fromJson(Map<String, dynamic> json) =>
       _$RecipeImageOutFromJson(json);

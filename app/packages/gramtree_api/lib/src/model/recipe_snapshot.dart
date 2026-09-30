@@ -22,9 +22,9 @@ class RecipeSnapshot {
   RecipeSnapshot({
     this.activeTimeSeconds = 0,
 
-    required this.difficulty,
+    this.difficulty,
 
-    required this.dishType,
+    this.dishType,
 
     required this.formatVersion,
 
@@ -49,11 +49,11 @@ class RecipeSnapshot {
   )
   final int? activeTimeSeconds;
 
-  @JsonKey(name: r'difficulty', required: true, includeIfNull: false)
-  final String difficulty;
+  @JsonKey(name: r'difficulty', required: false, includeIfNull: false)
+  final String? difficulty;
 
-  @JsonKey(name: r'dish_type', required: true, includeIfNull: false)
-  final String dishType;
+  @JsonKey(name: r'dish_type', required: false, includeIfNull: false)
+  final String? dishType;
 
   /// 快照格式版本
   @JsonKey(name: r'format_version', required: true, includeIfNull: false)
@@ -100,8 +100,8 @@ class RecipeSnapshot {
   @override
   int get hashCode =>
       activeTimeSeconds.hashCode +
-      difficulty.hashCode +
-      dishType.hashCode +
+      (difficulty == null ? 0 : difficulty.hashCode) +
+      (dishType == null ? 0 : dishType.hashCode) +
       formatVersion.hashCode +
       ingredients.hashCode +
       servings.hashCode +

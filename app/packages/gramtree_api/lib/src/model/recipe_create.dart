@@ -24,13 +24,11 @@ class RecipeCreate {
 
     this.changeNote = '',
 
-    required this.dish,
+    this.dish,
 
     this.dishAliases,
 
-    required this.dishName,
-
-    this.imageIds,
+    this.dishName,
 
     required this.snapshot,
   });
@@ -51,17 +49,14 @@ class RecipeCreate {
   )
   final String? changeNote;
 
-  @JsonKey(name: r'dish', required: true, includeIfNull: false)
-  final DishInput dish;
+  @JsonKey(name: r'dish', required: false, includeIfNull: false)
+  final DishInput? dish;
 
   @JsonKey(name: r'dish_aliases', required: false, includeIfNull: false)
   final List<String>? dishAliases;
 
-  @JsonKey(name: r'dish_name', required: true, includeIfNull: false)
-  final String dishName;
-
-  @JsonKey(name: r'image_ids', required: false, includeIfNull: false)
-  final List<String>? imageIds;
+  @JsonKey(name: r'dish_name', required: false, includeIfNull: false)
+  final String? dishName;
 
   @JsonKey(name: r'snapshot', required: true, includeIfNull: false)
   final RecipeSnapshot snapshot;
@@ -75,7 +70,6 @@ class RecipeCreate {
           other.dish == dish &&
           other.dishAliases == dishAliases &&
           other.dishName == dishName &&
-          other.imageIds == imageIds &&
           other.snapshot == snapshot;
 
   @override
@@ -84,8 +78,7 @@ class RecipeCreate {
       changeNote.hashCode +
       dish.hashCode +
       dishAliases.hashCode +
-      dishName.hashCode +
-      imageIds.hashCode +
+      (dishName == null ? 0 : dishName.hashCode) +
       snapshot.hashCode;
 
   factory RecipeCreate.fromJson(Map<String, dynamic> json) =>

@@ -34,7 +34,8 @@ class RecipeList {
           other.nextCursor == nextCursor;
 
   @override
-  int get hashCode => items.hashCode + nextCursor.hashCode;
+  int get hashCode =>
+      items.hashCode + (nextCursor == null ? 0 : nextCursor.hashCode);
 
   factory RecipeList.fromJson(Map<String, dynamic> json) =>
       _$RecipeListFromJson(json);

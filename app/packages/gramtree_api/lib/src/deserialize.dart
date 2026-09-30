@@ -63,10 +63,8 @@ import 'package:gramtree_api/src/model/recipe_create.dart';
 import 'package:gramtree_api/src/model/recipe_derived.dart';
 import 'package:gramtree_api/src/model/recipe_detail.dart';
 import 'package:gramtree_api/src/model/recipe_image_out.dart';
-import 'package:gramtree_api/src/model/recipe_image_staged_out.dart';
 import 'package:gramtree_api/src/model/recipe_image_upload.dart';
 import 'package:gramtree_api/src/model/recipe_ingredient.dart';
-import 'package:gramtree_api/src/model/recipe_ingredient_replacement.dart';
 import 'package:gramtree_api/src/model/recipe_list.dart';
 import 'package:gramtree_api/src/model/recipe_list_item.dart';
 import 'package:gramtree_api/src/model/recipe_replacement.dart';
@@ -298,17 +296,11 @@ ReturnType deserialize<ReturnType, BaseType>(
     case 'RecipeImageOut':
       return RecipeImageOut.fromJson(value as Map<String, dynamic>)
           as ReturnType;
-    case 'RecipeImageStagedOut':
-      return RecipeImageStagedOut.fromJson(value as Map<String, dynamic>)
-          as ReturnType;
     case 'RecipeImageUpload':
       return RecipeImageUpload.fromJson(value as Map<String, dynamic>)
           as ReturnType;
     case 'RecipeIngredient':
       return RecipeIngredient.fromJson(value as Map<String, dynamic>)
-          as ReturnType;
-    case 'RecipeIngredientReplacement':
-      return RecipeIngredientReplacement.fromJson(value as Map<String, dynamic>)
           as ReturnType;
     case 'RecipeList':
       return RecipeList.fromJson(value as Map<String, dynamic>) as ReturnType;

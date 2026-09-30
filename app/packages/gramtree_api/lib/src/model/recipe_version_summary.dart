@@ -66,7 +66,7 @@ class RecipeVersionSummary {
       changeNote.hashCode +
       createdAt.hashCode +
       id.hashCode +
-      previousVersionId.hashCode +
+      (previousVersionId == null ? 0 : previousVersionId.hashCode) +
       versionNumber.hashCode;
 
   factory RecipeVersionSummary.fromJson(Map<String, dynamic> json) =>

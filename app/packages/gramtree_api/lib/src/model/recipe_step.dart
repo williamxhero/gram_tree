@@ -19,19 +19,19 @@ part 'recipe_step.g.dart';
 class RecipeStep {
   /// Returns a new [RecipeStep] instance.
   RecipeStep({
-    required this.action,
+    this.action,
 
-    required this.cookware,
+    this.cookware,
 
     this.dependsOn,
 
-    required this.doneness,
+    this.doneness,
 
     this.durationSeconds = 0,
 
     this.durationSource,
 
-    required this.heat,
+    this.heat,
 
     this.heatSource,
 
@@ -41,28 +41,28 @@ class RecipeStep {
 
     required this.instruction,
 
-    required this.notes,
+    this.notes,
 
-    required this.temperatureCelsius,
+    this.temperatureCelsius,
 
     this.temperatureSource,
 
     this.unattended = false,
 
-    required this.why,
+    this.why,
   });
 
-  @JsonKey(name: r'action', required: true, includeIfNull: false)
-  final String action;
+  @JsonKey(name: r'action', required: false, includeIfNull: false)
+  final String? action;
 
-  @JsonKey(name: r'cookware', required: true, includeIfNull: false)
-  final String cookware;
+  @JsonKey(name: r'cookware', required: false, includeIfNull: false)
+  final String? cookware;
 
   @JsonKey(name: r'depends_on', required: false, includeIfNull: false)
   final List<String>? dependsOn;
 
-  @JsonKey(name: r'doneness', required: true, includeIfNull: false)
-  final String doneness;
+  @JsonKey(name: r'doneness', required: false, includeIfNull: false)
+  final String? doneness;
 
   // minimum: 0
   // maximum: 86400
@@ -77,8 +77,8 @@ class RecipeStep {
   @JsonKey(name: r'duration_source', required: false, includeIfNull: false)
   final ValueSource? durationSource;
 
-  @JsonKey(name: r'heat', required: true, includeIfNull: false)
-  final String heat;
+  @JsonKey(name: r'heat', required: false, includeIfNull: false)
+  final String? heat;
 
   @JsonKey(name: r'heat_source', required: false, includeIfNull: false)
   final ValueSource? heatSource;
@@ -93,11 +93,13 @@ class RecipeStep {
   @JsonKey(name: r'instruction', required: true, includeIfNull: false)
   final String instruction;
 
-  @JsonKey(name: r'notes', required: true, includeIfNull: false)
-  final String notes;
+  @JsonKey(name: r'notes', required: false, includeIfNull: false)
+  final String? notes;
 
-  @JsonKey(name: r'temperature_celsius', required: true, includeIfNull: false)
-  final num temperatureCelsius;
+  // minimum: -50.0
+  // maximum: 1000.0
+  @JsonKey(name: r'temperature_celsius', required: false, includeIfNull: false)
+  final num? temperatureCelsius;
 
   @JsonKey(name: r'temperature_source', required: false, includeIfNull: false)
   final ValueSource? temperatureSource;
@@ -110,8 +112,8 @@ class RecipeStep {
   )
   final bool? unattended;
 
-  @JsonKey(name: r'why', required: true, includeIfNull: false)
-  final String why;
+  @JsonKey(name: r'why', required: false, includeIfNull: false)
+  final String? why;
 
   @override
   bool operator ==(Object other) =>
@@ -136,22 +138,22 @@ class RecipeStep {
 
   @override
   int get hashCode =>
-      action.hashCode +
-      cookware.hashCode +
+      (action == null ? 0 : action.hashCode) +
+      (cookware == null ? 0 : cookware.hashCode) +
       dependsOn.hashCode +
-      doneness.hashCode +
+      (doneness == null ? 0 : doneness.hashCode) +
       durationSeconds.hashCode +
       durationSource.hashCode +
-      heat.hashCode +
+      (heat == null ? 0 : heat.hashCode) +
       heatSource.hashCode +
       id.hashCode +
       ingredientIds.hashCode +
       instruction.hashCode +
-      notes.hashCode +
-      temperatureCelsius.hashCode +
+      (notes == null ? 0 : notes.hashCode) +
+      (temperatureCelsius == null ? 0 : temperatureCelsius.hashCode) +
       temperatureSource.hashCode +
       unattended.hashCode +
-      why.hashCode;
+      (why == null ? 0 : why.hashCode);
 
   factory RecipeStep.fromJson(Map<String, dynamic> json) =>
       _$RecipeStepFromJson(json);

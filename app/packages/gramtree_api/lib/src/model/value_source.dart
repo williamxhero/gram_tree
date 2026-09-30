@@ -18,23 +18,25 @@ part 'value_source.g.dart';
 class ValueSource {
   /// Returns a new [ValueSource] instance.
   ValueSource({
-    required this.basis,
+    this.basis,
 
-    required this.confidence,
+    this.confidence,
 
-    required this.original,
+    this.original,
 
     required this.source_,
   });
 
-  @JsonKey(name: r'basis', required: true, includeIfNull: false)
-  final String basis;
+  @JsonKey(name: r'basis', required: false, includeIfNull: false)
+  final String? basis;
 
-  @JsonKey(name: r'confidence', required: true, includeIfNull: false)
-  final num confidence;
+  // minimum: 0.0
+  // maximum: 1.0
+  @JsonKey(name: r'confidence', required: false, includeIfNull: false)
+  final num? confidence;
 
-  @JsonKey(name: r'original', required: true, includeIfNull: false)
-  final String original;
+  @JsonKey(name: r'original', required: false, includeIfNull: false)
+  final String? original;
 
   @JsonKey(name: r'source', required: true, includeIfNull: false)
   final ValueSourceSource_Enum source_;
@@ -50,9 +52,9 @@ class ValueSource {
 
   @override
   int get hashCode =>
-      basis.hashCode +
-      confidence.hashCode +
-      original.hashCode +
+      (basis == null ? 0 : basis.hashCode) +
+      (confidence == null ? 0 : confidence.hashCode) +
+      (original == null ? 0 : original.hashCode) +
       source_.hashCode;
 
   factory ValueSource.fromJson(Map<String, dynamic> json) =>

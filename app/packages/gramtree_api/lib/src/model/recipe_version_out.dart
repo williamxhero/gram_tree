@@ -96,7 +96,7 @@ class RecipeVersionOut {
       editOperations.hashCode +
       id.hashCode +
       images.hashCode +
-      previousVersionId.hashCode +
+      (previousVersionId == null ? 0 : previousVersionId.hashCode) +
       snapshot.hashCode +
       versionNumber.hashCode;
 

@@ -34,7 +34,8 @@ class RecipeVersionHistory {
           other.nextCursor == nextCursor;
 
   @override
-  int get hashCode => items.hashCode + nextCursor.hashCode;
+  int get hashCode =>
+      items.hashCode + (nextCursor == null ? 0 : nextCursor.hashCode);
 
   factory RecipeVersionHistory.fromJson(Map<String, dynamic> json) =>
       _$RecipeVersionHistoryFromJson(json);
