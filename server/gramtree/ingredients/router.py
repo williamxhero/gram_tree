@@ -345,7 +345,7 @@ def get_ingredient_changes(
     merged: list[MergeRelation] = []
     for row in rows:
         if row.merged_into is not None:
-            # 已合并的食材只报合并关系：它的数据不再有价值，App 按这个关系改写本机缓存的旧 ID
+            # 已合并的食材只报合并关系；客户端保留本地旧详情并改写 ID 映射。
             merged.append(MergeRelation(from_id=row.id, to_id=row.merged_into))
             continue
         # 首次出现的版本晚于客户端手上的版本才是新增，否则是修改。

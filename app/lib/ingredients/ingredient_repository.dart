@@ -208,13 +208,10 @@ class IngredientRepository {
     final ranked = <String, ({int priority, IngredientDetail detail})>{};
 
     for (final detail in snapshot.ingredients.values) {
-      // The online search excludes rows that have been merged. Reads by an
-      // explicit old ID still follow [snapshot.merged] in [get].
-      if (snapshot.merged.containsKey(detail.id)) continue;
       final resolved = _resolve(snapshot, detail.id);
       final target = snapshot.ingredients[resolved];
       if (target == null) continue;
-      final priority = _matchPriority(detail, q, lower);
+      final priority = _matchPriority(detail, lower);
       if (priority == null) continue;
       final existing = ranked[target.id];
       if (existing == null || priority < existing.priority) {
@@ -319,11 +316,15 @@ class IngredientRepository {
     }
   }
 
-  int? _matchPriority(IngredientDetail detail, String query, String lower) {
-    if (detail.standardName.startsWith(query)) return 0;
-    if (detail.aliases.any((alias) => alias.startsWith(query))) return 1;
-    if (detail.pinyinInitials.toLowerCase().startsWith(lower)) return 2;
-    if (detail.pinyin.toLowerCase().startsWith(lower)) return 3;
+  int? _matchPriority(IngredientDetail detail, String lower) {
+    final standard = detail.standardName.toLowerCase();
+    final aliases = detail.aliases.map((alias) => alias.toLowerCase());
+    if (standard == lower) return 0;
+    if (aliases.any((alias) => alias == lower)) return 1;
+    if (standard.startsWith(lower)) return 2;
+    if (aliases.any((alias) => alias.startsWith(lower))) return 3;
+    if (detail.pinyinInitials.toLowerCase().startsWith(lower)) return 4;
+    if (detail.pinyin.toLowerCase().startsWith(lower)) return 5;
     return null;
   }
 

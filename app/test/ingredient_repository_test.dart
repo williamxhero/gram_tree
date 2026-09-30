@@ -127,6 +127,37 @@ void main() {
     expect(await repository.get('missing'), isNull);
   });
 
+  test('离线搜索按服务端的精确、别名、前缀和拼音优先级排序', () async {
+    final api = FakeIngredientSyncApi()
+      ..changesResponses.add(
+        changes(
+          version: 'v1',
+          added: [
+            ingredient(id: '00000000-0000-4000-8000-000000000011', name: '番茄酱'),
+            ingredient(
+              id: '00000000-0000-4000-8000-000000000012',
+              name: '番茄',
+            ),
+            ingredient(
+              id: '00000000-0000-4000-8000-000000000013',
+              name: '番茄汁',
+            ),
+          ],
+        ),
+      );
+    final repository = IngredientRepository(
+      api: api,
+      cache: LocalStoreIngredientCache(MemoryLocalStore()),
+    );
+
+    expect(await repository.sync(), isTrue);
+    expect((await repository.search('番茄')).map((item) => item.standardName), [
+      '番茄',
+      '番茄汁',
+      '番茄酱',
+    ]);
+  });
+
   test('增量同步合并新增、修改和旧 ID 映射，并使用新版本', () async {
     final api = FakeIngredientSyncApi()
       ..changesResponses.add(
@@ -165,7 +196,7 @@ void main() {
     expect(repository.version, 'v2');
     expect((await repository.get(oldId))!.id, newId);
     expect((await repository.search('水')).single.id, newId);
-    expect(await repository.search('红'), isEmpty);
+    expect((await repository.search('红')).single.id, newId);
   });
 
   test('同步失败时保留旧缓存、版本和离线查询结果', () async {
