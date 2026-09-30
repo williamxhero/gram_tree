@@ -4,7 +4,9 @@
 
 import 'dart:async';
 
-import 'package:built_value/serializer.dart';
+// ignore: unused_import
+import 'dart:convert';
+import 'package:gramtree_api/src/deserialize.dart';
 import 'package:dio/dio.dart';
 
 import 'package:gramtree_api/src/model/apple_login_request.dart';
@@ -21,9 +23,7 @@ class AuthApi {
 
   final Dio _dio;
 
-  final Serializers _serializers;
-
-  const AuthApi(this._dio, this._serializers);
+  const AuthApi(this._dio);
 
   /// 通过 Apple 登录（首次登录自动创建账号）
   /// 
@@ -65,9 +65,7 @@ class AuthApi {
     dynamic _bodyData;
 
     try {
-      const _type = FullType(AppleLoginRequest);
-      _bodyData = _serializers.serialize(appleLoginRequest, specifiedType: _type);
-
+_bodyData=jsonEncode(appleLoginRequest);
     } catch(error, stackTrace) {
       throw DioException(
          requestOptions: _options.compose(
@@ -92,11 +90,8 @@ class AuthApi {
     TokenPair? _responseData;
 
     try {
-      final rawResponse = _response.data;
-      _responseData = rawResponse == null ? null : _serializers.deserialize(
-        rawResponse,
-        specifiedType: const FullType(TokenPair),
-      ) as TokenPair;
+final rawData = _response.data;
+_responseData = rawData == null ? null : deserialize<TokenPair, TokenPair>(rawData, 'TokenPair', growable: true);
 
     } catch (error, stackTrace) {
       throw DioException(
@@ -160,9 +155,7 @@ class AuthApi {
     dynamic _bodyData;
 
     try {
-      const _type = FullType(EmailLoginRequest);
-      _bodyData = _serializers.serialize(emailLoginRequest, specifiedType: _type);
-
+_bodyData=jsonEncode(emailLoginRequest);
     } catch(error, stackTrace) {
       throw DioException(
          requestOptions: _options.compose(
@@ -187,11 +180,8 @@ class AuthApi {
     TokenPair? _responseData;
 
     try {
-      final rawResponse = _response.data;
-      _responseData = rawResponse == null ? null : _serializers.deserialize(
-        rawResponse,
-        specifiedType: const FullType(TokenPair),
-      ) as TokenPair;
+final rawData = _response.data;
+_responseData = rawData == null ? null : deserialize<TokenPair, TokenPair>(rawData, 'TokenPair', growable: true);
 
     } catch (error, stackTrace) {
       throw DioException(
@@ -312,9 +302,7 @@ class AuthApi {
     dynamic _bodyData;
 
     try {
-      const _type = FullType(AppleReauthRequest);
-      _bodyData = _serializers.serialize(appleReauthRequest, specifiedType: _type);
-
+_bodyData=jsonEncode(appleReauthRequest);
     } catch(error, stackTrace) {
       throw DioException(
          requestOptions: _options.compose(
@@ -385,9 +373,7 @@ class AuthApi {
     dynamic _bodyData;
 
     try {
-      const _type = FullType(EmailReauthRequest);
-      _bodyData = _serializers.serialize(emailReauthRequest, specifiedType: _type);
-
+_bodyData=jsonEncode(emailReauthRequest);
     } catch(error, stackTrace) {
       throw DioException(
          requestOptions: _options.compose(
@@ -452,9 +438,7 @@ class AuthApi {
     dynamic _bodyData;
 
     try {
-      const _type = FullType(RefreshRequest);
-      _bodyData = _serializers.serialize(refreshRequest, specifiedType: _type);
-
+_bodyData=jsonEncode(refreshRequest);
     } catch(error, stackTrace) {
       throw DioException(
          requestOptions: _options.compose(
@@ -479,11 +463,8 @@ class AuthApi {
     TokenPair? _responseData;
 
     try {
-      final rawResponse = _response.data;
-      _responseData = rawResponse == null ? null : _serializers.deserialize(
-        rawResponse,
-        specifiedType: const FullType(TokenPair),
-      ) as TokenPair;
+final rawData = _response.data;
+_responseData = rawData == null ? null : deserialize<TokenPair, TokenPair>(rawData, 'TokenPair', growable: true);
 
     } catch (error, stackTrace) {
       throw DioException(
@@ -553,9 +534,7 @@ class AuthApi {
     dynamic _bodyData;
 
     try {
-      const _type = FullType(EmailCodeRequest);
-      _bodyData = _serializers.serialize(emailCodeRequest, specifiedType: _type);
-
+_bodyData=jsonEncode(emailCodeRequest);
     } catch(error, stackTrace) {
       throw DioException(
          requestOptions: _options.compose(
@@ -580,11 +559,8 @@ class AuthApi {
     EmailCodeSent? _responseData;
 
     try {
-      final rawResponse = _response.data;
-      _responseData = rawResponse == null ? null : _serializers.deserialize(
-        rawResponse,
-        specifiedType: const FullType(EmailCodeSent),
-      ) as EmailCodeSent;
+final rawData = _response.data;
+_responseData = rawData == null ? null : deserialize<EmailCodeSent, EmailCodeSent>(rawData, 'EmailCodeSent', growable: true);
 
     } catch (error, stackTrace) {
       throw DioException(

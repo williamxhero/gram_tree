@@ -3,124 +3,74 @@
 //
 
 // ignore_for_file: unused_element
-import 'package:built_collection/built_collection.dart';
-import 'package:built_value/json_object.dart';
-import 'package:built_value/built_value.dart';
-import 'package:built_value/serializer.dart';
+import 'package:copy_with_extension/copy_with_extension.dart';
+import 'package:json_annotation/json_annotation.dart';
 
 part 'count_unit.g.dart';
 
-/// CountUnit
-///
-/// Properties:
-/// * [unit] - 计数单位，例如 个、瓣、根、片
-/// * [grams] - 一个这样的单位大约多少克
-@BuiltValue()
-abstract class CountUnit implements Built<CountUnit, CountUnitBuilder> {
-  /// 计数单位，例如 个、瓣、根、片
-  @BuiltValueField(wireName: r'unit')
-  String get unit;
 
-  /// 一个这样的单位大约多少克
-  @BuiltValueField(wireName: r'grams')
-  num get grams;
+@CopyWith()
+@JsonSerializable(
+  checked: true,
+  createToJson: true,
+  disallowUnrecognizedKeys: false,
+  explicitToJson: true,
+)
+class CountUnit {
+  /// Returns a new [CountUnit] instance.
+  CountUnit({
 
-  CountUnit._();
+    required  this.grams,
 
-  factory CountUnit([void updates(CountUnitBuilder b)]) = _$CountUnit;
+    required  this.unit,
+  });
 
-  @BuiltValueHook(initializeBuilder: true)
-  static void _defaults(CountUnitBuilder b) => b;
+      /// 一个这样的单位大约多少克
+  @JsonKey(
+    
+    name: r'grams',
+    required: true,
+    includeIfNull: false,
+  )
 
-  @BuiltValueSerializer(custom: true)
-  static Serializer<CountUnit> get serializer => _$CountUnitSerializer();
-}
 
-class _$CountUnitSerializer implements PrimitiveSerializer<CountUnit> {
-  @override
-  final Iterable<Type> types = const [CountUnit, _$CountUnit];
+  final num grams;
 
-  @override
-  final String wireName = r'CountUnit';
 
-  Iterable<Object?> _serializeProperties(
-    Serializers serializers,
-    CountUnit object, {
-    FullType specifiedType = FullType.unspecified,
-  }) sync* {
-    yield r'unit';
-    yield serializers.serialize(
-      object.unit,
-      specifiedType: const FullType(String),
-    );
-    yield r'grams';
-    yield serializers.serialize(
-      object.grams,
-      specifiedType: const FullType(num),
-    );
-  }
 
-  @override
-  Object serialize(
-    Serializers serializers,
-    CountUnit object, {
-    FullType specifiedType = FullType.unspecified,
-  }) {
-    return _serializeProperties(serializers, object, specifiedType: specifiedType).toList();
-  }
+      /// 计数单位，例如 个、瓣、根、片
+  @JsonKey(
+    
+    name: r'unit',
+    required: true,
+    includeIfNull: false,
+  )
 
-  void _deserializeProperties(
-    Serializers serializers,
-    Object serialized, {
-    FullType specifiedType = FullType.unspecified,
-    required List<Object?> serializedList,
-    required CountUnitBuilder result,
-    required List<Object?> unhandled,
-  }) {
-    for (var i = 0; i < serializedList.length; i += 2) {
-      final key = serializedList[i] as String;
-      final value = serializedList[i + 1];
-      switch (key) {
-        case r'unit':
-          final valueDes = serializers.deserialize(
-            value,
-            specifiedType: const FullType(String),
-          ) as String;
-          result.unit = valueDes;
-          break;
-        case r'grams':
-          final valueDes = serializers.deserialize(
-            value,
-            specifiedType: const FullType(num),
-          ) as num;
-          result.grams = valueDes;
-          break;
-        default:
-          unhandled.add(key);
-          unhandled.add(value);
-          break;
-      }
-    }
-  }
+
+  final String unit;
+
+
+
+
+
+    @override
+    bool operator ==(Object other) => identical(this, other) || other is CountUnit &&
+      other.grams == grams &&
+      other.unit == unit;
+
+    @override
+    int get hashCode =>
+        grams.hashCode +
+        unit.hashCode;
+
+  factory CountUnit.fromJson(Map<String, dynamic> json) => _$CountUnitFromJson(json);
+
+  Map<String, dynamic> toJson() => _$CountUnitToJson(this);
 
   @override
-  CountUnit deserialize(
-    Serializers serializers,
-    Object serialized, {
-    FullType specifiedType = FullType.unspecified,
-  }) {
-    final result = CountUnitBuilder();
-    final serializedList = (serialized as Iterable<Object?>).toList();
-    final unhandled = <Object?>[];
-    _deserializeProperties(
-      serializers,
-      serialized,
-      specifiedType: specifiedType,
-      serializedList: serializedList,
-      unhandled: unhandled,
-      result: result,
-    );
-    return result.build();
+  String toString() {
+    return toJson().toString();
   }
+
 }
 

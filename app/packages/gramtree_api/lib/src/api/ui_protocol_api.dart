@@ -4,7 +4,9 @@
 
 import 'dart:async';
 
-import 'package:built_value/serializer.dart';
+// ignore: unused_import
+import 'dart:convert';
+import 'package:gramtree_api/src/deserialize.dart';
 import 'package:dio/dio.dart';
 
 import 'package:gramtree_api/src/model/compose_request.dart';
@@ -17,9 +19,7 @@ class UiProtocolApi {
 
   final Dio _dio;
 
-  final Serializers _serializers;
-
-  const UiProtocolApi(this._dio, this._serializers);
+  const UiProtocolApi(this._dio);
 
   /// 按 App 声明的协议版本和组件清单，下发一份页面描述（需要登录）
   /// 
@@ -67,9 +67,7 @@ class UiProtocolApi {
     dynamic _bodyData;
 
     try {
-      const _type = FullType(ComposeRequest);
-      _bodyData = _serializers.serialize(composeRequest, specifiedType: _type);
-
+_bodyData=jsonEncode(composeRequest);
     } catch(error, stackTrace) {
       throw DioException(
          requestOptions: _options.compose(
@@ -94,11 +92,8 @@ class UiProtocolApi {
     PageDescription? _responseData;
 
     try {
-      final rawResponse = _response.data;
-      _responseData = rawResponse == null ? null : _serializers.deserialize(
-        rawResponse,
-        specifiedType: const FullType(PageDescription),
-      ) as PageDescription;
+final rawData = _response.data;
+_responseData = rawData == null ? null : deserialize<PageDescription, PageDescription>(rawData, 'PageDescription', growable: true);
 
     } catch (error, stackTrace) {
       throw DioException(
@@ -168,9 +163,7 @@ class UiProtocolApi {
     dynamic _bodyData;
 
     try {
-      const _type = FullType(SkipAdjustmentRequest);
-      _bodyData = _serializers.serialize(skipAdjustmentRequest, specifiedType: _type);
-
+_bodyData=jsonEncode(skipAdjustmentRequest);
     } catch(error, stackTrace) {
       throw DioException(
          requestOptions: _options.compose(
@@ -195,11 +188,8 @@ class UiProtocolApi {
     SkipAdjustmentResult? _responseData;
 
     try {
-      final rawResponse = _response.data;
-      _responseData = rawResponse == null ? null : _serializers.deserialize(
-        rawResponse,
-        specifiedType: const FullType(SkipAdjustmentResult),
-      ) as SkipAdjustmentResult;
+final rawData = _response.data;
+_responseData = rawData == null ? null : deserialize<SkipAdjustmentResult, SkipAdjustmentResult>(rawData, 'SkipAdjustmentResult', growable: true);
 
     } catch (error, stackTrace) {
       throw DioException(

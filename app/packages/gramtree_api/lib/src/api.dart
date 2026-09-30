@@ -3,8 +3,6 @@
 //
 
 import 'package:dio/dio.dart';
-import 'package:built_value/serializer.dart';
-import 'package:gramtree_api/src/serializers.dart';
 import 'package:gramtree_api/src/auth/api_key_auth.dart';
 import 'package:gramtree_api/src/auth/basic_auth.dart';
 import 'package:gramtree_api/src/auth/bearer_auth.dart';
@@ -14,7 +12,6 @@ import 'package:gramtree_api/src/api/analytics_api.dart';
 import 'package:gramtree_api/src/api/auth_api.dart';
 import 'package:gramtree_api/src/api/config_api.dart';
 import 'package:gramtree_api/src/api/events_api.dart';
-import 'package:gramtree_api/src/api/examples_api.dart';
 import 'package:gramtree_api/src/api/health_api.dart';
 import 'package:gramtree_api/src/api/ingredients_api.dart';
 import 'package:gramtree_api/src/api/ui_protocol_api.dart';
@@ -23,14 +20,11 @@ class GramtreeApi {
   static const String basePath = r'http://localhost';
 
   final Dio dio;
-  final Serializers serializers;
-
   GramtreeApi({
     Dio? dio,
-    Serializers? serializers,
     String? basePathOverride,
     List<Interceptor>? interceptors,
-  })  : this.serializers = serializers ?? standardSerializers,
+  })  : 
         this.dio = dio ??
             Dio(BaseOptions(
               baseUrl: basePathOverride ?? basePath,
@@ -76,54 +70,48 @@ class GramtreeApi {
   /// Get AccountApi instance, base route and serializer can be overridden by a given but be careful,
   /// by doing that all interceptors will not be executed
   AccountApi getAccountApi() {
-    return AccountApi(dio, serializers);
+    return AccountApi(dio);
   }
 
   /// Get AnalyticsApi instance, base route and serializer can be overridden by a given but be careful,
   /// by doing that all interceptors will not be executed
   AnalyticsApi getAnalyticsApi() {
-    return AnalyticsApi(dio, serializers);
+    return AnalyticsApi(dio);
   }
 
   /// Get AuthApi instance, base route and serializer can be overridden by a given but be careful,
   /// by doing that all interceptors will not be executed
   AuthApi getAuthApi() {
-    return AuthApi(dio, serializers);
+    return AuthApi(dio);
   }
 
   /// Get ConfigApi instance, base route and serializer can be overridden by a given but be careful,
   /// by doing that all interceptors will not be executed
   ConfigApi getConfigApi() {
-    return ConfigApi(dio, serializers);
+    return ConfigApi(dio);
   }
 
   /// Get EventsApi instance, base route and serializer can be overridden by a given but be careful,
   /// by doing that all interceptors will not be executed
   EventsApi getEventsApi() {
-    return EventsApi(dio, serializers);
-  }
-
-  /// Get ExamplesApi instance, base route and serializer can be overridden by a given but be careful,
-  /// by doing that all interceptors will not be executed
-  ExamplesApi getExamplesApi() {
-    return ExamplesApi(dio, serializers);
+    return EventsApi(dio);
   }
 
   /// Get HealthApi instance, base route and serializer can be overridden by a given but be careful,
   /// by doing that all interceptors will not be executed
   HealthApi getHealthApi() {
-    return HealthApi(dio, serializers);
+    return HealthApi(dio);
   }
 
   /// Get IngredientsApi instance, base route and serializer can be overridden by a given but be careful,
   /// by doing that all interceptors will not be executed
   IngredientsApi getIngredientsApi() {
-    return IngredientsApi(dio, serializers);
+    return IngredientsApi(dio);
   }
 
   /// Get UiProtocolApi instance, base route and serializer can be overridden by a given but be careful,
   /// by doing that all interceptors will not be executed
   UiProtocolApi getUiProtocolApi() {
-    return UiProtocolApi(dio, serializers);
+    return UiProtocolApi(dio);
   }
 }

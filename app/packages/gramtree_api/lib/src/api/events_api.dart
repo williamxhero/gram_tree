@@ -4,7 +4,9 @@
 
 import 'dart:async';
 
-import 'package:built_value/serializer.dart';
+// ignore: unused_import
+import 'dart:convert';
+import 'package:gramtree_api/src/deserialize.dart';
 import 'package:dio/dio.dart';
 
 import 'package:gramtree_api/src/model/error_response.dart';
@@ -15,9 +17,7 @@ class EventsApi {
 
   final Dio _dio;
 
-  final Serializers _serializers;
-
-  const EventsApi(this._dio, this._serializers);
+  const EventsApi(this._dio);
 
   /// 批量上传经验层事件（需要登录，按登记表校验，按事件 ID 去重，只追加存储）
   /// 
@@ -65,9 +65,7 @@ class EventsApi {
     dynamic _bodyData;
 
     try {
-      const _type = FullType(EventUploadRequest);
-      _bodyData = _serializers.serialize(eventUploadRequest, specifiedType: _type);
-
+_bodyData=jsonEncode(eventUploadRequest);
     } catch(error, stackTrace) {
       throw DioException(
          requestOptions: _options.compose(
@@ -92,11 +90,8 @@ class EventsApi {
     EventUploadResponse? _responseData;
 
     try {
-      final rawResponse = _response.data;
-      _responseData = rawResponse == null ? null : _serializers.deserialize(
-        rawResponse,
-        specifiedType: const FullType(EventUploadResponse),
-      ) as EventUploadResponse;
+final rawData = _response.data;
+_responseData = rawData == null ? null : deserialize<EventUploadResponse, EventUploadResponse>(rawData, 'EventUploadResponse', growable: true);
 
     } catch (error, stackTrace) {
       throw DioException(

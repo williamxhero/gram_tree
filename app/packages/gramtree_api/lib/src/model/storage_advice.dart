@@ -3,124 +3,74 @@
 //
 
 // ignore_for_file: unused_element
-import 'package:built_collection/built_collection.dart';
-import 'package:built_value/json_object.dart';
-import 'package:built_value/built_value.dart';
-import 'package:built_value/serializer.dart';
+import 'package:copy_with_extension/copy_with_extension.dart';
+import 'package:json_annotation/json_annotation.dart';
 
 part 'storage_advice.g.dart';
 
-/// StorageAdvice
-///
-/// Properties:
-/// * [method] - 常温、冷藏或冷冻
-/// * [days] - 建议存放天数
-@BuiltValue()
-abstract class StorageAdvice implements Built<StorageAdvice, StorageAdviceBuilder> {
-  /// 常温、冷藏或冷冻
-  @BuiltValueField(wireName: r'method')
-  String get method;
 
-  /// 建议存放天数
-  @BuiltValueField(wireName: r'days')
-  int get days;
+@CopyWith()
+@JsonSerializable(
+  checked: true,
+  createToJson: true,
+  disallowUnrecognizedKeys: false,
+  explicitToJson: true,
+)
+class StorageAdvice {
+  /// Returns a new [StorageAdvice] instance.
+  StorageAdvice({
 
-  StorageAdvice._();
+    required  this.days,
 
-  factory StorageAdvice([void updates(StorageAdviceBuilder b)]) = _$StorageAdvice;
+    required  this.method,
+  });
 
-  @BuiltValueHook(initializeBuilder: true)
-  static void _defaults(StorageAdviceBuilder b) => b;
+      /// 建议存放天数
+  @JsonKey(
+    
+    name: r'days',
+    required: true,
+    includeIfNull: false,
+  )
 
-  @BuiltValueSerializer(custom: true)
-  static Serializer<StorageAdvice> get serializer => _$StorageAdviceSerializer();
-}
 
-class _$StorageAdviceSerializer implements PrimitiveSerializer<StorageAdvice> {
-  @override
-  final Iterable<Type> types = const [StorageAdvice, _$StorageAdvice];
+  final int days;
 
-  @override
-  final String wireName = r'StorageAdvice';
 
-  Iterable<Object?> _serializeProperties(
-    Serializers serializers,
-    StorageAdvice object, {
-    FullType specifiedType = FullType.unspecified,
-  }) sync* {
-    yield r'method';
-    yield serializers.serialize(
-      object.method,
-      specifiedType: const FullType(String),
-    );
-    yield r'days';
-    yield serializers.serialize(
-      object.days,
-      specifiedType: const FullType(int),
-    );
-  }
 
-  @override
-  Object serialize(
-    Serializers serializers,
-    StorageAdvice object, {
-    FullType specifiedType = FullType.unspecified,
-  }) {
-    return _serializeProperties(serializers, object, specifiedType: specifiedType).toList();
-  }
+      /// 常温、冷藏或冷冻
+  @JsonKey(
+    
+    name: r'method',
+    required: true,
+    includeIfNull: false,
+  )
 
-  void _deserializeProperties(
-    Serializers serializers,
-    Object serialized, {
-    FullType specifiedType = FullType.unspecified,
-    required List<Object?> serializedList,
-    required StorageAdviceBuilder result,
-    required List<Object?> unhandled,
-  }) {
-    for (var i = 0; i < serializedList.length; i += 2) {
-      final key = serializedList[i] as String;
-      final value = serializedList[i + 1];
-      switch (key) {
-        case r'method':
-          final valueDes = serializers.deserialize(
-            value,
-            specifiedType: const FullType(String),
-          ) as String;
-          result.method = valueDes;
-          break;
-        case r'days':
-          final valueDes = serializers.deserialize(
-            value,
-            specifiedType: const FullType(int),
-          ) as int;
-          result.days = valueDes;
-          break;
-        default:
-          unhandled.add(key);
-          unhandled.add(value);
-          break;
-      }
-    }
-  }
+
+  final String method;
+
+
+
+
+
+    @override
+    bool operator ==(Object other) => identical(this, other) || other is StorageAdvice &&
+      other.days == days &&
+      other.method == method;
+
+    @override
+    int get hashCode =>
+        days.hashCode +
+        method.hashCode;
+
+  factory StorageAdvice.fromJson(Map<String, dynamic> json) => _$StorageAdviceFromJson(json);
+
+  Map<String, dynamic> toJson() => _$StorageAdviceToJson(this);
 
   @override
-  StorageAdvice deserialize(
-    Serializers serializers,
-    Object serialized, {
-    FullType specifiedType = FullType.unspecified,
-  }) {
-    final result = StorageAdviceBuilder();
-    final serializedList = (serialized as Iterable<Object?>).toList();
-    final unhandled = <Object?>[];
-    _deserializeProperties(
-      serializers,
-      serialized,
-      specifiedType: specifiedType,
-      serializedList: serializedList,
-      unhandled: unhandled,
-      result: result,
-    );
-    return result.build();
+  String toString() {
+    return toJson().toString();
   }
+
 }
 

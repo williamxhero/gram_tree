@@ -4,7 +4,9 @@
 
 import 'dart:async';
 
-import 'package:built_value/serializer.dart';
+// ignore: unused_import
+import 'dart:convert';
+import 'package:gramtree_api/src/deserialize.dart';
 import 'package:dio/dio.dart';
 
 import 'package:gramtree_api/src/model/health_response.dart';
@@ -13,9 +15,7 @@ class HealthApi {
 
   final Dio _dio;
 
-  final Serializers _serializers;
-
-  const HealthApi(this._dio, this._serializers);
+  const HealthApi(this._dio);
 
   /// 健康检查：服务、数据库、Redis 是否可用
   /// 
@@ -62,11 +62,8 @@ class HealthApi {
     HealthResponse? _responseData;
 
     try {
-      final rawResponse = _response.data;
-      _responseData = rawResponse == null ? null : _serializers.deserialize(
-        rawResponse,
-        specifiedType: const FullType(HealthResponse),
-      ) as HealthResponse;
+final rawData = _response.data;
+_responseData = rawData == null ? null : deserialize<HealthResponse, HealthResponse>(rawData, 'HealthResponse', growable: true);
 
     } catch (error, stackTrace) {
       throw DioException(

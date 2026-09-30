@@ -4,104 +4,56 @@
 
 // ignore_for_file: unused_element
 import 'package:gramtree_api/src/model/error_body.dart';
-import 'package:built_value/built_value.dart';
-import 'package:built_value/serializer.dart';
+import 'package:copy_with_extension/copy_with_extension.dart';
+import 'package:json_annotation/json_annotation.dart';
 
 part 'error_response.g.dart';
 
-/// ErrorResponse
-///
-/// Properties:
-/// * [error] 
-@BuiltValue()
-abstract class ErrorResponse implements Built<ErrorResponse, ErrorResponseBuilder> {
-  @BuiltValueField(wireName: r'error')
-  ErrorBody get error;
 
-  ErrorResponse._();
+@CopyWith()
+@JsonSerializable(
+  checked: true,
+  createToJson: true,
+  disallowUnrecognizedKeys: false,
+  explicitToJson: true,
+)
+class ErrorResponse {
+  /// Returns a new [ErrorResponse] instance.
+  ErrorResponse({
 
-  factory ErrorResponse([void updates(ErrorResponseBuilder b)]) = _$ErrorResponse;
+    required  this.error,
+  });
 
-  @BuiltValueHook(initializeBuilder: true)
-  static void _defaults(ErrorResponseBuilder b) => b;
+  @JsonKey(
+    
+    name: r'error',
+    required: true,
+    includeIfNull: false,
+  )
 
-  @BuiltValueSerializer(custom: true)
-  static Serializer<ErrorResponse> get serializer => _$ErrorResponseSerializer();
-}
 
-class _$ErrorResponseSerializer implements PrimitiveSerializer<ErrorResponse> {
-  @override
-  final Iterable<Type> types = const [ErrorResponse, _$ErrorResponse];
+  final ErrorBody error;
 
-  @override
-  final String wireName = r'ErrorResponse';
 
-  Iterable<Object?> _serializeProperties(
-    Serializers serializers,
-    ErrorResponse object, {
-    FullType specifiedType = FullType.unspecified,
-  }) sync* {
-    yield r'error';
-    yield serializers.serialize(
-      object.error,
-      specifiedType: const FullType(ErrorBody),
-    );
-  }
 
-  @override
-  Object serialize(
-    Serializers serializers,
-    ErrorResponse object, {
-    FullType specifiedType = FullType.unspecified,
-  }) {
-    return _serializeProperties(serializers, object, specifiedType: specifiedType).toList();
-  }
 
-  void _deserializeProperties(
-    Serializers serializers,
-    Object serialized, {
-    FullType specifiedType = FullType.unspecified,
-    required List<Object?> serializedList,
-    required ErrorResponseBuilder result,
-    required List<Object?> unhandled,
-  }) {
-    for (var i = 0; i < serializedList.length; i += 2) {
-      final key = serializedList[i] as String;
-      final value = serializedList[i + 1];
-      switch (key) {
-        case r'error':
-          final valueDes = serializers.deserialize(
-            value,
-            specifiedType: const FullType(ErrorBody),
-          ) as ErrorBody;
-          result.error.replace(valueDes);
-          break;
-        default:
-          unhandled.add(key);
-          unhandled.add(value);
-          break;
-      }
-    }
-  }
+
+    @override
+    bool operator ==(Object other) => identical(this, other) || other is ErrorResponse &&
+      other.error == error;
+
+    @override
+    int get hashCode =>
+        error.hashCode;
+
+  factory ErrorResponse.fromJson(Map<String, dynamic> json) => _$ErrorResponseFromJson(json);
+
+  Map<String, dynamic> toJson() => _$ErrorResponseToJson(this);
 
   @override
-  ErrorResponse deserialize(
-    Serializers serializers,
-    Object serialized, {
-    FullType specifiedType = FullType.unspecified,
-  }) {
-    final result = ErrorResponseBuilder();
-    final serializedList = (serialized as Iterable<Object?>).toList();
-    final unhandled = <Object?>[];
-    _deserializeProperties(
-      serializers,
-      serialized,
-      specifiedType: specifiedType,
-      serializedList: serializedList,
-      unhandled: unhandled,
-      result: result,
-    );
-    return result.build();
+  String toString() {
+    return toJson().toString();
   }
+
 }
 

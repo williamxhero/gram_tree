@@ -3,120 +3,72 @@
 //
 
 // ignore_for_file: unused_element
-import 'package:built_value/built_value.dart';
-import 'package:built_value/serializer.dart';
+import 'package:copy_with_extension/copy_with_extension.dart';
+import 'package:json_annotation/json_annotation.dart';
 
 part 'normalize_candidate.g.dart';
 
-/// NormalizeCandidate
-///
-/// Properties:
-/// * [ingredientId] 
-/// * [standardName] 
-@BuiltValue()
-abstract class NormalizeCandidate implements Built<NormalizeCandidate, NormalizeCandidateBuilder> {
-  @BuiltValueField(wireName: r'ingredient_id')
-  String get ingredientId;
 
-  @BuiltValueField(wireName: r'standard_name')
-  String get standardName;
+@CopyWith()
+@JsonSerializable(
+  checked: true,
+  createToJson: true,
+  disallowUnrecognizedKeys: false,
+  explicitToJson: true,
+)
+class NormalizeCandidate {
+  /// Returns a new [NormalizeCandidate] instance.
+  NormalizeCandidate({
 
-  NormalizeCandidate._();
+    required  this.ingredientId,
 
-  factory NormalizeCandidate([void updates(NormalizeCandidateBuilder b)]) = _$NormalizeCandidate;
+    required  this.standardName,
+  });
 
-  @BuiltValueHook(initializeBuilder: true)
-  static void _defaults(NormalizeCandidateBuilder b) => b;
+  @JsonKey(
+    
+    name: r'ingredient_id',
+    required: true,
+    includeIfNull: false,
+  )
 
-  @BuiltValueSerializer(custom: true)
-  static Serializer<NormalizeCandidate> get serializer => _$NormalizeCandidateSerializer();
-}
 
-class _$NormalizeCandidateSerializer implements PrimitiveSerializer<NormalizeCandidate> {
-  @override
-  final Iterable<Type> types = const [NormalizeCandidate, _$NormalizeCandidate];
+  final String ingredientId;
 
-  @override
-  final String wireName = r'NormalizeCandidate';
 
-  Iterable<Object?> _serializeProperties(
-    Serializers serializers,
-    NormalizeCandidate object, {
-    FullType specifiedType = FullType.unspecified,
-  }) sync* {
-    yield r'ingredient_id';
-    yield serializers.serialize(
-      object.ingredientId,
-      specifiedType: const FullType(String),
-    );
-    yield r'standard_name';
-    yield serializers.serialize(
-      object.standardName,
-      specifiedType: const FullType(String),
-    );
-  }
 
-  @override
-  Object serialize(
-    Serializers serializers,
-    NormalizeCandidate object, {
-    FullType specifiedType = FullType.unspecified,
-  }) {
-    return _serializeProperties(serializers, object, specifiedType: specifiedType).toList();
-  }
+  @JsonKey(
+    
+    name: r'standard_name',
+    required: true,
+    includeIfNull: false,
+  )
 
-  void _deserializeProperties(
-    Serializers serializers,
-    Object serialized, {
-    FullType specifiedType = FullType.unspecified,
-    required List<Object?> serializedList,
-    required NormalizeCandidateBuilder result,
-    required List<Object?> unhandled,
-  }) {
-    for (var i = 0; i < serializedList.length; i += 2) {
-      final key = serializedList[i] as String;
-      final value = serializedList[i + 1];
-      switch (key) {
-        case r'ingredient_id':
-          final valueDes = serializers.deserialize(
-            value,
-            specifiedType: const FullType(String),
-          ) as String;
-          result.ingredientId = valueDes;
-          break;
-        case r'standard_name':
-          final valueDes = serializers.deserialize(
-            value,
-            specifiedType: const FullType(String),
-          ) as String;
-          result.standardName = valueDes;
-          break;
-        default:
-          unhandled.add(key);
-          unhandled.add(value);
-          break;
-      }
-    }
-  }
+
+  final String standardName;
+
+
+
+
+
+    @override
+    bool operator ==(Object other) => identical(this, other) || other is NormalizeCandidate &&
+      other.ingredientId == ingredientId &&
+      other.standardName == standardName;
+
+    @override
+    int get hashCode =>
+        ingredientId.hashCode +
+        standardName.hashCode;
+
+  factory NormalizeCandidate.fromJson(Map<String, dynamic> json) => _$NormalizeCandidateFromJson(json);
+
+  Map<String, dynamic> toJson() => _$NormalizeCandidateToJson(this);
 
   @override
-  NormalizeCandidate deserialize(
-    Serializers serializers,
-    Object serialized, {
-    FullType specifiedType = FullType.unspecified,
-  }) {
-    final result = NormalizeCandidateBuilder();
-    final serializedList = (serialized as Iterable<Object?>).toList();
-    final unhandled = <Object?>[];
-    _deserializeProperties(
-      serializers,
-      serialized,
-      specifiedType: specifiedType,
-      serializedList: serializedList,
-      unhandled: unhandled,
-      result: result,
-    );
-    return result.build();
+  String toString() {
+    return toJson().toString();
   }
+
 }
 

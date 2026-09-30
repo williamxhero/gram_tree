@@ -3,161 +3,104 @@
 //
 
 // ignore_for_file: unused_element
-import 'package:built_value/built_value.dart';
-import 'package:built_value/serializer.dart';
+import 'package:copy_with_extension/copy_with_extension.dart';
+import 'package:json_annotation/json_annotation.dart';
 
 part 'apple_login_request.g.dart';
 
-/// AppleLoginRequest
-///
-/// Properties:
-/// * [identityToken] 
-/// * [authorizationCode] 
-/// * [givenName] 
-/// * [familyName] 
-@BuiltValue()
-abstract class AppleLoginRequest implements Built<AppleLoginRequest, AppleLoginRequestBuilder> {
-  @BuiltValueField(wireName: r'identity_token')
-  String get identityToken;
 
-  @BuiltValueField(wireName: r'authorization_code')
-  String? get authorizationCode;
+@CopyWith()
+@JsonSerializable(
+  checked: true,
+  createToJson: true,
+  disallowUnrecognizedKeys: false,
+  explicitToJson: true,
+)
+class AppleLoginRequest {
+  /// Returns a new [AppleLoginRequest] instance.
+  AppleLoginRequest({
 
-  @BuiltValueField(wireName: r'given_name')
-  String? get givenName;
+     this.authorizationCode,
 
-  @BuiltValueField(wireName: r'family_name')
-  String? get familyName;
+     this.familyName,
 
-  AppleLoginRequest._();
+     this.givenName,
 
-  factory AppleLoginRequest([void updates(AppleLoginRequestBuilder b)]) = _$AppleLoginRequest;
+    required  this.identityToken,
+  });
 
-  @BuiltValueHook(initializeBuilder: true)
-  static void _defaults(AppleLoginRequestBuilder b) => b;
+  @JsonKey(
+    
+    name: r'authorization_code',
+    required: false,
+    includeIfNull: false,
+  )
 
-  @BuiltValueSerializer(custom: true)
-  static Serializer<AppleLoginRequest> get serializer => _$AppleLoginRequestSerializer();
-}
 
-class _$AppleLoginRequestSerializer implements PrimitiveSerializer<AppleLoginRequest> {
-  @override
-  final Iterable<Type> types = const [AppleLoginRequest, _$AppleLoginRequest];
+  final String? authorizationCode;
 
-  @override
-  final String wireName = r'AppleLoginRequest';
 
-  Iterable<Object?> _serializeProperties(
-    Serializers serializers,
-    AppleLoginRequest object, {
-    FullType specifiedType = FullType.unspecified,
-  }) sync* {
-    yield r'identity_token';
-    yield serializers.serialize(
-      object.identityToken,
-      specifiedType: const FullType(String),
-    );
-    if (object.authorizationCode != null) {
-      yield r'authorization_code';
-      yield serializers.serialize(
-        object.authorizationCode,
-        specifiedType: const FullType.nullable(String),
-      );
-    }
-    if (object.givenName != null) {
-      yield r'given_name';
-      yield serializers.serialize(
-        object.givenName,
-        specifiedType: const FullType.nullable(String),
-      );
-    }
-    if (object.familyName != null) {
-      yield r'family_name';
-      yield serializers.serialize(
-        object.familyName,
-        specifiedType: const FullType.nullable(String),
-      );
-    }
-  }
 
-  @override
-  Object serialize(
-    Serializers serializers,
-    AppleLoginRequest object, {
-    FullType specifiedType = FullType.unspecified,
-  }) {
-    return _serializeProperties(serializers, object, specifiedType: specifiedType).toList();
-  }
+  @JsonKey(
+    
+    name: r'family_name',
+    required: false,
+    includeIfNull: false,
+  )
 
-  void _deserializeProperties(
-    Serializers serializers,
-    Object serialized, {
-    FullType specifiedType = FullType.unspecified,
-    required List<Object?> serializedList,
-    required AppleLoginRequestBuilder result,
-    required List<Object?> unhandled,
-  }) {
-    for (var i = 0; i < serializedList.length; i += 2) {
-      final key = serializedList[i] as String;
-      final value = serializedList[i + 1];
-      switch (key) {
-        case r'identity_token':
-          final valueDes = serializers.deserialize(
-            value,
-            specifiedType: const FullType(String),
-          ) as String;
-          result.identityToken = valueDes;
-          break;
-        case r'authorization_code':
-          final valueDes = serializers.deserialize(
-            value,
-            specifiedType: const FullType.nullable(String),
-          ) as String?;
-          if (valueDes == null) continue;
-          result.authorizationCode = valueDes;
-          break;
-        case r'given_name':
-          final valueDes = serializers.deserialize(
-            value,
-            specifiedType: const FullType.nullable(String),
-          ) as String?;
-          if (valueDes == null) continue;
-          result.givenName = valueDes;
-          break;
-        case r'family_name':
-          final valueDes = serializers.deserialize(
-            value,
-            specifiedType: const FullType.nullable(String),
-          ) as String?;
-          if (valueDes == null) continue;
-          result.familyName = valueDes;
-          break;
-        default:
-          unhandled.add(key);
-          unhandled.add(value);
-          break;
-      }
-    }
-  }
+
+  final String? familyName;
+
+
+
+  @JsonKey(
+    
+    name: r'given_name',
+    required: false,
+    includeIfNull: false,
+  )
+
+
+  final String? givenName;
+
+
+
+  @JsonKey(
+    
+    name: r'identity_token',
+    required: true,
+    includeIfNull: false,
+  )
+
+
+  final String identityToken;
+
+
+
+
+
+    @override
+    bool operator ==(Object other) => identical(this, other) || other is AppleLoginRequest &&
+      other.authorizationCode == authorizationCode &&
+      other.familyName == familyName &&
+      other.givenName == givenName &&
+      other.identityToken == identityToken;
+
+    @override
+    int get hashCode =>
+        (authorizationCode == null ? 0 : authorizationCode.hashCode) +
+        (familyName == null ? 0 : familyName.hashCode) +
+        (givenName == null ? 0 : givenName.hashCode) +
+        identityToken.hashCode;
+
+  factory AppleLoginRequest.fromJson(Map<String, dynamic> json) => _$AppleLoginRequestFromJson(json);
+
+  Map<String, dynamic> toJson() => _$AppleLoginRequestToJson(this);
 
   @override
-  AppleLoginRequest deserialize(
-    Serializers serializers,
-    Object serialized, {
-    FullType specifiedType = FullType.unspecified,
-  }) {
-    final result = AppleLoginRequestBuilder();
-    final serializedList = (serialized as Iterable<Object?>).toList();
-    final unhandled = <Object?>[];
-    _deserializeProperties(
-      serializers,
-      serialized,
-      specifiedType: specifiedType,
-      serializedList: serializedList,
-      unhandled: unhandled,
-      result: result,
-    );
-    return result.build();
+  String toString() {
+    return toJson().toString();
   }
+
 }
 

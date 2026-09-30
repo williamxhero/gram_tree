@@ -4,10 +4,12 @@
 
 import 'dart:async';
 
-import 'package:built_value/serializer.dart';
+// ignore: unused_import
+import 'dart:convert';
+import 'package:gramtree_api/src/deserialize.dart';
 import 'package:dio/dio.dart';
 
-import 'package:gramtree_api/src/api_util.dart';
+import 'package:gramtree_api/src/model/changes_response.dart';
 import 'package:gramtree_api/src/model/error_response.dart';
 import 'package:gramtree_api/src/model/ingredient_detail.dart';
 import 'package:gramtree_api/src/model/normalize_request.dart';
@@ -19,9 +21,84 @@ class IngredientsApi {
 
   final Dio _dio;
 
-  final Serializers _serializers;
+  const IngredientsApi(this._dio);
 
-  const IngredientsApi(this._dio, this._serializers);
+  /// Batch Get Ingredients
+  /// 批量读取食材的完整数据（含详细属性）。最多一次 100 个。  参数 ids 是逗号分隔的标准 ID，例如：?ids&#x3D;uuid1,uuid2,uuid3 如果某个 ID 已合并，自动返回合并后的食材。 不存在的 ID 会被跳过（不返回、不报错）。
+  ///
+  /// Parameters:
+  /// * [ids] 
+  /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
+  /// * [headers] - Can be used to add additional headers to the request
+  /// * [extras] - Can be used to add flags to the request
+  /// * [validateStatus] - A [ValidateStatus] callback that can be used to determine request success based on the HTTP status of the response
+  /// * [onSendProgress] - A [ProgressCallback] that can be used to get the send progress
+  /// * [onReceiveProgress] - A [ProgressCallback] that can be used to get the receive progress
+  ///
+  /// Returns a [Future] containing a [Response] with a [List<IngredientDetail>] as data
+  /// Throws [DioException] if API call or serialization fails
+  Future<Response<List<IngredientDetail>>> batchGetIngredients({ 
+    required String ids,
+    CancelToken? cancelToken,
+    Map<String, dynamic>? headers,
+    Map<String, dynamic>? extra,
+    ValidateStatus? validateStatus,
+    ProgressCallback? onSendProgress,
+    ProgressCallback? onReceiveProgress,
+  }) async {
+    final _path = r'/v1/ingredients/batch';
+    final _options = Options(
+      method: r'GET',
+      headers: <String, dynamic>{
+        ...?headers,
+      },
+      extra: <String, dynamic>{
+        'secure': <Map<String, String>>[],
+        ...?extra,
+      },
+      validateStatus: validateStatus,
+    );
+
+    final _queryParameters = <String, dynamic>{
+      r'ids': ids,
+    };
+
+    final _response = await _dio.request<Object>(
+      _path,
+      options: _options,
+      queryParameters: _queryParameters,
+      cancelToken: cancelToken,
+      onSendProgress: onSendProgress,
+      onReceiveProgress: onReceiveProgress,
+    );
+
+    List<IngredientDetail>? _responseData;
+
+    try {
+final rawData = _response.data;
+_responseData = rawData == null ? null : deserialize<List<IngredientDetail>, IngredientDetail>(rawData, 'List<IngredientDetail>', growable: true);
+
+    } catch (error, stackTrace) {
+      throw DioException(
+        requestOptions: _response.requestOptions,
+        response: _response,
+        type: DioExceptionType.unknown,
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+
+    return Response<List<IngredientDetail>>(
+      data: _responseData,
+      headers: _response.headers,
+      isRedirect: _response.isRedirect,
+      requestOptions: _response.requestOptions,
+      redirects: _response.redirects,
+      statusCode: _response.statusCode,
+      statusMessage: _response.statusMessage,
+      extra: _response.extra,
+    );
+  }
 
   /// Get Ingredient
   /// 读取一种食材的完整数据。如果这个 ID 已经合并到另一个,自动返回合并后的食材。  没经人工校对的属性带 &#x60;estimate: true&#x60;，计算和显示时按估算处理。
@@ -46,7 +123,7 @@ class IngredientsApi {
     ProgressCallback? onSendProgress,
     ProgressCallback? onReceiveProgress,
   }) async {
-    final _path = r'/v1/ingredients/{ingredient_id}'.replaceAll('{' r'ingredient_id' '}', encodeQueryParameter(_serializers, ingredientId, const FullType(String)).toString());
+    final _path = r'/v1/ingredients/{ingredient_id}'.replaceAll('{' r'ingredient_id' '}', ingredientId.toString());
     final _options = Options(
       method: r'GET',
       headers: <String, dynamic>{
@@ -70,11 +147,8 @@ class IngredientsApi {
     IngredientDetail? _responseData;
 
     try {
-      final rawResponse = _response.data;
-      _responseData = rawResponse == null ? null : _serializers.deserialize(
-        rawResponse,
-        specifiedType: const FullType(IngredientDetail),
-      ) as IngredientDetail;
+final rawData = _response.data;
+_responseData = rawData == null ? null : deserialize<IngredientDetail, IngredientDetail>(rawData, 'IngredientDetail', growable: true);
 
     } catch (error, stackTrace) {
       throw DioException(
@@ -87,6 +161,83 @@ class IngredientsApi {
     }
 
     return Response<IngredientDetail>(
+      data: _responseData,
+      headers: _response.headers,
+      isRedirect: _response.isRedirect,
+      requestOptions: _response.requestOptions,
+      redirects: _response.redirects,
+      statusCode: _response.statusCode,
+      statusMessage: _response.statusMessage,
+      extra: _response.extra,
+    );
+  }
+
+  /// Get Ingredient Changes
+  /// 返回指定版本之后的食材变化。客户端用它做增量同步。  - added：新增的食材 - modified：内容有变化的（通过 Ingredient.version &gt; since_version 检测） - merged：被合并的食材（旧 ID -&gt; 新 ID 映射）
+  ///
+  /// Parameters:
+  /// * [sinceVersion] 
+  /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
+  /// * [headers] - Can be used to add additional headers to the request
+  /// * [extras] - Can be used to add flags to the request
+  /// * [validateStatus] - A [ValidateStatus] callback that can be used to determine request success based on the HTTP status of the response
+  /// * [onSendProgress] - A [ProgressCallback] that can be used to get the send progress
+  /// * [onReceiveProgress] - A [ProgressCallback] that can be used to get the receive progress
+  ///
+  /// Returns a [Future] containing a [Response] with a [ChangesResponse] as data
+  /// Throws [DioException] if API call or serialization fails
+  Future<Response<ChangesResponse>> getIngredientChanges({ 
+    required String sinceVersion,
+    CancelToken? cancelToken,
+    Map<String, dynamic>? headers,
+    Map<String, dynamic>? extra,
+    ValidateStatus? validateStatus,
+    ProgressCallback? onSendProgress,
+    ProgressCallback? onReceiveProgress,
+  }) async {
+    final _path = r'/v1/ingredients/changes';
+    final _options = Options(
+      method: r'GET',
+      headers: <String, dynamic>{
+        ...?headers,
+      },
+      extra: <String, dynamic>{
+        'secure': <Map<String, String>>[],
+        ...?extra,
+      },
+      validateStatus: validateStatus,
+    );
+
+    final _queryParameters = <String, dynamic>{
+      r'since_version': sinceVersion,
+    };
+
+    final _response = await _dio.request<Object>(
+      _path,
+      options: _options,
+      queryParameters: _queryParameters,
+      cancelToken: cancelToken,
+      onSendProgress: onSendProgress,
+      onReceiveProgress: onReceiveProgress,
+    );
+
+    ChangesResponse? _responseData;
+
+    try {
+final rawData = _response.data;
+_responseData = rawData == null ? null : deserialize<ChangesResponse, ChangesResponse>(rawData, 'ChangesResponse', growable: true);
+
+    } catch (error, stackTrace) {
+      throw DioException(
+        requestOptions: _response.requestOptions,
+        response: _response,
+        type: DioExceptionType.unknown,
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+
+    return Response<ChangesResponse>(
       data: _responseData,
       headers: _response.headers,
       isRedirect: _response.isRedirect,
@@ -138,9 +289,7 @@ class IngredientsApi {
     dynamic _bodyData;
 
     try {
-      const _type = FullType(NormalizeRequest);
-      _bodyData = _serializers.serialize(normalizeRequest, specifiedType: _type);
-
+_bodyData=jsonEncode(normalizeRequest);
     } catch(error, stackTrace) {
       throw DioException(
          requestOptions: _options.compose(
@@ -165,11 +314,8 @@ class IngredientsApi {
     NormalizeResponse? _responseData;
 
     try {
-      final rawResponse = _response.data;
-      _responseData = rawResponse == null ? null : _serializers.deserialize(
-        rawResponse,
-        specifiedType: const FullType(NormalizeResponse),
-      ) as NormalizeResponse;
+final rawData = _response.data;
+_responseData = rawData == null ? null : deserialize<NormalizeResponse, NormalizeResponse>(rawData, 'NormalizeResponse', growable: true);
 
     } catch (error, stackTrace) {
       throw DioException(
@@ -233,9 +379,7 @@ class IngredientsApi {
     dynamic _bodyData;
 
     try {
-      const _type = FullType(SearchQuery);
-      _bodyData = _serializers.serialize(searchQuery, specifiedType: _type);
-
+_bodyData=jsonEncode(searchQuery);
     } catch(error, stackTrace) {
       throw DioException(
          requestOptions: _options.compose(
@@ -260,11 +404,8 @@ class IngredientsApi {
     SearchResult? _responseData;
 
     try {
-      final rawResponse = _response.data;
-      _responseData = rawResponse == null ? null : _serializers.deserialize(
-        rawResponse,
-        specifiedType: const FullType(SearchResult),
-      ) as SearchResult;
+final rawData = _response.data;
+_responseData = rawData == null ? null : deserialize<SearchResult, SearchResult>(rawData, 'SearchResult', growable: true);
 
     } catch (error, stackTrace) {
       throw DioException(
