@@ -186,7 +186,8 @@ def record_recipe_version_saved(
     if existing is not None:
         return
     item = EventInput(
-        id=uuid.uuid4(),
+        # A version is immutable and emitted once: replays must keep its event ID.
+        id=version_id,
         event_type="recipe.version_saved",
         type_version=1,
         device_id="server",

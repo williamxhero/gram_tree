@@ -17,6 +17,8 @@ abstract class _$RecipeCreateCWProxy {
 
   RecipeCreate dishName(String dishName);
 
+  RecipeCreate imageIds(List<String>? imageIds);
+
   RecipeCreate snapshot(RecipeSnapshot snapshot);
 
   /// This function **does support** nullification of nullable fields. All `null` values passed to `non-nullable` fields will be ignored. You can also use `RecipeCreate(...).copyWith.fieldName(...)` to override fields one at a time with nullification support.
@@ -31,6 +33,7 @@ abstract class _$RecipeCreateCWProxy {
     DishInput dish,
     List<String>? dishAliases,
     String dishName,
+    List<String>? imageIds,
     RecipeSnapshot snapshot,
   });
 }
@@ -58,6 +61,9 @@ class _$RecipeCreateCWProxyImpl implements _$RecipeCreateCWProxy {
   RecipeCreate dishName(String dishName) => this(dishName: dishName);
 
   @override
+  RecipeCreate imageIds(List<String>? imageIds) => this(imageIds: imageIds);
+
+  @override
   RecipeCreate snapshot(RecipeSnapshot snapshot) => this(snapshot: snapshot);
 
   @override
@@ -73,6 +79,7 @@ class _$RecipeCreateCWProxyImpl implements _$RecipeCreateCWProxy {
     Object? dish = const $CopyWithPlaceholder(),
     Object? dishAliases = const $CopyWithPlaceholder(),
     Object? dishName = const $CopyWithPlaceholder(),
+    Object? imageIds = const $CopyWithPlaceholder(),
     Object? snapshot = const $CopyWithPlaceholder(),
   }) {
     return RecipeCreate(
@@ -96,6 +103,10 @@ class _$RecipeCreateCWProxyImpl implements _$RecipeCreateCWProxy {
           ? _value.dishName
           // ignore: cast_nullable_to_non_nullable
           : dishName as String,
+      imageIds: imageIds == const $CopyWithPlaceholder()
+          ? _value.imageIds
+          // ignore: cast_nullable_to_non_nullable
+          : imageIds as List<String>?,
       snapshot: snapshot == const $CopyWithPlaceholder()
           ? _value.snapshot
           // ignore: cast_nullable_to_non_nullable
@@ -135,6 +146,10 @@ RecipeCreate _$RecipeCreateFromJson(Map<String, dynamic> json) =>
             (v) => (v as List<dynamic>?)?.map((e) => e as String).toList(),
           ),
           dishName: $checkedConvert('dish_name', (v) => v as String),
+          imageIds: $checkedConvert(
+            'image_ids',
+            (v) => (v as List<dynamic>?)?.map((e) => e as String).toList(),
+          ),
           snapshot: $checkedConvert(
             'snapshot',
             (v) => RecipeSnapshot.fromJson(v as Map<String, dynamic>),
@@ -147,6 +162,7 @@ RecipeCreate _$RecipeCreateFromJson(Map<String, dynamic> json) =>
         'changeNote': 'change_note',
         'dishAliases': 'dish_aliases',
         'dishName': 'dish_name',
+        'imageIds': 'image_ids',
       },
     );
 
@@ -157,5 +173,6 @@ Map<String, dynamic> _$RecipeCreateToJson(RecipeCreate instance) =>
       'dish': instance.dish.toJson(),
       'dish_aliases': ?instance.dishAliases,
       'dish_name': instance.dishName,
+      'image_ids': ?instance.imageIds,
       'snapshot': instance.snapshot.toJson(),
     };

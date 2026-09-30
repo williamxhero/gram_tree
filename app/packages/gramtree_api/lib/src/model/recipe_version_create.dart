@@ -25,6 +25,8 @@ class RecipeVersionCreate {
 
     this.changeNote = '',
 
+    this.imageIds,
+
     required this.snapshot,
   });
 
@@ -47,6 +49,9 @@ class RecipeVersionCreate {
   )
   final String? changeNote;
 
+  @JsonKey(name: r'image_ids', required: false, includeIfNull: false)
+  final List<String>? imageIds;
+
   @JsonKey(name: r'snapshot', required: true, includeIfNull: false)
   final RecipeSnapshot snapshot;
 
@@ -57,6 +62,7 @@ class RecipeVersionCreate {
           other.aiAssisted == aiAssisted &&
           other.baseVersionId == baseVersionId &&
           other.changeNote == changeNote &&
+          other.imageIds == imageIds &&
           other.snapshot == snapshot;
 
   @override
@@ -64,6 +70,7 @@ class RecipeVersionCreate {
       aiAssisted.hashCode +
       baseVersionId.hashCode +
       changeNote.hashCode +
+      imageIds.hashCode +
       snapshot.hashCode;
 
   factory RecipeVersionCreate.fromJson(Map<String, dynamic> json) =>

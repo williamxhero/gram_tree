@@ -86,6 +86,7 @@ lib/src/model/recipe_create.dart
 lib/src/model/recipe_derived.dart
 lib/src/model/recipe_detail.dart
 lib/src/model/recipe_image_out.dart
+lib/src/model/recipe_image_staged_out.dart
 lib/src/model/recipe_image_upload.dart
 lib/src/model/recipe_ingredient.dart
 lib/src/model/recipe_ingredient_replacement.dart

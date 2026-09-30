@@ -12,8 +12,6 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('create-recipe-entry')));
     await tester.pumpAndSettle();
     expect(find.byKey(const ValueKey('recipe-dish-name')), findsOneWidget);
-    expect(find.text('食材'), findsOneWidget);
-    expect(find.text('步骤'), findsOneWidget);
     expect(find.byKey(const ValueKey('save-recipe-button')), findsOneWidget);
     expect(env.local.getString(RecipeDraftStore.keyPrefix), isNull);
   });

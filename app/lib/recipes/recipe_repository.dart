@@ -38,6 +38,7 @@ class RecipeRepository {
         dishAliases: form.aliases,
         snapshot: form.snapshot,
         changeNote: form.changeNote,
+        imageIds: form.imageIds,
       ),
     );
     return response.data!;
@@ -55,6 +56,7 @@ class RecipeRepository {
         baseVersionId: baseVersionId,
         snapshot: form.snapshot,
         changeNote: form.changeNote,
+        imageIds: form.imageIds,
       ),
     );
     return response.data!;
@@ -357,6 +359,7 @@ class RecipeForm {
     this.changeNote = '',
     List<RecipeIngredientDraft>? ingredients,
     List<RecipeStepDraft>? steps,
+    this.imageIds = const [],
   }) : ingredients = ingredients ?? [RecipeIngredientDraft(id: 'ingredient-1')],
        steps = steps ?? [RecipeStepDraft(id: 'step-1')];
 
@@ -388,7 +391,8 @@ class RecipeForm {
             _string(value['dish_name']) ?? '',
           )
           ..aliases = _strings(value['aliases'])
-          ..changeNote = _string(value['change_note']) ?? '';
+          ..changeNote = _string(value['change_note']) ?? ''
+          ..imageIds = _strings(value['image_ids']);
       } catch (_) {
         // Fall through to the safe empty form below.
       }
@@ -407,6 +411,7 @@ class RecipeForm {
   String changeNote;
   List<RecipeIngredientDraft> ingredients;
   List<RecipeStepDraft> steps;
+  List<String> imageIds;
 
   RecipeSnapshot get snapshot => RecipeSnapshot(
     activeTimeSeconds: activeTimeSeconds,
@@ -424,6 +429,7 @@ class RecipeForm {
     'dish_name': dishName,
     'aliases': [...aliases],
     'change_note': changeNote,
+    'image_ids': [...imageIds],
     'snapshot': snapshot.toJson(),
   };
 }

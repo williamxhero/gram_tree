@@ -10,6 +10,7 @@ import '../../ingredients/ingredient_provider.dart';
 import '../../l10n/app_localizations.dart';
 import '../../recipes/recipe_draft.dart';
 import '../../recipes/recipe_repository.dart';
+import 'recipe_photo_panel.dart';
 import '../../storage/local_store.dart';
 import '../../ui_protocol/source_mark.dart';
 import '../../ui_protocol/source_types.dart';
@@ -439,6 +440,16 @@ class _RecipeEditorPageState extends ConsumerState<RecipeEditorPage> {
           KeyedSubtree(
             key: ValueKey('recipe-info-$_editorRevision'),
             child: _RecipeInfoFields(form: _form, onChanged: _changed),
+          ),
+          const SizedBox(height: 20),
+          RecipePhotoPanel(
+            recipeId: _loaded?.id,
+            onUploaded: (result) {
+              if (_loaded == null) {
+                _form.imageIds.add(result.id);
+                _changed();
+              }
+            },
           ),
           const SizedBox(height: 20),
           Row(
@@ -1327,7 +1338,12 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
       body: ListView(
         padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
         children: [
-          RecipePhotoPanel(images: detail.version.images),
+          _RecipePhotoDisplay(images: detail.version.images),
+          if (widget.versionId == null)
+            RecipePhotoPanel(
+              recipeId: widget.recipeId,
+              onUploaded: (_) => _load(),
+            ),
           Text(
             detail.dish.name,
             style: Theme.of(context).textTheme.headlineSmall,
@@ -1419,8 +1435,8 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
   }
 }
 
-class RecipePhotoPanel extends StatelessWidget {
-  const RecipePhotoPanel({super.key, this.images});
+class _RecipePhotoDisplay extends StatelessWidget {
+  const _RecipePhotoDisplay({this.images});
   final List<RecipeImageOut>? images;
 
   @override

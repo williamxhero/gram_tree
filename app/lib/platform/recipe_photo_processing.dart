@@ -24,7 +24,8 @@ class DefaultRecipePhotoProcessor implements RecipePhotoProcessor {
       // bakeOrientation reads EXIF orientation, then the JPEG encoder below
       // writes a fresh image with no EXIF/GPS/application metadata.
       var normalized = img.bakeOrientation(decoded);
-      if (normalized.width > _maxDimension || normalized.height > _maxDimension) {
+      if (normalized.width > _maxDimension ||
+          normalized.height > _maxDimension) {
         normalized = img.copyResize(
           normalized,
           width: normalized.width >= normalized.height ? _maxDimension : null,

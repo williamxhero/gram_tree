@@ -4,14 +4,17 @@ import 'recipe_photo_types.dart';
 
 /// Browser substitute: image_picker opens the browser file/camera chooser.
 class WebRecipePhotoPicker implements RecipePhotoPicker {
-  WebRecipePhotoPicker([ImagePicker? picker]) : _picker = picker ?? ImagePicker();
+  WebRecipePhotoPicker([ImagePicker? picker])
+    : _picker = picker ?? ImagePicker();
 
   final ImagePicker _picker;
 
   @override
   Future<RecipePhotoAsset?> pick(RecipePhotoSource source) async {
     final file = await _picker.pickImage(
-      source: source == RecipePhotoSource.camera ? ImageSource.camera : ImageSource.gallery,
+      source: source == RecipePhotoSource.camera
+          ? ImageSource.camera
+          : ImageSource.gallery,
     );
     if (file == null) return null;
     final bytes = await file.readAsBytes();

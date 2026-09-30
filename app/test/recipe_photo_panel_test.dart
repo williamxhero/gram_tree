@@ -11,7 +11,6 @@ import 'package:gram_tree/platform/recipe_photo.dart';
 import 'package:gram_tree/platform/recipe_photo_api.dart';
 import 'package:gram_tree/privacy/policy.dart';
 import 'package:gram_tree/storage/local_store.dart';
-import 'package:gram_tree/widgets/permission_request.dart';
 import 'package:image/image.dart' as img;
 
 class _FakePermissions implements PermissionService {
@@ -21,7 +20,8 @@ class _FakePermissions implements PermissionService {
   final requested = <AppPermission>[];
 
   @override
-  Future<PermissionState> status(AppPermission permission) async => PermissionState.denied;
+  Future<PermissionState> status(AppPermission permission) async =>
+      PermissionState.denied;
 
   @override
   Future<PermissionState> request(AppPermission permission) async {
@@ -108,11 +108,14 @@ Future<void> _pumpPanel(
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
-        localStoreProvider.overrideWithValue(MemoryLocalStore(_consentedStore())),
+        localStoreProvider.overrideWithValue(
+          MemoryLocalStore(_consentedStore()),
+        ),
         recipePhotoPickerProvider.overrideWithValue(picker),
         recipePhotoProcessorProvider.overrideWithValue(processor),
         recipePhotoApiProvider.overrideWithValue(api),
-        if (permissions != null) permissionServiceProvider.overrideWithValue(permissions),
+        if (permissions != null)
+          permissionServiceProvider.overrideWithValue(permissions),
       ],
       child: const MaterialApp(
         locale: Locale.fromSubtags(languageCode: 'zh', scriptCode: 'Hans'),
@@ -133,7 +136,11 @@ Future<void> _pumpPanel(
 void main() {
   testWidgets('选择、处理、上传成功会显示完整状态结果', (tester) async {
     final picker = _FakePicker(
-      RecipePhotoAsset(bytes: _jpeg(), filename: 'dish.jpg', contentType: 'image/jpeg'),
+      RecipePhotoAsset(
+        bytes: _jpeg(),
+        filename: 'dish.jpg',
+        contentType: 'image/jpeg',
+      ),
     );
     final processor = _FakeProcessor(
       ProcessedRecipePhoto(
@@ -156,7 +163,11 @@ void main() {
 
   testWidgets('上传失败只影响图片功能并显示失败状态', (tester) async {
     final picker = _FakePicker(
-      RecipePhotoAsset(bytes: _jpeg(), filename: 'dish.jpg', contentType: 'image/jpeg'),
+      RecipePhotoAsset(
+        bytes: _jpeg(),
+        filename: 'dish.jpg',
+        contentType: 'image/jpeg',
+      ),
     );
     final processor = _FakeProcessor(
       ProcessedRecipePhoto(

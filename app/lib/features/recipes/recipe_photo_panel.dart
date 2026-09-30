@@ -9,14 +9,17 @@ import '../../platform/recipe_photo_api.dart';
 import '../../widgets/permission_request.dart';
 
 /// The complete photo-selection lifecycle, independent of the recipe editor.
-enum RecipePhotoPanelStatus { idle, picking, processing, uploading, success, error }
+enum RecipePhotoPanelStatus {
+  idle,
+  picking,
+  processing,
+  uploading,
+  success,
+  error,
+}
 
 class RecipePhotoPanel extends ConsumerStatefulWidget {
-  const RecipePhotoPanel({
-    super.key,
-    this.recipeId,
-    this.onUploaded,
-  });
+  const RecipePhotoPanel({super.key, this.recipeId, this.onUploaded});
 
   /// Null means the image is staged and can be attached to a future version.
   final String? recipeId;
@@ -80,10 +83,9 @@ class _RecipePhotoPanelState extends ConsumerState<RecipePhotoPanel> {
       final processed = ref.read(recipePhotoProcessorProvider).process(picked);
       if (!mounted) return;
       setState(() => _status = RecipePhotoPanelStatus.uploading);
-      final result = await ref.read(recipePhotoApiProvider).upload(
-        recipeId: widget.recipeId,
-        photo: processed,
-      );
+      final result = await ref
+          .read(recipePhotoApiProvider)
+          .upload(recipeId: widget.recipeId, photo: processed);
       if (!mounted) return;
       setState(() {
         _status = RecipePhotoPanelStatus.success;
@@ -142,12 +144,15 @@ class _RecipePhotoPanelState extends ConsumerState<RecipePhotoPanel> {
               const SizedBox(height: 6),
               Text(_statusLabel, style: theme.textTheme.bodySmall),
             ],
-            if (_status == RecipePhotoPanelStatus.success && _uploaded != null) ...[
+            if (_status == RecipePhotoPanelStatus.success &&
+                _uploaded != null) ...[
               const SizedBox(height: 8),
               Text(
                 '已上传，图片会以短期私有地址读取。',
                 style: theme.textTheme.bodyMedium?.copyWith(
-                  color: Theme.of(context).extension<GramTreeColors>()?.verified,
+                  color: Theme.of(context)
+                      .extension<GramTreeColors>()
+                      ?.verified,
                 ),
               ),
             ],
@@ -165,12 +170,16 @@ class _RecipePhotoPanelState extends ConsumerState<RecipePhotoPanel> {
               runSpacing: 8,
               children: [
                 OutlinedButton.icon(
-                  onPressed: _busy ? null : () => _choose(RecipePhotoSource.camera),
+                  onPressed: _busy
+                      ? null
+                      : () => _choose(RecipePhotoSource.camera),
                   icon: const Icon(Icons.camera_alt_outlined),
                   label: const Text('拍照'),
                 ),
                 OutlinedButton.icon(
-                  onPressed: _busy ? null : () => _choose(RecipePhotoSource.gallery),
+                  onPressed: _busy
+                      ? null
+                      : () => _choose(RecipePhotoSource.gallery),
                   icon: const Icon(Icons.photo_library_outlined),
                   label: const Text('从相册选图'),
                 ),
