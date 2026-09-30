@@ -1374,12 +1374,12 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
                   ),
                 ),
               ),
-              if (snapshot.difficulty.isNotEmpty)
+              if (snapshot.difficulty?.isNotEmpty == true)
                 Chip(
-                  label: Text(l10n.recipeDifficultyValue(snapshot.difficulty)),
+                  label: Text(l10n.recipeDifficultyValue(snapshot.difficulty!)),
                 ),
-              if (snapshot.dishType.isNotEmpty)
-                Chip(label: Text(l10n.recipeDishTypeValue(snapshot.dishType))),
+              if (snapshot.dishType?.isNotEmpty == true)
+                Chip(label: Text(l10n.recipeDishTypeValue(snapshot.dishType!))),
               for (final tag in snapshot.tags ?? const [])
                 Chip(label: Text(tag)),
             ],
@@ -1507,11 +1507,12 @@ class _IngredientDetailRow extends StatelessWidget {
       subtitle: Text(
         [
           quantity,
-          if (ingredient.preparation.isNotEmpty) ingredient.preparation,
+          if (ingredient.preparation?.isNotEmpty == true)
+            ingredient.preparation!,
           if (ingredient.optional == true) l10n.recipeOptional,
           if (ingredient.functional == true) l10n.recipeFunctionalToggle,
-          if (ingredient.replacement != null)
-            '${l10n.recipeReplacement}：${ingredient.replacement!.displayName} × ${ingredient.replacement!.ratio}',
+          if (_replacementLabel(ingredient.replacement).isNotEmpty)
+            '${l10n.recipeReplacement}：${_replacementLabel(ingredient.replacement)}',
         ].join(' · '),
       ),
     );
@@ -1542,12 +1543,13 @@ class _StepDetailTile extends StatelessWidget {
       if ((step.durationSeconds ?? 0) > 0)
         l10n.recipeSeconds(step.durationSeconds ?? 0),
       if (step.unattended == true) l10n.recipeStepUnattended,
-      if (step.heat.isNotEmpty) '${l10n.recipeStepHeat}：${step.heat}',
-      if (step.temperatureCelsius != 0)
+      if (step.heat?.isNotEmpty == true)
+        '${l10n.recipeStepHeat}：${step.heat}',
+      if ((step.temperatureCelsius ?? 0) != 0)
         '${l10n.recipeStepTemperature}：${step.temperatureCelsius}',
-      if (step.cookware.isNotEmpty)
+      if (step.cookware?.isNotEmpty == true)
         '${l10n.recipeStepCookware}：${step.cookware}',
-      if (step.doneness.isNotEmpty)
+      if (step.doneness?.isNotEmpty == true)
         '${l10n.recipeStepDoneness}：${step.doneness}',
       if ((step.dependsOn ?? const []).isNotEmpty)
         '${l10n.recipeStepDepends}：${step.dependsOn!.join('、')}',
@@ -1556,20 +1558,20 @@ class _StepDetailTile extends StatelessWidget {
       key: ValueKey('recipe-step-$index'),
       title: Text('${index + 1}. ${step.instruction}'),
       subtitle: Text(
-        details.isEmpty ? step.action : '${step.action} · $details',
+        details.isEmpty ? (step.action ?? '') : '${step.action ?? ''} · $details',
       ),
       children: [
-        if (step.notes.isNotEmpty)
+        if (step.notes?.isNotEmpty == true)
           ListTile(
             title: Text(l10n.recipeStepNotes),
-            subtitle: Text(step.notes),
+            subtitle: Text(step.notes!),
           ),
-        if (step.why.isNotEmpty)
+        if (step.why?.isNotEmpty == true)
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 8),
             child: WhyPanel(
               sourceType: sourceTypeAuthorFilled,
-              value: step.why,
+              value: step.why!,
               basisText: l10n.recipeStepWhy,
               required: true,
             ),
@@ -1771,8 +1773,21 @@ List<String> _split(String value) => value
     .toList();
 
 int _minutes(int? seconds) => ((seconds ?? 0) / 60).ceil();
-String _decimal(num value) => value.toStringAsFixed(1);
+String _decimal(num? value) => (value ?? 0).toStringAsFixed(1);
 String _formatDate(String value) =>
     value.replaceFirst('T', ' ').split('.').first;
+String _replacementLabel(Object? value) {
+  if (value is RecipeReplacement) {
+    return '${value.displayName} × ${(value.ratio ?? 1)}';
+  }
+  if (value is Map) {
+    final display = value['display_name'];
+    if (display is String && display.isNotEmpty) {
+      return '$display × ${value['ratio'] ?? 1}';
+    }
+  }
+  return '';
+}
+
 String _message(Object error) =>
     error.toString().replaceFirst('Exception: ', '');

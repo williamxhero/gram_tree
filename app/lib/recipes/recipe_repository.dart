@@ -116,25 +116,24 @@ class RecipeIngredientDraft {
   factory RecipeIngredientDraft.fromModel(RecipeIngredient value) =>
       RecipeIngredientDraft(
         id: value.id,
-        ingredientId: value.ingredientId.isEmpty ? null : value.ingredientId,
+        ingredientId: value.ingredientId?.isEmpty == true
+            ? null
+            : value.ingredientId,
         displayName: value.displayName,
         quantity: value.quantity.toDouble(),
         unit: value.unit,
-        baseQuantity: value.baseQuantity.toDouble(),
-        baseUnit: value.baseUnit.value,
-        preparation: value.preparation,
-        group: value.group,
+        baseQuantity: value.baseQuantity?.toDouble() ?? 0,
+        baseUnit: value.baseUnit?.value ?? 'g',
+        preparation: value.preparation ?? '',
+        group: value.group ?? '主料',
         scalingMode: value.scalingMode,
         optional: value.optional == true,
         functional: value.functional == true,
-        replacement: value.replacement == null
-            ? null
-            : RecipeReplacementDraft(
-                ingredientId: value.replacement!.ingredientId,
-                displayName: value.replacement!.displayName,
-                ratio: value.replacement!.ratio?.toDouble() ?? 1,
-                note: value.replacement!.note,
-              ),
+        replacement: value.replacement is Map
+            ? RecipeReplacementDraft.fromJson(
+                Map<String, dynamic>.from(value.replacement as Map),
+              )
+            : null,
       );
 
   factory RecipeIngredientDraft.fromJson(Map<String, dynamic> value) {
@@ -229,7 +228,7 @@ class RecipeReplacementDraft {
   double ratio;
   String note;
 
-  RecipeIngredientReplacement toModel() => RecipeIngredientReplacement(
+  RecipeReplacement toModel() => RecipeReplacement(
     displayName: displayName.trim(),
     ingredientId: ingredientId,
     note: note.trim(),
@@ -263,18 +262,18 @@ class RecipeStepDraft {
 
   factory RecipeStepDraft.fromModel(RecipeStep value) => RecipeStepDraft(
     id: value.id,
-    action: value.action,
+    action: value.action ?? '其他',
     instruction: value.instruction,
     ingredientIds: [...?value.ingredientIds],
     durationSeconds: value.durationSeconds ?? 0,
     unattended: value.unattended == true,
-    heat: value.heat,
-    temperatureCelsius: value.temperatureCelsius.toDouble(),
-    cookware: value.cookware,
-    doneness: value.doneness,
+    heat: value.heat ?? '',
+    temperatureCelsius: value.temperatureCelsius?.toDouble() ?? 0,
+    cookware: value.cookware ?? '',
+    doneness: value.doneness ?? '',
     dependsOn: [...?value.dependsOn],
-    notes: value.notes,
-    why: value.why,
+    notes: value.notes ?? '',
+    why: value.why ?? '',
   );
 
   factory RecipeStepDraft.fromJson(Map<String, dynamic> value) =>
@@ -367,8 +366,8 @@ class RecipeForm {
       RecipeForm(
         dishName: name,
         servings: snapshot.servings,
-        difficulty: snapshot.difficulty,
-        dishType: snapshot.dishType,
+        difficulty: snapshot.difficulty ?? '',
+        dishType: snapshot.dishType ?? '',
         tags: [...?snapshot.tags],
         totalTimeSeconds: snapshot.totalTimeSeconds ?? 0,
         activeTimeSeconds: snapshot.activeTimeSeconds ?? 0,

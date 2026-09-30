@@ -30,6 +30,8 @@ class RecipeCreate {
 
     this.dishName,
 
+    this.imageIds,
+
     required this.snapshot,
   });
 
@@ -58,6 +60,9 @@ class RecipeCreate {
   @JsonKey(name: r'dish_name', required: false, includeIfNull: false)
   final String? dishName;
 
+  @JsonKey(name: r'image_ids', required: false, includeIfNull: false)
+  final List<String>? imageIds;
+
   @JsonKey(name: r'snapshot', required: true, includeIfNull: false)
   final RecipeSnapshot snapshot;
 
@@ -70,6 +75,7 @@ class RecipeCreate {
           other.dish == dish &&
           other.dishAliases == dishAliases &&
           other.dishName == dishName &&
+          other.imageIds == imageIds &&
           other.snapshot == snapshot;
 
   @override
@@ -79,6 +85,7 @@ class RecipeCreate {
       dish.hashCode +
       dishAliases.hashCode +
       (dishName == null ? 0 : dishName.hashCode) +
+      imageIds.hashCode +
       snapshot.hashCode;
 
   factory RecipeCreate.fromJson(Map<String, dynamic> json) =>

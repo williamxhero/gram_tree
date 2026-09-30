@@ -87,7 +87,6 @@ export 'package:gramtree_api/src/model/recipe_image_out.dart';
 export 'package:gramtree_api/src/model/recipe_image_staged_out.dart';
 export 'package:gramtree_api/src/model/recipe_image_upload.dart';
 export 'package:gramtree_api/src/model/recipe_ingredient.dart';
-export 'package:gramtree_api/src/model/recipe_ingredient_replacement.dart';
 export 'package:gramtree_api/src/model/recipe_list.dart';
 export 'package:gramtree_api/src/model/recipe_list_item.dart';
 export 'package:gramtree_api/src/model/recipe_replacement.dart';

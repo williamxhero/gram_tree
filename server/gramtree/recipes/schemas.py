@@ -4,10 +4,9 @@
 派生信息，不把 ORM 对象暴露给客户端。
 """
 
-import uuid
 from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from gramtree.core.ids import IdV4
 from gramtree.core.time import Timestamp
@@ -19,22 +18,9 @@ class ValueSource(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     source: SourceType
-    original: str | None = Field(..., json_schema_extra={"title": None})
-    confidence: float | None = Field(..., json_schema_extra={"title": None})
-    basis: str | None = Field(..., json_schema_extra={"title": None})
-
-    @model_validator(mode="before")
-    @classmethod
-    def fill_nullable(cls, value: object) -> object:
-        if isinstance(value, dict):
-            return {
-                "source": "author_filled",
-                "original": None,
-                "confidence": None,
-                "basis": None,
-                **value,
-            }
-        return value
+    original: str | None = None
+    confidence: float | None = Field(default=None, ge=0, le=1)
+    basis: str | None = None
 
     @field_validator("confidence")
     @classmethod
@@ -70,73 +56,34 @@ class DishInput(BaseModel):
 class RecipeReplacement(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    ingredient_id: uuid.UUID | None = Field(..., json_schema_extra={"title": None})
+    ingredient_id: IdV4 | None = None
     display_name: str = Field(min_length=1, max_length=200)
     ratio: float = Field(default=1, gt=0, le=100)
-    note: str | None = Field(..., json_schema_extra={"title": None})
-
-    @model_validator(mode="before")
-    @classmethod
-    def fill_nullable(cls, value: object) -> object:
-        if isinstance(value, dict):
-            filled = {"ingredient_id": None, "note": None, **value}
-            if filled["ingredient_id"] == "":
-                filled["ingredient_id"] = None
-            return filled
-        return value
-
-    @field_validator("ingredient_id")
-    @classmethod
-    def v4_ingredient_id(cls, value: uuid.UUID | None) -> uuid.UUID | None:
-        if value is not None and value.version != 4:
-            raise ValueError("ID 必须是 UUID v4")
-        return value
+    note: str | None = None
 
 
 class RecipeIngredient(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     id: str = Field(min_length=1, max_length=100, description="菜谱内食材 ID")
-    ingredient_id: uuid.UUID | None = Field(
-        ..., description="标准食材 UUID；为空表示未收录", json_schema_extra={"title": None}
+    ingredient_id: IdV4 | None = Field(
+        default=None, description="标准食材 UUID；为空表示未收录"
     )
     display_name: str = Field(min_length=1, max_length=200)
     quantity: float = Field(ge=0, le=10_000_000)
     unit: str = Field(min_length=1, max_length=20)
     # 服务端保存的统一基础量；作者只需填写 quantity/unit。
-    base_quantity: float | None = Field(
-        ..., description="换算后的基础数量", json_schema_extra={"title": None}
-    )
+    base_quantity: float | None = Field(default=None, description="换算后的基础数量")
     base_unit: Literal["g", "ml", "count"] | None = Field(
-        ..., description="换算后的基础单位", json_schema_extra={"title": None}
+        default=None, description="换算后的基础单位"
     )
-    preparation: str | None = Field(..., description="处理方式", json_schema_extra={"title": None})
-    group: str | None = Field(..., description="食材分组", json_schema_extra={"title": None})
+    preparation: str | None = Field(default=None, description="处理方式")
+    group: str | None = Field(default=None, description="食材分组")
     optional: bool = False
-    replacement: RecipeReplacement | str | None = Field(
-        default=None, json_schema_extra={"title": None}
-    )
+    replacement: RecipeReplacement | str | None = None
     functional: bool = False
-    scaling_mode: Literal["proportional", "unchanged", "round"]
+    scaling_mode: Literal["proportional", "unchanged", "round"] = "proportional"
     quantity_source: ValueSource | None = None
-
-    @model_validator(mode="before")
-    @classmethod
-    def fill_nullable(cls, value: object) -> object:
-        if isinstance(value, dict):
-            filled = {
-                "ingredient_id": None,
-                "base_quantity": None,
-                "base_unit": None,
-                "preparation": None,
-                "group": None,
-                "scaling_mode": "proportional",
-                **value,
-            }
-            if filled["ingredient_id"] == "":
-                filled["ingredient_id"] = None
-            return filled
-        return value
 
     @field_validator("display_name", "unit")
     @classmethod
@@ -146,49 +93,26 @@ class RecipeIngredient(BaseModel):
             raise ValueError("文字不能为空")
         return value
 
-    @field_validator("ingredient_id")
-    @classmethod
-    def v4_ingredient_id(cls, value: uuid.UUID | None) -> uuid.UUID | None:
-        if value is not None and value.version != 4:
-            raise ValueError("ID 必须是 UUID v4")
-        return value
-
 
 class RecipeStep(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     id: str = Field(min_length=1, max_length=100, description="步骤 ID")
-    action: str | None = Field(..., json_schema_extra={"title": None})
+    action: str | None = None
     instruction: str = Field(min_length=1, max_length=2000)
     ingredient_ids: list[str] = Field(default_factory=list, max_length=100)
     duration_seconds: int = Field(default=0, ge=0, le=86400)
     unattended: bool = False
-    heat: str | None = Field(..., json_schema_extra={"title": None})
-    temperature_celsius: float | None = Field(..., json_schema_extra={"title": None})
-    cookware: str | None = Field(..., json_schema_extra={"title": None})
-    doneness: str | None = Field(..., json_schema_extra={"title": None})
+    heat: str | None = None
+    temperature_celsius: float | None = Field(default=None, ge=-50, le=1000)
+    cookware: str | None = None
+    doneness: str | None = None
     depends_on: list[str] = Field(default_factory=list, max_length=100)
-    notes: str | None = Field(..., json_schema_extra={"title": None})
-    why: str | None = Field(..., json_schema_extra={"title": None})
+    notes: str | None = None
+    why: str | None = None
     duration_source: ValueSource | None = None
     heat_source: ValueSource | None = None
     temperature_source: ValueSource | None = None
-
-    @model_validator(mode="before")
-    @classmethod
-    def fill_nullable(cls, value: object) -> object:
-        if isinstance(value, dict):
-            return {
-                "action": None,
-                "heat": None,
-                "temperature_celsius": None,
-                "cookware": None,
-                "doneness": None,
-                "notes": None,
-                "why": None,
-                **value,
-            }
-        return value
 
     @field_validator("temperature_celsius")
     @classmethod
@@ -199,25 +123,11 @@ class RecipeStep(BaseModel):
 
 
 class NutritionEstimate(BaseModel):
-    energy_kcal: float | None = Field(..., json_schema_extra={"title": None})
-    protein_g: float | None = Field(..., json_schema_extra={"title": None})
-    fat_g: float | None = Field(..., json_schema_extra={"title": None})
-    carbohydrate_g: float | None = Field(..., json_schema_extra={"title": None})
-    sodium_mg: float | None = Field(..., json_schema_extra={"title": None})
-
-    @model_validator(mode="before")
-    @classmethod
-    def fill_nullable(cls, value: object) -> object:
-        if isinstance(value, dict):
-            return {
-                "energy_kcal": None,
-                "protein_g": None,
-                "fat_g": None,
-                "carbohydrate_g": None,
-                "sodium_mg": None,
-                **value,
-            }
-        return value
+    energy_kcal: float | None = None
+    protein_g: float | None = None
+    fat_g: float | None = None
+    carbohydrate_g: float | None = None
+    sodium_mg: float | None = None
 
     estimated: bool = True
     incomplete: bool = False
@@ -229,32 +139,18 @@ class RecipeDerived(BaseModel):
     cookware: list[str] = Field(default_factory=list)
     allergens: list[str] = Field(default_factory=list)
     allergens_incomplete: bool = False
-    nutrition_per_serving: NutritionEstimate | None = Field(
-        default=None, json_schema_extra={"title": None}
-    )
+    nutrition_per_serving: NutritionEstimate | None = None
 
 
 class RecipeSnapshot(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    @model_validator(mode="before")
-    @classmethod
-    def fill_nullable(cls, value: object) -> object:
-        if isinstance(value, dict):
-            return {
-                "difficulty": None,
-                "dish_type": None,
-                "format_version": 1,
-                **value,
-            }
-        return value
-
-    format_version: Literal[1] = Field(..., description="快照格式版本")
+    format_version: Literal[1] = Field(default=1, description="快照格式版本")
     servings: int = Field(ge=1, le=1000)
     total_time_seconds: int = Field(default=0, ge=0, le=604800)
     active_time_seconds: int = Field(default=0, ge=0, le=604800)
-    difficulty: str | None = Field(..., json_schema_extra={"title": None})
-    dish_type: str | None = Field(..., json_schema_extra={"title": None})
+    difficulty: str | None = None
+    dish_type: str | None = None
     tags: list[str] = Field(default_factory=list, max_length=50)
     ingredients: list[RecipeIngredient] = Field(default_factory=list, max_length=500)
     steps: list[RecipeStep] = Field(default_factory=list, max_length=200)
@@ -263,21 +159,13 @@ class RecipeSnapshot(BaseModel):
 class RecipeCreate(BaseModel):
     """创建菜谱并保存第 1 版。"""
 
-    dish_name: str | None = Field(..., json_schema_extra={"title": None})
+    dish_name: str | None = None
     dish_aliases: list[str] = Field(default_factory=list, max_length=20)
-    dish: DishInput | None = Field(..., json_schema_extra={"title": None})
+    dish: DishInput | None = None
     snapshot: RecipeSnapshot
     change_note: str = Field(default="", max_length=2000)
     ai_assisted: bool = False
-    # Images are staged first, then atomically attached to this immutable version.
     image_ids: list[IdV4] = Field(default_factory=list, max_length=10)
-
-    @model_validator(mode="before")
-    @classmethod
-    def fill_nullable(cls, value: object) -> object:
-        if isinstance(value, dict):
-            return {"dish_name": None, "dish": None, **value}
-        return value
 
     @field_validator("dish_name")
     @classmethod
@@ -309,7 +197,7 @@ class RecipeVersionCreate(BaseModel):
     snapshot: RecipeSnapshot
     change_note: str = Field(default="", max_length=2000)
     ai_assisted: bool = False
-    base_version_id: IdV4 | None = Field(default=None, json_schema_extra={"title": None})
+    base_version_id: IdV4 | None = None
     image_ids: list[IdV4] = Field(default_factory=list, max_length=10)
 
 
@@ -329,8 +217,8 @@ class RecipeImageOut(BaseModel):
     version_id: IdV4
     content_type: str
     byte_size: int
-    width: int | None = Field(default=None, json_schema_extra={"title": None})
-    height: int | None = Field(default=None, json_schema_extra={"title": None})
+    width: int | None = None
+    height: int | None = None
     url: str
     expires_in_seconds: int
 
@@ -341,8 +229,8 @@ class RecipeImageStagedOut(BaseModel):
     id: IdV4
     content_type: str
     byte_size: int
-    width: int | None = Field(default=None, json_schema_extra={"title": None})
-    height: int | None = Field(default=None, json_schema_extra={"title": None})
+    width: int | None = None
+    height: int | None = None
     url: str
     expires_in_seconds: int
 
@@ -350,7 +238,7 @@ class RecipeImageStagedOut(BaseModel):
 class RecipeVersionOut(BaseModel):
     id: IdV4
     version_number: int
-    previous_version_id: IdV4 | None = Field(default=None, json_schema_extra={"title": None})
+    previous_version_id: IdV4 | None = None
     snapshot: RecipeSnapshot
     derived: RecipeDerived
     edit_operations: list[dict[str, Any]]
@@ -365,8 +253,8 @@ class RecipeDetail(BaseModel):
     dish: DishOut
     author: RecipeAuthor
     visibility: Literal["private"]
-    source_version_id: IdV4 | None = Field(default=None, json_schema_extra={"title": None})
-    root_recipe_id: IdV4 | None = Field(default=None, json_schema_extra={"title": None})
+    source_version_id: IdV4 | None = None
+    root_recipe_id: IdV4 | None = None
     created_at: Timestamp
     updated_at: Timestamp
     version: RecipeVersionOut
@@ -375,7 +263,7 @@ class RecipeDetail(BaseModel):
 class RecipeVersionSummary(BaseModel):
     id: IdV4
     version_number: int
-    previous_version_id: IdV4 | None = Field(default=None, json_schema_extra={"title": None})
+    previous_version_id: IdV4 | None = None
     change_note: str
     ai_assisted: bool
     created_at: Timestamp
@@ -392,7 +280,7 @@ class RecipeListItem(BaseModel):
     visibility: Literal["private"]
     version_number: int
     servings: int
-    difficulty: str | None = Field(default=None, json_schema_extra={"title": None})
+    difficulty: str | None = None
     total_time_seconds: int
     active_time_seconds: int
     updated_at: Timestamp
@@ -408,4 +296,4 @@ class RecipeImageUpload(BaseModel):
 
     content_base64: str = Field(min_length=1, max_length=20_000_000)
     content_type: str = Field(pattern=r"^image/(jpeg|png|webp)$")
-    filename: str | None = Field(default=None, json_schema_extra={"title": None})
+    filename: str | None = None

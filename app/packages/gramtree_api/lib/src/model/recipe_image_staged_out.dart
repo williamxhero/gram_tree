@@ -71,10 +71,10 @@ class RecipeImageStagedOut {
       byteSize.hashCode +
       contentType.hashCode +
       expiresInSeconds.hashCode +
-      height.hashCode +
+      (height == null ? 0 : height.hashCode) +
       id.hashCode +
       url.hashCode +
-      width.hashCode;
+      (width == null ? 0 : width.hashCode);
 
   factory RecipeImageStagedOut.fromJson(Map<String, dynamic> json) =>
       _$RecipeImageStagedOutFromJson(json);
