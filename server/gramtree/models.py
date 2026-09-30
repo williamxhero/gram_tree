@@ -6,6 +6,7 @@ from gramtree.db import Base
 from gramtree.events import models as _events  # noqa: F401
 from gramtree.examples import models as _examples  # noqa: F401
 from gramtree.ingredients import models as _ingredients  # noqa: F401
+from gramtree.recipes import models as _recipes  # noqa: F401
 from gramtree.runtime_config import models as _runtime_config  # noqa: F401
 
 metadata = Base.metadata

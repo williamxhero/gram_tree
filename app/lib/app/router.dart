@@ -14,6 +14,7 @@ import '../features/me/me_page.dart';
 import '../features/me/settings_page.dart';
 import '../features/me/withdraw_page.dart';
 import '../features/onboarding/consent_page.dart';
+import '../features/recipes/recipe_pages.dart';
 import '../features/records/records_page.dart';
 import '../features/tab_paths.dart';
 import '../features/today/today_page.dart';
@@ -91,6 +92,38 @@ final routerProvider = Provider<GoRouter>((ref) {
           _branch(TabPaths.create, const CreatePage()),
           _branch(TabPaths.records, const RecordsPage()),
           _branch(TabPaths.me, const MePage()),
+        ],
+      ),
+      GoRoute(
+        path: RecipeListPage.path,
+        builder: (_, _) => const RecipeListPage(),
+      ),
+      GoRoute(
+        path: RecipeEditorPage.path,
+        builder: (_, _) => const RecipeEditorPage(),
+      ),
+      GoRoute(
+        path: '/recipes/:recipeId',
+        builder: (_, state) =>
+            RecipeDetailPage(recipeId: state.pathParameters['recipeId']!),
+        routes: [
+          GoRoute(
+            path: 'edit',
+            builder: (_, state) =>
+                RecipeEditorPage(recipeId: state.pathParameters['recipeId']!),
+          ),
+          GoRoute(
+            path: 'history',
+            builder: (_, state) =>
+                RecipeHistoryPage(recipeId: state.pathParameters['recipeId']!),
+          ),
+          GoRoute(
+            path: 'versions/:versionId',
+            builder: (_, state) => RecipeDetailPage(
+              recipeId: state.pathParameters['recipeId']!,
+              versionId: state.pathParameters['versionId'],
+            ),
+          ),
         ],
       ),
       GoRoute(
