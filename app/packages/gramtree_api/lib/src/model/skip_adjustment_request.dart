@@ -3,105 +3,57 @@
 //
 
 // ignore_for_file: unused_element
-import 'package:built_value/built_value.dart';
-import 'package:built_value/serializer.dart';
+import 'package:copy_with_extension/copy_with_extension.dart';
+import 'package:json_annotation/json_annotation.dart';
 
 part 'skip_adjustment_request.g.dart';
 
-/// SkipAdjustmentRequest
-///
-/// Properties:
-/// * [componentId] - 要去掉来源调整的组件实例 ID
-@BuiltValue()
-abstract class SkipAdjustmentRequest implements Built<SkipAdjustmentRequest, SkipAdjustmentRequestBuilder> {
-  /// 要去掉来源调整的组件实例 ID
-  @BuiltValueField(wireName: r'component_id')
-  String get componentId;
 
-  SkipAdjustmentRequest._();
+@CopyWith()
+@JsonSerializable(
+  checked: true,
+  createToJson: true,
+  disallowUnrecognizedKeys: false,
+  explicitToJson: true,
+)
+class SkipAdjustmentRequest {
+  /// Returns a new [SkipAdjustmentRequest] instance.
+  SkipAdjustmentRequest({
 
-  factory SkipAdjustmentRequest([void updates(SkipAdjustmentRequestBuilder b)]) = _$SkipAdjustmentRequest;
+    required  this.componentId,
+  });
 
-  @BuiltValueHook(initializeBuilder: true)
-  static void _defaults(SkipAdjustmentRequestBuilder b) => b;
+      /// 要去掉来源调整的组件实例 ID
+  @JsonKey(
+    
+    name: r'component_id',
+    required: true,
+    includeIfNull: false,
+  )
 
-  @BuiltValueSerializer(custom: true)
-  static Serializer<SkipAdjustmentRequest> get serializer => _$SkipAdjustmentRequestSerializer();
-}
 
-class _$SkipAdjustmentRequestSerializer implements PrimitiveSerializer<SkipAdjustmentRequest> {
-  @override
-  final Iterable<Type> types = const [SkipAdjustmentRequest, _$SkipAdjustmentRequest];
+  final String componentId;
 
-  @override
-  final String wireName = r'SkipAdjustmentRequest';
 
-  Iterable<Object?> _serializeProperties(
-    Serializers serializers,
-    SkipAdjustmentRequest object, {
-    FullType specifiedType = FullType.unspecified,
-  }) sync* {
-    yield r'component_id';
-    yield serializers.serialize(
-      object.componentId,
-      specifiedType: const FullType(String),
-    );
-  }
 
-  @override
-  Object serialize(
-    Serializers serializers,
-    SkipAdjustmentRequest object, {
-    FullType specifiedType = FullType.unspecified,
-  }) {
-    return _serializeProperties(serializers, object, specifiedType: specifiedType).toList();
-  }
 
-  void _deserializeProperties(
-    Serializers serializers,
-    Object serialized, {
-    FullType specifiedType = FullType.unspecified,
-    required List<Object?> serializedList,
-    required SkipAdjustmentRequestBuilder result,
-    required List<Object?> unhandled,
-  }) {
-    for (var i = 0; i < serializedList.length; i += 2) {
-      final key = serializedList[i] as String;
-      final value = serializedList[i + 1];
-      switch (key) {
-        case r'component_id':
-          final valueDes = serializers.deserialize(
-            value,
-            specifiedType: const FullType(String),
-          ) as String;
-          result.componentId = valueDes;
-          break;
-        default:
-          unhandled.add(key);
-          unhandled.add(value);
-          break;
-      }
-    }
-  }
+
+    @override
+    bool operator ==(Object other) => identical(this, other) || other is SkipAdjustmentRequest &&
+      other.componentId == componentId;
+
+    @override
+    int get hashCode =>
+        componentId.hashCode;
+
+  factory SkipAdjustmentRequest.fromJson(Map<String, dynamic> json) => _$SkipAdjustmentRequestFromJson(json);
+
+  Map<String, dynamic> toJson() => _$SkipAdjustmentRequestToJson(this);
 
   @override
-  SkipAdjustmentRequest deserialize(
-    Serializers serializers,
-    Object serialized, {
-    FullType specifiedType = FullType.unspecified,
-  }) {
-    final result = SkipAdjustmentRequestBuilder();
-    final serializedList = (serialized as Iterable<Object?>).toList();
-    final unhandled = <Object?>[];
-    _deserializeProperties(
-      serializers,
-      serialized,
-      specifiedType: specifiedType,
-      serializedList: serializedList,
-      unhandled: unhandled,
-      result: result,
-    );
-    return result.build();
+  String toString() {
+    return toJson().toString();
   }
+
 }
 

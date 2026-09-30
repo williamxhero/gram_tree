@@ -3,120 +3,72 @@
 //
 
 // ignore_for_file: unused_element
-import 'package:built_value/built_value.dart';
-import 'package:built_value/serializer.dart';
+import 'package:copy_with_extension/copy_with_extension.dart';
+import 'package:json_annotation/json_annotation.dart';
 
 part 'email_reauth_request.g.dart';
 
-/// EmailReauthRequest
-///
-/// Properties:
-/// * [email] 
-/// * [code] 
-@BuiltValue()
-abstract class EmailReauthRequest implements Built<EmailReauthRequest, EmailReauthRequestBuilder> {
-  @BuiltValueField(wireName: r'email')
-  String get email;
 
-  @BuiltValueField(wireName: r'code')
-  String get code;
+@CopyWith()
+@JsonSerializable(
+  checked: true,
+  createToJson: true,
+  disallowUnrecognizedKeys: false,
+  explicitToJson: true,
+)
+class EmailReauthRequest {
+  /// Returns a new [EmailReauthRequest] instance.
+  EmailReauthRequest({
 
-  EmailReauthRequest._();
+    required  this.code,
 
-  factory EmailReauthRequest([void updates(EmailReauthRequestBuilder b)]) = _$EmailReauthRequest;
+    required  this.email,
+  });
 
-  @BuiltValueHook(initializeBuilder: true)
-  static void _defaults(EmailReauthRequestBuilder b) => b;
+  @JsonKey(
+    
+    name: r'code',
+    required: true,
+    includeIfNull: false,
+  )
 
-  @BuiltValueSerializer(custom: true)
-  static Serializer<EmailReauthRequest> get serializer => _$EmailReauthRequestSerializer();
-}
 
-class _$EmailReauthRequestSerializer implements PrimitiveSerializer<EmailReauthRequest> {
-  @override
-  final Iterable<Type> types = const [EmailReauthRequest, _$EmailReauthRequest];
+  final String code;
 
-  @override
-  final String wireName = r'EmailReauthRequest';
 
-  Iterable<Object?> _serializeProperties(
-    Serializers serializers,
-    EmailReauthRequest object, {
-    FullType specifiedType = FullType.unspecified,
-  }) sync* {
-    yield r'email';
-    yield serializers.serialize(
-      object.email,
-      specifiedType: const FullType(String),
-    );
-    yield r'code';
-    yield serializers.serialize(
-      object.code,
-      specifiedType: const FullType(String),
-    );
-  }
 
-  @override
-  Object serialize(
-    Serializers serializers,
-    EmailReauthRequest object, {
-    FullType specifiedType = FullType.unspecified,
-  }) {
-    return _serializeProperties(serializers, object, specifiedType: specifiedType).toList();
-  }
+  @JsonKey(
+    
+    name: r'email',
+    required: true,
+    includeIfNull: false,
+  )
 
-  void _deserializeProperties(
-    Serializers serializers,
-    Object serialized, {
-    FullType specifiedType = FullType.unspecified,
-    required List<Object?> serializedList,
-    required EmailReauthRequestBuilder result,
-    required List<Object?> unhandled,
-  }) {
-    for (var i = 0; i < serializedList.length; i += 2) {
-      final key = serializedList[i] as String;
-      final value = serializedList[i + 1];
-      switch (key) {
-        case r'email':
-          final valueDes = serializers.deserialize(
-            value,
-            specifiedType: const FullType(String),
-          ) as String;
-          result.email = valueDes;
-          break;
-        case r'code':
-          final valueDes = serializers.deserialize(
-            value,
-            specifiedType: const FullType(String),
-          ) as String;
-          result.code = valueDes;
-          break;
-        default:
-          unhandled.add(key);
-          unhandled.add(value);
-          break;
-      }
-    }
-  }
+
+  final String email;
+
+
+
+
+
+    @override
+    bool operator ==(Object other) => identical(this, other) || other is EmailReauthRequest &&
+      other.code == code &&
+      other.email == email;
+
+    @override
+    int get hashCode =>
+        code.hashCode +
+        email.hashCode;
+
+  factory EmailReauthRequest.fromJson(Map<String, dynamic> json) => _$EmailReauthRequestFromJson(json);
+
+  Map<String, dynamic> toJson() => _$EmailReauthRequestToJson(this);
 
   @override
-  EmailReauthRequest deserialize(
-    Serializers serializers,
-    Object serialized, {
-    FullType specifiedType = FullType.unspecified,
-  }) {
-    final result = EmailReauthRequestBuilder();
-    final serializedList = (serialized as Iterable<Object?>).toList();
-    final unhandled = <Object?>[];
-    _deserializeProperties(
-      serializers,
-      serialized,
-      specifiedType: specifiedType,
-      serializedList: serializedList,
-      unhandled: unhandled,
-      result: result,
-    );
-    return result.build();
+  String toString() {
+    return toJson().toString();
   }
+
 }
 

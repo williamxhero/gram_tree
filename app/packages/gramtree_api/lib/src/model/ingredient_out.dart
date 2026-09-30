@@ -3,201 +3,152 @@
 //
 
 // ignore_for_file: unused_element
-import 'package:built_collection/built_collection.dart';
-import 'package:built_value/built_value.dart';
-import 'package:built_value/serializer.dart';
+import 'package:copy_with_extension/copy_with_extension.dart';
+import 'package:json_annotation/json_annotation.dart';
 
 part 'ingredient_out.g.dart';
 
-/// IngredientOut
-///
-/// Properties:
-/// * [id] 
-/// * [standardName] 
-/// * [aliases] 
-/// * [pinyin] 
-/// * [pinyinInitials] 
-/// * [category] 
-/// * [version] 
-@BuiltValue()
-abstract class IngredientOut implements Built<IngredientOut, IngredientOutBuilder> {
-  @BuiltValueField(wireName: r'id')
-  String get id;
 
-  @BuiltValueField(wireName: r'standard_name')
-  String get standardName;
+@CopyWith()
+@JsonSerializable(
+  checked: true,
+  createToJson: true,
+  disallowUnrecognizedKeys: false,
+  explicitToJson: true,
+)
+class IngredientOut {
+  /// Returns a new [IngredientOut] instance.
+  IngredientOut({
 
-  @BuiltValueField(wireName: r'aliases')
-  BuiltList<String> get aliases;
+    required  this.aliases,
 
-  @BuiltValueField(wireName: r'pinyin')
-  String get pinyin;
+    required  this.category,
 
-  @BuiltValueField(wireName: r'pinyin_initials')
-  String get pinyinInitials;
+    required  this.id,
 
-  @BuiltValueField(wireName: r'category')
-  String get category;
+    required  this.pinyin,
 
-  @BuiltValueField(wireName: r'version')
-  String get version;
+    required  this.pinyinInitials,
 
-  IngredientOut._();
+    required  this.standardName,
 
-  factory IngredientOut([void updates(IngredientOutBuilder b)]) = _$IngredientOut;
+    required  this.version,
+  });
 
-  @BuiltValueHook(initializeBuilder: true)
-  static void _defaults(IngredientOutBuilder b) => b;
+  @JsonKey(
+    
+    name: r'aliases',
+    required: true,
+    includeIfNull: false,
+  )
 
-  @BuiltValueSerializer(custom: true)
-  static Serializer<IngredientOut> get serializer => _$IngredientOutSerializer();
-}
 
-class _$IngredientOutSerializer implements PrimitiveSerializer<IngredientOut> {
-  @override
-  final Iterable<Type> types = const [IngredientOut, _$IngredientOut];
+  final List<String> aliases;
 
-  @override
-  final String wireName = r'IngredientOut';
 
-  Iterable<Object?> _serializeProperties(
-    Serializers serializers,
-    IngredientOut object, {
-    FullType specifiedType = FullType.unspecified,
-  }) sync* {
-    yield r'id';
-    yield serializers.serialize(
-      object.id,
-      specifiedType: const FullType(String),
-    );
-    yield r'standard_name';
-    yield serializers.serialize(
-      object.standardName,
-      specifiedType: const FullType(String),
-    );
-    yield r'aliases';
-    yield serializers.serialize(
-      object.aliases,
-      specifiedType: const FullType(BuiltList, [FullType(String)]),
-    );
-    yield r'pinyin';
-    yield serializers.serialize(
-      object.pinyin,
-      specifiedType: const FullType(String),
-    );
-    yield r'pinyin_initials';
-    yield serializers.serialize(
-      object.pinyinInitials,
-      specifiedType: const FullType(String),
-    );
-    yield r'category';
-    yield serializers.serialize(
-      object.category,
-      specifiedType: const FullType(String),
-    );
-    yield r'version';
-    yield serializers.serialize(
-      object.version,
-      specifiedType: const FullType(String),
-    );
-  }
 
-  @override
-  Object serialize(
-    Serializers serializers,
-    IngredientOut object, {
-    FullType specifiedType = FullType.unspecified,
-  }) {
-    return _serializeProperties(serializers, object, specifiedType: specifiedType).toList();
-  }
+  @JsonKey(
+    
+    name: r'category',
+    required: true,
+    includeIfNull: false,
+  )
 
-  void _deserializeProperties(
-    Serializers serializers,
-    Object serialized, {
-    FullType specifiedType = FullType.unspecified,
-    required List<Object?> serializedList,
-    required IngredientOutBuilder result,
-    required List<Object?> unhandled,
-  }) {
-    for (var i = 0; i < serializedList.length; i += 2) {
-      final key = serializedList[i] as String;
-      final value = serializedList[i + 1];
-      switch (key) {
-        case r'id':
-          final valueDes = serializers.deserialize(
-            value,
-            specifiedType: const FullType(String),
-          ) as String;
-          result.id = valueDes;
-          break;
-        case r'standard_name':
-          final valueDes = serializers.deserialize(
-            value,
-            specifiedType: const FullType(String),
-          ) as String;
-          result.standardName = valueDes;
-          break;
-        case r'aliases':
-          final valueDes = serializers.deserialize(
-            value,
-            specifiedType: const FullType(BuiltList, [FullType(String)]),
-          ) as BuiltList<String>;
-          result.aliases.replace(valueDes);
-          break;
-        case r'pinyin':
-          final valueDes = serializers.deserialize(
-            value,
-            specifiedType: const FullType(String),
-          ) as String;
-          result.pinyin = valueDes;
-          break;
-        case r'pinyin_initials':
-          final valueDes = serializers.deserialize(
-            value,
-            specifiedType: const FullType(String),
-          ) as String;
-          result.pinyinInitials = valueDes;
-          break;
-        case r'category':
-          final valueDes = serializers.deserialize(
-            value,
-            specifiedType: const FullType(String),
-          ) as String;
-          result.category = valueDes;
-          break;
-        case r'version':
-          final valueDes = serializers.deserialize(
-            value,
-            specifiedType: const FullType(String),
-          ) as String;
-          result.version = valueDes;
-          break;
-        default:
-          unhandled.add(key);
-          unhandled.add(value);
-          break;
-      }
-    }
-  }
+
+  final String category;
+
+
+
+  @JsonKey(
+    
+    name: r'id',
+    required: true,
+    includeIfNull: false,
+  )
+
+
+  final String id;
+
+
+
+  @JsonKey(
+    
+    name: r'pinyin',
+    required: true,
+    includeIfNull: false,
+  )
+
+
+  final String pinyin;
+
+
+
+  @JsonKey(
+    
+    name: r'pinyin_initials',
+    required: true,
+    includeIfNull: false,
+  )
+
+
+  final String pinyinInitials;
+
+
+
+  @JsonKey(
+    
+    name: r'standard_name',
+    required: true,
+    includeIfNull: false,
+  )
+
+
+  final String standardName;
+
+
+
+  @JsonKey(
+    
+    name: r'version',
+    required: true,
+    includeIfNull: false,
+  )
+
+
+  final String version;
+
+
+
+
+
+    @override
+    bool operator ==(Object other) => identical(this, other) || other is IngredientOut &&
+      other.aliases == aliases &&
+      other.category == category &&
+      other.id == id &&
+      other.pinyin == pinyin &&
+      other.pinyinInitials == pinyinInitials &&
+      other.standardName == standardName &&
+      other.version == version;
+
+    @override
+    int get hashCode =>
+        aliases.hashCode +
+        category.hashCode +
+        id.hashCode +
+        pinyin.hashCode +
+        pinyinInitials.hashCode +
+        standardName.hashCode +
+        version.hashCode;
+
+  factory IngredientOut.fromJson(Map<String, dynamic> json) => _$IngredientOutFromJson(json);
+
+  Map<String, dynamic> toJson() => _$IngredientOutToJson(this);
 
   @override
-  IngredientOut deserialize(
-    Serializers serializers,
-    Object serialized, {
-    FullType specifiedType = FullType.unspecified,
-  }) {
-    final result = IngredientOutBuilder();
-    final serializedList = (serialized as Iterable<Object?>).toList();
-    final unhandled = <Object?>[];
-    _deserializeProperties(
-      serializers,
-      serialized,
-      specifiedType: specifiedType,
-      serializedList: serializedList,
-      unhandled: unhandled,
-      result: result,
-    );
-    return result.build();
+  String toString() {
+    return toJson().toString();
   }
+
 }
 

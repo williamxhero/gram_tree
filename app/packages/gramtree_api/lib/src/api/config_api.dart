@@ -4,7 +4,9 @@
 
 import 'dart:async';
 
-import 'package:built_value/serializer.dart';
+// ignore: unused_import
+import 'dart:convert';
+import 'package:gramtree_api/src/deserialize.dart';
 import 'package:dio/dio.dart';
 
 import 'package:gramtree_api/src/model/client_config.dart';
@@ -14,9 +16,7 @@ class ConfigApi {
 
   final Dio _dio;
 
-  final Serializers _serializers;
-
-  const ConfigApi(this._dio, this._serializers);
+  const ConfigApi(this._dio);
 
   /// App 用的能力开关和参数
   /// 
@@ -63,11 +63,8 @@ class ConfigApi {
     ClientConfig? _responseData;
 
     try {
-      final rawResponse = _response.data;
-      _responseData = rawResponse == null ? null : _serializers.deserialize(
-        rawResponse,
-        specifiedType: const FullType(ClientConfig),
-      ) as ClientConfig;
+final rawData = _response.data;
+_responseData = rawData == null ? null : deserialize<ClientConfig, ClientConfig>(rawData, 'ClientConfig', growable: true);
 
     } catch (error, stackTrace) {
       throw DioException(
