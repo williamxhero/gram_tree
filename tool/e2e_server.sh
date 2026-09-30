@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# 给端到端测试起一个真的服务端：新建空库 gramtree_e2e_acceptance20、跑完全部迁移、在后台启动，等健康检查通过。
+# 给端到端测试起一个真的服务端：新建空库 gramtree_e2e、跑完全部迁移、在后台启动，等健康检查通过。
 # 用法：tool/e2e_server.sh start | stop
 #
 # 服务端用 test 环境：验证码只存在内存里，可以从 /v1/dev/latest-email-code 读出来（测试环境才有这个接口）。
@@ -7,11 +7,11 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-PID_FILE="${TMPDIR:-/tmp}/gramtree_e2e_server.pid"
-LOG_FILE="${TMPDIR:-/tmp}/gramtree_e2e_server.log"
-PG="${GRAMTREE_E2E_PG:-postgresql+psycopg://postgres:postgres@localhost:5432}"
 PORT="${GRAMTREE_E2E_PORT:-8000}"
-DATABASE_NAME="${GRAMTREE_E2E_DATABASE_NAME:-gramtree_e2e_acceptance20}"
+PID_FILE="${GRAMTREE_E2E_PID_FILE:-${TMPDIR:-/tmp}/gramtree_e2e_server_${PORT}.pid}"
+LOG_FILE="${GRAMTREE_E2E_LOG_FILE:-${TMPDIR:-/tmp}/gramtree_e2e_server_${PORT}.log}"
+PG="${GRAMTREE_E2E_PG:-postgresql+psycopg://postgres:postgres@localhost:5432}"
+DATABASE_NAME="${GRAMTREE_E2E_DATABASE_NAME:-gramtree_e2e}"
 
 stop() {
   if [[ -f "$PID_FILE" ]]; then
@@ -25,7 +25,7 @@ start() {
   cd "$ROOT/server"
   export GRAMTREE_ENV=test
   export GRAMTREE_DATABASE_URL="$PG/$DATABASE_NAME"
-  export GRAMTREE_REDIS_URL="${GRAMTREE_E2E_REDIS:-redis://localhost:6379/8}"
+  export GRAMTREE_REDIS_URL="${GRAMTREE_E2E_REDIS:-redis://localhost:6379/14}"
   export GRAMTREE_MAIL_BACKEND=memory
 
   uv run python - "$PG" "$DATABASE_NAME" <<'EOF'

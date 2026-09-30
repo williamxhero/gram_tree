@@ -14,9 +14,9 @@ from collections.abc import Iterator
 
 TEST_DATABASE_URL = os.environ.get(
     "GRAMTREE_TEST_DATABASE_URL",
-    "postgresql+psycopg://postgres:postgres@localhost:5432/gramtree_test_acceptance20",
+    "postgresql+psycopg://postgres:postgres@localhost:5432/gramtree_test",
 )
-TEST_REDIS_URL = os.environ.get("GRAMTREE_TEST_REDIS_URL", "redis://localhost:6379/8")
+TEST_REDIS_URL = os.environ.get("GRAMTREE_TEST_REDIS_URL", "redis://localhost:6379/15")
 
 # 必须在 import gramtree 之前设好，命令行和任务进程都从环境变量读设置
 os.environ["GRAMTREE_ENV"] = "test"
