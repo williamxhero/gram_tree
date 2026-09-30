@@ -66,9 +66,7 @@ class RecipeIngredient(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     id: str = Field(min_length=1, max_length=100, description="菜谱内食材 ID")
-    ingredient_id: IdV4 | None = Field(
-        default=None, description="标准食材 UUID；为空表示未收录"
-    )
+    ingredient_id: IdV4 | None = Field(default=None, description="标准食材 UUID；为空表示未收录")
     display_name: str = Field(min_length=1, max_length=200)
     quantity: float = Field(ge=0, le=10_000_000)
     unit: str = Field(min_length=1, max_length=20)
