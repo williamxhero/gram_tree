@@ -278,7 +278,9 @@ def validate_directory(
     manifest, records, locations = _load_directory_with_locations(data_dir)
     _check_allergen_coverage(records, locations)
 
-    if baseline_dir is not None and (baseline_dir / "manifest.json").is_file():
+    if baseline_dir is not None:
+        if not (baseline_dir / "manifest.json").is_file():
+            raise IngredientImportError(f"基线目录缺少 {baseline_dir / 'manifest.json'}")
         _, baseline_records, baseline_locations = _load_directory_with_locations(baseline_dir)
         current_ids = {record.id for record in records}
         for location, record in zip(baseline_locations, baseline_records, strict=True):
