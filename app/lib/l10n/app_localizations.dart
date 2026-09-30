@@ -1577,6 +1577,12 @@ abstract class AppLocalizations {
   /// **'步骤引用了不存在的食材或前置步骤'**
   String get recipeInvalidStepReference;
 
+  /// No description provided for @recipeIngredientRequired.
+  ///
+  /// In zh, this message translates to:
+  /// **'请先填写食材名称'**
+  String get recipeIngredientRequired;
+
   /// No description provided for @recipeInvalidNumber.
   ///
   /// In zh, this message translates to:

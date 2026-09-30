@@ -809,6 +809,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get recipeInvalidStepReference => '步骤引用了不存在的食材或前置步骤';
 
   @override
+  String get recipeIngredientRequired => '请先填写食材名称';
+
+  @override
   String get recipeInvalidNumber => '请填写有效的非负数字';
 
   @override

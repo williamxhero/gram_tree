@@ -332,6 +332,7 @@
   "recipeVersionDate": "保存于 {date}",
   "recipeOperationCount": "{count} 条修改",
   "recipeInvalidStepReference": "步骤引用了不存在的食材或前置步骤",
+  "recipeIngredientRequired": "请先填写食材名称",
   "recipeInvalidNumber": "请填写有效的非负数字",
   "recipeDiscardConfirmTitle": "放弃未保存修改？",
   "recipeDiscardConfirmBody": "这会删除本机草稿，已保存的版本不会受影响。",

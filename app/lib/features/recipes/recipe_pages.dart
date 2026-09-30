@@ -269,6 +269,10 @@ class _RecipeEditorPageState extends ConsumerState<RecipeEditorPage> {
       setState(() => _error = l10n.recipeDishRequired);
       return false;
     }
+    if (_form.ingredients.any((item) => item.displayName.trim().isEmpty)) {
+      setState(() => _error = l10n.recipeIngredientRequired);
+      return false;
+    }
     if (_form.servings < 1 ||
         _form.ingredients.any(
           (item) => item.quantity < 0 || item.baseQuantity < 0,
