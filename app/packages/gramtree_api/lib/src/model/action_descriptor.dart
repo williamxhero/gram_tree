@@ -3,46 +3,125 @@
 //
 
 // ignore_for_file: unused_element
-import 'package:copy_with_extension/copy_with_extension.dart';
-import 'package:json_annotation/json_annotation.dart';
+import 'package:built_collection/built_collection.dart';
+import 'package:built_value/json_object.dart';
+import 'package:built_value/built_value.dart';
+import 'package:built_value/serializer.dart';
 
 part 'action_descriptor.g.dart';
 
-@CopyWith()
-@JsonSerializable(
-  checked: true,
-  createToJson: true,
-  disallowUnrecognizedKeys: false,
-  explicitToJson: true,
-)
-class ActionDescriptor {
-  /// Returns a new [ActionDescriptor] instance.
-  ActionDescriptor({required this.intent, this.params});
-
+/// ActionDescriptor
+///
+/// Properties:
+/// * [intent] - 已登记的意图名（SPEC-009.1 #81）
+/// * [params] 
+@BuiltValue()
+abstract class ActionDescriptor implements Built<ActionDescriptor, ActionDescriptorBuilder> {
   /// 已登记的意图名（SPEC-009.1 #81）
-  @JsonKey(name: r'intent', required: true, includeIfNull: false)
-  final String intent;
+  @BuiltValueField(wireName: r'intent')
+  String get intent;
 
-  @JsonKey(name: r'params', required: false, includeIfNull: false)
-  final Object? params;
+  @BuiltValueField(wireName: r'params')
+  BuiltMap<String, JsonObject?>? get params;
+
+  ActionDescriptor._();
+
+  factory ActionDescriptor([void updates(ActionDescriptorBuilder b)]) = _$ActionDescriptor;
+
+  @BuiltValueHook(initializeBuilder: true)
+  static void _defaults(ActionDescriptorBuilder b) => b;
+
+  @BuiltValueSerializer(custom: true)
+  static Serializer<ActionDescriptor> get serializer => _$ActionDescriptorSerializer();
+}
+
+class _$ActionDescriptorSerializer implements PrimitiveSerializer<ActionDescriptor> {
+  @override
+  final Iterable<Type> types = const [ActionDescriptor, _$ActionDescriptor];
 
   @override
-  bool operator ==(Object other) =>
-      identical(this, other) ||
-      other is ActionDescriptor &&
-          other.intent == intent &&
-          other.params == params;
+  final String wireName = r'ActionDescriptor';
+
+  Iterable<Object?> _serializeProperties(
+    Serializers serializers,
+    ActionDescriptor object, {
+    FullType specifiedType = FullType.unspecified,
+  }) sync* {
+    yield r'intent';
+    yield serializers.serialize(
+      object.intent,
+      specifiedType: const FullType(String),
+    );
+    if (object.params != null) {
+      yield r'params';
+      yield serializers.serialize(
+        object.params,
+        specifiedType: const FullType(BuiltMap, [FullType(String), FullType.nullable(JsonObject)]),
+      );
+    }
+  }
 
   @override
-  int get hashCode => intent.hashCode + params.hashCode;
+  Object serialize(
+    Serializers serializers,
+    ActionDescriptor object, {
+    FullType specifiedType = FullType.unspecified,
+  }) {
+    return _serializeProperties(serializers, object, specifiedType: specifiedType).toList();
+  }
 
-  factory ActionDescriptor.fromJson(Map<String, dynamic> json) =>
-      _$ActionDescriptorFromJson(json);
-
-  Map<String, dynamic> toJson() => _$ActionDescriptorToJson(this);
+  void _deserializeProperties(
+    Serializers serializers,
+    Object serialized, {
+    FullType specifiedType = FullType.unspecified,
+    required List<Object?> serializedList,
+    required ActionDescriptorBuilder result,
+    required List<Object?> unhandled,
+  }) {
+    for (var i = 0; i < serializedList.length; i += 2) {
+      final key = serializedList[i] as String;
+      final value = serializedList[i + 1];
+      switch (key) {
+        case r'intent':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(String),
+          ) as String;
+          result.intent = valueDes;
+          break;
+        case r'params':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(BuiltMap, [FullType(String), FullType.nullable(JsonObject)]),
+          ) as BuiltMap<String, JsonObject?>;
+          result.params.replace(valueDes);
+          break;
+        default:
+          unhandled.add(key);
+          unhandled.add(value);
+          break;
+      }
+    }
+  }
 
   @override
-  String toString() {
-    return toJson().toString();
+  ActionDescriptor deserialize(
+    Serializers serializers,
+    Object serialized, {
+    FullType specifiedType = FullType.unspecified,
+  }) {
+    final result = ActionDescriptorBuilder();
+    final serializedList = (serialized as Iterable<Object?>).toList();
+    final unhandled = <Object?>[];
+    _deserializeProperties(
+      serializers,
+      serialized,
+      specifiedType: specifiedType,
+      serializedList: serializedList,
+      unhandled: unhandled,
+      result: result,
+    );
+    return result.build();
   }
 }
+

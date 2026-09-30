@@ -1,41 +1,1870 @@
 {
+  "openapi": "3.1.0",
+  "info": {
+    "title": "味谱 GramTree API",
+    "description": "味谱服务端接口。Dart 客户端由这份描述生成，不要手改生成代码。",
+    "version": "1.0.0"
+  },
+  "paths": {
+    "/v1/health": {
+      "get": {
+        "tags": [
+          "health"
+        ],
+        "summary": "健康检查：服务、数据库、Redis 是否可用",
+        "operationId": "health",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "有组件不可用",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/client-config": {
+      "get": {
+        "tags": [
+          "config"
+        ],
+        "summary": "App 用的能力开关和参数",
+        "operationId": "client_config",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientConfig"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "参数错误",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "服务端错误",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/auth/email/code": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "发送邮箱验证码",
+        "description": "purpose=login 不需要登录；bind（绑定新邮箱）和 reauth（重新验证身份）需要登录。",
+        "operationId": "send_email_code",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EmailCodeRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EmailCodeSent"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "参数错误",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "服务端错误",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/v1/auth/email/login": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "用邮箱验证码登录（首次登录自动创建账号）",
+        "operationId": "email_login",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EmailLoginRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TokenPair"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "参数错误",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "服务端错误",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/auth/apple/login": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "通过 Apple 登录（首次登录自动创建账号）",
+        "operationId": "apple_login",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AppleLoginRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TokenPair"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "参数错误",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "服务端错误",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service Unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/auth/refresh": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "用刷新令牌续期",
+        "description": "每次续期都换发新的刷新令牌。旧的刷新令牌再被使用时，这台设备的登录全部失效。",
+        "operationId": "refresh_tokens",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RefreshRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TokenPair"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "参数错误",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "服务端错误",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/auth/logout": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "退出当前设备的登录",
+        "operationId": "logout",
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "参数错误",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "服务端错误",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/v1/auth/reauth/email": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "用邮箱验证码重新验证身份（注销账号等敏感操作前）",
+        "operationId": "reauth_email",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EmailReauthRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "参数错误",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "服务端错误",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/v1/auth/reauth/apple": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "通过 Apple 重新验证身份",
+        "operationId": "reauth_apple",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AppleReauthRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "参数错误",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "服务端错误",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service Unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/v1/me": {
+      "get": {
+        "tags": [
+          "account"
+        ],
+        "summary": "当前账号",
+        "operationId": "get_me",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "参数错误",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "服务端错误",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      },
+      "patch": {
+        "tags": [
+          "account"
+        ],
+        "summary": "修改昵称或时区",
+        "operationId": "update_me",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProfileUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "参数错误",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "服务端错误",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/v1/me/identities": {
+      "get": {
+        "tags": [
+          "account"
+        ],
+        "summary": "已绑定的登录方式",
+        "operationId": "list_identities",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/IdentityOut"
+                  },
+                  "type": "array",
+                  "title": "Response List Identities"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "参数错误",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "服务端错误",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/v1/me/identities/email": {
+      "post": {
+        "tags": [
+          "account"
+        ],
+        "summary": "绑定邮箱",
+        "operationId": "bind_email",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BindEmailRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/IdentityOut"
+                  },
+                  "type": "array",
+                  "title": "Response Bind Email"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "参数错误",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "服务端错误",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/v1/me/identities/apple": {
+      "post": {
+        "tags": [
+          "account"
+        ],
+        "summary": "绑定 Apple",
+        "operationId": "bind_apple",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BindAppleRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/IdentityOut"
+                  },
+                  "type": "array",
+                  "title": "Response Bind Apple"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "参数错误",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "服务端错误",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service Unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/v1/me/consents": {
+      "get": {
+        "tags": [
+          "account"
+        ],
+        "summary": "我的同意记录",
+        "operationId": "list_consents",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ConsentRecord-Output"
+                  },
+                  "type": "array",
+                  "title": "Response List Consents"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "参数错误",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "服务端错误",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "account"
+        ],
+        "summary": "上传同意或撤回记录（登录前存在本机的，登录后补传）",
+        "operationId": "upload_consents",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConsentUpload"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "参数错误",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "服务端错误",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/v1/me/deletion": {
+      "post": {
+        "tags": [
+          "account"
+        ],
+        "summary": "注销账号",
+        "description": "要求最近几分钟内重新验证过身份。成功后所有设备立即退出，账号变为注销中，个人数据在期限内由后台删除。",
+        "operationId": "request_deletion",
+        "responses": {
+          "202": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeletionOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "参数错误",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "服务端错误",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/v1/events/upload": {
+      "post": {
+        "tags": [
+          "events"
+        ],
+        "summary": "批量上传经验层事件（需要登录，按登记表校验，按事件 ID 去重，只追加存储）",
+        "operationId": "upload_events",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EventUploadRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EventUploadResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "参数错误",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "服务端错误",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/v1/analytics/events": {
+      "post": {
+        "tags": [
+          "analytics"
+        ],
+        "summary": "上传产品埋点（页面访问 / 入口点击 / 加载耗时）",
+        "description": "同意隐私政策前、或关闭“产品改进统计”开关后，客户端不应调用这个接口。服务端只按登记好的字段接收，多余字段一律拒收；不接受第三方分析服务转发。",
+        "operationId": "upload_analytics_events",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AnalyticsUploadRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "服务端错误",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/v1/ingredients/{ingredient_id}": {
+      "get": {
+        "tags": [
+          "ingredients"
+        ],
+        "summary": "Get Ingredient",
+        "description": "读取一种食材的完整数据。如果这个 ID 已经合并到另一个,自动返回合并后的食材。\n\n没经人工校对的属性带 `estimate: true`，计算和显示时按估算处理。",
+        "operationId": "get_ingredient",
+        "parameters": [
+          {
+            "name": "ingredient_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Ingredient Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IngredientDetail"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "参数错误",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "服务端错误",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/ingredients/search": {
+      "post": {
+        "tags": [
+          "ingredients"
+        ],
+        "summary": "Search Ingredients",
+        "description": "搜索食材。支持标准名、别名、拼音首字母、完整拼音前缀匹配。最多返回 20 个结果。",
+        "operationId": "search_ingredients",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SearchQuery"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SearchResult"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "参数错误",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "服务端错误",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/ingredients/normalize": {
+      "post": {
+        "tags": [
+          "ingredients"
+        ],
+        "summary": "Normalize Ingredients",
+        "description": "把一批食材名称归一到标准 ID（只用规则匹配），结果按输入顺序返回。",
+        "operationId": "normalize_ingredients",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NormalizeRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NormalizeResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "参数错误",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "服务端错误",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/ui/compositions": {
+      "post": {
+        "tags": [
+          "ui-protocol"
+        ],
+        "summary": "按 App 声明的协议版本和组件清单，下发一份页面描述（需要登录）",
+        "operationId": "compose",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ComposeRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PageDescription"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "参数错误",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "服务端错误",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/v1/ui/compositions/skip-adjustment": {
+      "post": {
+        "tags": [
+          "ui-protocol"
+        ],
+        "summary": "\"这次不用\"：返回去掉这条来源调整后的结果，只影响这次查看，不写口味档案（需要登录）",
+        "operationId": "skip_adjustment",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SkipAdjustmentRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkipAdjustmentResult"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "参数错误",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "服务端错误",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/v1/examples/samples": {
+      "put": {
+        "tags": [
+          "examples"
+        ],
+        "summary": "创建示例（同一个 ID 重复提交返回已有记录）",
+        "operationId": "put_sample",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SampleCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SampleOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "参数错误",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "服务端错误",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "201": {
+            "description": "新建",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SampleOut"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "examples"
+        ],
+        "summary": "示例列表（游标分页，新的在前）",
+        "operationId": "list_samples",
+        "parameters": [
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "上一页返回的 next_cursor",
+              "title": "Cursor"
+            },
+            "description": "上一页返回的 next_cursor"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "每页条数，上限见配置项 api.page_size_max",
+              "default": 20,
+              "title": "Limit"
+            },
+            "description": "每页条数，上限见配置项 api.page_size_max"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page_SampleOut_"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "参数错误",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "服务端错误",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/examples/samples/{sample_id}": {
+      "get": {
+        "tags": [
+          "examples"
+        ],
+        "summary": "读取一条示例",
+        "operationId": "get_sample",
+        "parameters": [
+          {
+            "name": "sample_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Sample Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SampleOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "参数错误",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "服务端错误",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "不存在",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/examples/boom": {
+      "get": {
+        "tags": [
+          "examples"
+        ],
+        "summary": "故意抛出未处理异常，用来测试统一错误格式",
+        "operationId": "boom",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "参数错误",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "服务端错误",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/examples/heartbeats": {
+      "get": {
+        "tags": [
+          "examples"
+        ],
+        "summary": "示例后台任务写下的记录（最近 20 条）",
+        "operationId": "list_heartbeats",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/HeartbeatOut"
+                  },
+                  "type": "array",
+                  "title": "Response List Heartbeats"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "参数错误",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "服务端错误",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "examples"
+        ],
+        "summary": "触发示例后台任务",
+        "operationId": "trigger_heartbeat",
+        "responses": {
+          "202": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TaskAccepted"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "参数错误",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "服务端错误",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
   "components": {
     "schemas": {
       "ActionDescriptor": {
         "properties": {
           "intent": {
-            "description": "已登记的意图名（SPEC-009.1 #81）",
+            "type": "string",
             "title": "Intent",
-            "type": "string"
+            "description": "已登记的意图名（SPEC-009.1 #81）"
           },
           "params": {
             "additionalProperties": true,
-            "title": "Params",
-            "type": "object"
+            "type": "object",
+            "title": "Params"
           }
         },
+        "type": "object",
         "required": [
           "intent"
         ],
-        "title": "ActionDescriptor",
-        "type": "object"
+        "title": "ActionDescriptor"
       },
       "AllergensAttribute": {
-        "additionalProperties": false,
-        "description": "所属过敏原分类；空列表表示不含已登记的过敏原。",
         "properties": {
-          "estimate": {
-            "description": "没经人工校对的字段按估算处理",
-            "readOnly": true,
-            "title": "Estimate",
-            "type": "boolean"
-          },
           "source": {
-            "description": "这项数据的来源",
+            "type": "string",
             "maxLength": 200,
             "minLength": 1,
             "title": "Source",
-            "type": "string"
+            "description": "这项数据的来源"
           },
           "status": {
             "$ref": "#/components/schemas/AttributeStatus",
@@ -45,10 +1874,18 @@
             "items": {
               "type": "string"
             },
-            "title": "Value",
-            "type": "array"
+            "type": "array",
+            "title": "Value"
+          },
+          "estimate": {
+            "type": "boolean",
+            "title": "Estimate",
+            "description": "没经人工校对的字段按估算处理",
+            "readOnly": true
           }
         },
+        "additionalProperties": false,
+        "type": "object",
         "required": [
           "source",
           "status",
@@ -56,66 +1893,66 @@
           "estimate"
         ],
         "title": "AllergensAttribute",
-        "type": "object"
+        "description": "所属过敏原分类；空列表表示不含已登记的过敏原。"
       },
       "AnalyticsEventIn": {
-        "additionalProperties": false,
-        "description": "只允许这些字段：事件类型、页面/入口标识、可选耗时、发生时间、设备 ID。\n\n不含菜谱内容、口味档案、过敏和健康信息；也不接受用户 ID（服务端按登录状态填入）。",
         "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id",
+            "description": "客户端生成的 UUID v4，用于去重"
+          },
+          "event_type": {
+            "type": "string",
+            "enum": [
+              "page_view",
+              "tap",
+              "load_duration"
+            ],
+            "title": "Event Type"
+          },
+          "target": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Target",
+            "description": "页面或入口标识"
+          },
+          "duration_ms": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 600000.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duration Ms",
+            "description": "耗时（毫秒），仅部分事件类型有意义"
+          },
+          "occurred_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Occurred At"
+          },
           "device_id": {
             "anyOf": [
               {
-                "maxLength": 64,
-                "type": "string"
+                "type": "string",
+                "maxLength": 64
               },
               {
                 "type": "null"
               }
             ],
             "title": "Device Id"
-          },
-          "duration_ms": {
-            "anyOf": [
-              {
-                "maximum": 600000.0,
-                "minimum": 0.0,
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "耗时（毫秒），仅部分事件类型有意义",
-            "title": "Duration Ms"
-          },
-          "event_type": {
-            "enum": [
-              "page_view",
-              "tap",
-              "load_duration"
-            ],
-            "title": "Event Type",
-            "type": "string"
-          },
-          "id": {
-            "description": "客户端生成的 UUID v4，用于去重",
-            "format": "uuid",
-            "title": "Id",
-            "type": "string"
-          },
-          "occurred_at": {
-            "format": "date-time",
-            "title": "Occurred At",
-            "type": "string"
-          },
-          "target": {
-            "description": "页面或入口标识",
-            "maxLength": 200,
-            "minLength": 1,
-            "title": "Target",
-            "type": "string"
           }
         },
+        "additionalProperties": false,
+        "type": "object",
         "required": [
           "id",
           "event_type",
@@ -123,29 +1960,33 @@
           "occurred_at"
         ],
         "title": "AnalyticsEventIn",
-        "type": "object"
+        "description": "只允许这些字段：事件类型、页面/入口标识、可选耗时、发生时间、设备 ID。\n\n不含菜谱内容、口味档案、过敏和健康信息；也不接受用户 ID（服务端按登录状态填入）。"
       },
       "AnalyticsUploadRequest": {
-        "additionalProperties": false,
         "properties": {
           "events": {
             "items": {
               "$ref": "#/components/schemas/AnalyticsEventIn"
             },
+            "type": "array",
             "maxItems": 100,
             "minItems": 1,
-            "title": "Events",
-            "type": "array"
+            "title": "Events"
           }
         },
+        "additionalProperties": false,
+        "type": "object",
         "required": [
           "events"
         ],
-        "title": "AnalyticsUploadRequest",
-        "type": "object"
+        "title": "AnalyticsUploadRequest"
       },
       "AppleLoginRequest": {
         "properties": {
+          "identity_token": {
+            "type": "string",
+            "title": "Identity Token"
+          },
           "authorization_code": {
             "anyOf": [
               {
@@ -156,6 +1997,18 @@
               }
             ],
             "title": "Authorization Code"
+          },
+          "given_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Given Name",
+            "description": "首次授权时 Apple 给的名字"
           },
           "family_name": {
             "anyOf": [
@@ -167,54 +2020,42 @@
               }
             ],
             "title": "Family Name"
-          },
-          "given_name": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "首次授权时 Apple 给的名字",
-            "title": "Given Name"
-          },
-          "identity_token": {
-            "title": "Identity Token",
-            "type": "string"
           }
         },
+        "type": "object",
         "required": [
           "identity_token"
         ],
-        "title": "AppleLoginRequest",
-        "type": "object"
+        "title": "AppleLoginRequest"
       },
       "AppleReauthRequest": {
         "properties": {
           "identity_token": {
-            "title": "Identity Token",
-            "type": "string"
+            "type": "string",
+            "title": "Identity Token"
           }
         },
+        "type": "object",
         "required": [
           "identity_token"
         ],
-        "title": "AppleReauthRequest",
-        "type": "object"
+        "title": "AppleReauthRequest"
       },
       "AttributeStatus": {
-        "description": "字段的校对状态。",
+        "type": "string",
         "enum": [
           "ai_draft",
           "verified"
         ],
         "title": "AttributeStatus",
-        "type": "string"
+        "description": "字段的校对状态。"
       },
       "BindAppleRequest": {
         "properties": {
+          "identity_token": {
+            "type": "string",
+            "title": "Identity Token"
+          },
           "authorization_code": {
             "anyOf": [
               {
@@ -225,71 +2066,67 @@
               }
             ],
             "title": "Authorization Code"
-          },
-          "identity_token": {
-            "title": "Identity Token",
-            "type": "string"
           }
         },
+        "type": "object",
         "required": [
           "identity_token"
         ],
-        "title": "BindAppleRequest",
-        "type": "object"
+        "title": "BindAppleRequest"
       },
       "BindEmailRequest": {
         "properties": {
+          "email": {
+            "type": "string",
+            "title": "Email"
+          },
           "code": {
+            "type": "string",
             "maxLength": 6,
             "minLength": 6,
-            "title": "Code",
-            "type": "string"
-          },
-          "email": {
-            "title": "Email",
-            "type": "string"
+            "title": "Code"
           }
         },
+        "type": "object",
         "required": [
           "email",
           "code"
         ],
-        "title": "BindEmailRequest",
-        "type": "object"
+        "title": "BindEmailRequest"
       },
       "BoolAttribute": {
-        "additionalProperties": false,
         "properties": {
-          "estimate": {
-            "description": "没经人工校对的字段按估算处理",
-            "readOnly": true,
-            "title": "Estimate",
-            "type": "boolean"
-          },
           "source": {
-            "description": "这项数据的来源",
+            "type": "string",
             "maxLength": 200,
             "minLength": 1,
             "title": "Source",
-            "type": "string"
+            "description": "这项数据的来源"
           },
           "status": {
             "$ref": "#/components/schemas/AttributeStatus",
             "description": "ai_draft：AI 起草；verified：人工校对过"
           },
           "value": {
-            "title": "Value",
-            "type": "boolean"
+            "type": "boolean",
+            "title": "Value"
+          },
+          "estimate": {
+            "type": "boolean",
+            "title": "Estimate",
+            "description": "没经人工校对的字段按估算处理",
+            "readOnly": true
           }
         },
+        "additionalProperties": false,
+        "type": "object",
         "required": [
           "source",
           "status",
           "value",
           "estimate"
         ],
-        "title": "BoolAttribute",
-        "type": "object"
+        "title": "BoolAttribute"
       },
       "CacheInfo": {
         "properties": {
@@ -297,90 +2134,91 @@
             "additionalProperties": {
               "type": "string"
             },
-            "description": "依赖的内容版本",
+            "type": "object",
             "title": "Depends On",
-            "type": "object"
+            "description": "依赖的内容版本"
           },
           "ttl_s": {
-            "description": "缓存有效期（秒）",
+            "type": "integer",
             "minimum": 0.0,
             "title": "Ttl S",
-            "type": "integer"
+            "description": "缓存有效期（秒）"
           }
         },
+        "type": "object",
         "required": [
           "ttl_s"
         ],
-        "title": "CacheInfo",
-        "type": "object"
+        "title": "CacheInfo"
       },
       "ClientConfig": {
-        "description": "App 启动时拉取的服务端配置。",
         "properties": {
           "features": {
             "additionalProperties": {
               "type": "boolean"
             },
-            "title": "Features",
-            "type": "object"
+            "type": "object",
+            "title": "Features"
           },
           "params": {
             "additionalProperties": true,
-            "title": "Params",
-            "type": "object"
+            "type": "object",
+            "title": "Params"
           }
         },
+        "type": "object",
         "required": [
           "features",
           "params"
         ],
         "title": "ClientConfig",
-        "type": "object"
+        "description": "App 启动时拉取的服务端配置。"
       },
       "ComponentDescriptor": {
         "properties": {
-          "actions": {
-            "items": {
-              "$ref": "#/components/schemas/ActionDescriptor"
-            },
-            "title": "Actions",
-            "type": "array"
+          "type": {
+            "type": "string",
+            "title": "Type",
+            "description": "组件类型名，必须是 App 声明支持的组件"
           },
-          "data": {
-            "additionalProperties": true,
-            "description": "组件数据，形状由该 type 的组件 Schema 定义",
-            "title": "Data",
-            "type": "object"
+          "id": {
+            "type": "string",
+            "title": "Id",
+            "description": "这份描述里的组件实例 ID"
           },
           "detail": {
+            "type": "string",
             "enum": [
               "brief",
               "standard",
               "detailed"
             ],
-            "title": "Detail",
-            "type": "string"
+            "title": "Detail"
           },
-          "id": {
-            "description": "这份描述里的组件实例 ID",
-            "title": "Id",
-            "type": "string"
+          "data": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Data",
+            "description": "组件数据，形状由该 type 的组件 Schema 定义"
+          },
+          "actions": {
+            "items": {
+              "$ref": "#/components/schemas/ActionDescriptor"
+            },
+            "type": "array",
+            "title": "Actions"
           },
           "reason": {
             "$ref": "#/components/schemas/ComponentReason"
           },
           "required": {
-            "default": false,
-            "description": "是否是必显组件",
+            "type": "boolean",
             "title": "Required",
-            "type": "boolean"
-          },
-          "type": {
-            "description": "组件类型名，必须是 App 声明支持的组件",
-            "title": "Type",
-            "type": "string"
+            "description": "是否是必显组件",
+            "default": false
           }
         },
+        "type": "object",
         "required": [
           "type",
           "id",
@@ -388,107 +2226,107 @@
           "data",
           "reason"
         ],
-        "title": "ComponentDescriptor",
-        "type": "object"
+        "title": "ComponentDescriptor"
       },
       "ComponentReason": {
         "properties": {
           "code": {
-            "description": "理由代码，例如 default",
+            "type": "string",
             "title": "Code",
-            "type": "string"
+            "description": "理由代码，例如 default"
           },
           "text": {
-            "description": "给人看的一句话说明",
+            "type": "string",
             "title": "Text",
-            "type": "string"
+            "description": "给人看的一句话说明"
           }
         },
+        "type": "object",
         "required": [
           "code",
           "text"
         ],
-        "title": "ComponentReason",
-        "type": "object"
+        "title": "ComponentReason"
       },
       "ComposeRequest": {
         "properties": {
           "page_type": {
-            "description": "要哪个页面类型的组合，例如 today",
+            "type": "string",
             "title": "Page Type",
-            "type": "string"
+            "description": "要哪个页面类型的组合，例如 today"
           },
           "protocol_version": {
-            "description": "App 自己实现的协议版本，例如 1.0",
+            "type": "string",
             "title": "Protocol Version",
-            "type": "string"
+            "description": "App 自己实现的协议版本，例如 1.0"
           },
           "supported_components": {
-            "description": "App 已登记、认识的组件类型清单；服务端只会下发这里面的类型",
             "items": {
               "type": "string"
             },
+            "type": "array",
             "title": "Supported Components",
-            "type": "array"
+            "description": "App 已登记、认识的组件类型清单；服务端只会下发这里面的类型"
           }
         },
+        "type": "object",
         "required": [
           "page_type",
           "protocol_version"
         ],
-        "title": "ComposeRequest",
-        "type": "object"
+        "title": "ComposeRequest"
       },
       "ConsentRecord-Input": {
         "properties": {
-          "action": {
-            "enum": [
-              "agree",
-              "withdraw"
-            ],
-            "title": "Action",
-            "type": "string"
-          },
-          "device_id": {
-            "anyOf": [
-              {
-                "maxLength": 64,
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Device Id"
-          },
           "id": {
-            "description": "客户端生成的 UUID v4，重复上传按它去重",
+            "type": "string",
             "format": "uuid",
             "title": "Id",
-            "type": "string"
+            "description": "客户端生成的 UUID v4，重复上传按它去重"
           },
           "kind": {
+            "type": "string",
             "enum": [
               "terms",
               "privacy",
               "sensitive_personal_info",
               "product_analytics"
             ],
-            "title": "Kind",
-            "type": "string"
-          },
-          "occurred_at": {
-            "format": "date-time",
-            "title": "Occurred At",
-            "type": "string"
+            "title": "Kind"
           },
           "version": {
+            "type": "string",
             "maxLength": 32,
             "minLength": 1,
-            "title": "Version",
-            "type": "string"
+            "title": "Version"
+          },
+          "action": {
+            "type": "string",
+            "enum": [
+              "agree",
+              "withdraw"
+            ],
+            "title": "Action"
+          },
+          "occurred_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Occurred At"
+          },
+          "device_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 64
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Device Id"
           }
         },
+        "type": "object",
         "required": [
           "id",
           "kind",
@@ -496,58 +2334,58 @@
           "action",
           "occurred_at"
         ],
-        "title": "ConsentRecord",
-        "type": "object"
+        "title": "ConsentRecord"
       },
       "ConsentRecord-Output": {
         "properties": {
-          "action": {
-            "enum": [
-              "agree",
-              "withdraw"
-            ],
-            "title": "Action",
-            "type": "string"
-          },
-          "device_id": {
-            "anyOf": [
-              {
-                "maxLength": 64,
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Device Id"
-          },
           "id": {
-            "description": "客户端生成的 UUID v4，重复上传按它去重",
+            "type": "string",
             "format": "uuid",
             "title": "Id",
-            "type": "string"
+            "description": "客户端生成的 UUID v4，重复上传按它去重"
           },
           "kind": {
+            "type": "string",
             "enum": [
               "terms",
               "privacy",
               "sensitive_personal_info",
               "product_analytics"
             ],
-            "title": "Kind",
-            "type": "string"
-          },
-          "occurred_at": {
-            "title": "Occurred At",
-            "type": "string"
+            "title": "Kind"
           },
           "version": {
+            "type": "string",
             "maxLength": 32,
             "minLength": 1,
-            "title": "Version",
-            "type": "string"
+            "title": "Version"
+          },
+          "action": {
+            "type": "string",
+            "enum": [
+              "agree",
+              "withdraw"
+            ],
+            "title": "Action"
+          },
+          "occurred_at": {
+            "type": "string",
+            "title": "Occurred At"
+          },
+          "device_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 64
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Device Id"
           }
         },
+        "type": "object",
         "required": [
           "id",
           "kind",
@@ -555,8 +2393,7 @@
           "action",
           "occurred_at"
         ],
-        "title": "ConsentRecord",
-        "type": "object"
+        "title": "ConsentRecord"
       },
       "ConsentUpload": {
         "properties": {
@@ -564,54 +2401,47 @@
             "items": {
               "$ref": "#/components/schemas/ConsentRecord-Input"
             },
+            "type": "array",
             "maxItems": 100,
-            "title": "Records",
-            "type": "array"
+            "title": "Records"
           }
         },
+        "type": "object",
         "required": [
           "records"
         ],
-        "title": "ConsentUpload",
-        "type": "object"
+        "title": "ConsentUpload"
       },
       "CountUnit": {
-        "additionalProperties": false,
         "properties": {
+          "unit": {
+            "type": "string",
+            "title": "Unit",
+            "description": "计数单位，例如 个、瓣、根、片"
+          },
           "grams": {
-            "description": "一个这样的单位大约多少克",
+            "type": "number",
             "exclusiveMinimum": 0.0,
             "title": "Grams",
-            "type": "number"
-          },
-          "unit": {
-            "description": "计数单位，例如 个、瓣、根、片",
-            "title": "Unit",
-            "type": "string"
+            "description": "一个这样的单位大约多少克"
           }
         },
+        "additionalProperties": false,
+        "type": "object",
         "required": [
           "unit",
           "grams"
         ],
-        "title": "CountUnit",
-        "type": "object"
+        "title": "CountUnit"
       },
       "CountUnitsAttribute": {
-        "additionalProperties": false,
         "properties": {
-          "estimate": {
-            "description": "没经人工校对的字段按估算处理",
-            "readOnly": true,
-            "title": "Estimate",
-            "type": "boolean"
-          },
           "source": {
-            "description": "这项数据的来源",
+            "type": "string",
             "maxLength": 200,
             "minLength": 1,
             "title": "Source",
-            "type": "string"
+            "description": "这项数据的来源"
           },
           "status": {
             "$ref": "#/components/schemas/AttributeStatus",
@@ -621,22 +2451,38 @@
             "items": {
               "$ref": "#/components/schemas/CountUnit"
             },
+            "type": "array",
             "minItems": 1,
-            "title": "Value",
-            "type": "array"
+            "title": "Value"
+          },
+          "estimate": {
+            "type": "boolean",
+            "title": "Estimate",
+            "description": "没经人工校对的字段按估算处理",
+            "readOnly": true
           }
         },
+        "additionalProperties": false,
+        "type": "object",
         "required": [
           "source",
           "status",
           "value",
           "estimate"
         ],
-        "title": "CountUnitsAttribute",
-        "type": "object"
+        "title": "CountUnitsAttribute"
       },
       "DeletionOut": {
         "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "active",
+              "deleting",
+              "deleted"
+            ],
+            "title": "Status"
+          },
           "deletion_due_at": {
             "anyOf": [
               {
@@ -647,146 +2493,141 @@
               }
             ],
             "title": "Deletion Due At"
-          },
-          "status": {
-            "enum": [
-              "active",
-              "deleting",
-              "deleted"
-            ],
-            "title": "Status",
-            "type": "string"
           }
         },
+        "type": "object",
         "required": [
           "status",
           "deletion_due_at"
         ],
-        "title": "DeletionOut",
-        "type": "object"
+        "title": "DeletionOut"
       },
       "DensityAttribute": {
-        "additionalProperties": false,
         "properties": {
-          "estimate": {
-            "description": "没经人工校对的字段按估算处理",
-            "readOnly": true,
-            "title": "Estimate",
-            "type": "boolean"
-          },
           "source": {
-            "description": "这项数据的来源",
+            "type": "string",
             "maxLength": 200,
             "minLength": 1,
             "title": "Source",
-            "type": "string"
+            "description": "这项数据的来源"
           },
           "status": {
             "$ref": "#/components/schemas/AttributeStatus",
             "description": "ai_draft：AI 起草；verified：人工校对过"
           },
           "value": {
-            "description": "克/毫升",
+            "type": "number",
             "exclusiveMinimum": 0.0,
             "title": "Value",
-            "type": "number"
+            "description": "克/毫升"
+          },
+          "estimate": {
+            "type": "boolean",
+            "title": "Estimate",
+            "description": "没经人工校对的字段按估算处理",
+            "readOnly": true
           }
         },
+        "additionalProperties": false,
+        "type": "object",
         "required": [
           "source",
           "status",
           "value",
           "estimate"
         ],
-        "title": "DensityAttribute",
-        "type": "object"
+        "title": "DensityAttribute"
       },
       "EmailCodeRequest": {
         "properties": {
           "email": {
-            "title": "Email",
-            "type": "string"
+            "type": "string",
+            "title": "Email"
           },
           "purpose": {
+            "type": "string",
             "enum": [
               "login",
               "bind",
               "reauth"
             ],
-            "title": "Purpose",
-            "type": "string"
+            "title": "Purpose"
           }
         },
+        "type": "object",
         "required": [
           "email",
           "purpose"
         ],
-        "title": "EmailCodeRequest",
-        "type": "object"
+        "title": "EmailCodeRequest"
       },
       "EmailCodeSent": {
         "properties": {
-          "expires_in_seconds": {
-            "title": "Expires In Seconds",
-            "type": "integer"
-          },
           "resend_after_seconds": {
-            "title": "Resend After Seconds",
-            "type": "integer"
+            "type": "integer",
+            "title": "Resend After Seconds"
+          },
+          "expires_in_seconds": {
+            "type": "integer",
+            "title": "Expires In Seconds"
           }
         },
+        "type": "object",
         "required": [
           "resend_after_seconds",
           "expires_in_seconds"
         ],
-        "title": "EmailCodeSent",
-        "type": "object"
+        "title": "EmailCodeSent"
       },
       "EmailLoginRequest": {
         "properties": {
+          "email": {
+            "type": "string",
+            "title": "Email"
+          },
           "code": {
+            "type": "string",
             "maxLength": 6,
             "minLength": 6,
-            "title": "Code",
-            "type": "string"
-          },
-          "email": {
-            "title": "Email",
-            "type": "string"
+            "title": "Code"
           }
         },
+        "type": "object",
         "required": [
           "email",
           "code"
         ],
-        "title": "EmailLoginRequest",
-        "type": "object"
+        "title": "EmailLoginRequest"
       },
       "EmailReauthRequest": {
         "properties": {
+          "email": {
+            "type": "string",
+            "title": "Email"
+          },
           "code": {
+            "type": "string",
             "maxLength": 6,
             "minLength": 6,
-            "title": "Code",
-            "type": "string"
-          },
-          "email": {
-            "title": "Email",
-            "type": "string"
+            "title": "Code"
           }
         },
+        "type": "object",
         "required": [
           "email",
           "code"
         ],
-        "title": "EmailReauthRequest",
-        "type": "object"
+        "title": "EmailReauthRequest"
       },
       "ErrorBody": {
         "properties": {
           "code": {
-            "title": "Code",
-            "type": "string"
+            "type": "string",
+            "title": "Code"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
           },
           "detail": {
             "anyOf": [
@@ -798,10 +2639,6 @@
               }
             ],
             "title": "Detail"
-          },
-          "message": {
-            "title": "Message",
-            "type": "string"
           },
           "request_id": {
             "anyOf": [
@@ -815,12 +2652,12 @@
             "title": "Request Id"
           }
         },
+        "type": "object",
         "required": [
           "code",
           "message"
         ],
-        "title": "ErrorBody",
-        "type": "object"
+        "title": "ErrorBody"
       },
       "ErrorResponse": {
         "properties": {
@@ -828,39 +2665,14 @@
             "$ref": "#/components/schemas/ErrorBody"
           }
         },
+        "type": "object",
         "required": [
           "error"
         ],
-        "title": "ErrorResponse",
-        "type": "object"
+        "title": "ErrorResponse"
       },
       "EventCorrelationIds": {
-        "description": "关联 ID：都可以留空。这些字段名是所有事件类型统一使用的命名，\n后面新增的关联类型也照这个模式加字段，不要另起一套命名。\n\n这里只要求\"是字符串\"，不在 pydantic 层面强制 UUID v4 格式——格式是否合法放在\n`gramtree.events.validation` 里按条判断，不合法的那一条被单独拒收\n（原因码 `invalid_correlation_id`），不会拖累同一批里其它合格的事件。",
         "properties": {
-          "cooking_record_id": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "做菜记录",
-            "title": "Cooking Record Id"
-          },
-          "plan_id": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "规划",
-            "title": "Plan Id"
-          },
           "recipe_version_id": {
             "anyOf": [
               {
@@ -870,10 +2682,10 @@
                 "type": "null"
               }
             ],
-            "description": "菜谱版本",
-            "title": "Recipe Version Id"
+            "title": "Recipe Version Id",
+            "description": "菜谱版本"
           },
-          "recommendation_exposure_id": {
+          "cooking_record_id": {
             "anyOf": [
               {
                 "type": "string"
@@ -882,32 +2694,8 @@
                 "type": "null"
               }
             ],
-            "description": "推荐曝光",
-            "title": "Recommendation Exposure Id"
-          },
-          "suggestion_id": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "建议",
-            "title": "Suggestion Id"
-          },
-          "taste_profile_change_id": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "口味档案变更",
-            "title": "Taste Profile Change Id"
+            "title": "Cooking Record Id",
+            "description": "做菜记录"
           },
           "ui_composition_id": {
             "anyOf": [
@@ -918,61 +2706,111 @@
                 "type": "null"
               }
             ],
-            "description": "界面组合",
-            "title": "Ui Composition Id"
+            "title": "Ui Composition Id",
+            "description": "界面组合"
+          },
+          "taste_profile_change_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Taste Profile Change Id",
+            "description": "口味档案变更"
+          },
+          "plan_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Plan Id",
+            "description": "规划"
+          },
+          "recommendation_exposure_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Recommendation Exposure Id",
+            "description": "推荐曝光"
+          },
+          "suggestion_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Suggestion Id",
+            "description": "建议"
           }
         },
+        "type": "object",
         "title": "EventCorrelationIds",
-        "type": "object"
+        "description": "关联 ID：都可以留空。这些字段名是所有事件类型统一使用的命名，\n后面新增的关联类型也照这个模式加字段，不要另起一套命名。\n\n这里只要求\"是字符串\"，不在 pydantic 层面强制 UUID v4 格式——格式是否合法放在\n`gramtree.events.validation` 里按条判断，不合法的那一条被单独拒收\n（原因码 `invalid_correlation_id`），不会拖累同一批里其它合格的事件。"
       },
       "EventUploadItem": {
         "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id",
+            "description": "客户端生成的事件 ID（UUID v4），全局唯一，按它去重"
+          },
+          "event_type": {
+            "type": "string",
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Event Type"
+          },
+          "type_version": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Type Version",
+            "description": "事件类型的版本号"
+          },
+          "device_id": {
+            "type": "string",
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "Device Id"
+          },
+          "device_time": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Device Time",
+            "description": "设备本地时间，必须带时区"
+          },
           "app_version": {
+            "type": "string",
             "maxLength": 32,
             "minLength": 1,
-            "title": "App Version",
-            "type": "string"
-          },
-          "content": {
-            "additionalProperties": true,
-            "description": "事件内容。用户 ID 只按登录状态填入，这里出现的任何 user_id 字段都不采信",
-            "title": "Content",
-            "type": "object"
+            "title": "App Version"
           },
           "correlation": {
             "$ref": "#/components/schemas/EventCorrelationIds"
           },
-          "device_id": {
-            "maxLength": 64,
-            "minLength": 1,
-            "title": "Device Id",
-            "type": "string"
-          },
-          "device_time": {
-            "description": "设备本地时间，必须带时区",
-            "format": "date-time",
-            "title": "Device Time",
-            "type": "string"
-          },
-          "event_type": {
-            "maxLength": 100,
-            "minLength": 1,
-            "title": "Event Type",
-            "type": "string"
-          },
-          "id": {
-            "description": "客户端生成的事件 ID（UUID v4），全局唯一，按它去重",
-            "format": "uuid",
-            "title": "Id",
-            "type": "string"
-          },
-          "type_version": {
-            "description": "事件类型的版本号",
-            "minimum": 1.0,
-            "title": "Type Version",
-            "type": "integer"
+          "content": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Content",
+            "description": "事件内容。用户 ID 只按登录状态填入，这里出现的任何 user_id 字段都不采信"
           }
         },
+        "type": "object",
         "required": [
           "id",
           "event_type",
@@ -981,8 +2819,7 @@
           "device_time",
           "app_version"
         ],
-        "title": "EventUploadItem",
-        "type": "object"
+        "title": "EventUploadItem"
       },
       "EventUploadRequest": {
         "properties": {
@@ -990,16 +2827,16 @@
             "items": {
               "$ref": "#/components/schemas/EventUploadItem"
             },
+            "type": "array",
             "minItems": 1,
-            "title": "Events",
-            "type": "array"
+            "title": "Events"
           }
         },
+        "type": "object",
         "required": [
           "events"
         ],
-        "title": "EventUploadRequest",
-        "type": "object"
+        "title": "EventUploadRequest"
       },
       "EventUploadResponse": {
         "properties": {
@@ -1007,22 +2844,32 @@
             "items": {
               "$ref": "#/components/schemas/EventUploadResultItem"
             },
-            "title": "Results",
-            "type": "array"
+            "type": "array",
+            "title": "Results"
           }
         },
+        "type": "object",
         "required": [
           "results"
         ],
-        "title": "EventUploadResponse",
-        "type": "object"
+        "title": "EventUploadResponse"
       },
       "EventUploadResultItem": {
         "properties": {
           "id": {
+            "type": "string",
             "format": "uuid",
-            "title": "Id",
-            "type": "string"
+            "title": "Id"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "accepted",
+              "duplicate",
+              "rejected"
+            ],
+            "title": "Status",
+            "description": "accepted：已接收入库；duplicate：这个 ID 之前已经收到过，原记录未改动；rejected：没通过登记表校验，未入库，见 reason"
           },
           "reason": {
             "anyOf": [
@@ -1034,46 +2881,37 @@
               }
             ],
             "description": "status 是 rejected 时才有，说明被拒收的原因"
-          },
-          "status": {
-            "description": "accepted：已接收入库；duplicate：这个 ID 之前已经收到过，原记录未改动；rejected：没通过登记表校验，未入库，见 reason",
-            "enum": [
-              "accepted",
-              "duplicate",
-              "rejected"
-            ],
-            "title": "Status",
-            "type": "string"
           }
         },
+        "type": "object",
         "required": [
           "id",
           "status"
         ],
-        "title": "EventUploadResultItem",
-        "type": "object"
+        "title": "EventUploadResultItem"
       },
       "ExperimentInfo": {
         "properties": {
           "experiment": {
-            "title": "Experiment",
-            "type": "string"
+            "type": "string",
+            "title": "Experiment"
           },
           "variant": {
-            "title": "Variant",
-            "type": "string"
+            "type": "string",
+            "title": "Variant"
           }
         },
+        "type": "object",
         "required": [
           "experiment",
           "variant"
         ],
-        "title": "ExperimentInfo",
-        "type": "object"
+        "title": "ExperimentInfo"
       },
       "FallbackInfo": {
         "properties": {
           "reason_code": {
+            "type": "string",
             "enum": [
               "unknown_major",
               "unknown_component",
@@ -1083,31 +2921,23 @@
               "server_error",
               "timeout"
             ],
-            "title": "Reason Code",
-            "type": "string"
+            "title": "Reason Code"
           }
         },
+        "type": "object",
         "required": [
           "reason_code"
         ],
-        "title": "FallbackInfo",
-        "type": "object"
+        "title": "FallbackInfo"
       },
       "FlavorAttribute": {
-        "additionalProperties": false,
         "properties": {
-          "estimate": {
-            "description": "没经人工校对的字段按估算处理",
-            "readOnly": true,
-            "title": "Estimate",
-            "type": "boolean"
-          },
           "source": {
-            "description": "这项数据的来源",
+            "type": "string",
             "maxLength": 200,
             "minLength": 1,
             "title": "Source",
-            "type": "string"
+            "description": "这项数据的来源"
           },
           "status": {
             "$ref": "#/components/schemas/AttributeStatus",
@@ -1115,142 +2945,179 @@
           },
           "value": {
             "$ref": "#/components/schemas/FlavorProfile"
+          },
+          "estimate": {
+            "type": "boolean",
+            "title": "Estimate",
+            "description": "没经人工校对的字段按估算处理",
+            "readOnly": true
           }
         },
+        "additionalProperties": false,
+        "type": "object",
         "required": [
           "source",
           "status",
           "value",
           "estimate"
         ],
-        "title": "FlavorAttribute",
-        "type": "object"
+        "title": "FlavorAttribute"
       },
       "FlavorProfile": {
-        "additionalProperties": false,
-        "description": "味型贡献：单位用量下的相对强度，0～3，没写的项是 0。",
         "properties": {
-          "numbing": {
-            "default": 0,
-            "description": "麻",
-            "maximum": 3.0,
-            "minimum": 0.0,
-            "title": "Numbing",
-            "type": "integer"
-          },
-          "oily": {
-            "default": 0,
-            "description": "油",
-            "maximum": 3.0,
-            "minimum": 0.0,
-            "title": "Oily",
-            "type": "integer"
-          },
           "salty": {
-            "default": 0,
-            "description": "咸",
+            "type": "integer",
             "maximum": 3.0,
             "minimum": 0.0,
             "title": "Salty",
-            "type": "integer"
-          },
-          "sour": {
-            "default": 0,
-            "description": "酸",
-            "maximum": 3.0,
-            "minimum": 0.0,
-            "title": "Sour",
-            "type": "integer"
-          },
-          "spicy": {
-            "default": 0,
-            "description": "辣",
-            "maximum": 3.0,
-            "minimum": 0.0,
-            "title": "Spicy",
-            "type": "integer"
+            "description": "咸",
+            "default": 0
           },
           "sweet": {
-            "default": 0,
-            "description": "甜",
+            "type": "integer",
             "maximum": 3.0,
             "minimum": 0.0,
             "title": "Sweet",
-            "type": "integer"
+            "description": "甜",
+            "default": 0
+          },
+          "sour": {
+            "type": "integer",
+            "maximum": 3.0,
+            "minimum": 0.0,
+            "title": "Sour",
+            "description": "酸",
+            "default": 0
+          },
+          "spicy": {
+            "type": "integer",
+            "maximum": 3.0,
+            "minimum": 0.0,
+            "title": "Spicy",
+            "description": "辣",
+            "default": 0
           },
           "umami": {
-            "default": 0,
-            "description": "鲜",
+            "type": "integer",
             "maximum": 3.0,
             "minimum": 0.0,
             "title": "Umami",
-            "type": "integer"
+            "description": "鲜",
+            "default": 0
+          },
+          "numbing": {
+            "type": "integer",
+            "maximum": 3.0,
+            "minimum": 0.0,
+            "title": "Numbing",
+            "description": "麻",
+            "default": 0
+          },
+          "oily": {
+            "type": "integer",
+            "maximum": 3.0,
+            "minimum": 0.0,
+            "title": "Oily",
+            "description": "油",
+            "default": 0
           }
         },
+        "additionalProperties": false,
+        "type": "object",
         "title": "FlavorProfile",
-        "type": "object"
+        "description": "味型贡献：单位用量下的相对强度，0～3，没写的项是 0。"
       },
       "HealthChecks": {
         "properties": {
           "api": {
+            "type": "string",
             "enum": [
               "ok",
               "fail"
             ],
-            "title": "Api",
-            "type": "string"
+            "title": "Api"
           },
           "database": {
+            "type": "string",
             "enum": [
               "ok",
               "fail"
             ],
-            "title": "Database",
-            "type": "string"
+            "title": "Database"
           },
           "redis": {
+            "type": "string",
             "enum": [
               "ok",
               "fail"
             ],
-            "title": "Redis",
-            "type": "string"
+            "title": "Redis"
           }
         },
+        "type": "object",
         "required": [
           "api",
           "database",
           "redis"
         ],
-        "title": "HealthChecks",
-        "type": "object"
+        "title": "HealthChecks"
       },
       "HealthResponse": {
         "properties": {
-          "checks": {
-            "$ref": "#/components/schemas/HealthChecks"
-          },
           "status": {
+            "type": "string",
             "enum": [
               "ok",
               "unhealthy"
             ],
-            "title": "Status",
-            "type": "string"
+            "title": "Status"
+          },
+          "checks": {
+            "$ref": "#/components/schemas/HealthChecks"
           }
         },
+        "type": "object",
         "required": [
           "status",
           "checks"
         ],
-        "title": "HealthResponse",
-        "type": "object"
+        "title": "HealthResponse"
+      },
+      "HeartbeatOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "source": {
+            "type": "string",
+            "title": "Source"
+          },
+          "created_at": {
+            "type": "string",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "source",
+          "created_at"
+        ],
+        "title": "HeartbeatOut"
       },
       "IdentityOut": {
         "properties": {
-          "created_at": {
-            "title": "Created At",
-            "type": "string"
+          "kind": {
+            "type": "string",
+            "enum": [
+              "email",
+              "apple",
+              "phone",
+              "wechat"
+            ],
+            "title": "Kind"
           },
           "email": {
             "anyOf": [
@@ -1263,73 +3130,21 @@
             ],
             "title": "Email"
           },
-          "kind": {
-            "enum": [
-              "email",
-              "apple",
-              "phone",
-              "wechat"
-            ],
-            "title": "Kind",
-            "type": "string"
+          "created_at": {
+            "type": "string",
+            "title": "Created At"
           }
         },
+        "type": "object",
         "required": [
           "kind",
           "email",
           "created_at"
         ],
-        "title": "IdentityOut",
-        "type": "object"
+        "title": "IdentityOut"
       },
       "IngredientAttributes": {
-        "additionalProperties": false,
-        "description": "一种食材的全部详细属性，每项都可选；没有数据的项为 null。",
         "properties": {
-          "allergens": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/AllergensAttribute"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "过敏原分类，可多类"
-          },
-          "base_unit": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/TextAttribute"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "基础单位：克或毫升"
-          },
-          "count_units": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/CountUnitsAttribute"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "常见计数单位和单个重量"
-          },
-          "density": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/DensityAttribute"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "密度（克/毫升），液体和粉粒类"
-          },
           "flavor": {
             "anyOf": [
               {
@@ -1352,7 +3167,7 @@
             ],
             "description": "是否常作功能性用料"
           },
-          "market_zone": {
+          "scaling": {
             "anyOf": [
               {
                 "$ref": "#/components/schemas/TextAttribute"
@@ -1361,7 +3176,51 @@
                 "type": "null"
               }
             ],
-            "description": "超市分区"
+            "description": "默认缩放方式：线性、固定、阶梯"
+          },
+          "base_unit": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TextAttribute"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "基础单位：克或毫升"
+          },
+          "density": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DensityAttribute"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "密度（克/毫升），液体和粉粒类"
+          },
+          "count_units": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CountUnitsAttribute"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "常见计数单位和单个重量"
+          },
+          "allergens": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AllergensAttribute"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "过敏原分类，可多类"
           },
           "nutrition": {
             "anyOf": [
@@ -1374,17 +3233,6 @@
             ],
             "description": "每 100 克营养"
           },
-          "pantry_staple": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/BoolAttribute"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "是否常备调料"
-          },
           "purchase_units": {
             "anyOf": [
               {
@@ -1396,7 +3244,7 @@
             ],
             "description": "购买单位和大约重量"
           },
-          "scaling": {
+          "market_zone": {
             "anyOf": [
               {
                 "$ref": "#/components/schemas/TextAttribute"
@@ -1405,7 +3253,7 @@
                 "type": "null"
               }
             ],
-            "description": "默认缩放方式：线性、固定、阶梯"
+            "description": "超市分区"
           },
           "storage": {
             "anyOf": [
@@ -1417,50 +3265,63 @@
               }
             ],
             "description": "建议存放方式和天数"
+          },
+          "pantry_staple": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/BoolAttribute"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "是否常备调料"
           }
         },
+        "additionalProperties": false,
+        "type": "object",
         "title": "IngredientAttributes",
-        "type": "object"
+        "description": "一种食材的全部详细属性，每项都可选；没有数据的项为 null。"
       },
       "IngredientDetail": {
-        "description": "按 ID 读取时的完整数据：身份信息加全部详细属性（#97）。",
         "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "standard_name": {
+            "type": "string",
+            "title": "Standard Name"
+          },
           "aliases": {
             "items": {
               "type": "string"
             },
-            "title": "Aliases",
-            "type": "array"
+            "type": "array",
+            "title": "Aliases"
+          },
+          "pinyin": {
+            "type": "string",
+            "title": "Pinyin"
+          },
+          "pinyin_initials": {
+            "type": "string",
+            "title": "Pinyin Initials"
+          },
+          "category": {
+            "type": "string",
+            "title": "Category"
+          },
+          "version": {
+            "type": "string",
+            "title": "Version"
           },
           "attributes": {
             "$ref": "#/components/schemas/IngredientAttributes"
-          },
-          "category": {
-            "title": "Category",
-            "type": "string"
-          },
-          "id": {
-            "format": "uuid",
-            "title": "Id",
-            "type": "string"
-          },
-          "pinyin": {
-            "title": "Pinyin",
-            "type": "string"
-          },
-          "pinyin_initials": {
-            "title": "Pinyin Initials",
-            "type": "string"
-          },
-          "standard_name": {
-            "title": "Standard Name",
-            "type": "string"
-          },
-          "version": {
-            "title": "Version",
-            "type": "string"
           }
         },
+        "type": "object",
         "required": [
           "id",
           "standard_name",
@@ -1472,43 +3333,44 @@
           "attributes"
         ],
         "title": "IngredientDetail",
-        "type": "object"
+        "description": "按 ID 读取时的完整数据：身份信息加全部详细属性（#97）。"
       },
       "IngredientOut": {
         "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "standard_name": {
+            "type": "string",
+            "title": "Standard Name"
+          },
           "aliases": {
             "items": {
               "type": "string"
             },
-            "title": "Aliases",
-            "type": "array"
-          },
-          "category": {
-            "title": "Category",
-            "type": "string"
-          },
-          "id": {
-            "format": "uuid",
-            "title": "Id",
-            "type": "string"
+            "type": "array",
+            "title": "Aliases"
           },
           "pinyin": {
-            "title": "Pinyin",
-            "type": "string"
+            "type": "string",
+            "title": "Pinyin"
           },
           "pinyin_initials": {
-            "title": "Pinyin Initials",
-            "type": "string"
+            "type": "string",
+            "title": "Pinyin Initials"
           },
-          "standard_name": {
-            "title": "Standard Name",
-            "type": "string"
+          "category": {
+            "type": "string",
+            "title": "Category"
           },
           "version": {
-            "title": "Version",
-            "type": "string"
+            "type": "string",
+            "title": "Version"
           }
         },
+        "type": "object",
         "required": [
           "id",
           "standard_name",
@@ -1518,97 +3380,233 @@
           "category",
           "version"
         ],
-        "title": "IngredientOut",
-        "type": "object"
+        "title": "IngredientOut"
       },
-      "Nutrition": {
-        "additionalProperties": false,
-        "description": "每 100 克的营养，缺失的项留空。",
+      "NormalizeCandidate": {
         "properties": {
-          "carbohydrate_g": {
+          "ingredient_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Ingredient Id"
+          },
+          "standard_name": {
+            "type": "string",
+            "title": "Standard Name"
+          }
+        },
+        "type": "object",
+        "required": [
+          "ingredient_id",
+          "standard_name"
+        ],
+        "title": "NormalizeCandidate"
+      },
+      "NormalizeItem": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Name",
+            "description": "菜谱里写的食材名称"
+          },
+          "context": {
             "anyOf": [
               {
-                "minimum": 0.0,
-                "type": "number"
+                "type": "string",
+                "maxLength": 200
               },
               {
                 "type": "null"
               }
             ],
-            "description": "碳水化合物（克）",
-            "title": "Carbohydrate G"
+            "title": "Context",
+            "description": "上下文，如所在菜名。规则匹配不使用，留给 SPEC-003.1 的 AI 判断"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "title": "NormalizeItem"
+      },
+      "NormalizeRequest": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/NormalizeItem"
+            },
+            "type": "array",
+            "maxItems": 100,
+            "minItems": 1,
+            "title": "Items"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items"
+        ],
+        "title": "NormalizeRequest"
+      },
+      "NormalizeResponse": {
+        "properties": {
+          "results": {
+            "items": {
+              "$ref": "#/components/schemas/NormalizeResultItem"
+            },
+            "type": "array",
+            "title": "Results"
+          }
+        },
+        "type": "object",
+        "required": [
+          "results"
+        ],
+        "title": "NormalizeResponse"
+      },
+      "NormalizeResultItem": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name",
+            "description": "原样返回输入的名称"
           },
+          "confidence": {
+            "type": "string",
+            "enum": [
+              "exact",
+              "alias",
+              "fuzzy",
+              "ambiguous",
+              "unrecorded"
+            ],
+            "title": "Confidence",
+            "description": "exact 标准名精确匹配；alias 别名匹配（含已合并食材的旧名）；fuzzy 去掉修饰词或按拼音后唯一命中；ambiguous 歧义名，见 candidates；unrecorded 未收录"
+          },
+          "ingredient_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ingredient Id",
+            "description": "合并后的标准 ID；歧义和未收录时为空"
+          },
+          "standard_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Standard Name"
+          },
+          "candidates": {
+            "items": {
+              "$ref": "#/components/schemas/NormalizeCandidate"
+            },
+            "type": "array",
+            "title": "Candidates",
+            "description": "只有 ambiguous 时非空"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "confidence",
+          "ingredient_id",
+          "standard_name",
+          "candidates"
+        ],
+        "title": "NormalizeResultItem"
+      },
+      "Nutrition": {
+        "properties": {
           "energy_kcal": {
             "anyOf": [
               {
-                "minimum": 0.0,
-                "type": "number"
+                "type": "number",
+                "minimum": 0.0
               },
               {
                 "type": "null"
               }
             ],
-            "description": "能量（千卡）",
-            "title": "Energy Kcal"
-          },
-          "fat_g": {
-            "anyOf": [
-              {
-                "minimum": 0.0,
-                "type": "number"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "脂肪（克）",
-            "title": "Fat G"
+            "title": "Energy Kcal",
+            "description": "能量（千卡）"
           },
           "protein_g": {
             "anyOf": [
               {
-                "minimum": 0.0,
-                "type": "number"
+                "type": "number",
+                "minimum": 0.0
               },
               {
                 "type": "null"
               }
             ],
-            "description": "蛋白质（克）",
-            "title": "Protein G"
+            "title": "Protein G",
+            "description": "蛋白质（克）"
+          },
+          "fat_g": {
+            "anyOf": [
+              {
+                "type": "number",
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fat G",
+            "description": "脂肪（克）"
+          },
+          "carbohydrate_g": {
+            "anyOf": [
+              {
+                "type": "number",
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Carbohydrate G",
+            "description": "碳水化合物（克）"
           },
           "sodium_mg": {
             "anyOf": [
               {
-                "minimum": 0.0,
-                "type": "number"
+                "type": "number",
+                "minimum": 0.0
               },
               {
                 "type": "null"
               }
             ],
-            "description": "钠（毫克）",
-            "title": "Sodium Mg"
+            "title": "Sodium Mg",
+            "description": "钠（毫克）"
           }
         },
+        "additionalProperties": false,
+        "type": "object",
         "title": "Nutrition",
-        "type": "object"
+        "description": "每 100 克的营养，缺失的项留空。"
       },
       "NutritionAttribute": {
-        "additionalProperties": false,
         "properties": {
-          "estimate": {
-            "description": "没经人工校对的字段按估算处理",
-            "readOnly": true,
-            "title": "Estimate",
-            "type": "boolean"
-          },
           "source": {
-            "description": "这项数据的来源",
+            "type": "string",
             "maxLength": 200,
             "minLength": 1,
             "title": "Source",
-            "type": "string"
+            "description": "这项数据的来源"
           },
           "status": {
             "$ref": "#/components/schemas/AttributeStatus",
@@ -1616,33 +3614,46 @@
           },
           "value": {
             "$ref": "#/components/schemas/Nutrition"
+          },
+          "estimate": {
+            "type": "boolean",
+            "title": "Estimate",
+            "description": "没经人工校对的字段按估算处理",
+            "readOnly": true
           }
         },
+        "additionalProperties": false,
+        "type": "object",
         "required": [
           "source",
           "status",
           "value",
           "estimate"
         ],
-        "title": "NutritionAttribute",
-        "type": "object"
+        "title": "NutritionAttribute"
       },
       "PageDescription": {
         "properties": {
-          "cache": {
-            "$ref": "#/components/schemas/CacheInfo"
+          "protocol": {
+            "type": "string",
+            "title": "Protocol",
+            "description": "协议版本，大版本.小版本，例如 1.0"
           },
-          "components": {
-            "items": {
-              "$ref": "#/components/schemas/ComponentDescriptor"
-            },
-            "title": "Components",
-            "type": "array"
+          "page_type": {
+            "type": "string",
+            "title": "Page Type"
           },
           "composition_id": {
+            "type": "string",
             "format": "uuid",
-            "title": "Composition Id",
-            "type": "string"
+            "title": "Composition Id"
+          },
+          "generated_at": {
+            "type": "string",
+            "title": "Generated At"
+          },
+          "cache": {
+            "$ref": "#/components/schemas/CacheInfo"
           },
           "experiment": {
             "anyOf": [
@@ -1665,20 +3676,15 @@
             ],
             "description": "非空表示这份描述是标准布局兜底，components 为空数组"
           },
-          "generated_at": {
-            "title": "Generated At",
-            "type": "string"
-          },
-          "page_type": {
-            "title": "Page Type",
-            "type": "string"
-          },
-          "protocol": {
-            "description": "协议版本，大版本.小版本，例如 1.0",
-            "title": "Protocol",
-            "type": "string"
+          "components": {
+            "items": {
+              "$ref": "#/components/schemas/ComponentDescriptor"
+            },
+            "type": "array",
+            "title": "Components"
           }
         },
+        "type": "object",
         "required": [
           "protocol",
           "page_type",
@@ -1686,8 +3692,34 @@
           "generated_at",
           "cache"
         ],
-        "title": "PageDescription",
-        "type": "object"
+        "title": "PageDescription"
+      },
+      "Page_SampleOut_": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/SampleOut"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Cursor"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items"
+        ],
+        "title": "Page[SampleOut]"
       },
       "ProfileUpdate": {
         "properties": {
@@ -1711,52 +3743,45 @@
                 "type": "null"
               }
             ],
-            "description": "IANA 时区名，如 Asia/Shanghai",
-            "title": "Timezone"
+            "title": "Timezone",
+            "description": "IANA 时区名，如 Asia/Shanghai"
           }
         },
-        "title": "ProfileUpdate",
-        "type": "object"
+        "type": "object",
+        "title": "ProfileUpdate"
       },
       "PurchaseUnit": {
-        "additionalProperties": false,
         "properties": {
-          "grams": {
-            "description": "一个购买单位大约多少克",
-            "exclusiveMinimum": 0.0,
-            "title": "Grams",
-            "type": "number"
-          },
           "name": {
-            "description": "购买单位，例如 盒、把、瓶",
+            "type": "string",
             "maxLength": 20,
             "minLength": 1,
             "title": "Name",
-            "type": "string"
+            "description": "购买单位，例如 盒、把、瓶"
+          },
+          "grams": {
+            "type": "number",
+            "exclusiveMinimum": 0.0,
+            "title": "Grams",
+            "description": "一个购买单位大约多少克"
           }
         },
+        "additionalProperties": false,
+        "type": "object",
         "required": [
           "name",
           "grams"
         ],
-        "title": "PurchaseUnit",
-        "type": "object"
+        "title": "PurchaseUnit"
       },
       "PurchaseUnitsAttribute": {
-        "additionalProperties": false,
         "properties": {
-          "estimate": {
-            "description": "没经人工校对的字段按估算处理",
-            "readOnly": true,
-            "title": "Estimate",
-            "type": "boolean"
-          },
           "source": {
-            "description": "这项数据的来源",
+            "type": "string",
             "maxLength": 200,
             "minLength": 1,
             "title": "Source",
-            "type": "string"
+            "description": "这项数据的来源"
           },
           "status": {
             "$ref": "#/components/schemas/AttributeStatus",
@@ -1766,67 +3791,120 @@
             "items": {
               "$ref": "#/components/schemas/PurchaseUnit"
             },
+            "type": "array",
             "minItems": 1,
-            "title": "Value",
-            "type": "array"
+            "title": "Value"
+          },
+          "estimate": {
+            "type": "boolean",
+            "title": "Estimate",
+            "description": "没经人工校对的字段按估算处理",
+            "readOnly": true
           }
         },
+        "additionalProperties": false,
+        "type": "object",
         "required": [
           "source",
           "status",
           "value",
           "estimate"
         ],
-        "title": "PurchaseUnitsAttribute",
-        "type": "object"
+        "title": "PurchaseUnitsAttribute"
       },
       "RefreshRequest": {
         "properties": {
           "refresh_token": {
-            "title": "Refresh Token",
-            "type": "string"
+            "type": "string",
+            "title": "Refresh Token"
           }
         },
+        "type": "object",
         "required": [
           "refresh_token"
         ],
-        "title": "RefreshRequest",
-        "type": "object"
+        "title": "RefreshRequest"
       },
       "RejectionReason": {
         "properties": {
           "code": {
-            "description": "程序可判断的拒收原因代码：unknown_event_type / unsupported_version / invalid_content / invalid_correlation_id",
+            "type": "string",
             "title": "Code",
-            "type": "string"
+            "description": "程序可判断的拒收原因代码：unknown_event_type / unsupported_version / invalid_content / invalid_correlation_id"
           },
           "message": {
-            "description": "给人看的一句话说明，不包含事件内容本身",
+            "type": "string",
             "title": "Message",
-            "type": "string"
+            "description": "给人看的一句话说明，不包含事件内容本身"
           }
         },
+        "type": "object",
         "required": [
           "code",
           "message"
         ],
-        "title": "RejectionReason",
-        "type": "object"
+        "title": "RejectionReason"
+      },
+      "SampleCreate": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id",
+            "description": "客户端生成的 UUID v4"
+          },
+          "title": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Title"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "title"
+        ],
+        "title": "SampleCreate"
+      },
+      "SampleOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "created_at": {
+            "type": "string",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "title",
+          "created_at"
+        ],
+        "title": "SampleOut"
       },
       "SearchQuery": {
         "properties": {
           "query": {
+            "type": "string",
             "maxLength": 100,
             "minLength": 1,
-            "title": "Query",
-            "type": "string"
+            "title": "Query"
           }
         },
+        "type": "object",
         "required": [
           "query"
         ],
-        "title": "SearchQuery",
-        "type": "object"
+        "title": "SearchQuery"
       },
       "SearchResult": {
         "properties": {
@@ -1834,51 +3912,60 @@
             "items": {
               "$ref": "#/components/schemas/IngredientOut"
             },
-            "title": "Items",
-            "type": "array"
+            "type": "array",
+            "title": "Items"
           }
         },
+        "type": "object",
         "required": [
           "items"
         ],
-        "title": "SearchResult",
-        "type": "object"
+        "title": "SearchResult"
       },
       "SkipAdjustmentRequest": {
         "properties": {
           "component_id": {
-            "description": "要去掉来源调整的组件实例 ID",
+            "type": "string",
             "title": "Component Id",
-            "type": "string"
+            "description": "要去掉来源调整的组件实例 ID"
           }
         },
+        "type": "object",
         "required": [
           "component_id"
         ],
-        "title": "SkipAdjustmentRequest",
-        "type": "object"
+        "title": "SkipAdjustmentRequest"
       },
       "SkipAdjustmentResult": {
-        "description": "\"这次不用\"的返回：去掉这条调整后的来源字段，只影响这次查看，不写口味档案。",
         "properties": {
           "component_id": {
-            "title": "Component Id",
-            "type": "string"
+            "type": "string",
+            "title": "Component Id"
           },
           "source": {
             "$ref": "#/components/schemas/SourcedValue"
           }
         },
+        "type": "object",
         "required": [
           "component_id",
           "source"
         ],
         "title": "SkipAdjustmentResult",
-        "type": "object"
+        "description": "\"这次不用\"的返回：去掉这条调整后的来源字段，只影响这次查看，不写口味档案。"
       },
       "SourceBasis": {
-        "description": "依据：只用等级、日期这类用户看得懂的信息，不含内部分数或精确统计\n（SPEC-010 开放边界，#82 明确要求）。",
         "properties": {
+          "reason_code": {
+            "type": "string",
+            "title": "Reason Code",
+            "description": "理由代码，供程序判断用"
+          },
+          "text": {
+            "type": "string",
+            "title": "Text",
+            "description": "一句大白话说明"
+          },
           "citation": {
             "anyOf": [
               {
@@ -1888,31 +3975,34 @@
                 "type": "null"
               }
             ],
-            "description": "来源引用，例如记录日期、口味档案变更、菜谱原文",
-            "title": "Citation"
-          },
-          "reason_code": {
-            "description": "理由代码，供程序判断用",
-            "title": "Reason Code",
-            "type": "string"
-          },
-          "text": {
-            "description": "一句大白话说明",
-            "title": "Text",
-            "type": "string"
+            "title": "Citation",
+            "description": "来源引用，例如记录日期、口味档案变更、菜谱原文"
           }
         },
+        "type": "object",
         "required": [
           "reason_code",
           "text"
         ],
         "title": "SourceBasis",
-        "type": "object"
+        "description": "依据：只用等级、日期这类用户看得懂的信息，不含内部分数或精确统计\n（SPEC-010 开放边界，#82 明确要求）。"
       },
       "SourcedValue": {
         "properties": {
-          "basis": {
-            "$ref": "#/components/schemas/SourceBasis"
+          "source_type": {
+            "type": "string",
+            "enum": [
+              "author_filled",
+              "taste_adjusted",
+              "scenario_adjusted",
+              "ai_estimated",
+              "verified"
+            ],
+            "title": "Source Type"
+          },
+          "value": {
+            "type": "string",
+            "title": "Value"
           },
           "original_value": {
             "anyOf": [
@@ -1923,70 +4013,51 @@
                 "type": "null"
               }
             ],
-            "description": "换算/调整前的原值，只有真的发生换算/调整时才有",
-            "title": "Original Value"
+            "title": "Original Value",
+            "description": "换算/调整前的原值，只有真的发生换算/调整时才有"
           },
-          "source_type": {
-            "enum": [
-              "author_filled",
-              "taste_adjusted",
-              "scenario_adjusted",
-              "ai_estimated",
-              "verified"
-            ],
-            "title": "Source Type",
-            "type": "string"
-          },
-          "value": {
-            "title": "Value",
-            "type": "string"
+          "basis": {
+            "$ref": "#/components/schemas/SourceBasis"
           }
         },
+        "type": "object",
         "required": [
           "source_type",
           "value",
           "basis"
         ],
-        "title": "SourcedValue",
-        "type": "object"
+        "title": "SourcedValue"
       },
       "StorageAdvice": {
-        "additionalProperties": false,
         "properties": {
+          "method": {
+            "type": "string",
+            "title": "Method",
+            "description": "常温、冷藏或冷冻"
+          },
           "days": {
-            "description": "建议存放天数",
+            "type": "integer",
             "exclusiveMinimum": 0.0,
             "title": "Days",
-            "type": "integer"
-          },
-          "method": {
-            "description": "常温、冷藏或冷冻",
-            "title": "Method",
-            "type": "string"
+            "description": "建议存放天数"
           }
         },
+        "additionalProperties": false,
+        "type": "object",
         "required": [
           "method",
           "days"
         ],
-        "title": "StorageAdvice",
-        "type": "object"
+        "title": "StorageAdvice"
       },
       "StorageAttribute": {
-        "additionalProperties": false,
         "properties": {
-          "estimate": {
-            "description": "没经人工校对的字段按估算处理",
-            "readOnly": true,
-            "title": "Estimate",
-            "type": "boolean"
-          },
           "source": {
-            "description": "这项数据的来源",
+            "type": "string",
             "maxLength": 200,
             "minLength": 1,
             "title": "Source",
-            "type": "string"
+            "description": "这项数据的来源"
           },
           "status": {
             "$ref": "#/components/schemas/AttributeStatus",
@@ -1996,46 +4067,66 @@
             "items": {
               "$ref": "#/components/schemas/StorageAdvice"
             },
+            "type": "array",
             "minItems": 1,
-            "title": "Value",
-            "type": "array"
+            "title": "Value"
+          },
+          "estimate": {
+            "type": "boolean",
+            "title": "Estimate",
+            "description": "没经人工校对的字段按估算处理",
+            "readOnly": true
           }
         },
+        "additionalProperties": false,
+        "type": "object",
         "required": [
           "source",
           "status",
           "value",
           "estimate"
         ],
-        "title": "StorageAttribute",
-        "type": "object"
+        "title": "StorageAttribute"
+      },
+      "TaskAccepted": {
+        "properties": {
+          "task_id": {
+            "type": "string",
+            "title": "Task Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "task_id"
+        ],
+        "title": "TaskAccepted"
       },
       "TextAttribute": {
-        "additionalProperties": false,
-        "description": "取值为登记值之一的属性（缩放方式、基础单位、超市分区）。",
         "properties": {
-          "estimate": {
-            "description": "没经人工校对的字段按估算处理",
-            "readOnly": true,
-            "title": "Estimate",
-            "type": "boolean"
-          },
           "source": {
-            "description": "这项数据的来源",
+            "type": "string",
             "maxLength": 200,
             "minLength": 1,
             "title": "Source",
-            "type": "string"
+            "description": "这项数据的来源"
           },
           "status": {
             "$ref": "#/components/schemas/AttributeStatus",
             "description": "ai_draft：AI 起草；verified：人工校对过"
           },
           "value": {
-            "title": "Value",
-            "type": "string"
+            "type": "string",
+            "title": "Value"
+          },
+          "estimate": {
+            "type": "boolean",
+            "title": "Estimate",
+            "description": "没经人工校对的字段按估算处理",
+            "readOnly": true
           }
         },
+        "additionalProperties": false,
+        "type": "object",
         "required": [
           "source",
           "status",
@@ -2043,50 +4134,59 @@
           "estimate"
         ],
         "title": "TextAttribute",
-        "type": "object"
+        "description": "取值为登记值之一的属性（缩放方式、基础单位、超市分区）。"
       },
       "TokenPair": {
         "properties": {
-          "access_expires_in": {
-            "description": "访问令牌多少秒后过期",
-            "title": "Access Expires In",
-            "type": "integer"
-          },
           "access_token": {
-            "title": "Access Token",
-            "type": "string"
+            "type": "string",
+            "title": "Access Token"
+          },
+          "access_expires_in": {
+            "type": "integer",
+            "title": "Access Expires In",
+            "description": "访问令牌多少秒后过期"
           },
           "refresh_token": {
-            "description": "续期用；每次续期都会换发新的，旧的立即作废",
+            "type": "string",
             "title": "Refresh Token",
-            "type": "string"
+            "description": "续期用；每次续期都会换发新的，旧的立即作废"
           },
           "user": {
             "$ref": "#/components/schemas/UserOut"
           }
         },
+        "type": "object",
         "required": [
           "access_token",
           "access_expires_in",
           "refresh_token",
           "user"
         ],
-        "title": "TokenPair",
-        "type": "object"
+        "title": "TokenPair"
       },
       "UserOut": {
         "properties": {
-          "created_at": {
-            "title": "Created At",
-            "type": "string"
-          },
           "id": {
-            "title": "Id",
-            "type": "string"
+            "type": "string",
+            "title": "Id"
           },
           "nickname": {
-            "title": "Nickname",
-            "type": "string"
+            "type": "string",
+            "title": "Nickname"
+          },
+          "timezone": {
+            "type": "string",
+            "title": "Timezone"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "active",
+              "deleting",
+              "deleted"
+            ],
+            "title": "Status"
           },
           "phone": {
             "anyOf": [
@@ -2097,33 +4197,25 @@
                 "type": "null"
               }
             ],
-            "description": "预留：手机号登录（SPEC-011）",
-            "title": "Phone"
+            "title": "Phone",
+            "description": "预留：手机号登录（SPEC-011）"
           },
           "real_name_status": {
-            "description": "预留：发布内容实名状态（SPEC-011）",
+            "type": "string",
             "enum": [
               "none",
               "pending",
               "verified"
             ],
             "title": "Real Name Status",
-            "type": "string"
+            "description": "预留：发布内容实名状态（SPEC-011）"
           },
-          "status": {
-            "enum": [
-              "active",
-              "deleting",
-              "deleted"
-            ],
-            "title": "Status",
-            "type": "string"
-          },
-          "timezone": {
-            "title": "Timezone",
-            "type": "string"
+          "created_at": {
+            "type": "string",
+            "title": "Created At"
           }
         },
+        "type": "object",
         "required": [
           "id",
           "nickname",
@@ -2133,1481 +4225,14 @@
           "real_name_status",
           "created_at"
         ],
-        "title": "UserOut",
-        "type": "object"
+        "title": "UserOut"
       }
     },
     "securitySchemes": {
       "HTTPBearer": {
+        "type": "http",
         "description": "登录后拿到的访问令牌",
-        "scheme": "bearer",
-        "type": "http"
-      }
-    }
-  },
-  "info": {
-    "description": "味谱服务端接口。Dart 客户端由这份描述生成，不要手改生成代码。",
-    "title": "味谱 GramTree API",
-    "version": "1.0.0"
-  },
-  "openapi": "3.1.0",
-  "paths": {
-    "/v1/analytics/events": {
-      "post": {
-        "description": "同意隐私政策前、或关闭“产品改进统计”开关后，客户端不应调用这个接口。服务端只按登记好的字段接收，多余字段一律拒收；不接受第三方分析服务转发。",
-        "operationId": "upload_analytics_events",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/AnalyticsUploadRequest"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "204": {
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            },
-            "description": "Unprocessable Entity"
-          },
-          "500": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            },
-            "description": "服务端错误"
-          }
-        },
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ],
-        "summary": "上传产品埋点（页面访问 / 入口点击 / 加载耗时）",
-        "tags": [
-          "analytics"
-        ]
-      }
-    },
-    "/v1/auth/apple/login": {
-      "post": {
-        "operationId": "apple_login",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/AppleLoginRequest"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/TokenPair"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "401": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            },
-            "description": "Unauthorized"
-          },
-          "403": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            },
-            "description": "Forbidden"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            },
-            "description": "参数错误"
-          },
-          "500": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            },
-            "description": "服务端错误"
-          },
-          "503": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            },
-            "description": "Service Unavailable"
-          }
-        },
-        "summary": "通过 Apple 登录（首次登录自动创建账号）",
-        "tags": [
-          "auth"
-        ]
-      }
-    },
-    "/v1/auth/email/code": {
-      "post": {
-        "description": "purpose=login 不需要登录；bind（绑定新邮箱）和 reauth（重新验证身份）需要登录。",
-        "operationId": "send_email_code",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/EmailCodeRequest"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/EmailCodeSent"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "401": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            },
-            "description": "Unauthorized"
-          },
-          "403": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            },
-            "description": "Forbidden"
-          },
-          "409": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            },
-            "description": "Conflict"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            },
-            "description": "参数错误"
-          },
-          "429": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            },
-            "description": "Too Many Requests"
-          },
-          "500": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            },
-            "description": "服务端错误"
-          }
-        },
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ],
-        "summary": "发送邮箱验证码",
-        "tags": [
-          "auth"
-        ]
-      }
-    },
-    "/v1/auth/email/login": {
-      "post": {
-        "operationId": "email_login",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/EmailLoginRequest"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/TokenPair"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "400": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            },
-            "description": "Bad Request"
-          },
-          "403": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            },
-            "description": "Forbidden"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            },
-            "description": "参数错误"
-          },
-          "500": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            },
-            "description": "服务端错误"
-          }
-        },
-        "summary": "用邮箱验证码登录（首次登录自动创建账号）",
-        "tags": [
-          "auth"
-        ]
-      }
-    },
-    "/v1/auth/logout": {
-      "post": {
-        "operationId": "logout",
-        "responses": {
-          "204": {
-            "description": "Successful Response"
-          },
-          "401": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            },
-            "description": "Unauthorized"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            },
-            "description": "参数错误"
-          },
-          "500": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            },
-            "description": "服务端错误"
-          }
-        },
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ],
-        "summary": "退出当前设备的登录",
-        "tags": [
-          "auth"
-        ]
-      }
-    },
-    "/v1/auth/reauth/apple": {
-      "post": {
-        "operationId": "reauth_apple",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/AppleReauthRequest"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "204": {
-            "description": "Successful Response"
-          },
-          "401": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            },
-            "description": "Unauthorized"
-          },
-          "403": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            },
-            "description": "Forbidden"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            },
-            "description": "参数错误"
-          },
-          "500": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            },
-            "description": "服务端错误"
-          },
-          "503": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            },
-            "description": "Service Unavailable"
-          }
-        },
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ],
-        "summary": "通过 Apple 重新验证身份",
-        "tags": [
-          "auth"
-        ]
-      }
-    },
-    "/v1/auth/reauth/email": {
-      "post": {
-        "operationId": "reauth_email",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/EmailReauthRequest"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "204": {
-            "description": "Successful Response"
-          },
-          "400": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            },
-            "description": "Bad Request"
-          },
-          "401": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            },
-            "description": "Unauthorized"
-          },
-          "403": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            },
-            "description": "Forbidden"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            },
-            "description": "参数错误"
-          },
-          "500": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            },
-            "description": "服务端错误"
-          }
-        },
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ],
-        "summary": "用邮箱验证码重新验证身份（注销账号等敏感操作前）",
-        "tags": [
-          "auth"
-        ]
-      }
-    },
-    "/v1/auth/refresh": {
-      "post": {
-        "description": "每次续期都换发新的刷新令牌。旧的刷新令牌再被使用时，这台设备的登录全部失效。",
-        "operationId": "refresh_tokens",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/RefreshRequest"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/TokenPair"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "401": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            },
-            "description": "Unauthorized"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            },
-            "description": "参数错误"
-          },
-          "500": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            },
-            "description": "服务端错误"
-          }
-        },
-        "summary": "用刷新令牌续期",
-        "tags": [
-          "auth"
-        ]
-      }
-    },
-    "/v1/client-config": {
-      "get": {
-        "operationId": "client_config",
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ClientConfig"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            },
-            "description": "参数错误"
-          },
-          "500": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            },
-            "description": "服务端错误"
-          }
-        },
-        "summary": "App 用的能力开关和参数",
-        "tags": [
-          "config"
-        ]
-      }
-    },
-    "/v1/events/upload": {
-      "post": {
-        "operationId": "upload_events",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/EventUploadRequest"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/EventUploadResponse"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            },
-            "description": "参数错误"
-          },
-          "500": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            },
-            "description": "服务端错误"
-          }
-        },
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ],
-        "summary": "批量上传经验层事件（需要登录，按登记表校验，按事件 ID 去重，只追加存储）",
-        "tags": [
-          "events"
-        ]
-      }
-    },
-    "/v1/health": {
-      "get": {
-        "operationId": "health",
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HealthResponse"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "503": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HealthResponse"
-                }
-              }
-            },
-            "description": "有组件不可用"
-          }
-        },
-        "summary": "健康检查：服务、数据库、Redis 是否可用",
-        "tags": [
-          "health"
-        ]
-      }
-    },
-    "/v1/ingredients/search": {
-      "post": {
-        "description": "搜索食材。支持标准名、别名、拼音首字母、完整拼音前缀匹配。最多返回 20 个结果。",
-        "operationId": "search_ingredients",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/SearchQuery"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/SearchResult"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            },
-            "description": "参数错误"
-          },
-          "500": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            },
-            "description": "服务端错误"
-          }
-        },
-        "summary": "Search Ingredients",
-        "tags": [
-          "ingredients"
-        ]
-      }
-    },
-    "/v1/ingredients/{ingredient_id}": {
-      "get": {
-        "description": "读取一种食材的完整数据。如果这个 ID 已经合并到另一个,自动返回合并后的食材。\n\n没经人工校对的属性带 `estimate: true`，计算和显示时按估算处理。",
-        "operationId": "get_ingredient",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "ingredient_id",
-            "required": true,
-            "schema": {
-              "format": "uuid",
-              "title": "Ingredient Id",
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/IngredientDetail"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            },
-            "description": "参数错误"
-          },
-          "500": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            },
-            "description": "服务端错误"
-          }
-        },
-        "summary": "Get Ingredient",
-        "tags": [
-          "ingredients"
-        ]
-      }
-    },
-    "/v1/me": {
-      "get": {
-        "operationId": "get_me",
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/UserOut"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "401": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            },
-            "description": "Unauthorized"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            },
-            "description": "参数错误"
-          },
-          "500": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            },
-            "description": "服务端错误"
-          }
-        },
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ],
-        "summary": "当前账号",
-        "tags": [
-          "account"
-        ]
-      },
-      "patch": {
-        "operationId": "update_me",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/ProfileUpdate"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/UserOut"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "401": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            },
-            "description": "Unauthorized"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            },
-            "description": "参数错误"
-          },
-          "500": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            },
-            "description": "服务端错误"
-          }
-        },
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ],
-        "summary": "修改昵称或时区",
-        "tags": [
-          "account"
-        ]
-      }
-    },
-    "/v1/me/consents": {
-      "get": {
-        "operationId": "list_consents",
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "items": {
-                    "$ref": "#/components/schemas/ConsentRecord-Output"
-                  },
-                  "title": "Response List Consents",
-                  "type": "array"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "401": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            },
-            "description": "Unauthorized"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            },
-            "description": "参数错误"
-          },
-          "500": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            },
-            "description": "服务端错误"
-          }
-        },
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ],
-        "summary": "我的同意记录",
-        "tags": [
-          "account"
-        ]
-      },
-      "post": {
-        "operationId": "upload_consents",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/ConsentUpload"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "204": {
-            "description": "Successful Response"
-          },
-          "401": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            },
-            "description": "Unauthorized"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            },
-            "description": "参数错误"
-          },
-          "500": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            },
-            "description": "服务端错误"
-          }
-        },
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ],
-        "summary": "上传同意或撤回记录（登录前存在本机的，登录后补传）",
-        "tags": [
-          "account"
-        ]
-      }
-    },
-    "/v1/me/deletion": {
-      "post": {
-        "description": "要求最近几分钟内重新验证过身份。成功后所有设备立即退出，账号变为注销中，个人数据在期限内由后台删除。",
-        "operationId": "request_deletion",
-        "responses": {
-          "202": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/DeletionOut"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "401": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            },
-            "description": "Unauthorized"
-          },
-          "403": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            },
-            "description": "Forbidden"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            },
-            "description": "参数错误"
-          },
-          "500": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            },
-            "description": "服务端错误"
-          }
-        },
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ],
-        "summary": "注销账号",
-        "tags": [
-          "account"
-        ]
-      }
-    },
-    "/v1/me/identities": {
-      "get": {
-        "operationId": "list_identities",
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "items": {
-                    "$ref": "#/components/schemas/IdentityOut"
-                  },
-                  "title": "Response List Identities",
-                  "type": "array"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "401": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            },
-            "description": "Unauthorized"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            },
-            "description": "参数错误"
-          },
-          "500": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            },
-            "description": "服务端错误"
-          }
-        },
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ],
-        "summary": "已绑定的登录方式",
-        "tags": [
-          "account"
-        ]
-      }
-    },
-    "/v1/me/identities/apple": {
-      "post": {
-        "operationId": "bind_apple",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/BindAppleRequest"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "items": {
-                    "$ref": "#/components/schemas/IdentityOut"
-                  },
-                  "title": "Response Bind Apple",
-                  "type": "array"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "401": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            },
-            "description": "Unauthorized"
-          },
-          "409": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            },
-            "description": "Conflict"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            },
-            "description": "参数错误"
-          },
-          "500": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            },
-            "description": "服务端错误"
-          },
-          "503": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            },
-            "description": "Service Unavailable"
-          }
-        },
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ],
-        "summary": "绑定 Apple",
-        "tags": [
-          "account"
-        ]
-      }
-    },
-    "/v1/me/identities/email": {
-      "post": {
-        "operationId": "bind_email",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/BindEmailRequest"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "items": {
-                    "$ref": "#/components/schemas/IdentityOut"
-                  },
-                  "title": "Response Bind Email",
-                  "type": "array"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "400": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            },
-            "description": "Bad Request"
-          },
-          "401": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            },
-            "description": "Unauthorized"
-          },
-          "409": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            },
-            "description": "Conflict"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            },
-            "description": "参数错误"
-          },
-          "500": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            },
-            "description": "服务端错误"
-          }
-        },
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ],
-        "summary": "绑定邮箱",
-        "tags": [
-          "account"
-        ]
-      }
-    },
-    "/v1/ui/compositions": {
-      "post": {
-        "operationId": "compose",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/ComposeRequest"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PageDescription"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            },
-            "description": "参数错误"
-          },
-          "500": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            },
-            "description": "服务端错误"
-          }
-        },
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ],
-        "summary": "按 App 声明的协议版本和组件清单，下发一份页面描述（需要登录）",
-        "tags": [
-          "ui-protocol"
-        ]
-      }
-    },
-    "/v1/ui/compositions/skip-adjustment": {
-      "post": {
-        "operationId": "skip_adjustment",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/SkipAdjustmentRequest"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/SkipAdjustmentResult"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            },
-            "description": "参数错误"
-          },
-          "500": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            },
-            "description": "服务端错误"
-          }
-        },
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ],
-        "summary": "\"这次不用\"：返回去掉这条来源调整后的结果，只影响这次查看，不写口味档案（需要登录）",
-        "tags": [
-          "ui-protocol"
-        ]
+        "scheme": "bearer"
       }
     }
   }

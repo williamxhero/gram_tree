@@ -3,125 +3,242 @@
 //
 
 // ignore_for_file: unused_element
-import 'package:copy_with_extension/copy_with_extension.dart';
-import 'package:json_annotation/json_annotation.dart';
+import 'package:built_collection/built_collection.dart';
+import 'package:built_value/built_value.dart';
+import 'package:built_value/serializer.dart';
 
 part 'user_out.g.dart';
 
-@CopyWith()
-@JsonSerializable(
-  checked: true,
-  createToJson: true,
-  disallowUnrecognizedKeys: false,
-  explicitToJson: true,
-)
-class UserOut {
-  /// Returns a new [UserOut] instance.
-  UserOut({
-    required this.createdAt,
+/// UserOut
+///
+/// Properties:
+/// * [id] 
+/// * [nickname] 
+/// * [timezone] 
+/// * [status] 
+/// * [phone] 
+/// * [realNameStatus] - 预留：发布内容实名状态（SPEC-011）
+/// * [createdAt] 
+@BuiltValue()
+abstract class UserOut implements Built<UserOut, UserOutBuilder> {
+  @BuiltValueField(wireName: r'id')
+  String get id;
 
-    required this.id,
+  @BuiltValueField(wireName: r'nickname')
+  String get nickname;
 
-    required this.nickname,
+  @BuiltValueField(wireName: r'timezone')
+  String get timezone;
 
-    required this.phone,
+  @BuiltValueField(wireName: r'status')
+  UserOutStatusEnum get status;
+  // enum statusEnum {  active,  deleting,  deleted,  };
 
-    required this.realNameStatus,
-
-    required this.status,
-
-    required this.timezone,
-  });
-
-  @JsonKey(name: r'created_at', required: true, includeIfNull: false)
-  final String createdAt;
-
-  @JsonKey(name: r'id', required: true, includeIfNull: false)
-  final String id;
-
-  @JsonKey(name: r'nickname', required: true, includeIfNull: false)
-  final String nickname;
-
-  @JsonKey(name: r'phone', required: true, includeIfNull: true)
-  final String? phone;
+  @BuiltValueField(wireName: r'phone')
+  String? get phone;
 
   /// 预留：发布内容实名状态（SPEC-011）
-  @JsonKey(name: r'real_name_status', required: true, includeIfNull: false)
-  final UserOutRealNameStatusEnum realNameStatus;
+  @BuiltValueField(wireName: r'real_name_status')
+  UserOutRealNameStatusEnum get realNameStatus;
+  // enum realNameStatusEnum {  none,  pending,  verified,  };
 
-  @JsonKey(name: r'status', required: true, includeIfNull: false)
-  final UserOutStatusEnum status;
+  @BuiltValueField(wireName: r'created_at')
+  String get createdAt;
 
-  @JsonKey(name: r'timezone', required: true, includeIfNull: false)
-  final String timezone;
+  UserOut._();
+
+  factory UserOut([void updates(UserOutBuilder b)]) = _$UserOut;
+
+  @BuiltValueHook(initializeBuilder: true)
+  static void _defaults(UserOutBuilder b) => b;
+
+  @BuiltValueSerializer(custom: true)
+  static Serializer<UserOut> get serializer => _$UserOutSerializer();
+}
+
+class _$UserOutSerializer implements PrimitiveSerializer<UserOut> {
+  @override
+  final Iterable<Type> types = const [UserOut, _$UserOut];
 
   @override
-  bool operator ==(Object other) =>
-      identical(this, other) ||
-      other is UserOut &&
-          other.createdAt == createdAt &&
-          other.id == id &&
-          other.nickname == nickname &&
-          other.phone == phone &&
-          other.realNameStatus == realNameStatus &&
-          other.status == status &&
-          other.timezone == timezone;
+  final String wireName = r'UserOut';
+
+  Iterable<Object?> _serializeProperties(
+    Serializers serializers,
+    UserOut object, {
+    FullType specifiedType = FullType.unspecified,
+  }) sync* {
+    yield r'id';
+    yield serializers.serialize(
+      object.id,
+      specifiedType: const FullType(String),
+    );
+    yield r'nickname';
+    yield serializers.serialize(
+      object.nickname,
+      specifiedType: const FullType(String),
+    );
+    yield r'timezone';
+    yield serializers.serialize(
+      object.timezone,
+      specifiedType: const FullType(String),
+    );
+    yield r'status';
+    yield serializers.serialize(
+      object.status,
+      specifiedType: const FullType(UserOutStatusEnum),
+    );
+    yield r'phone';
+    yield object.phone == null ? null : serializers.serialize(
+      object.phone,
+      specifiedType: const FullType.nullable(String),
+    );
+    yield r'real_name_status';
+    yield serializers.serialize(
+      object.realNameStatus,
+      specifiedType: const FullType(UserOutRealNameStatusEnum),
+    );
+    yield r'created_at';
+    yield serializers.serialize(
+      object.createdAt,
+      specifiedType: const FullType(String),
+    );
+  }
 
   @override
-  int get hashCode =>
-      createdAt.hashCode +
-      id.hashCode +
-      nickname.hashCode +
-      (phone == null ? 0 : phone.hashCode) +
-      realNameStatus.hashCode +
-      status.hashCode +
-      timezone.hashCode;
+  Object serialize(
+    Serializers serializers,
+    UserOut object, {
+    FullType specifiedType = FullType.unspecified,
+  }) {
+    return _serializeProperties(serializers, object, specifiedType: specifiedType).toList();
+  }
 
-  factory UserOut.fromJson(Map<String, dynamic> json) =>
-      _$UserOutFromJson(json);
-
-  Map<String, dynamic> toJson() => _$UserOutToJson(this);
+  void _deserializeProperties(
+    Serializers serializers,
+    Object serialized, {
+    FullType specifiedType = FullType.unspecified,
+    required List<Object?> serializedList,
+    required UserOutBuilder result,
+    required List<Object?> unhandled,
+  }) {
+    for (var i = 0; i < serializedList.length; i += 2) {
+      final key = serializedList[i] as String;
+      final value = serializedList[i + 1];
+      switch (key) {
+        case r'id':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(String),
+          ) as String;
+          result.id = valueDes;
+          break;
+        case r'nickname':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(String),
+          ) as String;
+          result.nickname = valueDes;
+          break;
+        case r'timezone':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(String),
+          ) as String;
+          result.timezone = valueDes;
+          break;
+        case r'status':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(UserOutStatusEnum),
+          ) as UserOutStatusEnum;
+          result.status = valueDes;
+          break;
+        case r'phone':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(String),
+          ) as String?;
+          if (valueDes == null) continue;
+          result.phone = valueDes;
+          break;
+        case r'real_name_status':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(UserOutRealNameStatusEnum),
+          ) as UserOutRealNameStatusEnum;
+          result.realNameStatus = valueDes;
+          break;
+        case r'created_at':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(String),
+          ) as String;
+          result.createdAt = valueDes;
+          break;
+        default:
+          unhandled.add(key);
+          unhandled.add(value);
+          break;
+      }
+    }
+  }
 
   @override
-  String toString() {
-    return toJson().toString();
+  UserOut deserialize(
+    Serializers serializers,
+    Object serialized, {
+    FullType specifiedType = FullType.unspecified,
+  }) {
+    final result = UserOutBuilder();
+    final serializedList = (serialized as Iterable<Object?>).toList();
+    final unhandled = <Object?>[];
+    _deserializeProperties(
+      serializers,
+      serialized,
+      specifiedType: specifiedType,
+      serializedList: serializedList,
+      unhandled: unhandled,
+      result: result,
+    );
+    return result.build();
   }
 }
 
-/// 预留：发布内容实名状态（SPEC-011）
-enum UserOutRealNameStatusEnum {
-  /// 预留：发布内容实名状态（SPEC-011）
-  @JsonValue(r'none')
-  none(r'none'),
+class UserOutStatusEnum extends EnumClass {
 
-  /// 预留：发布内容实名状态（SPEC-011）
-  @JsonValue(r'pending')
-  pending(r'pending'),
+  @BuiltValueEnumConst(wireName: r'active')
+  static const UserOutStatusEnum active = _$userOutStatusEnum_active;
+  @BuiltValueEnumConst(wireName: r'deleting')
+  static const UserOutStatusEnum deleting = _$userOutStatusEnum_deleting;
+  @BuiltValueEnumConst(wireName: r'deleted')
+  static const UserOutStatusEnum deleted = _$userOutStatusEnum_deleted;
 
-  /// 预留：发布内容实名状态（SPEC-011）
-  @JsonValue(r'verified')
-  verified(r'verified');
+  static Serializer<UserOutStatusEnum> get serializer => _$userOutStatusEnumSerializer;
 
-  const UserOutRealNameStatusEnum(this.value);
+  const UserOutStatusEnum._(String name): super(name);
 
-  final String value;
-
-  @override
-  String toString() => value;
+  static BuiltSet<UserOutStatusEnum> get values => _$userOutStatusEnumValues;
+  static UserOutStatusEnum valueOf(String name) => _$userOutStatusEnumValueOf(name);
 }
 
-enum UserOutStatusEnum {
-  @JsonValue(r'active')
-  active(r'active'),
-  @JsonValue(r'deleting')
-  deleting(r'deleting'),
-  @JsonValue(r'deleted')
-  deleted(r'deleted');
+class UserOutRealNameStatusEnum extends EnumClass {
 
-  const UserOutStatusEnum(this.value);
+  /// 预留：发布内容实名状态（SPEC-011）
+  @BuiltValueEnumConst(wireName: r'none')
+  static const UserOutRealNameStatusEnum none = _$userOutRealNameStatusEnum_none;
+  /// 预留：发布内容实名状态（SPEC-011）
+  @BuiltValueEnumConst(wireName: r'pending')
+  static const UserOutRealNameStatusEnum pending = _$userOutRealNameStatusEnum_pending;
+  /// 预留：发布内容实名状态（SPEC-011）
+  @BuiltValueEnumConst(wireName: r'verified')
+  static const UserOutRealNameStatusEnum verified = _$userOutRealNameStatusEnum_verified;
 
-  final String value;
+  static Serializer<UserOutRealNameStatusEnum> get serializer => _$userOutRealNameStatusEnumSerializer;
 
-  @override
-  String toString() => value;
+  const UserOutRealNameStatusEnum._(String name): super(name);
+
+  static BuiltSet<UserOutRealNameStatusEnum> get values => _$userOutRealNameStatusEnumValues;
+  static UserOutRealNameStatusEnum valueOf(String name) => _$userOutRealNameStatusEnumValueOf(name);
 }
+

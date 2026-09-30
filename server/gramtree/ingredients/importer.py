@@ -1,7 +1,8 @@
 """把仓库里的食材库数据文件导入数据库（`gramtree ingredients import <目录>`）。
 
 数据目录的格式：
-- `manifest.json`：`{"version": "1.0.0", "changelog": "……"}`，整份食材库一个版本号。
+- `manifest.json`：`{"version": "1.0.0", "changelog": "……", "ambiguous_names": ["葱"]}`，
+  整份食材库一个版本号；`ambiguous_names` 可省略，登记允许多种食材共用的别名。
 - 其余每个 `*.json` 文件是一个食材列表，按分类分文件只是为了方便评审，导入时不看文件名，
   分类以每条记录自己的 `category` 为准。
 
@@ -57,6 +58,9 @@ class ManifestFile(BaseModel):
 
     version: str = Field(pattern=r"^\d+\.\d+\.\d+$")
     changelog: str = Field(min_length=1, max_length=2000)
+    # 确需一名多指的别名（如“葱”既指小葱也指大葱）。只有登记在这里的别名才允许同时属于
+    # 多种食材，归一时返回候选列表；标准名永远唯一，不能登记。
+    ambiguous_names: list[str] = Field(default_factory=list)
 
 
 class IngredientRecord(BaseModel):
@@ -142,25 +146,34 @@ def load_directory(data_dir: Path) -> tuple[ManifestFile, list[IngredientRecord]
             except ValidationError as exc:
                 raise IngredientImportError(_record_error(path.name, index, item, exc)) from exc
 
-    _check_consistency(records)
+    _check_consistency(records, set(manifest.ambiguous_names))
     return manifest, records
 
 
-def _check_consistency(records: list[IngredientRecord]) -> None:
+def _check_consistency(records: list[IngredientRecord], ambiguous: set[str]) -> None:
     ids = {r.id for r in records}
     if len(ids) != len(records):
         raise IngredientImportError("有重复的标准 ID")
     owner: dict[str, str] = {}
+    ambiguous_owners: dict[str, set[str]] = {name: set() for name in ambiguous}
     for r in records:
         if r.category not in CATEGORIES:
             raise IngredientImportError(f"{r.standard_name}：分类“{r.category}”不在登记的分类里")
+        if r.standard_name in ambiguous:
+            raise IngredientImportError(f"“{r.standard_name}”是标准名，不能登记成歧义名")
         for name in (r.standard_name, *r.aliases):
+            if name in ambiguous:
+                ambiguous_owners[name].add(str(r.id))
+                continue
             other = owner.get(name)
             if other is not None and other != str(r.id):
                 raise IngredientImportError(f"名称“{name}”同时指向两种食材")
             owner[name] = str(r.id)
         if r.merged_into is not None and (r.merged_into == r.id or r.merged_into not in ids):
             raise IngredientImportError(f"{r.standard_name}：merged_into 指向的食材不存在")
+    for name, owners in ambiguous_owners.items():
+        if len(owners) < 2:
+            raise IngredientImportError(f"歧义名“{name}”只有 {len(owners)} 种食材在用，请删掉登记")
     targets = {r.id: r.merged_into for r in records}
     for r in records:
         # 合并只能指向一个没有再被合并的食材，读取时一步就能跳到位

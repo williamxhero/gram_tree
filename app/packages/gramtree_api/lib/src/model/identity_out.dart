@@ -3,74 +3,158 @@
 //
 
 // ignore_for_file: unused_element
-import 'package:copy_with_extension/copy_with_extension.dart';
-import 'package:json_annotation/json_annotation.dart';
+import 'package:built_collection/built_collection.dart';
+import 'package:built_value/built_value.dart';
+import 'package:built_value/serializer.dart';
 
 part 'identity_out.g.dart';
 
-@CopyWith()
-@JsonSerializable(
-  checked: true,
-  createToJson: true,
-  disallowUnrecognizedKeys: false,
-  explicitToJson: true,
-)
-class IdentityOut {
-  /// Returns a new [IdentityOut] instance.
-  IdentityOut({
-    required this.createdAt,
+/// IdentityOut
+///
+/// Properties:
+/// * [kind] 
+/// * [email] 
+/// * [createdAt] 
+@BuiltValue()
+abstract class IdentityOut implements Built<IdentityOut, IdentityOutBuilder> {
+  @BuiltValueField(wireName: r'kind')
+  IdentityOutKindEnum get kind;
+  // enum kindEnum {  email,  apple,  phone,  wechat,  };
 
-    required this.email,
+  @BuiltValueField(wireName: r'email')
+  String? get email;
 
-    required this.kind,
-  });
+  @BuiltValueField(wireName: r'created_at')
+  String get createdAt;
 
-  @JsonKey(name: r'created_at', required: true, includeIfNull: false)
-  final String createdAt;
+  IdentityOut._();
 
-  @JsonKey(name: r'email', required: true, includeIfNull: true)
-  final String? email;
+  factory IdentityOut([void updates(IdentityOutBuilder b)]) = _$IdentityOut;
 
-  @JsonKey(name: r'kind', required: true, includeIfNull: false)
-  final IdentityOutKindEnum kind;
+  @BuiltValueHook(initializeBuilder: true)
+  static void _defaults(IdentityOutBuilder b) => b;
+
+  @BuiltValueSerializer(custom: true)
+  static Serializer<IdentityOut> get serializer => _$IdentityOutSerializer();
+}
+
+class _$IdentityOutSerializer implements PrimitiveSerializer<IdentityOut> {
+  @override
+  final Iterable<Type> types = const [IdentityOut, _$IdentityOut];
 
   @override
-  bool operator ==(Object other) =>
-      identical(this, other) ||
-      other is IdentityOut &&
-          other.createdAt == createdAt &&
-          other.email == email &&
-          other.kind == kind;
+  final String wireName = r'IdentityOut';
+
+  Iterable<Object?> _serializeProperties(
+    Serializers serializers,
+    IdentityOut object, {
+    FullType specifiedType = FullType.unspecified,
+  }) sync* {
+    yield r'kind';
+    yield serializers.serialize(
+      object.kind,
+      specifiedType: const FullType(IdentityOutKindEnum),
+    );
+    yield r'email';
+    yield object.email == null ? null : serializers.serialize(
+      object.email,
+      specifiedType: const FullType.nullable(String),
+    );
+    yield r'created_at';
+    yield serializers.serialize(
+      object.createdAt,
+      specifiedType: const FullType(String),
+    );
+  }
 
   @override
-  int get hashCode =>
-      createdAt.hashCode + (email == null ? 0 : email.hashCode) + kind.hashCode;
+  Object serialize(
+    Serializers serializers,
+    IdentityOut object, {
+    FullType specifiedType = FullType.unspecified,
+  }) {
+    return _serializeProperties(serializers, object, specifiedType: specifiedType).toList();
+  }
 
-  factory IdentityOut.fromJson(Map<String, dynamic> json) =>
-      _$IdentityOutFromJson(json);
-
-  Map<String, dynamic> toJson() => _$IdentityOutToJson(this);
+  void _deserializeProperties(
+    Serializers serializers,
+    Object serialized, {
+    FullType specifiedType = FullType.unspecified,
+    required List<Object?> serializedList,
+    required IdentityOutBuilder result,
+    required List<Object?> unhandled,
+  }) {
+    for (var i = 0; i < serializedList.length; i += 2) {
+      final key = serializedList[i] as String;
+      final value = serializedList[i + 1];
+      switch (key) {
+        case r'kind':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(IdentityOutKindEnum),
+          ) as IdentityOutKindEnum;
+          result.kind = valueDes;
+          break;
+        case r'email':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(String),
+          ) as String?;
+          if (valueDes == null) continue;
+          result.email = valueDes;
+          break;
+        case r'created_at':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(String),
+          ) as String;
+          result.createdAt = valueDes;
+          break;
+        default:
+          unhandled.add(key);
+          unhandled.add(value);
+          break;
+      }
+    }
+  }
 
   @override
-  String toString() {
-    return toJson().toString();
+  IdentityOut deserialize(
+    Serializers serializers,
+    Object serialized, {
+    FullType specifiedType = FullType.unspecified,
+  }) {
+    final result = IdentityOutBuilder();
+    final serializedList = (serialized as Iterable<Object?>).toList();
+    final unhandled = <Object?>[];
+    _deserializeProperties(
+      serializers,
+      serialized,
+      specifiedType: specifiedType,
+      serializedList: serializedList,
+      unhandled: unhandled,
+      result: result,
+    );
+    return result.build();
   }
 }
 
-enum IdentityOutKindEnum {
-  @JsonValue(r'email')
-  email(r'email'),
-  @JsonValue(r'apple')
-  apple(r'apple'),
-  @JsonValue(r'phone')
-  phone(r'phone'),
-  @JsonValue(r'wechat')
-  wechat(r'wechat');
+class IdentityOutKindEnum extends EnumClass {
 
-  const IdentityOutKindEnum(this.value);
+  @BuiltValueEnumConst(wireName: r'email')
+  static const IdentityOutKindEnum email = _$identityOutKindEnum_email;
+  @BuiltValueEnumConst(wireName: r'apple')
+  static const IdentityOutKindEnum apple = _$identityOutKindEnum_apple;
+  @BuiltValueEnumConst(wireName: r'phone')
+  static const IdentityOutKindEnum phone = _$identityOutKindEnum_phone;
+  @BuiltValueEnumConst(wireName: r'wechat')
+  static const IdentityOutKindEnum wechat = _$identityOutKindEnum_wechat;
 
-  final String value;
+  static Serializer<IdentityOutKindEnum> get serializer => _$identityOutKindEnumSerializer;
 
-  @override
-  String toString() => value;
+  const IdentityOutKindEnum._(String name): super(name);
+
+  static BuiltSet<IdentityOutKindEnum> get values => _$identityOutKindEnumValues;
+  static IdentityOutKindEnum valueOf(String name) => _$identityOutKindEnumValueOf(name);
 }
+

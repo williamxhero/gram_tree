@@ -3,47 +3,126 @@
 //
 
 // ignore_for_file: unused_element
-import 'package:copy_with_extension/copy_with_extension.dart';
-import 'package:json_annotation/json_annotation.dart';
+import 'package:built_value/built_value.dart';
+import 'package:built_value/serializer.dart';
 
 part 'profile_update.g.dart';
 
-@CopyWith()
-@JsonSerializable(
-  checked: true,
-  createToJson: true,
-  disallowUnrecognizedKeys: false,
-  explicitToJson: true,
-)
-class ProfileUpdate {
-  /// Returns a new [ProfileUpdate] instance.
-  ProfileUpdate({this.nickname, this.timezone});
+/// ProfileUpdate
+///
+/// Properties:
+/// * [nickname] 
+/// * [timezone] 
+@BuiltValue()
+abstract class ProfileUpdate implements Built<ProfileUpdate, ProfileUpdateBuilder> {
+  @BuiltValueField(wireName: r'nickname')
+  String? get nickname;
 
-  @JsonKey(name: r'nickname', required: false, includeIfNull: false)
-  final String? nickname;
+  @BuiltValueField(wireName: r'timezone')
+  String? get timezone;
 
-  @JsonKey(name: r'timezone', required: false, includeIfNull: false)
-  final String? timezone;
+  ProfileUpdate._();
+
+  factory ProfileUpdate([void updates(ProfileUpdateBuilder b)]) = _$ProfileUpdate;
+
+  @BuiltValueHook(initializeBuilder: true)
+  static void _defaults(ProfileUpdateBuilder b) => b;
+
+  @BuiltValueSerializer(custom: true)
+  static Serializer<ProfileUpdate> get serializer => _$ProfileUpdateSerializer();
+}
+
+class _$ProfileUpdateSerializer implements PrimitiveSerializer<ProfileUpdate> {
+  @override
+  final Iterable<Type> types = const [ProfileUpdate, _$ProfileUpdate];
 
   @override
-  bool operator ==(Object other) =>
-      identical(this, other) ||
-      other is ProfileUpdate &&
-          other.nickname == nickname &&
-          other.timezone == timezone;
+  final String wireName = r'ProfileUpdate';
+
+  Iterable<Object?> _serializeProperties(
+    Serializers serializers,
+    ProfileUpdate object, {
+    FullType specifiedType = FullType.unspecified,
+  }) sync* {
+    if (object.nickname != null) {
+      yield r'nickname';
+      yield serializers.serialize(
+        object.nickname,
+        specifiedType: const FullType.nullable(String),
+      );
+    }
+    if (object.timezone != null) {
+      yield r'timezone';
+      yield serializers.serialize(
+        object.timezone,
+        specifiedType: const FullType.nullable(String),
+      );
+    }
+  }
 
   @override
-  int get hashCode =>
-      (nickname == null ? 0 : nickname.hashCode) +
-      (timezone == null ? 0 : timezone.hashCode);
+  Object serialize(
+    Serializers serializers,
+    ProfileUpdate object, {
+    FullType specifiedType = FullType.unspecified,
+  }) {
+    return _serializeProperties(serializers, object, specifiedType: specifiedType).toList();
+  }
 
-  factory ProfileUpdate.fromJson(Map<String, dynamic> json) =>
-      _$ProfileUpdateFromJson(json);
-
-  Map<String, dynamic> toJson() => _$ProfileUpdateToJson(this);
+  void _deserializeProperties(
+    Serializers serializers,
+    Object serialized, {
+    FullType specifiedType = FullType.unspecified,
+    required List<Object?> serializedList,
+    required ProfileUpdateBuilder result,
+    required List<Object?> unhandled,
+  }) {
+    for (var i = 0; i < serializedList.length; i += 2) {
+      final key = serializedList[i] as String;
+      final value = serializedList[i + 1];
+      switch (key) {
+        case r'nickname':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(String),
+          ) as String?;
+          if (valueDes == null) continue;
+          result.nickname = valueDes;
+          break;
+        case r'timezone':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(String),
+          ) as String?;
+          if (valueDes == null) continue;
+          result.timezone = valueDes;
+          break;
+        default:
+          unhandled.add(key);
+          unhandled.add(value);
+          break;
+      }
+    }
+  }
 
   @override
-  String toString() {
-    return toJson().toString();
+  ProfileUpdate deserialize(
+    Serializers serializers,
+    Object serialized, {
+    FullType specifiedType = FullType.unspecified,
+  }) {
+    final result = ProfileUpdateBuilder();
+    final serializedList = (serialized as Iterable<Object?>).toList();
+    final unhandled = <Object?>[];
+    _deserializeProperties(
+      serializers,
+      serialized,
+      specifiedType: specifiedType,
+      serializedList: serializedList,
+      unhandled: unhandled,
+      result: result,
+    );
+    return result.build();
   }
 }
+

@@ -3,10 +3,12 @@
 from fastapi import APIRouter
 from pydantic import BaseModel, Field, field_validator
 from sqlalchemy import select
+from sqlalchemy.orm import Session
 
 from gramtree.core.errors import ERROR_RESPONSES, ApiError, NotFound
 from gramtree.core.ids import IdV4
 from gramtree.deps import SessionDep
+from gramtree.ingredients import matching
 from gramtree.ingredients.attributes import IngredientAttributes
 from gramtree.ingredients.models import Ingredient, IngredientAlias, IngredientAttribute
 
@@ -44,6 +46,43 @@ class SearchResult(BaseModel):
     items: list[IngredientOut]
 
 
+def _to_out(db: Session, row: Ingredient) -> IngredientOut:
+    aliases = list(
+        db.scalars(select(IngredientAlias.alias).where(IngredientAlias.ingredient_id == row.id))
+    )
+    return IngredientOut(
+        id=row.id,
+        standard_name=row.standard_name,
+        aliases=aliases,
+        pinyin=row.pinyin,
+        pinyin_initials=row.pinyin_initials,
+        category=row.category,
+        version=row.version,
+    )
+
+
+def _to_detail(db: Session, row: Ingredient) -> IngredientDetail:
+    stored = db.scalars(
+        select(IngredientAttribute).where(IngredientAttribute.ingredient_id == row.id)
+    )
+    attributes = IngredientAttributes.from_stored(
+        {a.field: (a.value, a.source, a.status) for a in stored}
+    )
+    aliases = list(
+        db.scalars(select(IngredientAlias.alias).where(IngredientAlias.ingredient_id == row.id))
+    )
+    return IngredientDetail(
+        id=row.id,
+        standard_name=row.standard_name,
+        aliases=aliases,
+        pinyin=row.pinyin,
+        pinyin_initials=row.pinyin_initials,
+        category=row.category,
+        version=row.version,
+        attributes=attributes,
+    )
+
+
 @router.get("/{ingredient_id}", response_model=IngredientDetail, responses=ERROR_RESPONSES)
 def get_ingredient(ingredient_id: IdV4, db: SessionDep) -> IngredientDetail:
     """读取一种食材的完整数据。如果这个 ID 已经合并到另一个,自动返回合并后的食材。
@@ -61,25 +100,7 @@ def get_ingredient(ingredient_id: IdV4, db: SessionDep) -> IngredientDetail:
     else:
         raise NotFound(f"合并链太长或有循环：{ingredient_id}")
 
-    aliases = list(
-        db.scalars(select(IngredientAlias.alias).where(IngredientAlias.ingredient_id == row.id))
-    )
-    stored = db.scalars(
-        select(IngredientAttribute).where(IngredientAttribute.ingredient_id == row.id)
-    )
-    attributes = IngredientAttributes.from_stored(
-        {a.field: (a.value, a.source, a.status) for a in stored}
-    )
-    return IngredientDetail(
-        id=row.id,
-        standard_name=row.standard_name,
-        aliases=aliases,
-        pinyin=row.pinyin,
-        pinyin_initials=row.pinyin_initials,
-        category=row.category,
-        version=row.version,
-        attributes=attributes,
-    )
+    return _to_detail(db, row)
 
 
 @router.post("/search", response_model=SearchResult, responses=ERROR_RESPONSES)
@@ -90,61 +111,72 @@ def search_ingredients(query: SearchQuery, db: SessionDep) -> SearchResult:
     if not q:
         raise ApiError(400, "invalid_request", "查询不能为空")
 
-    # 查找未合并的食材
-    base_query = select(Ingredient).where(Ingredient.merged_into.is_(None))
+    return SearchResult(items=[_to_out(db, ing) for ing in matching.search(db, q, limit=20)])
 
-    # 匹配策略按优先级排序
-    results: list[tuple[int, Ingredient]] = []  # (priority, ingredient)
 
-    # 1. 标准名称前缀匹配 (优先级 1)
-    stmt = base_query.where(Ingredient.standard_name.startswith(q))
-    for ing in db.scalars(stmt).all():
-        results.append((1, ing))
+# 一次归一的名称数量上限，超过按 ADR 0002 返回 422 invalid_request
+NORMALIZE_MAX_ITEMS = 100
 
-    # 2. 别名前缀匹配 (优先级 2)
-    alias_stmt = (
-        select(Ingredient)
-        .join(IngredientAlias, IngredientAlias.ingredient_id == Ingredient.id)
-        .where(Ingredient.merged_into.is_(None))
-        .where(IngredientAlias.alias.startswith(q))
+
+class NormalizeItem(BaseModel):
+    name: str = Field(..., min_length=1, max_length=100, description="菜谱里写的食材名称")
+    context: str | None = Field(
+        None,
+        max_length=200,
+        description="上下文，如所在菜名。规则匹配不使用，留给 SPEC-003.1 的 AI 判断",
     )
-    for ing in db.scalars(alias_stmt).all():
-        # 避免重复（可能已经通过标准名匹配了）
-        if not any(ing.id == r[1].id for r in results):
-            results.append((2, ing))
 
-    # 3. 拼音首字母匹配 (优先级 3)
-    pinyin_initial_stmt = base_query.where(Ingredient.pinyin_initials.startswith(q.lower()))
-    for ing in db.scalars(pinyin_initial_stmt).all():
-        if not any(ing.id == r[1].id for r in results):
-            results.append((3, ing))
+    @field_validator("name")
+    @classmethod
+    def validate_name(cls, v: str) -> str:
+        if not v.strip():
+            raise ValueError("名称不能为空")
+        return v
 
-    # 4. 完整拼音前缀匹配 (优先级 4)
-    pinyin_stmt = base_query.where(Ingredient.pinyin.startswith(q.lower()))
-    for ing in db.scalars(pinyin_stmt).all():
-        if not any(ing.id == r[1].id for r in results):
-            results.append((4, ing))
 
-    # 按优先级排序并限制为 20 个
-    results.sort(key=lambda x: (x[0], x[1].standard_name))
-    top_results = results[:20]
+class NormalizeRequest(BaseModel):
+    items: list[NormalizeItem] = Field(..., min_length=1, max_length=NORMALIZE_MAX_ITEMS)
 
-    # 为每个食材获取别名
-    items = []
-    for _, ing in top_results:
-        aliases = list(
-            db.scalars(select(IngredientAlias.alias).where(IngredientAlias.ingredient_id == ing.id))
+
+class NormalizeCandidate(BaseModel):
+    ingredient_id: IdV4
+    standard_name: str
+
+
+class NormalizeResultItem(BaseModel):
+    name: str = Field(description="原样返回输入的名称")
+    confidence: matching.Confidence = Field(
+        description=(
+            "exact 标准名精确匹配；alias 别名匹配（含已合并食材的旧名）；"
+            "fuzzy 去掉修饰词或按拼音后唯一命中；ambiguous 歧义名，见 candidates；"
+            "unrecorded 未收录"
         )
-        items.append(
-            IngredientOut(
-                id=ing.id,
-                standard_name=ing.standard_name,
-                aliases=aliases,
-                pinyin=ing.pinyin,
-                pinyin_initials=ing.pinyin_initials,
-                category=ing.category,
-                version=ing.version,
+    )
+    ingredient_id: IdV4 | None = Field(description="合并后的标准 ID；歧义和未收录时为空")
+    standard_name: str | None
+    candidates: list[NormalizeCandidate] = Field(description="只有 ambiguous 时非空")
+
+
+class NormalizeResponse(BaseModel):
+    results: list[NormalizeResultItem]
+
+
+@router.post("/normalize", response_model=NormalizeResponse, responses=ERROR_RESPONSES)
+def normalize_ingredients(body: NormalizeRequest, db: SessionDep) -> NormalizeResponse:
+    """把一批食材名称归一到标准 ID（只用规则匹配），结果按输入顺序返回。"""
+    names = [item.name for item in body.items]
+    results = []
+    for name, n in zip(names, matching.normalize(db, names), strict=True):
+        results.append(
+            NormalizeResultItem(
+                name=name,
+                confidence=n.confidence,
+                ingredient_id=n.ingredient.id if n.ingredient else None,
+                standard_name=n.ingredient.standard_name if n.ingredient else None,
+                candidates=[
+                    NormalizeCandidate(ingredient_id=c.id, standard_name=c.standard_name)
+                    for c in n.candidates
+                ],
             )
         )
-
-    return SearchResult(items=items)
+    return NormalizeResponse(results=results)

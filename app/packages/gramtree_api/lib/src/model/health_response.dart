@@ -4,59 +4,137 @@
 
 // ignore_for_file: unused_element
 import 'package:gramtree_api/src/model/health_checks.dart';
-import 'package:copy_with_extension/copy_with_extension.dart';
-import 'package:json_annotation/json_annotation.dart';
+import 'package:built_collection/built_collection.dart';
+import 'package:built_value/built_value.dart';
+import 'package:built_value/serializer.dart';
 
 part 'health_response.g.dart';
 
-@CopyWith()
-@JsonSerializable(
-  checked: true,
-  createToJson: true,
-  disallowUnrecognizedKeys: false,
-  explicitToJson: true,
-)
-class HealthResponse {
-  /// Returns a new [HealthResponse] instance.
-  HealthResponse({required this.checks, required this.status});
+/// HealthResponse
+///
+/// Properties:
+/// * [status] 
+/// * [checks] 
+@BuiltValue()
+abstract class HealthResponse implements Built<HealthResponse, HealthResponseBuilder> {
+  @BuiltValueField(wireName: r'status')
+  HealthResponseStatusEnum get status;
+  // enum statusEnum {  ok,  unhealthy,  };
 
-  @JsonKey(name: r'checks', required: true, includeIfNull: false)
-  final HealthChecks checks;
+  @BuiltValueField(wireName: r'checks')
+  HealthChecks get checks;
 
-  @JsonKey(name: r'status', required: true, includeIfNull: false)
-  final HealthResponseStatusEnum status;
+  HealthResponse._();
+
+  factory HealthResponse([void updates(HealthResponseBuilder b)]) = _$HealthResponse;
+
+  @BuiltValueHook(initializeBuilder: true)
+  static void _defaults(HealthResponseBuilder b) => b;
+
+  @BuiltValueSerializer(custom: true)
+  static Serializer<HealthResponse> get serializer => _$HealthResponseSerializer();
+}
+
+class _$HealthResponseSerializer implements PrimitiveSerializer<HealthResponse> {
+  @override
+  final Iterable<Type> types = const [HealthResponse, _$HealthResponse];
 
   @override
-  bool operator ==(Object other) =>
-      identical(this, other) ||
-      other is HealthResponse &&
-          other.checks == checks &&
-          other.status == status;
+  final String wireName = r'HealthResponse';
+
+  Iterable<Object?> _serializeProperties(
+    Serializers serializers,
+    HealthResponse object, {
+    FullType specifiedType = FullType.unspecified,
+  }) sync* {
+    yield r'status';
+    yield serializers.serialize(
+      object.status,
+      specifiedType: const FullType(HealthResponseStatusEnum),
+    );
+    yield r'checks';
+    yield serializers.serialize(
+      object.checks,
+      specifiedType: const FullType(HealthChecks),
+    );
+  }
 
   @override
-  int get hashCode => checks.hashCode + status.hashCode;
+  Object serialize(
+    Serializers serializers,
+    HealthResponse object, {
+    FullType specifiedType = FullType.unspecified,
+  }) {
+    return _serializeProperties(serializers, object, specifiedType: specifiedType).toList();
+  }
 
-  factory HealthResponse.fromJson(Map<String, dynamic> json) =>
-      _$HealthResponseFromJson(json);
-
-  Map<String, dynamic> toJson() => _$HealthResponseToJson(this);
+  void _deserializeProperties(
+    Serializers serializers,
+    Object serialized, {
+    FullType specifiedType = FullType.unspecified,
+    required List<Object?> serializedList,
+    required HealthResponseBuilder result,
+    required List<Object?> unhandled,
+  }) {
+    for (var i = 0; i < serializedList.length; i += 2) {
+      final key = serializedList[i] as String;
+      final value = serializedList[i + 1];
+      switch (key) {
+        case r'status':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(HealthResponseStatusEnum),
+          ) as HealthResponseStatusEnum;
+          result.status = valueDes;
+          break;
+        case r'checks':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(HealthChecks),
+          ) as HealthChecks;
+          result.checks.replace(valueDes);
+          break;
+        default:
+          unhandled.add(key);
+          unhandled.add(value);
+          break;
+      }
+    }
+  }
 
   @override
-  String toString() {
-    return toJson().toString();
+  HealthResponse deserialize(
+    Serializers serializers,
+    Object serialized, {
+    FullType specifiedType = FullType.unspecified,
+  }) {
+    final result = HealthResponseBuilder();
+    final serializedList = (serialized as Iterable<Object?>).toList();
+    final unhandled = <Object?>[];
+    _deserializeProperties(
+      serializers,
+      serialized,
+      specifiedType: specifiedType,
+      serializedList: serializedList,
+      unhandled: unhandled,
+      result: result,
+    );
+    return result.build();
   }
 }
 
-enum HealthResponseStatusEnum {
-  @JsonValue(r'ok')
-  ok(r'ok'),
-  @JsonValue(r'unhealthy')
-  unhealthy(r'unhealthy');
+class HealthResponseStatusEnum extends EnumClass {
 
-  const HealthResponseStatusEnum(this.value);
+  @BuiltValueEnumConst(wireName: r'ok')
+  static const HealthResponseStatusEnum ok = _$healthResponseStatusEnum_ok;
+  @BuiltValueEnumConst(wireName: r'unhealthy')
+  static const HealthResponseStatusEnum unhealthy = _$healthResponseStatusEnum_unhealthy;
 
-  final String value;
+  static Serializer<HealthResponseStatusEnum> get serializer => _$healthResponseStatusEnumSerializer;
 
-  @override
-  String toString() => value;
+  const HealthResponseStatusEnum._(String name): super(name);
+
+  static BuiltSet<HealthResponseStatusEnum> get values => _$healthResponseStatusEnumValues;
+  static HealthResponseStatusEnum valueOf(String name) => _$healthResponseStatusEnumValueOf(name);
 }
+

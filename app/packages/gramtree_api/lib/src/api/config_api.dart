@@ -4,21 +4,22 @@
 
 import 'dart:async';
 
-// ignore: unused_import
-import 'dart:convert';
-import 'package:gramtree_api/src/deserialize.dart';
+import 'package:built_value/serializer.dart';
 import 'package:dio/dio.dart';
 
 import 'package:gramtree_api/src/model/client_config.dart';
 import 'package:gramtree_api/src/model/error_response.dart';
 
 class ConfigApi {
+
   final Dio _dio;
 
-  const ConfigApi(this._dio);
+  final Serializers _serializers;
+
+  const ConfigApi(this._dio, this._serializers);
 
   /// App 用的能力开关和参数
-  ///
+  /// 
   ///
   /// Parameters:
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
@@ -30,7 +31,7 @@ class ConfigApi {
   ///
   /// Returns a [Future] containing a [Response] with a [ClientConfig] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<ClientConfig>> clientConfig({
+  Future<Response<ClientConfig>> clientConfig({ 
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
     Map<String, dynamic>? extra,
@@ -41,8 +42,13 @@ class ConfigApi {
     final _path = r'/v1/client-config';
     final _options = Options(
       method: r'GET',
-      headers: <String, dynamic>{...?headers},
-      extra: <String, dynamic>{'secure': <Map<String, String>>[], ...?extra},
+      headers: <String, dynamic>{
+        ...?headers,
+      },
+      extra: <String, dynamic>{
+        'secure': <Map<String, String>>[],
+        ...?extra,
+      },
       validateStatus: validateStatus,
     );
 
@@ -57,14 +63,12 @@ class ConfigApi {
     ClientConfig? _responseData;
 
     try {
-      final rawData = _response.data;
-      _responseData = rawData == null
-          ? null
-          : deserialize<ClientConfig, ClientConfig>(
-              rawData,
-              'ClientConfig',
-              growable: true,
-            );
+      final rawResponse = _response.data;
+      _responseData = rawResponse == null ? null : _serializers.deserialize(
+        rawResponse,
+        specifiedType: const FullType(ClientConfig),
+      ) as ClientConfig;
+
     } catch (error, stackTrace) {
       throw DioException(
         requestOptions: _response.requestOptions,
@@ -86,4 +90,5 @@ class ConfigApi {
       extra: _response.extra,
     );
   }
+
 }

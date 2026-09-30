@@ -3,142 +3,230 @@
 //
 
 // ignore_for_file: unused_element
-import 'package:copy_with_extension/copy_with_extension.dart';
-import 'package:json_annotation/json_annotation.dart';
+import 'package:built_collection/built_collection.dart';
+import 'package:built_value/json_object.dart';
+import 'package:built_value/built_value.dart';
+import 'package:built_value/serializer.dart';
 
 part 'flavor_profile.g.dart';
 
-@CopyWith()
-@JsonSerializable(
-  checked: true,
-  createToJson: true,
-  disallowUnrecognizedKeys: false,
-  explicitToJson: true,
-)
-class FlavorProfile {
-  /// Returns a new [FlavorProfile] instance.
-  FlavorProfile({
-    this.numbing = 0,
-
-    this.oily = 0,
-
-    this.salty = 0,
-
-    this.sour = 0,
-
-    this.spicy = 0,
-
-    this.sweet = 0,
-
-    this.umami = 0,
-  });
-
-  /// 麻
-  // minimum: 0
-  // maximum: 3
-  @JsonKey(
-    defaultValue: 0,
-    name: r'numbing',
-    required: false,
-    includeIfNull: false,
-  )
-  final int? numbing;
-
-  /// 油
-  // minimum: 0
-  // maximum: 3
-  @JsonKey(
-    defaultValue: 0,
-    name: r'oily',
-    required: false,
-    includeIfNull: false,
-  )
-  final int? oily;
-
+/// 味型贡献：单位用量下的相对强度，0～3，没写的项是 0。
+///
+/// Properties:
+/// * [salty] - 咸
+/// * [sweet] - 甜
+/// * [sour] - 酸
+/// * [spicy] - 辣
+/// * [umami] - 鲜
+/// * [numbing] - 麻
+/// * [oily] - 油
+@BuiltValue()
+abstract class FlavorProfile implements Built<FlavorProfile, FlavorProfileBuilder> {
   /// 咸
-  // minimum: 0
-  // maximum: 3
-  @JsonKey(
-    defaultValue: 0,
-    name: r'salty',
-    required: false,
-    includeIfNull: false,
-  )
-  final int? salty;
-
-  /// 酸
-  // minimum: 0
-  // maximum: 3
-  @JsonKey(
-    defaultValue: 0,
-    name: r'sour',
-    required: false,
-    includeIfNull: false,
-  )
-  final int? sour;
-
-  /// 辣
-  // minimum: 0
-  // maximum: 3
-  @JsonKey(
-    defaultValue: 0,
-    name: r'spicy',
-    required: false,
-    includeIfNull: false,
-  )
-  final int? spicy;
+  @BuiltValueField(wireName: r'salty')
+  int? get salty;
 
   /// 甜
-  // minimum: 0
-  // maximum: 3
-  @JsonKey(
-    defaultValue: 0,
-    name: r'sweet',
-    required: false,
-    includeIfNull: false,
-  )
-  final int? sweet;
+  @BuiltValueField(wireName: r'sweet')
+  int? get sweet;
+
+  /// 酸
+  @BuiltValueField(wireName: r'sour')
+  int? get sour;
+
+  /// 辣
+  @BuiltValueField(wireName: r'spicy')
+  int? get spicy;
 
   /// 鲜
-  // minimum: 0
-  // maximum: 3
-  @JsonKey(
-    defaultValue: 0,
-    name: r'umami',
-    required: false,
-    includeIfNull: false,
-  )
-  final int? umami;
+  @BuiltValueField(wireName: r'umami')
+  int? get umami;
+
+  /// 麻
+  @BuiltValueField(wireName: r'numbing')
+  int? get numbing;
+
+  /// 油
+  @BuiltValueField(wireName: r'oily')
+  int? get oily;
+
+  FlavorProfile._();
+
+  factory FlavorProfile([void updates(FlavorProfileBuilder b)]) = _$FlavorProfile;
+
+  @BuiltValueHook(initializeBuilder: true)
+  static void _defaults(FlavorProfileBuilder b) => b
+      ..salty = 0
+      ..sweet = 0
+      ..sour = 0
+      ..spicy = 0
+      ..umami = 0
+      ..numbing = 0
+      ..oily = 0;
+
+  @BuiltValueSerializer(custom: true)
+  static Serializer<FlavorProfile> get serializer => _$FlavorProfileSerializer();
+}
+
+class _$FlavorProfileSerializer implements PrimitiveSerializer<FlavorProfile> {
+  @override
+  final Iterable<Type> types = const [FlavorProfile, _$FlavorProfile];
 
   @override
-  bool operator ==(Object other) =>
-      identical(this, other) ||
-      other is FlavorProfile &&
-          other.numbing == numbing &&
-          other.oily == oily &&
-          other.salty == salty &&
-          other.sour == sour &&
-          other.spicy == spicy &&
-          other.sweet == sweet &&
-          other.umami == umami;
+  final String wireName = r'FlavorProfile';
+
+  Iterable<Object?> _serializeProperties(
+    Serializers serializers,
+    FlavorProfile object, {
+    FullType specifiedType = FullType.unspecified,
+  }) sync* {
+    if (object.salty != null) {
+      yield r'salty';
+      yield serializers.serialize(
+        object.salty,
+        specifiedType: const FullType(int),
+      );
+    }
+    if (object.sweet != null) {
+      yield r'sweet';
+      yield serializers.serialize(
+        object.sweet,
+        specifiedType: const FullType(int),
+      );
+    }
+    if (object.sour != null) {
+      yield r'sour';
+      yield serializers.serialize(
+        object.sour,
+        specifiedType: const FullType(int),
+      );
+    }
+    if (object.spicy != null) {
+      yield r'spicy';
+      yield serializers.serialize(
+        object.spicy,
+        specifiedType: const FullType(int),
+      );
+    }
+    if (object.umami != null) {
+      yield r'umami';
+      yield serializers.serialize(
+        object.umami,
+        specifiedType: const FullType(int),
+      );
+    }
+    if (object.numbing != null) {
+      yield r'numbing';
+      yield serializers.serialize(
+        object.numbing,
+        specifiedType: const FullType(int),
+      );
+    }
+    if (object.oily != null) {
+      yield r'oily';
+      yield serializers.serialize(
+        object.oily,
+        specifiedType: const FullType(int),
+      );
+    }
+  }
 
   @override
-  int get hashCode =>
-      numbing.hashCode +
-      oily.hashCode +
-      salty.hashCode +
-      sour.hashCode +
-      spicy.hashCode +
-      sweet.hashCode +
-      umami.hashCode;
+  Object serialize(
+    Serializers serializers,
+    FlavorProfile object, {
+    FullType specifiedType = FullType.unspecified,
+  }) {
+    return _serializeProperties(serializers, object, specifiedType: specifiedType).toList();
+  }
 
-  factory FlavorProfile.fromJson(Map<String, dynamic> json) =>
-      _$FlavorProfileFromJson(json);
-
-  Map<String, dynamic> toJson() => _$FlavorProfileToJson(this);
+  void _deserializeProperties(
+    Serializers serializers,
+    Object serialized, {
+    FullType specifiedType = FullType.unspecified,
+    required List<Object?> serializedList,
+    required FlavorProfileBuilder result,
+    required List<Object?> unhandled,
+  }) {
+    for (var i = 0; i < serializedList.length; i += 2) {
+      final key = serializedList[i] as String;
+      final value = serializedList[i + 1];
+      switch (key) {
+        case r'salty':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(int),
+          ) as int;
+          result.salty = valueDes;
+          break;
+        case r'sweet':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(int),
+          ) as int;
+          result.sweet = valueDes;
+          break;
+        case r'sour':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(int),
+          ) as int;
+          result.sour = valueDes;
+          break;
+        case r'spicy':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(int),
+          ) as int;
+          result.spicy = valueDes;
+          break;
+        case r'umami':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(int),
+          ) as int;
+          result.umami = valueDes;
+          break;
+        case r'numbing':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(int),
+          ) as int;
+          result.numbing = valueDes;
+          break;
+        case r'oily':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(int),
+          ) as int;
+          result.oily = valueDes;
+          break;
+        default:
+          unhandled.add(key);
+          unhandled.add(value);
+          break;
+      }
+    }
+  }
 
   @override
-  String toString() {
-    return toJson().toString();
+  FlavorProfile deserialize(
+    Serializers serializers,
+    Object serialized, {
+    FullType specifiedType = FullType.unspecified,
+  }) {
+    final result = FlavorProfileBuilder();
+    final serializedList = (serialized as Iterable<Object?>).toList();
+    final unhandled = <Object?>[];
+    _deserializeProperties(
+      serializers,
+      serialized,
+      specifiedType: specifiedType,
+      serializedList: serializedList,
+      unhandled: unhandled,
+      result: result,
+    );
+    return result.build();
   }
 }
+

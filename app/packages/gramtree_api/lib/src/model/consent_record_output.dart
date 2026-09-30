@@ -3,112 +3,225 @@
 //
 
 // ignore_for_file: unused_element
-import 'package:copy_with_extension/copy_with_extension.dart';
-import 'package:json_annotation/json_annotation.dart';
+import 'package:built_collection/built_collection.dart';
+import 'package:built_value/built_value.dart';
+import 'package:built_value/serializer.dart';
 
 part 'consent_record_output.g.dart';
 
-@CopyWith()
-@JsonSerializable(
-  checked: true,
-  createToJson: true,
-  disallowUnrecognizedKeys: false,
-  explicitToJson: true,
-)
-class ConsentRecordOutput {
-  /// Returns a new [ConsentRecordOutput] instance.
-  ConsentRecordOutput({
-    required this.action,
-
-    this.deviceId,
-
-    required this.id,
-
-    required this.kind,
-
-    required this.occurredAt,
-
-    required this.version,
-  });
-
-  @JsonKey(name: r'action', required: true, includeIfNull: false)
-  final ConsentRecordOutputActionEnum action;
-
-  @JsonKey(name: r'device_id', required: false, includeIfNull: false)
-  final String? deviceId;
-
+/// ConsentRecordOutput
+///
+/// Properties:
+/// * [id] - 客户端生成的 UUID v4，重复上传按它去重
+/// * [kind] 
+/// * [version] 
+/// * [action] 
+/// * [occurredAt] 
+/// * [deviceId] 
+@BuiltValue()
+abstract class ConsentRecordOutput implements Built<ConsentRecordOutput, ConsentRecordOutputBuilder> {
   /// 客户端生成的 UUID v4，重复上传按它去重
-  @JsonKey(name: r'id', required: true, includeIfNull: false)
-  final String id;
+  @BuiltValueField(wireName: r'id')
+  String get id;
 
-  @JsonKey(name: r'kind', required: true, includeIfNull: false)
-  final ConsentRecordOutputKindEnum kind;
+  @BuiltValueField(wireName: r'kind')
+  ConsentRecordOutputKindEnum get kind;
+  // enum kindEnum {  terms,  privacy,  sensitive_personal_info,  product_analytics,  };
 
-  @JsonKey(name: r'occurred_at', required: true, includeIfNull: false)
-  final String occurredAt;
+  @BuiltValueField(wireName: r'version')
+  String get version;
 
-  @JsonKey(name: r'version', required: true, includeIfNull: false)
-  final String version;
+  @BuiltValueField(wireName: r'action')
+  ConsentRecordOutputActionEnum get action;
+  // enum actionEnum {  agree,  withdraw,  };
+
+  @BuiltValueField(wireName: r'occurred_at')
+  String get occurredAt;
+
+  @BuiltValueField(wireName: r'device_id')
+  String? get deviceId;
+
+  ConsentRecordOutput._();
+
+  factory ConsentRecordOutput([void updates(ConsentRecordOutputBuilder b)]) = _$ConsentRecordOutput;
+
+  @BuiltValueHook(initializeBuilder: true)
+  static void _defaults(ConsentRecordOutputBuilder b) => b;
+
+  @BuiltValueSerializer(custom: true)
+  static Serializer<ConsentRecordOutput> get serializer => _$ConsentRecordOutputSerializer();
+}
+
+class _$ConsentRecordOutputSerializer implements PrimitiveSerializer<ConsentRecordOutput> {
+  @override
+  final Iterable<Type> types = const [ConsentRecordOutput, _$ConsentRecordOutput];
 
   @override
-  bool operator ==(Object other) =>
-      identical(this, other) ||
-      other is ConsentRecordOutput &&
-          other.action == action &&
-          other.deviceId == deviceId &&
-          other.id == id &&
-          other.kind == kind &&
-          other.occurredAt == occurredAt &&
-          other.version == version;
+  final String wireName = r'ConsentRecordOutput';
+
+  Iterable<Object?> _serializeProperties(
+    Serializers serializers,
+    ConsentRecordOutput object, {
+    FullType specifiedType = FullType.unspecified,
+  }) sync* {
+    yield r'id';
+    yield serializers.serialize(
+      object.id,
+      specifiedType: const FullType(String),
+    );
+    yield r'kind';
+    yield serializers.serialize(
+      object.kind,
+      specifiedType: const FullType(ConsentRecordOutputKindEnum),
+    );
+    yield r'version';
+    yield serializers.serialize(
+      object.version,
+      specifiedType: const FullType(String),
+    );
+    yield r'action';
+    yield serializers.serialize(
+      object.action,
+      specifiedType: const FullType(ConsentRecordOutputActionEnum),
+    );
+    yield r'occurred_at';
+    yield serializers.serialize(
+      object.occurredAt,
+      specifiedType: const FullType(String),
+    );
+    if (object.deviceId != null) {
+      yield r'device_id';
+      yield serializers.serialize(
+        object.deviceId,
+        specifiedType: const FullType.nullable(String),
+      );
+    }
+  }
 
   @override
-  int get hashCode =>
-      action.hashCode +
-      (deviceId == null ? 0 : deviceId.hashCode) +
-      id.hashCode +
-      kind.hashCode +
-      occurredAt.hashCode +
-      version.hashCode;
+  Object serialize(
+    Serializers serializers,
+    ConsentRecordOutput object, {
+    FullType specifiedType = FullType.unspecified,
+  }) {
+    return _serializeProperties(serializers, object, specifiedType: specifiedType).toList();
+  }
 
-  factory ConsentRecordOutput.fromJson(Map<String, dynamic> json) =>
-      _$ConsentRecordOutputFromJson(json);
-
-  Map<String, dynamic> toJson() => _$ConsentRecordOutputToJson(this);
+  void _deserializeProperties(
+    Serializers serializers,
+    Object serialized, {
+    FullType specifiedType = FullType.unspecified,
+    required List<Object?> serializedList,
+    required ConsentRecordOutputBuilder result,
+    required List<Object?> unhandled,
+  }) {
+    for (var i = 0; i < serializedList.length; i += 2) {
+      final key = serializedList[i] as String;
+      final value = serializedList[i + 1];
+      switch (key) {
+        case r'id':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(String),
+          ) as String;
+          result.id = valueDes;
+          break;
+        case r'kind':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(ConsentRecordOutputKindEnum),
+          ) as ConsentRecordOutputKindEnum;
+          result.kind = valueDes;
+          break;
+        case r'version':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(String),
+          ) as String;
+          result.version = valueDes;
+          break;
+        case r'action':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(ConsentRecordOutputActionEnum),
+          ) as ConsentRecordOutputActionEnum;
+          result.action = valueDes;
+          break;
+        case r'occurred_at':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(String),
+          ) as String;
+          result.occurredAt = valueDes;
+          break;
+        case r'device_id':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(String),
+          ) as String?;
+          if (valueDes == null) continue;
+          result.deviceId = valueDes;
+          break;
+        default:
+          unhandled.add(key);
+          unhandled.add(value);
+          break;
+      }
+    }
+  }
 
   @override
-  String toString() {
-    return toJson().toString();
+  ConsentRecordOutput deserialize(
+    Serializers serializers,
+    Object serialized, {
+    FullType specifiedType = FullType.unspecified,
+  }) {
+    final result = ConsentRecordOutputBuilder();
+    final serializedList = (serialized as Iterable<Object?>).toList();
+    final unhandled = <Object?>[];
+    _deserializeProperties(
+      serializers,
+      serialized,
+      specifiedType: specifiedType,
+      serializedList: serializedList,
+      unhandled: unhandled,
+      result: result,
+    );
+    return result.build();
   }
 }
 
-enum ConsentRecordOutputActionEnum {
-  @JsonValue(r'agree')
-  agree(r'agree'),
-  @JsonValue(r'withdraw')
-  withdraw(r'withdraw');
+class ConsentRecordOutputKindEnum extends EnumClass {
 
-  const ConsentRecordOutputActionEnum(this.value);
+  @BuiltValueEnumConst(wireName: r'terms')
+  static const ConsentRecordOutputKindEnum terms = _$consentRecordOutputKindEnum_terms;
+  @BuiltValueEnumConst(wireName: r'privacy')
+  static const ConsentRecordOutputKindEnum privacy = _$consentRecordOutputKindEnum_privacy;
+  @BuiltValueEnumConst(wireName: r'sensitive_personal_info')
+  static const ConsentRecordOutputKindEnum sensitivePersonalInfo = _$consentRecordOutputKindEnum_sensitivePersonalInfo;
+  @BuiltValueEnumConst(wireName: r'product_analytics')
+  static const ConsentRecordOutputKindEnum productAnalytics = _$consentRecordOutputKindEnum_productAnalytics;
 
-  final String value;
+  static Serializer<ConsentRecordOutputKindEnum> get serializer => _$consentRecordOutputKindEnumSerializer;
 
-  @override
-  String toString() => value;
+  const ConsentRecordOutputKindEnum._(String name): super(name);
+
+  static BuiltSet<ConsentRecordOutputKindEnum> get values => _$consentRecordOutputKindEnumValues;
+  static ConsentRecordOutputKindEnum valueOf(String name) => _$consentRecordOutputKindEnumValueOf(name);
 }
 
-enum ConsentRecordOutputKindEnum {
-  @JsonValue(r'terms')
-  terms(r'terms'),
-  @JsonValue(r'privacy')
-  privacy(r'privacy'),
-  @JsonValue(r'sensitive_personal_info')
-  sensitivePersonalInfo(r'sensitive_personal_info'),
-  @JsonValue(r'product_analytics')
-  productAnalytics(r'product_analytics');
+class ConsentRecordOutputActionEnum extends EnumClass {
 
-  const ConsentRecordOutputKindEnum(this.value);
+  @BuiltValueEnumConst(wireName: r'agree')
+  static const ConsentRecordOutputActionEnum agree = _$consentRecordOutputActionEnum_agree;
+  @BuiltValueEnumConst(wireName: r'withdraw')
+  static const ConsentRecordOutputActionEnum withdraw = _$consentRecordOutputActionEnum_withdraw;
 
-  final String value;
+  static Serializer<ConsentRecordOutputActionEnum> get serializer => _$consentRecordOutputActionEnumSerializer;
 
-  @override
-  String toString() => value;
+  const ConsentRecordOutputActionEnum._(String name): super(name);
+
+  static BuiltSet<ConsentRecordOutputActionEnum> get values => _$consentRecordOutputActionEnumValues;
+  static ConsentRecordOutputActionEnum valueOf(String name) => _$consentRecordOutputActionEnumValueOf(name);
 }
+

@@ -3,86 +3,179 @@
 //
 
 // ignore_for_file: unused_element
+import 'package:built_collection/built_collection.dart';
 import 'package:gramtree_api/src/model/source_basis.dart';
-import 'package:copy_with_extension/copy_with_extension.dart';
-import 'package:json_annotation/json_annotation.dart';
+import 'package:built_value/built_value.dart';
+import 'package:built_value/serializer.dart';
 
 part 'sourced_value.g.dart';
 
-@CopyWith()
-@JsonSerializable(
-  checked: true,
-  createToJson: true,
-  disallowUnrecognizedKeys: false,
-  explicitToJson: true,
-)
-class SourcedValue {
-  /// Returns a new [SourcedValue] instance.
-  SourcedValue({
-    required this.basis,
+/// SourcedValue
+///
+/// Properties:
+/// * [sourceType] 
+/// * [value] 
+/// * [originalValue] 
+/// * [basis] 
+@BuiltValue()
+abstract class SourcedValue implements Built<SourcedValue, SourcedValueBuilder> {
+  @BuiltValueField(wireName: r'source_type')
+  SourcedValueSourceTypeEnum get sourceType;
+  // enum sourceTypeEnum {  author_filled,  taste_adjusted,  scenario_adjusted,  ai_estimated,  verified,  };
 
-    this.originalValue,
+  @BuiltValueField(wireName: r'value')
+  String get value;
 
-    required this.sourceType,
+  @BuiltValueField(wireName: r'original_value')
+  String? get originalValue;
 
-    required this.value,
-  });
+  @BuiltValueField(wireName: r'basis')
+  SourceBasis get basis;
 
-  @JsonKey(name: r'basis', required: true, includeIfNull: false)
-  final SourceBasis basis;
+  SourcedValue._();
 
-  @JsonKey(name: r'original_value', required: false, includeIfNull: false)
-  final String? originalValue;
+  factory SourcedValue([void updates(SourcedValueBuilder b)]) = _$SourcedValue;
 
-  @JsonKey(name: r'source_type', required: true, includeIfNull: false)
-  final SourcedValueSourceTypeEnum sourceType;
+  @BuiltValueHook(initializeBuilder: true)
+  static void _defaults(SourcedValueBuilder b) => b;
 
-  @JsonKey(name: r'value', required: true, includeIfNull: false)
-  final String value;
+  @BuiltValueSerializer(custom: true)
+  static Serializer<SourcedValue> get serializer => _$SourcedValueSerializer();
+}
+
+class _$SourcedValueSerializer implements PrimitiveSerializer<SourcedValue> {
+  @override
+  final Iterable<Type> types = const [SourcedValue, _$SourcedValue];
 
   @override
-  bool operator ==(Object other) =>
-      identical(this, other) ||
-      other is SourcedValue &&
-          other.basis == basis &&
-          other.originalValue == originalValue &&
-          other.sourceType == sourceType &&
-          other.value == value;
+  final String wireName = r'SourcedValue';
+
+  Iterable<Object?> _serializeProperties(
+    Serializers serializers,
+    SourcedValue object, {
+    FullType specifiedType = FullType.unspecified,
+  }) sync* {
+    yield r'source_type';
+    yield serializers.serialize(
+      object.sourceType,
+      specifiedType: const FullType(SourcedValueSourceTypeEnum),
+    );
+    yield r'value';
+    yield serializers.serialize(
+      object.value,
+      specifiedType: const FullType(String),
+    );
+    if (object.originalValue != null) {
+      yield r'original_value';
+      yield serializers.serialize(
+        object.originalValue,
+        specifiedType: const FullType.nullable(String),
+      );
+    }
+    yield r'basis';
+    yield serializers.serialize(
+      object.basis,
+      specifiedType: const FullType(SourceBasis),
+    );
+  }
 
   @override
-  int get hashCode =>
-      basis.hashCode +
-      (originalValue == null ? 0 : originalValue.hashCode) +
-      sourceType.hashCode +
-      value.hashCode;
+  Object serialize(
+    Serializers serializers,
+    SourcedValue object, {
+    FullType specifiedType = FullType.unspecified,
+  }) {
+    return _serializeProperties(serializers, object, specifiedType: specifiedType).toList();
+  }
 
-  factory SourcedValue.fromJson(Map<String, dynamic> json) =>
-      _$SourcedValueFromJson(json);
-
-  Map<String, dynamic> toJson() => _$SourcedValueToJson(this);
+  void _deserializeProperties(
+    Serializers serializers,
+    Object serialized, {
+    FullType specifiedType = FullType.unspecified,
+    required List<Object?> serializedList,
+    required SourcedValueBuilder result,
+    required List<Object?> unhandled,
+  }) {
+    for (var i = 0; i < serializedList.length; i += 2) {
+      final key = serializedList[i] as String;
+      final value = serializedList[i + 1];
+      switch (key) {
+        case r'source_type':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(SourcedValueSourceTypeEnum),
+          ) as SourcedValueSourceTypeEnum;
+          result.sourceType = valueDes;
+          break;
+        case r'value':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(String),
+          ) as String;
+          result.value = valueDes;
+          break;
+        case r'original_value':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(String),
+          ) as String?;
+          if (valueDes == null) continue;
+          result.originalValue = valueDes;
+          break;
+        case r'basis':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(SourceBasis),
+          ) as SourceBasis;
+          result.basis.replace(valueDes);
+          break;
+        default:
+          unhandled.add(key);
+          unhandled.add(value);
+          break;
+      }
+    }
+  }
 
   @override
-  String toString() {
-    return toJson().toString();
+  SourcedValue deserialize(
+    Serializers serializers,
+    Object serialized, {
+    FullType specifiedType = FullType.unspecified,
+  }) {
+    final result = SourcedValueBuilder();
+    final serializedList = (serialized as Iterable<Object?>).toList();
+    final unhandled = <Object?>[];
+    _deserializeProperties(
+      serializers,
+      serialized,
+      specifiedType: specifiedType,
+      serializedList: serializedList,
+      unhandled: unhandled,
+      result: result,
+    );
+    return result.build();
   }
 }
 
-enum SourcedValueSourceTypeEnum {
-  @JsonValue(r'author_filled')
-  authorFilled(r'author_filled'),
-  @JsonValue(r'taste_adjusted')
-  tasteAdjusted(r'taste_adjusted'),
-  @JsonValue(r'scenario_adjusted')
-  scenarioAdjusted(r'scenario_adjusted'),
-  @JsonValue(r'ai_estimated')
-  aiEstimated(r'ai_estimated'),
-  @JsonValue(r'verified')
-  verified(r'verified');
+class SourcedValueSourceTypeEnum extends EnumClass {
 
-  const SourcedValueSourceTypeEnum(this.value);
+  @BuiltValueEnumConst(wireName: r'author_filled')
+  static const SourcedValueSourceTypeEnum authorFilled = _$sourcedValueSourceTypeEnum_authorFilled;
+  @BuiltValueEnumConst(wireName: r'taste_adjusted')
+  static const SourcedValueSourceTypeEnum tasteAdjusted = _$sourcedValueSourceTypeEnum_tasteAdjusted;
+  @BuiltValueEnumConst(wireName: r'scenario_adjusted')
+  static const SourcedValueSourceTypeEnum scenarioAdjusted = _$sourcedValueSourceTypeEnum_scenarioAdjusted;
+  @BuiltValueEnumConst(wireName: r'ai_estimated')
+  static const SourcedValueSourceTypeEnum aiEstimated = _$sourcedValueSourceTypeEnum_aiEstimated;
+  @BuiltValueEnumConst(wireName: r'verified')
+  static const SourcedValueSourceTypeEnum verified = _$sourcedValueSourceTypeEnum_verified;
 
-  final String value;
+  static Serializer<SourcedValueSourceTypeEnum> get serializer => _$sourcedValueSourceTypeEnumSerializer;
 
-  @override
-  String toString() => value;
+  const SourcedValueSourceTypeEnum._(String name): super(name);
+
+  static BuiltSet<SourcedValueSourceTypeEnum> get values => _$sourcedValueSourceTypeEnumValues;
+  static SourcedValueSourceTypeEnum valueOf(String name) => _$sourcedValueSourceTypeEnumValueOf(name);
 }
+

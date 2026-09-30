@@ -3,39 +3,104 @@
 //
 
 // ignore_for_file: unused_element
-import 'package:copy_with_extension/copy_with_extension.dart';
-import 'package:json_annotation/json_annotation.dart';
+import 'package:built_value/built_value.dart';
+import 'package:built_value/serializer.dart';
 
 part 'search_query.g.dart';
 
-@CopyWith()
-@JsonSerializable(
-  checked: true,
-  createToJson: true,
-  disallowUnrecognizedKeys: false,
-  explicitToJson: true,
-)
-class SearchQuery {
-  /// Returns a new [SearchQuery] instance.
-  SearchQuery({required this.query});
+/// SearchQuery
+///
+/// Properties:
+/// * [query] 
+@BuiltValue()
+abstract class SearchQuery implements Built<SearchQuery, SearchQueryBuilder> {
+  @BuiltValueField(wireName: r'query')
+  String get query;
 
-  @JsonKey(name: r'query', required: true, includeIfNull: false)
-  final String query;
+  SearchQuery._();
+
+  factory SearchQuery([void updates(SearchQueryBuilder b)]) = _$SearchQuery;
+
+  @BuiltValueHook(initializeBuilder: true)
+  static void _defaults(SearchQueryBuilder b) => b;
+
+  @BuiltValueSerializer(custom: true)
+  static Serializer<SearchQuery> get serializer => _$SearchQuerySerializer();
+}
+
+class _$SearchQuerySerializer implements PrimitiveSerializer<SearchQuery> {
+  @override
+  final Iterable<Type> types = const [SearchQuery, _$SearchQuery];
 
   @override
-  bool operator ==(Object other) =>
-      identical(this, other) || other is SearchQuery && other.query == query;
+  final String wireName = r'SearchQuery';
+
+  Iterable<Object?> _serializeProperties(
+    Serializers serializers,
+    SearchQuery object, {
+    FullType specifiedType = FullType.unspecified,
+  }) sync* {
+    yield r'query';
+    yield serializers.serialize(
+      object.query,
+      specifiedType: const FullType(String),
+    );
+  }
 
   @override
-  int get hashCode => query.hashCode;
+  Object serialize(
+    Serializers serializers,
+    SearchQuery object, {
+    FullType specifiedType = FullType.unspecified,
+  }) {
+    return _serializeProperties(serializers, object, specifiedType: specifiedType).toList();
+  }
 
-  factory SearchQuery.fromJson(Map<String, dynamic> json) =>
-      _$SearchQueryFromJson(json);
-
-  Map<String, dynamic> toJson() => _$SearchQueryToJson(this);
+  void _deserializeProperties(
+    Serializers serializers,
+    Object serialized, {
+    FullType specifiedType = FullType.unspecified,
+    required List<Object?> serializedList,
+    required SearchQueryBuilder result,
+    required List<Object?> unhandled,
+  }) {
+    for (var i = 0; i < serializedList.length; i += 2) {
+      final key = serializedList[i] as String;
+      final value = serializedList[i + 1];
+      switch (key) {
+        case r'query':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(String),
+          ) as String;
+          result.query = valueDes;
+          break;
+        default:
+          unhandled.add(key);
+          unhandled.add(value);
+          break;
+      }
+    }
+  }
 
   @override
-  String toString() {
-    return toJson().toString();
+  SearchQuery deserialize(
+    Serializers serializers,
+    Object serialized, {
+    FullType specifiedType = FullType.unspecified,
+  }) {
+    final result = SearchQueryBuilder();
+    final serializedList = (serialized as Iterable<Object?>).toList();
+    final unhandled = <Object?>[];
+    _deserializeProperties(
+      serializers,
+      serialized,
+      specifiedType: specifiedType,
+      serializedList: serializedList,
+      unhandled: unhandled,
+      result: result,
+    );
+    return result.build();
   }
 }
+

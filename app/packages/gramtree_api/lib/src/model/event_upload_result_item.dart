@@ -3,74 +3,163 @@
 //
 
 // ignore_for_file: unused_element
+import 'package:built_collection/built_collection.dart';
 import 'package:gramtree_api/src/model/rejection_reason.dart';
-import 'package:copy_with_extension/copy_with_extension.dart';
-import 'package:json_annotation/json_annotation.dart';
+import 'package:built_value/built_value.dart';
+import 'package:built_value/serializer.dart';
 
 part 'event_upload_result_item.g.dart';
 
-@CopyWith()
-@JsonSerializable(
-  checked: true,
-  createToJson: true,
-  disallowUnrecognizedKeys: false,
-  explicitToJson: true,
-)
-class EventUploadResultItem {
-  /// Returns a new [EventUploadResultItem] instance.
-  EventUploadResultItem({required this.id, this.reason, required this.status});
-
-  @JsonKey(name: r'id', required: true, includeIfNull: false)
-  final String id;
-
-  @JsonKey(name: r'reason', required: false, includeIfNull: false)
-  final RejectionReason? reason;
+/// EventUploadResultItem
+///
+/// Properties:
+/// * [id] 
+/// * [status] - accepted：已接收入库；duplicate：这个 ID 之前已经收到过，原记录未改动；rejected：没通过登记表校验，未入库，见 reason
+/// * [reason] 
+@BuiltValue()
+abstract class EventUploadResultItem implements Built<EventUploadResultItem, EventUploadResultItemBuilder> {
+  @BuiltValueField(wireName: r'id')
+  String get id;
 
   /// accepted：已接收入库；duplicate：这个 ID 之前已经收到过，原记录未改动；rejected：没通过登记表校验，未入库，见 reason
-  @JsonKey(name: r'status', required: true, includeIfNull: false)
-  final EventUploadResultItemStatusEnum status;
+  @BuiltValueField(wireName: r'status')
+  EventUploadResultItemStatusEnum get status;
+  // enum statusEnum {  accepted,  duplicate,  rejected,  };
+
+  @BuiltValueField(wireName: r'reason')
+  RejectionReason? get reason;
+
+  EventUploadResultItem._();
+
+  factory EventUploadResultItem([void updates(EventUploadResultItemBuilder b)]) = _$EventUploadResultItem;
+
+  @BuiltValueHook(initializeBuilder: true)
+  static void _defaults(EventUploadResultItemBuilder b) => b;
+
+  @BuiltValueSerializer(custom: true)
+  static Serializer<EventUploadResultItem> get serializer => _$EventUploadResultItemSerializer();
+}
+
+class _$EventUploadResultItemSerializer implements PrimitiveSerializer<EventUploadResultItem> {
+  @override
+  final Iterable<Type> types = const [EventUploadResultItem, _$EventUploadResultItem];
 
   @override
-  bool operator ==(Object other) =>
-      identical(this, other) ||
-      other is EventUploadResultItem &&
-          other.id == id &&
-          other.reason == reason &&
-          other.status == status;
+  final String wireName = r'EventUploadResultItem';
+
+  Iterable<Object?> _serializeProperties(
+    Serializers serializers,
+    EventUploadResultItem object, {
+    FullType specifiedType = FullType.unspecified,
+  }) sync* {
+    yield r'id';
+    yield serializers.serialize(
+      object.id,
+      specifiedType: const FullType(String),
+    );
+    yield r'status';
+    yield serializers.serialize(
+      object.status,
+      specifiedType: const FullType(EventUploadResultItemStatusEnum),
+    );
+    if (object.reason != null) {
+      yield r'reason';
+      yield serializers.serialize(
+        object.reason,
+        specifiedType: const FullType.nullable(RejectionReason),
+      );
+    }
+  }
 
   @override
-  int get hashCode =>
-      id.hashCode + (reason == null ? 0 : reason.hashCode) + status.hashCode;
+  Object serialize(
+    Serializers serializers,
+    EventUploadResultItem object, {
+    FullType specifiedType = FullType.unspecified,
+  }) {
+    return _serializeProperties(serializers, object, specifiedType: specifiedType).toList();
+  }
 
-  factory EventUploadResultItem.fromJson(Map<String, dynamic> json) =>
-      _$EventUploadResultItemFromJson(json);
-
-  Map<String, dynamic> toJson() => _$EventUploadResultItemToJson(this);
+  void _deserializeProperties(
+    Serializers serializers,
+    Object serialized, {
+    FullType specifiedType = FullType.unspecified,
+    required List<Object?> serializedList,
+    required EventUploadResultItemBuilder result,
+    required List<Object?> unhandled,
+  }) {
+    for (var i = 0; i < serializedList.length; i += 2) {
+      final key = serializedList[i] as String;
+      final value = serializedList[i + 1];
+      switch (key) {
+        case r'id':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(String),
+          ) as String;
+          result.id = valueDes;
+          break;
+        case r'status':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(EventUploadResultItemStatusEnum),
+          ) as EventUploadResultItemStatusEnum;
+          result.status = valueDes;
+          break;
+        case r'reason':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(RejectionReason),
+          ) as RejectionReason?;
+          if (valueDes == null) continue;
+          result.reason.replace(valueDes);
+          break;
+        default:
+          unhandled.add(key);
+          unhandled.add(value);
+          break;
+      }
+    }
+  }
 
   @override
-  String toString() {
-    return toJson().toString();
+  EventUploadResultItem deserialize(
+    Serializers serializers,
+    Object serialized, {
+    FullType specifiedType = FullType.unspecified,
+  }) {
+    final result = EventUploadResultItemBuilder();
+    final serializedList = (serialized as Iterable<Object?>).toList();
+    final unhandled = <Object?>[];
+    _deserializeProperties(
+      serializers,
+      serialized,
+      specifiedType: specifiedType,
+      serializedList: serializedList,
+      unhandled: unhandled,
+      result: result,
+    );
+    return result.build();
   }
 }
 
-/// accepted：已接收入库；duplicate：这个 ID 之前已经收到过，原记录未改动；rejected：没通过登记表校验，未入库，见 reason
-enum EventUploadResultItemStatusEnum {
-  /// accepted：已接收入库；duplicate：这个 ID 之前已经收到过，原记录未改动；rejected：没通过登记表校验，未入库，见 reason
-  @JsonValue(r'accepted')
-  accepted(r'accepted'),
+class EventUploadResultItemStatusEnum extends EnumClass {
 
   /// accepted：已接收入库；duplicate：这个 ID 之前已经收到过，原记录未改动；rejected：没通过登记表校验，未入库，见 reason
-  @JsonValue(r'duplicate')
-  duplicate(r'duplicate'),
-
+  @BuiltValueEnumConst(wireName: r'accepted')
+  static const EventUploadResultItemStatusEnum accepted = _$eventUploadResultItemStatusEnum_accepted;
   /// accepted：已接收入库；duplicate：这个 ID 之前已经收到过，原记录未改动；rejected：没通过登记表校验，未入库，见 reason
-  @JsonValue(r'rejected')
-  rejected(r'rejected');
+  @BuiltValueEnumConst(wireName: r'duplicate')
+  static const EventUploadResultItemStatusEnum duplicate = _$eventUploadResultItemStatusEnum_duplicate;
+  /// accepted：已接收入库；duplicate：这个 ID 之前已经收到过，原记录未改动；rejected：没通过登记表校验，未入库，见 reason
+  @BuiltValueEnumConst(wireName: r'rejected')
+  static const EventUploadResultItemStatusEnum rejected = _$eventUploadResultItemStatusEnum_rejected;
 
-  const EventUploadResultItemStatusEnum(this.value);
+  static Serializer<EventUploadResultItemStatusEnum> get serializer => _$eventUploadResultItemStatusEnumSerializer;
 
-  final String value;
+  const EventUploadResultItemStatusEnum._(String name): super(name);
 
-  @override
-  String toString() => value;
+  static BuiltSet<EventUploadResultItemStatusEnum> get values => _$eventUploadResultItemStatusEnumValues;
+  static EventUploadResultItemStatusEnum valueOf(String name) => _$eventUploadResultItemStatusEnumValueOf(name);
 }
+

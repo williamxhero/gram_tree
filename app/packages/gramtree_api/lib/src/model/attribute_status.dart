@@ -3,22 +3,34 @@
 //
 
 // ignore_for_file: unused_element
-import 'package:json_annotation/json_annotation.dart';
+import 'package:built_collection/built_collection.dart';
+import 'package:built_value/built_value.dart';
+import 'package:built_value/serializer.dart';
 
-/// 字段的校对状态。
-enum AttributeStatus {
+part 'attribute_status.g.dart';
+
+class AttributeStatus extends EnumClass {
+
   /// 字段的校对状态。
-  @JsonValue(r'ai_draft')
-  aiDraft(r'ai_draft'),
-
+  @BuiltValueEnumConst(wireName: r'ai_draft')
+  static const AttributeStatus aiDraft = _$aiDraft;
   /// 字段的校对状态。
-  @JsonValue(r'verified')
-  verified(r'verified');
+  @BuiltValueEnumConst(wireName: r'verified')
+  static const AttributeStatus verified = _$verified;
 
-  const AttributeStatus(this.value);
+  static Serializer<AttributeStatus> get serializer => _$attributeStatusSerializer;
 
-  final String value;
+  const AttributeStatus._(String name): super(name);
 
-  @override
-  String toString() => value;
+  static BuiltSet<AttributeStatus> get values => _$values;
+  static AttributeStatus valueOf(String name) => _$valueOf(name);
 }
+
+/// Optionally, enum_class can generate a mixin to go with your enum for use
+/// with Angular. It exposes your enum constants as getters. So, if you mix it
+/// in to your Dart component class, the values become available to the
+/// corresponding Angular template.
+///
+/// Trigger mixin generation by writing a line like this one next to your enum.
+abstract class AttributeStatusMixin = Object with _$AttributeStatusMixin;
+

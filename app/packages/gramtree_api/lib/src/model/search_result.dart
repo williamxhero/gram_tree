@@ -3,40 +3,106 @@
 //
 
 // ignore_for_file: unused_element
+import 'package:built_collection/built_collection.dart';
 import 'package:gramtree_api/src/model/ingredient_out.dart';
-import 'package:copy_with_extension/copy_with_extension.dart';
-import 'package:json_annotation/json_annotation.dart';
+import 'package:built_value/built_value.dart';
+import 'package:built_value/serializer.dart';
 
 part 'search_result.g.dart';
 
-@CopyWith()
-@JsonSerializable(
-  checked: true,
-  createToJson: true,
-  disallowUnrecognizedKeys: false,
-  explicitToJson: true,
-)
-class SearchResult {
-  /// Returns a new [SearchResult] instance.
-  SearchResult({required this.items});
+/// SearchResult
+///
+/// Properties:
+/// * [items] 
+@BuiltValue()
+abstract class SearchResult implements Built<SearchResult, SearchResultBuilder> {
+  @BuiltValueField(wireName: r'items')
+  BuiltList<IngredientOut> get items;
 
-  @JsonKey(name: r'items', required: true, includeIfNull: false)
-  final List<IngredientOut> items;
+  SearchResult._();
+
+  factory SearchResult([void updates(SearchResultBuilder b)]) = _$SearchResult;
+
+  @BuiltValueHook(initializeBuilder: true)
+  static void _defaults(SearchResultBuilder b) => b;
+
+  @BuiltValueSerializer(custom: true)
+  static Serializer<SearchResult> get serializer => _$SearchResultSerializer();
+}
+
+class _$SearchResultSerializer implements PrimitiveSerializer<SearchResult> {
+  @override
+  final Iterable<Type> types = const [SearchResult, _$SearchResult];
 
   @override
-  bool operator ==(Object other) =>
-      identical(this, other) || other is SearchResult && other.items == items;
+  final String wireName = r'SearchResult';
+
+  Iterable<Object?> _serializeProperties(
+    Serializers serializers,
+    SearchResult object, {
+    FullType specifiedType = FullType.unspecified,
+  }) sync* {
+    yield r'items';
+    yield serializers.serialize(
+      object.items,
+      specifiedType: const FullType(BuiltList, [FullType(IngredientOut)]),
+    );
+  }
 
   @override
-  int get hashCode => items.hashCode;
+  Object serialize(
+    Serializers serializers,
+    SearchResult object, {
+    FullType specifiedType = FullType.unspecified,
+  }) {
+    return _serializeProperties(serializers, object, specifiedType: specifiedType).toList();
+  }
 
-  factory SearchResult.fromJson(Map<String, dynamic> json) =>
-      _$SearchResultFromJson(json);
-
-  Map<String, dynamic> toJson() => _$SearchResultToJson(this);
+  void _deserializeProperties(
+    Serializers serializers,
+    Object serialized, {
+    FullType specifiedType = FullType.unspecified,
+    required List<Object?> serializedList,
+    required SearchResultBuilder result,
+    required List<Object?> unhandled,
+  }) {
+    for (var i = 0; i < serializedList.length; i += 2) {
+      final key = serializedList[i] as String;
+      final value = serializedList[i + 1];
+      switch (key) {
+        case r'items':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(BuiltList, [FullType(IngredientOut)]),
+          ) as BuiltList<IngredientOut>;
+          result.items.replace(valueDes);
+          break;
+        default:
+          unhandled.add(key);
+          unhandled.add(value);
+          break;
+      }
+    }
+  }
 
   @override
-  String toString() {
-    return toJson().toString();
+  SearchResult deserialize(
+    Serializers serializers,
+    Object serialized, {
+    FullType specifiedType = FullType.unspecified,
+  }) {
+    final result = SearchResultBuilder();
+    final serializedList = (serialized as Iterable<Object?>).toList();
+    final unhandled = <Object?>[];
+    _deserializeProperties(
+      serializers,
+      serialized,
+      specifiedType: specifiedType,
+      serializedList: serializedList,
+      unhandled: unhandled,
+      result: result,
+    );
+    return result.build();
   }
 }
+

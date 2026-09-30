@@ -3,40 +3,104 @@
 //
 
 // ignore_for_file: unused_element
-import 'package:copy_with_extension/copy_with_extension.dart';
-import 'package:json_annotation/json_annotation.dart';
+import 'package:built_value/built_value.dart';
+import 'package:built_value/serializer.dart';
 
 part 'apple_reauth_request.g.dart';
 
-@CopyWith()
-@JsonSerializable(
-  checked: true,
-  createToJson: true,
-  disallowUnrecognizedKeys: false,
-  explicitToJson: true,
-)
-class AppleReauthRequest {
-  /// Returns a new [AppleReauthRequest] instance.
-  AppleReauthRequest({required this.identityToken});
+/// AppleReauthRequest
+///
+/// Properties:
+/// * [identityToken] 
+@BuiltValue()
+abstract class AppleReauthRequest implements Built<AppleReauthRequest, AppleReauthRequestBuilder> {
+  @BuiltValueField(wireName: r'identity_token')
+  String get identityToken;
 
-  @JsonKey(name: r'identity_token', required: true, includeIfNull: false)
-  final String identityToken;
+  AppleReauthRequest._();
+
+  factory AppleReauthRequest([void updates(AppleReauthRequestBuilder b)]) = _$AppleReauthRequest;
+
+  @BuiltValueHook(initializeBuilder: true)
+  static void _defaults(AppleReauthRequestBuilder b) => b;
+
+  @BuiltValueSerializer(custom: true)
+  static Serializer<AppleReauthRequest> get serializer => _$AppleReauthRequestSerializer();
+}
+
+class _$AppleReauthRequestSerializer implements PrimitiveSerializer<AppleReauthRequest> {
+  @override
+  final Iterable<Type> types = const [AppleReauthRequest, _$AppleReauthRequest];
 
   @override
-  bool operator ==(Object other) =>
-      identical(this, other) ||
-      other is AppleReauthRequest && other.identityToken == identityToken;
+  final String wireName = r'AppleReauthRequest';
+
+  Iterable<Object?> _serializeProperties(
+    Serializers serializers,
+    AppleReauthRequest object, {
+    FullType specifiedType = FullType.unspecified,
+  }) sync* {
+    yield r'identity_token';
+    yield serializers.serialize(
+      object.identityToken,
+      specifiedType: const FullType(String),
+    );
+  }
 
   @override
-  int get hashCode => identityToken.hashCode;
+  Object serialize(
+    Serializers serializers,
+    AppleReauthRequest object, {
+    FullType specifiedType = FullType.unspecified,
+  }) {
+    return _serializeProperties(serializers, object, specifiedType: specifiedType).toList();
+  }
 
-  factory AppleReauthRequest.fromJson(Map<String, dynamic> json) =>
-      _$AppleReauthRequestFromJson(json);
-
-  Map<String, dynamic> toJson() => _$AppleReauthRequestToJson(this);
+  void _deserializeProperties(
+    Serializers serializers,
+    Object serialized, {
+    FullType specifiedType = FullType.unspecified,
+    required List<Object?> serializedList,
+    required AppleReauthRequestBuilder result,
+    required List<Object?> unhandled,
+  }) {
+    for (var i = 0; i < serializedList.length; i += 2) {
+      final key = serializedList[i] as String;
+      final value = serializedList[i + 1];
+      switch (key) {
+        case r'identity_token':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(String),
+          ) as String;
+          result.identityToken = valueDes;
+          break;
+        default:
+          unhandled.add(key);
+          unhandled.add(value);
+          break;
+      }
+    }
+  }
 
   @override
-  String toString() {
-    return toJson().toString();
+  AppleReauthRequest deserialize(
+    Serializers serializers,
+    Object serialized, {
+    FullType specifiedType = FullType.unspecified,
+  }) {
+    final result = AppleReauthRequestBuilder();
+    final serializedList = (serialized as Iterable<Object?>).toList();
+    final unhandled = <Object?>[];
+    _deserializeProperties(
+      serializers,
+      serialized,
+      specifiedType: specifiedType,
+      serializedList: serializedList,
+      unhandled: unhandled,
+      result: result,
+    );
+    return result.build();
   }
 }
+

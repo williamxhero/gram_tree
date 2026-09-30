@@ -3,66 +3,159 @@
 //
 
 // ignore_for_file: unused_element
+import 'package:built_collection/built_collection.dart';
 import 'package:gramtree_api/src/model/attribute_status.dart';
-import 'package:copy_with_extension/copy_with_extension.dart';
-import 'package:json_annotation/json_annotation.dart';
+import 'package:built_value/json_object.dart';
+import 'package:built_value/built_value.dart';
+import 'package:built_value/serializer.dart';
 
 part 'bool_attribute.g.dart';
 
-@CopyWith()
-@JsonSerializable(
-  checked: true,
-  createToJson: true,
-  disallowUnrecognizedKeys: false,
-  explicitToJson: true,
-)
-class BoolAttribute {
-  /// Returns a new [BoolAttribute] instance.
-  BoolAttribute({
-    required this.estimate,
-
-    required this.source_,
-
-    required this.status,
-
-    required this.value,
-  });
-
-  /// 没经人工校对的字段按估算处理
-  @JsonKey(name: r'estimate', required: true, includeIfNull: false)
-  final bool estimate;
-
+/// BoolAttribute
+///
+/// Properties:
+/// * [source_] - 这项数据的来源
+/// * [status] - ai_draft：AI 起草；verified：人工校对过
+/// * [value] 
+/// * [estimate] - 没经人工校对的字段按估算处理
+@BuiltValue()
+abstract class BoolAttribute implements Built<BoolAttribute, BoolAttributeBuilder> {
   /// 这项数据的来源
-  @JsonKey(name: r'source', required: true, includeIfNull: false)
-  final String source_;
+  @BuiltValueField(wireName: r'source')
+  String get source_;
 
   /// ai_draft：AI 起草；verified：人工校对过
-  @JsonKey(name: r'status', required: true, includeIfNull: false)
-  final AttributeStatus status;
+  @BuiltValueField(wireName: r'status')
+  AttributeStatus get status;
+  // enum statusEnum {  ai_draft,  verified,  };
 
-  @JsonKey(name: r'value', required: true, includeIfNull: false)
-  final bool value;
+  @BuiltValueField(wireName: r'value')
+  bool get value;
+
+  /// 没经人工校对的字段按估算处理
+  @BuiltValueField(wireName: r'estimate')
+  bool get estimate;
+
+  BoolAttribute._();
+
+  factory BoolAttribute([void updates(BoolAttributeBuilder b)]) = _$BoolAttribute;
+
+  @BuiltValueHook(initializeBuilder: true)
+  static void _defaults(BoolAttributeBuilder b) => b;
+
+  @BuiltValueSerializer(custom: true)
+  static Serializer<BoolAttribute> get serializer => _$BoolAttributeSerializer();
+}
+
+class _$BoolAttributeSerializer implements PrimitiveSerializer<BoolAttribute> {
+  @override
+  final Iterable<Type> types = const [BoolAttribute, _$BoolAttribute];
 
   @override
-  bool operator ==(Object other) =>
-      identical(this, other) ||
-      other is BoolAttribute &&
-          other.estimate == estimate &&
-          other.source_ == source_ &&
-          other.status == status &&
-          other.value == value;
+  final String wireName = r'BoolAttribute';
+
+  Iterable<Object?> _serializeProperties(
+    Serializers serializers,
+    BoolAttribute object, {
+    FullType specifiedType = FullType.unspecified,
+  }) sync* {
+    yield r'source';
+    yield serializers.serialize(
+      object.source_,
+      specifiedType: const FullType(String),
+    );
+    yield r'status';
+    yield serializers.serialize(
+      object.status,
+      specifiedType: const FullType(AttributeStatus),
+    );
+    yield r'value';
+    yield serializers.serialize(
+      object.value,
+      specifiedType: const FullType(bool),
+    );
+    yield r'estimate';
+    yield serializers.serialize(
+      object.estimate,
+      specifiedType: const FullType(bool),
+    );
+  }
 
   @override
-  int get hashCode =>
-      estimate.hashCode + source_.hashCode + status.hashCode + value.hashCode;
+  Object serialize(
+    Serializers serializers,
+    BoolAttribute object, {
+    FullType specifiedType = FullType.unspecified,
+  }) {
+    return _serializeProperties(serializers, object, specifiedType: specifiedType).toList();
+  }
 
-  factory BoolAttribute.fromJson(Map<String, dynamic> json) =>
-      _$BoolAttributeFromJson(json);
-
-  Map<String, dynamic> toJson() => _$BoolAttributeToJson(this);
+  void _deserializeProperties(
+    Serializers serializers,
+    Object serialized, {
+    FullType specifiedType = FullType.unspecified,
+    required List<Object?> serializedList,
+    required BoolAttributeBuilder result,
+    required List<Object?> unhandled,
+  }) {
+    for (var i = 0; i < serializedList.length; i += 2) {
+      final key = serializedList[i] as String;
+      final value = serializedList[i + 1];
+      switch (key) {
+        case r'source':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(String),
+          ) as String;
+          result.source_ = valueDes;
+          break;
+        case r'status':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(AttributeStatus),
+          ) as AttributeStatus;
+          result.status = valueDes;
+          break;
+        case r'value':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(bool),
+          ) as bool;
+          result.value = valueDes;
+          break;
+        case r'estimate':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(bool),
+          ) as bool;
+          result.estimate = valueDes;
+          break;
+        default:
+          unhandled.add(key);
+          unhandled.add(value);
+          break;
+      }
+    }
+  }
 
   @override
-  String toString() {
-    return toJson().toString();
+  BoolAttribute deserialize(
+    Serializers serializers,
+    Object serialized, {
+    FullType specifiedType = FullType.unspecified,
+  }) {
+    final result = BoolAttributeBuilder();
+    final serializedList = (serialized as Iterable<Object?>).toList();
+    final unhandled = <Object?>[];
+    _deserializeProperties(
+      serializers,
+      serialized,
+      specifiedType: specifiedType,
+      serializedList: serializedList,
+      unhandled: unhandled,
+      result: result,
+    );
+    return result.build();
   }
 }
+

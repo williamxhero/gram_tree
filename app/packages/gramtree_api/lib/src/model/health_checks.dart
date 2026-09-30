@@ -3,97 +3,185 @@
 //
 
 // ignore_for_file: unused_element
-import 'package:copy_with_extension/copy_with_extension.dart';
-import 'package:json_annotation/json_annotation.dart';
+import 'package:built_collection/built_collection.dart';
+import 'package:built_value/built_value.dart';
+import 'package:built_value/serializer.dart';
 
 part 'health_checks.g.dart';
 
-@CopyWith()
-@JsonSerializable(
-  checked: true,
-  createToJson: true,
-  disallowUnrecognizedKeys: false,
-  explicitToJson: true,
-)
-class HealthChecks {
-  /// Returns a new [HealthChecks] instance.
-  HealthChecks({
-    required this.api,
+/// HealthChecks
+///
+/// Properties:
+/// * [api] 
+/// * [database] 
+/// * [redis] 
+@BuiltValue()
+abstract class HealthChecks implements Built<HealthChecks, HealthChecksBuilder> {
+  @BuiltValueField(wireName: r'api')
+  HealthChecksApiEnum get api;
+  // enum apiEnum {  ok,  fail,  };
 
-    required this.database,
+  @BuiltValueField(wireName: r'database')
+  HealthChecksDatabaseEnum get database;
+  // enum databaseEnum {  ok,  fail,  };
 
-    required this.redis,
-  });
+  @BuiltValueField(wireName: r'redis')
+  HealthChecksRedisEnum get redis;
+  // enum redisEnum {  ok,  fail,  };
 
-  @JsonKey(name: r'api', required: true, includeIfNull: false)
-  final HealthChecksApiEnum api;
+  HealthChecks._();
 
-  @JsonKey(name: r'database', required: true, includeIfNull: false)
-  final HealthChecksDatabaseEnum database;
+  factory HealthChecks([void updates(HealthChecksBuilder b)]) = _$HealthChecks;
 
-  @JsonKey(name: r'redis', required: true, includeIfNull: false)
-  final HealthChecksRedisEnum redis;
+  @BuiltValueHook(initializeBuilder: true)
+  static void _defaults(HealthChecksBuilder b) => b;
+
+  @BuiltValueSerializer(custom: true)
+  static Serializer<HealthChecks> get serializer => _$HealthChecksSerializer();
+}
+
+class _$HealthChecksSerializer implements PrimitiveSerializer<HealthChecks> {
+  @override
+  final Iterable<Type> types = const [HealthChecks, _$HealthChecks];
 
   @override
-  bool operator ==(Object other) =>
-      identical(this, other) ||
-      other is HealthChecks &&
-          other.api == api &&
-          other.database == database &&
-          other.redis == redis;
+  final String wireName = r'HealthChecks';
+
+  Iterable<Object?> _serializeProperties(
+    Serializers serializers,
+    HealthChecks object, {
+    FullType specifiedType = FullType.unspecified,
+  }) sync* {
+    yield r'api';
+    yield serializers.serialize(
+      object.api,
+      specifiedType: const FullType(HealthChecksApiEnum),
+    );
+    yield r'database';
+    yield serializers.serialize(
+      object.database,
+      specifiedType: const FullType(HealthChecksDatabaseEnum),
+    );
+    yield r'redis';
+    yield serializers.serialize(
+      object.redis,
+      specifiedType: const FullType(HealthChecksRedisEnum),
+    );
+  }
 
   @override
-  int get hashCode => api.hashCode + database.hashCode + redis.hashCode;
+  Object serialize(
+    Serializers serializers,
+    HealthChecks object, {
+    FullType specifiedType = FullType.unspecified,
+  }) {
+    return _serializeProperties(serializers, object, specifiedType: specifiedType).toList();
+  }
 
-  factory HealthChecks.fromJson(Map<String, dynamic> json) =>
-      _$HealthChecksFromJson(json);
-
-  Map<String, dynamic> toJson() => _$HealthChecksToJson(this);
+  void _deserializeProperties(
+    Serializers serializers,
+    Object serialized, {
+    FullType specifiedType = FullType.unspecified,
+    required List<Object?> serializedList,
+    required HealthChecksBuilder result,
+    required List<Object?> unhandled,
+  }) {
+    for (var i = 0; i < serializedList.length; i += 2) {
+      final key = serializedList[i] as String;
+      final value = serializedList[i + 1];
+      switch (key) {
+        case r'api':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(HealthChecksApiEnum),
+          ) as HealthChecksApiEnum;
+          result.api = valueDes;
+          break;
+        case r'database':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(HealthChecksDatabaseEnum),
+          ) as HealthChecksDatabaseEnum;
+          result.database = valueDes;
+          break;
+        case r'redis':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(HealthChecksRedisEnum),
+          ) as HealthChecksRedisEnum;
+          result.redis = valueDes;
+          break;
+        default:
+          unhandled.add(key);
+          unhandled.add(value);
+          break;
+      }
+    }
+  }
 
   @override
-  String toString() {
-    return toJson().toString();
+  HealthChecks deserialize(
+    Serializers serializers,
+    Object serialized, {
+    FullType specifiedType = FullType.unspecified,
+  }) {
+    final result = HealthChecksBuilder();
+    final serializedList = (serialized as Iterable<Object?>).toList();
+    final unhandled = <Object?>[];
+    _deserializeProperties(
+      serializers,
+      serialized,
+      specifiedType: specifiedType,
+      serializedList: serializedList,
+      unhandled: unhandled,
+      result: result,
+    );
+    return result.build();
   }
 }
 
-enum HealthChecksApiEnum {
-  @JsonValue(r'ok')
-  ok(r'ok'),
-  @JsonValue(r'fail')
-  fail(r'fail');
+class HealthChecksApiEnum extends EnumClass {
 
-  const HealthChecksApiEnum(this.value);
+  @BuiltValueEnumConst(wireName: r'ok')
+  static const HealthChecksApiEnum ok = _$healthChecksApiEnum_ok;
+  @BuiltValueEnumConst(wireName: r'fail')
+  static const HealthChecksApiEnum fail = _$healthChecksApiEnum_fail;
 
-  final String value;
+  static Serializer<HealthChecksApiEnum> get serializer => _$healthChecksApiEnumSerializer;
 
-  @override
-  String toString() => value;
+  const HealthChecksApiEnum._(String name): super(name);
+
+  static BuiltSet<HealthChecksApiEnum> get values => _$healthChecksApiEnumValues;
+  static HealthChecksApiEnum valueOf(String name) => _$healthChecksApiEnumValueOf(name);
 }
 
-enum HealthChecksDatabaseEnum {
-  @JsonValue(r'ok')
-  ok(r'ok'),
-  @JsonValue(r'fail')
-  fail(r'fail');
+class HealthChecksDatabaseEnum extends EnumClass {
 
-  const HealthChecksDatabaseEnum(this.value);
+  @BuiltValueEnumConst(wireName: r'ok')
+  static const HealthChecksDatabaseEnum ok = _$healthChecksDatabaseEnum_ok;
+  @BuiltValueEnumConst(wireName: r'fail')
+  static const HealthChecksDatabaseEnum fail = _$healthChecksDatabaseEnum_fail;
 
-  final String value;
+  static Serializer<HealthChecksDatabaseEnum> get serializer => _$healthChecksDatabaseEnumSerializer;
 
-  @override
-  String toString() => value;
+  const HealthChecksDatabaseEnum._(String name): super(name);
+
+  static BuiltSet<HealthChecksDatabaseEnum> get values => _$healthChecksDatabaseEnumValues;
+  static HealthChecksDatabaseEnum valueOf(String name) => _$healthChecksDatabaseEnumValueOf(name);
 }
 
-enum HealthChecksRedisEnum {
-  @JsonValue(r'ok')
-  ok(r'ok'),
-  @JsonValue(r'fail')
-  fail(r'fail');
+class HealthChecksRedisEnum extends EnumClass {
 
-  const HealthChecksRedisEnum(this.value);
+  @BuiltValueEnumConst(wireName: r'ok')
+  static const HealthChecksRedisEnum ok = _$healthChecksRedisEnum_ok;
+  @BuiltValueEnumConst(wireName: r'fail')
+  static const HealthChecksRedisEnum fail = _$healthChecksRedisEnum_fail;
 
-  final String value;
+  static Serializer<HealthChecksRedisEnum> get serializer => _$healthChecksRedisEnumSerializer;
 
-  @override
-  String toString() => value;
+  const HealthChecksRedisEnum._(String name): super(name);
+
+  static BuiltSet<HealthChecksRedisEnum> get values => _$healthChecksRedisEnumValues;
+  static HealthChecksRedisEnum valueOf(String name) => _$healthChecksRedisEnumValueOf(name);
 }
+
