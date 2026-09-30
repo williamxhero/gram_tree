@@ -9,7 +9,6 @@ import 'package:json_annotation/json_annotation.dart';
 
 part 'analytics_upload_request.g.dart';
 
-
 @CopyWith()
 @JsonSerializable(
   checked: true,
@@ -19,34 +18,21 @@ part 'analytics_upload_request.g.dart';
 )
 class AnalyticsUploadRequest {
   /// Returns a new [AnalyticsUploadRequest] instance.
-  AnalyticsUploadRequest({
+  AnalyticsUploadRequest({required this.events});
 
-    required  this.events,
-  });
-
-  @JsonKey(
-    
-    name: r'events',
-    required: true,
-    includeIfNull: false,
-  )
-
-
+  @JsonKey(name: r'events', required: true, includeIfNull: false)
   final List<AnalyticsEventIn> events;
 
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is AnalyticsUploadRequest && other.events == events;
 
+  @override
+  int get hashCode => events.hashCode;
 
-
-
-    @override
-    bool operator ==(Object other) => identical(this, other) || other is AnalyticsUploadRequest &&
-      other.events == events;
-
-    @override
-    int get hashCode =>
-        events.hashCode;
-
-  factory AnalyticsUploadRequest.fromJson(Map<String, dynamic> json) => _$AnalyticsUploadRequestFromJson(json);
+  factory AnalyticsUploadRequest.fromJson(Map<String, dynamic> json) =>
+      _$AnalyticsUploadRequestFromJson(json);
 
   Map<String, dynamic> toJson() => _$AnalyticsUploadRequestToJson(this);
 
@@ -54,6 +40,4 @@ class AnalyticsUploadRequest {
   String toString() {
     return toJson().toString();
   }
-
 }
-

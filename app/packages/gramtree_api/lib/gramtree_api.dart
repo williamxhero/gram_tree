@@ -8,7 +8,6 @@ export 'package:gramtree_api/src/auth/basic_auth.dart';
 export 'package:gramtree_api/src/auth/bearer_auth.dart';
 export 'package:gramtree_api/src/auth/oauth.dart';
 
-
 export 'package:gramtree_api/src/api/account_api.dart';
 export 'package:gramtree_api/src/api/analytics_api.dart';
 export 'package:gramtree_api/src/api/auth_api.dart';
@@ -86,4 +85,3 @@ export 'package:gramtree_api/src/model/text_attribute.dart';
 export 'package:gramtree_api/src/model/token_pair.dart';
 export 'package:gramtree_api/src/model/unrecorded_ingredient_item.dart';
 export 'package:gramtree_api/src/model/user_out.dart';
-

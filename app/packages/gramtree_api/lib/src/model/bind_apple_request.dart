@@ -8,7 +8,6 @@ import 'package:json_annotation/json_annotation.dart';
 
 part 'bind_apple_request.g.dart';
 
-
 @CopyWith()
 @JsonSerializable(
   checked: true,
@@ -18,50 +17,28 @@ part 'bind_apple_request.g.dart';
 )
 class BindAppleRequest {
   /// Returns a new [BindAppleRequest] instance.
-  BindAppleRequest({
+  BindAppleRequest({this.authorizationCode, required this.identityToken});
 
-     this.authorizationCode,
-
-    required  this.identityToken,
-  });
-
-  @JsonKey(
-    
-    name: r'authorization_code',
-    required: false,
-    includeIfNull: false,
-  )
-
-
+  @JsonKey(name: r'authorization_code', required: false, includeIfNull: false)
   final String? authorizationCode;
 
-
-
-  @JsonKey(
-    
-    name: r'identity_token',
-    required: true,
-    includeIfNull: false,
-  )
-
-
+  @JsonKey(name: r'identity_token', required: true, includeIfNull: false)
   final String identityToken;
 
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is BindAppleRequest &&
+          other.authorizationCode == authorizationCode &&
+          other.identityToken == identityToken;
 
+  @override
+  int get hashCode =>
+      (authorizationCode == null ? 0 : authorizationCode.hashCode) +
+      identityToken.hashCode;
 
-
-
-    @override
-    bool operator ==(Object other) => identical(this, other) || other is BindAppleRequest &&
-      other.authorizationCode == authorizationCode &&
-      other.identityToken == identityToken;
-
-    @override
-    int get hashCode =>
-        (authorizationCode == null ? 0 : authorizationCode.hashCode) +
-        identityToken.hashCode;
-
-  factory BindAppleRequest.fromJson(Map<String, dynamic> json) => _$BindAppleRequestFromJson(json);
+  factory BindAppleRequest.fromJson(Map<String, dynamic> json) =>
+      _$BindAppleRequestFromJson(json);
 
   Map<String, dynamic> toJson() => _$BindAppleRequestToJson(this);
 
@@ -69,6 +46,4 @@ class BindAppleRequest {
   String toString() {
     return toJson().toString();
   }
-
 }
-

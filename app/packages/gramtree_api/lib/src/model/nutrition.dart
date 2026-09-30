@@ -8,7 +8,6 @@ import 'package:json_annotation/json_annotation.dart';
 
 part 'nutrition.g.dart';
 
-
 @CopyWith()
 @JsonSerializable(
   checked: true,
@@ -19,102 +18,57 @@ part 'nutrition.g.dart';
 class Nutrition {
   /// Returns a new [Nutrition] instance.
   Nutrition({
+    this.carbohydrateG,
 
-     this.carbohydrateG,
+    this.energyKcal,
 
-     this.energyKcal,
+    this.fatG,
 
-     this.fatG,
+    this.proteinG,
 
-     this.proteinG,
-
-     this.sodiumMg,
+    this.sodiumMg,
   });
 
-          // minimum: 0.0
-  @JsonKey(
-    
-    name: r'carbohydrate_g',
-    required: false,
-    includeIfNull: false,
-  )
-
-
+  // minimum: 0.0
+  @JsonKey(name: r'carbohydrate_g', required: false, includeIfNull: false)
   final num? carbohydrateG;
 
-
-
-          // minimum: 0.0
-  @JsonKey(
-    
-    name: r'energy_kcal',
-    required: false,
-    includeIfNull: false,
-  )
-
-
+  // minimum: 0.0
+  @JsonKey(name: r'energy_kcal', required: false, includeIfNull: false)
   final num? energyKcal;
 
-
-
-          // minimum: 0.0
-  @JsonKey(
-    
-    name: r'fat_g',
-    required: false,
-    includeIfNull: false,
-  )
-
-
+  // minimum: 0.0
+  @JsonKey(name: r'fat_g', required: false, includeIfNull: false)
   final num? fatG;
 
-
-
-          // minimum: 0.0
-  @JsonKey(
-    
-    name: r'protein_g',
-    required: false,
-    includeIfNull: false,
-  )
-
-
+  // minimum: 0.0
+  @JsonKey(name: r'protein_g', required: false, includeIfNull: false)
   final num? proteinG;
 
-
-
-          // minimum: 0.0
-  @JsonKey(
-    
-    name: r'sodium_mg',
-    required: false,
-    includeIfNull: false,
-  )
-
-
+  // minimum: 0.0
+  @JsonKey(name: r'sodium_mg', required: false, includeIfNull: false)
   final num? sodiumMg;
 
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is Nutrition &&
+          other.carbohydrateG == carbohydrateG &&
+          other.energyKcal == energyKcal &&
+          other.fatG == fatG &&
+          other.proteinG == proteinG &&
+          other.sodiumMg == sodiumMg;
 
+  @override
+  int get hashCode =>
+      (carbohydrateG == null ? 0 : carbohydrateG.hashCode) +
+      (energyKcal == null ? 0 : energyKcal.hashCode) +
+      (fatG == null ? 0 : fatG.hashCode) +
+      (proteinG == null ? 0 : proteinG.hashCode) +
+      (sodiumMg == null ? 0 : sodiumMg.hashCode);
 
-
-
-    @override
-    bool operator ==(Object other) => identical(this, other) || other is Nutrition &&
-      other.carbohydrateG == carbohydrateG &&
-      other.energyKcal == energyKcal &&
-      other.fatG == fatG &&
-      other.proteinG == proteinG &&
-      other.sodiumMg == sodiumMg;
-
-    @override
-    int get hashCode =>
-        (carbohydrateG == null ? 0 : carbohydrateG.hashCode) +
-        (energyKcal == null ? 0 : energyKcal.hashCode) +
-        (fatG == null ? 0 : fatG.hashCode) +
-        (proteinG == null ? 0 : proteinG.hashCode) +
-        (sodiumMg == null ? 0 : sodiumMg.hashCode);
-
-  factory Nutrition.fromJson(Map<String, dynamic> json) => _$NutritionFromJson(json);
+  factory Nutrition.fromJson(Map<String, dynamic> json) =>
+      _$NutritionFromJson(json);
 
   Map<String, dynamic> toJson() => _$NutritionToJson(this);
 
@@ -122,6 +76,4 @@ class Nutrition {
   String toString() {
     return toJson().toString();
   }
-
 }
-

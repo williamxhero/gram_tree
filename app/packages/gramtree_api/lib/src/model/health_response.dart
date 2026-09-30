@@ -9,7 +9,6 @@ import 'package:json_annotation/json_annotation.dart';
 
 part 'health_response.g.dart';
 
-
 @CopyWith()
 @JsonSerializable(
   checked: true,
@@ -19,50 +18,26 @@ part 'health_response.g.dart';
 )
 class HealthResponse {
   /// Returns a new [HealthResponse] instance.
-  HealthResponse({
+  HealthResponse({required this.checks, required this.status});
 
-    required  this.checks,
-
-    required  this.status,
-  });
-
-  @JsonKey(
-    
-    name: r'checks',
-    required: true,
-    includeIfNull: false,
-  )
-
-
+  @JsonKey(name: r'checks', required: true, includeIfNull: false)
   final HealthChecks checks;
 
-
-
-  @JsonKey(
-    
-    name: r'status',
-    required: true,
-    includeIfNull: false,
-  )
-
-
+  @JsonKey(name: r'status', required: true, includeIfNull: false)
   final HealthResponseStatusEnum status;
 
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is HealthResponse &&
+          other.checks == checks &&
+          other.status == status;
 
+  @override
+  int get hashCode => checks.hashCode + status.hashCode;
 
-
-
-    @override
-    bool operator ==(Object other) => identical(this, other) || other is HealthResponse &&
-      other.checks == checks &&
-      other.status == status;
-
-    @override
-    int get hashCode =>
-        checks.hashCode +
-        status.hashCode;
-
-  factory HealthResponse.fromJson(Map<String, dynamic> json) => _$HealthResponseFromJson(json);
+  factory HealthResponse.fromJson(Map<String, dynamic> json) =>
+      _$HealthResponseFromJson(json);
 
   Map<String, dynamic> toJson() => _$HealthResponseToJson(this);
 
@@ -70,22 +45,18 @@ class HealthResponse {
   String toString() {
     return toJson().toString();
   }
-
 }
-
 
 enum HealthResponseStatusEnum {
-@JsonValue(r'ok')
-ok(r'ok'),
-@JsonValue(r'unhealthy')
-unhealthy(r'unhealthy');
+  @JsonValue(r'ok')
+  ok(r'ok'),
+  @JsonValue(r'unhealthy')
+  unhealthy(r'unhealthy');
 
-const HealthResponseStatusEnum(this.value);
+  const HealthResponseStatusEnum(this.value);
 
-final String value;
+  final String value;
 
-@override
-String toString() => value;
+  @override
+  String toString() => value;
 }
-
-

@@ -8,7 +8,6 @@ import 'package:json_annotation/json_annotation.dart';
 
 part 'action_descriptor.g.dart';
 
-
 @CopyWith()
 @JsonSerializable(
   checked: true,
@@ -18,51 +17,27 @@ part 'action_descriptor.g.dart';
 )
 class ActionDescriptor {
   /// Returns a new [ActionDescriptor] instance.
-  ActionDescriptor({
+  ActionDescriptor({required this.intent, this.params});
 
-    required  this.intent,
-
-     this.params,
-  });
-
-      /// 已登记的意图名（SPEC-009.1 #81）
-  @JsonKey(
-    
-    name: r'intent',
-    required: true,
-    includeIfNull: false,
-  )
-
-
+  /// 已登记的意图名（SPEC-009.1 #81）
+  @JsonKey(name: r'intent', required: true, includeIfNull: false)
   final String intent;
 
-
-
-  @JsonKey(
-    
-    name: r'params',
-    required: false,
-    includeIfNull: false,
-  )
-
-
+  @JsonKey(name: r'params', required: false, includeIfNull: false)
   final Object? params;
 
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is ActionDescriptor &&
+          other.intent == intent &&
+          other.params == params;
 
+  @override
+  int get hashCode => intent.hashCode + params.hashCode;
 
-
-
-    @override
-    bool operator ==(Object other) => identical(this, other) || other is ActionDescriptor &&
-      other.intent == intent &&
-      other.params == params;
-
-    @override
-    int get hashCode =>
-        intent.hashCode +
-        params.hashCode;
-
-  factory ActionDescriptor.fromJson(Map<String, dynamic> json) => _$ActionDescriptorFromJson(json);
+  factory ActionDescriptor.fromJson(Map<String, dynamic> json) =>
+      _$ActionDescriptorFromJson(json);
 
   Map<String, dynamic> toJson() => _$ActionDescriptorToJson(this);
 
@@ -70,6 +45,4 @@ class ActionDescriptor {
   String toString() {
     return toJson().toString();
   }
-
 }
-
