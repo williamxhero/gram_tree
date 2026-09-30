@@ -43,6 +43,7 @@ class RecipeRepository {
     return response.data!;
   }
 
+  /// Save a new immutable version from [baseVersionId].
   Future<RecipeDetail> saveVersion(
     String recipeId,
     RecipeForm form, {
@@ -51,9 +52,9 @@ class RecipeRepository {
     final response = await _recipes.saveRecipeVersion(
       recipeId: recipeId,
       recipeVersionCreate: RecipeVersionCreate(
+        baseVersionId: baseVersionId,
         snapshot: form.snapshot,
         changeNote: form.changeNote,
-        baseVersionId: baseVersionId,
       ),
     );
     return response.data!;
@@ -90,8 +91,259 @@ final recipeRepositoryProvider = Provider<RecipeRepository>(
   (ref) => RecipeRepository(ref.watch(apiClientProvider)),
 );
 
-/// Editable fields kept intentionally small for the first authoring surface.
-/// The wire snapshot still contains the complete structured contract.
+/// A mutable, serializable ingredient row used by the editor. It intentionally
+/// keeps both the author-entered quantity and the server-facing base quantity;
+/// the client never derives conversions from units.
+class RecipeIngredientDraft {
+  RecipeIngredientDraft({
+    required this.id,
+    this.ingredientId,
+    this.displayName = '',
+    this.quantity = 0,
+    this.unit = 'g',
+    this.baseQuantity = 0,
+    this.baseUnit = 'g',
+    this.preparation = '',
+    this.group = '主料',
+    this.scalingMode = RecipeIngredientScalingModeEnum.proportional,
+    this.optional = false,
+    this.functional = false,
+    this.replacement,
+  });
+
+  factory RecipeIngredientDraft.fromModel(RecipeIngredient value) =>
+      RecipeIngredientDraft(
+        id: value.id,
+        ingredientId: value.ingredientId.isEmpty ? null : value.ingredientId,
+        displayName: value.displayName,
+        quantity: value.quantity.toDouble(),
+        unit: value.unit,
+        baseQuantity: value.baseQuantity.toDouble(),
+        baseUnit: value.baseUnit.value,
+        preparation: value.preparation,
+        group: value.group,
+        scalingMode: value.scalingMode,
+        optional: value.optional == true,
+        functional: value.functional == true,
+        replacement: value.replacement == null
+            ? null
+            : RecipeReplacementDraft(
+                ingredientId: value.replacement!.ingredientId,
+                displayName: value.replacement!.displayName,
+                ratio: value.replacement!.ratio?.toDouble() ?? 1,
+                note: value.replacement!.note,
+              ),
+      );
+
+  factory RecipeIngredientDraft.fromJson(Map<String, dynamic> value) {
+    final replacement = value['replacement'];
+    return RecipeIngredientDraft(
+      id: _string(value['id']) ?? 'ingredient-${_nextId()}',
+      ingredientId: _nonEmpty(value['ingredient_id']),
+      displayName: _string(value['display_name']) ?? '',
+      quantity: _number(value['quantity']),
+      unit: _string(value['unit']) ?? 'g',
+      baseQuantity: _number(value['base_quantity']),
+      baseUnit: _string(value['base_unit']) ?? 'g',
+      preparation: _string(value['preparation']) ?? '',
+      group: _string(value['group']) ?? '主料',
+      scalingMode: _scalingMode(value['scaling_mode']),
+      optional: value['optional'] == true,
+      functional: value['functional'] == true,
+      replacement: replacement is Map
+          ? RecipeReplacementDraft.fromJson(
+              Map<String, dynamic>.from(replacement),
+            )
+          : null,
+    );
+  }
+
+  String id;
+  String? ingredientId;
+  String displayName;
+  double quantity;
+  String unit;
+  double baseQuantity;
+  String baseUnit;
+  String preparation;
+  String group;
+  RecipeIngredientScalingModeEnum scalingMode;
+  bool optional;
+  bool functional;
+  RecipeReplacementDraft? replacement;
+
+  RecipeIngredient toModel() => RecipeIngredient(
+    baseQuantity: baseQuantity,
+    baseUnit: _baseUnit(baseUnit),
+    displayName: displayName.trim().isEmpty ? '未收录食材' : displayName.trim(),
+    functional: functional,
+    group: group.trim().isEmpty ? '主料' : group.trim(),
+    id: id,
+    ingredientId: ingredientId ?? '',
+    optional: optional,
+    preparation: preparation.trim(),
+    quantity: quantity,
+    quantitySource: _authorSource(quantity.toString()),
+    replacement: replacement?.toModel(),
+    scalingMode: scalingMode,
+    unit: unit.trim().isEmpty ? 'g' : unit.trim(),
+  );
+
+  Map<String, dynamic> toJson() => {
+    'id': id,
+    'ingredient_id': ingredientId,
+    'display_name': displayName,
+    'quantity': quantity,
+    'unit': unit,
+    'base_quantity': baseQuantity,
+    'base_unit': baseUnit,
+    'preparation': preparation,
+    'group': group,
+    'scaling_mode': scalingMode.value,
+    'optional': optional,
+    'functional': functional,
+    'replacement': replacement?.toJson(),
+  };
+}
+
+class RecipeReplacementDraft {
+  RecipeReplacementDraft({
+    required this.ingredientId,
+    required this.displayName,
+    this.ratio = 1,
+    this.note = '',
+  });
+
+  factory RecipeReplacementDraft.fromJson(Map<String, dynamic> value) =>
+      RecipeReplacementDraft(
+        ingredientId: _string(value['ingredient_id']) ?? '',
+        displayName: _string(value['display_name']) ?? '',
+        ratio: _number(value['ratio'], fallback: 1),
+        note: _string(value['note']) ?? '',
+      );
+
+  String ingredientId;
+  String displayName;
+  double ratio;
+  String note;
+
+  RecipeIngredientReplacement toModel() => RecipeIngredientReplacement(
+    displayName: displayName.trim(),
+    ingredientId: ingredientId,
+    note: note.trim(),
+    ratio: ratio,
+  );
+
+  Map<String, dynamic> toJson() => {
+    'ingredient_id': ingredientId,
+    'display_name': displayName,
+    'ratio': ratio,
+    'note': note,
+  };
+}
+
+class RecipeStepDraft {
+  RecipeStepDraft({
+    required this.id,
+    this.action = '其他',
+    this.instruction = '',
+    this.ingredientIds = const [],
+    this.durationSeconds = 0,
+    this.unattended = false,
+    this.heat = '',
+    this.temperatureCelsius = 0,
+    this.cookware = '',
+    this.doneness = '',
+    this.dependsOn = const [],
+    this.notes = '',
+    this.why = '',
+  });
+
+  factory RecipeStepDraft.fromModel(RecipeStep value) => RecipeStepDraft(
+    id: value.id,
+    action: value.action,
+    instruction: value.instruction,
+    ingredientIds: [...?value.ingredientIds],
+    durationSeconds: value.durationSeconds ?? 0,
+    unattended: value.unattended == true,
+    heat: value.heat,
+    temperatureCelsius: value.temperatureCelsius.toDouble(),
+    cookware: value.cookware,
+    doneness: value.doneness,
+    dependsOn: [...?value.dependsOn],
+    notes: value.notes,
+    why: value.why,
+  );
+
+  factory RecipeStepDraft.fromJson(Map<String, dynamic> value) =>
+      RecipeStepDraft(
+        id: _string(value['id']) ?? 'step-${_nextId()}',
+        action: _string(value['action']) ?? '其他',
+        instruction: _string(value['instruction']) ?? '',
+        ingredientIds: _strings(value['ingredient_ids']),
+        durationSeconds: _number(value['duration_seconds']).toInt(),
+        unattended: value['unattended'] == true,
+        heat: _string(value['heat']) ?? '',
+        temperatureCelsius: _number(value['temperature_celsius']),
+        cookware: _string(value['cookware']) ?? '',
+        doneness: _string(value['doneness']) ?? '',
+        dependsOn: _strings(value['depends_on']),
+        notes: _string(value['notes']) ?? '',
+        why: _string(value['why']) ?? '',
+      );
+
+  String id;
+  String action;
+  String instruction;
+  List<String> ingredientIds;
+  int durationSeconds;
+  bool unattended;
+  String heat;
+  double temperatureCelsius;
+  String cookware;
+  String doneness;
+  List<String> dependsOn;
+  String notes;
+  String why;
+
+  RecipeStep toModel() => RecipeStep(
+    action: action.trim(),
+    cookware: cookware.trim(),
+    dependsOn: [...dependsOn],
+    doneness: doneness.trim(),
+    durationSeconds: durationSeconds,
+    durationSource: _authorSource(durationSeconds.toString()),
+    heat: heat.trim(),
+    heatSource: _authorSource(heat),
+    id: id,
+    ingredientIds: [...ingredientIds],
+    instruction: instruction.trim().isEmpty ? '完成这一步' : instruction.trim(),
+    notes: notes.trim(),
+    temperatureCelsius: temperatureCelsius,
+    temperatureSource: _authorSource(temperatureCelsius.toString()),
+    unattended: unattended,
+    why: why.trim(),
+  );
+
+  Map<String, dynamic> toJson() => {
+    'id': id,
+    'action': action,
+    'instruction': instruction,
+    'ingredient_ids': [...ingredientIds],
+    'duration_seconds': durationSeconds,
+    'unattended': unattended,
+    'heat': heat,
+    'temperature_celsius': temperatureCelsius,
+    'cookware': cookware,
+    'doneness': doneness,
+    'depends_on': [...dependsOn],
+    'notes': notes,
+    'why': why,
+  };
+}
+
+/// Complete editor state. Every field in the structured snapshot is represented
+/// here so a draft is a full snapshot rather than a second, lossy form format.
 class RecipeForm {
   RecipeForm({
     required this.dishName,
@@ -99,119 +351,114 @@ class RecipeForm {
     this.servings = 2,
     this.difficulty = '',
     this.dishType = '',
+    this.tags = const [],
+    this.totalTimeSeconds = 0,
+    this.activeTimeSeconds = 0,
     this.changeNote = '',
-    this.ingredientName = '',
-    this.ingredientQuantity = 0,
-    this.ingredientUnit = 'g',
-    this.preparation = '',
-    this.ingredientGroup = '主料',
-    this.stepInstruction = '',
-    this.stepDurationSeconds = 0,
-    this.stepAction = '炒',
-    this.stepWhy = '',
-    this.ingredientId,
-    this.extraIngredients = const [],
-    this.extraSteps = const [],
-  });
+    List<RecipeIngredientDraft>? ingredients,
+    List<RecipeStepDraft>? steps,
+  }) : ingredients = ingredients ?? [RecipeIngredientDraft(id: 'ingredient-1')],
+       steps = steps ?? [RecipeStepDraft(id: 'step-1')];
+
+  factory RecipeForm.fromSnapshot(RecipeSnapshot snapshot, String name) =>
+      RecipeForm(
+        dishName: name,
+        servings: snapshot.servings,
+        difficulty: snapshot.difficulty,
+        dishType: snapshot.dishType,
+        tags: [...?snapshot.tags],
+        totalTimeSeconds: snapshot.totalTimeSeconds ?? 0,
+        activeTimeSeconds: snapshot.activeTimeSeconds ?? 0,
+        ingredients: [
+          for (final item in snapshot.ingredients ?? const [])
+            RecipeIngredientDraft.fromModel(item),
+        ],
+        steps: [
+          for (final item in snapshot.steps ?? const [])
+            RecipeStepDraft.fromModel(item),
+        ],
+      );
+
+  factory RecipeForm.fromDraft(Map<String, dynamic> value) {
+    final snapshot = value['snapshot'];
+    if (snapshot is Map) {
+      try {
+        return RecipeForm.fromSnapshot(
+            RecipeSnapshot.fromJson(Map<String, dynamic>.from(snapshot)),
+            _string(value['dish_name']) ?? '',
+          )
+          ..aliases = _strings(value['aliases'])
+          ..changeNote = _string(value['change_note']) ?? '';
+      } catch (_) {
+        // Fall through to the safe empty form below.
+      }
+    }
+    return RecipeForm(dishName: _string(value['dish_name']) ?? '');
+  }
 
   String dishName;
   List<String> aliases;
   int servings;
   String difficulty;
   String dishType;
+  List<String> tags;
+  int totalTimeSeconds;
+  int activeTimeSeconds;
   String changeNote;
-  String ingredientName;
-  double ingredientQuantity;
-  String ingredientUnit;
-  String preparation;
-  String ingredientGroup;
-  String stepInstruction;
-  int stepDurationSeconds;
-  String stepAction;
-  String stepWhy;
-  String? ingredientId;
-  List<RecipeIngredient> extraIngredients;
-  List<RecipeStep> extraSteps;
+  List<RecipeIngredientDraft> ingredients;
+  List<RecipeStepDraft> steps;
 
   RecipeSnapshot get snapshot => RecipeSnapshot(
-    formatVersion: RecipeSnapshotFormatVersionEnum.number1,
-    servings: servings,
+    activeTimeSeconds: activeTimeSeconds,
     difficulty: difficulty,
     dishType: dishType,
-    ingredients: [
-      RecipeIngredient(
-        baseQuantity: ingredientUnit == 'g' ? ingredientQuantity : 0,
-        baseUnit: ingredientUnit == 'ml'
-            ? RecipeIngredientBaseUnitEnum.ml
-            : RecipeIngredientBaseUnitEnum.g,
-        displayName: ingredientName.isEmpty ? '未收录食材' : ingredientName,
-        group: ingredientGroup,
-        id: 'ingredient-1',
-        ingredientId: ingredientId ?? '',
-        preparation: preparation,
-        quantity: ingredientQuantity,
-        scalingMode: RecipeIngredientScalingModeEnum.proportional,
-        unit: ingredientUnit,
-      ),
-      ...extraIngredients,
-    ],
-    steps: [
-      RecipeStep(
-        action: stepAction,
-        cookware: '',
-        dependsOn: const [],
-        doneness: '',
-        durationSeconds: stepDurationSeconds,
-        heat: '',
-        id: 'step-1',
-        ingredientIds: const ['ingredient-1'],
-        instruction: stepInstruction.isEmpty ? '完成这一步' : stepInstruction,
-        notes: '',
-        temperatureCelsius: 0,
-        unattended: false,
-        why: stepWhy,
-      ),
-      ...extraSteps,
-    ],
+    formatVersion: RecipeSnapshotFormatVersionEnum.number1,
+    ingredients: [for (final item in ingredients) item.toModel()],
+    servings: servings,
+    steps: [for (final item in steps) item.toModel()],
+    tags: [...tags],
+    totalTimeSeconds: totalTimeSeconds,
   );
 
   Map<String, dynamic> toDraft() => {
     'dish_name': dishName,
-    'aliases': aliases,
-    'servings': servings,
-    'difficulty': difficulty,
-    'dish_type': dishType,
+    'aliases': [...aliases],
     'change_note': changeNote,
-    'ingredient_name': ingredientName,
-    'ingredient_quantity': ingredientQuantity,
-    'ingredient_unit': ingredientUnit,
-    'preparation': preparation,
-    'ingredient_group': ingredientGroup,
-    'ingredient_id': ingredientId,
-    'step_instruction': stepInstruction,
-    'step_duration_seconds': stepDurationSeconds,
-    'step_action': stepAction,
-    'step_why': stepWhy,
-    'extra_ingredients': extraIngredients.map((item) => item.toJson()).toList(),
-    'extra_steps': extraSteps.map((item) => item.toJson()).toList(),
+    'snapshot': snapshot.toJson(),
   };
+}
 
-  static RecipeForm fromDraft(Map<String, dynamic> value) => RecipeForm(
-    dishName: value['dish_name'] as String? ?? '',
-    aliases:
-        (value['aliases'] as List?)?.whereType<String>().toList() ?? const [],
-    servings: (value['servings'] as num?)?.toInt() ?? 2,
-    difficulty: value['difficulty'] as String? ?? '',
-    dishType: value['dish_type'] as String? ?? '',
-    changeNote: value['change_note'] as String? ?? '',
-    ingredientName: value['ingredient_name'] as String? ?? '',
-    ingredientQuantity: (value['ingredient_quantity'] as num?)?.toDouble() ?? 0,
-    ingredientUnit: value['ingredient_unit'] as String? ?? 'g',
-    preparation: value['preparation'] as String? ?? '',
-    ingredientGroup: value['ingredient_group'] as String? ?? '主料',
-    stepInstruction: value['step_instruction'] as String? ?? '',
-    stepDurationSeconds: (value['step_duration_seconds'] as num?)?.toInt() ?? 0,
-    stepAction: value['step_action'] as String? ?? '炒',
-    stepWhy: value['step_why'] as String? ?? '',
+ValueSource _authorSource(String original) => ValueSource(
+  basis: '作者填写',
+  confidence: 1,
+  original: original,
+  source_: ValueSourceSource_Enum.authorFilled,
+);
+
+RecipeIngredientBaseUnitEnum _baseUnit(String value) => switch (value) {
+  'ml' => RecipeIngredientBaseUnitEnum.ml,
+  'count' => RecipeIngredientBaseUnitEnum.count,
+  _ => RecipeIngredientBaseUnitEnum.g,
+};
+
+RecipeIngredientScalingModeEnum _scalingMode(Object? value) {
+  final raw = value?.toString();
+  return RecipeIngredientScalingModeEnum.values.firstWhere(
+    (item) => item.value == raw,
+    orElse: () => RecipeIngredientScalingModeEnum.proportional,
   );
 }
+
+String? _string(Object? value) => value is String ? value : null;
+String? _nonEmpty(Object? value) {
+  final result = _string(value);
+  return result == null || result.isEmpty ? null : result;
+}
+
+double _number(Object? value, {double fallback = 0}) =>
+    value is num ? value.toDouble() : fallback;
+
+List<String> _strings(Object? value) =>
+    value is List ? value.whereType<String>().toList() : <String>[];
+
+int _nextId() => DateTime.now().microsecondsSinceEpoch;

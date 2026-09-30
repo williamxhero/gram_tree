@@ -255,7 +255,76 @@
   "recipeSeconds": "{seconds} 秒",
   "recipeAi": " · AI 协助",
   "recipeEditAction": "我来改一版",
+  "recipeBaseOnVersion": "基于这一版继续编辑",
   "recipeRetry": "重试",
+  "recipeListSummary": "第 {version} 版 · {servings} 份 · {minutes} 分钟",
+  "recipeAliases": "别名（用逗号分隔）",
+  "recipeServings": "份数",
+  "recipeDifficulty": "难度",
+  "recipeDishType": "菜型",
+  "recipeTags": "标签（用逗号分隔）",
+  "recipeTotalTime": "总时长（秒）",
+  "recipeActiveTime": "动手时长（秒）",
+  "recipeIngredientAdd": "添加食材",
+  "recipeIngredientDelete": "删除食材",
+  "recipeIngredientMoveUp": "食材上移",
+  "recipeIngredientMoveDown": "食材下移",
+  "recipeSearchStandard": "搜索标准食材",
+  "recipeStandardIngredient": "标准食材",
+  "recipeUnknownIngredient": "未收录",
+  "recipeBaseQuantity": "基础用量",
+  "recipeBaseUnit": "基础单位（克、毫升、个）",
+  "recipeIngredientGroup": "分组",
+  "recipeScalingMode": "缩放方式",
+  "recipeScalingProportional": "按比例",
+  "recipeScalingUnchanged": "保持不变",
+  "recipeScalingRound": "按个取整",
+  "recipeOptionalToggle": "可选食材",
+  "recipeFunctionalToggle": "功能性用料",
+  "recipeReplacement": "替代品",
+  "recipeReplacementSearch": "搜索替代标准食材",
+  "recipeReplacementName": "替代品名称",
+  "recipeReplacementRatio": "替代比例",
+  "recipeReplacementNote": "替代说明",
+  "recipeStepAdd": "添加步骤",
+  "recipeStepDelete": "删除步骤",
+  "recipeStepMoveUp": "步骤上移",
+  "recipeStepMoveDown": "步骤下移",
+  "recipeStepAction": "动作类型",
+  "recipeStepIngredientRefs": "引用食材",
+  "recipeStepDuration": "时长（秒）",
+  "recipeStepUnattended": "可以走开",
+  "recipeStepHeat": "火候",
+  "recipeStepTemperature": "温度（摄氏度）",
+  "recipeStepCookware": "厨具",
+  "recipeStepDoneness": "成熟判断",
+  "recipeStepDepends": "依赖的前置步骤",
+  "recipeStepNotes": "要点",
+  "recipeStepWhy": "原理",
+  "recipeNoIngredients": "还没有食材",
+  "recipeNoSteps": "还没有步骤",
+  "recipeNutritionValues": "每份营养估算：能量 {energy} 千卡，蛋白质 {protein} 克，脂肪 {fat} 克，碳水 {carb} 克，钠 {sodium} 毫克{incomplete}",
+  "recipeNoNutrition": "暂无营养估算",
+  "recipeCookware": "厨具：{items}",
+  "recipeImagePlaceholder": "成品图将在这里显示",
+  "recipeNoTags": "未设置标签",
+  "recipeDifficultyValue": "难度：{value}",
+  "recipeDishTypeValue": "菜型：{value}",
+  "recipeVersionDate": "保存于 {date}",
+  "recipeOperationCount": "{count} 条修改",
+  "recipeInvalidStepReference": "步骤引用了不存在的食材或前置步骤",
+  "recipeInvalidNumber": "请填写有效的非负数字",
+  "recipeDiscardConfirmTitle": "放弃未保存修改？",
+  "recipeDiscardConfirmBody": "这会删除本机草稿，已保存的版本不会受影响。",
+  "recipeKeepEditing": "继续编辑",
+  "recipeDiscardConfirm": "放弃修改",
+  "recipeDeleteConfirmTitle": "删除这份菜谱？",
+  "recipeDeleteConfirmBody": "删除后不能恢复。",
+  "recipeDeleteConfirm": "确认删除",
+  "recipeCancel": "取消",
+  "recipeSaveSuccess": "已保存为新版本",
+  "recipeSearchNoResults": "没有找到标准食材，可以继续填写未收录食材",
+  "recipeAiAssisted": "AI 协助",
   "@compositionLastUpdatedAt": {
     "description": "上次更新时间",
     "placeholders": {"time": {"type": "String"}}
@@ -295,5 +364,34 @@
   },
   "@recipeMinutes": {
     "placeholders": {"minutes": {"type": "int"}}
+  },
+  "@recipeListSummary": {
+    "placeholders": {
+      "version": {"type": "int"},
+      "servings": {"type": "int"},
+      "minutes": {"type": "int"}
+    }
+  },
+  "@recipeNutritionValues": {
+    "placeholders": {
+      "energy": {"type": "String"},
+      "protein": {"type": "String"},
+      "fat": {"type": "String"},
+      "carb": {"type": "String"},
+      "sodium": {"type": "String"},
+      "incomplete": {"type": "String"}
+    }
+  },
+  "@recipeDifficultyValue": {
+    "placeholders": {"value": {"type": "String"}}
+  },
+  "@recipeDishTypeValue": {
+    "placeholders": {"value": {"type": "String"}}
+  },
+  "@recipeVersionDate": {
+    "placeholders": {"date": {"type": "String"}}
+  },
+  "@recipeOperationCount": {
+    "placeholders": {"count": {"type": "int"}}
   }
 }
