@@ -956,8 +956,8 @@ class _ReplacementEditor extends StatelessWidget {
               displayName: value,
             );
             item.replacement!.displayName = value;
-            if (item.replacement!.ingredientId.isNotEmpty) {
-              item.replacement!.ingredientId = '';
+            if (item.replacement!.ingredientId?.isNotEmpty == true) {
+              item.replacement!.ingredientId = null;
             }
             onChanged();
           },
