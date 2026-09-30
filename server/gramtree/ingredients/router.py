@@ -7,7 +7,8 @@ from sqlalchemy import select
 from gramtree.core.errors import ERROR_RESPONSES, ApiError, NotFound
 from gramtree.core.ids import IdV4
 from gramtree.deps import SessionDep
-from gramtree.ingredients.models import Ingredient, IngredientAlias
+from gramtree.ingredients.attributes import IngredientAttributes
+from gramtree.ingredients.models import Ingredient, IngredientAlias, IngredientAttribute
 
 router = APIRouter(prefix="/ingredients", tags=["ingredients"])
 
@@ -20,6 +21,12 @@ class IngredientOut(BaseModel):
     pinyin_initials: str
     category: str
     version: str
+
+
+class IngredientDetail(IngredientOut):
+    """按 ID 读取时的完整数据：身份信息加全部详细属性（#97）。"""
+
+    attributes: IngredientAttributes
 
 
 class SearchQuery(BaseModel):
@@ -37,9 +44,12 @@ class SearchResult(BaseModel):
     items: list[IngredientOut]
 
 
-@router.get("/{ingredient_id}", response_model=IngredientOut, responses=ERROR_RESPONSES)
-def get_ingredient(ingredient_id: IdV4, db: SessionDep) -> IngredientOut:
-    """读取一种食材的信息。如果这个 ID 已经合并到另一个,自动返回合并后的食材。"""
+@router.get("/{ingredient_id}", response_model=IngredientDetail, responses=ERROR_RESPONSES)
+def get_ingredient(ingredient_id: IdV4, db: SessionDep) -> IngredientDetail:
+    """读取一种食材的完整数据。如果这个 ID 已经合并到另一个,自动返回合并后的食材。
+
+    没经人工校对的属性带 `estimate: true`，计算和显示时按估算处理。
+    """
     current = ingredient_id
     for _ in range(10):  # 防止数据错误导致的死循环
         row = db.get(Ingredient, current)
@@ -54,7 +64,13 @@ def get_ingredient(ingredient_id: IdV4, db: SessionDep) -> IngredientOut:
     aliases = list(
         db.scalars(select(IngredientAlias.alias).where(IngredientAlias.ingredient_id == row.id))
     )
-    return IngredientOut(
+    stored = db.scalars(
+        select(IngredientAttribute).where(IngredientAttribute.ingredient_id == row.id)
+    )
+    attributes = IngredientAttributes.from_stored(
+        {a.field: (a.value, a.source, a.status) for a in stored}
+    )
+    return IngredientDetail(
         id=row.id,
         standard_name=row.standard_name,
         aliases=aliases,
@@ -62,6 +78,7 @@ def get_ingredient(ingredient_id: IdV4, db: SessionDep) -> IngredientOut:
         pinyin_initials=row.pinyin_initials,
         category=row.category,
         version=row.version,
+        attributes=attributes,
     )
 
 

@@ -8,7 +8,93 @@
     ],
     "pinyin": "jidan",
     "pinyin_initials": "jd",
-    "category": "蛋奶"
+    "category": "蛋奶",
+    "attributes": {
+      "flavor": {
+        "value": {
+          "umami": 1
+        },
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "functional": {
+        "value": false,
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "scaling": {
+        "value": "阶梯",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "base_unit": {
+        "value": "克",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "count_units": {
+        "value": [
+          {
+            "unit": "个",
+            "grams": 50
+          }
+        ],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "allergens": {
+        "value": [
+          "蛋类"
+        ],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "nutrition": {
+        "value": {
+          "energy_kcal": 143,
+          "protein_g": 12.6,
+          "fat_g": 9.5,
+          "carbohydrate_g": 0.7,
+          "sodium_mg": 142
+        },
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "purchase_units": {
+        "value": [
+          {
+            "name": "盒",
+            "grams": 500
+          }
+        ],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "market_zone": {
+        "value": "冷藏",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "storage": {
+        "value": [
+          {
+            "method": "常温",
+            "days": 7
+          },
+          {
+            "method": "冷藏",
+            "days": 30
+          }
+        ],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "pantry_staple": {
+        "value": false,
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      }
+    }
   },
   {
     "id": "686d5126-de70-4b8c-952d-4906c392f723",
@@ -60,7 +146,88 @@
     ],
     "pinyin": "niunai",
     "pinyin_initials": "nn",
-    "category": "蛋奶"
+    "category": "蛋奶",
+    "attributes": {
+      "flavor": {
+        "value": {
+          "sweet": 1
+        },
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "functional": {
+        "value": false,
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "scaling": {
+        "value": "线性",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "base_unit": {
+        "value": "毫升",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "density": {
+        "value": 1.03,
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "allergens": {
+        "value": [
+          "乳及乳制品"
+        ],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "nutrition": {
+        "value": {
+          "energy_kcal": 61,
+          "protein_g": 3.2,
+          "fat_g": 3.3,
+          "carbohydrate_g": 4.8,
+          "sodium_mg": 43
+        },
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "purchase_units": {
+        "value": [
+          {
+            "name": "盒",
+            "grams": 258
+          },
+          {
+            "name": "瓶",
+            "grams": 1030
+          }
+        ],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "market_zone": {
+        "value": "冷藏",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "storage": {
+        "value": [
+          {
+            "method": "冷藏",
+            "days": 7
+          }
+        ],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "pantry_staple": {
+        "value": false,
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      }
+    }
   },
   {
     "id": "719c99a4-5532-4d01-8798-b6d79ad821e3",

@@ -282,7 +282,91 @@
     ],
     "pinyin": "dasuan",
     "pinyin_initials": "ds",
-    "category": "蔬菜"
+    "category": "蔬菜",
+    "attributes": {
+      "flavor": {
+        "value": {
+          "spicy": 1
+        },
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "functional": {
+        "value": false,
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "scaling": {
+        "value": "阶梯",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "base_unit": {
+        "value": "克",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "count_units": {
+        "value": [
+          {
+            "unit": "瓣",
+            "grams": 5
+          },
+          {
+            "unit": "头",
+            "grams": 50
+          }
+        ],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "allergens": {
+        "value": [],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "nutrition": {
+        "value": {
+          "energy_kcal": 149,
+          "protein_g": 6.4,
+          "fat_g": 0.5,
+          "carbohydrate_g": 33.1,
+          "sodium_mg": 17
+        },
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "purchase_units": {
+        "value": [
+          {
+            "name": "袋",
+            "grams": 250
+          }
+        ],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "market_zone": {
+        "value": "蔬果",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "storage": {
+        "value": [
+          {
+            "method": "常温",
+            "days": 30
+          }
+        ],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "pantry_staple": {
+        "value": false,
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      }
+    }
   },
   {
     "id": "a2d312e9-2142-4ca4-9a15-0796be1a40e6",
@@ -293,7 +377,87 @@
     ],
     "pinyin": "cong",
     "pinyin_initials": "c",
-    "category": "蔬菜"
+    "category": "蔬菜",
+    "attributes": {
+      "flavor": {
+        "value": {
+          "spicy": 1
+        },
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "functional": {
+        "value": false,
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "scaling": {
+        "value": "线性",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "base_unit": {
+        "value": "克",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "count_units": {
+        "value": [
+          {
+            "unit": "根",
+            "grams": 15
+          }
+        ],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "allergens": {
+        "value": [],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "nutrition": {
+        "value": {
+          "energy_kcal": 32,
+          "protein_g": 1.8,
+          "fat_g": 0.2,
+          "carbohydrate_g": 7.3,
+          "sodium_mg": 16
+        },
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "purchase_units": {
+        "value": [
+          {
+            "name": "把",
+            "grams": 100
+          }
+        ],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "market_zone": {
+        "value": "蔬果",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "storage": {
+        "value": [
+          {
+            "method": "冷藏",
+            "days": 7
+          }
+        ],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "pantry_staple": {
+        "value": false,
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      }
+    }
   },
   {
     "id": "08490375-aa18-4cf5-b01d-7510a9b06f64",

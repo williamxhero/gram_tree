@@ -10,7 +10,7 @@ import 'package:gramtree_api/src/deserialize.dart';
 import 'package:dio/dio.dart';
 
 import 'package:gramtree_api/src/model/error_response.dart';
-import 'package:gramtree_api/src/model/ingredient_out.dart';
+import 'package:gramtree_api/src/model/ingredient_detail.dart';
 import 'package:gramtree_api/src/model/search_query.dart';
 import 'package:gramtree_api/src/model/search_result.dart';
 
@@ -20,7 +20,7 @@ class IngredientsApi {
   const IngredientsApi(this._dio);
 
   /// Get Ingredient
-  /// 读取一种食材的信息。如果这个 ID 已经合并到另一个,自动返回合并后的食材。
+  /// 读取一种食材的完整数据。如果这个 ID 已经合并到另一个,自动返回合并后的食材。  没经人工校对的属性带 &#x60;estimate: true&#x60;，计算和显示时按估算处理。
   ///
   /// Parameters:
   /// * [ingredientId]
@@ -31,9 +31,9 @@ class IngredientsApi {
   /// * [onSendProgress] - A [ProgressCallback] that can be used to get the send progress
   /// * [onReceiveProgress] - A [ProgressCallback] that can be used to get the receive progress
   ///
-  /// Returns a [Future] containing a [Response] with a [IngredientOut] as data
+  /// Returns a [Future] containing a [Response] with a [IngredientDetail] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<IngredientOut>> getIngredient({
+  Future<Response<IngredientDetail>> getIngredient({
     required String ingredientId,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -63,15 +63,15 @@ class IngredientsApi {
       onReceiveProgress: onReceiveProgress,
     );
 
-    IngredientOut? _responseData;
+    IngredientDetail? _responseData;
 
     try {
       final rawData = _response.data;
       _responseData = rawData == null
           ? null
-          : deserialize<IngredientOut, IngredientOut>(
+          : deserialize<IngredientDetail, IngredientDetail>(
               rawData,
-              'IngredientOut',
+              'IngredientDetail',
               growable: true,
             );
     } catch (error, stackTrace) {
@@ -84,7 +84,7 @@ class IngredientsApi {
       );
     }
 
-    return Response<IngredientOut>(
+    return Response<IngredientDetail>(
       data: _responseData,
       headers: _response.headers,
       isRedirect: _response.isRedirect,

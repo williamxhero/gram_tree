@@ -5,7 +5,87 @@
     "aliases": [],
     "pinyin": "doufu",
     "pinyin_initials": "df",
-    "category": "豆制品"
+    "category": "豆制品",
+    "attributes": {
+      "flavor": {
+        "value": {},
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "functional": {
+        "value": false,
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "scaling": {
+        "value": "线性",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "base_unit": {
+        "value": "克",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "count_units": {
+        "value": [
+          {
+            "unit": "块",
+            "grams": 400
+          }
+        ],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "allergens": {
+        "value": [
+          "大豆"
+        ],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "nutrition": {
+        "value": {
+          "energy_kcal": 81,
+          "protein_g": 8.1,
+          "fat_g": 3.7,
+          "carbohydrate_g": 4.2,
+          "sodium_mg": 7
+        },
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "purchase_units": {
+        "value": [
+          {
+            "name": "盒",
+            "grams": 400
+          }
+        ],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "market_zone": {
+        "value": "冷藏",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "storage": {
+        "value": [
+          {
+            "method": "冷藏",
+            "days": 3
+          }
+        ],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "pantry_staple": {
+        "value": false,
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      }
+    }
   },
   {
     "id": "671e70a7-9c1a-4e7f-81ba-996f550028e3",

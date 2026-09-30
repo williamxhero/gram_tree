@@ -5,7 +5,93 @@
     "aliases": [],
     "pinyin": "caoyu",
     "pinyin_initials": "cy",
-    "category": "水产"
+    "category": "水产",
+    "attributes": {
+      "flavor": {
+        "value": {
+          "umami": 1
+        },
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "functional": {
+        "value": false,
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "scaling": {
+        "value": "线性",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "base_unit": {
+        "value": "克",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "count_units": {
+        "value": [
+          {
+            "unit": "条",
+            "grams": 1500
+          }
+        ],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "allergens": {
+        "value": [
+          "鱼类"
+        ],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "nutrition": {
+        "value": {
+          "energy_kcal": 113,
+          "protein_g": 16.6,
+          "fat_g": 5.2,
+          "carbohydrate_g": 0,
+          "sodium_mg": 46
+        },
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "purchase_units": {
+        "value": [
+          {
+            "name": "条",
+            "grams": 1500
+          }
+        ],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "market_zone": {
+        "value": "水产",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "storage": {
+        "value": [
+          {
+            "method": "冷藏",
+            "days": 1
+          },
+          {
+            "method": "冷冻",
+            "days": 90
+          }
+        ],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "pantry_staple": {
+        "value": false,
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      }
+    }
   },
   {
     "id": "6c143b63-0ac9-4f94-b1d8-60f85a54c356",
@@ -58,7 +144,93 @@
     ],
     "pinyin": "xia",
     "pinyin_initials": "x",
-    "category": "水产"
+    "category": "水产",
+    "attributes": {
+      "flavor": {
+        "value": {
+          "umami": 2
+        },
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "functional": {
+        "value": false,
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "scaling": {
+        "value": "线性",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "base_unit": {
+        "value": "克",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "count_units": {
+        "value": [
+          {
+            "unit": "只",
+            "grams": 15
+          }
+        ],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "allergens": {
+        "value": [
+          "甲壳纲类动物"
+        ],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "nutrition": {
+        "value": {
+          "energy_kcal": 85,
+          "protein_g": 20.1,
+          "fat_g": 0.5,
+          "carbohydrate_g": 0,
+          "sodium_mg": 119
+        },
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "purchase_units": {
+        "value": [
+          {
+            "name": "盒",
+            "grams": 500
+          }
+        ],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "market_zone": {
+        "value": "水产",
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "storage": {
+        "value": [
+          {
+            "method": "冷藏",
+            "days": 1
+          },
+          {
+            "method": "冷冻",
+            "days": 90
+          }
+        ],
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      },
+      "pantry_staple": {
+        "value": false,
+        "source": "AI 起草、待核对",
+        "status": "ai_draft"
+      }
+    }
   },
   {
     "id": "a2b37cf1-74eb-40b5-a7d5-3a86f1df5aa9",

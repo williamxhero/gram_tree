@@ -5,20 +5,32 @@
 - 其余每个 `*.json` 文件是一个食材列表，按分类分文件只是为了方便评审，导入时不看文件名，
   分类以每条记录自己的 `category` 为准。
 
-导入是幂等的：同一份数据导入多次结果不变。只有内容真的变了的食材，`version` 才改成本次
-的版本号（增量更新靠它找出变化，见 SPEC-002.1）。标准 ID 永不删除：数据库里已有、数据
-文件里却没有的 ID 会让整次导入失败，一条都不写。
+每条记录除了身份信息，还可以带 `attributes`（详细属性，全部可选，格式和登记值见
+`gramtree/ingredients/attributes.py`）。
+
+导入是幂等的：同一份数据导入多次结果不变。只有内容真的变了的食材（身份信息、别名，或者
+任何一个属性的值、来源、校对状态），`version` 才改成本次的版本号（增量更新靠它找出变化，
+见 SPEC-002.1）。标准 ID 永不删除：数据库里已有、数据文件里却没有的 ID 会让整次导入失败，
+一条都不写。任何一条记录不合格，也是整次失败，错误里写明哪个文件第几条、哪个字段。
 """
 
 import json
 from pathlib import Path
+from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
+from pydantic_core import ErrorDetails
 from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
 
 from gramtree.core.ids import IdV4
-from gramtree.ingredients.models import Ingredient, IngredientAlias, IngredientVersion
+from gramtree.ingredients.attributes import IngredientAttributes
+from gramtree.ingredients.models import (
+    Ingredient,
+    IngredientAlias,
+    IngredientAttribute,
+    IngredientVersion,
+)
 
 CATEGORIES = (
     "肉禽",
@@ -57,6 +69,47 @@ class IngredientRecord(BaseModel):
     pinyin_initials: str = Field(pattern=r"^[a-z]+$", max_length=50)
     category: str
     merged_into: IdV4 | None = None
+    # 属性全部可选，没写 attributes 的记录就是空属性
+    attributes: IngredientAttributes = Field(default_factory=IngredientAttributes.from_stored_empty)
+
+
+_BOUNDS = {"gt": "大于", "ge": "大于等于", "lt": "小于", "le": "小于等于"}
+
+
+def _describe(error: ErrorDetails) -> str:
+    """把一条校验错误写成“字段路径：原因（写的是 …）”。"""
+    path = ""
+    for part in error["loc"]:
+        path += f"[{part}]" if isinstance(part, int) else f".{part}" if path else str(part)
+    kind = error["type"]
+    ctx = error.get("ctx") or {}
+    if kind == "missing":
+        reason = "有值却缺少来源" if error["loc"][-1] == "source" else "缺少这一项"
+        return f"{path}：{reason}"
+    if kind == "extra_forbidden":
+        return f"{path}：不认识这个字段"
+    if kind == "value_error":
+        reason = str(ctx.get("error", error["msg"]))
+    elif kind == "enum":
+        expected = str(ctx.get("expected", "")).replace("'", "")
+        reason = "只能是 " + expected.replace(" or ", "、").replace(", ", "、")
+    elif kind == "too_short":
+        reason = "不能为空"
+    elif any(k in ctx for k in _BOUNDS):
+        reason = "应当" + "、".join(f"{_BOUNDS[k]} {v}" for k, v in ctx.items() if k in _BOUNDS)
+    else:
+        reason = error["msg"]
+    shown = json.dumps(error["input"], ensure_ascii=False, default=str)
+    if len(shown) > 80:
+        shown = shown[:77] + "..."
+    return f"{path}：{reason}（写的是 {shown}）"
+
+
+def _record_error(file: str, index: int, item: object, exc: ValidationError) -> str:
+    name = item.get("standard_name") if isinstance(item, dict) else None
+    label = f"{file} 第 {index + 1} 条" + (f"（{name}）" if isinstance(name, str) else "")
+    reasons = "；".join(_describe(e) for e in exc.errors())
+    return f"{label}不合格：{reasons}"
 
 
 def _read_json(path: Path) -> object:
@@ -87,7 +140,7 @@ def load_directory(data_dir: Path) -> tuple[ManifestFile, list[IngredientRecord]
             try:
                 records.append(IngredientRecord.model_validate(item))
             except ValidationError as exc:
-                raise IngredientImportError(f"{path.name} 第 {index + 1} 条不合格：{exc}") from exc
+                raise IngredientImportError(_record_error(path.name, index, item, exc)) from exc
 
     _check_consistency(records)
     return manifest, records
@@ -128,6 +181,15 @@ def import_directory(session: Session, data_dir: Path) -> dict[str, int | str]:
     for row in session.scalars(select(IngredientAlias)):
         aliases_by_id.setdefault(row.ingredient_id, set()).add(row.alias)
 
+    attrs_by_id: dict[object, dict[str, tuple[Any, str, str]]] = {}
+    for row in session.scalars(select(IngredientAttribute)):
+        attrs_by_id.setdefault(row.ingredient_id, {})[row.field] = (
+            row.value,
+            row.source,
+            row.status,
+        )
+    new_attrs = {r.id: r.attributes.stored_fields() for r in records}
+
     added = changed = 0
     rows: dict[object, Ingredient] = {}
     # 先写不带合并关系的内容，再补 merged_into，避免外键引用还没写进去的食材
@@ -138,13 +200,16 @@ def import_directory(session: Session, data_dir: Path) -> dict[str, int | str]:
             session.add(row)
             added += 1
         elif (
-            row.standard_name,
-            row.pinyin,
-            row.pinyin_initials,
-            row.category,
-            row.merged_into,
-        ) != (r.standard_name, r.pinyin, r.pinyin_initials, r.category, r.merged_into) or (
-            aliases_by_id.get(r.id, set()) != set(r.aliases)
+            (
+                row.standard_name,
+                row.pinyin,
+                row.pinyin_initials,
+                row.category,
+                row.merged_into,
+            )
+            != (r.standard_name, r.pinyin, r.pinyin_initials, r.category, r.merged_into)
+            or aliases_by_id.get(r.id, set()) != set(r.aliases)
+            or attrs_by_id.get(r.id, {}) != new_attrs[r.id]
         ):
             row.version = manifest.version
             changed += 1
@@ -159,6 +224,16 @@ def import_directory(session: Session, data_dir: Path) -> dict[str, int | str]:
         if aliases_by_id.get(r.id, set()) != set(r.aliases):
             session.execute(delete(IngredientAlias).where(IngredientAlias.ingredient_id == r.id))
             session.add_all(IngredientAlias(ingredient_id=r.id, alias=a) for a in r.aliases)
+        if attrs_by_id.get(r.id, {}) != new_attrs[r.id]:
+            session.execute(
+                delete(IngredientAttribute).where(IngredientAttribute.ingredient_id == r.id)
+            )
+            session.add_all(
+                IngredientAttribute(
+                    ingredient_id=r.id, field=field, value=value, source=source, status=status
+                )
+                for field, (value, source, status) in new_attrs[r.id].items()
+            )
 
     if session.get(IngredientVersion, manifest.version) is None:
         session.add(IngredientVersion(version=manifest.version, changelog=manifest.changelog))
