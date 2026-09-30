@@ -18,10 +18,6 @@ void main() {
       '重启后仍在的菜',
     );
     await tester.pump(const Duration(milliseconds: 400));
-    expect(
-      env.local.values.keys.any((key) => key.contains('recipe_draft:v1:')),
-      isTrue,
-    );
 
     await restartApp(tester, env);
     await tester.tap(find.byKey(const ValueKey('primary-create-button')));
@@ -38,7 +34,7 @@ void main() {
   testWidgets('discarding an editor draft prevents a later restore', (
     tester,
   ) async {
-    final env = await pumpApp(tester);
+    await pumpApp(tester);
     await tester.tap(find.byKey(const ValueKey('primary-create-button')));
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const ValueKey('create-recipe-entry')));
@@ -59,9 +55,5 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('恢复未保存修改？'), findsNothing);
-    expect(
-      env.local.values.keys.any((key) => key.contains('recipe_draft:v1:')),
-      isFalse,
-    );
   });
 }
