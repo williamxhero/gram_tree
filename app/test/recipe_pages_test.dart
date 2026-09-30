@@ -291,6 +291,12 @@ Finder _textFieldWithKeyPrefix(String prefix) =>
 
 Future<void> _enterDishName(WidgetTester tester, String name) async {
   await tester.enterText(find.byKey(const ValueKey('recipe-dish-name')), name);
+  final ingredient = find.byKey(const ValueKey('recipe-ingredient-search'));
+  await _scrollUntilVisible(tester, ingredient);
+  await tester.enterText(ingredient, '默认食材');
+  final step = find.byKey(const ValueKey('recipe-step-instruction'));
+  await _scrollUntilVisible(tester, step);
+  await tester.enterText(step, '完成默认步骤');
   await tester.pumpAndSettle();
 }
 
@@ -409,6 +415,7 @@ void main() {
     await pumpApp(tester, env: TestEnv.signedIn(server: server));
     await _openNewEditor(tester);
     await _enterDishName(tester, '排序测试');
+    await _scrollToTop(tester);
 
     await _scrollUntilVisible(
       tester,
@@ -523,6 +530,7 @@ void main() {
     await pumpApp(tester, env: TestEnv.signedIn(server: server));
     await _openNewEditor(tester);
     await _enterDishName(tester, '服务端拒绝');
+    await _scrollToTop(tester);
     await tester.tap(find.byKey(const ValueKey('save-recipe-button')));
     await tester.pumpAndSettle();
 
@@ -539,6 +547,7 @@ void main() {
       await pumpApp(tester, env: TestEnv.signedIn(server: server));
       await _openNewEditor(tester);
       await _enterDishName(tester, '版本链测试');
+      await _scrollToTop(tester);
       await tester.tap(find.byKey(const ValueKey('save-recipe-button')));
       await tester.pumpAndSettle();
       expect(
