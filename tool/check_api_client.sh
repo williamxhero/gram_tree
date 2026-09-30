@@ -2,7 +2,13 @@
 # CI 用：重新生成 OpenAPI 描述和 Dart 客户端，和仓库里的比较，不一致就失败。
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+SPEC="$ROOT/api/openapi.json"
+OUT="$ROOT/app/packages/gramtree_api"
 "$ROOT/tool/gen_api_client.sh"
+# Windows Git Bash can leave CRLF in the two top-level generated text files. Normalize those
+# before comparing so the contract check tests content rather than the host line-ending policy.
+sed -i 's/\r$//' "$SPEC" "$OUT/.openapi-generator/FILES"
+
 cd "$ROOT"
 changes="$(git status --porcelain -- api/openapi.json app/packages/gramtree_api)"
 if [[ -n "$changes" ]]; then
