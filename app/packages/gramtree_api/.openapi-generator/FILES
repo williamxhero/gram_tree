@@ -11,6 +11,7 @@ lib/src/api/auth_api.dart
 lib/src/api/config_api.dart
 lib/src/api/events_api.dart
 lib/src/api/health_api.dart
+lib/src/api/ingredients_api.dart
 lib/src/api/ui_protocol_api.dart
 lib/src/auth/api_key_auth.dart
 lib/src/auth/auth.dart
@@ -50,10 +51,13 @@ lib/src/model/fallback_info.dart
 lib/src/model/health_checks.dart
 lib/src/model/health_response.dart
 lib/src/model/identity_out.dart
+lib/src/model/ingredient_out.dart
 lib/src/model/page_description.dart
 lib/src/model/profile_update.dart
 lib/src/model/refresh_request.dart
 lib/src/model/rejection_reason.dart
+lib/src/model/search_query.dart
+lib/src/model/search_result.dart
 lib/src/model/skip_adjustment_request.dart
 lib/src/model/skip_adjustment_result.dart
 lib/src/model/source_basis.dart

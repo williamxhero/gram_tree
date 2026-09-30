@@ -1008,6 +1008,53 @@
         "title": "IdentityOut",
         "type": "object"
       },
+      "IngredientOut": {
+        "properties": {
+          "aliases": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Aliases",
+            "type": "array"
+          },
+          "category": {
+            "title": "Category",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "pinyin": {
+            "title": "Pinyin",
+            "type": "string"
+          },
+          "pinyin_initials": {
+            "title": "Pinyin Initials",
+            "type": "string"
+          },
+          "standard_name": {
+            "title": "Standard Name",
+            "type": "string"
+          },
+          "version": {
+            "title": "Version",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "standard_name",
+          "aliases",
+          "pinyin",
+          "pinyin_initials",
+          "category",
+          "version"
+        ],
+        "title": "IngredientOut",
+        "type": "object"
+      },
       "PageDescription": {
         "properties": {
           "cache": {
@@ -1130,6 +1177,37 @@
           "message"
         ],
         "title": "RejectionReason",
+        "type": "object"
+      },
+      "SearchQuery": {
+        "properties": {
+          "query": {
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Query",
+            "type": "string"
+          }
+        },
+        "required": [
+          "query"
+        ],
+        "title": "SearchQuery",
+        "type": "object"
+      },
+      "SearchResult": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/IngredientOut"
+            },
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "title": "SearchResult",
         "type": "object"
       },
       "SkipAdjustmentRequest": {
@@ -2038,6 +2116,112 @@
         "summary": "健康检查：服务、数据库、Redis 是否可用",
         "tags": [
           "health"
+        ]
+      }
+    },
+    "/v1/ingredients/search": {
+      "post": {
+        "description": "搜索食材。支持标准名、别名、拼音首字母、完整拼音前缀匹配。最多返回 20 个结果。",
+        "operationId": "search_ingredients",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SearchQuery"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SearchResult"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "参数错误"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "服务端错误"
+          }
+        },
+        "summary": "Search Ingredients",
+        "tags": [
+          "ingredients"
+        ]
+      }
+    },
+    "/v1/ingredients/{ingredient_id}": {
+      "get": {
+        "description": "读取一种食材的信息。如果这个 ID 已经合并到另一个,自动返回合并后的食材。",
+        "operationId": "get_ingredient",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "ingredient_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Ingredient Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IngredientOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "参数错误"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "服务端错误"
+          }
+        },
+        "summary": "Get Ingredient",
+        "tags": [
+          "ingredients"
         ]
       }
     },
