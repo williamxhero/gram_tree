@@ -12,6 +12,7 @@ lib/src/api/config_api.dart
 lib/src/api/events_api.dart
 lib/src/api/health_api.dart
 lib/src/api/ingredients_api.dart
+lib/src/api/personal_measures_api.dart
 lib/src/api/recipes_api.dart
 lib/src/api/ui_protocol_api.dart
 lib/src/auth/api_key_auth.dart
@@ -78,6 +79,9 @@ lib/src/model/nutrition_attribute.dart
 lib/src/model/nutrition_estimate.dart
 lib/src/model/page_description.dart
 lib/src/model/page_unrecorded_ingredient_item.dart
+lib/src/model/personal_measure_input.dart
+lib/src/model/personal_measure_out.dart
+lib/src/model/personal_measure_update.dart
 lib/src/model/profile_update.dart
 lib/src/model/purchase_unit.dart
 lib/src/model/purchase_units_attribute.dart

@@ -15,6 +15,7 @@ export 'package:gramtree_api/src/api/config_api.dart';
 export 'package:gramtree_api/src/api/events_api.dart';
 export 'package:gramtree_api/src/api/health_api.dart';
 export 'package:gramtree_api/src/api/ingredients_api.dart';
+export 'package:gramtree_api/src/api/personal_measures_api.dart';
 export 'package:gramtree_api/src/api/recipes_api.dart';
 export 'package:gramtree_api/src/api/ui_protocol_api.dart';
 
@@ -76,6 +77,9 @@ export 'package:gramtree_api/src/model/nutrition_attribute.dart';
 export 'package:gramtree_api/src/model/nutrition_estimate.dart';
 export 'package:gramtree_api/src/model/page_description.dart';
 export 'package:gramtree_api/src/model/page_unrecorded_ingredient_item.dart';
+export 'package:gramtree_api/src/model/personal_measure_input.dart';
+export 'package:gramtree_api/src/model/personal_measure_out.dart';
+export 'package:gramtree_api/src/model/personal_measure_update.dart';
 export 'package:gramtree_api/src/model/profile_update.dart';
 export 'package:gramtree_api/src/model/purchase_unit.dart';
 export 'package:gramtree_api/src/model/purchase_units_attribute.dart';

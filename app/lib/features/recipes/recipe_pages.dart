@@ -10,6 +10,8 @@ import '../../app/theme.dart';
 import '../../auth/auth_controller.dart';
 import '../../ingredients/ingredient_provider.dart';
 import '../../l10n/app_localizations.dart';
+import '../../recipes/measure_display.dart';
+import '../../recipes/personal_measure_repository.dart';
 import '../../recipes/recipe_draft.dart';
 import '../../recipes/recipe_repository.dart';
 import '../../recipes/serving_conversion.dart';
@@ -1335,6 +1337,9 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
   RecipeDetail? _detail;
   String? _error;
   int? _targetServings;
+  MeasureDisplayMode _displayMode = MeasureDisplayMode.base;
+  List<PersonalMeasureOut> _measures = const [];
+  Map<String, double> _densities = const {};
 
   @override
   void initState() {
@@ -1350,10 +1355,36 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
           : await repo.getVersion(widget.recipeId, widget.versionId!);
       _targetServings = _detail!.version.snapshot.servings;
       if (mounted) setState(() {});
+      unawaited(_loadDisplayMetadata(_detail!));
     } catch (_) {
       if (mounted) {
         setState(() => _error = 'not_found');
       }
+    }
+  }
+
+  Future<void> _loadDisplayMetadata(RecipeDetail detail) async {
+    final ids = [
+      for (final item in detail.version.snapshot.ingredients ?? const [])
+        if (item.ingredientId?.isNotEmpty == true) item.ingredientId!,
+    ];
+    try {
+      final ingredientRepository = ref.read(ingredientRepositoryProvider);
+      await ingredientRepository.sync();
+      final ingredients = await ingredientRepository.getMany(ids);
+      final densities = <String, double>{
+        for (final item in ingredients)
+          if (item.attributes.density != null)
+            item.id: item.attributes.density!.value.toDouble(),
+      };
+      final measures = await ref.read(personalMeasureRepositoryProvider).list();
+      if (!mounted) return;
+      setState(() {
+        _densities = densities;
+        _measures = measures;
+      });
+    } catch (_) {
+      // Detail pages remain useful offline with base g/ml values and cached data.
     }
   }
 
@@ -1417,6 +1448,16 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
     };
     final convertedStepsById = {
       for (final item in conversion.steps) item.id: item,
+    };
+    final displayedById = {
+      for (final ingredient in snapshot.ingredients ?? const [])
+        ingredient.id: _displayedAmount(
+          ingredient,
+          convertedById[ingredient.id],
+          displayMode: _displayMode,
+          densities: _densities,
+          measures: _measures,
+        ),
     };
     return Scaffold(
       appBar: AppBar(
@@ -1509,6 +1550,12 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
             onChanged: (value) => setState(() => _targetServings = value),
             onReset: () => setState(() => _targetServings = snapshot.servings),
           ),
+          const SizedBox(height: 8),
+          _DisplayModeControl(
+            mode: _displayMode,
+            hasHomeMeasures: _measures.isNotEmpty,
+            onChanged: (mode) => setState(() => _displayMode = mode),
+          ),
           const SizedBox(height: 16),
           if ((derived.allergens ?? const []).isNotEmpty ||
               derived.allergensIncomplete == true)
@@ -1536,6 +1583,7 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
               _IngredientDetailRow(
                 ingredient: ingredient,
                 converted: convertedById[ingredient.id],
+                displayed: displayedById[ingredient.id],
               ),
           ],
           const SizedBox(height: 20),
@@ -1701,27 +1749,86 @@ class _RecipePhotoDisplay extends StatelessWidget {
   }
 }
 
+class _DisplayModeControl extends StatelessWidget {
+  const _DisplayModeControl({
+    required this.mode,
+    required this.hasHomeMeasures,
+    required this.onChanged,
+  });
+
+  final MeasureDisplayMode mode;
+  final bool hasHomeMeasures;
+  final ValueChanged<MeasureDisplayMode> onChanged;
+
+  @override
+  Widget build(BuildContext context) => Card(
+    key: const ValueKey('recipe-measure-mode'),
+    margin: EdgeInsets.zero,
+    child: Padding(
+      padding: const EdgeInsets.all(12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const Text('用量显示方式'),
+          const SizedBox(height: 8),
+          SegmentedButton<MeasureDisplayMode>(
+            showSelectedIcon: false,
+            segments: const [
+              ButtonSegment(value: MeasureDisplayMode.base, label: Text('克/毫升')),
+              ButtonSegment(value: MeasureDisplayMode.standard, label: Text('汤匙/茶匙')),
+              ButtonSegment(value: MeasureDisplayMode.home, label: Text('自家量具')),
+            ],
+            selected: {mode},
+            onSelectionChanged: (selected) {
+              final value = selected.first;
+              if (value == MeasureDisplayMode.home && !hasHomeMeasures) return;
+              onChanged(value);
+            },
+          ),
+          if (mode == MeasureDisplayMode.home && !hasHomeMeasures)
+            const Padding(
+              padding: EdgeInsets.only(top: 8),
+              child: Text('还没有登记自家量具，请先到“我的”登记。'),
+            ),
+        ],
+      ),
+    ),
+  );
+
+}
+
 class _IngredientDetailRow extends StatelessWidget {
-  const _IngredientDetailRow({required this.ingredient, this.converted});
+  const _IngredientDetailRow({
+    required this.ingredient,
+    this.converted,
+    this.displayed,
+  });
   final RecipeIngredient ingredient;
   final ConvertedServingIngredient? converted;
+  final DisplayedAmount? displayed;
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final adjusted = converted != null &&
         converted!.displayQuantity != converted!.originalQuantity;
-    final quantity = adjusted
+    final servingQuantity = adjusted
         ? '${_quantityText(converted!.displayQuantity)} ${converted!.unit}'
         : '${_quantityText(ingredient.quantity)} ${ingredient.unit}';
+    final quantity = displayed?.text ?? servingQuantity;
+    final displayChanged = displayed != null &&
+        displayed!.rule != 'base' &&
+        displayed!.rule != 'no_density';
     final originalQuantity = '${_quantityText(ingredient.quantity)} ${ingredient.unit}';
     final source = ingredient.quantitySource;
-    final showSource = adjusted ||
+    final showSource = adjusted || displayChanged ||
         (source != null && source.source_.value != sourceTypeAuthorFilled);
-    final sourceType = adjusted
+    final sourceType = adjusted || displayChanged
         ? sourceTypeScenarioAdjusted
         : source?.source_.value ?? sourceTypeAuthorFilled;
-    final sourceBasis = adjusted
+    final sourceBasis = displayChanged
+        ? '个人量具只改变显示，菜谱基础值未改变'
+        : adjusted
         ? _servingRuleLabel(converted!.rule)
         : source?.basis?.isNotEmpty == true
         ? source!.basis!
@@ -1742,11 +1849,15 @@ class _IngredientDetailRow extends StatelessWidget {
           if (showSource)
             SourceMark(
               sourceType: sourceType,
-              componentId: adjusted
+              componentId: displayChanged
+                  ? 'recipe-ingredient-${ingredient.id}-measure'
+                  : adjusted
                   ? 'recipe-ingredient-${ingredient.id}-serving'
                   : 'recipe-ingredient-${ingredient.id}-quantity',
               value: quantity,
-              originalValue: adjusted ? originalQuantity : source?.original,
+              originalValue: displayChanged || adjusted
+                  ? originalQuantity
+                  : source?.original,
               basisText: sourceBasis,
               required: false,
               feedbackEnabled: false,
@@ -2194,6 +2305,40 @@ String _servingRuleLabel(String rule) => switch (rule) {
   'round' => '按个取整',
   _ => rule,
 };
+
+DisplayedAmount? _displayedAmount(
+  RecipeIngredient ingredient,
+  ConvertedServingIngredient? converted, {
+  required MeasureDisplayMode displayMode,
+  required Map<String, double> densities,
+  required List<PersonalMeasureOut> measures,
+}) {
+  final baseUnit = ingredient.baseUnit?.value ?? _displayBaseUnit(ingredient.unit);
+  if (baseUnit == null || baseUnit == 'count') return null;
+  var baseQuantity = ingredient.baseQuantity?.toDouble() ?? ingredient.quantity.toDouble();
+  if (converted != null && converted.originalQuantity != 0) {
+    baseQuantity *= converted.displayQuantity / converted.originalQuantity;
+  }
+  final density = densities[ingredient.ingredientId];
+  return displayAmount(DisplayMeasureInput(
+    baseQuantity: baseQuantity,
+    baseUnit: baseUnit,
+    density: density,
+    mode: displayMode,
+    measure: measures.firstOrNull,
+  ));
+}
+
+String? _displayBaseUnit(String unit) {
+  final normalized = unit.trim().toLowerCase();
+  if ({'g', '克', 'kg', '千克', '公斤'}.contains(normalized)) return 'g';
+  if ({'ml', '毫升', 'l', '升', '勺', '大勺', '汤匙', 'tbsp', '小勺', '茶匙', 'tsp'}.contains(normalized)) {
+    return 'ml';
+  }
+  return null;
+}
+
+// The pure row helper receives immutable snapshots from the page state.
 
 ServingConversionResult _recipeServingConversion(
   RecipeSnapshot snapshot,

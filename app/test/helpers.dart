@@ -196,6 +196,44 @@ class FakeServer extends Interceptor {
       return (200, [for (final i in identities) i.toJson()]);
     });
     on('POST', '/v1/me/consents', (_) => (204, null));
+    final personalMeasures = <Map<String, dynamic>>[];
+    on('GET', '/v1/me/measures', (_) => (200, personalMeasures));
+    on('POST', '/v1/me/measures', (r) {
+      final body = Map<String, dynamic>.from(r.body as Map);
+      final value = {
+        ...body,
+        'id': '66666666-6666-4666-8666-666666666666',
+        'created_at': '2026-10-02T00:00:00Z',
+        'updated_at': '2026-10-02T00:00:00Z',
+      };
+      personalMeasures.add(value);
+      return (201, value);
+    });
+    on('PATCH', '/v1/me/measures/66666666-6666-4666-8666-666666666666', (r) {
+      final body = Map<String, dynamic>.from(r.body as Map);
+      final current = personalMeasures.firstWhere(
+        (item) => item['id'] == '66666666-6666-4666-8666-666666666666',
+        orElse: () => {
+          'id': '66666666-6666-4666-8666-666666666666',
+          'name': '白瓷勺',
+          'kind': 'spoon',
+          'capacity_ml': 15,
+          'created_at': '2026-10-02T00:00:00Z',
+          'updated_at': '2026-10-02T00:00:00Z',
+        },
+      );
+      current.addAll(body);
+      if (!personalMeasures.contains(current)) personalMeasures.add(current);
+      return (200, current);
+    });
+    on('DELETE', '/v1/me/measures/66666666-6666-4666-8666-666666666666', (_) {
+      personalMeasures.removeWhere((item) => item['id'] == '66666666-6666-4666-8666-666666666666');
+      return (204, null);
+    });
+    on('GET', '/v1/me/measures/66666666-6666-4666-8666-666666666666', (_) {
+      final item = personalMeasures.firstOrNull;
+      return item == null ? FakeServer.error(404, 'not_found', '没有找到') : (200, item);
+    });
     on('POST', '/v1/analytics/events', (_) => (204, null));
     on('POST', '/v1/events/upload', (r) {
       final events = ((r.body as Map)['events'] as List).cast<Map>();

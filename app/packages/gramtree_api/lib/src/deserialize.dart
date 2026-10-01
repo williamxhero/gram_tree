@@ -55,6 +55,9 @@ import 'package:gramtree_api/src/model/nutrition_attribute.dart';
 import 'package:gramtree_api/src/model/nutrition_estimate.dart';
 import 'package:gramtree_api/src/model/page_description.dart';
 import 'package:gramtree_api/src/model/page_unrecorded_ingredient_item.dart';
+import 'package:gramtree_api/src/model/personal_measure_input.dart';
+import 'package:gramtree_api/src/model/personal_measure_out.dart';
+import 'package:gramtree_api/src/model/personal_measure_update.dart';
 import 'package:gramtree_api/src/model/profile_update.dart';
 import 'package:gramtree_api/src/model/purchase_unit.dart';
 import 'package:gramtree_api/src/model/purchase_units_attribute.dart';
@@ -281,6 +284,15 @@ ReturnType deserialize<ReturnType, BaseType>(
       return PageUnrecordedIngredientItem.fromJson(
             value as Map<String, dynamic>,
           )
+          as ReturnType;
+    case 'PersonalMeasureInput':
+      return PersonalMeasureInput.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'PersonalMeasureOut':
+      return PersonalMeasureOut.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'PersonalMeasureUpdate':
+      return PersonalMeasureUpdate.fromJson(value as Map<String, dynamic>)
           as ReturnType;
     case 'ProfileUpdate':
       return ProfileUpdate.fromJson(value as Map<String, dynamic>)
