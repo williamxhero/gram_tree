@@ -116,9 +116,11 @@ void main() {
     await waitFor(tester, find.text('网页版验收菜谱'));
     final card = find.byType(ListTile).last;
     await tester.tap(card);
+    await waitFor(tester, find.byKey(const ValueKey('delete-recipe-button')));
     await reveal(tester, find.byKey(const ValueKey('delete-recipe-button')));
     await tester.tap(find.byKey(const ValueKey('delete-recipe-button')));
     await settle(tester);
+    await waitFor(tester, find.text('确认删除'));
     await tester.tap(find.text('确认删除'));
     await waitFor(tester, find.text('还没有菜谱'));
   });
