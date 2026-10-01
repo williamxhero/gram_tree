@@ -16,6 +16,7 @@ import 'package:gramtree_api/src/model/recipe_image_out.dart';
 import 'package:gramtree_api/src/model/recipe_image_staged_out.dart';
 import 'package:gramtree_api/src/model/recipe_image_upload.dart';
 import 'package:gramtree_api/src/model/recipe_list.dart';
+import 'package:gramtree_api/src/model/recipe_serving_conversion_out.dart';
 import 'package:gramtree_api/src/model/recipe_version_create.dart';
 import 'package:gramtree_api/src/model/recipe_version_history.dart';
 
@@ -23,6 +24,193 @@ class RecipesApi {
   final Dio _dio;
 
   const RecipesApi(this._dio);
+
+  /// Convert Current Recipe Servings
+  ///
+  ///
+  /// Parameters:
+  /// * [recipeId]
+  /// * [targetServings]
+  /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
+  /// * [headers] - Can be used to add additional headers to the request
+  /// * [extras] - Can be used to add flags to the request
+  /// * [validateStatus] - A [ValidateStatus] callback that can be used to determine request success based on the HTTP status of the response
+  /// * [onSendProgress] - A [ProgressCallback] that can be used to get the send progress
+  /// * [onReceiveProgress] - A [ProgressCallback] that can be used to get the receive progress
+  ///
+  /// Returns a [Future] containing a [Response] with a [RecipeServingConversionOut] as data
+  /// Throws [DioException] if API call or serialization fails
+  Future<Response<RecipeServingConversionOut>> convertCurrentRecipeServings({
+    required String recipeId,
+    required int targetServings,
+    CancelToken? cancelToken,
+    Map<String, dynamic>? headers,
+    Map<String, dynamic>? extra,
+    ValidateStatus? validateStatus,
+    ProgressCallback? onSendProgress,
+    ProgressCallback? onReceiveProgress,
+  }) async {
+    final _path = r'/v1/recipes/{recipe_id}/servings'.replaceAll(
+      '{'
+      r'recipe_id'
+      '}',
+      recipeId.toString(),
+    );
+    final _options = Options(
+      method: r'GET',
+      headers: <String, dynamic>{...?headers},
+      extra: <String, dynamic>{
+        'secure': <Map<String, String>>[
+          {'type': 'http', 'scheme': 'bearer', 'name': 'HTTPBearer'},
+        ],
+        ...?extra,
+      },
+      validateStatus: validateStatus,
+    );
+
+    final _queryParameters = <String, dynamic>{
+      r'target_servings': targetServings,
+    };
+
+    final _response = await _dio.request<Object>(
+      _path,
+      options: _options,
+      queryParameters: _queryParameters,
+      cancelToken: cancelToken,
+      onSendProgress: onSendProgress,
+      onReceiveProgress: onReceiveProgress,
+    );
+
+    RecipeServingConversionOut? _responseData;
+
+    try {
+      final rawData = _response.data;
+      _responseData = rawData == null
+          ? null
+          : deserialize<RecipeServingConversionOut, RecipeServingConversionOut>(
+              rawData,
+              'RecipeServingConversionOut',
+              growable: true,
+            );
+    } catch (error, stackTrace) {
+      throw DioException(
+        requestOptions: _response.requestOptions,
+        response: _response,
+        type: DioExceptionType.unknown,
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+
+    return Response<RecipeServingConversionOut>(
+      data: _responseData,
+      headers: _response.headers,
+      isRedirect: _response.isRedirect,
+      requestOptions: _response.requestOptions,
+      redirects: _response.redirects,
+      statusCode: _response.statusCode,
+      statusMessage: _response.statusMessage,
+      extra: _response.extra,
+    );
+  }
+
+  /// Convert Recipe Version Servings
+  ///
+  ///
+  /// Parameters:
+  /// * [recipeId]
+  /// * [versionId]
+  /// * [targetServings]
+  /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
+  /// * [headers] - Can be used to add additional headers to the request
+  /// * [extras] - Can be used to add flags to the request
+  /// * [validateStatus] - A [ValidateStatus] callback that can be used to determine request success based on the HTTP status of the response
+  /// * [onSendProgress] - A [ProgressCallback] that can be used to get the send progress
+  /// * [onReceiveProgress] - A [ProgressCallback] that can be used to get the receive progress
+  ///
+  /// Returns a [Future] containing a [Response] with a [RecipeServingConversionOut] as data
+  /// Throws [DioException] if API call or serialization fails
+  Future<Response<RecipeServingConversionOut>> convertRecipeVersionServings({
+    required String recipeId,
+    required String versionId,
+    required int targetServings,
+    CancelToken? cancelToken,
+    Map<String, dynamic>? headers,
+    Map<String, dynamic>? extra,
+    ValidateStatus? validateStatus,
+    ProgressCallback? onSendProgress,
+    ProgressCallback? onReceiveProgress,
+  }) async {
+    final _path = r'/v1/recipes/{recipe_id}/versions/{version_id}/servings'
+        .replaceAll(
+          '{'
+          r'recipe_id'
+          '}',
+          recipeId.toString(),
+        )
+        .replaceAll(
+          '{'
+          r'version_id'
+          '}',
+          versionId.toString(),
+        );
+    final _options = Options(
+      method: r'GET',
+      headers: <String, dynamic>{...?headers},
+      extra: <String, dynamic>{
+        'secure': <Map<String, String>>[
+          {'type': 'http', 'scheme': 'bearer', 'name': 'HTTPBearer'},
+        ],
+        ...?extra,
+      },
+      validateStatus: validateStatus,
+    );
+
+    final _queryParameters = <String, dynamic>{
+      r'target_servings': targetServings,
+    };
+
+    final _response = await _dio.request<Object>(
+      _path,
+      options: _options,
+      queryParameters: _queryParameters,
+      cancelToken: cancelToken,
+      onSendProgress: onSendProgress,
+      onReceiveProgress: onReceiveProgress,
+    );
+
+    RecipeServingConversionOut? _responseData;
+
+    try {
+      final rawData = _response.data;
+      _responseData = rawData == null
+          ? null
+          : deserialize<RecipeServingConversionOut, RecipeServingConversionOut>(
+              rawData,
+              'RecipeServingConversionOut',
+              growable: true,
+            );
+    } catch (error, stackTrace) {
+      throw DioException(
+        requestOptions: _response.requestOptions,
+        response: _response,
+        type: DioExceptionType.unknown,
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+
+    return Response<RecipeServingConversionOut>(
+      data: _responseData,
+      headers: _response.headers,
+      isRedirect: _response.isRedirect,
+      requestOptions: _response.requestOptions,
+      redirects: _response.redirects,
+      statusCode: _response.statusCode,
+      statusMessage: _response.statusMessage,
+      extra: _response.extra,
+    );
+  }
 
   /// Create Recipe
   ///

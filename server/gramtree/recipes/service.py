@@ -45,13 +45,24 @@ from gramtree.recipes.schemas import (
     RecipeIngredient,
     RecipeList,
     RecipeListItem,
+    RecipeServingConversionOut,
     RecipeSnapshot,
     RecipeVersionCreate,
     RecipeVersionHistory,
     RecipeVersionOut,
     RecipeVersionSummary,
 )
+from gramtree.recipes.schemas import (
+    ServingConversion as ServingConversionSchema,
+)
+from gramtree.recipes.serving_conversion import (
+    ServingConversionError,
+    ServingIngredientInput,
+    ServingStepInput,
+    convert_servings,
+)
 from gramtree.recipes.storage import make_recipe_storage
+from gramtree.runtime_config import service as config
 from gramtree.settings import Settings
 
 logger = logging.getLogger("gramtree.recipes")
@@ -867,6 +878,72 @@ def get_version(
     if version is None:
         raise NotFound()
     return _detail(session, settings, recipe, version)
+
+
+def convert_recipe_servings(
+    session: Session,
+    owner: User,
+    recipe_id: uuid.UUID,
+    target_servings: int,
+    version_id: uuid.UUID | None = None,
+) -> RecipeServingConversionOut:
+    """Return a deterministic, read-only conversion for an owned recipe version."""
+    recipe = _owned_recipe(session, owner, recipe_id)
+    if version_id is None:
+        version = session.get(RecipeVersion, recipe.current_version_id)
+    else:
+        version = session.scalar(
+            select(RecipeVersion).where(
+                RecipeVersion.id == version_id,
+                RecipeVersion.recipe_id == recipe.id,
+            )
+        )
+    if version is None:
+        raise NotFound("菜谱版本不存在")
+
+    snapshot = RecipeSnapshot.model_validate(version.snapshot)
+    derived = RecipeDerived.model_validate(version.derived)
+    try:
+        conversion = convert_servings(
+            original_servings=snapshot.servings,
+            target_servings=target_servings,
+            ingredients=[
+                ServingIngredientInput(
+                    id=item.id,
+                    display_name=item.display_name,
+                    quantity=item.quantity,
+                    unit=item.unit,
+                    scaling_mode=item.scaling_mode,
+                )
+                for item in snapshot.ingredients
+            ],
+            steps=[
+                ServingStepInput(
+                    id=step.id,
+                    instruction=step.instruction,
+                    ingredient_ids=tuple(step.ingredient_ids),
+                    duration_seconds=step.duration_seconds,
+                    temperature_celsius=step.temperature_celsius,
+                    heat=step.heat,
+                )
+                for step in snapshot.steps
+            ],
+            min_servings=int(config.get(session, "recipe.servings_min")),
+            max_servings=int(config.get(session, "recipe.servings_max")),
+            round_deviation_threshold=float(
+                config.get(session, "recipe.scaling_round_deviation_threshold")
+            ),
+            batch_multiplier=float(config.get(session, "recipe.scaling_batch_multiplier")),
+            total_time_seconds=derived.total_time_seconds,
+            active_time_seconds=derived.active_time_seconds,
+        )
+    except ServingConversionError as exc:
+        raise ApiError(422, exc.code, exc.message, exc.detail) from exc
+    return RecipeServingConversionOut(
+        recipe_id=recipe.id,
+        version_id=version.id,
+        conversion=ServingConversionSchema.model_validate(conversion.as_dict()),
+    )
 
 
 def list_versions(

@@ -637,6 +637,27 @@ class AppLocalizationsZh extends AppLocalizations {
   String get recipeServings => '份数';
 
   @override
+  String get recipeServingsAdjust => '调整份数';
+
+  @override
+  String get recipeServingsDecrease => '减少一份';
+
+  @override
+  String get recipeServingsIncrease => '增加一份';
+
+  @override
+  String get recipeServingsUnit => '份';
+
+  @override
+  String recipeServingsRange(int min, int max) => '可调范围：$min–$max 份';
+
+  @override
+  String get recipeServingsReset => '恢复原份数';
+
+  @override
+  String get recipeBatchWarning => '注意分批下锅，时间以成熟判断为准。';
+
+  @override
   String get recipeDifficulty => '难度';
 
   @override

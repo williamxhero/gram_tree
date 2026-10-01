@@ -1264,6 +1264,48 @@ abstract class AppLocalizations {
   /// **'份数'**
   String get recipeServings;
 
+  /// No description provided for @recipeServingsAdjust.
+  ///
+  /// In zh, this message translates to:
+  /// **'调整份数'**
+  String get recipeServingsAdjust;
+
+  /// No description provided for @recipeServingsDecrease.
+  ///
+  /// In zh, this message translates to:
+  /// **'减少一份'**
+  String get recipeServingsDecrease;
+
+  /// No description provided for @recipeServingsIncrease.
+  ///
+  /// In zh, this message translates to:
+  /// **'增加一份'**
+  String get recipeServingsIncrease;
+
+  /// No description provided for @recipeServingsUnit.
+  ///
+  /// In zh, this message translates to:
+  /// **'份'**
+  String get recipeServingsUnit;
+
+  /// No description provided for @recipeServingsRange.
+  ///
+  /// In zh, this message translates to:
+  /// **'可调范围：{min}–{max} 份'**
+  String recipeServingsRange(int min, int max);
+
+  /// No description provided for @recipeServingsReset.
+  ///
+  /// In zh, this message translates to:
+  /// **'恢复原份数'**
+  String get recipeServingsReset;
+
+  /// No description provided for @recipeBatchWarning.
+  ///
+  /// In zh, this message translates to:
+  /// **'注意分批下锅，时间以成熟判断为准。'**
+  String get recipeBatchWarning;
+
   /// No description provided for @recipeDifficulty.
   ///
   /// In zh, this message translates to:

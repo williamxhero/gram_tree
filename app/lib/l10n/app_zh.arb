@@ -281,6 +281,13 @@
   "recipeListSummary": "第 {version} 版 · {servings} 份 · {minutes} 分钟",
   "recipeAliases": "别名（用逗号分隔）",
   "recipeServings": "份数",
+  "recipeServingsAdjust": "调整份数",
+  "recipeServingsDecrease": "减少一份",
+  "recipeServingsIncrease": "增加一份",
+  "recipeServingsUnit": "份",
+  "recipeServingsRange": "可调范围：{min}–{max} 份",
+  "recipeServingsReset": "恢复原份数",
+  "recipeBatchWarning": "注意分批下锅，时间以成熟判断为准。",
   "recipeDifficulty": "难度",
   "recipeDishType": "菜型",
   "recipeTags": "标签（用逗号分隔）",
@@ -415,5 +422,11 @@
   },
   "@recipeOperationCount": {
     "placeholders": {"count": {"type": "int"}}
+  },
+  "@recipeServingsRange": {
+    "placeholders": {
+      "min": {"type": "int"},
+      "max": {"type": "int"}
+    }
   }
 }

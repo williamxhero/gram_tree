@@ -69,6 +69,7 @@ import 'package:gramtree_api/src/model/recipe_ingredient.dart';
 import 'package:gramtree_api/src/model/recipe_list.dart';
 import 'package:gramtree_api/src/model/recipe_list_item.dart';
 import 'package:gramtree_api/src/model/recipe_replacement.dart';
+import 'package:gramtree_api/src/model/recipe_serving_conversion_out.dart';
 import 'package:gramtree_api/src/model/recipe_snapshot.dart';
 import 'package:gramtree_api/src/model/recipe_step.dart';
 import 'package:gramtree_api/src/model/recipe_version_create.dart';
@@ -81,6 +82,10 @@ import 'package:gramtree_api/src/model/release_note.dart';
 import 'package:gramtree_api/src/model/search_ingredient_out.dart';
 import 'package:gramtree_api/src/model/search_query.dart';
 import 'package:gramtree_api/src/model/search_result.dart';
+import 'package:gramtree_api/src/model/serving_conversion.dart';
+import 'package:gramtree_api/src/model/serving_conversion_ingredient.dart';
+import 'package:gramtree_api/src/model/serving_conversion_step.dart';
+import 'package:gramtree_api/src/model/serving_conversion_warning.dart';
 import 'package:gramtree_api/src/model/skip_adjustment_request.dart';
 import 'package:gramtree_api/src/model/skip_adjustment_result.dart';
 import 'package:gramtree_api/src/model/source_basis.dart';
@@ -314,6 +319,9 @@ ReturnType deserialize<ReturnType, BaseType>(
     case 'RecipeReplacement':
       return RecipeReplacement.fromJson(value as Map<String, dynamic>)
           as ReturnType;
+    case 'RecipeServingConversionOut':
+      return RecipeServingConversionOut.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
     case 'RecipeSnapshot':
       return RecipeSnapshot.fromJson(value as Map<String, dynamic>)
           as ReturnType;
@@ -346,6 +354,18 @@ ReturnType deserialize<ReturnType, BaseType>(
       return SearchQuery.fromJson(value as Map<String, dynamic>) as ReturnType;
     case 'SearchResult':
       return SearchResult.fromJson(value as Map<String, dynamic>) as ReturnType;
+    case 'ServingConversion':
+      return ServingConversion.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'ServingConversionIngredient':
+      return ServingConversionIngredient.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'ServingConversionStep':
+      return ServingConversionStep.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'ServingConversionWarning':
+      return ServingConversionWarning.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
     case 'SkipAdjustmentRequest':
       return SkipAdjustmentRequest.fromJson(value as Map<String, dynamic>)
           as ReturnType;

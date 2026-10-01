@@ -1091,4 +1091,55 @@ void main() {
       expect(find.text('还没有菜谱'), findsOneWidget);
     },
   );
+
+  testWidgets('recipe detail converts servings locally and resets with provenance', (
+    tester,
+  ) async {
+    final server = FakeServer();
+    final state = _installRecipeApi(server);
+    final detail = Map<String, dynamic>.from(state.current);
+    final version = Map<String, dynamic>.from(detail['version'] as Map);
+    final snapshot = Map<String, dynamic>.from(version['snapshot'] as Map);
+    final ingredients = [
+      for (final raw in (snapshot['ingredients'] as List))
+        Map<String, dynamic>.from(raw as Map),
+    ];
+    ingredients.first['scaling_mode'] = 'proportional';
+    snapshot['ingredients'] = ingredients;
+    final steps = [
+      for (final raw in (snapshot['steps'] as List))
+        Map<String, dynamic>.from(raw as Map),
+    ];
+    steps.first['ingredient_ids'] = ['ingredient-1'];
+    snapshot['steps'] = steps;
+    version['snapshot'] = snapshot;
+    detail['version'] = version;
+    state.current = detail;
+    state.versions[0] = detail;
+
+    await pumpApp(tester, env: TestEnv.signedIn(server: server));
+    await _openMyRecipes(tester);
+    await tester.tap(find.byKey(const ValueKey('recipe-card-$_recipeId')));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const ValueKey('recipe-serving-control')), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('recipe-serving-increase')));
+    await tester.pumpAndSettle();
+    await _scrollToBottom(tester);
+    expect(find.text('200 g'), findsWidgets);
+    expect(find.text('按场景调整'), findsOneWidget);
+    await _scrollToTop(tester);
+    await tester.tap(find.byKey(const ValueKey('recipe-serving-reset')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('recipe-serving-value')), findsOneWidget);
+    expect(find.text('2'), findsWidgets);
+
+    await tester.tap(find.byKey(const ValueKey('recipe-serving-increase')));
+    await tester.pumpAndSettle();
+    await _scrollToBottom(tester);
+    await tester.tap(find.text('按场景调整'));
+    await tester.pumpAndSettle();
+    expect(find.text('原来：100 g'), findsOneWidget);
+    expect(find.text('现在：200 g'), findsOneWidget);
+  });
 }
