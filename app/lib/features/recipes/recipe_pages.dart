@@ -1368,24 +1368,30 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
       for (final item in detail.version.snapshot.ingredients ?? const [])
         if (item.ingredientId?.isNotEmpty == true) item.ingredientId!,
     ];
+    final densities = <String, double>{};
     try {
       final ingredientRepository = ref.read(ingredientRepositoryProvider);
       await ingredientRepository.sync();
       final ingredients = await ingredientRepository.getMany(ids);
-      final densities = <String, double>{
+      densities.addAll({
         for (final item in ingredients)
           if (item.attributes.density != null)
             item.id: item.attributes.density!.value.toDouble(),
-      };
-      final measures = await ref.read(personalMeasureRepositoryProvider).list();
-      if (!mounted) return;
-      setState(() {
-        _densities = densities;
-        _measures = measures;
       });
+    } catch (_) {
+      // Density is optional; a missing catalogue must not hide cached measures.
+    }
+    List<PersonalMeasureOut> measures = const [];
+    try {
+      measures = await ref.read(personalMeasureRepositoryProvider).list();
     } catch (_) {
       // Detail pages remain useful offline with base g/ml values and cached data.
     }
+    if (!mounted) return;
+    setState(() {
+      _densities = densities;
+      _measures = measures;
+    });
   }
 
   Future<void> _delete() async {
