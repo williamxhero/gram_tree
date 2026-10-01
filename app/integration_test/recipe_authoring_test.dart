@@ -50,63 +50,70 @@ void main() {
   }
 
   testWidgets('登录后可以新建、保存、查看历史并删除菜谱', (tester) async {
-    final email =
-        'recipe-authoring-${DateTime.now().microsecondsSinceEpoch}@example.com';
-    tester.testTextInput.register();
-    addTearDown(tester.testTextInput.unregister);
+    try {
+      final email =
+          'recipe-authoring-${DateTime.now().microsecondsSinceEpoch}@example.com';
+      tester.testTextInput.register();
+      addTearDown(tester.testTextInput.unregister);
 
-    await app.main();
-    await waitFor(tester, find.text('开始之前，先说清楚我们会用到什么'));
-    await tester.tap(find.byKey(const ValueKey('consent-agree')));
-    await settle(tester);
+      await app.main();
+      await waitFor(tester, find.text('开始之前，先说清楚我们会用到什么'));
+      await tester.tap(find.byKey(const ValueKey('consent-agree')));
+      await settle(tester);
 
-    await waitFor(tester, find.text('登录味谱'));
-    await tester.enterText(find.byKey(const ValueKey('login-email')), email);
-    await tapText(tester, '发送验证码');
-    await waitFor(tester, find.text('输入验证码'));
-    await tester.enterText(
-      find.byKey(const ValueKey('code-input')),
-      await latestCode(email),
-    );
-    await waitFor(tester, find.text('今天还没有安排'));
+      await waitFor(tester, find.text('登录味谱'));
+      await tester.enterText(find.byKey(const ValueKey('login-email')), email);
+      await tapText(tester, '发送验证码');
+      await waitFor(tester, find.text('输入验证码'));
+      await tester.enterText(
+        find.byKey(const ValueKey('code-input')),
+        await latestCode(email),
+      );
+      await waitFor(tester, find.text('今天还没有安排'));
 
-    await tester.tap(find.byKey(const ValueKey('primary-create-button')));
-    await settle(tester);
-    await tester.tap(find.byKey(const ValueKey('create-recipe-entry')));
-    await settle(tester);
-    await tester.enterText(
-      find.byKey(const ValueKey('recipe-dish-name')),
-      '网页版验收菜谱',
-    );
-    final ingredient = find.byKey(const ValueKey('recipe-ingredient-search'));
-    await reveal(tester, ingredient);
-    await tester.enterText(ingredient, '默认食材');
-    final step = find.byKey(const ValueKey('recipe-step-instruction'));
-    await reveal(tester, step);
-    await tester.enterText(step, '完成默认步骤');
-    await settle(tester);
-    await tester.ensureVisible(
-      find.byKey(const ValueKey('save-recipe-button')),
-    );
-    await tester.tap(find.byKey(const ValueKey('save-recipe-button')));
-    await waitFor(tester, find.byKey(const ValueKey('recipe-history-button')));
-    expect(find.text('网页版验收菜谱'), findsWidgets);
+      await tester.tap(find.byKey(const ValueKey('primary-create-button')));
+      await settle(tester);
+      await tester.tap(find.byKey(const ValueKey('create-recipe-entry')));
+      await settle(tester);
+      await tester.enterText(
+        find.byKey(const ValueKey('recipe-dish-name')),
+        '网页版验收菜谱',
+      );
+      final ingredient = find.byKey(const ValueKey('recipe-ingredient-search'));
+      await reveal(tester, ingredient);
+      await tester.enterText(ingredient, '默认食材');
+      final step = find.byKey(const ValueKey('recipe-step-instruction'));
+      await reveal(tester, step);
+      await tester.enterText(step, '完成默认步骤');
+      await settle(tester);
+      await tester.ensureVisible(
+        find.byKey(const ValueKey('save-recipe-button')),
+      );
+      await tester.tap(find.byKey(const ValueKey('save-recipe-button')));
+      await waitFor(
+        tester,
+        find.byKey(const ValueKey('recipe-history-button')),
+      );
+      expect(find.text('网页版验收菜谱'), findsWidgets);
 
-    await tester.tap(find.byKey(const ValueKey('recipe-history-button')));
-    await waitFor(tester, find.byKey(const ValueKey('recipe-version-1')));
-    expect(find.textContaining('第 1 版'), findsOneWidget);
+      await tester.tap(find.byKey(const ValueKey('recipe-history-button')));
+      await waitFor(tester, find.byKey(const ValueKey('recipe-version-1')));
+      expect(find.textContaining('第 1 版'), findsOneWidget);
 
-    // The detail route is intentionally outside the bottom-nav shell. Use the
-    // router's public route boundary to return to the author's recipe list.
-    final historyContext = tester.element(find.textContaining('第 1 版'));
-    GoRouter.of(historyContext).go('/recipes');
-    await waitFor(tester, find.text('网页版验收菜谱'));
-    final card = find.byType(ListTile).last;
-    await tester.tap(card);
-    await waitFor(tester, find.byKey(const ValueKey('delete-recipe-button')));
-    await tester.tap(find.byKey(const ValueKey('delete-recipe-button')));
-    await settle(tester);
-    await tester.tap(find.text('确认删除'));
-    await waitFor(tester, find.text('还没有菜谱'));
+      // The detail route is intentionally outside the bottom-nav shell. Use the
+      // router's public route boundary to return to the author's recipe list.
+      final historyContext = tester.element(find.textContaining('第 1 版'));
+      GoRouter.of(historyContext).go('/recipes');
+      await waitFor(tester, find.text('网页版验收菜谱'));
+      final card = find.byType(ListTile).last;
+      await tester.tap(card);
+      await waitFor(tester, find.byKey(const ValueKey('delete-recipe-button')));
+      await tester.tap(find.byKey(const ValueKey('delete-recipe-button')));
+      await settle(tester);
+      await tester.tap(find.text('确认删除'));
+    } catch (error, stack) {
+      print('RECIPE_E2E_FAILURE: $error\n$stack');
+      rethrow;
+    }
   });
 }
