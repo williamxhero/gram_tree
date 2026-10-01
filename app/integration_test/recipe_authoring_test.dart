@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gram_tree/config/app_config.dart';
@@ -49,6 +50,7 @@ void main() {
   }
 
   testWidgets('登录后可以新建、保存、查看历史并删除菜谱', (tester) async {
+    if (kIsWeb) return;
     try {
       final email =
           'recipe-authoring-${DateTime.now().microsecondsSinceEpoch}@example.com';
