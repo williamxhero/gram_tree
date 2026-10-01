@@ -385,6 +385,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get recipeLoadError => '菜谱暂时加载不了';
 
   @override
+  String get recipeLoadMore => '加载更多';
+
+  @override
+  String get recipeLoadMoreRetry => '加载失败，重试';
+
+  @override
   String get recipeRetry => '重试';
 
   @override

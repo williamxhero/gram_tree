@@ -202,6 +202,8 @@
   "recipeEmptyTitle": "还没有菜谱",
   "recipeEmptyBody": "把常做的一道菜写下来，之后可以继续改良。",
   "recipeLoadError": "菜谱暂时加载不了",
+  "recipeLoadMore": "加载更多",
+  "recipeLoadMoreRetry": "加载失败，重试",
   "recipeRetry": "重试",
   "recipeName": "菜名",
   "recipeContinueEdit": "继续编辑菜谱",

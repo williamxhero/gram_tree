@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:gramtree_api/gramtree_api.dart';
 
 import '../../api/api_client.dart';
+import '../../app/theme.dart';
 import '../../auth/auth_controller.dart';
 import '../../ingredients/ingredient_provider.dart';
 import '../../l10n/app_localizations.dart';
@@ -13,21 +14,56 @@ import '../../recipes/recipe_draft.dart';
 import '../../recipes/recipe_repository.dart';
 import 'recipe_photo_panel.dart';
 import '../../storage/local_store.dart';
+import '../../ui_protocol/intent_dispatcher.dart';
 import '../../ui_protocol/source_mark.dart';
 import '../../ui_protocol/source_types.dart';
 import '../../widgets/empty_state.dart';
 
 final myRecipesProvider = FutureProvider.autoDispose<RecipeList>((ref) async {
-  return ref.watch(recipeRepositoryProvider).list();
+  return ref.watch(recipeRepositoryProvider).listPage();
 });
 
-class RecipeListPage extends ConsumerWidget {
+class RecipeListPage extends ConsumerStatefulWidget {
   const RecipeListPage({super.key});
 
   static const path = '/recipes';
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<RecipeListPage> createState() => _RecipeListPageState();
+}
+
+class _RecipeListPageState extends ConsumerState<RecipeListPage> {
+  RecipeList? _sourcePage;
+  List<RecipeListItem> _items = const [];
+  String? _nextCursor;
+  bool _loadingMore = false;
+  Object? _loadMoreError;
+
+  Future<void> _loadMore() async {
+    final cursor = _nextCursor;
+    if (_loadingMore || cursor == null) return;
+    setState(() {
+      _loadingMore = true;
+      _loadMoreError = null;
+    });
+    try {
+      final page = await ref
+          .read(recipeRepositoryProvider)
+          .listPage(cursor: cursor);
+      if (!mounted) return;
+      setState(() {
+        _items = [..._items, ...page.items];
+        _nextCursor = page.nextCursor;
+      });
+    } catch (error) {
+      if (mounted) setState(() => _loadMoreError = error);
+    } finally {
+      if (mounted) setState(() => _loadingMore = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final recipes = ref.watch(myRecipesProvider);
     return Scaffold(
@@ -38,39 +74,67 @@ class RecipeListPage extends ConsumerWidget {
           message: l10n.recipeLoadError,
           onRetry: () => ref.invalidate(myRecipesProvider),
         ),
-        data: (page) => page.items.isEmpty
-            ? EmptyState(
-                icon: Icons.menu_book_outlined,
-                title: l10n.recipeEmptyTitle,
-                message: l10n.recipeEmptyBody,
-                footer: _NewRecipeButton(),
-              )
-            : RefreshIndicator(
-                onRefresh: () async => ref.invalidate(myRecipesProvider),
-                child: ListView(
-                  padding: const EdgeInsets.all(16),
-                  children: [
-                    _NewRecipeButton(),
-                    const SizedBox(height: 12),
-                    for (final item in page.items)
-                      Card(
-                        child: ListTile(
-                          key: ValueKey('recipe-card-${item.id}'),
-                          title: Text(item.dish.name),
-                          subtitle: Text(
-                            l10n.recipeListSummary(
-                              item.versionNumber,
-                              item.servings,
-                              _minutes(item.totalTimeSeconds),
-                            ),
-                          ),
-                          trailing: const Icon(Icons.chevron_right),
-                          onTap: () => context.push('/recipes/${item.id}'),
+        data: (page) {
+          if (!identical(_sourcePage, page)) {
+            _sourcePage = page;
+            _items = [...page.items];
+            _nextCursor = page.nextCursor;
+            _loadMoreError = null;
+          }
+          if (_items.isEmpty) {
+            return EmptyState(
+              icon: Icons.menu_book_outlined,
+              title: l10n.recipeEmptyTitle,
+              message: l10n.recipeEmptyBody,
+              footer: _NewRecipeButton(),
+            );
+          }
+          return RefreshIndicator(
+            onRefresh: () async => ref.invalidate(myRecipesProvider),
+            child: ListView(
+              padding: const EdgeInsets.all(16),
+              children: [
+                _NewRecipeButton(),
+                const SizedBox(height: 12),
+                for (final item in _items)
+                  Card(
+                    child: ListTile(
+                      key: ValueKey('recipe-card-${item.id}'),
+                      title: Text(item.dish.name),
+                      subtitle: Text(
+                        l10n.recipeListSummary(
+                          item.versionNumber,
+                          item.servings,
+                          _minutes(item.totalTimeSeconds),
                         ),
                       ),
-                  ],
-                ),
-              ),
+                      trailing: const Icon(Icons.chevron_right),
+                      onTap: () => context.push('/recipes/${item.id}'),
+                    ),
+                  ),
+                if (_nextCursor != null) ...[
+                  const SizedBox(height: 8),
+                  OutlinedButton.icon(
+                    key: const ValueKey('recipe-load-more'),
+                    onPressed: _loadingMore ? null : _loadMore,
+                    icon: _loadingMore
+                        ? const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Icon(Icons.expand_more),
+                    label: Text(
+                      _loadMoreError == null
+                          ? l10n.recipeLoadMore
+                          : l10n.recipeLoadMoreRetry,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          );
+        },
       ),
     );
   }
@@ -138,6 +202,10 @@ class _RecipeEditorPageState extends ConsumerState<RecipeEditorPage> {
         _form = RecipeForm.fromSnapshot(
           _loaded!.version.snapshot,
           _loaded!.dish.name,
+          aliases: _loaded!.dish.aliases,
+          imageIds: [
+            for (final image in _loaded!.version.images ?? const []) image.id,
+          ],
         );
       }
       _draft = _draftStore.read(
@@ -750,9 +818,7 @@ class _IngredientEditorCardState extends State<_IngredientEditorCard> {
               value: item.displayName,
               controller: _displayController,
               onChanged: (value) {
-                final hadStandardId = item.ingredientId != null;
                 item.displayName = value;
-                if (hadStandardId) item.ingredientId = null;
                 onChanged();
               },
               suffixIcon: IconButton(
@@ -1313,9 +1379,19 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
           in snapshot.ingredients ?? const <RecipeIngredient>[])
         ingredient.id: ingredient.displayName,
     };
+    final Map<String, String> stepLabels = {
+      for (final (index, step) in (snapshot.steps ?? const []).indexed)
+        step.id: '${index + 1}. ${step.instruction}',
+    };
     return Scaffold(
       appBar: AppBar(
         title: Text(detail.dish.name),
+        leading: IconButton(
+          key: const ValueKey('recipe-list-button'),
+          tooltip: l10n.myRecipes,
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => context.go(RecipeListPage.path),
+        ),
         actions: [
           IconButton(
             key: const ValueKey('recipe-history-button'),
@@ -1343,6 +1419,7 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
         ],
       ),
       body: ListView(
+        key: const ValueKey('recipe-detail-content'),
         padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
         children: [
           _RecipePhotoDisplay(images: detail.version.images),
@@ -1392,7 +1469,8 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
             ],
           ),
           const SizedBox(height: 16),
-          if ((derived.allergens ?? const []).isNotEmpty)
+          if ((derived.allergens ?? const []).isNotEmpty ||
+              derived.allergensIncomplete == true)
             _InfoSection(
               title: l10n.recipeAllergens(
                 (derived.allergens ?? const []).join('、'),
@@ -1427,6 +1505,7 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
               index: index,
               step: step,
               ingredientNames: ingredientNames,
+              stepLabels: stepLabels,
               l10n: l10n,
             ),
           const SizedBox(height: 16),
@@ -1478,12 +1557,12 @@ class _RecipePhotoDisplay extends StatelessWidget {
   }
 }
 
-class _IngredientDetailRow extends StatelessWidget {
+class _IngredientDetailRow extends ConsumerWidget {
   const _IngredientDetailRow({required this.ingredient});
   final RecipeIngredient ingredient;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context);
     final quantity = '${ingredient.quantity} ${ingredient.unit}';
     return ListTile(
@@ -1508,7 +1587,14 @@ class _IngredientDetailRow extends StatelessWidget {
                 ? ingredient.quantitySource!.basis!
                 : l10n.recipeSourceAuthorFilled,
             required: true,
-            onAction: (_) {},
+            onAction: (action) => ref
+                .read(intentDispatcherProvider)
+                .dispatch(
+                  context,
+                  compositionId: 'recipe-detail-${ingredient.id}',
+                  componentId: 'recipe-ingredient-${ingredient.id}-quantity',
+                  action: action,
+                ),
           ),
         ],
       ),
@@ -1522,29 +1608,65 @@ class _IngredientDetailRow extends StatelessWidget {
           if (_replacementLabel(ingredient.replacement).isNotEmpty)
             '${l10n.recipeReplacement}：${_replacementLabel(ingredient.replacement)}',
         ].join(' · '),
+        style: GramTreeColors.of(context).numberStyle(
+          Theme.of(context).textTheme.bodyMedium ?? const TextStyle(),
+        ),
       ),
     );
   }
 }
 
-class _StepDetailTile extends StatelessWidget {
+class _StepDetailTile extends ConsumerWidget {
   const _StepDetailTile({
     required this.index,
     required this.step,
     required this.ingredientNames,
+    required this.stepLabels,
     required this.l10n,
   });
 
   final int index;
   final RecipeStep step;
   final Map<String, String> ingredientNames;
+  final Map<String, String> stepLabels;
   final AppLocalizations l10n;
 
+  Widget _sourceMark(
+    BuildContext context,
+    WidgetRef ref, {
+    required String field,
+    required String value,
+    required ValueSource? source,
+  }) {
+    if (source == null) return const SizedBox.shrink();
+    return SourceMark(
+      sourceType: source.source_.value,
+      componentId: 'recipe-step-${step.id}-$field',
+      value: value,
+      originalValue: source.original,
+      basisText: source.basis?.isNotEmpty == true
+          ? source.basis!
+          : l10n.recipeSourceAuthorFilled,
+      required: true,
+      onAction: (action) => ref
+          .read(intentDispatcherProvider)
+          .dispatch(
+            context,
+            compositionId: 'recipe-detail-${step.id}',
+            componentId: 'recipe-step-${step.id}-$field',
+            action: action,
+          ),
+    );
+  }
+
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final references = (step.ingredientIds ?? const [])
         .map((id) => ingredientNames[id])
         .whereType<String>()
+        .join('、');
+    final dependencies = (step.dependsOn ?? const [])
+        .map((id) => stepLabels[id] ?? id)
         .join('、');
     final details = [
       if (references.isNotEmpty) '${l10n.recipeStepIngredientRefs}：$references',
@@ -1558,8 +1680,7 @@ class _StepDetailTile extends StatelessWidget {
         '${l10n.recipeStepCookware}：${step.cookware}',
       if (step.doneness?.isNotEmpty == true)
         '${l10n.recipeStepDoneness}：${step.doneness}',
-      if ((step.dependsOn ?? const []).isNotEmpty)
-        '${l10n.recipeStepDepends}：${step.dependsOn!.join('、')}',
+      if (dependencies.isNotEmpty) '${l10n.recipeStepDepends}：$dependencies',
     ].join(' · ');
     return ExpansionTile(
       key: ValueKey('recipe-step-$index'),
@@ -1570,6 +1691,35 @@ class _StepDetailTile extends StatelessWidget {
             : '${step.action ?? ''} · $details',
       ),
       children: [
+        if (step.durationSource != null ||
+            step.heatSource != null ||
+            step.temperatureSource != null)
+          Wrap(
+            spacing: 8,
+            children: [
+              _sourceMark(
+                context,
+                ref,
+                field: 'duration',
+                value: l10n.recipeSeconds(step.durationSeconds ?? 0),
+                source: step.durationSource,
+              ),
+              _sourceMark(
+                context,
+                ref,
+                field: 'heat',
+                value: step.heat ?? '',
+                source: step.heatSource,
+              ),
+              _sourceMark(
+                context,
+                ref,
+                field: 'temperature',
+                value: '${step.temperatureCelsius ?? 0}',
+                source: step.temperatureSource,
+              ),
+            ],
+          ),
         if (step.notes?.isNotEmpty == true)
           ListTile(
             title: Text(l10n.recipeStepNotes),
@@ -1609,6 +1759,9 @@ class _NutritionSection extends StatelessWidget {
           _decimal(nutrition!.sodiumMg),
           nutrition!.incomplete == true ? l10n.recipeIncomplete : '',
         ),
+        style: GramTreeColors.of(context).numberStyle(
+          Theme.of(context).textTheme.bodyMedium ?? const TextStyle(),
+        ),
       ),
     );
   }
@@ -1630,63 +1783,124 @@ class RecipeHistoryPage extends ConsumerStatefulWidget {
 }
 
 class _RecipeHistoryPageState extends ConsumerState<RecipeHistoryPage> {
-  late Future<RecipeVersionHistory> _future;
-
-  Future<RecipeVersionHistory> _load() =>
-      ref.read(recipeRepositoryProvider).history(widget.recipeId);
+  List<RecipeVersionSummary> _items = const [];
+  String? _nextCursor;
+  Object? _error;
+  bool _loading = true;
+  bool _loadingMore = false;
 
   @override
   void initState() {
     super.initState();
-    _future = _load();
+    unawaited(_loadFirst());
+  }
+
+  Future<void> _loadFirst() async {
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+    try {
+      final page = await ref
+          .read(recipeRepositoryProvider)
+          .historyPage(widget.recipeId);
+      if (!mounted) return;
+      setState(() {
+        _items = page.items;
+        _nextCursor = page.nextCursor;
+        _loading = false;
+      });
+    } catch (error) {
+      if (mounted) {
+        setState(() {
+          _error = error;
+          _loading = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _loadMore() async {
+    final cursor = _nextCursor;
+    if (_loadingMore || cursor == null) return;
+    setState(() => _loadingMore = true);
+    try {
+      final page = await ref
+          .read(recipeRepositoryProvider)
+          .historyPage(widget.recipeId, cursor: cursor);
+      if (!mounted) return;
+      setState(() {
+        _items = [..._items, ...page.items];
+        _nextCursor = page.nextCursor;
+        _error = null;
+      });
+    } catch (error) {
+      if (mounted) setState(() => _error = error);
+    } finally {
+      if (mounted) setState(() => _loadingMore = false);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
+    Widget body;
+    if (_loading) {
+      body = const Center(child: CircularProgressIndicator());
+    } else if (_error != null && _items.isEmpty) {
+      body = _RecipeError(message: l10n.recipeLoadError, onRetry: _loadFirst);
+    } else if (_items.isEmpty) {
+      body = Center(child: Text(l10n.recipeNoHistory));
+    } else {
+      body = ListView(
+        children: [
+          for (final item in _items)
+            ListTile(
+              key: ValueKey('recipe-version-${item.versionNumber}'),
+              title: Text(
+                l10n.recipeVersionTitle(
+                  item.versionNumber,
+                  item.aiAssisted ? l10n.recipeAiAssisted : '',
+                ),
+              ),
+              subtitle: Text(
+                '${item.changeNote.isEmpty ? l10n.recipeNoChangeNote : item.changeNote}\n${l10n.recipeVersionDate(_formatDate(context, item.createdAt))}',
+                style: GramTreeColors.of(context).numberStyle(
+                  Theme.of(context).textTheme.bodyMedium ?? const TextStyle(),
+                ),
+              ),
+              isThreeLine: true,
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => context.push(
+                '/recipes/${widget.recipeId}/versions/${item.id}',
+              ),
+            ),
+          if (_nextCursor != null)
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: OutlinedButton.icon(
+                key: const ValueKey('recipe-history-load-more'),
+                onPressed: _loadingMore ? null : _loadMore,
+                icon: _loadingMore
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.expand_more),
+                label: Text(
+                  _error == null
+                      ? l10n.recipeLoadMore
+                      : l10n.recipeLoadMoreRetry,
+                ),
+              ),
+            ),
+        ],
+      );
+    }
     return Scaffold(
       appBar: AppBar(title: Text(l10n.recipeHistory)),
-      body: FutureBuilder<RecipeVersionHistory>(
-        future: _future,
-        builder: (context, snapshot) {
-          if (snapshot.hasError) {
-            return _RecipeError(
-              message: l10n.recipeLoadError,
-              onRetry: () => setState(() {
-                _future = _load();
-              }),
-            );
-          }
-          if (!snapshot.hasData) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          final items = snapshot.data!.items;
-          if (items.isEmpty) return Center(child: Text(l10n.recipeNoHistory));
-          return ListView.builder(
-            itemCount: items.length,
-            itemBuilder: (context, index) {
-              final item = items[index];
-              return ListTile(
-                key: ValueKey('recipe-version-${item.versionNumber}'),
-                title: Text(
-                  l10n.recipeVersionTitle(
-                    item.versionNumber,
-                    item.aiAssisted ? l10n.recipeAiAssisted : '',
-                  ),
-                ),
-                subtitle: Text(
-                  '${item.changeNote.isEmpty ? l10n.recipeNoChangeNote : item.changeNote}\n${l10n.recipeVersionDate(_formatDate(item.createdAt))}',
-                ),
-                isThreeLine: true,
-                trailing: const Icon(Icons.chevron_right),
-                onTap: () => context.push(
-                  '/recipes/${widget.recipeId}/versions/${item.id}',
-                ),
-              );
-            },
-          );
-        },
-      ),
+      body: body,
     );
   }
 }
@@ -1783,8 +1997,12 @@ List<String> _split(String value) => value
 
 int _minutes(int? seconds) => ((seconds ?? 0) / 60).ceil();
 String _decimal(num? value) => (value ?? 0).toStringAsFixed(1);
-String _formatDate(String value) =>
-    value.replaceFirst('T', ' ').split('.').first;
+String _formatDate(BuildContext context, String value) {
+  final parsed = DateTime.tryParse(value);
+  if (parsed == null) return value;
+  return MaterialLocalizations.of(context).formatMediumDate(parsed.toLocal());
+}
+
 String _replacementLabel(Object? value) {
   if (value is RecipeReplacement) {
     return '${value.displayName} × ${(value.ratio ?? 1)}';

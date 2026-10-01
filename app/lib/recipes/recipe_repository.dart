@@ -12,12 +12,16 @@ class RecipeRepository {
 
   RecipesApi get _recipes => _api.getRecipesApi();
 
+  Future<RecipeList> listPage({String? cursor}) async {
+    final response = await _recipes.listRecipes(cursor: cursor);
+    return response.data ?? RecipeList(items: const []);
+  }
+
   Future<RecipeList> list({String? cursor}) async {
     final items = <RecipeListItem>[];
     var next = cursor;
     do {
-      final response = await _recipes.listRecipes(cursor: next);
-      final page = response.data ?? RecipeList(items: const []);
+      final page = await listPage(cursor: next);
       items.addAll(page.items);
       next = page.nextCursor;
     } while (next != null);
@@ -69,15 +73,22 @@ class RecipeRepository {
     return response.data!;
   }
 
+  Future<RecipeVersionHistory> historyPage(
+    String recipeId, {
+    String? cursor,
+  }) async {
+    final response = await _recipes.listRecipeVersions(
+      recipeId: recipeId,
+      cursor: cursor,
+    );
+    return response.data ?? RecipeVersionHistory(items: const []);
+  }
+
   Future<RecipeVersionHistory> history(String recipeId) async {
     final items = <RecipeVersionSummary>[];
     String? cursor;
     do {
-      final response = await _recipes.listRecipeVersions(
-        recipeId: recipeId,
-        cursor: cursor,
-      );
-      final page = response.data ?? RecipeVersionHistory(items: const []);
+      final page = await historyPage(recipeId, cursor: cursor);
       items.addAll(page.items);
       cursor = page.nextCursor;
     } while (cursor != null);
@@ -381,24 +392,30 @@ class RecipeForm {
        steps = steps ?? [RecipeStepDraft(id: 'step-1')],
        imageIds = imageIds ?? <String>[];
 
-  factory RecipeForm.fromSnapshot(RecipeSnapshot snapshot, String name) =>
-      RecipeForm(
-        dishName: name,
-        servings: snapshot.servings,
-        difficulty: snapshot.difficulty ?? '',
-        dishType: snapshot.dishType ?? '',
-        tags: [...?snapshot.tags],
-        totalTimeSeconds: snapshot.totalTimeSeconds ?? 0,
-        activeTimeSeconds: snapshot.activeTimeSeconds ?? 0,
-        ingredients: [
-          for (final item in snapshot.ingredients ?? const [])
-            RecipeIngredientDraft.fromModel(item),
-        ],
-        steps: [
-          for (final item in snapshot.steps ?? const [])
-            RecipeStepDraft.fromModel(item),
-        ],
-      );
+  factory RecipeForm.fromSnapshot(
+    RecipeSnapshot snapshot,
+    String name, {
+    List<String>? aliases,
+    List<String>? imageIds,
+  }) => RecipeForm(
+    dishName: name,
+    aliases: [...?aliases],
+    servings: snapshot.servings,
+    difficulty: snapshot.difficulty ?? '',
+    dishType: snapshot.dishType ?? '',
+    tags: [...?snapshot.tags],
+    totalTimeSeconds: snapshot.totalTimeSeconds ?? 0,
+    activeTimeSeconds: snapshot.activeTimeSeconds ?? 0,
+    ingredients: [
+      for (final item in snapshot.ingredients ?? const [])
+        RecipeIngredientDraft.fromModel(item),
+    ],
+    steps: [
+      for (final item in snapshot.steps ?? const [])
+        RecipeStepDraft.fromModel(item),
+    ],
+    imageIds: [...?imageIds],
+  );
 
   factory RecipeForm.fromDraft(Map<String, dynamic> value) {
     final snapshot = value['snapshot'];

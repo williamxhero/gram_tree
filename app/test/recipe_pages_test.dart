@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:go_router/go_router.dart';
 import 'package:gramtree_api/gramtree_api.dart';
 
 import 'helpers.dart';
@@ -332,6 +331,57 @@ Future<void> _scrollUntilVisible(
 }
 
 void main() {
+  testWidgets(
+    'small phone scrolls loaded detail before deleting from history',
+    (tester) async {
+      await tester.binding.setSurfaceSize(const Size(320, 640));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      final server = FakeServer();
+      _installRecipeApi(server);
+      await pumpApp(tester, env: TestEnv.signedIn(server: server));
+      await _openMyRecipes(tester);
+      await tester.tap(find.byKey(const ValueKey('recipe-card-$_recipeId')));
+      await tester.pumpAndSettle();
+      expect(
+        find.byKey(const ValueKey('recipe-detail-content')),
+        findsOneWidget,
+      );
+      // Regression for the emulator failure: this control is not built at the
+      // top of a short viewport. Its absence here is not a failed detail load.
+      expect(find.byKey(const ValueKey('delete-recipe-button')), findsNothing);
+      await tester.tap(find.byKey(const ValueKey('recipe-history-button')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('recipe-version-1')));
+      await tester.pumpAndSettle();
+      expect(
+        find.byKey(const ValueKey('edit-old-recipe-button')),
+        findsOneWidget,
+      );
+      await tester.tap(find.byKey(const ValueKey('edit-old-recipe-button')));
+      await tester.pumpAndSettle();
+      await _scrollToTop(tester);
+      await tester.tap(find.byKey(const ValueKey('save-recipe-button')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('recipe-list-button')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('recipe-card-$_recipeId')));
+      await tester.pumpAndSettle();
+      expect(
+        find.byKey(const ValueKey('recipe-detail-content')),
+        findsOneWidget,
+      );
+      await _scrollUntilVisible(
+        tester,
+        find.byKey(const ValueKey('delete-recipe-button')),
+      );
+      await tester.tap(find.byKey(const ValueKey('delete-recipe-button')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('确认删除'));
+      await tester.pumpAndSettle();
+      expect(find.text('还没有菜谱'), findsOneWidget);
+    },
+  );
+
   testWidgets('minimal nullable detail renders through the generated client', (
     tester,
   ) async {
@@ -577,10 +627,8 @@ void main() {
         findsOneWidget,
       );
 
-      final detailContext = tester.element(
-        find.byKey(const ValueKey('delete-recipe-button')),
-      );
-      GoRouter.of(detailContext).go('/recipes');
+      await _scrollToTop(tester);
+      await tester.tap(find.byKey(const ValueKey('recipe-list-button')));
       await tester.pumpAndSettle();
       expect(
         find.byKey(const ValueKey('recipe-card-$_recipeId')),
