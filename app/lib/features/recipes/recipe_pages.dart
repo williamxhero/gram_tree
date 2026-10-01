@@ -1428,12 +1428,11 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
               l10n: l10n,
             ),
           const SizedBox(height: 16),
-          if (widget.versionId == null)
-            TextButton(
-              key: const ValueKey('delete-recipe-button'),
-              onPressed: _delete,
-              child: Text(l10n.recipeDelete),
-            ),
+          TextButton(
+            key: const ValueKey('delete-recipe-button'),
+            onPressed: _delete,
+            child: Text(l10n.recipeDelete),
+          ),
         ],
       ),
     );
