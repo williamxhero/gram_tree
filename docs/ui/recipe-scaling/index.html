@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>味谱｜换算与个人量具样稿</title>
+  <style>
+    :root {
+      --paper: #f7f4ee;
+      --card: #fffdf9;
+      --ink: #1b1813;
+      --muted: #5e574c;
+      --line: #ded8cd;
+      --sauce: #b0441e;
+      --verified: #4e6b48;
+      --soft-sauce: #f8e8e0;
+      --soft-green: #eaf0e7;
+      --radius: 18px;
+      color-scheme: light;
+      font-family: "Noto Sans SC", system-ui, sans-serif;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--paper); color: var(--ink); }
+    .wrap { max-width: 1160px; margin: auto; padding: 34px 24px 64px; }
+    h1, h2, h3 { font-family: "Noto Serif SC", Georgia, serif; font-weight: 600; margin: 0; }
+    h1 { font-size: clamp(28px, 4vw, 44px); }
+    h2 { font-size: 22px; }
+    h3 { font-size: 17px; }
+    .eyebrow { color: var(--muted); font-size: 13px; letter-spacing: .12em; margin-bottom: 9px; }
+    .subtle { color: var(--muted); font-size: 13px; line-height: 1.65; }
+    .grid { display: grid; grid-template-columns: 7fr 5fr; gap: 18px; margin-top: 26px; }
+    .card { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); padding: 21px; box-shadow: 0 10px 28px rgb(27 24 19 / 5%); }
+    .head, .line, .actions, .modebar { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+    .head { margin-bottom: 15px; }
+    .modebar { flex-wrap: wrap; justify-content: flex-start; margin: 14px 0; }
+    button, select, input { font: inherit; }
+    button { border: 1px solid var(--ink); background: var(--ink); color: var(--card); border-radius: 999px; padding: 9px 15px; cursor: pointer; }
+    button.secondary { background: transparent; color: var(--ink); border-color: var(--line); }
+    button.active { outline: 2px solid var(--ink); outline-offset: 2px; }
+    .pill, .rule, .source { display: inline-flex; align-items: center; border-radius: 999px; padding: 4px 9px; font-size: 12px; border: 1px solid var(--line); color: var(--muted); }
+    .source.changed { color: var(--sauce); border-color: var(--sauce); background: var(--soft-sauce); }
+    .source.verified { color: var(--verified); border-color: var(--verified); background: var(--soft-green); }
+    .amount { font-family: "DM Mono", ui-monospace, monospace; white-space: nowrap; }
+    .changed { color: var(--sauce); }
+    .section { border-top: 1px solid var(--line); padding-top: 17px; margin-top: 18px; }
+    .ingredient { display: grid; grid-template-columns: 1fr auto; gap: 4px 12px; padding: 13px 0; border-top: 1px solid var(--line); }
+    .ingredient:first-of-type { border-top: 0; }
+    .ingredient .meta { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 6px; }
+    .why { border-left: 3px solid var(--sauce); background: var(--soft-sauce); padding: 12px 14px; margin-top: 12px; color: var(--muted); font-size: 13px; line-height: 1.6; }
+    .alert { background: var(--soft-sauce); border: 1px solid color-mix(in srgb, var(--sauce), white 58%); color: var(--sauce); padding: 11px 13px; border-radius: 12px; line-height: 1.55; font-size: 13px; }
+    .form { display: grid; gap: 12px; }
+    label { color: var(--muted); font-size: 13px; display: grid; gap: 6px; }
+    input, select { width: 100%; border: 1px solid var(--line); border-radius: 10px; background: var(--card); color: var(--ink); padding: 9px 10px; }
+    .two { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .measure { display: flex; justify-content: space-between; gap: 12px; padding: 11px 0; border-top: 1px solid var(--line); }
+    .measure:first-of-type { border-top: 0; }
+    .small { font-size: 12px; }
+    .muted { color: var(--muted); }
+    @media (max-width: 850px) { .grid { grid-template-columns: 1fr; } }
+    @media (max-width: 500px) { .two { grid-template-columns: 1fr; } .wrap { padding-inline: 15px; } }
+    @media (prefers-color-scheme: dark) {
+      :root { --paper: #171511; --card: #221f1a; --ink: #f1ece3; --muted: #b9b1a4; --line: #484238; --sauce: #e07a52; --verified: #8dae84; --soft-sauce: #3a241d; --soft-green: #263326; color-scheme: dark; }
+    }
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <div class="eyebrow">SPEC-002.3 · 份数换算 / 模具换算 / 个人量具</div>
+    <h1>把原方留在身后，照着今天的量做</h1>
+    <p class="subtle">结论：当前按 5 份显示。依据：原方 2 份，按比例换算；明细：点开酱红数值查看原值和规则。</p>
+    <div class="grid">
+      <section class="card">
+        <div class="head"><div><h2>宫保鸡丁</h2><div class="subtle">第 2 版 · 作者填写的原方不变</div></div><span class="pill">当前模式：份数</span></div>
+        <div class="modebar">
+          <button class="active" onclick="mode(this,'份数')">按份数</button>
+          <button class="secondary" onclick="mode(this,'模具')">按模具</button>
+          <button class="secondary" onclick="mode(this,'原方')">回到原方</button>
+        </div>
+        <div class="two">
+          <label>目标份数 <input id="servings" type="number" value="5" min="1" max="12" oninput="update()"></label>
+          <label>显示方式 <select id="display" onchange="update()"><option value="base">克 / 毫升</option><option value="standard">常用量具</option><option value="home">自家量具</option></select></label>
+        </div>
+        <div id="alert" class="alert" style="margin-top:12px">份量已超过原方 2 倍：注意分批下锅，时间以成熟判断为准。</div>
+        <div class="section"><div class="head"><h3>食材 · 5 份</h3><span class="source changed">系统换算</span></div>
+          <div class="ingredient"><strong>鸡腿肉</strong><span id="chicken" class="amount changed">750 克</span><div class="meta"><span class="pill">原方 300 克</span><span class="source changed">按比例 × 2.5</span></div></div>
+          <div class="ingredient"><strong>干辣椒</strong><span id="pepper" class="amount changed">8 个</span><div class="meta"><span class="pill">理论值 7.5 个</span><span class="source changed">阶梯取整</span><button class="secondary small" onclick="toggleWhy('pepper-why')">查看依据</button></div><div id="pepper-why" class="why" hidden>原值 3 个 × 2.5 = 7.5 个，按个取整为 8 个；与理论值偏差未超过 20%。</div></div>
+          <div class="ingredient"><strong>腌制时间</strong><span class="amount">15 分钟</span><div class="meta"><span class="pill">原方 15 分钟</span><span class="source verified">不变</span></div></div>
+          <div class="ingredient"><strong>大火炒</strong><span class="amount">2 分钟</span><div class="meta"><span class="pill">温度不变</span><span class="source verified">不变</span></div></div>
+        </div>
+        <div class="section"><div class="head"><h3>步骤提示</h3><span class="source changed">按场景调整</span></div><p class="subtle">大火炒：先分两锅下料。时间不自动翻倍，看到“表面变白”再出锅。</p></div>
+        <div class="actions"><span class="subtle">显示的是 5 份，不会改动原方</span><button onclick="resetServings()">恢复原方 2 份</button></div>
+      </section>
+      <aside class="card">
+        <div class="head"><h2>换算依据</h2><span class="pill">为什么</span></div>
+        <div class="why" style="margin-top:0"><strong>原方 → 当前</strong><br>2 份 → 5 份 · 食材按各自缩放方式处理<br>规则版本：确定性换算 v1</div>
+        <div class="section"><div class="head"><h3>模具模式预览</h3><span class="pill">互斥</span></div><div class="two"><label>原模具 <select><option>6 寸圆模</option></select></label><label>目标模具 <select><option>8 寸圆模</option><option>20 厘米方模</option></select></label></div><p class="subtle">底面积比例约 1.78。温度不变；时间只给建议，以成熟判断为准。</p><button class="secondary" onclick="toggleWhy('mold-why')">查看模具规则</button><div id="mold-why" class="why" hidden>圆模面积按 πr²；方模按边长相乘；长方模按两边相乘。阶梯食材仍取整，份数调节器在此模式隐藏。</div></div>
+        <div class="section"><div class="head"><h3>自家量具</h3><button class="secondary">管理</button></div><div class="measure"><div><strong>白瓷勺</strong><div class="muted small">勺 · 12 毫升</div></div><span class="amount">鸡腿肉约 4 又 1/2 勺<br><span class="muted small">750 克（需密度数据）</span></span></div><div class="measure"><div><strong>蓝碗</strong><div class="muted small">碗 · 350 毫升</div></div><span class="amount">约 1 碗<br><span class="muted small">只影响显示</span></span></div><button class="secondary" onclick="toggleWhy('measure-why')">为什么要称水？</button><div id="measure-why" class="why" hidden>装满量具后称水，水的克数近似毫升数；系统只保存容量，不修改菜谱原值。</div></div>
+      </aside>
+    </div>
+  </main>
+  <script>
+    function toggleWhy(id) { const el = document.getElementById(id); el.hidden = !el.hidden; }
+    function mode(button, value) { document.querySelectorAll('.modebar button').forEach((b) => b.classList.remove('active')); button.classList.add('active'); document.querySelector('.pill').textContent = '当前模式：' + value; }
+    function update() { const value = Number(document.getElementById('servings').value || 2); document.getElementById('chicken').textContent = (300 * value / 2).toFixed(0) + ' 克'; document.getElementById('pepper').textContent = Math.max(1, Math.round(3 * value / 2)) + ' 个'; document.getElementById('alert').hidden = value < 4; }
+    function resetServings() { document.getElementById('servings').value = 2; update(); }
+    update();
+  </script>
+</body>
+</html>
