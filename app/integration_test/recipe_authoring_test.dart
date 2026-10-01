@@ -87,9 +87,10 @@ void main() {
       await reveal(tester, step);
       await tester.enterText(step, '完成默认步骤');
       await settle(tester);
-      await tester.ensureVisible(
-        find.byKey(const ValueKey('save-recipe-button')),
-      );
+      for (var i = 0; i < 12; i++) {
+        await tester.drag(find.byType(ListView).last, const Offset(0, 500));
+        await tester.pump(const Duration(milliseconds: 100));
+      }
       await tester.tap(find.byKey(const ValueKey('save-recipe-button')));
       await waitFor(tester, find.text('网页版验收菜谱'));
       expect(find.text('网页版验收菜谱'), findsWidgets);

@@ -4,6 +4,7 @@ import base64
 import io
 
 from PIL import Image
+from PIL.TiffImagePlugin import IFDRational
 
 from tests.accounts_support import Api, bearer
 from tests.test_conventions import assert_error_shape
@@ -88,6 +89,25 @@ def _create(api: Api, email: str = "author@example.com") -> tuple[dict, dict[str
     response = api.client.post("/v1/recipes", json=recipe_input(), headers=headers)
     assert response.status_code == 201, response.text
     return response.json(), headers
+
+
+def test_recipe_save_event_is_visible_once_to_its_owner(api: Api) -> None:
+    _saved, headers = _create(api, "events@example.com")
+    response = api.client.get(
+        "/v1/dev/events/count",
+        params={"event_type": "recipe.version_saved"},
+        headers=headers,
+    )
+    assert response.status_code == 200
+    assert response.json() == {"count": 1}
+    other_headers = bearer(api.login("events-other@example.com"))
+    other = api.client.get(
+        "/v1/dev/events/count",
+        params={"event_type": "recipe.version_saved"},
+        headers=other_headers,
+    )
+    assert other.status_code == 200
+    assert other.json() == {"count": 0}
 
 
 def test_author_can_save_read_list_and_delete_private_recipe(api: Api) -> None:
@@ -231,7 +251,14 @@ def test_image_upload_strips_metadata_and_uses_signed_private_url(api: Api, tmp_
     saved, headers = _create(api, "photo@example.com")
     image = Image.new("RGB", (3000, 1000), (180, 80, 40))
     buffer = io.BytesIO()
-    image.save(buffer, format="JPEG", quality=95)
+    exif = Image.Exif()
+    exif[34853] = {
+        1: "N",
+        2: (IFDRational(40, 1), IFDRational(0, 1), IFDRational(0, 1)),
+        3: "W",
+        4: (IFDRational(74, 1), IFDRational(0, 1), IFDRational(0, 1)),
+    }
+    image.save(buffer, format="JPEG", quality=95, exif=exif)
     encoded = base64.b64encode(buffer.getvalue()).decode()
     response = api.client.post(
         f"/v1/recipes/{saved['id']}/images",
@@ -248,13 +275,22 @@ def test_image_upload_strips_metadata_and_uses_signed_private_url(api: Api, tmp_
     file_response = api.client.get(image_out["url"])
     assert file_response.status_code == 200
     assert file_response.headers["content-type"] == "image/jpeg"
-    assert b"GPS" not in file_response.content
+    stored = Image.open(io.BytesIO(file_response.content))
+    assert 34853 not in stored.getexif()
 
 
-def _image_payload() -> dict[str, str]:
+def _image_payload(*, gps: bool = False) -> dict[str, str]:
     image = Image.new("RGB", (640, 480), (32, 96, 144))
     buffer = io.BytesIO()
-    image.save(buffer, format="JPEG", quality=90)
+    exif = Image.Exif()
+    if gps:
+        exif[34853] = {
+            1: "N",
+            2: (40.0, 0.0, 0.0),
+            3: "W",
+            4: (74.0, 0.0, 0.0),
+        }
+    image.save(buffer, format="JPEG", quality=90, exif=exif)
     return {
         "content_base64": base64.b64encode(buffer.getvalue()).decode(),
         "content_type": "image/jpeg",
