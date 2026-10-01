@@ -2014,6 +2014,7 @@ String _formatDate(BuildContext context, String value) {
 }
 
 String _replacementLabel(Object? value) {
+  if (value is String) return value;
   if (value is RecipeReplacement) {
     return '${value.displayName} × ${(value.ratio ?? 1)}';
   }

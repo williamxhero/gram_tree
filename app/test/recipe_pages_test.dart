@@ -2,8 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gramtree_api/gramtree_api.dart';
 
-import 'package:gram_tree/recipes/recipe_repository.dart';
-
 import 'helpers.dart';
 
 const _recipeId = '11111111-1111-4111-8111-111111111111';
@@ -712,14 +710,29 @@ void main() {
     expect(step.containsKey('cookware'), isFalse);
   });
 
-  test('free-text replacement serializes a nullable ingredient ID', () {
-    final replacement = RecipeReplacementDraft(
-      ingredientId: null,
-      displayName: '土豆',
-    ).toModel();
-    final json = replacement.toJson();
-    expect(json['display_name'], '土豆');
-    expect(json.containsKey('ingredient_id'), isFalse);
+  testWidgets('recipe detail displays a free-text replacement', (tester) async {
+    final server = FakeServer();
+    final state = _installRecipeApi(server);
+    final detail = Map<String, dynamic>.from(state.current);
+    final version = Map<String, dynamic>.from(detail['version'] as Map);
+    final snapshot = Map<String, dynamic>.from(version['snapshot'] as Map);
+    final ingredients = [
+      for (final raw in (snapshot['ingredients'] as List))
+        Map<String, dynamic>.from(raw as Map),
+    ];
+    ingredients.first['replacement'] = '土豆';
+    snapshot['ingredients'] = ingredients;
+    version['snapshot'] = snapshot;
+    detail['version'] = version;
+    state.current = detail;
+    state.versions[0] = detail;
+
+    await pumpApp(tester, env: TestEnv.signedIn(server: server));
+    await _openMyRecipes(tester);
+    await tester.tap(find.byKey(const ValueKey('recipe-card-$_recipeId')));
+    await tester.pumpAndSettle();
+    await _scrollToBottom(tester);
+    expect(find.textContaining('替代品：土豆'), findsOneWidget);
   });
 
   testWidgets('editor can add and reorder multiple ingredients and steps', (
