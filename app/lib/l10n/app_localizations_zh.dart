@@ -873,4 +873,83 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get recipeAiAssisted => 'AI 协助';
+
+  @override
+  String get personalMeasuresTitle => '自家量具';
+
+  @override
+  String get personalMeasuresIntro =>
+      '把空量具放在厨房秤上归零，装满水后的克数就是容量（毫升）。只影响显示，不会修改菜谱。';
+
+  @override
+  String get personalMeasuresOffline => '离线：正在使用已缓存的量具；登记、修改和删除需要联网。';
+
+  @override
+  String get personalMeasuresAdd => '登记量具';
+
+  @override
+  String get personalMeasuresEmpty => '还没有登记量具';
+
+  @override
+  String get personalMeasuresDeleteTooltip => '删除量具';
+
+  @override
+  String get personalMeasuresDeleteTitle => '删除量具？';
+
+  @override
+  String personalMeasuresDeleteBody(String name) => '删除“$name”不会改动菜谱。';
+
+  @override
+  String get personalMeasuresEdit => '修改量具';
+
+  @override
+  String get personalMeasuresRegister => '登记量具';
+
+  @override
+  String get personalMeasuresName => '量具名称';
+
+  @override
+  String get personalMeasuresKind => '种类';
+
+  @override
+  String get personalMeasuresCapacity => '满水容量（毫升）';
+
+  @override
+  String personalMeasuresCapacityValue(String value) => '$value 毫升';
+
+  @override
+  String get personalMeasuresValidation => '名称需为 1–64 个字，容量需大于 0 且不超过 10000 毫升';
+
+  @override
+  String get personalMeasuresSpoon => '勺';
+
+  @override
+  String get personalMeasuresBowl => '碗';
+
+  @override
+  String get personalMeasuresCup => '杯';
+
+  @override
+  String get recipeMeasureModeTitle => '用量显示方式';
+
+  @override
+  String get recipeMeasureModeBase => '克/毫升';
+
+  @override
+  String get recipeMeasureModeStandard => '汤匙/茶匙';
+
+  @override
+  String get recipeMeasureModeHome => '自家量具';
+
+  @override
+  String get recipeMeasureChoose => '选择量具';
+
+  @override
+  String get recipeMeasureModeNoHome => '还没有登记自家量具，请先到“我的”登记。';
+
+  @override
+  String get recipeMeasureDisplayOnly => '个人量具只改变显示，菜谱基础值未改变';
+
+  @override
+  String get recipeMeasureNoDensity => '没有密度数据，保留克数';
 }

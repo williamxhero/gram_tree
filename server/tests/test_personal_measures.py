@@ -14,7 +14,8 @@ CASES = json.loads(FIXTURE_PATH.read_text(encoding="utf-8"))
 
 def test_personal_measures_are_account_scoped_and_syncable(api: Api) -> None:
     owner = bearer(api.login("measures-owner@example.com", device="device-a"))
-    other = bearer(api.login("measures-other@example.com", device="device-b"))
+    owner_other_device = bearer(api.login("measures-owner@example.com", device="device-b"))
+    other = bearer(api.login("measures-other@example.com", device="device-c"))
 
     created = api.client.post(
         "/v1/me/measures",
@@ -27,13 +28,16 @@ def test_personal_measures_are_account_scoped_and_syncable(api: Api) -> None:
     assert measure["kind"] == "spoon"
     assert measure["capacity_ml"] == 12.0
 
-    listed_on_other_device = api.client.get("/v1/me/measures", headers=owner)
+    listed_on_other_device = api.client.get("/v1/me/measures", headers=owner_other_device)
     assert listed_on_other_device.status_code == 200
-    assert listed_on_other_device.json() == [measure]
+    assert listed_on_other_device.json()["items"] == [measure]
+    first_page = api.client.get("/v1/me/measures", params={"limit": 1}, headers=owner_other_device)
+    assert first_page.status_code == 200
+    assert first_page.json()["items"] == [measure]
 
     listed_for_other_account = api.client.get("/v1/me/measures", headers=other)
     assert listed_for_other_account.status_code == 200
-    assert listed_for_other_account.json() == []
+    assert listed_for_other_account.json()["items"] == []
 
     updated = api.client.patch(
         f"/v1/me/measures/{measure['id']}",
@@ -52,7 +56,7 @@ def test_personal_measures_are_account_scoped_and_syncable(api: Api) -> None:
 
     deleted = api.client.delete(f"/v1/me/measures/{measure['id']}", headers=owner)
     assert deleted.status_code == 204, deleted.text
-    assert api.client.get("/v1/me/measures", headers=owner).json() == []
+    assert api.client.get("/v1/me/measures", headers=owner).json()["items"] == []
 
 
 def test_personal_measure_validation_and_duplicate_names(api: Api) -> None:
@@ -81,10 +85,25 @@ def test_personal_measure_validation_and_duplicate_names(api: Api) -> None:
 
 
 @pytest.mark.parametrize("case", CASES, ids=[case["name"] for case in CASES])
-def test_measure_display_matches_shared_fixture(case: dict) -> None:
-    # The fixture is consumed by the app and server tests. The HTTP CRUD seam above
-    # keeps account data external; this check pins the deterministic display contract.
-    from gramtree.recipes.measure_display import display_amount
-
-    actual = display_amount(**case["input"])
-    assert actual == case["expected"], case["name"]
+def test_measure_display_matches_shared_fixture(api: Api, case: dict) -> None:
+    headers = bearer(
+        api.login(f"display-{case['input']['mode']}-{case['input']['base_quantity']}@example.com")
+    )
+    source = case["input"]
+    payload = {key: value for key, value in source.items() if key != "measure"}
+    measure = source.get("measure")
+    if measure is not None:
+        created = api.client.post(
+            "/v1/me/measures",
+            json=measure,
+            headers=headers,
+        )
+        assert created.status_code == 201, created.text
+        payload["measure_id"] = created.json()["id"]
+    response = api.client.post(
+        "/v1/me/measures/display",
+        json=payload,
+        headers=headers,
+    )
+    assert response.status_code == 200, response.text
+    assert response.json() == case["expected"], case["name"]

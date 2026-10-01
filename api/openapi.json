@@ -1637,6 +1637,109 @@
         "title": "IngredientDetail",
         "type": "object"
       },
+      "MeasureDisplayOut": {
+        "properties": {
+          "display_quantity": {
+            "title": "Display Quantity",
+            "type": "number"
+          },
+          "display_unit": {
+            "title": "Display Unit",
+            "type": "string"
+          },
+          "grams": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Grams"
+          },
+          "rule": {
+            "enum": [
+              "base",
+              "standard_measure",
+              "personal_measure",
+              "no_density"
+            ],
+            "title": "Rule",
+            "type": "string"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "text",
+          "display_quantity",
+          "display_unit",
+          "rule"
+        ],
+        "title": "MeasureDisplayOut",
+        "type": "object"
+      },
+      "MeasureDisplayRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "base_quantity": {
+            "minimum": 0.0,
+            "title": "Base Quantity",
+            "type": "number"
+          },
+          "base_unit": {
+            "enum": [
+              "g",
+              "ml"
+            ],
+            "title": "Base Unit",
+            "type": "string"
+          },
+          "density": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Density"
+          },
+          "measure_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Measure Id"
+          },
+          "mode": {
+            "enum": [
+              "base",
+              "standard",
+              "home"
+            ],
+            "title": "Mode",
+            "type": "string"
+          }
+        },
+        "required": [
+          "base_quantity",
+          "base_unit",
+          "mode"
+        ],
+        "title": "MeasureDisplayRequest",
+        "type": "object"
+      },
       "MergeRelation": {
         "description": "一次合并：旧 ID 指向新 ID，并保留旧记录的身份信息（#101）。",
         "properties": {
@@ -2052,6 +2155,33 @@
           "cache"
         ],
         "title": "PageDescription",
+        "type": "object"
+      },
+      "Page_PersonalMeasureOut_": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/PersonalMeasureOut"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Cursor"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "title": "Page[PersonalMeasureOut]",
         "type": "object"
       },
       "Page_UnrecordedIngredientItem_": {
@@ -5884,16 +6014,45 @@
     "/v1/me/measures": {
       "get": {
         "operationId": "list_personal_measures",
+        "parameters": [
+          {
+            "description": "上一页返回的 next_cursor",
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "上一页返回的 next_cursor",
+              "title": "Cursor"
+            }
+          },
+          {
+            "description": "每页条数，上限见配置项 api.page_size_max",
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "description": "每页条数，上限见配置项 api.page_size_max",
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "content": {
               "application/json": {
                 "schema": {
-                  "items": {
-                    "$ref": "#/components/schemas/PersonalMeasureOut"
-                  },
-                  "title": "Response List Personal Measures",
-                  "type": "array"
+                  "$ref": "#/components/schemas/Page_PersonalMeasureOut_"
                 }
               }
             },
@@ -6040,6 +6199,92 @@
           }
         ],
         "summary": "Create Personal Measure",
+        "tags": [
+          "personal-measures"
+        ]
+      }
+    },
+    "/v1/me/measures/display": {
+      "post": {
+        "operationId": "display_personal_measure",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MeasureDisplayRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MeasureDisplayOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "参数错误"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "服务端错误"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Display Personal Measure",
         "tags": [
           "personal-measures"
         ]

@@ -1340,6 +1340,7 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
   MeasureDisplayMode _displayMode = MeasureDisplayMode.base;
   List<PersonalMeasureOut> _measures = const [];
   Map<String, double> _densities = const {};
+  String? _selectedMeasureId;
 
   @override
   void initState() {
@@ -1391,6 +1392,9 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
     setState(() {
       _densities = densities;
       _measures = measures;
+      _selectedMeasureId = measures.any((item) => item.id == _selectedMeasureId)
+          ? _selectedMeasureId
+          : measures.firstOrNull?.id;
     });
   }
 
@@ -1455,6 +1459,7 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
     final convertedStepsById = {
       for (final item in conversion.steps) item.id: item,
     };
+    final selectedMeasure = _measures.where((item) => item.id == _selectedMeasureId).firstOrNull;
     final displayedById = {
       for (final ingredient in snapshot.ingredients ?? const [])
         ingredient.id: _displayedAmount(
@@ -1462,7 +1467,7 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
           convertedById[ingredient.id],
           displayMode: _displayMode,
           densities: _densities,
-          measures: _measures,
+          measure: selectedMeasure,
         ),
     };
     return Scaffold(
@@ -1560,6 +1565,9 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
           _DisplayModeControl(
             mode: _displayMode,
             hasHomeMeasures: _measures.isNotEmpty,
+            measures: _measures,
+            selectedMeasureId: _selectedMeasureId,
+            onMeasureChanged: (id) => setState(() => _selectedMeasureId = id),
             onChanged: (mode) => setState(() => _displayMode = mode),
           ),
           const SizedBox(height: 16),
@@ -1759,15 +1767,23 @@ class _DisplayModeControl extends StatelessWidget {
   const _DisplayModeControl({
     required this.mode,
     required this.hasHomeMeasures,
+    required this.measures,
+    required this.selectedMeasureId,
+    required this.onMeasureChanged,
     required this.onChanged,
   });
 
   final MeasureDisplayMode mode;
   final bool hasHomeMeasures;
+  final List<PersonalMeasureOut> measures;
+  final String? selectedMeasureId;
+  final ValueChanged<String?> onMeasureChanged;
   final ValueChanged<MeasureDisplayMode> onChanged;
 
   @override
-  Widget build(BuildContext context) => Card(
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    return Card(
     key: const ValueKey('recipe-measure-mode'),
     margin: EdgeInsets.zero,
     child: Padding(
@@ -1775,14 +1791,14 @@ class _DisplayModeControl extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const Text('用量显示方式'),
+          Text(l10n.recipeMeasureModeTitle),
           const SizedBox(height: 8),
           SegmentedButton<MeasureDisplayMode>(
             showSelectedIcon: false,
-            segments: const [
-              ButtonSegment(value: MeasureDisplayMode.base, label: Text('克/毫升')),
-              ButtonSegment(value: MeasureDisplayMode.standard, label: Text('汤匙/茶匙')),
-              ButtonSegment(value: MeasureDisplayMode.home, label: Text('自家量具')),
+            segments: [
+              ButtonSegment(value: MeasureDisplayMode.base, label: Text(l10n.recipeMeasureModeBase)),
+              ButtonSegment(value: MeasureDisplayMode.standard, label: Text(l10n.recipeMeasureModeStandard)),
+              ButtonSegment(value: MeasureDisplayMode.home, label: Text(l10n.recipeMeasureModeHome)),
             ],
             selected: {mode},
             onSelectionChanged: (selected) {
@@ -1791,10 +1807,24 @@ class _DisplayModeControl extends StatelessWidget {
               onChanged(value);
             },
           ),
+          if (mode == MeasureDisplayMode.home && hasHomeMeasures)
+            DropdownButtonFormField<String>(
+              key: const ValueKey('recipe-measure-picker'),
+              initialValue: selectedMeasureId,
+              decoration: InputDecoration(labelText: l10n.recipeMeasureChoose),
+              items: [
+                for (final measure in measures)
+                  DropdownMenuItem(
+                    value: measure.id,
+                    child: Text('${measure.name} · ${l10n.personalMeasuresCapacityValue(measure.capacityMl.toString())}'),
+                  ),
+              ],
+              onChanged: onMeasureChanged,
+            ),
           if (mode == MeasureDisplayMode.home && !hasHomeMeasures)
-            const Padding(
-              padding: EdgeInsets.only(top: 8),
-              child: Text('还没有登记自家量具，请先到“我的”登记。'),
+            Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: Text(l10n.recipeMeasureModeNoHome),
             ),
         ],
       ),
@@ -1827,20 +1857,20 @@ class _IngredientDetailRow extends StatelessWidget {
         displayed!.rule != 'no_density';
     final originalQuantity = '${_quantityText(ingredient.quantity)} ${ingredient.unit}';
     final source = ingredient.quantitySource;
-    final showSource = adjusted || displayChanged ||
+    final showSource = displayed != null || adjusted ||
         (source != null && source.source_.value != sourceTypeAuthorFilled);
     final sourceType = adjusted || displayChanged
         ? sourceTypeScenarioAdjusted
         : source?.source_.value ?? sourceTypeAuthorFilled;
     final sourceBasis = displayChanged
-        ? '个人量具只改变显示，菜谱基础值未改变'
+        ? l10n.recipeMeasureDisplayOnly
+        : displayed?.rule == 'no_density'
+        ? l10n.recipeMeasureNoDensity
         : adjusted
         ? _servingRuleLabel(converted!.rule)
         : source?.basis?.isNotEmpty == true
         ? source!.basis!
-        : sourceType == sourceTypeAuthorFilled
-        ? l10n.recipeSourceAuthorFilled
-        : '';
+        : l10n.recipeSourceAuthorFilled;
     return ListTile(
       contentPadding: EdgeInsets.zero,
       title: Row(
@@ -1861,7 +1891,7 @@ class _IngredientDetailRow extends StatelessWidget {
                   ? 'recipe-ingredient-${ingredient.id}-serving'
                   : 'recipe-ingredient-${ingredient.id}-quantity',
               value: quantity,
-              originalValue: displayChanged || adjusted
+              originalValue: displayed != null || adjusted
                   ? originalQuantity
                   : source?.original,
               basisText: sourceBasis,
@@ -2317,7 +2347,7 @@ DisplayedAmount? _displayedAmount(
   ConvertedServingIngredient? converted, {
   required MeasureDisplayMode displayMode,
   required Map<String, double> densities,
-  required List<PersonalMeasureOut> measures,
+  required PersonalMeasureOut? measure,
 }) {
   final baseUnit = ingredient.baseUnit?.value ?? _displayBaseUnit(ingredient.unit);
   if (baseUnit == null || baseUnit == 'count') return null;
@@ -2331,7 +2361,7 @@ DisplayedAmount? _displayedAmount(
     baseUnit: baseUnit,
     density: density,
     mode: displayMode,
-    measure: measures.firstOrNull,
+    measure: measure,
   ));
 }
 
