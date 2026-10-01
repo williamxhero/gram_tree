@@ -1,7 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:go_router/go_router.dart';
 import 'package:gram_tree/config/app_config.dart';
 import 'package:gram_tree/main.dart' as app;
 import 'package:integration_test/integration_test.dart';
@@ -108,21 +107,34 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('recipe-history-button')));
     await waitFor(tester, find.byKey(const ValueKey('recipe-version-1')));
     expect(find.textContaining('第 1 版'), findsOneWidget);
-
-    // The detail route is intentionally outside the bottom-nav shell. Use the
-    // router's public route boundary to return to the author's recipe list.
-    final historyContext = tester.element(find.textContaining('第 1 版'));
-    final path = GoRouter.of(historyContext)
-        .routeInformationProvider
-        .value
-        .uri
-        .path;
-    final recipeId = path.split('/')[2];
-    GoRouter.of(historyContext).go('/recipes');
+    await tester.tap(find.byKey(const ValueKey('recipe-version-1')));
+    await waitFor(tester, find.byKey(const ValueKey('edit-old-recipe-button')));
+    await tester.tap(find.byKey(const ValueKey('edit-old-recipe-button')));
+    await waitFor(tester, find.byKey(const ValueKey('recipe-dish-name')));
+    expect(find.text('网页版验收菜谱'), findsWidgets);
+    await reveal(tester, find.bySemanticsLabel('这次改了什么'));
+    await tester.enterText(find.bySemanticsLabel('这次改了什么'), '从第一版继续修改');
+    await reveal(tester, find.byKey(const ValueKey('save-recipe-button')));
+    await tester.tap(find.byKey(const ValueKey('save-recipe-button')));
+    await waitFor(tester, find.byKey(const ValueKey('recipe-history-button')));
+    await tester.tap(find.byKey(const ValueKey('recipe-history-button')));
+    await waitFor(tester, find.byKey(const ValueKey('recipe-version-2')));
+    expect(find.byKey(const ValueKey('recipe-version-1')), findsOneWidget);
+    expect(find.textContaining('从第一版继续修改'), findsOneWidget);
+    await tester.tap(find.byType(BackButton));
+    await waitFor(tester, find.byKey(const ValueKey('recipe-list-button')));
+    await tester.tap(find.byKey(const ValueKey('recipe-list-button')));
     await waitFor(tester, find.text('网页版验收菜谱'));
-    final listContext = tester.element(find.text('网页版验收菜谱').last);
-    GoRouter.of(listContext).go('/recipes/$recipeId');
-    await waitFor(tester, find.byKey(const ValueKey('delete-recipe-button')));
+    final recipeCard = find.ancestor(
+      of: find.text('网页版验收菜谱'),
+      matching: find.byType(ListTile),
+    );
+    expect(recipeCard, findsOneWidget);
+    await tester.tap(recipeCard);
+    // The public, always-built content boundary signals that the HTTP detail
+    // has loaded. On a small phone the delete control is a lazy sliver child;
+    // scrolling is a user operation, not something waitFor can substitute for.
+    await waitFor(tester, find.byKey(const ValueKey('recipe-detail-content')));
     await reveal(tester, find.byKey(const ValueKey('delete-recipe-button')));
     await tester.tap(find.byKey(const ValueKey('delete-recipe-button')));
     await settle(tester);

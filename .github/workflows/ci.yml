@@ -226,7 +226,7 @@ jobs:
           script: flutter test integration_test --dart-define=APP_ENV=dev --dart-define=API_BASE_URL=http://10.0.2.2:8000 -d emulator-5554
       - name: 服务端日志
         if: failure()
-        run: cat /tmp/gramtree_e2e_server.log || true
+        run: cat /tmp/gramtree_e2e_server_8000.log || true
 
   ios-e2e:
     name: iOS 模拟器端到端测试（手动触发）
