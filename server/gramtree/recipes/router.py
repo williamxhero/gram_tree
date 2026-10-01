@@ -20,6 +20,7 @@ from gramtree.recipes.schemas import (
     RecipeImageStagedOut,
     RecipeImageUpload,
     RecipeList,
+    RecipeServingConversionOut,
     RecipeVersionCreate,
     RecipeVersionHistory,
 )
@@ -96,6 +97,20 @@ def read_staged_recipe_image(
     )
 
 
+@router.get(
+    "/{recipe_id}/servings",
+    response_model=RecipeServingConversionOut,
+    responses=_errors(401, 404, 422),
+)
+def convert_current_recipe_servings(
+    recipe_id: IdV4,
+    auth: CurrentAuth,
+    session: SessionDep,
+    target_servings: int = Query(),
+) -> RecipeServingConversionOut:
+    return service.convert_recipe_servings(session, auth.user, recipe_id, target_servings)
+
+
 @router.get("/{recipe_id}", response_model=RecipeDetail, responses=_errors(401, 404))
 def get_recipe(
     recipe_id: IdV4, auth: CurrentAuth, session: SessionDep, settings: SettingsDep
@@ -133,6 +148,23 @@ def list_recipe_versions(
         cursor=page.cursor,
         limit=page.limit,
         maximum=int(config.get(session, "api.page_size_max")),
+    )
+
+
+@router.get(
+    "/{recipe_id}/versions/{version_id}/servings",
+    response_model=RecipeServingConversionOut,
+    responses=_errors(401, 404, 422),
+)
+def convert_recipe_version_servings(
+    recipe_id: IdV4,
+    version_id: IdV4,
+    auth: CurrentAuth,
+    session: SessionDep,
+    target_servings: int = Query(),
+) -> RecipeServingConversionOut:
+    return service.convert_recipe_servings(
+        session, auth.user, recipe_id, target_servings, version_id
     )
 
 

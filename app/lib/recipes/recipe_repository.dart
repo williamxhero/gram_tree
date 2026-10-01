@@ -41,6 +41,27 @@ class RecipeRepository {
     return response.data!;
   }
 
+  /// Fetch a server conversion when the caller needs a shareable/public result.
+  /// Recipe details use the same pure kernel locally so this is not required for
+  /// the offline serving control.
+  Future<RecipeServingConversionOut> convertServings(
+    String recipeId,
+    int targetServings, {
+    String? versionId,
+  }) async {
+    final response = versionId == null
+        ? await _recipes.convertCurrentRecipeServings(
+            recipeId: recipeId,
+            targetServings: targetServings,
+          )
+        : await _recipes.convertRecipeVersionServings(
+            recipeId: recipeId,
+            versionId: versionId,
+            targetServings: targetServings,
+          );
+    return response.data!;
+  }
+
   Future<RecipeDetail> create(RecipeForm form) async {
     final response = await _recipes.createRecipe(
       recipeCreate: RecipeCreate(

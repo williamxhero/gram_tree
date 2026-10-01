@@ -295,3 +295,54 @@ class RecipeImageUpload(BaseModel):
     content_base64: str = Field(min_length=1, max_length=20_000_000)
     content_type: str = Field(pattern=r"^image/(jpeg|png|webp)$")
     filename: str | None = None
+
+
+class ServingConversionIngredient(BaseModel):
+    """One immutable recipe ingredient as displayed at the requested servings."""
+
+    id: str
+    display_name: str
+    original_quantity: float
+    display_quantity: float
+    unit: str
+    rule: Literal["proportional", "unchanged", "round"]
+    deviation_ratio: float | None = None
+    deviation_warning: bool = False
+
+
+class ServingConversionStep(BaseModel):
+    """Step values that remain unchanged, plus a deterministic batch warning."""
+
+    id: str
+    instruction: str
+    duration_seconds: int
+    temperature_celsius: float | None = None
+    heat: str | None = None
+    batch_warning: bool = False
+    batch_warning_text: str | None = None
+
+
+class ServingConversionWarning(BaseModel):
+    code: Literal["round_deviation"]
+    ingredient_id: str | None = None
+    message: str
+
+
+class ServingConversion(BaseModel):
+    """Deterministic serving conversion contract shared with the App."""
+
+    original_servings: int
+    target_servings: int
+    min_servings: int
+    max_servings: int
+    ingredients: list[ServingConversionIngredient]
+    steps: list[ServingConversionStep]
+    warnings: list[ServingConversionWarning]
+    total_time_seconds: int
+    active_time_seconds: int
+
+
+class RecipeServingConversionOut(BaseModel):
+    recipe_id: IdV4
+    version_id: IdV4
+    conversion: ServingConversion

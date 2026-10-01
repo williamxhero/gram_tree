@@ -92,6 +92,7 @@ lib/src/model/recipe_ingredient.dart
 lib/src/model/recipe_list.dart
 lib/src/model/recipe_list_item.dart
 lib/src/model/recipe_replacement.dart
+lib/src/model/recipe_serving_conversion_out.dart
 lib/src/model/recipe_snapshot.dart
 lib/src/model/recipe_step.dart
 lib/src/model/recipe_version_create.dart
@@ -104,6 +105,10 @@ lib/src/model/release_note.dart
 lib/src/model/search_ingredient_out.dart
 lib/src/model/search_query.dart
 lib/src/model/search_result.dart
+lib/src/model/serving_conversion.dart
+lib/src/model/serving_conversion_ingredient.dart
+lib/src/model/serving_conversion_step.dart
+lib/src/model/serving_conversion_warning.dart
 lib/src/model/skip_adjustment_request.dart
 lib/src/model/skip_adjustment_result.dart
 lib/src/model/source_basis.dart

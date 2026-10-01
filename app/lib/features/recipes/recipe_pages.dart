@@ -12,6 +12,7 @@ import '../../ingredients/ingredient_provider.dart';
 import '../../l10n/app_localizations.dart';
 import '../../recipes/recipe_draft.dart';
 import '../../recipes/recipe_repository.dart';
+import '../../recipes/serving_conversion.dart';
 import 'recipe_photo_panel.dart';
 import '../../storage/local_store.dart';
 import '../../ui_protocol/source_mark.dart';
@@ -1333,6 +1334,7 @@ class RecipeDetailPage extends ConsumerStatefulWidget {
 class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
   RecipeDetail? _detail;
   String? _error;
+  int? _targetServings;
 
   @override
   void initState() {
@@ -1346,6 +1348,7 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
       _detail = widget.versionId == null
           ? await repo.get(widget.recipeId)
           : await repo.getVersion(widget.recipeId, widget.versionId!);
+      _targetServings = _detail!.version.snapshot.servings;
       if (mounted) setState(() {});
     } catch (_) {
       if (mounted) {
@@ -1406,6 +1409,14 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
     final Map<String, String> stepLabels = {
       for (final (index, step) in (snapshot.steps ?? const []).indexed)
         step.id: '${index + 1}. ${step.instruction}',
+    };
+    final targetServings = _targetServings ?? snapshot.servings;
+    final conversion = _recipeServingConversion(snapshot, derived, targetServings);
+    final convertedById = {
+      for (final item in conversion.ingredients) item.id: item,
+    };
+    final convertedStepsById = {
+      for (final item in conversion.steps) item.id: item,
     };
     return Scaffold(
       appBar: AppBar(
@@ -1492,6 +1503,12 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
                 Chip(label: Text(tag)),
             ],
           ),
+          const SizedBox(height: 12),
+          _ServingControl(
+            conversion: conversion,
+            onChanged: (value) => setState(() => _targetServings = value),
+            onReset: () => setState(() => _targetServings = snapshot.servings),
+          ),
           const SizedBox(height: 16),
           if ((derived.allergens ?? const []).isNotEmpty ||
               derived.allergensIncomplete == true)
@@ -1516,7 +1533,10 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
             const SizedBox(height: 8),
             Text(entry.key, style: Theme.of(context).textTheme.titleMedium),
             for (final ingredient in entry.value)
-              _IngredientDetailRow(ingredient: ingredient),
+              _IngredientDetailRow(
+                ingredient: ingredient,
+                converted: convertedById[ingredient.id],
+              ),
           ],
           const SizedBox(height: 20),
           Text(
@@ -1528,6 +1548,7 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
             _StepDetailTile(
               index: index,
               step: step,
+              converted: convertedStepsById[step.id],
               ingredientNames: ingredientNames,
               stepLabels: stepLabels,
               l10n: l10n,
@@ -1539,6 +1560,105 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
             child: Text(l10n.recipeDelete),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _ServingControl extends StatelessWidget {
+  const _ServingControl({
+    required this.conversion,
+    required this.onChanged,
+    required this.onReset,
+  });
+
+  final ServingConversionResult conversion;
+  final ValueChanged<int> onChanged;
+  final VoidCallback onReset;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final colors = GramTreeColors.of(context);
+    final changed = conversion.targetServings != conversion.originalServings;
+    return Card(
+      key: const ValueKey('recipe-serving-control'),
+      margin: EdgeInsets.zero,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    l10n.recipeServingsAdjust,
+                    style: Theme.of(context).textTheme.titleSmall,
+                  ),
+                ),
+                IconButton(
+                  key: const ValueKey('recipe-serving-decrease'),
+                  tooltip: l10n.recipeServingsDecrease,
+                  onPressed: conversion.targetServings <= conversion.minServings
+                      ? null
+                      : () => onChanged(conversion.targetServings - 1),
+                  icon: const Icon(Icons.remove_circle_outline),
+                ),
+                Semantics(
+                  label: l10n.recipeServings,
+                  value: '${conversion.targetServings}',
+                  child: Text(
+                    '${conversion.targetServings}',
+                    key: const ValueKey('recipe-serving-value'),
+                    style: colors.numberStyle(
+                      Theme.of(context).textTheme.titleMedium ??
+                          const TextStyle(),
+                    ),
+                  ),
+                ),
+                IconButton(
+                  key: const ValueKey('recipe-serving-increase'),
+                  tooltip: l10n.recipeServingsIncrease,
+                  onPressed: conversion.targetServings >= conversion.maxServings
+                      ? null
+                      : () => onChanged(conversion.targetServings + 1),
+                  icon: const Icon(Icons.add_circle_outline),
+                ),
+                Text(l10n.recipeServingsUnit),
+              ],
+            ),
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    l10n.recipeServingsRange(
+                      conversion.minServings,
+                      conversion.maxServings,
+                    ),
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                ),
+                TextButton(
+                  key: const ValueKey('recipe-serving-reset'),
+                  onPressed: changed ? onReset : null,
+                  child: Text(l10n.recipeServingsReset),
+                ),
+              ],
+            ),
+            for (final warning in conversion.warnings)
+              Padding(
+                padding: const EdgeInsets.only(top: 4),
+                child: Text(
+                  warning.message,
+                  key: ValueKey('recipe-serving-warning-${warning.ingredientId}'),
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: colors.accent,
+                  ),
+                ),
+              ),
+          ],
+        ),
       ),
     );
   }
@@ -1582,13 +1702,32 @@ class _RecipePhotoDisplay extends StatelessWidget {
 }
 
 class _IngredientDetailRow extends StatelessWidget {
-  const _IngredientDetailRow({required this.ingredient});
+  const _IngredientDetailRow({required this.ingredient, this.converted});
   final RecipeIngredient ingredient;
+  final ConvertedServingIngredient? converted;
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final quantity = '${ingredient.quantity} ${ingredient.unit}';
+    final adjusted = converted != null &&
+        converted!.displayQuantity != converted!.originalQuantity;
+    final quantity = adjusted
+        ? '${_quantityText(converted!.displayQuantity)} ${converted!.unit}'
+        : '${_quantityText(ingredient.quantity)} ${ingredient.unit}';
+    final originalQuantity = '${_quantityText(ingredient.quantity)} ${ingredient.unit}';
+    final source = ingredient.quantitySource;
+    final showSource = adjusted ||
+        (source != null && source.source_.value != sourceTypeAuthorFilled);
+    final sourceType = adjusted
+        ? sourceTypeScenarioAdjusted
+        : source?.source_.value ?? sourceTypeAuthorFilled;
+    final sourceBasis = adjusted
+        ? _servingRuleLabel(converted!.rule)
+        : source?.basis?.isNotEmpty == true
+        ? source!.basis!
+        : sourceType == sourceTypeAuthorFilled
+        ? l10n.recipeSourceAuthorFilled
+        : '';
     return ListTile(
       contentPadding: EdgeInsets.zero,
       title: Row(
@@ -1600,23 +1739,19 @@ class _IngredientDetailRow extends StatelessWidget {
                   : ingredient.displayName,
             ),
           ),
-          SourceMark(
-            sourceType:
-                ingredient.quantitySource?.source_.value ??
-                sourceTypeAuthorFilled,
-            componentId: 'recipe-ingredient-${ingredient.id}-quantity',
-            value: quantity,
-            originalValue: ingredient.quantitySource?.original,
-            basisText: ingredient.quantitySource?.basis?.isNotEmpty == true
-                ? ingredient.quantitySource!.basis!
-                : ingredient.quantitySource?.source_.value ==
-                      sourceTypeAuthorFilled
-                ? l10n.recipeSourceAuthorFilled
-                : '',
-            required: false,
-            feedbackEnabled: false,
-            onAction: (_) {},
-          ),
+          if (showSource)
+            SourceMark(
+              sourceType: sourceType,
+              componentId: adjusted
+                  ? 'recipe-ingredient-${ingredient.id}-serving'
+                  : 'recipe-ingredient-${ingredient.id}-quantity',
+              value: quantity,
+              originalValue: adjusted ? originalQuantity : source?.original,
+              basisText: sourceBasis,
+              required: false,
+              feedbackEnabled: false,
+              onAction: (_) {},
+            ),
         ],
       ),
       subtitle: Text(
@@ -1641,6 +1776,7 @@ class _StepDetailTile extends StatelessWidget {
   const _StepDetailTile({
     required this.index,
     required this.step,
+    this.converted,
     required this.ingredientNames,
     required this.stepLabels,
     required this.l10n,
@@ -1648,6 +1784,7 @@ class _StepDetailTile extends StatelessWidget {
 
   final int index;
   final RecipeStep step;
+  final ConvertedServingStep? converted;
   final Map<String, String> ingredientNames;
   final Map<String, String> stepLabels;
   final AppLocalizations l10n;
@@ -1710,6 +1847,27 @@ class _StepDetailTile extends StatelessWidget {
         ),
       ),
       children: [
+        if (converted?.batchWarning == true)
+          Container(
+            key: ValueKey('recipe-step-batch-warning-${step.id}'),
+            margin: const EdgeInsets.fromLTRB(8, 4, 8, 8),
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: GramTreeColors.of(context).accent.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  Icons.info_outline,
+                  size: 18,
+                  color: GramTreeColors.of(context).accent,
+                ),
+                const SizedBox(width: 8),
+                Expanded(child: Text(l10n.recipeBatchWarning)),
+              ],
+            ),
+          ),
         if (step.durationSource != null ||
             step.heatSource != null ||
             step.temperatureSource != null)
@@ -2020,6 +2178,55 @@ String _formatDate(BuildContext context, String value) {
   return '${MaterialLocalizations.of(context).formatMediumDate(local)} '
       '${MaterialLocalizations.of(context).formatTimeOfDay(TimeOfDay.fromDateTime(local))}';
 }
+
+String _quantityText(num value) {
+  final number = value.toDouble();
+  if (number == number.roundToDouble()) return number.toInt().toString();
+  return number.toStringAsFixed(2).replaceFirst(RegExp(r'0+$'), '').replaceFirst(
+    RegExp(r'\.$'),
+    '',
+  );
+}
+
+String _servingRuleLabel(String rule) => switch (rule) {
+  'proportional' => '按比例换算',
+  'unchanged' => '保持原值不变',
+  'round' => '按个取整',
+  _ => rule,
+};
+
+ServingConversionResult _recipeServingConversion(
+  RecipeSnapshot snapshot,
+  RecipeDerived derived,
+  int targetServings,
+) => convertServings(
+  originalServings: snapshot.servings,
+  targetServings: targetServings,
+  ingredients: [
+    for (final item in snapshot.ingredients ?? const [])
+      ServingIngredientInput(
+        id: item.id,
+        displayName: item.displayName,
+        quantity: item.quantity.toDouble(),
+        unit: item.unit,
+        scalingMode: item.scalingMode.value,
+      ),
+  ],
+  steps: [
+    for (final item in snapshot.steps ?? const [])
+      ServingStepInput(
+        id: item.id,
+        instruction: item.instruction,
+        ingredientIds: [...?item.ingredientIds],
+        durationSeconds: item.durationSeconds ?? 0,
+        temperatureCelsius: item.temperatureCelsius?.toDouble(),
+        heat: item.heat,
+        unattended: item.unattended == true,
+      ),
+  ],
+  totalTimeSeconds: derived.totalTimeSeconds,
+  activeTimeSeconds: derived.activeTimeSeconds,
+);
 
 String _replacementLabel(Object? value) {
   if (value is String) return value;
