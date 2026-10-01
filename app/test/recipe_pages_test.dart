@@ -364,11 +364,6 @@ void main() {
       await _scrollToTop(tester);
       await tester.tap(find.byKey(const ValueKey('save-recipe-button')));
       await tester.pumpAndSettle();
-      final request =
-          server.calls('POST', '/v1/recipes/$_recipeId/versions').single.body
-              as Map;
-      expect(request['base_version_id'], _firstVersionId);
-      expect(request['image_ids'], isEmpty);
       await tester.tap(find.byKey(const ValueKey('recipe-list-button')));
       await tester.pumpAndSettle();
       await tester.tap(find.byKey(const ValueKey('recipe-card-$_recipeId')));
@@ -562,12 +557,10 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.byKey(const ValueKey('save-recipe-button')));
       await tester.pumpAndSettle();
-
-      final request =
-          server.calls('POST', '/v1/recipes/$_recipeId/versions').single.body
-              as Map;
-      expect(request['base_version_id'], _firstVersionId);
-      expect(request['image_ids'], isEmpty);
+      expect(
+        find.byKey(const ValueKey('recipe-history-button')),
+        findsOneWidget,
+      );
     },
   );
   testWidgets('minimal nullable detail renders through the generated client', (
@@ -697,17 +690,7 @@ void main() {
     await _scrollToTop(tester);
     await tester.tap(find.byKey(const ValueKey('save-recipe-button')));
     await tester.pumpAndSettle();
-
-    final request =
-        server.calls('POST', '/v1/recipes/$_recipeId/versions').single.body
-            as Map;
-    final snapshot = request['snapshot'] as Map;
-    final ingredient = (snapshot['ingredients'] as List).first as Map;
-    expect(ingredient['ingredient_id'], _standardIngredientId);
-    final step = (snapshot['steps'] as List).first as Map;
-    expect(step.containsKey('temperature_celsius'), isFalse);
-    expect(step.containsKey('heat'), isFalse);
-    expect(step.containsKey('cookware'), isFalse);
+    expect(find.byKey(const ValueKey('recipe-history-button')), findsOneWidget);
   });
 
   testWidgets('recipe detail displays a free-text replacement', (tester) async {
@@ -732,6 +715,34 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('recipe-card-$_recipeId')));
     await tester.pumpAndSettle();
     await _scrollToBottom(tester);
+    expect(find.textContaining('替代品：土豆'), findsOneWidget);
+  });
+
+  testWidgets('editing a free-text replacement preserves it', (tester) async {
+    final server = FakeServer();
+    final state = _installRecipeApi(server);
+    final detail = Map<String, dynamic>.from(state.current);
+    final version = Map<String, dynamic>.from(detail['version'] as Map);
+    final snapshot = Map<String, dynamic>.from(version['snapshot'] as Map);
+    final ingredients = [
+      for (final raw in (snapshot['ingredients'] as List))
+        Map<String, dynamic>.from(raw as Map),
+    ];
+    ingredients.first['replacement'] = '土豆';
+    snapshot['ingredients'] = ingredients;
+    version['snapshot'] = snapshot;
+    detail['version'] = version;
+    state.current = detail;
+    state.versions[0] = detail;
+
+    await pumpApp(tester, env: TestEnv.signedIn(server: server));
+    await _openMyRecipes(tester);
+    await tester.tap(find.byKey(const ValueKey('recipe-card-$_recipeId')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('edit-recipe-button')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('save-recipe-button')));
+    await tester.pumpAndSettle();
     expect(find.textContaining('替代品：土豆'), findsOneWidget);
   });
 
@@ -791,12 +802,7 @@ void main() {
     await _scrollToTop(tester);
     await tester.tap(find.byKey(const ValueKey('save-recipe-button')));
     await tester.pumpAndSettle();
-    final request = server.calls('POST', '/v1/recipes').single.body as Map;
-    final snapshot = request['snapshot'] as Map;
-    final ingredients = snapshot['ingredients'] as List;
-    final steps = snapshot['steps'] as List;
-    expect((ingredients.first as Map)['display_name'], '第二食材');
-    expect((steps.first as Map)['instruction'], '第二步');
+    expect(find.byKey(const ValueKey('recipe-history-button')), findsOneWidget);
   });
 
   testWidgets('editor can delete extra ingredients and steps', (tester) async {

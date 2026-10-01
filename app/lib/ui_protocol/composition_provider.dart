@@ -11,6 +11,7 @@ import 'package:gramtree_api/gramtree_api.dart'
         PageDescription;
 
 import '../api/api_client.dart';
+import '../config/app_config.dart';
 import '../events/event_recorder.dart';
 import '../features_flags/features.dart';
 import 'component_registry.dart';
@@ -72,7 +73,9 @@ const _e2eCompositionTimeoutMs = String.fromEnvironment(
 
 final compositionTimeoutMsProvider = Provider<int>((ref) {
   final e2eOverride = int.tryParse(_e2eCompositionTimeoutMs);
-  if (e2eOverride != null) return e2eOverride;
+  if (!ref.watch(appConfigProvider).isProd && e2eOverride != null) {
+    return e2eOverride;
+  }
   // ClientConfig.params 是生成客户端里的 Object（openapi 的
   // additionalProperties 没有生成更具体的 Map 类型），这里按字典读一层。
   final params = ref.watch(clientConfigProvider).value?.params;

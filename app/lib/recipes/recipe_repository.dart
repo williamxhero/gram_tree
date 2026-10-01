@@ -157,7 +157,12 @@ class RecipeIngredientDraft {
         scalingMode: value.scalingMode,
         optional: value.optional == true,
         functional: value.functional == true,
-        replacement: value.replacement is Map
+        replacement: value.replacement is String
+            ? RecipeReplacementDraft(
+                ingredientId: null,
+                displayName: value.replacement as String,
+              )
+            : value.replacement is Map
             ? RecipeReplacementDraft.fromJson(
                 Map<String, dynamic>.from(value.replacement as Map),
               )
@@ -179,7 +184,9 @@ class RecipeIngredientDraft {
       scalingMode: _scalingMode(value['scaling_mode']),
       optional: value['optional'] == true,
       functional: value['functional'] == true,
-      replacement: replacement is Map
+      replacement: replacement is String
+          ? RecipeReplacementDraft(ingredientId: null, displayName: replacement)
+          : replacement is Map
           ? RecipeReplacementDraft.fromJson(
               Map<String, dynamic>.from(replacement),
             )
