@@ -120,7 +120,8 @@ void main() {
     final recipeId = path.split('/')[2];
     GoRouter.of(historyContext).go('/recipes');
     await waitFor(tester, find.text('网页版验收菜谱'));
-    GoRouter.of(historyContext).go('/recipes/$recipeId');
+    final listContext = tester.element(find.text('网页版验收菜谱').last);
+    GoRouter.of(listContext).go('/recipes/$recipeId');
     await waitFor(tester, find.byKey(const ValueKey('delete-recipe-button')));
     await reveal(tester, find.byKey(const ValueKey('delete-recipe-button')));
     await tester.tap(find.byKey(const ValueKey('delete-recipe-button')));
