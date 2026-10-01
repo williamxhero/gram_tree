@@ -199,6 +199,10 @@ jobs:
       - run: (cd server && uv sync --frozen)
       - name: 启动端到端用的服务端（模拟器里通过 10.0.2.2 访问）
         run: tool/e2e_server.sh start
+        env:
+          # Android emulator networking can exceed the normal 800ms UI
+          # composition budget; keep the real composition assertion intact.
+          GRAMTREE_E2E_COMPOSITION_TIMEOUT_MS: "3000"
       - name: 启用 KVM
         run: |
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
