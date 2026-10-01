@@ -410,14 +410,13 @@ void main() {
         ),
       ],
     ).toJson();
-    var listCalls = 0;
+    var listAvailable = false;
     server.on('GET', '/v1/recipes', (_) {
-      listCalls++;
-      return listCalls == 1
-          ? FakeServer.error(503, 'unavailable', '暂时不可用')
-          : (200, list);
+      return listAvailable
+          ? (200, list)
+          : FakeServer.error(503, 'unavailable', '暂时不可用');
     });
-    var historyCalls = 0;
+    var historyAvailable = false;
     final history = RecipeVersionHistory(
       items: [
         RecipeVersionSummary(
@@ -432,15 +431,16 @@ void main() {
     ).toJson();
     server.on('GET', '/v1/recipes/$_recipeId/versions', (_) {
       historyCalls++;
-      return historyCalls == 1
-          ? FakeServer.error(503, 'unavailable', '暂时不可用')
-          : (200, history);
+      return historyAvailable
+          ? (200, history)
+          : FakeServer.error(503, 'unavailable', '暂时不可用');
     });
     await pumpApp(tester, env: TestEnv.signedIn(server: server));
     await _openMyRecipes(tester);
     await tester.pumpAndSettle();
     expect(server.calls('GET', '/v1/recipes'), isNotEmpty);
     expect(find.text('菜谱暂时加载不了'), findsOneWidget);
+    listAvailable = true;
     await tester.tap(find.text('重试'));
     await tester.pumpAndSettle();
     expect(
@@ -452,6 +452,7 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('recipe-history-button')));
     await tester.pumpAndSettle();
     expect(find.text('菜谱暂时加载不了'), findsOneWidget);
+    historyAvailable = true;
     await tester.tap(find.text('重试'));
     await tester.pumpAndSettle();
     expect(find.byKey(const ValueKey('recipe-version-1')), findsOneWidget);
