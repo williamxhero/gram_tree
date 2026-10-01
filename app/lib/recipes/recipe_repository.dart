@@ -376,9 +376,10 @@ class RecipeForm {
     this.changeNote = '',
     List<RecipeIngredientDraft>? ingredients,
     List<RecipeStepDraft>? steps,
-    this.imageIds = const [],
+    List<String>? imageIds,
   }) : ingredients = ingredients ?? [RecipeIngredientDraft(id: 'ingredient-1')],
-       steps = steps ?? [RecipeStepDraft(id: 'step-1')];
+       steps = steps ?? [RecipeStepDraft(id: 'step-1')],
+       imageIds = imageIds ?? <String>[];
 
   factory RecipeForm.fromSnapshot(RecipeSnapshot snapshot, String name) =>
       RecipeForm(

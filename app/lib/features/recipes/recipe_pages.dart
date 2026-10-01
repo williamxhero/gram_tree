@@ -1304,7 +1304,9 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
     final derived = detail.version.derived;
     final groups = <String, List<RecipeIngredient>>{};
     for (final ingredient in snapshot.ingredients ?? const []) {
-      groups.putIfAbsent(ingredient.group, () => []).add(ingredient);
+      groups
+          .putIfAbsent(ingredient.group ?? l10n.recipeIngredientGroup, () => [])
+          .add(ingredient);
     }
     final Map<String, String> ingredientNames = {
       for (final ingredient
