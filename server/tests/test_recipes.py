@@ -2,13 +2,16 @@
 
 import base64
 import io
+import json
 import os
 import subprocess
+from pathlib import Path
 
 from fastapi.testclient import TestClient
 from PIL import Image
 from PIL.TiffImagePlugin import IFDRational
 
+from gramtree.cli import main as cli
 from gramtree.main import create_app
 from tests.accounts_support import Api, bearer
 from tests.conftest import make_settings
@@ -317,6 +320,104 @@ def test_invalid_references_and_dependency_cycles_are_rejected(api: Api) -> None
     response = api.client.post("/v1/recipes", json=body, headers=headers)
     error = assert_error_shape(response, 422, "invalid_recipe")
     assert "replacement.ingredient_id" in (error["detail"] or "")
+
+
+def test_recipe_derived_parallel_and_override_times(api: Api) -> None:
+    tokens = api.login("derived-boundaries@example.com")
+    headers = bearer(tokens)
+    body = recipe_input("并行时长")
+    body["snapshot"]["steps"][1]["depends_on"] = []
+    response = api.client.post("/v1/recipes", json=body, headers=headers)
+    assert response.status_code == 201, response.text
+    derived = response.json()["version"]["derived"]
+    assert derived["total_time_seconds"] == 900
+    assert derived["active_time_seconds"] == 120
+
+    overridden = recipe_input("覆盖时长")
+    overridden["snapshot"]["total_time_seconds"] = 777
+    overridden["snapshot"]["active_time_seconds"] = 88
+    response = api.client.post("/v1/recipes", json=overridden, headers=headers)
+    assert response.status_code == 201, response.text
+    derived = response.json()["version"]["derived"]
+    assert derived["total_time_seconds"] == 777
+    assert derived["active_time_seconds"] == 88
+
+
+def test_recipe_numeric_boundaries_are_rejected_over_http(api: Api) -> None:
+    tokens = api.login("numeric-boundaries@example.com")
+    headers = bearer(tokens)
+    for field, value in (("duration_seconds", -1), ("temperature_celsius", 1001)):
+        body = recipe_input("数值边界")
+        body["snapshot"]["steps"][0][field] = value
+        response = api.client.post("/v1/recipes", json=body, headers=headers)
+        assert response.status_code == 422, response.text
+
+
+def test_recipe_known_nutrition_and_allergens_are_derived_over_http(
+    api: Api, tmp_path: Path
+) -> None:
+    ingredient_id = "00000000-0000-4000-8000-000000000031"
+    record = {
+        "id": ingredient_id,
+        "standard_name": "测试豆酱",
+        "aliases": [],
+        "pinyin": "ceshidoujiang",
+        "pinyin_initials": "csdj",
+        "category": "调料",
+        "attributes": {
+            "base_unit": {"value": "克", "source": "测试", "status": "verified"},
+            "allergens": {"value": ["大豆"], "source": "测试", "status": "verified"},
+            "nutrition": {
+                "value": {
+                    "energy_kcal": 100,
+                    "protein_g": 20,
+                    "fat_g": 4,
+                    "carbohydrate_g": 10,
+                    "sodium_mg": 50,
+                },
+                "source": "测试",
+                "status": "verified",
+            },
+        },
+    }
+    (tmp_path / "manifest.json").write_text(
+        json.dumps({"version": "1.0.0", "changelog": "recipe test"}), encoding="utf-8"
+    )
+    (tmp_path / "ingredients.json").write_text(json.dumps([record]), encoding="utf-8")
+    assert cli(["ingredients", "import", str(tmp_path)]) == 0
+
+    tokens = api.login("known-nutrition@example.com")
+    headers = bearer(tokens)
+    body = recipe_input("营养边界")
+    body["snapshot"]["ingredients"] = [
+        {
+            "id": "chicken",
+            "ingredient_id": ingredient_id,
+            "display_name": "测试豆酱",
+            "quantity": 100,
+            "unit": "g",
+            "optional": False,
+            "functional": False,
+            "scaling_mode": "proportional",
+        }
+    ]
+    body["snapshot"]["steps"][0]["ingredient_ids"] = ["chicken"]
+    body["snapshot"]["steps"][1]["ingredient_ids"] = ["chicken"]
+    response = api.client.post("/v1/recipes", json=body, headers=headers)
+    assert response.status_code == 201, response.text
+    derived = response.json()["version"]["derived"]
+    assert derived["allergens"] == ["大豆"]
+    assert derived["allergens_incomplete"] is False
+    nutrition = derived["nutrition_per_serving"]
+    assert nutrition == {
+        "energy_kcal": 50.0,
+        "protein_g": 10.0,
+        "fat_g": 2.0,
+        "carbohydrate_g": 5.0,
+        "sodium_mg": 25.0,
+        "estimated": True,
+        "incomplete": False,
+    }
 
 
 def test_image_upload_strips_metadata_and_uses_signed_private_url(api: Api, tmp_path) -> None:

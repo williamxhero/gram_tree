@@ -1404,148 +1404,138 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
       for (final (index, step) in (snapshot.steps ?? const []).indexed)
         step.id: '${index + 1}. ${step.instruction}',
     };
-    return CompositionIdScope(
-      compositionId: widget.recipeId,
-      child: Scaffold(
-        appBar: AppBar(
-          title: Text(detail.dish.name),
-          leading: IconButton(
-            key: const ValueKey('recipe-list-button'),
-            tooltip: l10n.myRecipes,
-            icon: const Icon(Icons.arrow_back),
-            onPressed: () => context.go(RecipeListPage.path),
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(detail.dish.name),
+        leading: IconButton(
+          key: const ValueKey('recipe-list-button'),
+          tooltip: l10n.myRecipes,
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => context.go(RecipeListPage.path),
+        ),
+        actions: [
+          IconButton(
+            key: const ValueKey('recipe-history-button'),
+            tooltip: l10n.recipeHistory,
+            icon: const Icon(Icons.history),
+            onPressed: () =>
+                context.push('/recipes/${widget.recipeId}/history'),
           ),
-          actions: [
+          if (widget.versionId == null)
             IconButton(
-              key: const ValueKey('recipe-history-button'),
-              tooltip: l10n.recipeHistory,
-              icon: const Icon(Icons.history),
-              onPressed: () =>
-                  context.push('/recipes/${widget.recipeId}/history'),
+              key: const ValueKey('edit-recipe-button'),
+              tooltip: l10n.recipeEditAction,
+              icon: const Icon(Icons.edit_outlined),
+              onPressed: () => context.push('/recipes/${widget.recipeId}/edit'),
+            )
+          else
+            IconButton(
+              key: const ValueKey('edit-old-recipe-button'),
+              tooltip: l10n.recipeBaseOnVersion,
+              icon: const Icon(Icons.edit_note),
+              onPressed: () => context.push(
+                '/recipes/${widget.recipeId}/edit?versionId=${widget.versionId}',
+              ),
             ),
-            if (widget.versionId == null)
-              IconButton(
-                key: const ValueKey('edit-recipe-button'),
-                tooltip: l10n.recipeEditAction,
-                icon: const Icon(Icons.edit_outlined),
-                onPressed: () =>
-                    context.push('/recipes/${widget.recipeId}/edit'),
-              )
-            else
-              IconButton(
-                key: const ValueKey('edit-old-recipe-button'),
-                tooltip: l10n.recipeBaseOnVersion,
-                icon: const Icon(Icons.edit_note),
-                onPressed: () => context.push(
-                  '/recipes/${widget.recipeId}/edit?versionId=${widget.versionId}',
+        ],
+      ),
+      body: ListView(
+        key: const ValueKey('recipe-detail-content'),
+        padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
+        children: [
+          _RecipePhotoDisplay(images: detail.version.images),
+          if (widget.versionId == null)
+            RecipePhotoPanel(
+              recipeId: widget.recipeId,
+              onUploaded: (_) => _load(),
+            ),
+          Text(
+            detail.dish.name,
+            style: Theme.of(context).textTheme.headlineSmall,
+          ),
+          const SizedBox(height: 4),
+          Text(
+            detail.author.nickname,
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              Chip(
+                label: Text(
+                  l10n.recipeAuthorVersion(
+                    detail.version.versionNumber,
+                    snapshot.servings,
+                  ),
                 ),
               ),
-          ],
-        ),
-        body: ListView(
-          key: const ValueKey('recipe-detail-content'),
-          padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
-          children: [
-            _RecipePhotoDisplay(images: detail.version.images),
-            if (widget.versionId == null)
-              RecipePhotoPanel(
-                recipeId: widget.recipeId,
-                onUploaded: (_) => _load(),
+              Chip(
+                label: Text(
+                  l10n.recipeDuration(
+                    _minutes(derived.totalTimeSeconds),
+                    _minutes(derived.activeTimeSeconds),
+                  ),
+                ),
               ),
-            Text(
-              detail.dish.name,
-              style: Theme.of(context).textTheme.headlineSmall,
-            ),
-            const SizedBox(height: 4),
-            Text(
-              detail.author.nickname,
-              style: Theme.of(context).textTheme.bodySmall,
-            ),
-            const SizedBox(height: 12),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
+              if (snapshot.difficulty?.isNotEmpty == true)
                 Chip(
-                  label: Text(
-                    l10n.recipeAuthorVersion(
-                      detail.version.versionNumber,
-                      snapshot.servings,
-                    ),
-                  ),
+                  label: Text(l10n.recipeDifficultyValue(snapshot.difficulty!)),
                 ),
-                Chip(
-                  label: Text(
-                    l10n.recipeDuration(
-                      _minutes(derived.totalTimeSeconds),
-                      _minutes(derived.activeTimeSeconds),
-                    ),
-                  ),
-                ),
-                if (snapshot.difficulty?.isNotEmpty == true)
-                  Chip(
-                    label: Text(
-                      l10n.recipeDifficultyValue(snapshot.difficulty!),
-                    ),
-                  ),
-                if (snapshot.dishType?.isNotEmpty == true)
-                  Chip(
-                    label: Text(l10n.recipeDishTypeValue(snapshot.dishType!)),
-                  ),
-                for (final tag in snapshot.tags ?? const [])
-                  Chip(label: Text(tag)),
-              ],
-            ),
-            const SizedBox(height: 16),
-            if ((derived.allergens ?? const []).isNotEmpty ||
-                derived.allergensIncomplete == true)
-              _InfoSection(
-                title: l10n.recipeAllergens(
-                  (derived.allergens ?? const []).join('、'),
-                  derived.allergensIncomplete == true
-                      ? l10n.recipeIncomplete
-                      : '',
-                ),
-              ),
-            _NutritionSection(nutrition: derived.nutritionPerServing),
-            if ((derived.cookware ?? const []).isNotEmpty)
-              Text(
-                l10n.recipeCookware((derived.cookware ?? const []).join('、')),
-              ),
-            const SizedBox(height: 20),
-            Text(
-              l10n.recipeIngredients,
-              style: Theme.of(context).textTheme.titleLarge,
-            ),
-            if (groups.isEmpty) Text(l10n.recipeNoIngredients),
-            for (final entry in groups.entries) ...[
-              const SizedBox(height: 8),
-              Text(entry.key, style: Theme.of(context).textTheme.titleMedium),
-              for (final ingredient in entry.value)
-                _IngredientDetailRow(ingredient: ingredient),
+              if (snapshot.dishType?.isNotEmpty == true)
+                Chip(label: Text(l10n.recipeDishTypeValue(snapshot.dishType!))),
+              for (final tag in snapshot.tags ?? const [])
+                Chip(label: Text(tag)),
             ],
-            const SizedBox(height: 20),
-            Text(
-              l10n.recipeStepsTitle,
-              style: Theme.of(context).textTheme.titleLarge,
-            ),
-            if ((snapshot.steps ?? const []).isEmpty) Text(l10n.recipeNoSteps),
-            for (final (index, step) in (snapshot.steps ?? const []).indexed)
-              _StepDetailTile(
-                index: index,
-                step: step,
-                ingredientNames: ingredientNames,
-                stepLabels: stepLabels,
-                l10n: l10n,
+          ),
+          const SizedBox(height: 16),
+          if ((derived.allergens ?? const []).isNotEmpty ||
+              derived.allergensIncomplete == true)
+            _InfoSection(
+              title: l10n.recipeAllergens(
+                (derived.allergens ?? const []).join('、'),
+                derived.allergensIncomplete == true
+                    ? l10n.recipeIncomplete
+                    : '',
               ),
-            const SizedBox(height: 16),
-            TextButton(
-              key: const ValueKey('delete-recipe-button'),
-              onPressed: _delete,
-              child: Text(l10n.recipeDelete),
             ),
+          _NutritionSection(nutrition: derived.nutritionPerServing),
+          if ((derived.cookware ?? const []).isNotEmpty)
+            Text(l10n.recipeCookware((derived.cookware ?? const []).join('、'))),
+          const SizedBox(height: 20),
+          Text(
+            l10n.recipeIngredients,
+            style: Theme.of(context).textTheme.titleLarge,
+          ),
+          if (groups.isEmpty) Text(l10n.recipeNoIngredients),
+          for (final entry in groups.entries) ...[
+            const SizedBox(height: 8),
+            Text(entry.key, style: Theme.of(context).textTheme.titleMedium),
+            for (final ingredient in entry.value)
+              _IngredientDetailRow(ingredient: ingredient),
           ],
-        ),
+          const SizedBox(height: 20),
+          Text(
+            l10n.recipeStepsTitle,
+            style: Theme.of(context).textTheme.titleLarge,
+          ),
+          if ((snapshot.steps ?? const []).isEmpty) Text(l10n.recipeNoSteps),
+          for (final (index, step) in (snapshot.steps ?? const []).indexed)
+            _StepDetailTile(
+              index: index,
+              step: step,
+              ingredientNames: ingredientNames,
+              stepLabels: stepLabels,
+              l10n: l10n,
+            ),
+          const SizedBox(height: 16),
+          TextButton(
+            key: const ValueKey('delete-recipe-button'),
+            onPressed: _delete,
+            child: Text(l10n.recipeDelete),
+          ),
+        ],
       ),
     );
   }
@@ -1617,7 +1607,8 @@ class _IngredientDetailRow extends StatelessWidget {
             basisText: ingredient.quantitySource?.basis?.isNotEmpty == true
                 ? ingredient.quantitySource!.basis!
                 : l10n.recipeSourceAuthorFilled,
-            required: true,
+            required: false,
+            feedbackEnabled: false,
             onAction: (_) {},
           ),
         ],
@@ -1670,7 +1661,8 @@ class _StepDetailTile extends StatelessWidget {
       basisText: source.basis?.isNotEmpty == true
           ? source.basis!
           : l10n.recipeSourceAuthorFilled,
-      required: true,
+      required: false,
+      feedbackEnabled: false,
       onAction: (_) {},
     );
   }

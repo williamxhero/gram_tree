@@ -1,5 +1,3 @@
-import os
-from contextlib import suppress
 from typing import Any
 
 from fastapi import APIRouter
@@ -38,13 +36,5 @@ def client_config(session: SessionDep) -> ClientConfig:
         if cfg.is_feature_flag:
             features[cfg.key.removeprefix("feature.")] = bool(values[cfg.key])
         else:
-            value = values[cfg.key]
-            # Android E2E may need extra network budget without mutating the
-            # persisted runtime configuration used by the default web gate.
-            if cfg.key == "ui.composition_timeout_ms":
-                override = os.getenv("GRAMTREE_E2E_COMPOSITION_TIMEOUT_MS")
-                if override:
-                    with suppress(ValueError):
-                        value = int(override)
-            params[cfg.key] = value
+            params[cfg.key] = values[cfg.key]
     return ClientConfig(features=features, params=params)

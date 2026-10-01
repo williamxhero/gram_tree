@@ -54,6 +54,7 @@ class SourceMark extends ConsumerWidget {
     required this.basisText,
     this.citation,
     required this.required,
+    this.feedbackEnabled = true,
     required this.onAction,
   });
 
@@ -67,6 +68,10 @@ class SourceMark extends ConsumerWidget {
   /// 这个组件是不是必显组件（食品安全、过敏等）——是的话面板不提供"这次不用"/
   /// "以后别这样"两个动作。
   final bool required;
+
+  /// Whether this source can be adjusted from this surface. Immutable recipe
+  /// details expose provenance read-only until a real adjustment contract exists.
+  final bool feedbackEnabled;
 
   /// 触发意图的统一入口（就是 `CompositionView` 传给每个组件 builder 的
   /// `onAction`，见 `composition_view.dart`）——"这次不用"/"以后别这样"走的是
@@ -135,7 +140,8 @@ class SourceMark extends ConsumerWidget {
         basisText: basisText,
         citation: citation,
         required: required,
-        onSkipOnce: required
+        feedbackEnabled: feedbackEnabled,
+        onSkipOnce: required || !feedbackEnabled
             ? null
             : () {
                 Navigator.of(sheetContext).pop();
@@ -242,6 +248,7 @@ class WhyPanel extends StatelessWidget {
     required this.basisText,
     this.citation,
     required this.required,
+    this.feedbackEnabled = true,
     this.onSkipOnce,
     this.onNeverAgain,
   });
@@ -252,6 +259,7 @@ class WhyPanel extends StatelessWidget {
   final String basisText;
   final String? citation;
   final bool required;
+  final bool feedbackEnabled;
   final VoidCallback? onSkipOnce;
   final VoidCallback? onNeverAgain;
 
@@ -287,7 +295,9 @@ class WhyPanel extends StatelessWidget {
               ),
             ],
             const SizedBox(height: 20),
-            if (required)
+            if (!feedbackEnabled)
+              const SizedBox.shrink()
+            else if (required)
               Text(
                 '这是必显内容，不能关掉',
                 style: theme.textTheme.bodySmall?.copyWith(
