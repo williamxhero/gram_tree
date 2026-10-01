@@ -203,9 +203,6 @@ class _RecipeEditorPageState extends ConsumerState<RecipeEditorPage> {
           _loaded!.version.snapshot,
           _loaded!.dish.name,
           aliases: _loaded!.dish.aliases,
-          imageIds: [
-            for (final image in _loaded!.version.images ?? const []) image.id,
-          ],
         );
       }
       _draft = _draftStore.read(

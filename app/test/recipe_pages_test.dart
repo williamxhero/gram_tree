@@ -25,6 +25,7 @@ Map<String, dynamic> _minimalDetailJson({
   String changeNote = '第一版',
   String? standardIngredientId,
   RecipeSnapshot? snapshot,
+  List<RecipeImageOut>? images,
 }) {
   final detail = RecipeDetail(
     author: RecipeAuthor(id: 'author-id', nickname: '味友0001'),
@@ -46,6 +47,7 @@ Map<String, dynamic> _minimalDetailJson({
       ),
       editOperations: const [],
       id: versionId,
+      images: images ?? const [],
       previousVersionId: previousVersionId,
       snapshot:
           snapshot ??
@@ -382,6 +384,43 @@ void main() {
     },
   );
 
+  testWidgets(
+    'editing an existing photo version does not submit its image as staged',
+    (tester) async {
+      final server = FakeServer();
+      final state = _installRecipeApi(server);
+      final image = RecipeImageOut(
+        byteSize: 12,
+        contentType: 'image/jpeg',
+        expiresInSeconds: 900,
+        id: '55555555-5555-4555-8555-555555555555',
+        url: '/private-image',
+        versionId: _firstVersionId,
+        width: 10,
+        height: 10,
+      );
+      final detail = Map<String, dynamic>.from(state.current);
+      final version = Map<String, dynamic>.from(detail['version'] as Map)
+        ..['images'] = [image.toJson()];
+      detail['version'] = version;
+      state.current = detail;
+      state.versions[0] = detail;
+
+      await pumpApp(tester, env: TestEnv.signedIn(server: server));
+      await _openMyRecipes(tester);
+      await tester.tap(find.byKey(const ValueKey('recipe-card-$_recipeId')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('edit-recipe-button')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('save-recipe-button')));
+      await tester.pumpAndSettle();
+
+      final request =
+          server.calls('POST', '/v1/recipes/$_recipeId/versions').single.body
+              as Map;
+      expect(request['image_ids'], isEmpty);
+    },
+  );
   testWidgets('minimal nullable detail renders through the generated client', (
     tester,
   ) async {
