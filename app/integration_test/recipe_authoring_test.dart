@@ -33,12 +33,22 @@ void main() {
   }
 
   Future<void> reveal(WidgetTester tester, Finder finder) async {
+    await tester.testTextInput.hide();
+    await tester.pump();
     final list = find.byType(ListView).last;
+    // Sliver children outside the viewport may not exist yet. Start from the
+    // top so revealing an earlier control never scrolls in the wrong direction.
+    for (var i = 0; i < 12; i++) {
+      await tester.drag(list, const Offset(0, 500));
+      await tester.pump(const Duration(milliseconds: 100));
+    }
     for (var i = 0; i < 30 && finder.evaluate().isEmpty; i++) {
       await tester.drag(list, const Offset(0, -500));
       await tester.pump(const Duration(milliseconds: 100));
     }
+    expect(finder, findsOneWidget);
     await tester.ensureVisible(finder);
+    await tester.pump();
   }
 
   Future<void> tapText(WidgetTester tester, String text) async {
@@ -106,7 +116,7 @@ void main() {
     await waitFor(tester, find.text('网页版验收菜谱'));
     final card = find.byType(ListTile).last;
     await tester.tap(card);
-    await waitFor(tester, find.byKey(const ValueKey('delete-recipe-button')));
+    await reveal(tester, find.byKey(const ValueKey('delete-recipe-button')));
     await tester.tap(find.byKey(const ValueKey('delete-recipe-button')));
     await settle(tester);
     await tester.tap(find.text('确认删除'));
