@@ -112,7 +112,7 @@ void main() {
       await settle(tester);
       await tester.tap(find.text('确认删除'));
     } catch (error, stack) {
-      print('RECIPE_E2E_FAILURE: $error\n$stack');
+      debugPrint('RECIPE_E2E_FAILURE: $error\n$stack');
       rethrow;
     }
   });
