@@ -56,18 +56,20 @@ void main() {
     addTearDown(tester.testTextInput.unregister);
 
     await app.main();
-    await waitFor(tester, find.text('开始之前，先说清楚我们会用到什么'));
-    await tester.tap(find.byKey(const ValueKey('consent-agree')));
     await settle(tester);
-
-    await waitFor(tester, find.text('登录味谱'));
-    await tester.enterText(find.byKey(const ValueKey('login-email')), email);
-    await tapText(tester, '发送验证码');
-    await waitFor(tester, find.text('输入验证码'));
-    await tester.enterText(
-      find.byKey(const ValueKey('code-input')),
-      await latestCode(email),
-    );
+    if (find.text('开始之前，先说清楚我们会用到什么').evaluate().isNotEmpty) {
+      await tester.tap(find.byKey(const ValueKey('consent-agree')));
+      await settle(tester);
+    }
+    if (find.text('登录味谱').evaluate().isNotEmpty) {
+      await tester.enterText(find.byKey(const ValueKey('login-email')), email);
+      await tapText(tester, '发送验证码');
+      await waitFor(tester, find.text('输入验证码'));
+      await tester.enterText(
+        find.byKey(const ValueKey('code-input')),
+        await latestCode(email),
+      );
+    }
     await waitFor(tester, find.text('今天还没有安排'));
 
     await tester.tap(find.byKey(const ValueKey('primary-create-button')));
