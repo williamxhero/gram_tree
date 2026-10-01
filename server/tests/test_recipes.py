@@ -108,27 +108,6 @@ def test_recipe_save_event_is_visible_once_to_its_owner(api: Api) -> None:
     )
     assert other.status_code == 200
     assert other.json() == {"count": 0}
-
-
-def test_recipe_save_event_is_visible_once_to_its_owner(api: Api) -> None:
-    _saved, headers = _create(api, "events@example.com")
-    response = api.client.get(
-        "/v1/dev/events/count",
-        params={"event_type": "recipe.version_saved"},
-        headers=headers,
-    )
-    assert response.status_code == 200
-    assert response.json() == {"count": 1}
-    other = api.client.get(
-        "/v1/dev/events/count",
-        params={"event_type": "recipe.version_saved"},
-        headers=bearer(api.login("events-other@example.com")),
-    )
-    assert other.status_code == 200
-    assert other.json() == {"count": 0}
-
-
-def test_author_can_save_read_list_and_delete_private_recipe(api: Api) -> None:
     saved, headers = _create(api)
     recipe_id = saved["id"]
     snapshot = saved["version"]["snapshot"]
