@@ -100,7 +100,7 @@ def _create(api: Api, email: str = "author@example.com") -> tuple[dict, dict[str
 
 
 def test_recipe_save_event_is_visible_once_to_its_owner(api: Api) -> None:
-    _saved, headers = _create(api, "events@example.com")
+    saved, headers = _create(api, "events@example.com")
     response = api.client.get(
         "/v1/dev/events/count",
         params={"event_type": "recipe.version_saved"},
@@ -108,6 +108,18 @@ def test_recipe_save_event_is_visible_once_to_its_owner(api: Api) -> None:
     )
     assert response.status_code == 200
     assert response.json() == {"count": 1}
+    receipt = api.client.get(
+        "/v1/dev/events/recipe-version-saved",
+        params={"version_id": saved["version"]["id"]},
+        headers=headers,
+    )
+    assert receipt.status_code == 200
+    item = receipt.json()["items"]
+    assert len(item) == 1
+    assert item[0]["recipe_version_id"] == saved["version"]["id"]
+    assert item[0]["previous_version_id"] is None
+    assert item[0]["edit_operations"] == []
+    assert item[0]["ai_assisted"] is False
     other_headers = bearer(api.login("events-other@example.com"))
     other = api.client.get(
         "/v1/dev/events/count",
@@ -246,6 +258,18 @@ def test_versions_are_immutable_and_history_can_branch_from_old_version(api: Api
     assert second["version"]["previous_version_id"] == first_id
     assert any(op["intent"] == "作者手动修改" for op in second["version"]["edit_operations"])
     assert any(op["type"] == "change_display_name" for op in second["version"]["edit_operations"])
+    receipt = api.client.get(
+        "/v1/dev/events/recipe-version-saved",
+        params={"version_id": second["version"]["id"]},
+        headers=headers,
+    )
+    assert receipt.status_code == 200
+    saved_event = receipt.json()["items"]
+    assert len(saved_event) == 1
+    assert saved_event[0]["previous_version_id"] == first_id
+    assert any(
+        operation["intent"] == "作者手动修改" for operation in saved_event[0]["edit_operations"]
+    )
     first = api.client.get(f"/v1/recipes/{recipe_id}/versions/{first_id}", headers=headers).json()
     assert first["version"]["version_number"] == 1
     assert first["version"]["snapshot"]["servings"] == 2
