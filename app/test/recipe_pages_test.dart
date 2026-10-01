@@ -382,7 +382,7 @@ void main() {
       await tester.tap(find.byKey(const ValueKey('recipe-mode-serving')));
       await tester.pumpAndSettle();
       await _scrollToBottom(tester);
-      expect(find.text('100 g'), findsWidgets);
+      expect(find.text('100 克'), findsWidgets);
       expect((snapshot['ingredients'] as List).first['quantity'], 100);
     },
   );
@@ -1202,7 +1202,7 @@ void main() {
       await tester.tap(find.byKey(const ValueKey('recipe-serving-increase')));
       await tester.pumpAndSettle();
       await _scrollToBottom(tester);
-      expect(find.text('200 g'), findsWidgets);
+      expect(find.text('150 克'), findsWidgets);
       expect(find.text('按场景调整'), findsOneWidget);
       await _scrollToTop(tester);
       await tester.tap(find.byKey(const ValueKey('recipe-serving-reset')));
@@ -1219,7 +1219,96 @@ void main() {
       await tester.tap(find.text('按场景调整'));
       await tester.pumpAndSettle();
       expect(find.text('原来：100 g'), findsOneWidget);
-      expect(find.text('现在：200 g'), findsOneWidget);
+      expect(find.text('现在：150 克'), findsOneWidget);
     },
   );
+
+  testWidgets('recipe detail switches display mode without changing source', (
+    tester,
+  ) async {
+    final server = FakeServer();
+    _installRecipeApi(server);
+    await pumpApp(tester, env: TestEnv.signedIn(server: server));
+    await _openMyRecipes(tester);
+    await tester.tap(find.byKey(const ValueKey('recipe-card-$_recipeId')));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const ValueKey('recipe-measure-mode')), findsOneWidget);
+    await _scrollUntilVisible(tester, find.text('汤匙/茶匙'));
+    await tester.tap(find.text('汤匙/茶匙'));
+    await tester.pumpAndSettle();
+    await _scrollToBottom(tester);
+    expect(find.text('100 克'), findsWidgets);
+    expect(server.calls('POST', '/v1/recipes'), isEmpty);
+  });
+
+  testWidgets('recipe detail selects a personal measure and retains grams', (
+    tester,
+  ) async {
+    final server = FakeServer();
+    _installRecipeApi(server, standardIngredientId: _standardIngredientId);
+    final densityIngredient = IngredientDetail(
+      aliases: const ['水'],
+      attributes: IngredientAttributes(
+        density: DensityAttribute(
+          estimate: false,
+          source_: 'fixture',
+          status: AttributeStatus.verified,
+          value: 1,
+        ),
+      ),
+      category: '饮品',
+      id: _standardIngredientId,
+      pinyin: 'shui',
+      pinyinInitials: 'S',
+      standardName: '水',
+      version: 'ingredient-v1',
+    );
+    server.on(
+      'GET',
+      '/v1/ingredients/changes',
+      (_) => (
+        200,
+        {
+          'added': [densityIngredient.toJson()],
+          'current_version': 'ingredient-v1',
+          'merged': const [],
+          'modified': const [],
+          'releases': const [],
+        },
+      ),
+    );
+    server.on(
+      'GET',
+      '/v1/me/measures',
+      (_) => (
+        200,
+        {
+          'items': [
+            {
+              'id': '66666666-6666-4666-8666-666666666666',
+              'name': '白瓷勺',
+              'kind': 'spoon',
+              'capacity_ml': 15,
+              'created_at': '2026-10-02T00:00:00Z',
+              'updated_at': '2026-10-02T00:00:00Z',
+            },
+          ],
+          'next_cursor': null,
+        },
+      ),
+    );
+    await pumpApp(tester, env: TestEnv.signedIn(server: server));
+    await _openMyRecipes(tester);
+    await tester.tap(find.byKey(const ValueKey('recipe-card-$_recipeId')));
+    await tester.pumpAndSettle();
+
+    await _scrollUntilVisible(tester, find.text('自家量具'));
+    await tester.tap(find.text('自家量具'));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('recipe-measure-picker')), findsOneWidget);
+    await _scrollToBottom(tester);
+    expect(find.textContaining('白瓷勺'), findsWidgets);
+    expect(find.textContaining('100 克'), findsWidgets);
+  });
 }

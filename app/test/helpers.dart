@@ -197,7 +197,7 @@ class FakeServer extends Interceptor {
     });
     on('POST', '/v1/me/consents', (_) => (204, null));
     final personalMeasures = <Map<String, dynamic>>[];
-    on('GET', '/v1/me/measures', (_) => (200, personalMeasures));
+    on('GET', '/v1/me/measures', (_) => (200, {'items': personalMeasures, 'next_cursor': null}));
     on('POST', '/v1/me/measures', (r) {
       final body = Map<String, dynamic>.from(r.body as Map);
       final value = {

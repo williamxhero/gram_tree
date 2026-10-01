@@ -72,8 +72,8 @@ class MePage extends ConsumerWidget {
           ListTile(
             key: const ValueKey('personal-measures-entry'),
             contentPadding: EdgeInsets.zero,
-            title: const Text('自家量具'),
-            subtitle: const Text('登记勺、碗、杯的满水容量'),
+            title: Text(l10n.personalMeasuresTitle),
+            subtitle: Text(l10n.personalMeasuresCapacity),
             trailing: const Icon(Icons.chevron_right),
             onTap: () => context.push(PersonalMeasuresPage.path),
           ),

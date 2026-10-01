@@ -1703,11 +1703,36 @@ abstract class AppLocalizations {
   /// **'没有找到标准食材，可以继续填写未收录食材'**
   String get recipeSearchNoResults;
 
-  /// No description provided for @recipeAiAssisted.
-  ///
   /// In zh, this message translates to:
   /// **'AI 协助'**
   String get recipeAiAssisted;
+
+  String get personalMeasuresTitle;
+  String get personalMeasuresIntro;
+  String get personalMeasuresOffline;
+  String get personalMeasuresAdd;
+  String get personalMeasuresEmpty;
+  String get personalMeasuresDeleteTooltip;
+  String get personalMeasuresDeleteTitle;
+  String personalMeasuresDeleteBody(String name);
+  String get personalMeasuresEdit;
+  String get personalMeasuresRegister;
+  String get personalMeasuresName;
+  String get personalMeasuresKind;
+  String get personalMeasuresCapacity;
+  String personalMeasuresCapacityValue(String value);
+  String get personalMeasuresValidation;
+  String get personalMeasuresSpoon;
+  String get personalMeasuresBowl;
+  String get personalMeasuresCup;
+  String get recipeMeasureModeTitle;
+  String get recipeMeasureModeBase;
+  String get recipeMeasureModeStandard;
+  String get recipeMeasureModeHome;
+  String get recipeMeasureChoose;
+  String get recipeMeasureModeNoHome;
+  String get recipeMeasureDisplayOnly;
+  String get recipeMeasureNoDensity;
 }
 
 class _AppLocalizationsDelegate

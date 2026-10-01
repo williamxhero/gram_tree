@@ -69,10 +69,7 @@ const _fractions = <double>[0.25, 1 / 3, 0.5, 2 / 3, 0.75, 1];
       : (fraction - 2 / 3).abs() < 0.01
       ? '2/3'
       : '3/4';
-  return (
-    value: rounded,
-    text: whole == 0 ? text : '$whole $text',
-  );
+  return (value: rounded, text: whole == 0 ? text : '$whole $text');
 }
 
 double? _grams(double quantity, String unit, double? density) {
@@ -83,9 +80,10 @@ double? _grams(double quantity, String unit, double? density) {
 
 String _quantityText(double value) => value == value.roundToDouble()
     ? value.toInt().toString()
-    : value.toStringAsFixed(2).replaceFirst(RegExp(r'0+$'), '').replaceFirst(
-        RegExp(r'\.$'),
-      );
+    : value
+          .toStringAsFixed(2)
+          .replaceFirst(RegExp(r'0+$'), '')
+          .replaceFirst(RegExp(r'\.$'), '');
 
 DisplayedAmount _base(DisplayMeasureInput input, {String? rule}) {
   final unit = input.baseUnit == 'g' ? 'g' : 'ml';
@@ -110,7 +108,7 @@ DisplayedAmount _standard(DisplayMeasureInput input) {
 
   const candidates = [(15.0, '汤匙'), (5.0, '茶匙')];
   final candidate = candidates.reduce((a, b) {
-    final ar = _roundedFraction(millilitres! / a.$1).value;
+    final ar = _roundedFraction(millilitres / a.$1).value;
     final br = _roundedFraction(millilitres / b.$1).value;
     final ae = (ar * a.$1 - millilitres).abs();
     final be = (br * b.$1 - millilitres).abs();

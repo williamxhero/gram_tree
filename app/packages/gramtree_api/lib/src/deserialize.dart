@@ -44,6 +44,8 @@ import 'package:gramtree_api/src/model/health_response.dart';
 import 'package:gramtree_api/src/model/identity_out.dart';
 import 'package:gramtree_api/src/model/ingredient_attributes.dart';
 import 'package:gramtree_api/src/model/ingredient_detail.dart';
+import 'package:gramtree_api/src/model/measure_display_out.dart';
+import 'package:gramtree_api/src/model/measure_display_request.dart';
 import 'package:gramtree_api/src/model/merge_relation.dart';
 import 'package:gramtree_api/src/model/mold_conversion.dart';
 import 'package:gramtree_api/src/model/mold_conversion_ingredient.dart';
@@ -59,6 +61,7 @@ import 'package:gramtree_api/src/model/nutrition.dart';
 import 'package:gramtree_api/src/model/nutrition_attribute.dart';
 import 'package:gramtree_api/src/model/nutrition_estimate.dart';
 import 'package:gramtree_api/src/model/page_description.dart';
+import 'package:gramtree_api/src/model/page_personal_measure_out.dart';
 import 'package:gramtree_api/src/model/page_unrecorded_ingredient_item.dart';
 import 'package:gramtree_api/src/model/personal_measure_input.dart';
 import 'package:gramtree_api/src/model/personal_measure_out.dart';
@@ -258,6 +261,12 @@ ReturnType deserialize<ReturnType, BaseType>(
     case 'IngredientDetail':
       return IngredientDetail.fromJson(value as Map<String, dynamic>)
           as ReturnType;
+    case 'MeasureDisplayOut':
+      return MeasureDisplayOut.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'MeasureDisplayRequest':
+      return MeasureDisplayRequest.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
     case 'MergeRelation':
       return MergeRelation.fromJson(value as Map<String, dynamic>)
           as ReturnType;
@@ -300,6 +309,9 @@ ReturnType deserialize<ReturnType, BaseType>(
           as ReturnType;
     case 'PageDescription':
       return PageDescription.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'PagePersonalMeasureOut':
+      return PagePersonalMeasureOut.fromJson(value as Map<String, dynamic>)
           as ReturnType;
     case 'PageUnrecordedIngredientItem':
       return PageUnrecordedIngredientItem.fromJson(

@@ -68,6 +68,8 @@ lib/src/model/health_response.dart
 lib/src/model/identity_out.dart
 lib/src/model/ingredient_attributes.dart
 lib/src/model/ingredient_detail.dart
+lib/src/model/measure_display_out.dart
+lib/src/model/measure_display_request.dart
 lib/src/model/merge_relation.dart
 lib/src/model/mold_conversion.dart
 lib/src/model/mold_conversion_ingredient.dart
@@ -83,6 +85,7 @@ lib/src/model/nutrition.dart
 lib/src/model/nutrition_attribute.dart
 lib/src/model/nutrition_estimate.dart
 lib/src/model/page_description.dart
+lib/src/model/page_personal_measure_out.dart
 lib/src/model/page_unrecorded_ingredient_item.dart
 lib/src/model/personal_measure_input.dart
 lib/src/model/personal_measure_out.dart

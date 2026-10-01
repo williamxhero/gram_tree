@@ -49,8 +49,14 @@ class PersonalMeasureRepository {
 
   Future<List<PersonalMeasureOut>> list() async {
     try {
-      final response = await api.listPersonalMeasures();
-      final values = response.data ?? [];
+      final values = <PersonalMeasureOut>[];
+      String? cursor;
+      do {
+        final response = await api.listPersonalMeasures(cursor: cursor);
+        final page = response.data ?? PagePersonalMeasureOut(items: const []);
+        values.addAll(page.items);
+        cursor = page.nextCursor;
+      } while (cursor != null);
       await _cache(values);
       offline = false;
       return values;
