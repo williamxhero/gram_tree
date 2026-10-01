@@ -1,7 +1,7 @@
 import 'dart:convert';
 
-import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:gramtree_api/gramtree_api.dart';
 
 import '../api/api_client.dart';
 import 'recipe_photo.dart';
@@ -17,18 +17,6 @@ class RecipePhotoUploadResult {
     required this.expiresInSeconds,
     this.versionId,
   });
-
-  factory RecipePhotoUploadResult.fromJson(Map<String, dynamic> json) =>
-      RecipePhotoUploadResult(
-        id: json['id'] as String,
-        versionId: json['version_id'] as String?,
-        contentType: json['content_type'] as String,
-        byteSize: json['byte_size'] as int,
-        width: json['width'] as int?,
-        height: json['height'] as int?,
-        url: json['url'] as String,
-        expiresInSeconds: json['expires_in_seconds'] as int,
-      );
 
   final String id;
   final String? versionId;
@@ -47,33 +35,60 @@ abstract interface class RecipePhotoApi {
   });
 }
 
-class DioRecipePhotoApi implements RecipePhotoApi {
-  const DioRecipePhotoApi(this._dio);
+/// Uses the generated OpenAPI client for both staged and version uploads.
+/// Keeping the platform-facing result type here avoids leaking generated models
+/// into the photo picker while preventing a second, hand-written HTTP contract.
+class GeneratedRecipePhotoApi implements RecipePhotoApi {
+  const GeneratedRecipePhotoApi(this._api);
 
-  final Dio _dio;
+  final GramtreeApi _api;
 
   @override
   Future<RecipePhotoUploadResult> upload({
     required String? recipeId,
     required ProcessedRecipePhoto photo,
   }) async {
-    final path = recipeId == null
-        ? '/v1/recipes/images/staging'
-        : '/v1/recipes/$recipeId/images';
-    final response = await _dio.post<Map<String, dynamic>>(
-      path,
-      data: {
-        'content_base64': base64Encode(photo.bytes),
-        'content_type': photo.contentType,
-        'filename': photo.filename,
-      },
+    final request = RecipeImageUpload(
+      contentBase64: base64Encode(photo.bytes),
+      contentType: photo.contentType,
+      filename: photo.filename,
     );
-    return RecipePhotoUploadResult.fromJson(response.data!);
+    final recipes = _api.getRecipesApi();
+    if (recipeId == null) {
+      final response = await recipes.stageRecipeImage(
+        recipeImageUpload: request,
+      );
+      final result = response.data!;
+      return RecipePhotoUploadResult(
+        id: result.id,
+        contentType: result.contentType,
+        byteSize: result.byteSize,
+        width: result.width,
+        height: result.height,
+        url: result.url,
+        expiresInSeconds: result.expiresInSeconds,
+      );
+    }
+    final response = await recipes.uploadRecipeImage(
+      recipeId: recipeId,
+      recipeImageUpload: request,
+    );
+    final result = response.data!;
+    return RecipePhotoUploadResult(
+      id: result.id,
+      versionId: result.versionId,
+      contentType: result.contentType,
+      byteSize: result.byteSize,
+      width: result.width,
+      height: result.height,
+      url: result.url,
+      expiresInSeconds: result.expiresInSeconds,
+    );
   }
 }
 
 final recipePhotoApiProvider = Provider<RecipePhotoApi>(
-  (ref) => DioRecipePhotoApi(ref.watch(dioProvider)),
+  (ref) => GeneratedRecipePhotoApi(ref.watch(apiClientProvider)),
 );
 
 final recipePhotoPickerProvider = Provider<RecipePhotoPicker>(

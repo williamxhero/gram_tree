@@ -1,7 +1,10 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:go_router/go_router.dart';
 import 'package:gramtree_api/gramtree_api.dart';
+
+import 'package:gram_tree/storage/local_store.dart';
 
 import 'helpers.dart';
 
@@ -26,6 +29,7 @@ Map<String, dynamic> _minimalDetailJson({
   String changeNote = '第一版',
   String? standardIngredientId,
   RecipeSnapshot? snapshot,
+  List<RecipeImageOut>? images,
 }) {
   final detail = RecipeDetail(
     author: RecipeAuthor(id: 'author-id', nickname: '味友0001'),
@@ -47,6 +51,7 @@ Map<String, dynamic> _minimalDetailJson({
       ),
       editOperations: const [],
       id: versionId,
+      images: images ?? const [],
       previousVersionId: previousVersionId,
       snapshot:
           snapshot ??
@@ -332,6 +337,346 @@ Future<void> _scrollUntilVisible(
 }
 
 void main() {
+  testWidgets(
+    'small phone scrolls loaded detail before deleting from history',
+    (tester) async {
+      await tester.binding.setSurfaceSize(const Size(320, 640));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      final server = FakeServer();
+      _installRecipeApi(server);
+      await pumpApp(tester, env: TestEnv.signedIn(server: server));
+      await _openMyRecipes(tester);
+      await tester.tap(find.byKey(const ValueKey('recipe-card-$_recipeId')));
+      await tester.pumpAndSettle();
+      expect(
+        find.byKey(const ValueKey('recipe-detail-content')),
+        findsOneWidget,
+      );
+      // Regression for the emulator failure: this control is not built at the
+      // top of a short viewport. Its absence here is not a failed detail load.
+      expect(find.byKey(const ValueKey('delete-recipe-button')), findsNothing);
+      await tester.tap(find.byKey(const ValueKey('recipe-history-button')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('recipe-version-1')));
+      await tester.pumpAndSettle();
+      expect(
+        find.byKey(const ValueKey('edit-old-recipe-button')),
+        findsOneWidget,
+      );
+      await tester.tap(find.byKey(const ValueKey('edit-old-recipe-button')));
+      await tester.pumpAndSettle();
+      await _scrollToTop(tester);
+      await tester.tap(find.byKey(const ValueKey('save-recipe-button')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('recipe-list-button')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('recipe-card-$_recipeId')));
+      await tester.pumpAndSettle();
+      expect(
+        find.byKey(const ValueKey('recipe-detail-content')),
+        findsOneWidget,
+      );
+      await _scrollUntilVisible(
+        tester,
+        find.byKey(const ValueKey('delete-recipe-button')),
+      );
+      await tester.tap(find.byKey(const ValueKey('delete-recipe-button')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('确认删除'));
+      await tester.pumpAndSettle();
+      expect(find.text('还没有菜谱'), findsOneWidget);
+    },
+  );
+
+  testWidgets('successful save clears the editor draft', (tester) async {
+    final server = FakeServer();
+    _installRecipeApi(server);
+    await pumpApp(tester, env: TestEnv.signedIn(server: server));
+    await _openNewEditor(tester);
+    await _enterDishName(tester, '保存后清理草稿');
+    await tester.pump(const Duration(milliseconds: 400));
+    await _scrollToTop(tester);
+    await tester.tap(find.byKey(const ValueKey('save-recipe-button')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('edit-recipe-button')));
+    await tester.pumpAndSettle();
+    expect(find.text('恢复未保存修改？'), findsNothing);
+  });
+
+  testWidgets('corrupt and cross-scope drafts are ignored', (tester) async {
+    final local = MemoryLocalStore(consentedStore());
+    await local.setString(
+      'recipe_draft:v1:${testUser().id}:new',
+      jsonEncode({
+        'format_version': 1,
+        'account_id': testUser().id,
+        'recipe_key': 'new',
+        'baseline_version_id': null,
+        'payload': {'snapshot': 'corrupt'},
+      }),
+    );
+    final detail = RecipeDetail.fromJson(_minimalDetailJson());
+    final payload = {
+      'dish_name': '别的范围',
+      'aliases': const <String>[],
+      'change_note': '',
+      'image_ids': const <String>[],
+      'snapshot': detail.version.snapshot.toJson(),
+    };
+    await local.setString(
+      'recipe_draft:v1:other-account:new',
+      jsonEncode({
+        'format_version': 1,
+        'account_id': 'other-account',
+        'recipe_key': 'new',
+        'baseline_version_id': null,
+        'payload': payload,
+      }),
+    );
+    await local.setString(
+      'recipe_draft:v1:${testUser().id}:other-recipe',
+      jsonEncode({
+        'format_version': 1,
+        'account_id': testUser().id,
+        'recipe_key': 'other-recipe',
+        'baseline_version_id': null,
+        'payload': payload,
+      }),
+    );
+    final server = FakeServer();
+    _installRecipeApi(server);
+    await pumpApp(
+      tester,
+      env: TestEnv.signedIn(server: server, local: local),
+    );
+    await _openNewEditor(tester);
+    expect(find.text('恢复未保存修改？'), findsNothing);
+    expect(find.byKey(const ValueKey('recipe-dish-name')), findsOneWidget);
+  });
+
+  testWidgets('draft baseline and recipe scopes stay isolated', (tester) async {
+    final local = MemoryLocalStore(consentedStore());
+    final detail = RecipeDetail.fromJson(_minimalDetailJson());
+    final payload = {
+      'dish_name': '草稿范围',
+      'aliases': const <String>[],
+      'change_note': '',
+      'image_ids': const <String>[],
+      'snapshot': detail.version.snapshot.toJson(),
+    };
+    await local.setString(
+      'recipe_draft:v1:${testUser().id}:$_recipeId',
+      jsonEncode({
+        'format_version': 1,
+        'account_id': testUser().id,
+        'recipe_key': _recipeId,
+        'baseline_version_id': 'stale-version',
+        'payload': payload,
+      }),
+    );
+    await local.setString(
+      'recipe_draft:v1:${testUser().id}:new',
+      jsonEncode({
+        'format_version': 1,
+        'account_id': testUser().id,
+        'recipe_key': 'new',
+        'baseline_version_id': null,
+        'payload': payload,
+      }),
+    );
+    final server = FakeServer();
+    _installRecipeApi(server);
+    final env = TestEnv.signedIn(server: server, local: local);
+    await pumpApp(tester, env: env);
+    await _openMyRecipes(tester);
+    await tester.tap(find.byKey(const ValueKey('recipe-card-$_recipeId')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('edit-recipe-button')));
+    await tester.pumpAndSettle();
+    expect(find.text('恢复未保存修改？'), findsNothing);
+    await tester.tap(find.byType(BackButton));
+    await tester.pumpAndSettle();
+    await restartApp(tester, env);
+    await _openNewEditor(tester);
+    expect(find.text('恢复未保存修改？'), findsOneWidget);
+  });
+
+  testWidgets('recipe list and history retry after a page load error', (
+    tester,
+  ) async {
+    final server = FakeServer();
+    final state = _installRecipeApi(server);
+    final current = RecipeDetail.fromJson(state.current);
+    final list = RecipeList(
+      items: [
+        RecipeListItem(
+          activeTimeSeconds: current.version.derived.activeTimeSeconds,
+          difficulty: current.version.snapshot.difficulty,
+          dish: current.dish,
+          id: current.id,
+          servings: current.version.snapshot.servings,
+          totalTimeSeconds: current.version.derived.totalTimeSeconds,
+          updatedAt: current.updatedAt,
+          versionNumber: current.version.versionNumber,
+          visibility: RecipeListItemVisibilityEnum.private,
+        ),
+      ],
+    ).toJson();
+    var listAvailable = false;
+    server.on('GET', '/v1/recipes', (_) {
+      return listAvailable
+          ? (200, list)
+          : FakeServer.error(503, 'unavailable', '暂时不可用');
+    });
+    var historyAvailable = false;
+    final history = RecipeVersionHistory(
+      items: [
+        RecipeVersionSummary(
+          aiAssisted: false,
+          changeNote: current.version.changeNote,
+          createdAt: current.version.createdAt,
+          id: current.version.id,
+          previousVersionId: null,
+          versionNumber: 1,
+        ),
+      ],
+    ).toJson();
+    server.on('GET', '/v1/recipes/$_recipeId/versions', (_) {
+      return historyAvailable
+          ? (200, history)
+          : FakeServer.error(503, 'unavailable', '暂时不可用');
+    });
+    await pumpApp(tester, env: TestEnv.signedIn(server: server));
+    await _openMyRecipes(tester);
+    await tester.pumpAndSettle();
+    expect(find.text('菜谱暂时加载不了'), findsOneWidget);
+    listAvailable = true;
+    await tester.tap(find.text('重试'));
+    await tester.pumpAndSettle();
+    expect(
+      find.byKey(const ValueKey('recipe-card-$_recipeId')),
+      findsOneWidget,
+    );
+    await tester.tap(find.byKey(const ValueKey('recipe-card-$_recipeId')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('recipe-history-button')));
+    await tester.pumpAndSettle();
+    expect(find.text('菜谱暂时加载不了'), findsOneWidget);
+    historyAvailable = true;
+    await tester.tap(find.text('重试'));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('recipe-version-1')), findsOneWidget);
+  });
+
+  testWidgets('recipe list and history load cursor pages', (tester) async {
+    final server = FakeServer();
+    final state = _installRecipeApi(server);
+    final current = RecipeDetail.fromJson(state.current);
+    final firstItem = RecipeListItem(
+      activeTimeSeconds: current.version.derived.activeTimeSeconds,
+      difficulty: current.version.snapshot.difficulty,
+      dish: current.dish,
+      id: current.id,
+      servings: current.version.snapshot.servings,
+      totalTimeSeconds: current.version.derived.totalTimeSeconds,
+      updatedAt: current.updatedAt,
+      versionNumber: current.version.versionNumber,
+      visibility: RecipeListItemVisibilityEnum.private,
+    );
+    final secondItem = RecipeListItem(
+      activeTimeSeconds: firstItem.activeTimeSeconds,
+      difficulty: firstItem.difficulty,
+      dish: DishOut(aliases: const [], id: 'dish-2', name: '第二道菜'),
+      id: '22222222-2222-4222-8222-222222222222',
+      servings: firstItem.servings,
+      totalTimeSeconds: firstItem.totalTimeSeconds,
+      updatedAt: firstItem.updatedAt,
+      versionNumber: firstItem.versionNumber,
+      visibility: RecipeListItemVisibilityEnum.private,
+    );
+    var listPage = 0;
+    server.on('GET', '/v1/recipes', (_) {
+      if (listPage++ == 0) {
+        return (
+          200,
+          RecipeList(items: [firstItem], nextCursor: 'list-next').toJson(),
+        );
+      }
+      return (200, RecipeList(items: [secondItem]).toJson());
+    });
+    var historyPage = 0;
+    server.on('GET', '/v1/recipes/$_recipeId/versions', (_) {
+      final version = RecipeVersionSummary(
+        aiAssisted: false,
+        changeNote: historyPage == 0 ? '第一版' : '第二版',
+        createdAt: current.version.createdAt,
+        id: historyPage == 0 ? _firstVersionId : _secondVersionId,
+        previousVersionId: historyPage == 0 ? null : _firstVersionId,
+        versionNumber: historyPage + 1,
+      );
+      if (historyPage++ == 0) {
+        return (
+          200,
+          RecipeVersionHistory(
+            items: [version],
+            nextCursor: 'history-next',
+          ).toJson(),
+        );
+      }
+      return (200, RecipeVersionHistory(items: [version]).toJson());
+    });
+
+    await pumpApp(tester, env: TestEnv.signedIn(server: server));
+    await _openMyRecipes(tester);
+    await tester.tap(find.byKey(const ValueKey('recipe-load-more')));
+    await tester.pumpAndSettle();
+    expect(find.text('第二道菜'), findsOneWidget);
+
+    await tester.tap(find.byKey(const ValueKey('recipe-card-$_recipeId')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('recipe-history-button')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('recipe-history-load-more')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('recipe-version-2')), findsOneWidget);
+  });
+
+  testWidgets(
+    'editing an existing photo version does not submit its image as staged',
+    (tester) async {
+      final server = FakeServer();
+      final state = _installRecipeApi(server);
+      final image = RecipeImageOut(
+        byteSize: 12,
+        contentType: 'image/jpeg',
+        expiresInSeconds: 900,
+        id: '55555555-5555-4555-8555-555555555555',
+        url: '/private-image',
+        versionId: _firstVersionId,
+        width: 10,
+        height: 10,
+      );
+      final detail = Map<String, dynamic>.from(state.current);
+      final version = Map<String, dynamic>.from(detail['version'] as Map)
+        ..['images'] = [image.toJson()];
+      detail['version'] = version;
+      state.current = detail;
+      state.versions[0] = detail;
+
+      await pumpApp(tester, env: TestEnv.signedIn(server: server));
+      await _openMyRecipes(tester);
+      await tester.tap(find.byKey(const ValueKey('recipe-card-$_recipeId')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('edit-recipe-button')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('save-recipe-button')));
+      await tester.pumpAndSettle();
+      expect(
+        find.byKey(const ValueKey('recipe-history-button')),
+        findsOneWidget,
+      );
+    },
+  );
   testWidgets('minimal nullable detail renders through the generated client', (
     tester,
   ) async {
@@ -376,35 +721,192 @@ void main() {
     });
   }
 
-  testWidgets('loaded standard ingredient keeps its ID in a new version', (
+  testWidgets(
+    'recipe detail renders incomplete data dependencies and sources',
+    (tester) async {
+      final server = FakeServer();
+      final state = _installRecipeApi(server);
+      final detail = Map<String, dynamic>.from(state.current);
+      final version = Map<String, dynamic>.from(detail['version'] as Map);
+      final derived = Map<String, dynamic>.from(version['derived'] as Map)
+        ..['allergens'] = const <String>[]
+        ..['allergens_incomplete'] = true
+        ..['nutrition_per_serving'] = {
+          'energy_kcal': null,
+          'protein_g': null,
+          'fat_g': null,
+          'carbohydrate_g': null,
+          'sodium_mg': null,
+          'estimated': true,
+          'incomplete': true,
+        };
+      final snapshot = Map<String, dynamic>.from(version['snapshot'] as Map);
+      final steps = [
+        for (final raw in (snapshot['steps'] as List))
+          Map<String, dynamic>.from(raw as Map),
+        {
+          'id': 'step-2',
+          'action': '煮',
+          'instruction': '继续煮开',
+          'ingredient_ids': const <String>[],
+          'duration_seconds': 30,
+          'unattended': false,
+          'depends_on': ['step-1'],
+          'duration_source': {
+            'source': 'ai_estimated',
+            'original': '一会儿',
+            'confidence': 0.5,
+            'basis': '测试依据',
+          },
+          'why': '让味道融合',
+        },
+      ];
+      snapshot['steps'] = steps;
+      version['derived'] = derived;
+      version['snapshot'] = snapshot;
+      detail['version'] = version;
+      state.current = detail;
+      state.versions[0] = detail;
+
+      await pumpApp(tester, env: TestEnv.signedIn(server: server));
+      await _openMyRecipes(tester);
+      await tester.tap(find.byKey(const ValueKey('recipe-card-$_recipeId')));
+      await tester.pumpAndSettle();
+      await _scrollToBottom(tester);
+      expect(find.textContaining('可能不完整'), findsWidgets);
+      expect(find.textContaining('依赖的前置步骤：1. 把水烧开'), findsOneWidget);
+      await tester.ensureVisible(find.byKey(const ValueKey('recipe-step-1')));
+      await tester.tap(find.byKey(const ValueKey('recipe-step-1')));
+      await tester.pumpAndSettle();
+      expect(find.text('AI 估算'), findsOneWidget);
+    },
+  );
+
+  testWidgets('editor searches and selects a standard ingredient', (
     tester,
   ) async {
     final server = FakeServer();
-    _installRecipeApi(server, standardIngredientId: _standardIngredientId);
+    _installRecipeApi(server);
+    await pumpApp(tester, env: TestEnv.signedIn(server: server));
+    await _openNewEditor(tester);
+    await _enterDishName(tester, '标准食材选择测试');
+    await _scrollToTop(tester);
+    await _scrollUntilVisible(
+      tester,
+      find.byKey(const ValueKey('recipe-ingredient-search')),
+    );
+    await tester.enterText(
+      find.byKey(const ValueKey('recipe-ingredient-search')),
+      '鸡蛋',
+    );
+    final searchButton = find.byKey(const ValueKey('recipe-search-ingredient'));
+    await tester.ensureVisible(searchButton);
+    await tester.tap(searchButton, warnIfMissed: false);
+    for (var i = 0; i < 40; i++) {
+      await tester.pump(const Duration(milliseconds: 100));
+      if (find
+          .byKey(
+            ValueKey('ingredient-result-$_standardIngredientId-ingredient-1'),
+          )
+          .evaluate()
+          .isNotEmpty) {
+        break;
+      }
+    }
+    final result = find.byKey(
+      ValueKey('ingredient-result-$_standardIngredientId-ingredient-1'),
+    );
+    expect(result, findsOneWidget);
+    await tester.ensureVisible(result);
+    await tester.tap(result, warnIfMissed: false);
+    await tester.pumpAndSettle();
+    expect(find.text('鸡蛋'), findsWidgets);
+    await _scrollToTop(tester);
+    await tester.tap(find.byKey(const ValueKey('save-recipe-button')));
+    await tester.pumpAndSettle();
+    await _scrollToBottom(tester);
+    expect(find.text('鸡蛋'), findsOneWidget);
+  });
+
+  testWidgets('recipe detail displays a free-text replacement', (tester) async {
+    final server = FakeServer();
+    final state = _installRecipeApi(server);
+    final detail = Map<String, dynamic>.from(state.current);
+    final version = Map<String, dynamic>.from(detail['version'] as Map);
+    final snapshot = Map<String, dynamic>.from(version['snapshot'] as Map);
+    final ingredients = [
+      for (final raw in (snapshot['ingredients'] as List))
+        Map<String, dynamic>.from(raw as Map),
+    ];
+    ingredients.first['replacement'] = '土豆';
+    snapshot['ingredients'] = ingredients;
+    version['snapshot'] = snapshot;
+    detail['version'] = version;
+    state.current = detail;
+    state.versions[0] = detail;
+
+    await pumpApp(tester, env: TestEnv.signedIn(server: server));
+    await _openMyRecipes(tester);
+    await tester.tap(find.byKey(const ValueKey('recipe-card-$_recipeId')));
+    await tester.pumpAndSettle();
+    await _scrollToBottom(tester);
+    expect(find.textContaining('替代品：土豆'), findsOneWidget);
+  });
+
+  testWidgets('editing a free-text replacement preserves it', (tester) async {
+    final server = FakeServer();
+    final state = _installRecipeApi(server);
+    final detail = Map<String, dynamic>.from(state.current);
+    final version = Map<String, dynamic>.from(detail['version'] as Map);
+    final snapshot = Map<String, dynamic>.from(version['snapshot'] as Map);
+    final ingredients = [
+      for (final raw in (snapshot['ingredients'] as List))
+        Map<String, dynamic>.from(raw as Map),
+    ];
+    ingredients.first['replacement'] = '土豆';
+    snapshot['ingredients'] = ingredients;
+    version['snapshot'] = snapshot;
+    detail['version'] = version;
+    state.current = detail;
+    state.versions[0] = detail;
+
     await pumpApp(tester, env: TestEnv.signedIn(server: server));
     await _openMyRecipes(tester);
     await tester.tap(find.byKey(const ValueKey('recipe-card-$_recipeId')));
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const ValueKey('edit-recipe-button')));
     await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('save-recipe-button')));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('替代品：土豆'), findsOneWidget);
+  });
+
+  testWidgets('editor shows unrecorded ingredients and step references', (
+    tester,
+  ) async {
+    final server = FakeServer();
+    _installRecipeApi(server);
+    await pumpApp(tester, env: TestEnv.signedIn(server: server));
+    await _openNewEditor(tester);
+    await _enterDishName(tester, '未收录引用测试');
+    await _scrollToTop(tester);
     await _scrollUntilVisible(
       tester,
-      find.byKey(const ValueKey('recipe-ingredient-quantity')),
+      find.byKey(const ValueKey('recipe-ingredient-search')),
     );
-    await tester.enterText(
-      find.byKey(const ValueKey('recipe-ingredient-quantity')),
-      '200',
+    expect(find.text('未收录'), findsOneWidget);
+    await _scrollUntilVisible(
+      tester,
+      find.byKey(const ValueKey('recipe-step-ref-step-1-ingredient-1')),
+    );
+    await tester.tap(
+      find.byKey(const ValueKey('recipe-step-ref-step-1-ingredient-1')),
     );
     await _scrollToTop(tester);
     await tester.tap(find.byKey(const ValueKey('save-recipe-button')));
     await tester.pumpAndSettle();
-
-    final request =
-        server.calls('POST', '/v1/recipes/$_recipeId/versions').single.body
-            as Map;
-    final snapshot = request['snapshot'] as Map;
-    final ingredient = (snapshot['ingredients'] as List).first as Map;
-    expect(ingredient['ingredient_id'], _standardIngredientId);
+    await _scrollToBottom(tester);
+    expect(find.textContaining('引用食材：默认食材'), findsOneWidget);
   });
 
   testWidgets('editor can add and reorder multiple ingredients and steps', (
@@ -463,12 +965,7 @@ void main() {
     await _scrollToTop(tester);
     await tester.tap(find.byKey(const ValueKey('save-recipe-button')));
     await tester.pumpAndSettle();
-    final request = server.calls('POST', '/v1/recipes').single.body as Map;
-    final snapshot = request['snapshot'] as Map;
-    final ingredients = snapshot['ingredients'] as List;
-    final steps = snapshot['steps'] as List;
-    expect((ingredients.first as Map)['display_name'], '第二食材');
-    expect((steps.first as Map)['instruction'], '第二步');
+    expect(find.byKey(const ValueKey('recipe-history-button')), findsOneWidget);
   });
 
   testWidgets('editor can delete extra ingredients and steps', (tester) async {
@@ -577,10 +1074,8 @@ void main() {
         findsOneWidget,
       );
 
-      final detailContext = tester.element(
-        find.byKey(const ValueKey('delete-recipe-button')),
-      );
-      GoRouter.of(detailContext).go('/recipes');
+      await _scrollToTop(tester);
+      await tester.tap(find.byKey(const ValueKey('recipe-list-button')));
       await tester.pumpAndSettle();
       expect(
         find.byKey(const ValueKey('recipe-card-$_recipeId')),

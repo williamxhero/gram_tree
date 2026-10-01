@@ -11,6 +11,7 @@ import 'package:gramtree_api/gramtree_api.dart'
         PageDescription;
 
 import '../api/api_client.dart';
+import '../config/app_config.dart';
 import '../events/event_recorder.dart';
 import '../features_flags/features.dart';
 import 'component_registry.dart';
@@ -64,8 +65,17 @@ final componentRegistryProvider = Provider<ComponentRegistry>(
 /// （SPEC-009.1 #79：初始 800 毫秒）。
 const defaultCompositionTimeoutMs = 800;
 const _compositionTimeoutConfigKey = 'ui.composition_timeout_ms';
+// Android E2E can give its emulator process extra time without changing the
+// server's persisted/default runtime budget. Web and production leave this empty.
+const _e2eCompositionTimeoutMs = String.fromEnvironment(
+  'E2E_COMPOSITION_TIMEOUT_MS',
+);
 
 final compositionTimeoutMsProvider = Provider<int>((ref) {
+  final e2eOverride = int.tryParse(_e2eCompositionTimeoutMs);
+  if (!ref.watch(appConfigProvider).isProd && e2eOverride != null) {
+    return e2eOverride;
+  }
   // ClientConfig.params 是生成客户端里的 Object（openapi 的
   // additionalProperties 没有生成更具体的 Map 类型），这里按字典读一层。
   final params = ref.watch(clientConfigProvider).value?.params;

@@ -12,9 +12,20 @@ class RecipeRepository {
 
   RecipesApi get _recipes => _api.getRecipesApi();
 
-  Future<RecipeList> list({String? cursor}) async {
+  Future<RecipeList> listPage({String? cursor}) async {
     final response = await _recipes.listRecipes(cursor: cursor);
     return response.data ?? RecipeList(items: const []);
+  }
+
+  Future<RecipeList> list({String? cursor}) async {
+    final items = <RecipeListItem>[];
+    var next = cursor;
+    do {
+      final page = await listPage(cursor: next);
+      items.addAll(page.items);
+      next = page.nextCursor;
+    } while (next != null);
+    return RecipeList(items: items);
   }
 
   Future<RecipeDetail> get(String recipeId) async {
@@ -62,9 +73,26 @@ class RecipeRepository {
     return response.data!;
   }
 
-  Future<RecipeVersionHistory> history(String recipeId) async {
-    final response = await _recipes.listRecipeVersions(recipeId: recipeId);
+  Future<RecipeVersionHistory> historyPage(
+    String recipeId, {
+    String? cursor,
+  }) async {
+    final response = await _recipes.listRecipeVersions(
+      recipeId: recipeId,
+      cursor: cursor,
+    );
     return response.data ?? RecipeVersionHistory(items: const []);
+  }
+
+  Future<RecipeVersionHistory> history(String recipeId) async {
+    final items = <RecipeVersionSummary>[];
+    String? cursor;
+    do {
+      final page = await historyPage(recipeId, cursor: cursor);
+      items.addAll(page.items);
+      cursor = page.nextCursor;
+    } while (cursor != null);
+    return RecipeVersionHistory(items: items);
   }
 
   Future<void> delete(String recipeId) async {
@@ -129,7 +157,12 @@ class RecipeIngredientDraft {
         scalingMode: value.scalingMode,
         optional: value.optional == true,
         functional: value.functional == true,
-        replacement: value.replacement is Map
+        replacement: value.replacement is String
+            ? RecipeReplacementDraft(
+                ingredientId: null,
+                displayName: value.replacement as String,
+              )
+            : value.replacement is Map
             ? RecipeReplacementDraft.fromJson(
                 Map<String, dynamic>.from(value.replacement as Map),
               )
@@ -151,7 +184,9 @@ class RecipeIngredientDraft {
       scalingMode: _scalingMode(value['scaling_mode']),
       optional: value['optional'] == true,
       functional: value['functional'] == true,
-      replacement: replacement is Map
+      replacement: replacement is String
+          ? RecipeReplacementDraft(ingredientId: null, displayName: replacement)
+          : replacement is Map
           ? RecipeReplacementDraft.fromJson(
               Map<String, dynamic>.from(replacement),
             )
@@ -178,11 +213,11 @@ class RecipeIngredientDraft {
     baseUnit: _baseUnit(baseUnit),
     displayName: displayName.trim(),
     functional: functional,
-    group: group.trim(),
+    group: _optionalText(group),
     id: id,
     ingredientId: ingredientId,
     optional: optional,
-    preparation: preparation.trim(),
+    preparation: _optionalText(preparation),
     quantity: quantity,
     quantitySource: _authorSource(quantity.toString()),
     replacement: replacement?.toModel(),
@@ -309,22 +344,24 @@ class RecipeStepDraft {
   String why;
 
   RecipeStep toModel() => RecipeStep(
-    action: action.trim(),
-    cookware: cookware.trim(),
+    action: _optionalText(action),
+    cookware: _optionalText(cookware),
     dependsOn: [...dependsOn],
-    doneness: doneness.trim(),
+    doneness: _optionalText(doneness),
     durationSeconds: durationSeconds,
     durationSource: _authorSource(durationSeconds.toString()),
-    heat: heat.trim(),
-    heatSource: _authorSource(heat),
+    heat: _optionalText(heat),
+    heatSource: _optionalText(heat) == null ? null : _authorSource(heat),
     id: id,
     ingredientIds: [...ingredientIds],
     instruction: instruction.trim(),
-    notes: notes.trim(),
-    temperatureCelsius: temperatureCelsius,
-    temperatureSource: _authorSource(temperatureCelsius.toString()),
+    notes: _optionalText(notes),
+    temperatureCelsius: temperatureCelsius == 0 ? null : temperatureCelsius,
+    temperatureSource: temperatureCelsius == 0
+        ? null
+        : _authorSource(temperatureCelsius.toString()),
     unattended: unattended,
-    why: why.trim(),
+    why: _optionalText(why),
   );
 
   Map<String, dynamic> toJson() => {
@@ -359,30 +396,49 @@ class RecipeForm {
     this.changeNote = '',
     List<RecipeIngredientDraft>? ingredients,
     List<RecipeStepDraft>? steps,
-    this.imageIds = const [],
+    List<String>? imageIds,
   }) : ingredients = ingredients ?? [RecipeIngredientDraft(id: 'ingredient-1')],
-       steps = steps ?? [RecipeStepDraft(id: 'step-1')];
+       steps = steps ?? [RecipeStepDraft(id: 'step-1')],
+       imageIds = imageIds ?? <String>[];
 
-  factory RecipeForm.fromSnapshot(RecipeSnapshot snapshot, String name) =>
-      RecipeForm(
-        dishName: name,
-        servings: snapshot.servings,
-        difficulty: snapshot.difficulty ?? '',
-        dishType: snapshot.dishType ?? '',
-        tags: [...?snapshot.tags],
-        totalTimeSeconds: snapshot.totalTimeSeconds ?? 0,
-        activeTimeSeconds: snapshot.activeTimeSeconds ?? 0,
-        ingredients: [
-          for (final item in snapshot.ingredients ?? const [])
-            RecipeIngredientDraft.fromModel(item),
-        ],
-        steps: [
-          for (final item in snapshot.steps ?? const [])
-            RecipeStepDraft.fromModel(item),
-        ],
-      );
+  factory RecipeForm.fromSnapshot(
+    RecipeSnapshot snapshot,
+    String name, {
+    List<String>? aliases,
+    List<String>? imageIds,
+  }) => RecipeForm(
+    dishName: name,
+    aliases: [...?aliases],
+    servings: snapshot.servings,
+    difficulty: snapshot.difficulty ?? '',
+    dishType: snapshot.dishType ?? '',
+    tags: [...?snapshot.tags],
+    totalTimeSeconds: snapshot.totalTimeSeconds ?? 0,
+    activeTimeSeconds: snapshot.activeTimeSeconds ?? 0,
+    ingredients: [
+      for (final item in snapshot.ingredients ?? const [])
+        RecipeIngredientDraft.fromModel(item),
+    ],
+    steps: [
+      for (final item in snapshot.steps ?? const [])
+        RecipeStepDraft.fromModel(item),
+    ],
+    imageIds: [...?imageIds],
+  );
+
+  static bool isDraftPayloadValid(Map<String, dynamic> value) {
+    final snapshot = value['snapshot'];
+    if (snapshot is! Map) return false;
+    try {
+      RecipeSnapshot.fromJson(Map<String, dynamic>.from(snapshot));
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
 
   factory RecipeForm.fromDraft(Map<String, dynamic> value) {
+    if (!isDraftPayloadValid(value)) return RecipeForm(dishName: '');
     final snapshot = value['snapshot'];
     if (snapshot is Map) {
       try {
@@ -453,6 +509,11 @@ RecipeIngredientScalingModeEnum _scalingMode(Object? value) {
     (item) => item.value == raw,
     orElse: () => RecipeIngredientScalingModeEnum.proportional,
   );
+}
+
+String? _optionalText(String value) {
+  final trimmed = value.trim();
+  return trimmed.isEmpty ? null : trimmed;
 }
 
 String? _string(Object? value) => value is String ? value : null;

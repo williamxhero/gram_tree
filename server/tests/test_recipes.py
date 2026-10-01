@@ -2,11 +2,18 @@
 
 import base64
 import io
+import json
+import os
+import subprocess
+from pathlib import Path
 
+from fastapi.testclient import TestClient
 from PIL import Image
 from PIL.TiffImagePlugin import IFDRational
 
+from gramtree.main import create_app
 from tests.accounts_support import Api, bearer
+from tests.conftest import make_settings
 from tests.test_conventions import assert_error_shape
 
 
@@ -91,8 +98,8 @@ def _create(api: Api, email: str = "author@example.com") -> tuple[dict, dict[str
     return response.json(), headers
 
 
-def test_recipe_save_event_is_visible_once_to_its_owner(api: Api) -> None:
-    _saved, headers = _create(api, "events@example.com")
+def test_recipe_save_event_is_visible_once_to_its_owner(api: Api, database_url: str) -> None:
+    saved, headers = _create(api, "events@example.com")
     response = api.client.get(
         "/v1/dev/events/count",
         params={"event_type": "recipe.version_saved"},
@@ -100,6 +107,28 @@ def test_recipe_save_event_is_visible_once_to_its_owner(api: Api) -> None:
     )
     assert response.status_code == 200
     assert response.json() == {"count": 1}
+    env = os.environ.copy()
+    env["GRAMTREE_DATABASE_URL"] = database_url
+    receipt = subprocess.run(
+        [
+            "uv",
+            "run",
+            "gramtree",
+            "recipes",
+            "save-event-receipt",
+            saved["version"]["id"],
+        ],
+        cwd=os.path.dirname(os.path.dirname(__file__)),
+        env=env,
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    payload = json.loads(receipt.stdout)
+    assert payload["recipe_version_id"] == saved["version"]["id"]
+    assert payload["previous_version_id"] is None
+    assert payload["edit_operations"] == []
+    assert payload["ai_assisted"] is False
     other_headers = bearer(api.login("events-other@example.com"))
     other = api.client.get(
         "/v1/dev/events/count",
@@ -125,6 +154,13 @@ def test_author_can_save_read_list_and_delete_private_recipe(api: Api) -> None:
     assert saved["version"]["derived"]["total_time_seconds"] == 1020
     assert saved["version"]["derived"]["active_time_seconds"] == 120
     assert saved["version"]["derived"]["cookware"] == ["炒锅", "碗"]
+    assert saved["version"]["derived"]["allergens_incomplete"] is True
+    assert saved["version"]["derived"]["nutrition_per_serving"]["estimated"] is True
+    assert saved["version"]["derived"]["nutrition_per_serving"]["incomplete"] is True
+    assert all(
+        saved["version"]["derived"]["nutrition_per_serving"][field] is None
+        for field in ("energy_kcal", "protein_g", "fat_g", "carbohydrate_g", "sodium_mg")
+    ), saved["version"]["derived"]["nutrition_per_serving"]
 
     read = api.client.get(f"/v1/recipes/{recipe_id}", headers=headers)
     assert read.status_code == 200
@@ -152,6 +188,55 @@ def test_author_can_save_read_list_and_delete_private_recipe(api: Api) -> None:
     assert api.client.get("/v1/recipes", headers=headers).json()["items"] == []
 
 
+def test_recipe_event_retries_after_delete_via_http_and_cli(api: Api, database_url: str) -> None:
+    tokens = api.login("retry-after-delete@example.com")
+    headers = bearer(tokens)
+    unavailable = make_settings(redis_url="redis://127.0.0.1:63999/15")
+    with TestClient(create_app(unavailable), raise_server_exceptions=False) as broken:
+        for name in ("待重试菜谱一", "待重试菜谱二"):
+            saved = broken.post("/v1/recipes", json=recipe_input(name), headers=headers)
+            assert saved.status_code == 201, saved.text
+            recipe_id = saved.json()["id"]
+            assert broken.delete(f"/v1/recipes/{recipe_id}", headers=headers).status_code == 204
+
+    env = os.environ.copy()
+    env["GRAMTREE_DATABASE_URL"] = database_url
+    env["GRAMTREE_REDIS_URL"] = os.environ["GRAMTREE_REDIS_URL"]
+    command = ["uv", "run", "gramtree", "recipes", "drain-save-events"]
+    server_dir = os.path.dirname(os.path.dirname(__file__))
+    first_retry = subprocess.run(
+        command,
+        cwd=server_dir,
+        env=env,
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    assert "已投递 2 条菜谱版本事件" in first_retry.stdout
+    count = api.client.get(
+        "/v1/dev/events/count",
+        params={"event_type": "recipe.version_saved"},
+        headers=headers,
+    )
+    assert count.status_code == 200
+    assert count.json() == {"count": 2}
+
+    second_retry = subprocess.run(
+        command,
+        cwd=server_dir,
+        env=env,
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    assert "已投递 0 条菜谱版本事件" in second_retry.stdout
+    assert api.client.get(
+        "/v1/dev/events/count",
+        params={"event_type": "recipe.version_saved"},
+        headers=headers,
+    ).json() == {"count": 2}
+
+
 def test_private_recipe_is_isolated_between_accounts(api: Api) -> None:
     saved, author_headers = _create(api)
     other = bearer(api.login("other@example.com"))
@@ -164,13 +249,16 @@ def test_private_recipe_is_isolated_between_accounts(api: Api) -> None:
     assert api.client.get(f"/v1/recipes/{recipe_id}", headers=author_headers).status_code == 200
 
 
-def test_versions_are_immutable_and_history_can_branch_from_old_version(api: Api) -> None:
+def test_versions_are_immutable_and_history_can_branch_from_old_version(
+    api: Api, database_url: str
+) -> None:
     saved, headers = _create(api)
     recipe_id = saved["id"]
     first_id = saved["version"]["id"]
     changed = recipe_input()
     changed["snapshot"]["servings"] = 4
     changed["snapshot"]["ingredients"][0]["quantity"] = 600
+    changed["snapshot"]["ingredients"][0]["display_name"] = "作者叫法"
     changed["change_note"] = "加倍份量"
     second_response = api.client.post(
         f"/v1/recipes/{recipe_id}/versions", json=changed, headers=headers
@@ -180,6 +268,29 @@ def test_versions_are_immutable_and_history_can_branch_from_old_version(api: Api
     assert second["version"]["version_number"] == 2
     assert second["version"]["previous_version_id"] == first_id
     assert any(op["intent"] == "作者手动修改" for op in second["version"]["edit_operations"])
+    assert any(op["type"] == "change_display_name" for op in second["version"]["edit_operations"])
+    env = os.environ.copy()
+    env["GRAMTREE_DATABASE_URL"] = database_url
+    receipt = subprocess.run(
+        [
+            "uv",
+            "run",
+            "gramtree",
+            "recipes",
+            "save-event-receipt",
+            second["version"]["id"],
+        ],
+        cwd=os.path.dirname(os.path.dirname(__file__)),
+        env=env,
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    saved_event = json.loads(receipt.stdout)
+    assert saved_event["previous_version_id"] == first_id
+    assert any(
+        operation["intent"] == "作者手动修改" for operation in saved_event["edit_operations"]
+    )
     first = api.client.get(f"/v1/recipes/{recipe_id}/versions/{first_id}", headers=headers).json()
     assert first["version"]["version_number"] == 1
     assert first["version"]["snapshot"]["servings"] == 2
@@ -245,6 +356,128 @@ def test_invalid_references_and_dependency_cycles_are_rejected(api: Api) -> None
     body["snapshot"]["steps"][1]["depends_on"] = ["marinate"]
     response = api.client.post("/v1/recipes", json=body, headers=headers)
     assert_error_shape(response, 422, "invalid_recipe")
+    body = recipe_input()
+    body["snapshot"]["ingredients"][0]["replacement"] = {
+        "ingredient_id": "77777777-7777-4777-8777-777777777777",
+        "display_name": "不存在的替代品",
+        "ratio": 1,
+    }
+    response = api.client.post("/v1/recipes", json=body, headers=headers)
+    error = assert_error_shape(response, 422, "invalid_recipe")
+    assert "replacement.ingredient_id" in (error["detail"] or "")
+
+
+def test_recipe_derived_parallel_and_override_times(api: Api) -> None:
+    tokens = api.login("derived-boundaries@example.com")
+    headers = bearer(tokens)
+    body = recipe_input("并行时长")
+    body["snapshot"]["steps"][1]["depends_on"] = []
+    response = api.client.post("/v1/recipes", json=body, headers=headers)
+    assert response.status_code == 201, response.text
+    derived = response.json()["version"]["derived"]
+    assert derived["total_time_seconds"] == 900
+    assert derived["active_time_seconds"] == 120
+
+    overridden = recipe_input("覆盖时长")
+    overridden["snapshot"]["total_time_seconds"] = 777
+    overridden["snapshot"]["active_time_seconds"] = 88
+    response = api.client.post("/v1/recipes", json=overridden, headers=headers)
+    assert response.status_code == 201, response.text
+    derived = response.json()["version"]["derived"]
+    assert derived["total_time_seconds"] == 777
+    assert derived["active_time_seconds"] == 88
+
+
+def test_recipe_numeric_boundaries_are_rejected_over_http(api: Api) -> None:
+    tokens = api.login("numeric-boundaries@example.com")
+    headers = bearer(tokens)
+    for field, value in (("duration_seconds", -1), ("temperature_celsius", 1001)):
+        body = recipe_input("数值边界")
+        body["snapshot"]["steps"][0][field] = value
+        response = api.client.post("/v1/recipes", json=body, headers=headers)
+        assert response.status_code == 422, response.text
+
+
+def test_recipe_known_nutrition_and_allergens_are_derived_over_http(
+    api: Api, tmp_path: Path, database_url: str
+) -> None:
+    ingredient_id = "00000000-0000-4000-8000-000000000031"
+    record = {
+        "id": ingredient_id,
+        "standard_name": "测试豆酱",
+        "aliases": [],
+        "pinyin": "ceshidoujiang",
+        "pinyin_initials": "csdj",
+        "category": "调料",
+        "attributes": {
+            "base_unit": {"value": "克", "source": "测试", "status": "verified"},
+            "allergens": {"value": ["大豆"], "source": "测试", "status": "verified"},
+            "nutrition": {
+                "value": {
+                    "energy_kcal": 100,
+                    "protein_g": 20,
+                    "fat_g": 4,
+                    "carbohydrate_g": 10,
+                    "sodium_mg": 50,
+                },
+                "source": "测试",
+                "status": "verified",
+            },
+        },
+    }
+    (tmp_path / "manifest.json").write_text(
+        json.dumps({"version": "1.0.0", "changelog": "recipe test"}), encoding="utf-8"
+    )
+    (tmp_path / "ingredients.json").write_text(json.dumps([record]), encoding="utf-8")
+    env = os.environ.copy()
+    env["GRAMTREE_DATABASE_URL"] = database_url
+    import_result = subprocess.run(
+        ["uv", "run", "gramtree", "ingredients", "import", str(tmp_path)],
+        cwd=os.path.dirname(os.path.dirname(__file__)),
+        env=env,
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    assert import_result.returncode == 0
+
+    tokens = api.login("known-nutrition@example.com")
+    headers = bearer(tokens)
+    body = recipe_input("营养边界")
+    body["snapshot"]["ingredients"] = [
+        {
+            "id": "chicken",
+            "ingredient_id": ingredient_id,
+            "display_name": "测试豆酱",
+            "quantity": 100,
+            "unit": "g",
+            "optional": False,
+            "functional": False,
+            "scaling_mode": "proportional",
+        }
+    ]
+    body["snapshot"]["steps"][0]["ingredient_ids"] = ["chicken"]
+    body["snapshot"]["steps"][1]["ingredient_ids"] = ["chicken"]
+    response = api.client.post("/v1/recipes", json=body, headers=headers)
+    assert response.status_code == 201, response.text
+    saved = response.json()
+    assert saved["version"]["snapshot"]["ingredients"][0]["ingredient_id"] == ingredient_id
+    detail = api.client.get(f"/v1/recipes/{saved['id']}", headers=headers)
+    assert detail.status_code == 200
+    assert detail.json()["version"]["snapshot"]["ingredients"][0]["ingredient_id"] == ingredient_id
+    derived = saved["version"]["derived"]
+    assert derived["allergens"] == ["大豆"]
+    assert derived["allergens_incomplete"] is False
+    nutrition = derived["nutrition_per_serving"]
+    assert nutrition == {
+        "energy_kcal": 50.0,
+        "protein_g": 10.0,
+        "fat_g": 2.0,
+        "carbohydrate_g": 5.0,
+        "sodium_mg": 25.0,
+        "estimated": True,
+        "incomplete": False,
+    }
 
 
 def test_image_upload_strips_metadata_and_uses_signed_private_url(api: Api, tmp_path) -> None:
@@ -277,6 +510,8 @@ def test_image_upload_strips_metadata_and_uses_signed_private_url(api: Api, tmp_
     assert file_response.headers["content-type"] == "image/jpeg"
     stored = Image.open(io.BytesIO(file_response.content))
     assert 34853 not in stored.getexif()
+    tampered_url = image_out["url"].replace("signature=", "signature=invalid")
+    assert api.client.get(tampered_url).status_code == 404
 
 
 def _image_payload(*, gps: bool = False) -> dict[str, str]:
@@ -327,6 +562,23 @@ def test_staged_image_attaches_to_create_and_does_not_mutate_old_version(api: Ap
     assert len(old["version"]["images"]) == 1
     assert len(current["version"]["images"]) == 2
     assert current["version"]["version_number"] == 2
+
+    # Continuing from version 1 must branch with version 1's photo identity,
+    # not silently copy the current version 2 photo set.
+    branch = recipe_input("staged-photo-dish")
+    branch["base_version_id"] = first["version"]["id"]
+    branched_response = api.client.post(
+        f"/v1/recipes/{first['id']}/versions", json=branch, headers=headers
+    )
+    assert branched_response.status_code == 201, branched_response.text
+    branched = branched_response.json()
+    assert branched["version"]["version_number"] == 3
+    assert len(branched["version"]["images"]) == 1
+    branched_image = api.client.get(branched["version"]["images"][0]["url"])
+    first_image = api.client.get(first["version"]["images"][0]["url"])
+    assert branched_image.status_code == 200
+    assert first_image.status_code == 200
+    assert branched_image.content == first_image.content
 
 
 def test_staged_image_is_owner_scoped(api: Api) -> None:

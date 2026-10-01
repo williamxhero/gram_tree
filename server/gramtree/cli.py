@@ -59,6 +59,39 @@ def cmd_config(args: argparse.Namespace) -> int:
     return 2
 
 
+def cmd_recipes(args: argparse.Namespace) -> int:
+    if args.action == "drain-save-events":
+        from gramtree.tasks.jobs import drain_recipe_save_outbox
+
+        print(f"已投递 {drain_recipe_save_outbox()} 条菜谱版本事件")
+        return 0
+    if args.action == "save-event-receipt":
+        from sqlalchemy import select
+
+        from gramtree.events.models import Event
+
+        with _session() as session:
+            event = session.scalar(
+                select(Event).where(
+                    Event.event_type == "recipe.version_saved",
+                    Event.correlation["recipe_version_id"].astext == args.version_id,
+                )
+            )
+            if event is None:
+                print("未找到菜谱版本保存事件", file=sys.stderr)
+                return 1
+            receipt = {
+                "event_id": str(event.id),
+                "recipe_version_id": event.content.get("recipe_version_id"),
+                "previous_version_id": event.content.get("previous_version_id"),
+                "edit_operations": event.content.get("edit_operations", []),
+                "ai_assisted": event.content.get("ai_assisted", False),
+            }
+            print(_fmt(receipt))
+            return 0
+    return 2
+
+
 def cmd_openapi(args: argparse.Namespace) -> int:
     from gramtree.openapi_export import export
 
@@ -172,6 +205,19 @@ def build_parser() -> argparse.ArgumentParser:
     purge = acc_sub.add_parser("purge", help="立刻删除注销到期账号的个人数据（和每日定时任务相同）")
     purge.add_argument("--as-of", help="按这个时间判断是否到期（默认现在），带时区的 ISO 8601")
     acc.set_defaults(func=cmd_accounts)
+
+    recipes = sub.add_parser("recipes", help="菜谱维护")
+    recipes_sub = recipes.add_subparsers(dest="action", required=True)
+    recipes_sub.add_parser(
+        "drain-save-events",
+        help="重试未投递的菜谱版本经验事件",
+    )
+    receipt = recipes_sub.add_parser(
+        "save-event-receipt",
+        help="输出一条菜谱版本经验事件的验收收据",
+    )
+    receipt.add_argument("version_id")
+    recipes.set_defaults(func=cmd_recipes)
 
     ing = sub.add_parser("ingredients", help="食材库管理")
     ing_sub = ing.add_subparsers(dest="action", required=True)

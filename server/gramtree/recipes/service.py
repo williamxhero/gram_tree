@@ -184,6 +184,25 @@ def _validate_snapshot(session: Session, snapshot: RecipeSnapshot) -> RecipeSnap
     normalized_ingredients = [
         _normalize_ingredient(session, ingredient) for ingredient in snapshot.ingredients
     ]
+    replacement_ids = {
+        ingredient.replacement.ingredient_id
+        for ingredient in snapshot.ingredients
+        if ingredient.replacement is not None
+        and not isinstance(ingredient.replacement, str)
+        and ingredient.replacement.ingredient_id is not None
+    }
+    missing_replacements = [
+        str(ingredient_id)
+        for ingredient_id in replacement_ids
+        if session.get(Ingredient, ingredient_id) is None
+    ]
+    if missing_replacements:
+        raise ApiError(
+            422,
+            "invalid_recipe",
+            "菜谱结构有误",
+            "ingredients.replacement.ingredient_id 不存在：" + ", ".join(missing_replacements),
+        )
     step_ids = [step.id for step in snapshot.steps]
     if len(set(step_ids)) != len(step_ids):
         raise ApiError(422, "invalid_recipe", "菜谱结构有误", "steps.id 不能重复")
@@ -218,6 +237,7 @@ def _validate_snapshot(session: Session, snapshot: RecipeSnapshot) -> RecipeSnap
             )
 
     edges = {step.id: set(step.depends_on) for step in snapshot.steps}
+    step_indexes = {step.id: index for index, step in enumerate(snapshot.steps)}
     visiting: set[str] = set()
     visited: set[str] = set()
 
@@ -227,7 +247,7 @@ def _validate_snapshot(session: Session, snapshot: RecipeSnapshot) -> RecipeSnap
                 422,
                 "invalid_recipe",
                 "菜谱结构有误",
-                f"steps[{step_id}].depends_on 形成循环依赖",
+                f"steps[{step_indexes[step_id]}].depends_on 形成循环依赖",
             )
         if step_id in visited:
             return
@@ -271,15 +291,21 @@ def _derived(session: Session, snapshot: RecipeSnapshot) -> RecipeDerived:
 
     allergens: set[str] = set()
     allergens_incomplete = False
-    nutrition_totals = {
+    nutrition_totals: dict[str, float | None] = {
         field: 0.0 for field in ("energy_kcal", "protein_g", "fat_g", "carbohydrate_g", "sodium_mg")
     }
     nutrition_available = False
     nutrition_incomplete = False
+
+    def mark_nutrition_unknown() -> None:
+        for field in nutrition_totals:
+            nutrition_totals[field] = None
+
     for item in snapshot.ingredients:
         if item.ingredient_id is None or item.base_quantity is None:
             allergens_incomplete = True
             nutrition_incomplete = True
+            mark_nutrition_unknown()
             continue
         attrs = _ingredient_data(session, item.ingredient_id)
         if attrs.allergens is None:
@@ -288,6 +314,7 @@ def _derived(session: Session, snapshot: RecipeSnapshot) -> RecipeDerived:
             allergens.update(attrs.allergens.value)
         if attrs.nutrition is None:
             nutrition_incomplete = True
+            mark_nutrition_unknown()
             continue
         if item.base_unit == "g":
             grams = item.base_quantity
@@ -295,6 +322,7 @@ def _derived(session: Session, snapshot: RecipeSnapshot) -> RecipeDerived:
             grams = item.base_quantity * attrs.density.value
         else:
             nutrition_incomplete = True
+            mark_nutrition_unknown()
             continue
         nutrition_available = True
         nutrition = attrs.nutrition.value
@@ -302,14 +330,15 @@ def _derived(session: Session, snapshot: RecipeSnapshot) -> RecipeDerived:
             value = getattr(nutrition, field)
             if value is None:
                 nutrition_incomplete = True
-            else:
+                nutrition_totals[field] = None
+            elif nutrition_totals[field] is not None:
                 nutrition_totals[field] += value * grams / 100
 
     nutrition = None
     if nutrition_available or snapshot.ingredients:
         nutrition = NutritionEstimate(
             **{
-                field: round(value / snapshot.servings, 2)
+                field: None if value is None else round(value / snapshot.servings, 2)
                 for field, value in nutrition_totals.items()
             },
             estimated=True,
@@ -529,7 +558,7 @@ def _enqueue_save_event(
     )
 
 
-def _drain_save_events(session: Session, redis: Redis, owner: User) -> None:
+def _drain_save_events(session: Session, redis: Redis, owner: User) -> int:
     """Best-effort delivery with a durable row left for the next save to retry."""
     pending = list(
         session.scalars(
@@ -538,6 +567,7 @@ def _drain_save_events(session: Session, redis: Redis, owner: User) -> None:
             .order_by(RecipeSaveOutbox.created_at)
         )
     )
+    delivered = 0
     for outbox in pending:
         try:
             event_service.record_recipe_version_saved(
@@ -552,10 +582,12 @@ def _drain_save_events(session: Session, redis: Redis, owner: User) -> None:
             )
             outbox.delivered_at = utcnow()
             session.commit()
+            delivered += 1
         except Exception:
             logger.warning("recipe save event delivery deferred", exc_info=True)
             session.rollback()
-            return
+            return delivered
+    return delivered
 
 
 def create_recipe(
@@ -609,6 +641,7 @@ def _field_operations(
     if kind == "ingredient":
         type_by_field = {
             "ingredient_id": "replace_ingredient",
+            "display_name": "change_display_name",
             "quantity": "change_quantity",
             "unit": "change_quantity",
             "base_quantity": "change_quantity",
@@ -801,7 +834,7 @@ def save_version(
     )
     session.add(version)
     session.flush()
-    _copy_version_images(session, recipe, previous, version)
+    _copy_version_images(session, recipe, baseline, version)
     _attach_staged_images(session, owner, recipe, version, [row.id for row in staged])
     recipe.current_version_id = version.id
     recipe.updated_at = version.created_at
@@ -930,15 +963,20 @@ def list_recipes(
 
 def delete_recipe(session: Session, owner: User, recipe_id: uuid.UUID, settings: Settings) -> None:
     recipe = _owned_recipe(session, owner, recipe_id)
-    images = list(session.scalars(select(RecipeImage).where(RecipeImage.recipe_id == recipe.id)))
-    for image in images:
-        _delete_storage_object(settings, image.storage_key)
+    image_keys = [
+        image.storage_key
+        for image in session.scalars(select(RecipeImage).where(RecipeImage.recipe_id == recipe.id))
+    ]
     # current_version_id points into the versions table; clear it before deleting snapshots.
     session.execute(update(Recipe).where(Recipe.id == recipe.id).values(current_version_id=None))
     session.execute(delete(RecipeImage).where(RecipeImage.recipe_id == recipe.id))
     session.execute(delete(RecipeVersion).where(RecipeVersion.recipe_id == recipe.id))
     session.delete(recipe)
     session.commit()
+    # Remove objects only after the metadata transaction succeeds. A database
+    # failure must not leave a committed row pointing at a deleted object.
+    for key in image_keys:
+        _delete_storage_object(settings, key)
 
 
 def _delete_storage_object(settings: Settings, key: str) -> None:
@@ -1085,7 +1123,9 @@ def save_image(
     except Exception:
         session.rollback()
         if staged is not None:
-            _delete_storage_object(settings, staged.storage_key)
+            attached = session.get(RecipeImage, staged.id)
+            if attached is None:
+                _delete_storage_object(settings, staged.storage_key)
         raise
     if not detail.version.images:
         raise ApiError(500, "storage_error", "图片关联失败")

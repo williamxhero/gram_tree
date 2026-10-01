@@ -796,6 +796,18 @@ abstract class AppLocalizations {
   /// **'菜谱暂时加载不了'**
   String get recipeLoadError;
 
+  /// No description provided for @recipeLoadMore.
+  ///
+  /// In zh, this message translates to:
+  /// **'加载更多'**
+  String get recipeLoadMore;
+
+  /// No description provided for @recipeLoadMoreRetry.
+  ///
+  /// In zh, this message translates to:
+  /// **'加载失败，重试'**
+  String get recipeLoadMoreRetry;
+
   /// No description provided for @recipeRetry.
   ///
   /// In zh, this message translates to:

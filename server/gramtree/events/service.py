@@ -176,6 +176,10 @@ def record_recipe_version_saved(
     transient event-pipeline failure therefore cannot roll back the user's save;
     the caller logs the failure and a later reconciliation can retry it.
     """
+    # The event worker depends on Redis for its delivery path.  Check it before
+    # writing the event so a Redis outage leaves the durable recipe outbox row
+    # pending instead of falsely marking delivery complete.
+    redis.ping()
     existing = session.scalar(
         select(Event).where(
             Event.user_id == user_id,

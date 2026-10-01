@@ -48,4 +48,7 @@ for target in "${targets[@]}"; do
     --dart-define=APP_ENV=dev \
     --dart-define=API_BASE_URL="$API_BASE_URL" || status=1
 done
+if [[ "$status" != 0 ]]; then
+  cat "${GRAMTREE_E2E_LOG_FILE:-${TMPDIR:-/tmp}/gramtree_e2e_server_${GRAMTREE_E2E_PORT:-8000}.log}" || true
+fi
 exit $status
