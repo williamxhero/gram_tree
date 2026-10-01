@@ -65,6 +65,7 @@ void main() {
     addTearDown(tester.testTextInput.unregister);
 
     await app.main();
+    await settle(tester);
     final consent = find.text('开始之前，先说清楚我们会用到什么');
     if (consent.evaluate().isNotEmpty) {
       await tester.tap(find.byKey(const ValueKey('consent-agree')));
