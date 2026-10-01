@@ -23,6 +23,8 @@ PersonalMeasureOut _measure(Map<String, dynamic> value) => PersonalMeasureOut(
 );
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
   test('App display kernel matches the shared input-to-output table', () async {
     for (final raw in await _cases()) {
       final item = Map<String, dynamic>.from(raw as Map);

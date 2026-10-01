@@ -1335,14 +1335,12 @@ void main() {
     await _openMyRecipes(tester);
     await tester.tap(find.byKey(const ValueKey('recipe-card-$_recipeId')));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('汤匙/茶匙'));
-    await tester.pumpAndSettle();
+    await tapVisible(tester, find.text('汤匙/茶匙'));
     await _scrollToBottom(tester);
 
     expect(find.text('20 克'), findsWidgets);
     expect(find.text('作者填写'), findsWidgets);
-    await tester.tap(find.text('作者填写').last);
-    await tester.pumpAndSettle();
+    await tapVisible(tester, find.text('作者填写').last);
     expect(find.text('原来：20 g'), findsOneWidget);
     expect(find.text('现在：20 克'), findsOneWidget);
     expect(find.text('没有密度数据，保留克数'), findsOneWidget);
@@ -1420,16 +1418,16 @@ void main() {
     await _openMyRecipes(tester);
     await tester.tap(find.byKey(const ValueKey('recipe-card-$_recipeId')));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('自家量具'));
-    await tester.pumpAndSettle();
+    await tapVisible(tester, find.text('自家量具'));
     await _scrollToBottom(tester);
     expect(find.textContaining('约 1/2 白瓷勺（6 克）'), findsOneWidget);
 
     await _scrollToTop(tester);
-    await tester.tap(find.byKey(const ValueKey('recipe-measure-picker')));
-    await tester.pumpAndSettle();
-    await tester.tap(find.textContaining('陶瓷碗').last);
-    await tester.pumpAndSettle();
+    await tapVisible(
+      tester,
+      find.byKey(const ValueKey('recipe-measure-picker')),
+    );
+    await tapVisible(tester, find.textContaining('陶瓷碗').last);
     await _scrollToBottom(tester);
     expect(find.textContaining('约 1/4 陶瓷碗（6 克）'), findsOneWidget);
     expect((snapshot['ingredients'] as List).first['quantity'], 6);
