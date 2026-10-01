@@ -234,3 +234,58 @@ def test_recipe_display_keeps_private_recipe_and_measure_scope(api: Api) -> None
         ).status_code
         == 404
     )
+
+
+def test_recipe_display_composes_serving_and_mold_conversion(api: Api) -> None:
+    headers = bearer(api.login("recipe-display-conversion@example.com"))
+    body = recipe_input("显示换算组合")
+    body["snapshot"].update(
+        {
+            "servings": 2,
+            "base_mold": {"shape": "round", "unit": "in", "diameter": 6},
+            "ingredients": [
+                {
+                    "id": "display-ingredient",
+                    "display_name": "面粉",
+                    "quantity": 100,
+                    "unit": "g",
+                    "base_quantity": 100,
+                    "base_unit": "g",
+                    "scaling_mode": "proportional",
+                }
+            ],
+            "steps": [],
+        }
+    )
+    created = api.client.post("/v1/recipes", json=body, headers=headers)
+    assert created.status_code == 201, created.text
+    saved = created.json()
+    path = f"/v1/recipes/{saved['id']}/versions/{saved['version']['id']}/display"
+
+    serving = api.client.get(
+        path,
+        params={"mode": "base", "target_servings": 4},
+        headers=headers,
+    )
+    assert serving.status_code == 200, serving.text
+    serving_item = serving.json()["display"]["ingredients"][0]
+    assert serving_item["converted_quantity"] == 200
+    assert serving_item["conversion_rule"] == "proportional"
+    assert serving_item["display_quantity"] == 200
+
+    mold = api.client.get(
+        path,
+        params={
+            "mode": "base",
+            "target_mold": json.dumps(
+                {"shape": "round", "unit": "in", "diameter": 8},
+                separators=(",", ":"),
+            ),
+        },
+        headers=headers,
+    )
+    assert mold.status_code == 200, mold.text
+    mold_item = mold.json()["display"]["ingredients"][0]
+    assert mold_item["converted_quantity"] == 177.78
+    assert mold_item["conversion_rule"] == "mold_ratio"
+    assert mold_item["display_quantity"] == 177.78

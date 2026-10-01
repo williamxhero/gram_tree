@@ -573,6 +573,8 @@ class RecipesApi {
   /// * [recipeId]
   /// * [mode]
   /// * [measureId]
+  /// * [targetServings]
+  /// * [targetMold] - JSON encoded target mold
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -586,6 +588,8 @@ class RecipesApi {
     required String recipeId,
     required String mode,
     String? measureId,
+    int? targetServings,
+    String? targetMold,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
     Map<String, dynamic>? extra,
@@ -614,6 +618,8 @@ class RecipesApi {
     final _queryParameters = <String, dynamic>{
       r'mode': mode,
       r'measure_id': measureId,
+      r'target_servings': targetServings,
+      r'target_mold': targetMold,
     };
 
     final _response = await _dio.request<Object>(
@@ -666,6 +672,8 @@ class RecipesApi {
   /// * [versionId]
   /// * [mode]
   /// * [measureId]
+  /// * [targetServings]
+  /// * [targetMold] - JSON encoded target mold
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -680,6 +688,8 @@ class RecipesApi {
     required String versionId,
     required String mode,
     String? measureId,
+    int? targetServings,
+    String? targetMold,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
     Map<String, dynamic>? extra,
@@ -715,6 +725,8 @@ class RecipesApi {
     final _queryParameters = <String, dynamic>{
       r'mode': mode,
       r'measure_id': measureId,
+      r'target_servings': targetServings,
+      r'target_mold': targetMold,
     };
 
     final _response = await _dio.request<Object>(

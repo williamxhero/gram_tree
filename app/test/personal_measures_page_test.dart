@@ -92,4 +92,30 @@ void main() {
       isNull,
     );
   });
+
+  for (final (brightness, scale) in [
+    (Brightness.light, 1.3),
+    (Brightness.dark, 1.6),
+  ]) {
+    testWidgets('personal measure page remains usable at $scale text scale', (
+      tester,
+    ) async {
+      final server = FakeServer();
+      await pumpApp(
+        tester,
+        env: TestEnv.signedIn(server: server),
+        brightness: brightness,
+        textScale: scale,
+      );
+      await tester.tap(find.text('我的'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('personal-measures-entry')));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const ValueKey('measure-add')), findsOneWidget);
+      expect(
+        find.text('把空量具放在厨房秤上归零，装满水后的克数就是容量（毫升）。只影响显示，不会修改菜谱。'),
+        findsOneWidget,
+      );
+    });
+  }
 }

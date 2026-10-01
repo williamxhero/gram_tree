@@ -361,13 +361,17 @@ void main() {
         find.byKey(const ValueKey('recipe-serving-control')),
         findsNothing,
       );
+      await _scrollUntilVisible(
+        tester,
+        find.byKey(const ValueKey('recipe-measure-mode')),
+      );
+      expect(find.byKey(const ValueKey('recipe-measure-mode')), findsOneWidget);
       await tester.enterText(
         find.byKey(const ValueKey('target-mold-diameter')),
         '8',
       );
-      await tester.tap(find.byKey(const ValueKey('recipe-mold-apply')));
       await tester.pumpAndSettle();
-      await _scrollUntilVisible(tester, find.text('177.78 g'));
+      await _scrollUntilVisible(tester, find.text('177.78 克'));
       await tester.tap(find.text('按场景调整'));
       await tester.pumpAndSettle();
       expect(find.text('原来：100 g'), findsOneWidget);
@@ -769,6 +773,10 @@ void main() {
   });
 
   for (final (name, brightness, scale) in [
+    ('浅色字号 1.3', Brightness.light, 1.3),
+    ('深色字号 1.3', Brightness.dark, 1.3),
+    ('浅色字号 1.6', Brightness.light, 1.6),
+    ('深色字号 1.6', Brightness.dark, 1.6),
     ('浅色字号 2', Brightness.light, 2.0),
     ('深色字号 2', Brightness.dark, 2.0),
     ('浅色字号 3', Brightness.light, 3.0),
@@ -951,6 +959,7 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const ValueKey('save-recipe-button')));
     await tester.pumpAndSettle();
+    await _scrollToBottom(tester);
     expect(find.textContaining('替代品：土豆'), findsOneWidget);
   });
 
@@ -1233,6 +1242,10 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('recipe-card-$_recipeId')));
     await tester.pumpAndSettle();
 
+    await _scrollUntilVisible(
+      tester,
+      find.byKey(const ValueKey('recipe-measure-mode')),
+    );
     expect(find.byKey(const ValueKey('recipe-measure-mode')), findsOneWidget);
     await _scrollUntilVisible(tester, find.text('汤匙/茶匙'));
     await tester.tap(find.text('汤匙/茶匙'));
@@ -1335,7 +1348,8 @@ void main() {
     await _openMyRecipes(tester);
     await tester.tap(find.byKey(const ValueKey('recipe-card-$_recipeId')));
     await tester.pumpAndSettle();
-    await tapVisible(tester, find.text('汤匙/茶匙'));
+    await _scrollUntilVisible(tester, find.text('汤匙/茶匙'));
+    await tester.tap(find.text('汤匙/茶匙'));
     await _scrollToBottom(tester);
 
     expect(find.text('20 克'), findsWidgets);
@@ -1346,9 +1360,14 @@ void main() {
     expect(find.text('没有密度数据，保留克数'), findsOneWidget);
   });
 
-  testWidgets('recipe detail picks among multiple home measures', (tester) async {
+  testWidgets('recipe detail picks among multiple home measures', (
+    tester,
+  ) async {
     final server = FakeServer();
-    final state = _installRecipeApi(server, standardIngredientId: _standardIngredientId);
+    final state = _installRecipeApi(
+      server,
+      standardIngredientId: _standardIngredientId,
+    );
     final detail = Map<String, dynamic>.from(state.current);
     final version = Map<String, dynamic>.from(detail['version'] as Map);
     final snapshot = Map<String, dynamic>.from(version['snapshot'] as Map);
@@ -1379,54 +1398,65 @@ void main() {
       standardName: '水',
       version: 'ingredient-v1',
     );
-    server.on('GET', '/v1/ingredients/changes', (_) => (
-      200,
-      {
-        'added': [densityIngredient.toJson()],
-        'current_version': 'ingredient-v1',
-        'merged': const [],
-        'modified': const [],
-        'releases': const [],
-      },
-    ));
-    server.on('GET', '/v1/me/measures', (_) => (
-      200,
-      {
-        'items': [
-          {
-            'id': '66666666-6666-4666-8666-666666666666',
-            'name': '白瓷勺',
-            'kind': 'spoon',
-            'capacity_ml': 15,
-            'created_at': '2026-10-02T00:00:00Z',
-            'updated_at': '2026-10-02T00:00:00Z',
-          },
-          {
-            'id': '77777777-7777-4777-8777-777777777777',
-            'name': '陶瓷碗',
-            'kind': 'bowl',
-            'capacity_ml': 30,
-            'created_at': '2026-10-02T00:00:00Z',
-            'updated_at': '2026-10-02T00:00:00Z',
-          },
-        ],
-        'next_cursor': null,
-      },
-    ));
+    server.on(
+      'GET',
+      '/v1/ingredients/changes',
+      (_) => (
+        200,
+        {
+          'added': [densityIngredient.toJson()],
+          'current_version': 'ingredient-v1',
+          'merged': const [],
+          'modified': const [],
+          'releases': const [],
+        },
+      ),
+    );
+    server.on(
+      'GET',
+      '/v1/me/measures',
+      (_) => (
+        200,
+        {
+          'items': [
+            {
+              'id': '66666666-6666-4666-8666-666666666666',
+              'name': '白瓷勺',
+              'kind': 'spoon',
+              'capacity_ml': 15,
+              'created_at': '2026-10-02T00:00:00Z',
+              'updated_at': '2026-10-02T00:00:00Z',
+            },
+            {
+              'id': '77777777-7777-4777-8777-777777777777',
+              'name': '陶瓷碗',
+              'kind': 'bowl',
+              'capacity_ml': 30,
+              'created_at': '2026-10-02T00:00:00Z',
+              'updated_at': '2026-10-02T00:00:00Z',
+            },
+          ],
+          'next_cursor': null,
+        },
+      ),
+    );
 
     await pumpApp(tester, env: TestEnv.signedIn(server: server));
     await _openMyRecipes(tester);
     await tester.tap(find.byKey(const ValueKey('recipe-card-$_recipeId')));
     await tester.pumpAndSettle();
-    await tapVisible(tester, find.text('自家量具'));
+    await _scrollUntilVisible(tester, find.text('自家量具'));
+    await tester.tap(find.text('自家量具'));
     await _scrollToBottom(tester);
     expect(find.textContaining('约 1/2 白瓷勺（6 克）'), findsOneWidget);
 
     await _scrollToTop(tester);
-    await tapVisible(
+    await _scrollUntilVisible(
       tester,
       find.byKey(const ValueKey('recipe-measure-picker')),
     );
+    await tester.tap(find.byKey(const ValueKey('recipe-measure-picker')));
+    await tester.pumpAndSettle();
     await tapVisible(tester, find.textContaining('陶瓷碗').last);
     await _scrollToBottom(tester);
     expect(find.textContaining('约 1/4 陶瓷碗（6 克）'), findsOneWidget);

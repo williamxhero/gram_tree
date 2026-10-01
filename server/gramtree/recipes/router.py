@@ -2,6 +2,7 @@
 
 import base64
 import binascii
+import json
 from typing import Annotated, Any, Literal
 
 from fastapi import APIRouter, Depends, Query, status
@@ -14,6 +15,7 @@ from gramtree.core.pagination import PageParams, page_params
 from gramtree.deps import RedisDep, SessionDep, SettingsDep
 from gramtree.recipes import service
 from gramtree.recipes.schemas import (
+    MoldSpec,
     RecipeCreate,
     RecipeDetail,
     RecipeImageOut,
@@ -38,6 +40,18 @@ def _errors(*codes: int) -> dict[int | str, dict[str, Any]]:
     for code in codes:
         responses[code] = {"model": ErrorResponse}
     return responses
+
+
+def _parse_target_mold(raw: str | None) -> MoldSpec | None:
+    if raw is None:
+        return None
+    try:
+        value = json.loads(raw)
+        if not isinstance(value, dict):
+            raise ValueError
+        return MoldSpec.model_validate(value)
+    except (TypeError, ValueError, json.JSONDecodeError) as exc:
+        raise ApiError(422, "invalid_mold", "目标模具参数有误") from exc
 
 
 @router.post("", response_model=RecipeDetail, status_code=201, responses=_errors(401, 409))
@@ -139,9 +153,17 @@ def display_current_recipe_ingredients(
     session: SessionDep,
     mode: Literal["base", "standard", "home"] = Query(),
     measure_id: IdV4 | None = None,
+    target_servings: int | None = Query(default=None, ge=1),
+    target_mold: str | None = Query(default=None, description="JSON encoded target mold"),
 ) -> RecipeIngredientDisplayOut:
     return service.display_recipe_ingredients(
-        session, auth.user, recipe_id, mode, measure_id=measure_id
+        session,
+        auth.user,
+        recipe_id,
+        mode,
+        measure_id=measure_id,
+        target_servings=target_servings,
+        target_mold=_parse_target_mold(target_mold),
     )
 
 
@@ -157,6 +179,8 @@ def display_recipe_version_ingredients(
     session: SessionDep,
     mode: Literal["base", "standard", "home"] = Query(),
     measure_id: IdV4 | None = None,
+    target_servings: int | None = Query(default=None, ge=1),
+    target_mold: str | None = Query(default=None, description="JSON encoded target mold"),
 ) -> RecipeIngredientDisplayOut:
     return service.display_recipe_ingredients(
         session,
@@ -165,6 +189,8 @@ def display_recipe_version_ingredients(
         mode,
         measure_id=measure_id,
         version_id=version_id,
+        target_servings=target_servings,
+        target_mold=_parse_target_mold(target_mold),
     )
 
 

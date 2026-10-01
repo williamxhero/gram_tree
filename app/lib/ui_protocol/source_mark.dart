@@ -5,6 +5,7 @@ import 'package:gramtree_api/gramtree_api.dart'
 
 import '../app/theme.dart';
 import '../events/event_recorder.dart';
+import '../l10n/app_localizations.dart';
 import 'source_types.dart';
 
 /// 这次组合的 `composition_id`，通过 [BuildContext] 往下传给任何组件（SPEC-009.1
@@ -95,9 +96,10 @@ class SourceMark extends ConsumerWidget {
     final color = _colorFor(sourceType, colors, theme);
     final dashed = sourceType == sourceTypeAiEstimated;
 
+    final l10n = AppLocalizations.of(context);
     return Semantics(
       button: true,
-      label: '来源：${sourceTypeLabel(sourceType)}，点开查看为什么',
+      label: l10n.sourceSemantics(sourceTypeLabel(sourceType, l10n)),
       excludeSemantics: true,
       child: InkWell(
         borderRadius: BorderRadius.circular(999),
@@ -115,7 +117,7 @@ class SourceMark extends ConsumerWidget {
                       borderRadius: BorderRadius.circular(999),
                     ),
               child: Text(
-                sourceTypeLabel(sourceType),
+                sourceTypeLabel(sourceType, l10n),
                 style: theme.textTheme.labelSmall?.copyWith(color: color),
               ),
             ),
@@ -274,6 +276,7 @@ class WhyPanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context);
     return SafeArea(
       child: Padding(
         padding: const EdgeInsets.fromLTRB(20, 4, 20, 20),
@@ -282,15 +285,18 @@ class WhyPanel extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              sourceTypeLabel(sourceType),
+              sourceTypeLabel(sourceType, l10n),
               style: theme.textTheme.titleMedium,
             ),
             const SizedBox(height: 12),
             if (originalValue != null) ...[
-              Text('原来：$originalValue', style: theme.textTheme.bodyMedium),
+              Text(
+                l10n.whyOriginal(originalValue!),
+                style: theme.textTheme.bodyMedium,
+              ),
               const SizedBox(height: 2),
             ],
-            Text('现在：$value', style: theme.textTheme.bodyMedium),
+            Text(l10n.whyCurrent(value), style: theme.textTheme.bodyMedium),
             const SizedBox(height: 12),
             Text(basisText, style: theme.textTheme.bodyMedium),
             if (citation != null) ...[
@@ -307,7 +313,7 @@ class WhyPanel extends StatelessWidget {
               const SizedBox.shrink()
             else if (required)
               Text(
-                '这是必显内容，不能关掉',
+                l10n.whyRequired,
                 style: theme.textTheme.bodySmall?.copyWith(
                   color: theme.colorScheme.onSurfaceVariant,
                 ),
@@ -318,14 +324,14 @@ class WhyPanel extends StatelessWidget {
                   Expanded(
                     child: OutlinedButton(
                       onPressed: onSkipOnce,
-                      child: const Text('这次不用'),
+                      child: Text(l10n.whySkipThisTime),
                     ),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
                     child: OutlinedButton(
                       onPressed: onNeverAgain,
-                      child: const Text('以后别这样'),
+                      child: Text(l10n.whyDontDoAgain),
                     ),
                   ),
                 ],

@@ -43,6 +43,7 @@ class ServingStepInput:
     duration_seconds: int = 0
     temperature_celsius: float | None = None
     heat: str | None = None
+    unattended: bool = False
 
 
 @dataclass(frozen=True)
@@ -201,7 +202,7 @@ def convert_servings(
         total = max((step.duration_seconds for step in steps), default=0)
     active = active_time_seconds
     if active is None:
-        active = sum(step.duration_seconds for step in steps)
+        active = sum(step.duration_seconds for step in steps if not step.unattended)
     return ServingConversion(
         original_servings=original_servings,
         target_servings=target_servings,

@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gramtree_api/gramtree_api.dart';
 
@@ -88,19 +90,28 @@ class RecipeRepository {
     String recipeId, {
     required String mode,
     String? measureId,
+    int? targetServings,
+    MoldSpec? targetMold,
     String? versionId,
   }) async {
+    final targetMoldJson = targetMold == null
+        ? null
+        : jsonEncode(targetMold.toJson());
     final response = versionId == null
         ? await _recipes.displayCurrentRecipeIngredients(
             recipeId: recipeId,
             mode: mode,
             measureId: measureId,
+            targetServings: targetServings,
+            targetMold: targetMoldJson,
           )
         : await _recipes.displayRecipeVersionIngredients(
             recipeId: recipeId,
             versionId: versionId,
             mode: mode,
             measureId: measureId,
+            targetServings: targetServings,
+            targetMold: targetMoldJson,
           );
     return response.data!;
   }

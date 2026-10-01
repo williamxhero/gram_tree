@@ -54,6 +54,8 @@ class MoldStepInput:
     duration_seconds: int = 0
     temperature_celsius: float | None = None
     heat: str | None = None
+    action: str | None = None
+    cookware: str | None = None
     doneness: str | None = None
 
 
@@ -168,6 +170,18 @@ def _mold_dict(mold: MoldInput) -> dict[str, object]:
     }
 
 
+def _is_baking_step(step: MoldStepInput) -> bool:
+    context = " ".join(
+        value.casefold()
+        for value in (step.action, step.instruction, step.cookware, step.heat)
+        if value
+    )
+    return any(
+        marker in context
+        for marker in ("烤", "焙", "烘", "烤箱", "oven", "bake", "roast")
+    )
+
+
 def convert_mold(
     *,
     original_mold: MoldInput,
@@ -241,7 +255,7 @@ def convert_mold(
 
     steps_out: list[ConvertedMoldStep] = []
     for step in steps:
-        has_baking_time = step.duration_seconds > 0
+        has_baking_time = step.duration_seconds > 0 and _is_baking_step(step)
         steps_out.append(
             ConvertedMoldStep(
                 id=step.id,
@@ -254,7 +268,7 @@ def convert_mold(
                 doneness_warning_text=_DONENESS_WARNING if has_baking_time else None,
             )
         )
-    if any(step.duration_seconds > 0 for step in steps):
+    if any(step.duration_seconds > 0 and _is_baking_step(step) for step in steps):
         warnings.append(
             MoldConversionWarning(
                 code="doneness_check",

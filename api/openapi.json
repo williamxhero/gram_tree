@@ -2926,6 +2926,40 @@
       "RecipeDisplayedIngredient": {
         "description": "One immutable recipe amount in the requested display mode.",
         "properties": {
+          "conversion_rule": {
+            "default": "base",
+            "enum": [
+              "base",
+              "proportional",
+              "unchanged",
+              "round",
+              "mold_ratio"
+            ],
+            "title": "Conversion Rule",
+            "type": "string"
+          },
+          "converted_quantity": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Converted Quantity"
+          },
+          "converted_unit": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Converted Unit"
+          },
           "display_name": {
             "title": "Display Name",
             "type": "string"
@@ -7540,6 +7574,41 @@
               ],
               "title": "Measure Id"
             }
+          },
+          {
+            "in": "query",
+            "name": "target_servings",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Target Servings"
+            }
+          },
+          {
+            "description": "JSON encoded target mold",
+            "in": "query",
+            "name": "target_mold",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "JSON encoded target mold",
+              "title": "Target Mold"
+            }
           }
         ],
         "responses": {
@@ -8303,6 +8372,41 @@
                 }
               ],
               "title": "Measure Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "target_servings",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Target Servings"
+            }
+          },
+          {
+            "description": "JSON encoded target mold",
+            "in": "query",
+            "name": "target_mold",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "JSON encoded target mold",
+              "title": "Target Mold"
             }
           }
         ],

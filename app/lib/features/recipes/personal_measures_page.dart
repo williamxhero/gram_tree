@@ -5,6 +5,7 @@ import 'package:gramtree_api/gramtree_api.dart';
 import '../../api/api_client.dart';
 import '../../l10n/app_localizations.dart';
 import '../../recipes/personal_measure_repository.dart';
+import '../../ui_protocol/components/component_scaffold.dart';
 
 class PersonalMeasuresPage extends ConsumerWidget {
   const PersonalMeasuresPage({super.key});
@@ -52,25 +53,33 @@ class PersonalMeasuresPage extends ConsumerWidget {
                 child: Text(l10n.personalMeasuresEmpty),
               ),
             for (final item in items)
-              Card(
-                child: ListTile(
-                  key: ValueKey('measure-${item.id}'),
-                  title: Text(item.name),
-                  subtitle: Text(
-                    '${_kindLabel(item.kind.value, l10n)} · ${l10n.personalMeasuresCapacityValue(item.capacityMl.toString())}',
-                  ),
-                  onTap: ref.read(personalMeasureRepositoryProvider).offline
-                      ? null
-                      : () => _edit(context, ref, item),
-                  trailing: IconButton(
-                    key: ValueKey('measure-delete-${item.id}'),
-                    tooltip: l10n.personalMeasuresDeleteTooltip,
-                    icon: const Icon(Icons.delete_outline),
-                    onPressed:
-                        ref.read(personalMeasureRepositoryProvider).offline
-                        ? null
-                        : () => _delete(context, ref, item),
-                  ),
+              ComponentCard(
+                key: ValueKey('measure-${item.id}'),
+                detail: ComponentDescriptorDetailEnum.standard,
+                conclusion: Text(item.name),
+                conclusionSemanticsText:
+                    '${item.name}，${_kindLabel(item.kind.value, l10n)}',
+                onTapConclusion:
+                    ref.read(personalMeasureRepositoryProvider).offline
+                    ? null
+                    : () => _edit(context, ref, item),
+                standardExtra: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        '${_kindLabel(item.kind.value, l10n)} · ${l10n.personalMeasuresCapacityValue(item.capacityMl.toString())}',
+                      ),
+                    ),
+                    IconButton(
+                      key: ValueKey('measure-delete-${item.id}'),
+                      tooltip: l10n.personalMeasuresDeleteTooltip,
+                      icon: const Icon(Icons.delete_outline),
+                      onPressed:
+                          ref.read(personalMeasureRepositoryProvider).offline
+                          ? null
+                          : () => _delete(context, ref, item),
+                    ),
+                  ],
                 ),
               ),
           ],

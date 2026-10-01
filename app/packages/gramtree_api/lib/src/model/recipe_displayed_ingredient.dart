@@ -18,6 +18,12 @@ part 'recipe_displayed_ingredient.g.dart';
 class RecipeDisplayedIngredient {
   /// Returns a new [RecipeDisplayedIngredient] instance.
   RecipeDisplayedIngredient({
+    required this.conversionRule,
+
+    this.convertedQuantity,
+
+    this.convertedUnit,
+
     required this.displayName,
 
     required this.displayQuantity,
@@ -36,6 +42,15 @@ class RecipeDisplayedIngredient {
 
     required this.text,
   });
+
+  @JsonKey(name: r'conversion_rule', required: true, includeIfNull: false)
+  final RecipeDisplayedIngredientConversionRuleEnum conversionRule;
+
+  @JsonKey(name: r'converted_quantity', required: false, includeIfNull: false)
+  final num? convertedQuantity;
+
+  @JsonKey(name: r'converted_unit', required: false, includeIfNull: false)
+  final String? convertedUnit;
 
   @JsonKey(name: r'display_name', required: true, includeIfNull: false)
   final String displayName;
@@ -68,6 +83,9 @@ class RecipeDisplayedIngredient {
   bool operator ==(Object other) =>
       identical(this, other) ||
       other is RecipeDisplayedIngredient &&
+          other.conversionRule == conversionRule &&
+          other.convertedQuantity == convertedQuantity &&
+          other.convertedUnit == convertedUnit &&
           other.displayName == displayName &&
           other.displayQuantity == displayQuantity &&
           other.displayUnit == displayUnit &&
@@ -80,6 +98,9 @@ class RecipeDisplayedIngredient {
 
   @override
   int get hashCode =>
+      conversionRule.hashCode +
+      (convertedQuantity == null ? 0 : convertedQuantity.hashCode) +
+      (convertedUnit == null ? 0 : convertedUnit.hashCode) +
       displayName.hashCode +
       displayQuantity.hashCode +
       displayUnit.hashCode +
@@ -99,6 +120,26 @@ class RecipeDisplayedIngredient {
   String toString() {
     return toJson().toString();
   }
+}
+
+enum RecipeDisplayedIngredientConversionRuleEnum {
+  @JsonValue(r'base')
+  base_(r'base'),
+  @JsonValue(r'proportional')
+  proportional(r'proportional'),
+  @JsonValue(r'unchanged')
+  unchanged(r'unchanged'),
+  @JsonValue(r'round')
+  round(r'round'),
+  @JsonValue(r'mold_ratio')
+  moldRatio(r'mold_ratio');
+
+  const RecipeDisplayedIngredientConversionRuleEnum(this.value);
+
+  final String value;
+
+  @override
+  String toString() => value;
 }
 
 enum RecipeDisplayedIngredientRuleEnum {

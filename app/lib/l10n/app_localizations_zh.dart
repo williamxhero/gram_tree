@@ -649,13 +649,158 @@ class AppLocalizationsZh extends AppLocalizations {
   String get recipeServingsUnit => '份';
 
   @override
-  String recipeServingsRange(int min, int max) => '可调范围：$min–$max 份';
+  String recipeServingsRange(int min, int max) {
+    return '可调范围：$min–$max 份';
+  }
 
   @override
   String get recipeServingsReset => '恢复原份数';
 
   @override
   String get recipeBatchWarning => '注意分批下锅，时间以成熟判断为准。';
+
+  @override
+  String get recipeRuleProportional => '按比例换算';
+
+  @override
+  String get recipeRuleUnchanged => '保持原值不变';
+
+  @override
+  String get recipeRuleRound => '按个取整';
+
+  @override
+  String get recipeRuleMoldRatio => '模具比例';
+
+  @override
+  String get recipeModeServing => '按份数';
+
+  @override
+  String get recipeModeMold => '按模具';
+
+  @override
+  String get recipeMoldConversion => '模具换算';
+
+  @override
+  String get recipeMoldReset => '恢复原模具';
+
+  @override
+  String recipeMoldOriginal(String mold, String ratio) {
+    return '原模具：$mold · 底面积比例 $ratio';
+  }
+
+  @override
+  String get recipeMoldTargetShape => '目标模具形状';
+
+  @override
+  String get recipeMoldRound => '圆模';
+
+  @override
+  String get recipeMoldSquare => '方模';
+
+  @override
+  String get recipeMoldRectangular => '长方模';
+
+  @override
+  String get recipeMoldCustom => '自定义尺寸';
+
+  @override
+  String get recipeMoldDiameter => '直径';
+
+  @override
+  String get recipeMoldTargetDiameter => '目标直径';
+
+  @override
+  String get recipeMoldUnit => '单位';
+
+  @override
+  String get recipeMoldInch => '英寸';
+
+  @override
+  String get recipeMoldCm => '厘米';
+
+  @override
+  String get recipeMoldSide => '边长（厘米）';
+
+  @override
+  String get recipeMoldWidth => '宽（厘米）';
+
+  @override
+  String get recipeMoldLength => '长（厘米）';
+
+  @override
+  String get recipeMoldTargetSide => '目标边长（厘米）';
+
+  @override
+  String get recipeMoldTargetWidth => '目标宽（厘米）';
+
+  @override
+  String get recipeMoldTargetLength => '目标长（厘米）';
+
+  @override
+  String get recipeMoldBakingNote => '温度保持不变；时间不按比例放大，以成熟判断为准。';
+
+  @override
+  String get recipeMoldTimeAdvisory => '时间不按模具比例放大，建议从原时间开始检查，以成熟判断为准。';
+
+  @override
+  String get recipeMoldDonenessWarning => '请以成熟判断为准，不要只看计时。';
+
+  @override
+  String recipeServingRoundWarning(String name) {
+    return '$name取整后与按比例结果相差较大，请按口味微调其他用量。';
+  }
+
+  @override
+  String recipeMoldRoundWarning(String name) {
+    return '$name取整后与模具比例结果相差较大，请按实际情况微调其他用量。';
+  }
+
+  @override
+  String get recipeMeasureStandardDisplayOnly => '常用量具换算；菜谱基础值未改变';
+
+  @override
+  String recipeReplacementValue(String label) {
+    return '$label';
+  }
+
+  @override
+  String get sourceAuthorFilled => '作者填写';
+
+  @override
+  String get sourceTasteAdjusted => '按你的口味换算';
+
+  @override
+  String get sourceScenarioAdjusted => '按场景调整';
+
+  @override
+  String get sourceAiEstimated => 'AI 估算';
+
+  @override
+  String get sourceVerified => '已验证';
+
+  @override
+  String whyOriginal(String value) {
+    return '原来：$value';
+  }
+
+  @override
+  String whyCurrent(String value) {
+    return '现在：$value';
+  }
+
+  @override
+  String get whyRequired => '这是必显内容，不能关掉';
+
+  @override
+  String get whySkipThisTime => '这次不用';
+
+  @override
+  String get whyDontDoAgain => '以后别这样';
+
+  @override
+  String sourceSemantics(String source) {
+    return '来源：$source，点开查看为什么';
+  }
 
   @override
   String get recipeDifficulty => '难度';
@@ -897,7 +1042,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get personalMeasuresDeleteTitle => '删除量具？';
 
   @override
-  String personalMeasuresDeleteBody(String name) => '删除“$name”不会改动菜谱。';
+  String personalMeasuresDeleteBody(Object name) {
+    return '删除“$name”不会改动菜谱。';
+  }
 
   @override
   String get personalMeasuresEdit => '修改量具';
@@ -915,7 +1062,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get personalMeasuresCapacity => '满水容量（毫升）';
 
   @override
-  String personalMeasuresCapacityValue(String value) => '$value 毫升';
+  String personalMeasuresCapacityValue(Object value) {
+    return '$value 毫升';
+  }
 
   @override
   String get personalMeasuresValidation => '名称需为 1–64 个字，容量需大于 0 且不超过 10000 毫升';

@@ -38,6 +38,8 @@ class MoldStepInput {
     this.durationSeconds = 0,
     this.temperatureCelsius,
     this.heat,
+    this.action,
+    this.cookware,
   });
 
   final String id;
@@ -45,6 +47,8 @@ class MoldStepInput {
   final int durationSeconds;
   final double? temperatureCelsius;
   final String? heat;
+  final String? action;
+  final String? cookware;
 }
 
 class ConvertedMoldIngredient {
@@ -121,6 +125,16 @@ class MoldConversionResult {
   final List<MoldConversionWarning> warnings;
 }
 
+bool _isBakingStep(MoldStepInput step) {
+  final context = [
+    step.action,
+    step.instruction,
+    step.cookware,
+    step.heat,
+  ].whereType<String>().join(' ').toLowerCase();
+  return ['烤', '焙', '烘', '烤箱', 'oven', 'bake', 'roast'].any(context.contains);
+}
+
 MoldConversionResult convertMold({
   required MoldSpec originalMold,
   required MoldSpec targetMold,
@@ -188,16 +202,16 @@ MoldConversionResult convertMold({
         durationSeconds: step.durationSeconds,
         temperatureCelsius: step.temperatureCelsius,
         heat: step.heat,
-        timeAdvisory: step.durationSeconds > 0
+        timeAdvisory: step.durationSeconds > 0 && _isBakingStep(step)
             ? '时间不按模具比例放大，建议从原时间开始检查，以成熟判断为准。'
             : null,
-        donenessWarning: step.durationSeconds > 0,
-        donenessWarningText: step.durationSeconds > 0
+        donenessWarning: step.durationSeconds > 0 && _isBakingStep(step),
+        donenessWarningText: step.durationSeconds > 0 && _isBakingStep(step)
             ? '请以成熟判断为准，不要只看计时。'
             : null,
       ),
   ];
-  if (convertedSteps.any((step) => step.durationSeconds > 0)) {
+  if (convertedSteps.any((step) => step.donenessWarning)) {
     warnings.add(
       const MoldConversionWarning(
         code: 'doneness_check',

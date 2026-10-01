@@ -288,6 +288,49 @@
   "recipeServingsRange": "可调范围：{min}–{max} 份",
   "recipeServingsReset": "恢复原份数",
   "recipeBatchWarning": "注意分批下锅，时间以成熟判断为准。",
+  "recipeRuleProportional": "按比例换算",
+  "recipeRuleUnchanged": "保持原值不变",
+  "recipeRuleRound": "按个取整",
+  "recipeRuleMoldRatio": "模具比例",
+  "recipeModeServing": "按份数",
+  "recipeModeMold": "按模具",
+  "recipeMoldConversion": "模具换算",
+  "recipeMoldReset": "恢复原模具",
+  "recipeMoldOriginal": "原模具：{mold} · 底面积比例 {ratio}",
+  "recipeMoldTargetShape": "目标模具形状",
+  "recipeMoldRound": "圆模",
+  "recipeMoldSquare": "方模",
+  "recipeMoldRectangular": "长方模",
+  "recipeMoldCustom": "自定义尺寸",
+  "recipeMoldDiameter": "直径",
+  "recipeMoldTargetDiameter": "目标直径",
+  "recipeMoldUnit": "单位",
+  "recipeMoldInch": "英寸",
+  "recipeMoldCm": "厘米",
+  "recipeMoldSide": "边长（厘米）",
+  "recipeMoldWidth": "宽（厘米）",
+  "recipeMoldLength": "长（厘米）",
+  "recipeMoldTargetSide": "目标边长（厘米）",
+  "recipeMoldTargetWidth": "目标宽（厘米）",
+  "recipeMoldTargetLength": "目标长（厘米）",
+  "recipeMoldBakingNote": "温度保持不变；时间不按比例放大，以成熟判断为准。",
+  "recipeMoldTimeAdvisory": "时间不按模具比例放大，建议从原时间开始检查，以成熟判断为准。",
+  "recipeMoldDonenessWarning": "请以成熟判断为准，不要只看计时。",
+  "recipeServingRoundWarning": "{name}取整后与按比例结果相差较大，请按口味微调其他用量。",
+  "recipeMoldRoundWarning": "{name}取整后与模具比例结果相差较大，请按实际情况微调其他用量。",
+  "recipeMeasureStandardDisplayOnly": "常用量具换算；菜谱基础值未改变",
+  "recipeReplacementValue": "{label}",
+  "sourceAuthorFilled": "作者填写",
+  "sourceTasteAdjusted": "按你的口味换算",
+  "sourceScenarioAdjusted": "按场景调整",
+  "sourceAiEstimated": "AI 估算",
+  "sourceVerified": "已验证",
+  "whyOriginal": "原来：{value}",
+  "whyCurrent": "现在：{value}",
+  "whyRequired": "这是必显内容，不能关掉",
+  "whySkipThisTime": "这次不用",
+  "whyDontDoAgain": "以后别这样",
+  "sourceSemantics": "来源：{source}，点开查看为什么",
   "recipeDifficulty": "难度",
   "recipeDishType": "菜型",
   "recipeTags": "标签（用逗号分隔）",
@@ -454,5 +497,29 @@
       "min": {"type": "int"},
       "max": {"type": "int"}
     }
+  },
+  "@recipeMoldOriginal": {
+    "placeholders": {
+      "mold": {"type": "String"},
+      "ratio": {"type": "String"}
+    }
+  },
+  "@recipeServingRoundWarning": {
+    "placeholders": {"name": {"type": "String"}}
+  },
+  "@recipeMoldRoundWarning": {
+    "placeholders": {"name": {"type": "String"}}
+  },
+  "@recipeReplacementValue": {
+    "placeholders": {"label": {"type": "String"}}
+  },
+  "@whyOriginal": {
+    "placeholders": {"value": {"type": "String"}}
+  },
+  "@whyCurrent": {
+    "placeholders": {"value": {"type": "String"}}
+  },
+  "@sourceSemantics": {
+    "placeholders": {"source": {"type": "String"}}
   }
 }

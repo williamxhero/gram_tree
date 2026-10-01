@@ -7,6 +7,14 @@ part of 'recipe_displayed_ingredient.dart';
 // **************************************************************************
 
 abstract class _$RecipeDisplayedIngredientCWProxy {
+  RecipeDisplayedIngredient conversionRule(
+    RecipeDisplayedIngredientConversionRuleEnum conversionRule,
+  );
+
+  RecipeDisplayedIngredient convertedQuantity(num? convertedQuantity);
+
+  RecipeDisplayedIngredient convertedUnit(String? convertedUnit);
+
   RecipeDisplayedIngredient displayName(String displayName);
 
   RecipeDisplayedIngredient displayQuantity(num displayQuantity);
@@ -32,6 +40,9 @@ abstract class _$RecipeDisplayedIngredientCWProxy {
   /// RecipeDisplayedIngredient(...).copyWith(id: 12, name: "My name")
   /// ````
   RecipeDisplayedIngredient call({
+    RecipeDisplayedIngredientConversionRuleEnum conversionRule,
+    num? convertedQuantity,
+    String? convertedUnit,
     String displayName,
     num displayQuantity,
     String displayUnit,
@@ -50,6 +61,19 @@ class _$RecipeDisplayedIngredientCWProxyImpl
   const _$RecipeDisplayedIngredientCWProxyImpl(this._value);
 
   final RecipeDisplayedIngredient _value;
+
+  @override
+  RecipeDisplayedIngredient conversionRule(
+    RecipeDisplayedIngredientConversionRuleEnum conversionRule,
+  ) => this(conversionRule: conversionRule);
+
+  @override
+  RecipeDisplayedIngredient convertedQuantity(num? convertedQuantity) =>
+      this(convertedQuantity: convertedQuantity);
+
+  @override
+  RecipeDisplayedIngredient convertedUnit(String? convertedUnit) =>
+      this(convertedUnit: convertedUnit);
 
   @override
   RecipeDisplayedIngredient displayName(String displayName) =>
@@ -92,6 +116,9 @@ class _$RecipeDisplayedIngredientCWProxyImpl
   /// RecipeDisplayedIngredient(...).copyWith(id: 12, name: "My name")
   /// ````
   RecipeDisplayedIngredient call({
+    Object? conversionRule = const $CopyWithPlaceholder(),
+    Object? convertedQuantity = const $CopyWithPlaceholder(),
+    Object? convertedUnit = const $CopyWithPlaceholder(),
     Object? displayName = const $CopyWithPlaceholder(),
     Object? displayQuantity = const $CopyWithPlaceholder(),
     Object? displayUnit = const $CopyWithPlaceholder(),
@@ -103,6 +130,18 @@ class _$RecipeDisplayedIngredientCWProxyImpl
     Object? text = const $CopyWithPlaceholder(),
   }) {
     return RecipeDisplayedIngredient(
+      conversionRule: conversionRule == const $CopyWithPlaceholder()
+          ? _value.conversionRule
+          // ignore: cast_nullable_to_non_nullable
+          : conversionRule as RecipeDisplayedIngredientConversionRuleEnum,
+      convertedQuantity: convertedQuantity == const $CopyWithPlaceholder()
+          ? _value.convertedQuantity
+          // ignore: cast_nullable_to_non_nullable
+          : convertedQuantity as num?,
+      convertedUnit: convertedUnit == const $CopyWithPlaceholder()
+          ? _value.convertedUnit
+          // ignore: cast_nullable_to_non_nullable
+          : convertedUnit as String?,
       displayName: displayName == const $CopyWithPlaceholder()
           ? _value.displayName
           // ignore: cast_nullable_to_non_nullable
@@ -163,6 +202,7 @@ RecipeDisplayedIngredient _$RecipeDisplayedIngredientFromJson(
     $checkKeys(
       json,
       requiredKeys: const [
+        'conversion_rule',
         'display_name',
         'display_quantity',
         'display_unit',
@@ -174,6 +214,18 @@ RecipeDisplayedIngredient _$RecipeDisplayedIngredientFromJson(
       ],
     );
     final val = RecipeDisplayedIngredient(
+      conversionRule: $checkedConvert(
+        'conversion_rule',
+        (v) => $enumDecode(
+          _$RecipeDisplayedIngredientConversionRuleEnumEnumMap,
+          v,
+        ),
+      ),
+      convertedQuantity: $checkedConvert(
+        'converted_quantity',
+        (v) => v as num?,
+      ),
+      convertedUnit: $checkedConvert('converted_unit', (v) => v as String?),
       displayName: $checkedConvert('display_name', (v) => v as String),
       displayQuantity: $checkedConvert('display_quantity', (v) => v as num),
       displayUnit: $checkedConvert('display_unit', (v) => v as String),
@@ -190,6 +242,9 @@ RecipeDisplayedIngredient _$RecipeDisplayedIngredientFromJson(
     return val;
   },
   fieldKeyMap: const {
+    'conversionRule': 'conversion_rule',
+    'convertedQuantity': 'converted_quantity',
+    'convertedUnit': 'converted_unit',
     'displayName': 'display_name',
     'displayQuantity': 'display_quantity',
     'displayUnit': 'display_unit',
@@ -201,6 +256,11 @@ RecipeDisplayedIngredient _$RecipeDisplayedIngredientFromJson(
 Map<String, dynamic> _$RecipeDisplayedIngredientToJson(
   RecipeDisplayedIngredient instance,
 ) => <String, dynamic>{
+  'conversion_rule':
+      _$RecipeDisplayedIngredientConversionRuleEnumEnumMap[instance
+          .conversionRule]!,
+  'converted_quantity': ?instance.convertedQuantity,
+  'converted_unit': ?instance.convertedUnit,
   'display_name': instance.displayName,
   'display_quantity': instance.displayQuantity,
   'display_unit': instance.displayUnit,
@@ -210,6 +270,14 @@ Map<String, dynamic> _$RecipeDisplayedIngredientToJson(
   'original_unit': instance.originalUnit,
   'rule': _$RecipeDisplayedIngredientRuleEnumEnumMap[instance.rule]!,
   'text': instance.text,
+};
+
+const _$RecipeDisplayedIngredientConversionRuleEnumEnumMap = {
+  RecipeDisplayedIngredientConversionRuleEnum.base_: 'base',
+  RecipeDisplayedIngredientConversionRuleEnum.proportional: 'proportional',
+  RecipeDisplayedIngredientConversionRuleEnum.unchanged: 'unchanged',
+  RecipeDisplayedIngredientConversionRuleEnum.round: 'round',
+  RecipeDisplayedIngredientConversionRuleEnum.moldRatio: 'mold_ratio',
 };
 
 const _$RecipeDisplayedIngredientRuleEnumEnumMap = {

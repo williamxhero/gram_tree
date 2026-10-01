@@ -450,6 +450,9 @@ class RecipeDisplayedIngredient(BaseModel):
     display_name: str
     original_quantity: float
     original_unit: str
+    converted_quantity: float | None = None
+    converted_unit: str | None = None
+    conversion_rule: Literal["base", "proportional", "unchanged", "round", "mold_ratio"] = "base"
     text: str
     display_quantity: float
     display_unit: str
