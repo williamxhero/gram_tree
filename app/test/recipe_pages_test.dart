@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gramtree_api/gramtree_api.dart';
 
+import 'package:gram_tree/recipes/recipe_repository.dart';
+
 import 'helpers.dart';
 
 const _recipeId = '11111111-1111-4111-8111-111111111111';
@@ -457,6 +459,81 @@ void main() {
     expect(find.byKey(const ValueKey('recipe-version-1')), findsOneWidget);
   });
 
+  testWidgets('recipe list and history load cursor pages', (tester) async {
+    final server = FakeServer();
+    final state = _installRecipeApi(server);
+    final current = RecipeDetail.fromJson(state.current);
+    final firstItem = RecipeListItem(
+      activeTimeSeconds: current.version.derived.activeTimeSeconds,
+      difficulty: current.version.snapshot.difficulty,
+      dish: current.dish,
+      id: current.id,
+      servings: current.version.snapshot.servings,
+      totalTimeSeconds: current.version.derived.totalTimeSeconds,
+      updatedAt: current.updatedAt,
+      versionNumber: current.version.versionNumber,
+      visibility: RecipeListItemVisibilityEnum.private,
+    );
+    final secondItem = RecipeListItem(
+      activeTimeSeconds: firstItem.activeTimeSeconds,
+      difficulty: firstItem.difficulty,
+      dish: DishOut(aliases: const [], id: 'dish-2', name: '第二道菜'),
+      id: '22222222-2222-4222-8222-222222222222',
+      servings: firstItem.servings,
+      totalTimeSeconds: firstItem.totalTimeSeconds,
+      updatedAt: firstItem.updatedAt,
+      versionNumber: firstItem.versionNumber,
+      visibility: RecipeListItemVisibilityEnum.private,
+    );
+    var listPage = 0;
+    server.on('GET', '/v1/recipes', (request) {
+      if (listPage++ == 0) {
+        return (
+          200,
+          RecipeList(items: [firstItem], nextCursor: 'list-next').toJson(),
+        );
+      }
+      expect(request.query['cursor'], 'list-next');
+      return (200, RecipeList(items: [secondItem]).toJson());
+    });
+    var historyPage = 0;
+    server.on('GET', '/v1/recipes/$_recipeId/versions', (request) {
+      final version = RecipeVersionSummary(
+        aiAssisted: false,
+        changeNote: historyPage == 0 ? '第一版' : '第二版',
+        createdAt: current.version.createdAt,
+        id: historyPage == 0 ? _firstVersionId : _secondVersionId,
+        previousVersionId: historyPage == 0 ? null : _firstVersionId,
+        versionNumber: historyPage + 1,
+      );
+      if (historyPage++ == 0) {
+        return (
+          200,
+          RecipeVersionHistory(
+            items: [version],
+            nextCursor: 'history-next',
+          ).toJson(),
+        );
+      }
+      expect(request.query['cursor'], 'history-next');
+      return (200, RecipeVersionHistory(items: [version]).toJson());
+    });
+
+    await pumpApp(tester, env: TestEnv.signedIn(server: server));
+    await _openMyRecipes(tester);
+    await tester.tap(find.byKey(const ValueKey('recipe-load-more')));
+    await tester.pumpAndSettle();
+    expect(find.text('第二道菜'), findsOneWidget);
+
+    await tester.tap(find.byKey(const ValueKey('recipe-card-$_recipeId')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('recipe-history-button')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('recipe-history-load-more')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('recipe-version-2')), findsOneWidget);
+  });
+
   testWidgets(
     'editing an existing photo version does not submit its image as staged',
     (tester) async {
@@ -539,6 +616,67 @@ void main() {
     });
   }
 
+  testWidgets(
+    'recipe detail renders incomplete data dependencies and sources',
+    (tester) async {
+      final server = FakeServer();
+      final state = _installRecipeApi(server);
+      final detail = Map<String, dynamic>.from(state.current);
+      final version = Map<String, dynamic>.from(detail['version'] as Map);
+      final derived = Map<String, dynamic>.from(version['derived'] as Map)
+        ..['allergens'] = const <String>[]
+        ..['allergens_incomplete'] = true
+        ..['nutrition_per_serving'] = {
+          'energy_kcal': null,
+          'protein_g': null,
+          'fat_g': null,
+          'carbohydrate_g': null,
+          'sodium_mg': null,
+          'estimated': true,
+          'incomplete': true,
+        };
+      final snapshot = Map<String, dynamic>.from(version['snapshot'] as Map);
+      final steps = [
+        for (final raw in (snapshot['steps'] as List))
+          Map<String, dynamic>.from(raw as Map),
+        {
+          'id': 'step-2',
+          'action': '煮',
+          'instruction': '继续煮开',
+          'ingredient_ids': const <String>[],
+          'duration_seconds': 30,
+          'unattended': false,
+          'depends_on': ['step-1'],
+          'duration_source': {
+            'source': 'ai_estimated',
+            'original': '一会儿',
+            'confidence': 0.5,
+            'basis': '测试依据',
+          },
+          'why': '让味道融合',
+        },
+      ];
+      snapshot['steps'] = steps;
+      version['derived'] = derived;
+      version['snapshot'] = snapshot;
+      detail['version'] = version;
+      state.current = detail;
+      state.versions[0] = detail;
+
+      await pumpApp(tester, env: TestEnv.signedIn(server: server));
+      await _openMyRecipes(tester);
+      await tester.tap(find.byKey(const ValueKey('recipe-card-$_recipeId')));
+      await tester.pumpAndSettle();
+      await _scrollToBottom(tester);
+      expect(find.textContaining('可能不完整'), findsWidgets);
+      expect(find.textContaining('依赖的前置步骤：1. 把水烧开'), findsOneWidget);
+      await tester.ensureVisible(find.byKey(const ValueKey('recipe-step-1')));
+      await tester.tap(find.byKey(const ValueKey('recipe-step-1')));
+      await tester.pumpAndSettle();
+      expect(find.text('AI 估算'), findsOneWidget);
+    },
+  );
+
   testWidgets('loaded standard ingredient keeps its ID in a new version', (
     tester,
   ) async {
@@ -572,6 +710,16 @@ void main() {
     expect(step.containsKey('temperature_celsius'), isFalse);
     expect(step.containsKey('heat'), isFalse);
     expect(step.containsKey('cookware'), isFalse);
+  });
+
+  test('free-text replacement serializes a nullable ingredient ID', () {
+    final replacement = RecipeReplacementDraft(
+      ingredientId: null,
+      displayName: '土豆',
+    ).toModel();
+    final json = replacement.toJson();
+    expect(json['display_name'], '土豆');
+    expect(json.containsKey('ingredient_id'), isFalse);
   });
 
   testWidgets('editor can add and reorder multiple ingredients and steps', (

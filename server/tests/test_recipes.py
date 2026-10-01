@@ -133,6 +133,10 @@ def test_author_can_save_read_list_and_delete_private_recipe(api: Api) -> None:
     assert saved["version"]["derived"]["allergens_incomplete"] is True
     assert saved["version"]["derived"]["nutrition_per_serving"]["estimated"] is True
     assert saved["version"]["derived"]["nutrition_per_serving"]["incomplete"] is True
+    assert all(
+        saved["version"]["derived"]["nutrition_per_serving"][field] is None
+        for field in ("energy_kcal", "protein_g", "fat_g", "carbohydrate_g", "sodium_mg")
+    ), saved["version"]["derived"]["nutrition_per_serving"]
 
     read = api.client.get(f"/v1/recipes/{recipe_id}", headers=headers)
     assert read.status_code == 200

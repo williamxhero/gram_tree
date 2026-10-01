@@ -28,6 +28,17 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    # Re-adding the constraints is unsafe after retained rows can refer to
-    # deleted recipes, so the migration intentionally has no reversible DDL.
-    pass
+    # A downgrade is valid only while every retained outbox reference still
+    # points at its recipe and version. PostgreSQL rejects the constraint add
+    # when deletion has already produced dangling retry rows, instead of
+    # silently leaving the schema in the post-upgrade shape.
+    op.execute(
+        "ALTER TABLE recipe_save_outbox "
+        "ADD CONSTRAINT recipe_save_outbox_recipe_id_fkey "
+        "FOREIGN KEY (recipe_id) REFERENCES recipes (id) ON DELETE CASCADE"
+    )
+    op.execute(
+        "ALTER TABLE recipe_save_outbox "
+        "ADD CONSTRAINT recipe_save_outbox_version_id_fkey "
+        "FOREIGN KEY (version_id) REFERENCES recipe_versions (id) ON DELETE CASCADE"
+    )

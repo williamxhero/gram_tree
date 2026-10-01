@@ -65,21 +65,29 @@ void main() {
     addTearDown(tester.testTextInput.unregister);
 
     await app.main();
-    await settle(tester);
-    if (find.text('开始之前，先说清楚我们会用到什么').evaluate().isNotEmpty) {
+    final consent = find.text('开始之前，先说清楚我们会用到什么');
+    if (consent.evaluate().isNotEmpty) {
       await tester.tap(find.byKey(const ValueKey('consent-agree')));
       await settle(tester);
+    } else {
+      // A preceding integration target may have persisted current consent;
+      // never let this branch bypass the authenticated gate silently.
+      expect(find.text('登录味谱'), findsOneWidget);
     }
-    if (find.text('登录味谱').evaluate().isNotEmpty) {
-      await tester.enterText(find.byKey(const ValueKey('login-email')), email);
-      await tapText(tester, '发送验证码');
-      await waitFor(tester, find.text('输入验证码'));
-      await tester.enterText(
-        find.byKey(const ValueKey('code-input')),
-        await latestCode(email),
-      );
-    }
-    await waitFor(tester, find.text('今天还没有安排'));
+
+    await waitFor(tester, find.text('登录味谱'));
+    await tester.enterText(find.byKey(const ValueKey('login-email')), email);
+    await tapText(tester, '发送验证码');
+    await waitFor(tester, find.text('输入验证码'));
+    await tester.enterText(
+      find.byKey(const ValueKey('code-input')),
+      await latestCode(email),
+    );
+    // Only this sentence is emitted by a successful server composition; the
+    // fallback layout also contains "今天还没有安排" and is not a readiness
+    // signal for this full-flow acceptance test.
+    await waitFor(tester, find.text('先添加一道你常做的菜'));
+    expect(find.text('今天还没有安排'), findsOneWidget);
 
     await waitFor(tester, find.byKey(const ValueKey('primary-create-button')));
     await tester.tap(find.byKey(const ValueKey('primary-create-button')));

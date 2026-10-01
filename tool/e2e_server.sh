@@ -46,12 +46,6 @@ redis.Redis.from_url(Settings().redis_url).flushdb()
 EOF
   uv run alembic upgrade head >/dev/null
   uv run gramtree ingredients import tests/data/ingredients >/dev/null
-  if [[ -n "${GRAMTREE_E2E_COMPOSITION_TIMEOUT_MS:-}" ]]; then
-    uv run gramtree config set ui.composition_timeout_ms \
-      "$GRAMTREE_E2E_COMPOSITION_TIMEOUT_MS" \
-      --by e2e \
-      --reason "给模拟器网络往返留出组合页面加载时间"
-  fi
 
   # 单进程运行：验证码存在进程内存里，多进程时读不到
   nohup uv run uvicorn gramtree.asgi:app --host 0.0.0.0 --port "$PORT" >"$LOG_FILE" 2>&1 &

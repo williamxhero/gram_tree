@@ -14,7 +14,6 @@ import '../../recipes/recipe_draft.dart';
 import '../../recipes/recipe_repository.dart';
 import 'recipe_photo_panel.dart';
 import '../../storage/local_store.dart';
-import '../../ui_protocol/intent_dispatcher.dart';
 import '../../ui_protocol/source_mark.dart';
 import '../../ui_protocol/source_types.dart';
 import '../../widgets/empty_state.dart';
@@ -355,6 +354,30 @@ class _RecipeEditorPageState extends ConsumerState<RecipeEditorPage> {
           item.dependsOn.any((id) => !stepIds.contains(id)),
     )) {
       setState(() => _error = l10n.recipeInvalidStepReference);
+      return false;
+    }
+    final visiting = <String>{};
+    final visited = <String>{};
+    bool hasCycle(String stepId) {
+      if (stepId.isEmpty || visited.contains(stepId)) return false;
+      if (!visiting.add(stepId)) return true;
+      final step = _form.steps.firstWhere((item) => item.id == stepId);
+      for (final dependency in step.dependsOn) {
+        if (hasCycle(dependency)) return true;
+      }
+      visiting.remove(stepId);
+      visited.add(stepId);
+      return false;
+    }
+
+    if (_form.steps.any((step) => hasCycle(step.id))) {
+      setState(() => _error = l10n.recipeInvalidStepReference);
+      return false;
+    }
+    if (_form.steps.any(
+      (item) => item.temperatureCelsius < -50 || item.temperatureCelsius > 1000,
+    )) {
+      setState(() => _error = l10n.recipeInvalidNumber);
       return false;
     }
     return true;
@@ -1018,7 +1041,7 @@ class _ReplacementEditor extends StatelessWidget {
           value: replacement?.displayName ?? '',
           onChanged: (value) {
             item.replacement ??= RecipeReplacementDraft(
-              ingredientId: '',
+              ingredientId: null,
               displayName: value,
             );
             item.replacement!.displayName = value;
@@ -1381,138 +1404,148 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
       for (final (index, step) in (snapshot.steps ?? const []).indexed)
         step.id: '${index + 1}. ${step.instruction}',
     };
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(detail.dish.name),
-        leading: IconButton(
-          key: const ValueKey('recipe-list-button'),
-          tooltip: l10n.myRecipes,
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => context.go(RecipeListPage.path),
-        ),
-        actions: [
-          IconButton(
-            key: const ValueKey('recipe-history-button'),
-            tooltip: l10n.recipeHistory,
-            icon: const Icon(Icons.history),
-            onPressed: () =>
-                context.push('/recipes/${widget.recipeId}/history'),
+    return CompositionIdScope(
+      compositionId: widget.recipeId,
+      child: Scaffold(
+        appBar: AppBar(
+          title: Text(detail.dish.name),
+          leading: IconButton(
+            key: const ValueKey('recipe-list-button'),
+            tooltip: l10n.myRecipes,
+            icon: const Icon(Icons.arrow_back),
+            onPressed: () => context.go(RecipeListPage.path),
           ),
-          if (widget.versionId == null)
+          actions: [
             IconButton(
-              key: const ValueKey('edit-recipe-button'),
-              tooltip: l10n.recipeEditAction,
-              icon: const Icon(Icons.edit_outlined),
-              onPressed: () => context.push('/recipes/${widget.recipeId}/edit'),
-            )
-          else
-            IconButton(
-              key: const ValueKey('edit-old-recipe-button'),
-              tooltip: l10n.recipeBaseOnVersion,
-              icon: const Icon(Icons.edit_note),
-              onPressed: () => context.push(
-                '/recipes/${widget.recipeId}/edit?versionId=${widget.versionId}',
-              ),
+              key: const ValueKey('recipe-history-button'),
+              tooltip: l10n.recipeHistory,
+              icon: const Icon(Icons.history),
+              onPressed: () =>
+                  context.push('/recipes/${widget.recipeId}/history'),
             ),
-        ],
-      ),
-      body: ListView(
-        key: const ValueKey('recipe-detail-content'),
-        padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
-        children: [
-          _RecipePhotoDisplay(images: detail.version.images),
-          if (widget.versionId == null)
-            RecipePhotoPanel(
-              recipeId: widget.recipeId,
-              onUploaded: (_) => _load(),
-            ),
-          Text(
-            detail.dish.name,
-            style: Theme.of(context).textTheme.headlineSmall,
-          ),
-          const SizedBox(height: 4),
-          Text(
-            detail.author.nickname,
-            style: Theme.of(context).textTheme.bodySmall,
-          ),
-          const SizedBox(height: 12),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              Chip(
-                label: Text(
-                  l10n.recipeAuthorVersion(
-                    detail.version.versionNumber,
-                    snapshot.servings,
-                  ),
+            if (widget.versionId == null)
+              IconButton(
+                key: const ValueKey('edit-recipe-button'),
+                tooltip: l10n.recipeEditAction,
+                icon: const Icon(Icons.edit_outlined),
+                onPressed: () =>
+                    context.push('/recipes/${widget.recipeId}/edit'),
+              )
+            else
+              IconButton(
+                key: const ValueKey('edit-old-recipe-button'),
+                tooltip: l10n.recipeBaseOnVersion,
+                icon: const Icon(Icons.edit_note),
+                onPressed: () => context.push(
+                  '/recipes/${widget.recipeId}/edit?versionId=${widget.versionId}',
                 ),
               ),
-              Chip(
-                label: Text(
-                  l10n.recipeDuration(
-                    _minutes(derived.totalTimeSeconds),
-                    _minutes(derived.activeTimeSeconds),
-                  ),
-                ),
-              ),
-              if (snapshot.difficulty?.isNotEmpty == true)
-                Chip(
-                  label: Text(l10n.recipeDifficultyValue(snapshot.difficulty!)),
-                ),
-              if (snapshot.dishType?.isNotEmpty == true)
-                Chip(label: Text(l10n.recipeDishTypeValue(snapshot.dishType!))),
-              for (final tag in snapshot.tags ?? const [])
-                Chip(label: Text(tag)),
-            ],
-          ),
-          const SizedBox(height: 16),
-          if ((derived.allergens ?? const []).isNotEmpty ||
-              derived.allergensIncomplete == true)
-            _InfoSection(
-              title: l10n.recipeAllergens(
-                (derived.allergens ?? const []).join('、'),
-                derived.allergensIncomplete == true
-                    ? l10n.recipeIncomplete
-                    : '',
-              ),
-            ),
-          _NutritionSection(nutrition: derived.nutritionPerServing),
-          if ((derived.cookware ?? const []).isNotEmpty)
-            Text(l10n.recipeCookware((derived.cookware ?? const []).join('、'))),
-          const SizedBox(height: 20),
-          Text(
-            l10n.recipeIngredients,
-            style: Theme.of(context).textTheme.titleLarge,
-          ),
-          if (groups.isEmpty) Text(l10n.recipeNoIngredients),
-          for (final entry in groups.entries) ...[
-            const SizedBox(height: 8),
-            Text(entry.key, style: Theme.of(context).textTheme.titleMedium),
-            for (final ingredient in entry.value)
-              _IngredientDetailRow(ingredient: ingredient),
           ],
-          const SizedBox(height: 20),
-          Text(
-            l10n.recipeStepsTitle,
-            style: Theme.of(context).textTheme.titleLarge,
-          ),
-          if ((snapshot.steps ?? const []).isEmpty) Text(l10n.recipeNoSteps),
-          for (final (index, step) in (snapshot.steps ?? const []).indexed)
-            _StepDetailTile(
-              index: index,
-              step: step,
-              ingredientNames: ingredientNames,
-              stepLabels: stepLabels,
-              l10n: l10n,
+        ),
+        body: ListView(
+          key: const ValueKey('recipe-detail-content'),
+          padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
+          children: [
+            _RecipePhotoDisplay(images: detail.version.images),
+            if (widget.versionId == null)
+              RecipePhotoPanel(
+                recipeId: widget.recipeId,
+                onUploaded: (_) => _load(),
+              ),
+            Text(
+              detail.dish.name,
+              style: Theme.of(context).textTheme.headlineSmall,
             ),
-          const SizedBox(height: 16),
-          TextButton(
-            key: const ValueKey('delete-recipe-button'),
-            onPressed: _delete,
-            child: Text(l10n.recipeDelete),
-          ),
-        ],
+            const SizedBox(height: 4),
+            Text(
+              detail.author.nickname,
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                Chip(
+                  label: Text(
+                    l10n.recipeAuthorVersion(
+                      detail.version.versionNumber,
+                      snapshot.servings,
+                    ),
+                  ),
+                ),
+                Chip(
+                  label: Text(
+                    l10n.recipeDuration(
+                      _minutes(derived.totalTimeSeconds),
+                      _minutes(derived.activeTimeSeconds),
+                    ),
+                  ),
+                ),
+                if (snapshot.difficulty?.isNotEmpty == true)
+                  Chip(
+                    label: Text(
+                      l10n.recipeDifficultyValue(snapshot.difficulty!),
+                    ),
+                  ),
+                if (snapshot.dishType?.isNotEmpty == true)
+                  Chip(
+                    label: Text(l10n.recipeDishTypeValue(snapshot.dishType!)),
+                  ),
+                for (final tag in snapshot.tags ?? const [])
+                  Chip(label: Text(tag)),
+              ],
+            ),
+            const SizedBox(height: 16),
+            if ((derived.allergens ?? const []).isNotEmpty ||
+                derived.allergensIncomplete == true)
+              _InfoSection(
+                title: l10n.recipeAllergens(
+                  (derived.allergens ?? const []).join('、'),
+                  derived.allergensIncomplete == true
+                      ? l10n.recipeIncomplete
+                      : '',
+                ),
+              ),
+            _NutritionSection(nutrition: derived.nutritionPerServing),
+            if ((derived.cookware ?? const []).isNotEmpty)
+              Text(
+                l10n.recipeCookware((derived.cookware ?? const []).join('、')),
+              ),
+            const SizedBox(height: 20),
+            Text(
+              l10n.recipeIngredients,
+              style: Theme.of(context).textTheme.titleLarge,
+            ),
+            if (groups.isEmpty) Text(l10n.recipeNoIngredients),
+            for (final entry in groups.entries) ...[
+              const SizedBox(height: 8),
+              Text(entry.key, style: Theme.of(context).textTheme.titleMedium),
+              for (final ingredient in entry.value)
+                _IngredientDetailRow(ingredient: ingredient),
+            ],
+            const SizedBox(height: 20),
+            Text(
+              l10n.recipeStepsTitle,
+              style: Theme.of(context).textTheme.titleLarge,
+            ),
+            if ((snapshot.steps ?? const []).isEmpty) Text(l10n.recipeNoSteps),
+            for (final (index, step) in (snapshot.steps ?? const []).indexed)
+              _StepDetailTile(
+                index: index,
+                step: step,
+                ingredientNames: ingredientNames,
+                stepLabels: stepLabels,
+                l10n: l10n,
+              ),
+            const SizedBox(height: 16),
+            TextButton(
+              key: const ValueKey('delete-recipe-button'),
+              onPressed: _delete,
+              child: Text(l10n.recipeDelete),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -1555,12 +1588,12 @@ class _RecipePhotoDisplay extends StatelessWidget {
   }
 }
 
-class _IngredientDetailRow extends ConsumerWidget {
+class _IngredientDetailRow extends StatelessWidget {
   const _IngredientDetailRow({required this.ingredient});
   final RecipeIngredient ingredient;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final quantity = '${ingredient.quantity} ${ingredient.unit}';
     return ListTile(
@@ -1584,15 +1617,8 @@ class _IngredientDetailRow extends ConsumerWidget {
             basisText: ingredient.quantitySource?.basis?.isNotEmpty == true
                 ? ingredient.quantitySource!.basis!
                 : l10n.recipeSourceAuthorFilled,
-            required: false,
-            onAction: (action) => ref
-                .read(intentDispatcherProvider)
-                .dispatch(
-                  context,
-                  compositionId: 'recipe-detail-${ingredient.id}',
-                  componentId: 'recipe-ingredient-${ingredient.id}-quantity',
-                  action: action,
-                ),
+            required: true,
+            onAction: (_) {},
           ),
         ],
       ),
@@ -1614,7 +1640,7 @@ class _IngredientDetailRow extends ConsumerWidget {
   }
 }
 
-class _StepDetailTile extends ConsumerWidget {
+class _StepDetailTile extends StatelessWidget {
   const _StepDetailTile({
     required this.index,
     required this.step,
@@ -1630,8 +1656,7 @@ class _StepDetailTile extends ConsumerWidget {
   final AppLocalizations l10n;
 
   Widget _sourceMark(
-    BuildContext context,
-    WidgetRef ref, {
+    BuildContext context, {
     required String field,
     required String value,
     required ValueSource? source,
@@ -1645,20 +1670,13 @@ class _StepDetailTile extends ConsumerWidget {
       basisText: source.basis?.isNotEmpty == true
           ? source.basis!
           : l10n.recipeSourceAuthorFilled,
-      required: false,
-      onAction: (action) => ref
-          .read(intentDispatcherProvider)
-          .dispatch(
-            context,
-            compositionId: 'recipe-detail-${step.id}',
-            componentId: 'recipe-step-${step.id}-$field',
-            action: action,
-          ),
+      required: true,
+      onAction: (_) {},
     );
   }
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final references = (step.ingredientIds ?? const [])
         .map((id) => ingredientNames[id])
         .whereType<String>()
@@ -1700,21 +1718,18 @@ class _StepDetailTile extends ConsumerWidget {
             children: [
               _sourceMark(
                 context,
-                ref,
                 field: 'duration',
                 value: l10n.recipeSeconds(step.durationSeconds ?? 0),
                 source: step.durationSource,
               ),
               _sourceMark(
                 context,
-                ref,
                 field: 'heat',
                 value: step.heat ?? '',
                 source: step.heatSource,
               ),
               _sourceMark(
                 context,
-                ref,
                 field: 'temperature',
                 value: '${step.temperatureCelsius ?? 0}',
                 source: step.temperatureSource,
@@ -1997,11 +2012,13 @@ List<String> _split(String value) => value
     .toList();
 
 int _minutes(int? seconds) => ((seconds ?? 0) / 60).ceil();
-String _decimal(num? value) => (value ?? 0).toStringAsFixed(1);
+String _decimal(num? value) => value == null ? '—' : value.toStringAsFixed(1);
 String _formatDate(BuildContext context, String value) {
   final parsed = DateTime.tryParse(value);
   if (parsed == null) return value;
-  return MaterialLocalizations.of(context).formatMediumDate(parsed.toLocal());
+  final local = parsed.toLocal();
+  return '${MaterialLocalizations.of(context).formatMediumDate(local)} '
+      '${MaterialLocalizations.of(context).formatTimeOfDay(TimeOfDay.fromDateTime(local))}';
 }
 
 String _replacementLabel(Object? value) {

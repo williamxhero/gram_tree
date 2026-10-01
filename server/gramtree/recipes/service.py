@@ -291,15 +291,21 @@ def _derived(session: Session, snapshot: RecipeSnapshot) -> RecipeDerived:
 
     allergens: set[str] = set()
     allergens_incomplete = False
-    nutrition_totals = {
+    nutrition_totals: dict[str, float | None] = {
         field: 0.0 for field in ("energy_kcal", "protein_g", "fat_g", "carbohydrate_g", "sodium_mg")
     }
     nutrition_available = False
     nutrition_incomplete = False
+
+    def mark_nutrition_unknown() -> None:
+        for field in nutrition_totals:
+            nutrition_totals[field] = None
+
     for item in snapshot.ingredients:
         if item.ingredient_id is None or item.base_quantity is None:
             allergens_incomplete = True
             nutrition_incomplete = True
+            mark_nutrition_unknown()
             continue
         attrs = _ingredient_data(session, item.ingredient_id)
         if attrs.allergens is None:
@@ -308,6 +314,7 @@ def _derived(session: Session, snapshot: RecipeSnapshot) -> RecipeDerived:
             allergens.update(attrs.allergens.value)
         if attrs.nutrition is None:
             nutrition_incomplete = True
+            mark_nutrition_unknown()
             continue
         if item.base_unit == "g":
             grams = item.base_quantity
@@ -315,6 +322,7 @@ def _derived(session: Session, snapshot: RecipeSnapshot) -> RecipeDerived:
             grams = item.base_quantity * attrs.density.value
         else:
             nutrition_incomplete = True
+            mark_nutrition_unknown()
             continue
         nutrition_available = True
         nutrition = attrs.nutrition.value
@@ -322,14 +330,15 @@ def _derived(session: Session, snapshot: RecipeSnapshot) -> RecipeDerived:
             value = getattr(nutrition, field)
             if value is None:
                 nutrition_incomplete = True
-            else:
+                nutrition_totals[field] = None
+            elif nutrition_totals[field] is not None:
                 nutrition_totals[field] += value * grams / 100
 
     nutrition = None
     if nutrition_available or snapshot.ingredients:
         nutrition = NutritionEstimate(
             **{
-                field: round(value / snapshot.servings, 2)
+                field: None if value is None else round(value / snapshot.servings, 2)
                 for field, value in nutrition_totals.items()
             },
             estimated=True,
@@ -954,15 +963,20 @@ def list_recipes(
 
 def delete_recipe(session: Session, owner: User, recipe_id: uuid.UUID, settings: Settings) -> None:
     recipe = _owned_recipe(session, owner, recipe_id)
-    images = list(session.scalars(select(RecipeImage).where(RecipeImage.recipe_id == recipe.id)))
-    for image in images:
-        _delete_storage_object(settings, image.storage_key)
+    image_keys = [
+        image.storage_key
+        for image in session.scalars(select(RecipeImage).where(RecipeImage.recipe_id == recipe.id))
+    ]
     # current_version_id points into the versions table; clear it before deleting snapshots.
     session.execute(update(Recipe).where(Recipe.id == recipe.id).values(current_version_id=None))
     session.execute(delete(RecipeImage).where(RecipeImage.recipe_id == recipe.id))
     session.execute(delete(RecipeVersion).where(RecipeVersion.recipe_id == recipe.id))
     session.delete(recipe)
     session.commit()
+    # Remove objects only after the metadata transaction succeeds. A database
+    # failure must not leave a committed row pointing at a deleted object.
+    for key in image_keys:
+        _delete_storage_object(settings, key)
 
 
 def _delete_storage_object(settings: Settings, key: str) -> None:
@@ -1109,7 +1123,9 @@ def save_image(
     except Exception:
         session.rollback()
         if staged is not None:
-            _delete_storage_object(settings, staged.storage_key)
+            attached = session.get(RecipeImage, staged.id)
+            if attached is None:
+                _delete_storage_object(settings, staged.storage_key)
         raise
     if not detail.version.images:
         raise ApiError(500, "storage_error", "图片关联失败")

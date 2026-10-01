@@ -39,7 +39,11 @@ def drain_recipe_save_outbox() -> int:
     from gramtree.recipes.models import RecipeSaveOutbox
 
     settings = get_settings()
-    redis = Redis.from_url(settings.redis_url)
+    redis = Redis.from_url(
+        settings.redis_url,
+        socket_connect_timeout=5,
+        socket_timeout=5,
+    )
     delivered = 0
     with _session_factory()() as session:
         owner_ids = list(
