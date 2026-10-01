@@ -486,10 +486,8 @@ void main() {
     );
     final server = FakeServer();
     _installRecipeApi(server);
-    await pumpApp(
-      tester,
-      env: TestEnv.signedIn(server: server, local: local),
-    );
+    final env = TestEnv.signedIn(server: server, local: local);
+    await pumpApp(tester, env: env);
     await _openMyRecipes(tester);
     await tester.tap(find.byKey(const ValueKey('recipe-card-$_recipeId')));
     await tester.pumpAndSettle();
@@ -498,8 +496,7 @@ void main() {
     expect(find.text('恢复未保存修改？'), findsNothing);
     await tester.tap(find.byType(BackButton));
     await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const ValueKey('recipe-list-button')));
-    await tester.pumpAndSettle();
+    await restartApp(tester, env);
     await _openNewEditor(tester);
     expect(find.text('恢复未保存修改？'), findsOneWidget);
   });
