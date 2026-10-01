@@ -33,7 +33,7 @@ void main() {
   }
 
   Future<void> reveal(WidgetTester tester, Finder finder) async {
-    await tester.testTextInput.hide();
+    tester.testTextInput.hide();
     await tester.pump();
     final list = find.byType(ListView).last;
     // Sliver children outside the viewport may not exist yet. Start from the
