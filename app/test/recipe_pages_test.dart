@@ -364,6 +364,11 @@ void main() {
       await _scrollToTop(tester);
       await tester.tap(find.byKey(const ValueKey('save-recipe-button')));
       await tester.pumpAndSettle();
+      final request =
+          server.calls('POST', '/v1/recipes/$_recipeId/versions').single.body
+              as Map;
+      expect(request['base_version_id'], _firstVersionId);
+      expect(request['image_ids'], isEmpty);
       await tester.tap(find.byKey(const ValueKey('recipe-list-button')));
       await tester.pumpAndSettle();
       await tester.tap(find.byKey(const ValueKey('recipe-card-$_recipeId')));
@@ -383,6 +388,74 @@ void main() {
       expect(find.text('还没有菜谱'), findsOneWidget);
     },
   );
+
+  testWidgets('recipe list and history retry after a page load error', (
+    tester,
+  ) async {
+    final server = FakeServer();
+    final state = _installRecipeApi(server);
+    final current = RecipeDetail.fromJson(state.current);
+    final list = RecipeList(
+      items: [
+        RecipeListItem(
+          activeTimeSeconds: current.version.derived.activeTimeSeconds,
+          difficulty: current.version.snapshot.difficulty,
+          dish: current.dish,
+          id: current.id,
+          servings: current.version.snapshot.servings,
+          totalTimeSeconds: current.version.derived.totalTimeSeconds,
+          updatedAt: current.updatedAt,
+          versionNumber: current.version.versionNumber,
+          visibility: RecipeListItemVisibilityEnum.private,
+        ),
+      ],
+    ).toJson();
+    var listCalls = 0;
+    server.on('GET', '/v1/recipes', (_) {
+      listCalls++;
+      return listCalls == 1
+          ? FakeServer.error(503, 'unavailable', '暂时不可用')
+          : (200, list);
+    });
+    var historyCalls = 0;
+    final history = RecipeVersionHistory(
+      items: [
+        RecipeVersionSummary(
+          aiAssisted: false,
+          changeNote: current.version.changeNote,
+          createdAt: current.version.createdAt,
+          id: current.version.id,
+          previousVersionId: null,
+          versionNumber: 1,
+        ),
+      ],
+    ).toJson();
+    server.on('GET', '/v1/recipes/$_recipeId/versions', (_) {
+      historyCalls++;
+      return historyCalls == 1
+          ? FakeServer.error(503, 'unavailable', '暂时不可用')
+          : (200, history);
+    });
+    await pumpApp(tester, env: TestEnv.signedIn(server: server));
+    await _openMyRecipes(tester);
+    await tester.pumpAndSettle();
+    expect(server.calls('GET', '/v1/recipes'), isNotEmpty);
+    expect(find.text('菜谱暂时加载不了'), findsOneWidget);
+    await tester.tap(find.text('重试'));
+    await tester.pumpAndSettle();
+    expect(
+      find.byKey(const ValueKey('recipe-card-$_recipeId')),
+      findsOneWidget,
+    );
+    await tester.tap(find.byKey(const ValueKey('recipe-card-$_recipeId')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('recipe-history-button')));
+    await tester.pumpAndSettle();
+    expect(find.text('菜谱暂时加载不了'), findsOneWidget);
+    await tester.tap(find.text('重试'));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('recipe-version-1')), findsOneWidget);
+  });
 
   testWidgets(
     'editing an existing photo version does not submit its image as staged',
@@ -418,6 +491,7 @@ void main() {
       final request =
           server.calls('POST', '/v1/recipes/$_recipeId/versions').single.body
               as Map;
+      expect(request['base_version_id'], _firstVersionId);
       expect(request['image_ids'], isEmpty);
     },
   );
@@ -494,6 +568,10 @@ void main() {
     final snapshot = request['snapshot'] as Map;
     final ingredient = (snapshot['ingredients'] as List).first as Map;
     expect(ingredient['ingredient_id'], _standardIngredientId);
+    final step = (snapshot['steps'] as List).first as Map;
+    expect(step.containsKey('temperature_celsius'), isFalse);
+    expect(step.containsKey('heat'), isFalse);
+    expect(step.containsKey('cookware'), isFalse);
   });
 
   testWidgets('editor can add and reorder multiple ingredients and steps', (

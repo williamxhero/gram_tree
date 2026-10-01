@@ -549,7 +549,7 @@ def _enqueue_save_event(
     )
 
 
-def _drain_save_events(session: Session, redis: Redis, owner: User) -> None:
+def _drain_save_events(session: Session, redis: Redis, owner: User) -> int:
     """Best-effort delivery with a durable row left for the next save to retry."""
     pending = list(
         session.scalars(
@@ -558,6 +558,7 @@ def _drain_save_events(session: Session, redis: Redis, owner: User) -> None:
             .order_by(RecipeSaveOutbox.created_at)
         )
     )
+    delivered = 0
     for outbox in pending:
         try:
             event_service.record_recipe_version_saved(
@@ -572,10 +573,12 @@ def _drain_save_events(session: Session, redis: Redis, owner: User) -> None:
             )
             outbox.delivered_at = utcnow()
             session.commit()
+            delivered += 1
         except Exception:
             logger.warning("recipe save event delivery deferred", exc_info=True)
             session.rollback()
-            return
+            return delivered
+    return delivered
 
 
 def create_recipe(

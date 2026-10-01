@@ -206,11 +206,11 @@ class RecipeIngredientDraft {
     baseUnit: _baseUnit(baseUnit),
     displayName: displayName.trim(),
     functional: functional,
-    group: group.trim(),
+    group: _optionalText(group),
     id: id,
     ingredientId: ingredientId,
     optional: optional,
-    preparation: preparation.trim(),
+    preparation: _optionalText(preparation),
     quantity: quantity,
     quantitySource: _authorSource(quantity.toString()),
     replacement: replacement?.toModel(),
@@ -337,22 +337,24 @@ class RecipeStepDraft {
   String why;
 
   RecipeStep toModel() => RecipeStep(
-    action: action.trim(),
-    cookware: cookware.trim(),
+    action: _optionalText(action),
+    cookware: _optionalText(cookware),
     dependsOn: [...dependsOn],
-    doneness: doneness.trim(),
+    doneness: _optionalText(doneness),
     durationSeconds: durationSeconds,
     durationSource: _authorSource(durationSeconds.toString()),
-    heat: heat.trim(),
-    heatSource: _authorSource(heat),
+    heat: _optionalText(heat),
+    heatSource: _optionalText(heat) == null ? null : _authorSource(heat),
     id: id,
     ingredientIds: [...ingredientIds],
     instruction: instruction.trim(),
-    notes: notes.trim(),
-    temperatureCelsius: temperatureCelsius,
-    temperatureSource: _authorSource(temperatureCelsius.toString()),
+    notes: _optionalText(notes),
+    temperatureCelsius: temperatureCelsius == 0 ? null : temperatureCelsius,
+    temperatureSource: temperatureCelsius == 0
+        ? null
+        : _authorSource(temperatureCelsius.toString()),
     unattended: unattended,
-    why: why.trim(),
+    why: _optionalText(why),
   );
 
   Map<String, dynamic> toJson() => {
@@ -488,6 +490,11 @@ RecipeIngredientScalingModeEnum _scalingMode(Object? value) {
     (item) => item.value == raw,
     orElse: () => RecipeIngredientScalingModeEnum.proportional,
   );
+}
+
+String? _optionalText(String value) {
+  final trimmed = value.trim();
+  return trimmed.isEmpty ? null : trimmed;
 }
 
 String? _string(Object? value) => value is String ? value : null;

@@ -42,34 +42,18 @@ def drain_recipe_save_outbox() -> int:
     redis = Redis.from_url(settings.redis_url)
     delivered = 0
     with _session_factory()() as session:
-        owner_ids = session.scalars(
-            select(distinct(RecipeSaveOutbox.owner_id)).where(
-                RecipeSaveOutbox.delivered_at.is_(None)
+        owner_ids = list(
+            session.scalars(
+                select(distinct(RecipeSaveOutbox.owner_id)).where(
+                    RecipeSaveOutbox.delivered_at.is_(None)
+                )
             )
         )
         for owner_id in owner_ids:
             owner = session.get(User, owner_id)
             if owner is None:
                 continue
-            before = session.scalar(
-                select(RecipeSaveOutbox.id)
-                .where(
-                    RecipeSaveOutbox.owner_id == owner.id,
-                    RecipeSaveOutbox.delivered_at.is_(None),
-                )
-                .limit(1)
-            )
-            recipes._drain_save_events(session, redis, owner)
-            after = session.scalar(
-                select(RecipeSaveOutbox.id)
-                .where(
-                    RecipeSaveOutbox.owner_id == owner.id,
-                    RecipeSaveOutbox.delivered_at.is_(None),
-                )
-                .limit(1)
-            )
-            if before is not None and after is None:
-                delivered += 1
+            delivered += recipes._drain_save_events(session, redis, owner)
     return delivered
 
 

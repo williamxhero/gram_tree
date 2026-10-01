@@ -513,12 +513,13 @@ class _RecipeEditorPageState extends ConsumerState<RecipeEditorPage> {
           ),
           const SizedBox(height: 20),
           RecipePhotoPanel(
-            recipeId: _loaded?.id,
+            // Editors stage a new image; the immutable version save attaches it
+            // together with the structured snapshot. Viewing a saved recipe may
+            // still upload directly in the detail page below.
+            recipeId: null,
             onUploaded: (result) {
-              if (_loaded == null) {
-                _form.imageIds.add(result.id);
-                _changed();
-              }
+              _form.imageIds.add(result.id);
+              _changed();
             },
           ),
           const SizedBox(height: 20),

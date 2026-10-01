@@ -2,11 +2,16 @@
 
 import base64
 import io
+import os
+import subprocess
 
+from fastapi.testclient import TestClient
 from PIL import Image
 from PIL.TiffImagePlugin import IFDRational
 
+from gramtree.main import create_app
 from tests.accounts_support import Api, bearer
+from tests.conftest import make_settings
 from tests.test_conventions import assert_error_shape
 
 
@@ -108,6 +113,9 @@ def test_recipe_save_event_is_visible_once_to_its_owner(api: Api) -> None:
     )
     assert other.status_code == 200
     assert other.json() == {"count": 0}
+
+
+def test_author_can_save_read_list_and_delete_private_recipe(api: Api) -> None:
     saved, headers = _create(api)
     recipe_id = saved["id"]
     snapshot = saved["version"]["snapshot"]
@@ -122,6 +130,9 @@ def test_recipe_save_event_is_visible_once_to_its_owner(api: Api) -> None:
     assert saved["version"]["derived"]["total_time_seconds"] == 1020
     assert saved["version"]["derived"]["active_time_seconds"] == 120
     assert saved["version"]["derived"]["cookware"] == ["炒锅", "碗"]
+    assert saved["version"]["derived"]["allergens_incomplete"] is True
+    assert saved["version"]["derived"]["nutrition_per_serving"]["estimated"] is True
+    assert saved["version"]["derived"]["nutrition_per_serving"]["incomplete"] is True
 
     read = api.client.get(f"/v1/recipes/{recipe_id}", headers=headers)
     assert read.status_code == 200
@@ -147,6 +158,55 @@ def test_recipe_save_event_is_visible_once_to_its_owner(api: Api) -> None:
     assert api.client.delete(f"/v1/recipes/{recipe_id}", headers=headers).status_code == 204
     assert api.client.get(f"/v1/recipes/{recipe_id}", headers=headers).status_code == 404
     assert api.client.get("/v1/recipes", headers=headers).json()["items"] == []
+
+
+def test_recipe_event_retries_after_delete_via_http_and_cli(api: Api, database_url: str) -> None:
+    tokens = api.login("retry-after-delete@example.com")
+    headers = bearer(tokens)
+    unavailable = make_settings(redis_url="redis://127.0.0.1:63999/15")
+    with TestClient(create_app(unavailable), raise_server_exceptions=False) as broken:
+        for name in ("待重试菜谱一", "待重试菜谱二"):
+            saved = broken.post("/v1/recipes", json=recipe_input(name), headers=headers)
+            assert saved.status_code == 201, saved.text
+            recipe_id = saved.json()["id"]
+            assert broken.delete(f"/v1/recipes/{recipe_id}", headers=headers).status_code == 204
+
+    env = os.environ.copy()
+    env["GRAMTREE_DATABASE_URL"] = database_url
+    env["GRAMTREE_REDIS_URL"] = os.environ["GRAMTREE_REDIS_URL"]
+    command = ["uv", "run", "gramtree", "recipes", "drain-save-events"]
+    server_dir = os.path.dirname(os.path.dirname(__file__))
+    first_retry = subprocess.run(
+        command,
+        cwd=server_dir,
+        env=env,
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    assert "已投递 2 条菜谱版本事件" in first_retry.stdout
+    count = api.client.get(
+        "/v1/dev/events/count",
+        params={"event_type": "recipe.version_saved"},
+        headers=headers,
+    )
+    assert count.status_code == 200
+    assert count.json() == {"count": 2}
+
+    second_retry = subprocess.run(
+        command,
+        cwd=server_dir,
+        env=env,
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    assert "已投递 0 条菜谱版本事件" in second_retry.stdout
+    assert api.client.get(
+        "/v1/dev/events/count",
+        params={"event_type": "recipe.version_saved"},
+        headers=headers,
+    ).json() == {"count": 2}
 
 
 def test_private_recipe_is_isolated_between_accounts(api: Api) -> None:
@@ -285,6 +345,8 @@ def test_image_upload_strips_metadata_and_uses_signed_private_url(api: Api, tmp_
     assert file_response.headers["content-type"] == "image/jpeg"
     stored = Image.open(io.BytesIO(file_response.content))
     assert 34853 not in stored.getexif()
+    tampered_url = image_out["url"].replace("signature=", "signature=invalid")
+    assert api.client.get(tampered_url).status_code == 404
 
 
 def _image_payload(*, gps: bool = False) -> dict[str, str]:
@@ -347,10 +409,11 @@ def test_staged_image_attaches_to_create_and_does_not_mutate_old_version(api: Ap
     branched = branched_response.json()
     assert branched["version"]["version_number"] == 3
     assert len(branched["version"]["images"]) == 1
-    assert (
-        api.client.get(branched["version"]["images"][0]["url"]).content
-        == api.client.get(first["version"]["images"][0]["url"]).content
-    )
+    branched_image = api.client.get(branched["version"]["images"][0]["url"])
+    first_image = api.client.get(first["version"]["images"][0]["url"])
+    assert branched_image.status_code == 200
+    assert first_image.status_code == 200
+    assert branched_image.content == first_image.content
 
 
 def test_staged_image_is_owner_scoped(api: Api) -> None:
