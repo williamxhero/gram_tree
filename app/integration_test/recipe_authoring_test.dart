@@ -72,10 +72,13 @@ void main() {
     }
     await waitFor(tester, find.text('今天还没有安排'));
 
+    await waitFor(tester, find.byKey(const ValueKey('primary-create-button')));
     await tester.tap(find.byKey(const ValueKey('primary-create-button')));
     await settle(tester);
+    await waitFor(tester, find.byKey(const ValueKey('create-recipe-entry')));
     await tester.tap(find.byKey(const ValueKey('create-recipe-entry')));
     await settle(tester);
+    await waitFor(tester, find.byKey(const ValueKey('recipe-dish-name')));
     await tester.enterText(
       find.byKey(const ValueKey('recipe-dish-name')),
       '网页版验收菜谱',
