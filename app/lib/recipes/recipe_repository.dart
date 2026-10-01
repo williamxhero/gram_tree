@@ -13,8 +13,15 @@ class RecipeRepository {
   RecipesApi get _recipes => _api.getRecipesApi();
 
   Future<RecipeList> list({String? cursor}) async {
-    final response = await _recipes.listRecipes(cursor: cursor);
-    return response.data ?? RecipeList(items: const []);
+    final items = <RecipeListItem>[];
+    var next = cursor;
+    do {
+      final response = await _recipes.listRecipes(cursor: next);
+      final page = response.data ?? RecipeList(items: const []);
+      items.addAll(page.items);
+      next = page.nextCursor;
+    } while (next != null);
+    return RecipeList(items: items);
   }
 
   Future<RecipeDetail> get(String recipeId) async {
@@ -63,8 +70,18 @@ class RecipeRepository {
   }
 
   Future<RecipeVersionHistory> history(String recipeId) async {
-    final response = await _recipes.listRecipeVersions(recipeId: recipeId);
-    return response.data ?? RecipeVersionHistory(items: const []);
+    final items = <RecipeVersionSummary>[];
+    String? cursor;
+    do {
+      final response = await _recipes.listRecipeVersions(
+        recipeId: recipeId,
+        cursor: cursor,
+      );
+      final page = response.data ?? RecipeVersionHistory(items: const []);
+      items.addAll(page.items);
+      cursor = page.nextCursor;
+    } while (cursor != null);
+    return RecipeVersionHistory(items: items);
   }
 
   Future<void> delete(String recipeId) async {
