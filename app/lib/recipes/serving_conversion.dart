@@ -292,13 +292,13 @@ ServingConversionResult convertServings({
   ];
   final total =
       totalTimeSeconds ??
-      steps.fold(0, (maximum, step) =>
+      steps.fold<int>(0, (maximum, step) =>
           step.durationSeconds > maximum ? step.durationSeconds : maximum);
   final active =
       activeTimeSeconds ??
       steps
           .where((step) => !step.unattended)
-          .fold(0, (sum, step) => sum + step.durationSeconds);
+          .fold<int>(0, (sum, step) => sum + step.durationSeconds);
   return ServingConversionResult(
     originalServings: originalServings,
     targetServings: targetServings,

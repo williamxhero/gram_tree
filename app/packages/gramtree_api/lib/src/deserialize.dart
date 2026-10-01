@@ -45,6 +45,11 @@ import 'package:gramtree_api/src/model/identity_out.dart';
 import 'package:gramtree_api/src/model/ingredient_attributes.dart';
 import 'package:gramtree_api/src/model/ingredient_detail.dart';
 import 'package:gramtree_api/src/model/merge_relation.dart';
+import 'package:gramtree_api/src/model/mold_conversion.dart';
+import 'package:gramtree_api/src/model/mold_conversion_ingredient.dart';
+import 'package:gramtree_api/src/model/mold_conversion_step.dart';
+import 'package:gramtree_api/src/model/mold_conversion_warning.dart';
+import 'package:gramtree_api/src/model/mold_spec.dart';
 import 'package:gramtree_api/src/model/normalize_candidate.dart';
 import 'package:gramtree_api/src/model/normalize_item.dart';
 import 'package:gramtree_api/src/model/normalize_request.dart';
@@ -71,6 +76,8 @@ import 'package:gramtree_api/src/model/recipe_image_upload.dart';
 import 'package:gramtree_api/src/model/recipe_ingredient.dart';
 import 'package:gramtree_api/src/model/recipe_list.dart';
 import 'package:gramtree_api/src/model/recipe_list_item.dart';
+import 'package:gramtree_api/src/model/recipe_mold_conversion_out.dart';
+import 'package:gramtree_api/src/model/recipe_mold_conversion_request.dart';
 import 'package:gramtree_api/src/model/recipe_replacement.dart';
 import 'package:gramtree_api/src/model/recipe_serving_conversion_out.dart';
 import 'package:gramtree_api/src/model/recipe_snapshot.dart';
@@ -254,6 +261,20 @@ ReturnType deserialize<ReturnType, BaseType>(
     case 'MergeRelation':
       return MergeRelation.fromJson(value as Map<String, dynamic>)
           as ReturnType;
+    case 'MoldConversion':
+      return MoldConversion.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'MoldConversionIngredient':
+      return MoldConversionIngredient.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'MoldConversionStep':
+      return MoldConversionStep.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'MoldConversionWarning':
+      return MoldConversionWarning.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'MoldSpec':
+      return MoldSpec.fromJson(value as Map<String, dynamic>) as ReturnType;
     case 'NormalizeCandidate':
       return NormalizeCandidate.fromJson(value as Map<String, dynamic>)
           as ReturnType;
@@ -327,6 +348,12 @@ ReturnType deserialize<ReturnType, BaseType>(
       return RecipeList.fromJson(value as Map<String, dynamic>) as ReturnType;
     case 'RecipeListItem':
       return RecipeListItem.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'RecipeMoldConversionOut':
+      return RecipeMoldConversionOut.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'RecipeMoldConversionRequest':
+      return RecipeMoldConversionRequest.fromJson(value as Map<String, dynamic>)
           as ReturnType;
     case 'RecipeReplacement':
       return RecipeReplacement.fromJson(value as Map<String, dynamic>)

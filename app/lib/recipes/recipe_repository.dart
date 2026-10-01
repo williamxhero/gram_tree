@@ -62,6 +62,25 @@ class RecipeRepository {
     return response.data!;
   }
 
+  Future<RecipeMoldConversionOut> convertMold(
+    String recipeId,
+    MoldSpec targetMold, {
+    String? versionId,
+  }) async {
+    final request = RecipeMoldConversionRequest(targetMold: targetMold);
+    final response = versionId == null
+        ? await _recipes.convertCurrentRecipeMold(
+            recipeId: recipeId,
+            recipeMoldConversionRequest: request,
+          )
+        : await _recipes.convertRecipeVersionMold(
+            recipeId: recipeId,
+            versionId: versionId,
+            recipeMoldConversionRequest: request,
+          );
+    return response.data!;
+  }
+
   Future<RecipeDetail> create(RecipeForm form) async {
     final response = await _recipes.createRecipe(
       recipeCreate: RecipeCreate(
@@ -415,6 +434,7 @@ class RecipeForm {
     this.totalTimeSeconds = 0,
     this.activeTimeSeconds = 0,
     this.changeNote = '',
+    this.baseMold,
     List<RecipeIngredientDraft>? ingredients,
     List<RecipeStepDraft>? steps,
     List<String>? imageIds,
@@ -431,6 +451,7 @@ class RecipeForm {
     dishName: name,
     aliases: [...?aliases],
     servings: snapshot.servings,
+    baseMold: snapshot.baseMold,
     difficulty: snapshot.difficulty ?? '',
     dishType: snapshot.dishType ?? '',
     tags: [...?snapshot.tags],
@@ -486,12 +507,14 @@ class RecipeForm {
   int totalTimeSeconds;
   int activeTimeSeconds;
   String changeNote;
+  MoldSpec? baseMold;
   List<RecipeIngredientDraft> ingredients;
   List<RecipeStepDraft> steps;
   List<String> imageIds;
 
   RecipeSnapshot get snapshot => RecipeSnapshot(
     activeTimeSeconds: activeTimeSeconds,
+    baseMold: baseMold,
     difficulty: difficulty,
     dishType: dishType,
     formatVersion: RecipeSnapshotFormatVersionEnum.number1,

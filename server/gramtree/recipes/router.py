@@ -20,6 +20,8 @@ from gramtree.recipes.schemas import (
     RecipeImageStagedOut,
     RecipeImageUpload,
     RecipeList,
+    RecipeMoldConversionOut,
+    RecipeMoldConversionRequest,
     RecipeServingConversionOut,
     RecipeVersionCreate,
     RecipeVersionHistory,
@@ -111,6 +113,20 @@ def convert_current_recipe_servings(
     return service.convert_recipe_servings(session, auth.user, recipe_id, target_servings)
 
 
+@router.post(
+    "/{recipe_id}/mold",
+    response_model=RecipeMoldConversionOut,
+    responses=_errors(401, 404, 422),
+)
+def convert_current_recipe_mold(
+    recipe_id: IdV4,
+    body: RecipeMoldConversionRequest,
+    auth: CurrentAuth,
+    session: SessionDep,
+) -> RecipeMoldConversionOut:
+    return service.convert_recipe_mold(session, auth.user, recipe_id, body.target_mold)
+
+
 @router.get("/{recipe_id}", response_model=RecipeDetail, responses=_errors(401, 404))
 def get_recipe(
     recipe_id: IdV4, auth: CurrentAuth, session: SessionDep, settings: SettingsDep
@@ -166,6 +182,21 @@ def convert_recipe_version_servings(
     return service.convert_recipe_servings(
         session, auth.user, recipe_id, target_servings, version_id
     )
+
+
+@router.post(
+    "/{recipe_id}/versions/{version_id}/mold",
+    response_model=RecipeMoldConversionOut,
+    responses=_errors(401, 404, 422),
+)
+def convert_recipe_version_mold(
+    recipe_id: IdV4,
+    version_id: IdV4,
+    body: RecipeMoldConversionRequest,
+    auth: CurrentAuth,
+    session: SessionDep,
+) -> RecipeMoldConversionOut:
+    return service.convert_recipe_mold(session, auth.user, recipe_id, body.target_mold, version_id)
 
 
 @router.get(
