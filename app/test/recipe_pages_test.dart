@@ -782,29 +782,50 @@ void main() {
     },
   );
 
-  testWidgets('loaded standard ingredient keeps its ID in a new version', (
+  testWidgets('editor searches and selects a standard ingredient', (
     tester,
   ) async {
     final server = FakeServer();
-    _installRecipeApi(server, standardIngredientId: _standardIngredientId);
+    _installRecipeApi(server);
     await pumpApp(tester, env: TestEnv.signedIn(server: server));
-    await _openMyRecipes(tester);
-    await tester.tap(find.byKey(const ValueKey('recipe-card-$_recipeId')));
-    await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const ValueKey('edit-recipe-button')));
-    await tester.pumpAndSettle();
+    await _openNewEditor(tester);
+    await _enterDishName(tester, '标准食材选择测试');
+    await _scrollToTop(tester);
     await _scrollUntilVisible(
       tester,
-      find.byKey(const ValueKey('recipe-ingredient-quantity')),
+      find.byKey(const ValueKey('recipe-ingredient-search')),
     );
     await tester.enterText(
-      find.byKey(const ValueKey('recipe-ingredient-quantity')),
-      '200',
+      find.byKey(const ValueKey('recipe-ingredient-search')),
+      '鸡蛋',
     );
+    final searchButton = find.byKey(const ValueKey('recipe-search-ingredient'));
+    await tester.ensureVisible(searchButton);
+    await tester.tap(searchButton, warnIfMissed: false);
+    for (var i = 0; i < 40; i++) {
+      await tester.pump(const Duration(milliseconds: 100));
+      if (find
+          .byKey(
+            ValueKey('ingredient-result-$_standardIngredientId-ingredient-1'),
+          )
+          .evaluate()
+          .isNotEmpty) {
+        break;
+      }
+    }
+    final result = find.byKey(
+      ValueKey('ingredient-result-$_standardIngredientId-ingredient-1'),
+    );
+    expect(result, findsOneWidget);
+    await tester.ensureVisible(result);
+    await tester.tap(result, warnIfMissed: false);
+    await tester.pumpAndSettle();
+    expect(find.text('鸡蛋'), findsWidgets);
     await _scrollToTop(tester);
     await tester.tap(find.byKey(const ValueKey('save-recipe-button')));
     await tester.pumpAndSettle();
-    expect(find.byKey(const ValueKey('recipe-history-button')), findsOneWidget);
+    await _scrollToBottom(tester);
+    expect(find.text('鸡蛋'), findsOneWidget);
   });
 
   testWidgets('recipe detail displays a free-text replacement', (tester) async {

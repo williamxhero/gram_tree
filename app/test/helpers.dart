@@ -14,6 +14,9 @@ import 'package:gram_tree/events/event_queue.dart';
 import 'package:gram_tree/events/event_recorder.dart';
 import 'package:gram_tree/events/fake_event_queue.dart';
 import 'package:gram_tree/features_flags/features.dart';
+import 'package:gram_tree/ingredients/ingredient_api_client.dart';
+import 'package:gram_tree/ingredients/ingredient_provider.dart';
+import 'package:gram_tree/ingredients/ingredient_repository.dart';
 import 'package:gram_tree/observability/crash_reporting.dart';
 import 'package:gram_tree/platform/app_exit.dart';
 import 'package:gram_tree/platform/apple_sign_in.dart';
@@ -516,6 +519,16 @@ class TestEnv {
     localStoreProvider.overrideWithValue(local),
     secureStoreProvider.overrideWithValue(secure),
     fakeServerProvider.overrideWithValue(server),
+    // Page tests use the same cache interface with a fake-clock-safe store;
+    // native drift persistence is exercised by installed integration tests.
+    ingredientRepositoryProvider.overrideWith(
+      (ref) => IngredientRepository(
+        api: GeneratedIngredientSyncApi(
+          ref.watch(apiClientProvider).getIngredientsApi(),
+        ),
+        cache: LocalStoreIngredientCache(local),
+      ),
+    ),
     deviceCapabilitiesProvider.overrideWithValue(FakeDeviceCapabilities()),
     appExitProvider.overrideWithValue(exit),
     appleSignInProvider.overrideWithValue(apple),

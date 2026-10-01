@@ -11,7 +11,6 @@ from fastapi.testclient import TestClient
 from PIL import Image
 from PIL.TiffImagePlugin import IFDRational
 
-from gramtree.cli import main as cli
 from gramtree.main import create_app
 from tests.accounts_support import Api, bearer
 from tests.conftest import make_settings
@@ -400,7 +399,7 @@ def test_recipe_numeric_boundaries_are_rejected_over_http(api: Api) -> None:
 
 
 def test_recipe_known_nutrition_and_allergens_are_derived_over_http(
-    api: Api, tmp_path: Path
+    api: Api, tmp_path: Path, database_url: str
 ) -> None:
     ingredient_id = "00000000-0000-4000-8000-000000000031"
     record = {
@@ -430,7 +429,17 @@ def test_recipe_known_nutrition_and_allergens_are_derived_over_http(
         json.dumps({"version": "1.0.0", "changelog": "recipe test"}), encoding="utf-8"
     )
     (tmp_path / "ingredients.json").write_text(json.dumps([record]), encoding="utf-8")
-    assert cli(["ingredients", "import", str(tmp_path)]) == 0
+    env = os.environ.copy()
+    env["GRAMTREE_DATABASE_URL"] = database_url
+    import_result = subprocess.run(
+        ["uv", "run", "gramtree", "ingredients", "import", str(tmp_path)],
+        cwd=os.path.dirname(os.path.dirname(__file__)),
+        env=env,
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    assert import_result.returncode == 0
 
     tokens = api.login("known-nutrition@example.com")
     headers = bearer(tokens)
