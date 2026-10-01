@@ -1586,7 +1586,7 @@ class _IngredientDetailRow extends ConsumerWidget {
             basisText: ingredient.quantitySource?.basis?.isNotEmpty == true
                 ? ingredient.quantitySource!.basis!
                 : l10n.recipeSourceAuthorFilled,
-            required: true,
+            required: false,
             onAction: (action) => ref
                 .read(intentDispatcherProvider)
                 .dispatch(
@@ -1647,7 +1647,7 @@ class _StepDetailTile extends ConsumerWidget {
       basisText: source.basis?.isNotEmpty == true
           ? source.basis!
           : l10n.recipeSourceAuthorFilled,
-      required: true,
+      required: false,
       onAction: (action) => ref
           .read(intentDispatcherProvider)
           .dispatch(
@@ -1689,6 +1689,9 @@ class _StepDetailTile extends ConsumerWidget {
         details.isEmpty
             ? (step.action ?? '')
             : '${step.action ?? ''} · $details',
+        style: GramTreeColors.of(context).numberStyle(
+          Theme.of(context).textTheme.bodyMedium ?? const TextStyle(),
+        ),
       ),
       children: [
         if (step.durationSource != null ||
