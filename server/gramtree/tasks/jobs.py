@@ -29,6 +29,50 @@ def record_heartbeat(source: str) -> str:
         return str(row.id)
 
 
+@celery_app.task(name="gramtree.tasks.jobs.drain_recipe_save_outbox")
+def drain_recipe_save_outbox() -> int:
+    """Retry committed recipe-save events left by a transient experience outage."""
+    from sqlalchemy import distinct, select
+
+    from gramtree.accounts.models import User
+    from gramtree.recipes import service as recipes
+    from gramtree.recipes.models import RecipeSaveOutbox
+
+    settings = get_settings()
+    redis = Redis.from_url(settings.redis_url)
+    delivered = 0
+    with _session_factory()() as session:
+        owner_ids = session.scalars(
+            select(distinct(RecipeSaveOutbox.owner_id)).where(
+                RecipeSaveOutbox.delivered_at.is_(None)
+            )
+        )
+        for owner_id in owner_ids:
+            owner = session.get(User, owner_id)
+            if owner is None:
+                continue
+            before = session.scalar(
+                select(RecipeSaveOutbox.id)
+                .where(
+                    RecipeSaveOutbox.owner_id == owner.id,
+                    RecipeSaveOutbox.delivered_at.is_(None),
+                )
+                .limit(1)
+            )
+            recipes._drain_save_events(session, redis, owner)
+            after = session.scalar(
+                select(RecipeSaveOutbox.id)
+                .where(
+                    RecipeSaveOutbox.owner_id == owner.id,
+                    RecipeSaveOutbox.delivered_at.is_(None),
+                )
+                .limit(1)
+            )
+            if before is not None and after is None:
+                delivered += 1
+    return delivered
+
+
 @celery_app.task(name="gramtree.tasks.jobs.check_api_alerts")
 def check_api_alerts() -> dict[str, object]:
     redis = Redis.from_url(get_settings().redis_url)

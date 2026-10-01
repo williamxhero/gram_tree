@@ -1,6 +1,9 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <!-- 正式包也要能访问服务端 -->
     <uses-permission android:name="android.permission.INTERNET"/>
+    <!-- Camera is requested only when the author taps 拍照. Gallery uses the
+         Android 13+ system Photo Picker and does not request storage access. -->
+    <uses-permission android:name="android.permission.CAMERA"/>
     <application
         android:label="味谱"
         android:name="${applicationName}"

@@ -26,6 +26,8 @@ dependencies:
   sign_in_with_apple: ^8.2.0
   # 13.x 的安卓实现要求 compileSdk 37，当前 Android Gradle 插件最高支持 36；升级插件后再升
   permission_handler: ^12.0.3
+  image_picker: ^1.2.0
+  image: ^4.5.4
   flutter_timezone: ^5.1.0
   drift: ^2.35.0
   drift_flutter: ^0.3.1

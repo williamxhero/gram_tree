@@ -27,6 +27,10 @@ void main() {
       'text_block',
       'list',
       'empty_state',
+      'recipe_header',
+      'recipe_ingredients',
+      'recipe_steps',
+      'recipe_card',
       'source_demo',
     });
   });

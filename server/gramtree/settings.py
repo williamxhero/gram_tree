@@ -44,6 +44,24 @@ class Settings(BaseSettings):
     apple_key_id: str = ""
     apple_private_key: str = ""
 
+    # —— 菜谱图片（私有 S3 兼容存储） ——
+    # 开发/测试默认使用本地适配器；MinIO 测试只需将 backend 改成 s3。
+    # 正式环境由 check_settings 强制使用 S3，凭据只能来自环境变量/密钥管理。
+    recipe_storage_backend: Literal["filesystem", "s3"] = "filesystem"
+    recipe_media_dir: str = ".data/recipe-media"
+    recipe_s3_endpoint_url: str = ""
+    # Optional browser-reachable endpoint used only when generating signed URLs.
+    # Leave blank when the API and clients share the same S3 endpoint.
+    recipe_s3_public_endpoint_url: str = ""
+    recipe_s3_bucket: str = ""
+    recipe_s3_region: str = "us-east-1"
+    recipe_s3_access_key_id: str = ""
+    recipe_s3_secret_access_key: str = ""
+    recipe_s3_path_style: bool = True
+    recipe_image_url_ttl_seconds: int = 900
+    # Set in staging/production; development and tests derive signing from auth_secret.
+    image_signing_secret: str = ""
+
     @property
     def cors_origin_regex(self) -> str | None:
         """开发和测试环境放行本机任意端口，方便网页版连本机服务端。"""

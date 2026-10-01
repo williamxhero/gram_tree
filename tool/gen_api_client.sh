@@ -18,9 +18,13 @@ fi
 
 (cd "$ROOT/server" && uv run --quiet gramtree openapi --out "$SPEC")
 
+CLIENT_SPEC="$(mktemp)"
+trap 'rm -f "$CLIENT_SPEC"' EXIT
+(cd "$ROOT/server" && uv run --quiet python "$ROOT/tool/prepare_api_client.py" "$SPEC" "$CLIENT_SPEC")
+
 rm -rf "$OUT"
 java -jar "$JAR" generate --skip-validate-spec \
-  -i "$SPEC" -g dart-dio -o "$OUT" \
+  -i "$CLIENT_SPEC" -g dart-dio -o "$OUT" \
   --global-property=apiTests=false,modelTests=false,apiDocs=false,modelDocs=false \
   --additional-properties=pubName=gramtree_api,pubVersion=1.0.0,pubDescription="GramTree API client (generated)",serializationLibrary=json_serializable \
   >/dev/null
@@ -30,6 +34,13 @@ sed -i.bak "s/sdk: '>=3.5.0 <4.0.0'/sdk: '>=3.8.0 <4.0.0'/" "$OUT/pubspec.yaml" 
 rm -rf "$OUT/doc" "$OUT/test" "$OUT/README.md" "$OUT/.travis.yml" "$OUT/git_push.sh"
 
 cd "$OUT"
+if ! command -v flutter >/dev/null 2>&1; then
+  FLUTTER_ROOT="${GRAMTREE_FLUTTER_ROOT:-$HOME/.cache/gramtree/flutter}"
+  if [[ -x "$FLUTTER_ROOT/bin/flutter" ]]; then
+    PATH="$FLUTTER_ROOT/bin:$PATH"
+    export PATH
+  fi
+fi
 flutter pub get >/dev/null
 dart run build_runner build --delete-conflicting-outputs >/dev/null
 dart format lib >/dev/null

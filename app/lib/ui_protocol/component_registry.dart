@@ -7,6 +7,7 @@ import 'components/list_component.dart';
 import 'components/section_title_component.dart';
 import 'components/source_demo_component.dart';
 import 'components/text_block_component.dart';
+import 'recipe_components.dart';
 
 /// 组件登记时要给的标准空态文案：结论层（各组件类型自己的必填字段，比如
 /// `hint_bar`/`text_block`/`section_title` 的 `conclusion`，`list` 的 `items`）
@@ -106,6 +107,26 @@ final defaultComponentRegistry = ComponentRegistry(const [
     builder: buildEmptyStateComponent,
     emptyState: ComponentEmptyState(title: '没有内容'),
     fillsRemainingSpace: true,
+  ),
+  ComponentSpec(
+    type: 'recipe_header',
+    builder: buildRecipeHeaderComponent,
+    emptyState: ComponentEmptyState(title: ''),
+  ),
+  ComponentSpec(
+    type: 'recipe_ingredients',
+    builder: buildRecipeIngredientsComponent,
+    emptyState: ComponentEmptyState(title: ''),
+  ),
+  ComponentSpec(
+    type: 'recipe_steps',
+    builder: buildRecipeStepsComponent,
+    emptyState: ComponentEmptyState(title: ''),
+  ),
+  ComponentSpec(
+    type: 'recipe_card',
+    builder: buildRecipeCardComponent,
+    emptyState: ComponentEmptyState(title: ''),
   ),
   ComponentSpec(
     type: 'source_demo',

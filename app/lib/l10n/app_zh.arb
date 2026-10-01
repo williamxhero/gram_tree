@@ -195,12 +195,223 @@
   },
   "permissionOpenSettings": "去系统设置打开",
   "compositionLastUpdatedAt": "上次更新于 {time}",
+  "myRecipes": "我的菜谱",
+  "myRecipesSubtitle": "管理私有菜谱和版本历史",
+  "newRecipe": "新建菜谱",
+  "viewMyRecipes": "查看我的菜谱",
+  "recipeEmptyTitle": "还没有菜谱",
+  "recipeEmptyBody": "把常做的一道菜写下来，之后可以继续改良。",
+  "recipeLoadError": "菜谱暂时加载不了",
+  "recipeRetry": "重试",
+  "recipeName": "菜名",
+  "recipeContinueEdit": "继续编辑菜谱",
+  "recipeFood": "食材",
+  "recipeSearchOrFill": "搜索或填写食材",
+  "recipeQuantity": "用量",
+  "recipeUnit": "单位（克、毫升、个、勺）",
+  "recipePreparationGroup": "处理方式和分组",
+  "recipeSteps": "步骤",
+  "recipeInstruction": "步骤说明",
+  "recipeWhy": "为什么这样做（可选）",
+  "recipeChangeNote": "这次改了什么",
+  "recipeSaveVersion": "保存为新版本",
+  "recipeSaving": "保存中…",
+  "recipeDiscardDraft": "放弃草稿",
+  "recipeDishRequired": "请先填写菜名",
+  "recipeSaveFailed": "保存失败：{error}",
+  "recipeRestoreTitle": "恢复未保存修改？",
+  "recipeRestoreBody": "上次编辑还有未保存内容。要恢复这份草稿吗？",
+  "recipeDiscardDraftAction": "放弃草稿",
+  "recipeRestore": "恢复",
+  "recipeAuthorVersion": "第 {version} 版 · {servings} 份",
+  "recipeDuration": "总时长 {total} 分钟 · 动手 {active} 分钟",
+  "recipeAllergens": "过敏原：{items}{incomplete}",
+  "recipeNutrition": "每份营养：估算值{incomplete}",
+  "recipeIngredients": "食材",
+  "recipeStepsTitle": "步骤",
+  "recipeOptional": "可选",
+  "recipeAddPhoto": "添加成品图",
+  "recipeTakePhoto": "拍一张成品图",
+  "recipePhotoAvailable": "可以从相册选择成品图",
+  "recipePhotoDenied": "相册权限未开启，菜谱编辑不受影响",
+  "recipeCameraAvailable": "可以拍摄成品图",
+  "recipeCameraDenied": "相机权限未开启，菜谱编辑不受影响",
+  "recipeHistory": "查看版本历史",
+  "recipeDelete": "删除这份私有菜谱",
+  "recipeNoHistory": "还没有版本历史",
+  "recipeVersionTitle": "第 {version} 版{ai}",
+  "recipeNoChangeNote": "未填写修改说明",
+  "recipeRationale": "为什么这样做",
+  "recipeKeyPoint": "要点",
+  "recipeUnnamedIngredient": "未收录食材",
+  "recipeCompleteStep": "完成这一步",
+  "recipeNotFound": "菜谱不存在或你没有权限查看",
+  "recipeMinutes": "{minutes} 分钟",
+  "recipeDraftSaved": "草稿已保存",
+  "recipeCameraPermission": "拍照",
+  "recipePhotoPermission": "从相册选图",
+  "recipeComingSoon": "图片选择功能正在准备中",
+  "recipeIncomplete": "（可能不完整）",
+  "recipeSeconds": "{seconds} 秒",
+  "recipeAi": " · AI 协助",
+  "recipeEditAction": "我来改一版",
+  "recipeBaseOnVersion": "基于这一版继续编辑",
+  "recipeRetry": "重试",
+  "recipePhotoTitle": "成品图",
+  "recipePhotoStageHint": "先选图，保存菜谱时会把它放进第 1 版。",
+  "recipePhotoVersionHint": "照片会生成新的菜谱版本，不会改动旧版本。",
+  "recipePhotoSelected": "已选择的成品图",
+  "recipePhotoSuccess": "已上传，图片会以短期私有地址读取。",
+  "recipePhotoPicking": "正在打开照片选择器…",
+  "recipePhotoProcessing": "正在压缩并清除照片元数据…",
+  "recipePhotoUploading": "正在安全上传…",
+  "recipePhotoUploadError": "图片上传失败，请稍后重试。",
+  "recipePhotoReadError": "图片无法读取，请换一张图片。",
+  "recipePhotoTooLarge": "图片尺寸过大，无法安全处理。",
+  "recipePhotoUnsafe": "图片无法安全处理，请换一张图片。",
+  "recipeCameraButton": "拍照",
+  "recipeGalleryButton": "从相册选图",
+  "recipeSourceAuthorFilled": "作者填写",
+  "recipeEmptyRecipeHeader": "没有菜谱头部",
+  "recipeEmptyIngredients": "没有食材",
+  "recipeEmptySteps": "没有步骤",
+  "recipeEmptyCard": "没有菜谱卡",
+  "recipeListSummary": "第 {version} 版 · {servings} 份 · {minutes} 分钟",
+  "recipeAliases": "别名（用逗号分隔）",
+  "recipeServings": "份数",
+  "recipeDifficulty": "难度",
+  "recipeDishType": "菜型",
+  "recipeTags": "标签（用逗号分隔）",
+  "recipeTotalTime": "总时长（秒）",
+  "recipeActiveTime": "动手时长（秒）",
+  "recipeIngredientAdd": "添加食材",
+  "recipeIngredientDelete": "删除食材",
+  "recipeIngredientMoveUp": "食材上移",
+  "recipeIngredientMoveDown": "食材下移",
+  "recipeSearchStandard": "搜索标准食材",
+  "recipeStandardIngredient": "标准食材",
+  "recipeUnknownIngredient": "未收录",
+  "recipeBaseQuantity": "基础用量",
+  "recipeBaseUnit": "基础单位（克、毫升、个）",
+  "recipeIngredientGroup": "分组",
+  "recipeScalingMode": "缩放方式",
+  "recipeScalingProportional": "按比例",
+  "recipeScalingUnchanged": "保持不变",
+  "recipeScalingRound": "按个取整",
+  "recipeOptionalToggle": "可选食材",
+  "recipeFunctionalToggle": "功能性用料",
+  "recipeReplacement": "替代品",
+  "recipeReplacementSearch": "搜索替代标准食材",
+  "recipeReplacementName": "替代品名称",
+  "recipeReplacementRatio": "替代比例",
+  "recipeReplacementNote": "替代说明",
+  "recipeStepAdd": "添加步骤",
+  "recipeStepDelete": "删除步骤",
+  "recipeStepMoveUp": "步骤上移",
+  "recipeStepMoveDown": "步骤下移",
+  "recipeStepAction": "动作类型",
+  "recipeStepIngredientRefs": "引用食材",
+  "recipeStepDuration": "时长（秒）",
+  "recipeStepUnattended": "可以走开",
+  "recipeStepHeat": "火候",
+  "recipeStepTemperature": "温度（摄氏度）",
+  "recipeStepCookware": "厨具",
+  "recipeStepDoneness": "成熟判断",
+  "recipeStepDepends": "依赖的前置步骤",
+  "recipeStepNotes": "要点",
+  "recipeStepWhy": "原理",
+  "recipeNoIngredients": "还没有食材",
+  "recipeNoSteps": "还没有步骤",
+  "recipeNutritionValues": "每份营养估算：能量 {energy} 千卡，蛋白质 {protein} 克，脂肪 {fat} 克，碳水 {carb} 克，钠 {sodium} 毫克{incomplete}",
+  "recipeNoNutrition": "暂无营养估算",
+  "recipeCookware": "厨具：{items}",
+  "recipeImagePlaceholder": "成品图将在这里显示",
+  "recipeNoTags": "未设置标签",
+  "recipeDifficultyValue": "难度：{value}",
+  "recipeDishTypeValue": "菜型：{value}",
+  "recipeVersionDate": "保存于 {date}",
+  "recipeOperationCount": "{count} 条修改",
+  "recipeInvalidStepReference": "步骤引用了不存在的食材或前置步骤",
+  "recipeIngredientRequired": "请先填写食材名称",
+  "recipeInvalidNumber": "请填写有效的非负数字",
+  "recipeDiscardConfirmTitle": "放弃未保存修改？",
+  "recipeDiscardConfirmBody": "这会删除本机草稿，已保存的版本不会受影响。",
+  "recipeKeepEditing": "继续编辑",
+  "recipeDiscardConfirm": "放弃修改",
+  "recipeDeleteConfirmTitle": "删除这份菜谱？",
+  "recipeDeleteConfirmBody": "删除后不能恢复。",
+  "recipeDeleteConfirm": "确认删除",
+  "recipeCancel": "取消",
+  "recipeSaveSuccess": "已保存为新版本",
+  "recipeSearchNoResults": "没有找到标准食材，可以继续填写未收录食材",
+  "recipeAiAssisted": "AI 协助",
   "@compositionLastUpdatedAt": {
-    "description": "SPEC-009.1 票 7（#83）：离线/超时用本机缓存的描述时，显示它是什么时候存下来的。",
+    "description": "上次更新时间",
+    "placeholders": {"time": {"type": "String"}}
+  },
+  "@recipeSaveFailed": {
+    "placeholders": {"error": {"type": "String"}}
+  },
+  "@recipeAuthorVersion": {
     "placeholders": {
-      "time": {
-        "type": "String"
-      }
+      "version": {"type": "int"},
+      "servings": {"type": "int"}
     }
+  },
+  "@recipeDuration": {
+    "placeholders": {
+      "total": {"type": "int"},
+      "active": {"type": "int"}
+    }
+  },
+  "@recipeAllergens": {
+    "placeholders": {
+      "items": {"type": "String"},
+      "incomplete": {"type": "String"}
+    }
+  },
+  "@recipeNutrition": {
+    "placeholders": {"incomplete": {"type": "String"}}
+  },
+  "@recipeVersionTitle": {
+    "placeholders": {
+      "version": {"type": "int"},
+      "ai": {"type": "String"}
+    }
+  },
+  "@recipeSeconds": {
+    "placeholders": {"seconds": {"type": "int"}}
+  },
+  "@recipeMinutes": {
+    "placeholders": {"minutes": {"type": "int"}}
+  },
+  "@recipeListSummary": {
+    "placeholders": {
+      "version": {"type": "int"},
+      "servings": {"type": "int"},
+      "minutes": {"type": "int"}
+    }
+  },
+  "@recipeNutritionValues": {
+    "placeholders": {
+      "energy": {"type": "String"},
+      "protein": {"type": "String"},
+      "fat": {"type": "String"},
+      "carb": {"type": "String"},
+      "sodium": {"type": "String"},
+      "incomplete": {"type": "String"}
+    }
+  },
+  "@recipeDifficultyValue": {
+    "placeholders": {"value": {"type": "String"}}
+  },
+  "@recipeDishTypeValue": {
+    "placeholders": {"value": {"type": "String"}}
+  },
+  "@recipeVersionDate": {
+    "placeholders": {"date": {"type": "String"}}
+  },
+  "@recipeOperationCount": {
+    "placeholders": {"count": {"type": "int"}}
   }
 }

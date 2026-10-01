@@ -157,3 +157,48 @@ def _report_conflict(session: Session, redis: Redis, existing: Event) -> None:
             "复用了同一个事件 ID。"
         ),
     )
+
+
+def record_recipe_version_saved(
+    session: Session,
+    redis: Redis,
+    user_id: uuid.UUID,
+    version_id: uuid.UUID,
+    previous_version_id: uuid.UUID | None,
+    edit_operations: list[dict[str, Any]],
+    ai_assisted: bool,
+    *,
+    now: datetime,
+) -> None:
+    """Write one idempotent experience event for a saved recipe version.
+
+    The recipe transaction is already committed when this function is called. A
+    transient event-pipeline failure therefore cannot roll back the user's save;
+    the caller logs the failure and a later reconciliation can retry it.
+    """
+    existing = session.scalar(
+        select(Event).where(
+            Event.user_id == user_id,
+            Event.event_type == "recipe.version_saved",
+            Event.correlation["recipe_version_id"].astext == str(version_id),
+        )
+    )
+    if existing is not None:
+        return
+    item = EventInput(
+        # A version is immutable and emitted once: replays must keep its event ID.
+        id=version_id,
+        event_type="recipe.version_saved",
+        type_version=1,
+        device_id="server",
+        device_time=now,
+        app_version="server",
+        correlation={"recipe_version_id": str(version_id)},
+        content={
+            "recipe_version_id": str(version_id),
+            "previous_version_id": str(previous_version_id) if previous_version_id else None,
+            "edit_operations": edit_operations,
+            "ai_assisted": ai_assisted,
+        },
+    )
+    upload(session, redis, user_id, [item], now=now)

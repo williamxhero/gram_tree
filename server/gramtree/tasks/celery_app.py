@@ -44,6 +44,10 @@ def make_celery() -> Celery:
                 "task": "gramtree.tasks.jobs.purge_expired_analytics_events",
                 "schedule": crontab(hour=20, minute=30),
             },
+            "drain-recipe-save-outbox": {
+                "task": "gramtree.tasks.jobs.drain_recipe_save_outbox",
+                "schedule": 60.0,
+            },
             # 每分钟检查一次接口错误率和耗时，超阈值就告警
             "check-api-alerts": {
                 "task": "gramtree.tasks.jobs.check_api_alerts",

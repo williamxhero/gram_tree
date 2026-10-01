@@ -16,6 +16,7 @@ from gramtree.events import dev as events_dev
 from gramtree.events import router as events
 from gramtree.ingredients import router as ingredients
 from gramtree.legal import router as legal
+from gramtree.recipes import router as recipes
 from gramtree.settings import Settings, get_settings
 from gramtree.ui_protocol import router as ui_protocol
 
@@ -65,6 +66,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     v1.include_router(events.router)
     v1.include_router(analytics.router)
     v1.include_router(ingredients.router)
+    v1.include_router(recipes.router)
     v1.include_router(ui_protocol.router)
     if settings.dev_tools_enabled:
         v1.include_router(accounts_dev.router)
@@ -88,3 +90,11 @@ def check_settings(settings: Settings) -> None:
             raise RuntimeError("GRAMTREE_AUTH_SECRET 必须设置成至少 32 位的随机串")
         if settings.mail_backend != "smtp":
             raise RuntimeError("正式环境的 GRAMTREE_MAIL_BACKEND 必须是 smtp")
+        if len(settings.image_signing_secret) < 32:
+            raise RuntimeError("GRAMTREE_IMAGE_SIGNING_SECRET 必须设置成至少 32 位的随机串")
+        if settings.recipe_storage_backend != "s3":
+            raise RuntimeError("正式环境的 GRAMTREE_RECIPE_STORAGE_BACKEND 必须是 s3")
+        if not settings.recipe_s3_bucket or not settings.recipe_s3_access_key_id:
+            raise RuntimeError("正式环境必须配置 GRAMTREE_RECIPE_S3_BUCKET 和访问密钥")
+        if not settings.recipe_s3_secret_access_key:
+            raise RuntimeError("正式环境必须配置 GRAMTREE_RECIPE_S3_SECRET_ACCESS_KEY")

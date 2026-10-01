@@ -49,6 +49,12 @@ const personalInfoList = StaticDocument(
       '登录后收集，例如事件类型、发生时间、关联的菜谱版本/做菜记录等 ID 和事件内容；'
           '离线时先存在手机本地，联网后再上传',
     ),
+    ListedItem(
+      '菜谱成品照片',
+      '显示在你自己的私有菜谱版本里',
+      '你主动选择或拍摄后上传；上传前压缩并移除位置等照片元数据，'
+          '照片放在私有对象存储中，读取使用短期地址；拒绝相机或相册权限不影响其他编辑功能',
+    ),
   ],
 );
 
@@ -66,6 +72,11 @@ const sdkList = StaticDocument(
       'Sign in with Apple（sign_in_with_apple）',
       '通过 Apple 登录（仅 iPhone）',
       '只在你点“通过 Apple 登录”时调用系统的 Apple 登录',
+    ),
+    ListedItem(
+      '图片选择组件（image_picker）',
+      '从相机或相册选择成品图',
+      '只在你主动选择拍照或选图时调用系统能力；不把照片交给该组件的第三方服务',
     ),
   ],
 );

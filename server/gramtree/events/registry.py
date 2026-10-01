@@ -53,6 +53,15 @@ class SelfCheckContentV1(BaseModel):
     ping: str
 
 
+class RecipeVersionSavedContentV1(BaseModel):
+    """`recipe.version_saved` v1：保存一版菜谱时由服务端登记。"""
+
+    recipe_version_id: str
+    previous_version_id: str | None = None
+    edit_operations: list[dict[str, object]] = Field(default_factory=list)
+    ai_assisted: bool = False
+
+
 class SelfCheckContentV2(BaseModel):
     """`pipeline.self_check` v2：比 v1 多一个可选的 `note` 字段，用来验证版本兼容——
     v1、v2 都在支持期内，客户端用哪个版本上传都应该被正常接收。
@@ -174,6 +183,14 @@ ITEMS: tuple[EventTypeSpec, ...] = (
         exportable=False,
         content_schema=_RetiredDemoContent,
         supported=False,
+    ),
+    EventTypeSpec(
+        event_type="recipe.version_saved",
+        version=1,
+        description="菜谱版本保存：版本快照不可变，记录上一版和作者/AI 编辑操作。",
+        correlation_fields=("recipe_version_id",),
+        exportable=True,
+        content_schema=RecipeVersionSavedContentV1,
     ),
     EventTypeSpec(
         event_type="ui.composition_shown",

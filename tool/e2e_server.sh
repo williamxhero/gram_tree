@@ -3,14 +3,15 @@
 # 用法：tool/e2e_server.sh start | stop
 #
 # 服务端用 test 环境：验证码只存在内存里，可以从 /v1/dev/latest-email-code 读出来（测试环境才有这个接口）。
-# 需要本机的 PostgreSQL（含 pgvector）和 Redis；地址可以用 GRAMTREE_E2E_PG（不带库名）和 GRAMTREE_E2E_REDIS 改。
+# 需要本机的 PostgreSQL（含 pgvector）和 Redis；地址可以用 GRAMTREE_E2E_PG（不带库名）和 GRAMTREE_E2E_REDIS 改。数据库名可用 GRAMTREE_E2E_DATABASE_NAME 改。
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-PID_FILE="${TMPDIR:-/tmp}/gramtree_e2e_server.pid"
-LOG_FILE="${TMPDIR:-/tmp}/gramtree_e2e_server.log"
-PG="${GRAMTREE_E2E_PG:-postgresql+psycopg://postgres:postgres@localhost:5432}"
 PORT="${GRAMTREE_E2E_PORT:-8000}"
+PID_FILE="${GRAMTREE_E2E_PID_FILE:-${TMPDIR:-/tmp}/gramtree_e2e_server_${PORT}.pid}"
+LOG_FILE="${GRAMTREE_E2E_LOG_FILE:-${TMPDIR:-/tmp}/gramtree_e2e_server_${PORT}.log}"
+PG="${GRAMTREE_E2E_PG:-postgresql+psycopg://postgres:postgres@localhost:5432}"
+DATABASE_NAME="${GRAMTREE_E2E_DATABASE_NAME:-gramtree_e2e}"
 
 stop() {
   if [[ -f "$PID_FILE" ]]; then
@@ -23,22 +24,24 @@ start() {
   stop
   cd "$ROOT/server"
   export GRAMTREE_ENV=test
-  export GRAMTREE_DATABASE_URL="$PG/gramtree_e2e"
+  export GRAMTREE_DATABASE_URL="$PG/$DATABASE_NAME"
   export GRAMTREE_REDIS_URL="${GRAMTREE_E2E_REDIS:-redis://localhost:6379/14}"
   export GRAMTREE_MAIL_BACKEND=memory
 
-  uv run python - "$PG" <<'EOF'
+  uv run python - "$PG" "$DATABASE_NAME" <<'EOF'
 import sys
 
 import psycopg
 import redis
+from psycopg import sql
 
 from gramtree.settings import Settings
 
 url = sys.argv[1].replace("postgresql+psycopg://", "postgresql://") + "/postgres"
+database = sys.argv[2]
 with psycopg.connect(url, autocommit=True) as conn:
-    conn.execute("DROP DATABASE IF EXISTS gramtree_e2e WITH (FORCE)")
-    conn.execute("CREATE DATABASE gramtree_e2e")
+    conn.execute(sql.SQL("DROP DATABASE IF EXISTS {} WITH (FORCE)").format(sql.Identifier(database)))
+    conn.execute(sql.SQL("CREATE DATABASE {}").format(sql.Identifier(database)))
 redis.Redis.from_url(Settings().redis_url).flushdb()
 EOF
   uv run alembic upgrade head >/dev/null
