@@ -209,6 +209,9 @@ class _RecipeEditorPageState extends ConsumerState<RecipeEditorPage> {
         accountId: _accountId,
         baselineVersionId: _loaded?.version.id,
       );
+      if (_draft != null && !RecipeForm.isDraftPayloadValid(_draft!.payload)) {
+        await _discardDraft();
+      }
       if (_draft != null && mounted) {
         WidgetsBinding.instance.addPostFrameCallback((_) => _askRestore());
       }

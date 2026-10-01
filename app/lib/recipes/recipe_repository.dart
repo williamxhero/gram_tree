@@ -426,7 +426,19 @@ class RecipeForm {
     imageIds: [...?imageIds],
   );
 
+  static bool isDraftPayloadValid(Map<String, dynamic> value) {
+    final snapshot = value['snapshot'];
+    if (snapshot is! Map) return false;
+    try {
+      RecipeSnapshot.fromJson(Map<String, dynamic>.from(snapshot));
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
   factory RecipeForm.fromDraft(Map<String, dynamic> value) {
+    if (!isDraftPayloadValid(value)) return RecipeForm(dishName: '');
     final snapshot = value['snapshot'];
     if (snapshot is Map) {
       try {

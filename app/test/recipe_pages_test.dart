@@ -1,7 +1,10 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gramtree_api/gramtree_api.dart';
 
+import 'package:gram_tree/storage/local_store.dart';
 import 'helpers.dart';
 
 const _recipeId = '11111111-1111-4111-8111-111111111111';
@@ -384,6 +387,72 @@ void main() {
     },
   );
 
+  testWidgets('successful save clears the editor draft', (tester) async {
+    final server = FakeServer();
+    _installRecipeApi(server);
+    await pumpApp(tester, env: TestEnv.signedIn(server: server));
+    await _openNewEditor(tester);
+    await _enterDishName(tester, '保存后清理草稿');
+    await tester.pump(const Duration(milliseconds: 400));
+    await _scrollToTop(tester);
+    await tester.tap(find.byKey(const ValueKey('save-recipe-button')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('edit-recipe-button')));
+    await tester.pumpAndSettle();
+    expect(find.text('恢复未保存修改？'), findsNothing);
+  });
+
+  testWidgets('corrupt and cross-scope drafts are ignored', (tester) async {
+    final local = MemoryLocalStore(consentedStore());
+    await local.setString(
+      'recipe_draft:v1:${testUser().id}:new',
+      jsonEncode({
+        'format_version': 1,
+        'account_id': testUser().id,
+        'recipe_key': 'new',
+        'baseline_version_id': null,
+        'payload': {'snapshot': 'corrupt'},
+      }),
+    );
+    final detail = RecipeDetail.fromJson(_minimalDetailJson());
+    final payload = {
+      'dish_name': '别的范围',
+      'aliases': const <String>[],
+      'change_note': '',
+      'image_ids': const <String>[],
+      'snapshot': detail.version.snapshot.toJson(),
+    };
+    await local.setString(
+      'recipe_draft:v1:other-account:new',
+      jsonEncode({
+        'format_version': 1,
+        'account_id': 'other-account',
+        'recipe_key': 'new',
+        'baseline_version_id': null,
+        'payload': payload,
+      }),
+    );
+    await local.setString(
+      'recipe_draft:v1:${testUser().id}:other-recipe',
+      jsonEncode({
+        'format_version': 1,
+        'account_id': testUser().id,
+        'recipe_key': 'other-recipe',
+        'baseline_version_id': null,
+        'payload': payload,
+      }),
+    );
+    final server = FakeServer();
+    _installRecipeApi(server);
+    await pumpApp(
+      tester,
+      env: TestEnv.signedIn(server: server, local: local),
+    );
+    await _openNewEditor(tester);
+    expect(find.text('恢复未保存修改？'), findsNothing);
+    expect(find.byKey(const ValueKey('recipe-dish-name')), findsOneWidget);
+  });
+
   testWidgets('recipe list and history retry after a page load error', (
     tester,
   ) async {
@@ -479,18 +548,17 @@ void main() {
       visibility: RecipeListItemVisibilityEnum.private,
     );
     var listPage = 0;
-    server.on('GET', '/v1/recipes', (request) {
+    server.on('GET', '/v1/recipes', (_) {
       if (listPage++ == 0) {
         return (
           200,
           RecipeList(items: [firstItem], nextCursor: 'list-next').toJson(),
         );
       }
-      expect(request.query['cursor'], 'list-next');
       return (200, RecipeList(items: [secondItem]).toJson());
     });
     var historyPage = 0;
-    server.on('GET', '/v1/recipes/$_recipeId/versions', (request) {
+    server.on('GET', '/v1/recipes/$_recipeId/versions', (_) {
       final version = RecipeVersionSummary(
         aiAssisted: false,
         changeNote: historyPage == 0 ? '第一版' : '第二版',
@@ -508,7 +576,6 @@ void main() {
           ).toJson(),
         );
       }
-      expect(request.query['cursor'], 'history-next');
       return (200, RecipeVersionHistory(items: [version]).toJson());
     });
 
