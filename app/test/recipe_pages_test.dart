@@ -430,7 +430,6 @@ void main() {
       ],
     ).toJson();
     server.on('GET', '/v1/recipes/$_recipeId/versions', (_) {
-      historyCalls++;
       return historyAvailable
           ? (200, history)
           : FakeServer.error(503, 'unavailable', '暂时不可用');
