@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:gramtree_api/gramtree_api.dart';
 
 import 'package:gram_tree/storage/local_store.dart';
+
 import 'helpers.dart';
 
 const _recipeId = '11111111-1111-4111-8111-111111111111';
@@ -811,6 +812,34 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('save-recipe-button')));
     await tester.pumpAndSettle();
     expect(find.textContaining('替代品：土豆'), findsOneWidget);
+  });
+
+  testWidgets('editor shows unrecorded ingredients and step references', (
+    tester,
+  ) async {
+    final server = FakeServer();
+    _installRecipeApi(server);
+    await pumpApp(tester, env: TestEnv.signedIn(server: server));
+    await _openNewEditor(tester);
+    await _enterDishName(tester, '未收录引用测试');
+    await _scrollToTop(tester);
+    await _scrollUntilVisible(
+      tester,
+      find.byKey(const ValueKey('recipe-ingredient-search')),
+    );
+    expect(find.text('未收录'), findsOneWidget);
+    await _scrollUntilVisible(
+      tester,
+      find.byKey(const ValueKey('recipe-step-ref-step-1-ingredient-1')),
+    );
+    await tester.tap(
+      find.byKey(const ValueKey('recipe-step-ref-step-1-ingredient-1')),
+    );
+    await _scrollToTop(tester);
+    await tester.tap(find.byKey(const ValueKey('save-recipe-button')));
+    await tester.pumpAndSettle();
+    await _scrollToBottom(tester);
+    expect(find.textContaining('引用食材：默认食材'), findsOneWidget);
   });
 
   testWidgets('editor can add and reorder multiple ingredients and steps', (
