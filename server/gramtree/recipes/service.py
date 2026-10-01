@@ -184,6 +184,25 @@ def _validate_snapshot(session: Session, snapshot: RecipeSnapshot) -> RecipeSnap
     normalized_ingredients = [
         _normalize_ingredient(session, ingredient) for ingredient in snapshot.ingredients
     ]
+    replacement_ids = {
+        ingredient.replacement.ingredient_id
+        for ingredient in snapshot.ingredients
+        if ingredient.replacement is not None
+        and not isinstance(ingredient.replacement, str)
+        and ingredient.replacement.ingredient_id is not None
+    }
+    missing_replacements = [
+        str(ingredient_id)
+        for ingredient_id in replacement_ids
+        if session.get(Ingredient, ingredient_id) is None
+    ]
+    if missing_replacements:
+        raise ApiError(
+            422,
+            "invalid_recipe",
+            "菜谱结构有误",
+            "ingredients.replacement.ingredient_id 不存在：" + ", ".join(missing_replacements),
+        )
     step_ids = [step.id for step in snapshot.steps]
     if len(set(step_ids)) != len(step_ids):
         raise ApiError(422, "invalid_recipe", "菜谱结构有误", "steps.id 不能重复")
@@ -218,6 +237,7 @@ def _validate_snapshot(session: Session, snapshot: RecipeSnapshot) -> RecipeSnap
             )
 
     edges = {step.id: set(step.depends_on) for step in snapshot.steps}
+    step_indexes = {step.id: index for index, step in enumerate(snapshot.steps)}
     visiting: set[str] = set()
     visited: set[str] = set()
 
@@ -227,7 +247,7 @@ def _validate_snapshot(session: Session, snapshot: RecipeSnapshot) -> RecipeSnap
                 422,
                 "invalid_recipe",
                 "菜谱结构有误",
-                f"steps[{step_id}].depends_on 形成循环依赖",
+                f"steps[{step_indexes[step_id]}].depends_on 形成循环依赖",
             )
         if step_id in visited:
             return
@@ -609,6 +629,7 @@ def _field_operations(
     if kind == "ingredient":
         type_by_field = {
             "ingredient_id": "replace_ingredient",
+            "display_name": "change_display_name",
             "quantity": "change_quantity",
             "unit": "change_quantity",
             "base_quantity": "change_quantity",
@@ -801,7 +822,7 @@ def save_version(
     )
     session.add(version)
     session.flush()
-    _copy_version_images(session, recipe, previous, version)
+    _copy_version_images(session, recipe, baseline, version)
     _attach_staged_images(session, owner, recipe, version, [row.id for row in staged])
     recipe.current_version_id = version.id
     recipe.updated_at = version.created_at

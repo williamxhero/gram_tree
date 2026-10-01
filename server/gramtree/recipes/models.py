@@ -96,10 +96,11 @@ class RecipeSaveOutbox(Base):
     )
 
     id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=new_id)
-    recipe_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("recipes.id", ondelete="CASCADE"))
-    version_id: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey("recipe_versions.id", ondelete="CASCADE")
-    )
+    # Keep these identifiers as immutable event payload references.  They must
+    # survive recipe deletion so a delayed experience event can still be
+    # delivered; the owner foreign key remains cascading for account erasure.
+    recipe_id: Mapped[uuid.UUID] = mapped_column()
+    version_id: Mapped[uuid.UUID] = mapped_column()
     owner_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
     previous_version_id: Mapped[uuid.UUID | None] = mapped_column(default=None)
     edit_operations: Mapped[list[dict[str, Any]]] = mapped_column(JSONB, default=list)

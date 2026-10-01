@@ -168,6 +168,7 @@ def test_versions_are_immutable_and_history_can_branch_from_old_version(api: Api
     changed = recipe_input()
     changed["snapshot"]["servings"] = 4
     changed["snapshot"]["ingredients"][0]["quantity"] = 600
+    changed["snapshot"]["ingredients"][0]["display_name"] = "作者叫法"
     changed["change_note"] = "加倍份量"
     second_response = api.client.post(
         f"/v1/recipes/{recipe_id}/versions", json=changed, headers=headers
@@ -177,6 +178,7 @@ def test_versions_are_immutable_and_history_can_branch_from_old_version(api: Api
     assert second["version"]["version_number"] == 2
     assert second["version"]["previous_version_id"] == first_id
     assert any(op["intent"] == "作者手动修改" for op in second["version"]["edit_operations"])
+    assert any(op["type"] == "change_display_name" for op in second["version"]["edit_operations"])
     first = api.client.get(f"/v1/recipes/{recipe_id}/versions/{first_id}", headers=headers).json()
     assert first["version"]["version_number"] == 1
     assert first["version"]["snapshot"]["servings"] == 2
@@ -242,6 +244,15 @@ def test_invalid_references_and_dependency_cycles_are_rejected(api: Api) -> None
     body["snapshot"]["steps"][1]["depends_on"] = ["marinate"]
     response = api.client.post("/v1/recipes", json=body, headers=headers)
     assert_error_shape(response, 422, "invalid_recipe")
+    body = recipe_input()
+    body["snapshot"]["ingredients"][0]["replacement"] = {
+        "ingredient_id": "77777777-7777-4777-8777-777777777777",
+        "display_name": "不存在的替代品",
+        "ratio": 1,
+    }
+    response = api.client.post("/v1/recipes", json=body, headers=headers)
+    error = assert_error_shape(response, 422, "invalid_recipe")
+    assert "replacement.ingredient_id" in (error["detail"] or "")
 
 
 def test_image_upload_strips_metadata_and_uses_signed_private_url(api: Api, tmp_path) -> None:
@@ -324,6 +335,22 @@ def test_staged_image_attaches_to_create_and_does_not_mutate_old_version(api: Ap
     assert len(old["version"]["images"]) == 1
     assert len(current["version"]["images"]) == 2
     assert current["version"]["version_number"] == 2
+
+    # Continuing from version 1 must branch with version 1's photo identity,
+    # not silently copy the current version 2 photo set.
+    branch = recipe_input("staged-photo-dish")
+    branch["base_version_id"] = first["version"]["id"]
+    branched_response = api.client.post(
+        f"/v1/recipes/{first['id']}/versions", json=branch, headers=headers
+    )
+    assert branched_response.status_code == 201, branched_response.text
+    branched = branched_response.json()
+    assert branched["version"]["version_number"] == 3
+    assert len(branched["version"]["images"]) == 1
+    assert (
+        api.client.get(branched["version"]["images"][0]["url"]).content
+        == api.client.get(first["version"]["images"][0]["url"]).content
+    )
 
 
 def test_staged_image_is_owner_scoped(api: Api) -> None:
