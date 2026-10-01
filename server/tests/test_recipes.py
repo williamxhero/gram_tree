@@ -460,7 +460,12 @@ def test_recipe_known_nutrition_and_allergens_are_derived_over_http(
     body["snapshot"]["steps"][1]["ingredient_ids"] = ["chicken"]
     response = api.client.post("/v1/recipes", json=body, headers=headers)
     assert response.status_code == 201, response.text
-    derived = response.json()["version"]["derived"]
+    saved = response.json()
+    assert saved["version"]["snapshot"]["ingredients"][0]["ingredient_id"] == ingredient_id
+    detail = api.client.get(f"/v1/recipes/{saved['id']}", headers=headers)
+    assert detail.status_code == 200
+    assert detail.json()["version"]["snapshot"]["ingredients"][0]["ingredient_id"] == ingredient_id
+    derived = saved["version"]["derived"]
     assert derived["allergens"] == ["大豆"]
     assert derived["allergens_incomplete"] is False
     nutrition = derived["nutrition_per_serving"]
