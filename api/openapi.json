@@ -2923,6 +2923,72 @@
         "title": "RecipeDetail",
         "type": "object"
       },
+      "RecipeDisplayedIngredient": {
+        "description": "One immutable recipe amount in the requested display mode.",
+        "properties": {
+          "display_name": {
+            "title": "Display Name",
+            "type": "string"
+          },
+          "display_quantity": {
+            "title": "Display Quantity",
+            "type": "number"
+          },
+          "display_unit": {
+            "title": "Display Unit",
+            "type": "string"
+          },
+          "grams": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Grams"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "original_quantity": {
+            "title": "Original Quantity",
+            "type": "number"
+          },
+          "original_unit": {
+            "title": "Original Unit",
+            "type": "string"
+          },
+          "rule": {
+            "enum": [
+              "base",
+              "standard_measure",
+              "personal_measure",
+              "no_density"
+            ],
+            "title": "Rule",
+            "type": "string"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "display_name",
+          "original_quantity",
+          "original_unit",
+          "text",
+          "display_quantity",
+          "display_unit",
+          "rule"
+        ],
+        "title": "RecipeDisplayedIngredient",
+        "type": "object"
+      },
       "RecipeImageOut": {
         "properties": {
           "byte_size": {
@@ -3221,6 +3287,69 @@
           "unit"
         ],
         "title": "RecipeIngredient",
+        "type": "object"
+      },
+      "RecipeIngredientDisplay": {
+        "description": "Read-only display conversion for one owned recipe version.",
+        "properties": {
+          "ingredients": {
+            "items": {
+              "$ref": "#/components/schemas/RecipeDisplayedIngredient"
+            },
+            "title": "Ingredients",
+            "type": "array"
+          },
+          "measure_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Measure Id"
+          },
+          "mode": {
+            "enum": [
+              "base",
+              "standard",
+              "home"
+            ],
+            "title": "Mode",
+            "type": "string"
+          },
+          "recipe_id": {
+            "format": "uuid",
+            "title": "Recipe Id",
+            "type": "string"
+          },
+          "version_id": {
+            "format": "uuid",
+            "title": "Version Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "recipe_id",
+          "version_id",
+          "mode",
+          "ingredients"
+        ],
+        "title": "RecipeIngredientDisplay",
+        "type": "object"
+      },
+      "RecipeIngredientDisplayOut": {
+        "properties": {
+          "display": {
+            "$ref": "#/components/schemas/RecipeIngredientDisplay"
+          }
+        },
+        "required": [
+          "display"
+        ],
+        "title": "RecipeIngredientDisplayOut",
         "type": "object"
       },
       "RecipeList": {
@@ -7367,6 +7496,115 @@
         ]
       }
     },
+    "/v1/recipes/{recipe_id}/display": {
+      "get": {
+        "operationId": "display_current_recipe_ingredients",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "recipe_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Recipe Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "mode",
+            "required": true,
+            "schema": {
+              "enum": [
+                "base",
+                "standard",
+                "home"
+              ],
+              "title": "Mode",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "measure_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Measure Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecipeIngredientDisplayOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "服务端错误"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Display Current Recipe Ingredients",
+        "tags": [
+          "recipes"
+        ]
+      }
+    },
     "/v1/recipes/{recipe_id}/images": {
       "post": {
         "operationId": "upload_recipe_image",
@@ -8007,6 +8245,125 @@
           }
         ],
         "summary": "Get Recipe Version",
+        "tags": [
+          "recipes"
+        ]
+      }
+    },
+    "/v1/recipes/{recipe_id}/versions/{version_id}/display": {
+      "get": {
+        "operationId": "display_recipe_version_ingredients",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "recipe_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Recipe Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "version_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Version Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "mode",
+            "required": true,
+            "schema": {
+              "enum": [
+                "base",
+                "standard",
+                "home"
+              ],
+              "title": "Mode",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "measure_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Measure Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecipeIngredientDisplayOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "服务端错误"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Display Recipe Version Ingredients",
         "tags": [
           "recipes"
         ]

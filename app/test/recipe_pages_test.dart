@@ -1311,4 +1311,128 @@ void main() {
     expect(find.textContaining('白瓷勺'), findsWidgets);
     expect(find.textContaining('100 克'), findsWidgets);
   });
+
+  testWidgets('recipe detail exposes no-density fallback provenance', (
+    tester,
+  ) async {
+    final server = FakeServer();
+    final state = _installRecipeApi(server);
+    final detail = Map<String, dynamic>.from(state.current);
+    final version = Map<String, dynamic>.from(detail['version'] as Map);
+    final snapshot = Map<String, dynamic>.from(version['snapshot'] as Map);
+    final ingredients = [
+      for (final raw in (snapshot['ingredients'] as List))
+        Map<String, dynamic>.from(raw as Map),
+    ];
+    ingredients.first['quantity'] = 20;
+    snapshot['ingredients'] = ingredients;
+    version['snapshot'] = snapshot;
+    detail['version'] = version;
+    state.current = detail;
+    state.versions[0] = detail;
+
+    await pumpApp(tester, env: TestEnv.signedIn(server: server));
+    await _openMyRecipes(tester);
+    await tester.tap(find.byKey(const ValueKey('recipe-card-$_recipeId')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('汤匙/茶匙'));
+    await tester.pumpAndSettle();
+    await _scrollToBottom(tester);
+
+    expect(find.text('20 克'), findsWidgets);
+    expect(find.text('作者填写'), findsWidgets);
+    await tester.tap(find.text('作者填写').last);
+    await tester.pumpAndSettle();
+    expect(find.text('原来：20 g'), findsOneWidget);
+    expect(find.text('现在：20 克'), findsOneWidget);
+    expect(find.text('没有密度数据，保留克数'), findsOneWidget);
+  });
+
+  testWidgets('recipe detail picks among multiple home measures', (tester) async {
+    final server = FakeServer();
+    final state = _installRecipeApi(server, standardIngredientId: _standardIngredientId);
+    final detail = Map<String, dynamic>.from(state.current);
+    final version = Map<String, dynamic>.from(detail['version'] as Map);
+    final snapshot = Map<String, dynamic>.from(version['snapshot'] as Map);
+    final ingredients = [
+      for (final raw in (snapshot['ingredients'] as List))
+        Map<String, dynamic>.from(raw as Map),
+    ];
+    ingredients.first['quantity'] = 6;
+    snapshot['ingredients'] = ingredients;
+    version['snapshot'] = snapshot;
+    detail['version'] = version;
+    state.current = detail;
+    state.versions[0] = detail;
+    final densityIngredient = IngredientDetail(
+      aliases: const ['水'],
+      attributes: IngredientAttributes(
+        density: DensityAttribute(
+          estimate: false,
+          source_: 'fixture',
+          status: AttributeStatus.verified,
+          value: 0.8,
+        ),
+      ),
+      category: '饮品',
+      id: _standardIngredientId,
+      pinyin: 'shui',
+      pinyinInitials: 'S',
+      standardName: '水',
+      version: 'ingredient-v1',
+    );
+    server.on('GET', '/v1/ingredients/changes', (_) => (
+      200,
+      {
+        'added': [densityIngredient.toJson()],
+        'current_version': 'ingredient-v1',
+        'merged': const [],
+        'modified': const [],
+        'releases': const [],
+      },
+    ));
+    server.on('GET', '/v1/me/measures', (_) => (
+      200,
+      {
+        'items': [
+          {
+            'id': '66666666-6666-4666-8666-666666666666',
+            'name': '白瓷勺',
+            'kind': 'spoon',
+            'capacity_ml': 15,
+            'created_at': '2026-10-02T00:00:00Z',
+            'updated_at': '2026-10-02T00:00:00Z',
+          },
+          {
+            'id': '77777777-7777-4777-8777-777777777777',
+            'name': '陶瓷碗',
+            'kind': 'bowl',
+            'capacity_ml': 30,
+            'created_at': '2026-10-02T00:00:00Z',
+            'updated_at': '2026-10-02T00:00:00Z',
+          },
+        ],
+        'next_cursor': null,
+      },
+    ));
+
+    await pumpApp(tester, env: TestEnv.signedIn(server: server));
+    await _openMyRecipes(tester);
+    await tester.tap(find.byKey(const ValueKey('recipe-card-$_recipeId')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('自家量具'));
+    await tester.pumpAndSettle();
+    await _scrollToBottom(tester);
+    expect(find.textContaining('约 1/2 白瓷勺（6 克）'), findsOneWidget);
+
+    await _scrollToTop(tester);
+    await tester.tap(find.byKey(const ValueKey('recipe-measure-picker')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.textContaining('陶瓷碗').last);
+    await tester.pumpAndSettle();
+    await _scrollToBottom(tester);
+    expect(find.textContaining('约 1/4 陶瓷碗（6 克）'), findsOneWidget);
+    expect((snapshot['ingredients'] as List).first['quantity'], 6);
+    expect(server.calls('POST', '/v1/recipes'), isEmpty);
+  });
 }

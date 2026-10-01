@@ -55,6 +55,7 @@ class SourceMark extends ConsumerWidget {
     this.citation,
     required this.required,
     this.feedbackEnabled = true,
+    this.showAuthorMark = false,
     required this.onAction,
   });
 
@@ -73,6 +74,11 @@ class SourceMark extends ConsumerWidget {
   /// details expose provenance read-only until a real adjustment contract exists.
   final bool feedbackEnabled;
 
+  /// Whether an author-filled value should expose its read-only detail trigger.
+  /// Most source marks hide this source type; recipe display rows opt in so
+  /// unchanged and fallback amounts still expose the same WhyPanel contract.
+  final bool showAuthorMark;
+
   /// 触发意图的统一入口（就是 `CompositionView` 传给每个组件 builder 的
   /// `onAction`，见 `composition_view.dart`）——"这次不用"/"以后别这样"走的是
   /// 票 5（#81）已有的意图派发，这里不另写处理路径。
@@ -80,7 +86,9 @@ class SourceMark extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    if (sourceType == sourceTypeAuthorFilled) return const SizedBox.shrink();
+    if (sourceType == sourceTypeAuthorFilled && !showAuthorMark) {
+      return const SizedBox.shrink();
+    }
 
     final theme = Theme.of(context);
     final colors = GramTreeColors.of(context);

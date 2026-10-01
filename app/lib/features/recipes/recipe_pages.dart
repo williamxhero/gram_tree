@@ -2330,6 +2330,7 @@ class _DisplayModeControl extends StatelessWidget {
             if (mode == MeasureDisplayMode.home && hasHomeMeasures)
               DropdownButtonFormField<String>(
                 key: const ValueKey('recipe-measure-picker'),
+                isExpanded: true,
                 initialValue: selectedMeasureId,
                 decoration: InputDecoration(
                   labelText: l10n.recipeMeasureChoose,
@@ -2345,8 +2346,9 @@ class _DisplayModeControl extends StatelessWidget {
                 ],
                 onChanged: onMeasureChanged,
               ),
-            if (mode == MeasureDisplayMode.home && !hasHomeMeasures)
+            if (!hasHomeMeasures)
               Padding(
+                key: const ValueKey('recipe-measure-empty-hint'),
                 padding: const EdgeInsets.only(top: 8),
                 child: Text(l10n.recipeMeasureModeNoHome),
               ),
@@ -2389,27 +2391,33 @@ class _IngredientDetailRow extends StatelessWidget {
         displayed != null &&
         displayed!.rule != 'base' &&
         displayed!.rule != 'no_density';
+    final conversionPresent = converted != null || moldConverted != null;
     final originalQuantity =
         '${_quantityText(ingredient.quantity)} ${ingredient.unit}';
     final source = ingredient.quantitySource;
     final showSource =
         displayed != null ||
-        adjusted ||
+        conversionPresent ||
         (source != null && source.source_.value != sourceTypeAuthorFilled);
     final sourceType = adjusted || displayChanged
         ? sourceTypeScenarioAdjusted
         : source?.source_.value ?? sourceTypeAuthorFilled;
-    final sourceBasis = displayChanged
-        ? l10n.recipeMeasureDisplayOnly
-        : displayed?.rule == 'no_density'
-        ? l10n.recipeMeasureNoDensity
-        : adjusted
-        ? moldConverted != null
-              ? _conversionRuleLabel(convertedRule ?? '')
-              : _servingRuleLabel(convertedRule ?? '')
-        : source?.basis?.isNotEmpty == true
-        ? source!.basis!
-        : l10n.recipeSourceAuthorFilled;
+    final String sourceBasis;
+    if (displayChanged) {
+      sourceBasis = displayed!.rule == 'personal_measure'
+          ? l10n.recipeMeasureDisplayOnly
+          : '常用量具换算；菜谱基础值未改变';
+    } else if (displayed?.rule == 'no_density') {
+      sourceBasis = l10n.recipeMeasureNoDensity;
+    } else if (conversionPresent) {
+      sourceBasis = moldConverted != null
+          ? _conversionRuleLabel(convertedRule ?? '')
+          : _servingRuleLabel(convertedRule ?? '');
+    } else if (source?.basis?.isNotEmpty == true) {
+      sourceBasis = source!.basis!;
+    } else {
+      sourceBasis = l10n.recipeSourceAuthorFilled;
+    }
     return ListTile(
       contentPadding: EdgeInsets.zero,
       title: Row(
@@ -2430,10 +2438,11 @@ class _IngredientDetailRow extends StatelessWidget {
                   ? 'recipe-ingredient-${ingredient.id}-serving'
                   : 'recipe-ingredient-${ingredient.id}-quantity',
               value: quantity,
-              originalValue: displayed != null || adjusted
+              originalValue: displayed != null || conversionPresent
                   ? originalQuantity
                   : source?.original,
               basisText: sourceBasis,
+              showAuthorMark: sourceType == sourceTypeAuthorFilled,
               required: false,
               feedbackEnabled: false,
               onAction: (_) {},
@@ -2902,7 +2911,17 @@ DisplayedAmount? _displayedAmount(
 }) {
   final baseUnit =
       ingredient.baseUnit?.value ?? _displayBaseUnit(ingredient.unit);
-  if (baseUnit == null || baseUnit == 'count') return null;
+  if (baseUnit == null) return null;
+  if (baseUnit == 'count') {
+    final quantity = converted?.displayQuantity ?? ingredient.quantity.toDouble();
+    return DisplayedAmount(
+      text: '${_quantityText(quantity)} ${ingredient.unit}',
+      displayQuantity: quantity,
+      displayUnit: ingredient.unit,
+      grams: null,
+      rule: 'base',
+    );
+  }
   var baseQuantity =
       ingredient.baseQuantity?.toDouble() ?? ingredient.quantity.toDouble();
   if (converted != null && converted.originalQuantity != 0) {

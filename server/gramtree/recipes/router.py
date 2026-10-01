@@ -2,7 +2,7 @@
 
 import base64
 import binascii
-from typing import Annotated, Any
+from typing import Annotated, Any, Literal
 
 from fastapi import APIRouter, Depends, Query, status
 from fastapi.responses import Response
@@ -19,6 +19,7 @@ from gramtree.recipes.schemas import (
     RecipeImageOut,
     RecipeImageStagedOut,
     RecipeImageUpload,
+    RecipeIngredientDisplayOut,
     RecipeList,
     RecipeMoldConversionOut,
     RecipeMoldConversionRequest,
@@ -125,6 +126,46 @@ def convert_current_recipe_mold(
     session: SessionDep,
 ) -> RecipeMoldConversionOut:
     return service.convert_recipe_mold(session, auth.user, recipe_id, body.target_mold)
+
+
+@router.get(
+    "/{recipe_id}/display",
+    response_model=RecipeIngredientDisplayOut,
+    responses=_errors(401, 404, 422),
+)
+def display_current_recipe_ingredients(
+    recipe_id: IdV4,
+    auth: CurrentAuth,
+    session: SessionDep,
+    mode: Literal["base", "standard", "home"] = Query(),
+    measure_id: IdV4 | None = None,
+) -> RecipeIngredientDisplayOut:
+    return service.display_recipe_ingredients(
+        session, auth.user, recipe_id, mode, measure_id=measure_id
+    )
+
+
+@router.get(
+    "/{recipe_id}/versions/{version_id}/display",
+    response_model=RecipeIngredientDisplayOut,
+    responses=_errors(401, 404, 422),
+)
+def display_recipe_version_ingredients(
+    recipe_id: IdV4,
+    version_id: IdV4,
+    auth: CurrentAuth,
+    session: SessionDep,
+    mode: Literal["base", "standard", "home"] = Query(),
+    measure_id: IdV4 | None = None,
+) -> RecipeIngredientDisplayOut:
+    return service.display_recipe_ingredients(
+        session,
+        auth.user,
+        recipe_id,
+        mode,
+        measure_id=measure_id,
+        version_id=version_id,
+    )
 
 
 @router.get("/{recipe_id}", response_model=RecipeDetail, responses=_errors(401, 404))

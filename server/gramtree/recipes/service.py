@@ -10,7 +10,7 @@ import uuid
 import warnings
 from collections.abc import Iterable
 from datetime import UTC, datetime, timedelta
-from typing import Any
+from typing import Any, Literal
 
 from redis import Redis
 from sqlalchemy import delete, or_, select, update
@@ -23,6 +23,8 @@ from gramtree.core.time import utcnow
 from gramtree.events import service as event_service
 from gramtree.ingredients.attributes import IngredientAttributes
 from gramtree.ingredients.models import Ingredient, IngredientAttribute
+from gramtree.recipes.measure_display import display_amount
+from gramtree.recipes.measure_models import PersonalMeasure
 from gramtree.recipes.models import (
     Dish,
     DishAlias,
@@ -48,9 +50,12 @@ from gramtree.recipes.schemas import (
     RecipeCreate,
     RecipeDerived,
     RecipeDetail,
+    RecipeDisplayedIngredient,
     RecipeImageOut,
     RecipeImageStagedOut,
     RecipeIngredient,
+    RecipeIngredientDisplay,
+    RecipeIngredientDisplayOut,
     RecipeList,
     RecipeListItem,
     RecipeMoldConversionOut,
@@ -889,6 +894,125 @@ def get_version(
     if version is None:
         raise NotFound()
     return _detail(session, settings, recipe, version)
+
+
+def display_recipe_ingredients(
+    session: Session,
+    owner: User,
+    recipe_id: uuid.UUID,
+    mode: Literal["base", "standard", "home"],
+    measure_id: uuid.UUID | None = None,
+    version_id: uuid.UUID | None = None,
+) -> RecipeIngredientDisplayOut:
+    """Return display amounts for an owned immutable recipe version.
+
+    The recipe/version boundary is intentionally separate from the standalone
+    measure endpoint: callers receive the source amount alongside the rendered
+    amount, while density and personal-measure ownership stay server-side.
+    """
+    recipe = _owned_recipe(session, owner, recipe_id)
+    if version_id is None:
+        version = session.get(RecipeVersion, recipe.current_version_id)
+    else:
+        version = session.scalar(
+            select(RecipeVersion).where(
+                RecipeVersion.id == version_id,
+                RecipeVersion.recipe_id == recipe.id,
+            )
+        )
+    if version is None:
+        raise NotFound("菜谱版本不存在")
+
+    personal_measure: PersonalMeasure | None = None
+    if measure_id is not None:
+        personal_measure = session.scalar(
+            select(PersonalMeasure).where(
+                PersonalMeasure.id == measure_id,
+                PersonalMeasure.owner_id == owner.id,
+            )
+        )
+        if personal_measure is None:
+            raise NotFound()
+    if mode == "home" and personal_measure is None:
+        raise ApiError(422, "invalid_request", "请求参数有误", "自家量具模式需要 measure_id")
+
+    snapshot = RecipeSnapshot.model_validate(version.snapshot)
+    measure = (
+        {
+            "name": personal_measure.name,
+            "kind": personal_measure.kind,
+            "capacity_ml": personal_measure.capacity_ml,
+        }
+        if personal_measure is not None
+        else None
+    )
+    amounts: list[RecipeDisplayedIngredient] = []
+    for item in snapshot.ingredients:
+        original_quantity = float(item.quantity)
+        original_unit = item.unit
+        base_quantity = item.base_quantity
+        base_unit = item.base_unit
+        # Versions written before normalization can still be read safely.
+        if base_quantity is None or base_unit is None:
+            normalized = _display_base_quantity(original_quantity, original_unit)
+            if normalized is None:
+                base_quantity, base_unit = original_quantity, "count"
+            else:
+                base_quantity, base_unit = normalized
+        if base_unit == "count":
+            result = {
+                "text": f"{_quantity_text(float(base_quantity))} {original_unit}",
+                "display_quantity": float(base_quantity),
+                "display_unit": original_unit,
+                "grams": None,
+                "rule": "base",
+            }
+        else:
+            density = None
+            if item.ingredient_id is not None:
+                attributes = _ingredient_data(session, item.ingredient_id)
+                if attributes.density is not None:
+                    density = attributes.density.value
+            result = display_amount(
+                base_quantity=float(base_quantity),
+                base_unit=base_unit,
+                density=density,
+                mode=mode,
+                measure=measure,
+            )
+        amounts.append(
+            RecipeDisplayedIngredient(
+                id=item.id,
+                display_name=item.display_name,
+                original_quantity=original_quantity,
+                original_unit=original_unit,
+                **result,
+            )
+        )
+    return RecipeIngredientDisplayOut(
+        display=RecipeIngredientDisplay(
+            recipe_id=recipe.id,
+            version_id=version.id,
+            mode=mode,
+            measure_id=measure_id,
+            ingredients=amounts,
+        )
+    )
+
+
+def _display_base_quantity(quantity: float, unit: str) -> tuple[float, str] | None:
+    normalized = unit.strip().casefold()
+    if normalized in _MASS_UNITS:
+        return quantity * _MASS_UNITS[normalized], "g"
+    if normalized in _VOLUME_UNITS:
+        return quantity * _VOLUME_UNITS[normalized], "ml"
+    if normalized in _VOLUME_SPOONS:
+        return quantity * _VOLUME_SPOONS[normalized], "ml"
+    return None
+
+
+def _quantity_text(value: float) -> str:
+    return str(int(value)) if value == int(value) else f"{value:.2f}".rstrip("0").rstrip(".")
 
 
 def convert_recipe_servings(

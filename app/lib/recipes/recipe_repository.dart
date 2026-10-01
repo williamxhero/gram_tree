@@ -81,6 +81,30 @@ class RecipeRepository {
     return response.data!;
   }
 
+  /// Fetch the server-owned display contract for a recipe version.
+  /// Detail pages may use their matching local kernel while offline; this
+  /// method is the shareable HTTP seam with immutable source provenance.
+  Future<RecipeIngredientDisplayOut> displayIngredients(
+    String recipeId, {
+    required String mode,
+    String? measureId,
+    String? versionId,
+  }) async {
+    final response = versionId == null
+        ? await _recipes.displayCurrentRecipeIngredients(
+            recipeId: recipeId,
+            mode: mode,
+            measureId: measureId,
+          )
+        : await _recipes.displayRecipeVersionIngredients(
+            recipeId: recipeId,
+            versionId: versionId,
+            mode: mode,
+            measureId: measureId,
+          );
+    return response.data!;
+  }
+
   Future<RecipeDetail> create(RecipeForm form) async {
     final response = await _recipes.createRecipe(
       recipeCreate: RecipeCreate(

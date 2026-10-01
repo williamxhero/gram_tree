@@ -441,3 +441,31 @@ class RecipeServingConversionOut(BaseModel):
     recipe_id: IdV4
     version_id: IdV4
     conversion: ServingConversion
+
+
+class RecipeDisplayedIngredient(BaseModel):
+    """One immutable recipe amount in the requested display mode."""
+
+    id: str
+    display_name: str
+    original_quantity: float
+    original_unit: str
+    text: str
+    display_quantity: float
+    display_unit: str
+    grams: float | None = None
+    rule: Literal["base", "standard_measure", "personal_measure", "no_density"]
+
+
+class RecipeIngredientDisplay(BaseModel):
+    """Read-only display conversion for one owned recipe version."""
+
+    recipe_id: IdV4
+    version_id: IdV4
+    mode: Literal["base", "standard", "home"]
+    measure_id: IdV4 | None = None
+    ingredients: list[RecipeDisplayedIngredient]
+
+
+class RecipeIngredientDisplayOut(BaseModel):
+    display: RecipeIngredientDisplay

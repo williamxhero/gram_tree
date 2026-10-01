@@ -5,8 +5,10 @@ from pathlib import Path
 
 import pytest
 
+from gramtree.cli import main as cli
 from tests.accounts_support import Api, bearer
 from tests.test_conventions import assert_error_shape
+from tests.test_recipes import recipe_input
 
 FIXTURE_PATH = Path(__file__).parents[2] / "app" / "assets" / "measure_display_cases.json"
 CASES = json.loads(FIXTURE_PATH.read_text(encoding="utf-8"))
@@ -34,6 +36,11 @@ def test_personal_measures_are_account_scoped_and_syncable(api: Api) -> None:
     first_page = api.client.get("/v1/me/measures", params={"limit": 1}, headers=owner_other_device)
     assert first_page.status_code == 200
     assert first_page.json()["items"] == [measure]
+    read_on_other_device = api.client.get(
+        f"/v1/me/measures/{measure['id']}", headers=owner_other_device
+    )
+    assert read_on_other_device.status_code == 200
+    assert read_on_other_device.json() == measure
 
     listed_for_other_account = api.client.get("/v1/me/measures", headers=other)
     assert listed_for_other_account.status_code == 200
@@ -84,26 +91,146 @@ def test_personal_measure_validation_and_duplicate_names(api: Api) -> None:
     assert_error_shape(duplicate, 409, "measure_name_taken")
 
 
+DENSITY_ID = "00000000-0000-4000-8000-000000000099"
+
+
+def _import_density_ingredient(tmp_path: Path, density: float) -> None:
+    (tmp_path / "manifest.json").write_text(
+        json.dumps({"version": "1.0.0", "changelog": "display fixture"}),
+        encoding="utf-8",
+    )
+    (tmp_path / "ingredients.json").write_text(
+        json.dumps(
+            [
+                {
+                    "id": DENSITY_ID,
+                    "standard_name": "显示测试食材",
+                    "aliases": [],
+                    "pinyin": "xianshiceshishicai",
+                    "pinyin_initials": "xscsc",
+                    "category": "调料",
+                    "attributes": {
+                        "density": {
+                            "value": density,
+                            "source": "display fixture",
+                            "status": "verified",
+                        }
+                    },
+                }
+            ]
+        ),
+        encoding="utf-8",
+    )
+    assert cli(["ingredients", "import", str(tmp_path)]) == 0
+
+
 @pytest.mark.parametrize("case", CASES, ids=[case["name"] for case in CASES])
-def test_measure_display_matches_shared_fixture(api: Api, case: dict) -> None:
+def test_recipe_display_matches_shared_fixture_through_http(
+    api: Api, case: dict, tmp_path: Path
+) -> None:
     headers = bearer(
-        api.login(f"display-{case['input']['mode']}-{case['input']['base_quantity']}@example.com")
+        api.login(
+            f"recipe-display-{case['input']['mode']}-{case['input']['base_quantity']}@example.com"
+        )
     )
     source = case["input"]
-    payload = {key: value for key, value in source.items() if key != "measure"}
     measure = source.get("measure")
+    density = source.get("density")
+    if density is not None:
+        _import_density_ingredient(tmp_path, density)
+    ingredient = {
+        "id": "display-ingredient",
+        "display_name": "显示测试食材",
+        "quantity": source["base_quantity"],
+        "unit": source["base_unit"],
+        "scaling_mode": "proportional",
+    }
+    if density is not None:
+        ingredient["ingredient_id"] = DENSITY_ID
+    body = recipe_input(f"显示-{case['name']}")
+    body["snapshot"]["ingredients"] = [ingredient]
+    body["snapshot"]["steps"] = []
+    created_measure_id = None
     if measure is not None:
-        created = api.client.post(
-            "/v1/me/measures",
-            json=measure,
-            headers=headers,
-        )
-        assert created.status_code == 201, created.text
-        payload["measure_id"] = created.json()["id"]
-    response = api.client.post(
-        "/v1/me/measures/display",
-        json=payload,
+        created_measure = api.client.post("/v1/me/measures", json=measure, headers=headers)
+        assert created_measure.status_code == 201, created_measure.text
+        created_measure_id = created_measure.json()["id"]
+
+    created = api.client.post("/v1/recipes", json=body, headers=headers)
+    assert created.status_code == 201, created.text
+    saved = created.json()
+    params = {"mode": source["mode"]}
+    if created_measure_id is not None:
+        params["measure_id"] = created_measure_id
+    response = api.client.get(
+        f"/v1/recipes/{saved['id']}/versions/{saved['version']['id']}/display",
+        params=params,
         headers=headers,
     )
     assert response.status_code == 200, response.text
-    assert response.json() == case["expected"], case["name"]
+    display = response.json()["display"]
+    assert display["recipe_id"] == saved["id"]
+    assert display["version_id"] == saved["version"]["id"]
+    assert display["mode"] == source["mode"]
+    assert display["measure_id"] == created_measure_id
+    actual = display["ingredients"][0]
+    expected = case["expected"]
+    assert {
+        key: actual[key] for key in ("text", "display_quantity", "display_unit", "grams", "rule")
+    } == expected
+    assert actual["original_quantity"] == source["base_quantity"]
+    assert actual["original_unit"] == source["base_unit"]
+
+    current = api.client.get(
+        f"/v1/recipes/{saved['id']}/display",
+        params=params,
+        headers=headers,
+    )
+    assert current.status_code == 200, current.text
+    assert current.json() == response.json()
+    assert api.client.get(f"/v1/recipes/{saved['id']}", headers=headers).json() == saved
+
+
+def test_recipe_display_keeps_private_recipe_and_measure_scope(api: Api) -> None:
+    owner = bearer(api.login("recipe-display-owner@example.com", device="device-a"))
+    other_device = bearer(api.login("recipe-display-owner@example.com", device="device-b"))
+    other_account = bearer(api.login("recipe-display-other@example.com", device="device-c"))
+    body = recipe_input("显示权限")
+    body["snapshot"]["ingredients"] = [
+        {
+            "id": "display-ingredient",
+            "display_name": "水",
+            "quantity": 30,
+            "unit": "ml",
+            "scaling_mode": "proportional",
+        }
+    ]
+    body["snapshot"]["steps"] = []
+    created = api.client.post("/v1/recipes", json=body, headers=owner)
+    assert created.status_code == 201, created.text
+    saved = created.json()
+    measure = api.client.post(
+        "/v1/me/measures",
+        json={"name": "权限勺", "kind": "spoon", "capacity_ml": 15},
+        headers=owner,
+    )
+    assert measure.status_code == 201, measure.text
+    measure_id = measure.json()["id"]
+    path = f"/v1/recipes/{saved['id']}/display"
+    assert api.client.get(path, params={"mode": "base"}, headers=other_account).status_code == 404
+    assert (
+        api.client.get(
+            path,
+            params={"mode": "home", "measure_id": measure_id},
+            headers=other_device,
+        ).status_code
+        == 200
+    )
+    assert (
+        api.client.get(
+            path,
+            params={"mode": "home", "measure_id": measure_id},
+            headers=other_account,
+        ).status_code
+        == 404
+    )
