@@ -114,7 +114,7 @@ void main() {
     final historyContext = tester.element(find.textContaining('第 1 版'));
     GoRouter.of(historyContext).go('/recipes');
     await waitFor(tester, find.text('网页版验收菜谱'));
-    final card = find.byType(ListTile).last;
+    final card = find.widgetWithText(ListTile, '网页版验收菜谱').first;
     await tester.tap(card);
     await waitFor(tester, find.byKey(const ValueKey('delete-recipe-button')));
     await reveal(tester, find.byKey(const ValueKey('delete-recipe-button')));
