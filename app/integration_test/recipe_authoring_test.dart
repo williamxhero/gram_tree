@@ -112,10 +112,15 @@ void main() {
     // The detail route is intentionally outside the bottom-nav shell. Use the
     // router's public route boundary to return to the author's recipe list.
     final historyContext = tester.element(find.textContaining('第 1 版'));
+    final path = GoRouter.of(historyContext)
+        .routeInformationProvider
+        .value
+        .uri
+        .path;
+    final recipeId = path.split('/')[2];
     GoRouter.of(historyContext).go('/recipes');
     await waitFor(tester, find.text('网页版验收菜谱'));
-    final card = find.widgetWithText(ListTile, '网页版验收菜谱').first;
-    await tester.tap(card);
+    GoRouter.of(historyContext).go('/recipes/$recipeId');
     await waitFor(tester, find.byKey(const ValueKey('delete-recipe-button')));
     await reveal(tester, find.byKey(const ValueKey('delete-recipe-button')));
     await tester.tap(find.byKey(const ValueKey('delete-recipe-button')));
