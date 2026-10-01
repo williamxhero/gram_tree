@@ -32,9 +32,17 @@ from gramtree.recipes.models import (
     RecipeSaveOutbox,
     RecipeVersion,
 )
+from gramtree.recipes.mold_conversion import (
+    MoldConversionError,
+    MoldIngredientInput,
+    MoldInput,
+    MoldStepInput,
+    convert_mold,
+)
 from gramtree.recipes.schemas import (
     DishInput,
     DishOut,
+    MoldSpec,
     NutritionEstimate,
     RecipeAuthor,
     RecipeCreate,
@@ -45,6 +53,7 @@ from gramtree.recipes.schemas import (
     RecipeIngredient,
     RecipeList,
     RecipeListItem,
+    RecipeMoldConversionOut,
     RecipeServingConversionOut,
     RecipeSnapshot,
     RecipeVersionCreate,
@@ -52,6 +61,7 @@ from gramtree.recipes.schemas import (
     RecipeVersionOut,
     RecipeVersionSummary,
 )
+from gramtree.recipes.schemas import MoldConversion as MoldConversionSchema
 from gramtree.recipes.schemas import (
     ServingConversion as ServingConversionSchema,
 )
@@ -775,6 +785,7 @@ def _operations(previous: RecipeSnapshot, current: RecipeSnapshot) -> list[dict[
         )
     for field in (
         "servings",
+        "base_mold",
         "total_time_seconds",
         "active_time_seconds",
         "difficulty",
@@ -943,6 +954,72 @@ def convert_recipe_servings(
         recipe_id=recipe.id,
         version_id=version.id,
         conversion=ServingConversionSchema.model_validate(conversion.as_dict()),
+    )
+
+
+def convert_recipe_mold(
+    session: Session,
+    owner: User,
+    recipe_id: uuid.UUID,
+    target_mold: MoldSpec,
+    version_id: uuid.UUID | None = None,
+) -> RecipeMoldConversionOut:
+    """Return a deterministic, read-only bottom-area conversion for an owned version."""
+    recipe = _owned_recipe(session, owner, recipe_id)
+    if version_id is None:
+        version = session.get(RecipeVersion, recipe.current_version_id)
+    else:
+        version = session.scalar(
+            select(RecipeVersion).where(
+                RecipeVersion.id == version_id,
+                RecipeVersion.recipe_id == recipe.id,
+            )
+        )
+    if version is None:
+        raise NotFound("菜谱版本不存在")
+
+    snapshot = RecipeSnapshot.model_validate(version.snapshot)
+    if snapshot.base_mold is None:
+        raise ApiError(422, "missing_base_mold", "这份菜谱没有记录基准模具")
+
+    def mold_input(value: MoldSpec) -> MoldInput:
+        return MoldInput(**value.model_dump(mode="json"))
+
+    try:
+        conversion = convert_mold(
+            original_mold=mold_input(snapshot.base_mold),
+            target_mold=mold_input(target_mold),
+            round_deviation_threshold=float(
+                config.get(session, "recipe.scaling_round_deviation_threshold")
+            ),
+            ingredients=[
+                MoldIngredientInput(
+                    id=item.id,
+                    display_name=item.display_name,
+                    quantity=item.quantity,
+                    unit=item.unit,
+                    scaling_mode=item.scaling_mode,
+                )
+                for item in snapshot.ingredients
+            ],
+            steps=[
+                MoldStepInput(
+                    id=step.id,
+                    instruction=step.instruction,
+                    duration_seconds=step.duration_seconds,
+                    temperature_celsius=step.temperature_celsius,
+                    heat=step.heat,
+                    doneness=step.doneness,
+                )
+                for step in snapshot.steps
+            ],
+        )
+    except MoldConversionError as exc:
+        raise ApiError(422, exc.code, exc.message, exc.detail) from exc
+    return RecipeMoldConversionOut(
+        recipe_id=recipe.id,
+        version_id=version.id,
+        conversion=MoldConversionSchema.model_validate(conversion.as_dict()),
     )
 
 

@@ -5,6 +5,7 @@
 // ignore_for_file: unused_element
 import 'package:gramtree_api/src/model/recipe_ingredient.dart';
 import 'package:gramtree_api/src/model/recipe_step.dart';
+import 'package:gramtree_api/src/model/mold_spec.dart';
 import 'package:copy_with_extension/copy_with_extension.dart';
 import 'package:json_annotation/json_annotation.dart';
 
@@ -21,6 +22,8 @@ class RecipeSnapshot {
   /// Returns a new [RecipeSnapshot] instance.
   RecipeSnapshot({
     this.activeTimeSeconds = 0,
+
+    this.baseMold,
 
     this.difficulty,
 
@@ -48,6 +51,10 @@ class RecipeSnapshot {
     includeIfNull: false,
   )
   final int? activeTimeSeconds;
+
+  /// 烘焙菜谱的基准模具
+  @JsonKey(name: r'base_mold', required: false, includeIfNull: false)
+  final MoldSpec? baseMold;
 
   @JsonKey(name: r'difficulty', required: false, includeIfNull: false)
   final String? difficulty;
@@ -88,6 +95,7 @@ class RecipeSnapshot {
       identical(this, other) ||
       other is RecipeSnapshot &&
           other.activeTimeSeconds == activeTimeSeconds &&
+          other.baseMold == baseMold &&
           other.difficulty == difficulty &&
           other.dishType == dishType &&
           other.formatVersion == formatVersion &&
@@ -100,6 +108,7 @@ class RecipeSnapshot {
   @override
   int get hashCode =>
       activeTimeSeconds.hashCode +
+      baseMold.hashCode +
       (difficulty == null ? 0 : difficulty.hashCode) +
       (dishType == null ? 0 : dishType.hashCode) +
       formatVersion.hashCode +

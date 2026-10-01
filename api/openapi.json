@@ -1671,6 +1671,307 @@
         "title": "MergeRelation",
         "type": "object"
       },
+      "MoldConversion": {
+        "description": "Deterministic mold conversion contract shared with the App.",
+        "properties": {
+          "area_ratio": {
+            "title": "Area Ratio",
+            "type": "number"
+          },
+          "ingredients": {
+            "items": {
+              "$ref": "#/components/schemas/MoldConversionIngredient"
+            },
+            "title": "Ingredients",
+            "type": "array"
+          },
+          "original_mold": {
+            "$ref": "#/components/schemas/MoldSpec"
+          },
+          "steps": {
+            "items": {
+              "$ref": "#/components/schemas/MoldConversionStep"
+            },
+            "title": "Steps",
+            "type": "array"
+          },
+          "target_mold": {
+            "$ref": "#/components/schemas/MoldSpec"
+          },
+          "warnings": {
+            "items": {
+              "$ref": "#/components/schemas/MoldConversionWarning"
+            },
+            "title": "Warnings",
+            "type": "array"
+          }
+        },
+        "required": [
+          "original_mold",
+          "target_mold",
+          "area_ratio",
+          "ingredients",
+          "steps",
+          "warnings"
+        ],
+        "title": "MoldConversion",
+        "type": "object"
+      },
+      "MoldConversionIngredient": {
+        "description": "One ingredient as displayed after a bottom-area mold conversion.",
+        "properties": {
+          "deviation_ratio": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Deviation Ratio"
+          },
+          "deviation_warning": {
+            "default": false,
+            "title": "Deviation Warning",
+            "type": "boolean"
+          },
+          "display_name": {
+            "title": "Display Name",
+            "type": "string"
+          },
+          "display_quantity": {
+            "title": "Display Quantity",
+            "type": "number"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "original_quantity": {
+            "title": "Original Quantity",
+            "type": "number"
+          },
+          "rule": {
+            "enum": [
+              "mold_ratio",
+              "unchanged",
+              "round"
+            ],
+            "title": "Rule",
+            "type": "string"
+          },
+          "unit": {
+            "title": "Unit",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "display_name",
+          "original_quantity",
+          "display_quantity",
+          "unit",
+          "rule"
+        ],
+        "title": "MoldConversionIngredient",
+        "type": "object"
+      },
+      "MoldConversionStep": {
+        "description": "Stable baking values plus the deterministic time/doneness advisory.",
+        "properties": {
+          "doneness_warning": {
+            "default": false,
+            "title": "Doneness Warning",
+            "type": "boolean"
+          },
+          "doneness_warning_text": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Doneness Warning Text"
+          },
+          "duration_seconds": {
+            "title": "Duration Seconds",
+            "type": "integer"
+          },
+          "heat": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Heat"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "instruction": {
+            "title": "Instruction",
+            "type": "string"
+          },
+          "temperature_celsius": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Temperature Celsius"
+          },
+          "time_advisory": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Time Advisory"
+          }
+        },
+        "required": [
+          "id",
+          "instruction",
+          "duration_seconds"
+        ],
+        "title": "MoldConversionStep",
+        "type": "object"
+      },
+      "MoldConversionWarning": {
+        "properties": {
+          "code": {
+            "enum": [
+              "round_deviation",
+              "doneness_check"
+            ],
+            "title": "Code",
+            "type": "string"
+          },
+          "ingredient_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ingredient Id"
+          },
+          "message": {
+            "title": "Message",
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "message"
+        ],
+        "title": "MoldConversionWarning",
+        "type": "object"
+      },
+      "MoldSpec": {
+        "additionalProperties": false,
+        "description": "A recipe base or target mold, stored as part of the immutable snapshot.",
+        "properties": {
+          "diameter": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "maximum": 1000.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Diameter"
+          },
+          "length": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "maximum": 1000.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Length"
+          },
+          "shape": {
+            "enum": [
+              "round",
+              "square",
+              "rectangular",
+              "custom"
+            ],
+            "title": "Shape",
+            "type": "string"
+          },
+          "side": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "maximum": 1000.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Side"
+          },
+          "unit": {
+            "anyOf": [
+              {
+                "enum": [
+                  "cm",
+                  "in",
+                  "inch"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unit"
+          },
+          "width": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "maximum": 1000.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Width"
+          }
+        },
+        "required": [
+          "shape"
+        ],
+        "title": "MoldSpec",
+        "type": "object"
+      },
       "NormalizeCandidate": {
         "properties": {
           "ingredient_id": {
@@ -2753,6 +3054,43 @@
         "title": "RecipeListItem",
         "type": "object"
       },
+      "RecipeMoldConversionOut": {
+        "properties": {
+          "conversion": {
+            "$ref": "#/components/schemas/MoldConversion"
+          },
+          "recipe_id": {
+            "format": "uuid",
+            "title": "Recipe Id",
+            "type": "string"
+          },
+          "version_id": {
+            "format": "uuid",
+            "title": "Version Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "recipe_id",
+          "version_id",
+          "conversion"
+        ],
+        "title": "RecipeMoldConversionOut",
+        "type": "object"
+      },
+      "RecipeMoldConversionRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "target_mold": {
+            "$ref": "#/components/schemas/MoldSpec"
+          }
+        },
+        "required": [
+          "target_mold"
+        ],
+        "title": "RecipeMoldConversionRequest",
+        "type": "object"
+      },
       "RecipeReplacement": {
         "additionalProperties": false,
         "properties": {
@@ -2832,6 +3170,17 @@
             "minimum": 0.0,
             "title": "Active Time Seconds",
             "type": "integer"
+          },
+          "base_mold": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/MoldSpec"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "烘焙菜谱的基准模具"
           },
           "difficulty": {
             "anyOf": [
@@ -6407,6 +6756,94 @@
         ]
       }
     },
+    "/v1/recipes/{recipe_id}/mold": {
+      "post": {
+        "operationId": "convert_current_recipe_mold",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "recipe_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Recipe Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RecipeMoldConversionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecipeMoldConversionOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "服务端错误"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Convert Current Recipe Mold",
+        "tags": [
+          "recipes"
+        ]
+      }
+    },
     "/v1/recipes/{recipe_id}/servings": {
       "get": {
         "operationId": "convert_current_recipe_servings",
@@ -6470,7 +6907,7 @@
                 }
               }
             },
-            "description": "参数错误"
+            "description": "Unprocessable Entity"
           },
           "500": {
             "content": {
@@ -6777,6 +7214,104 @@
         ]
       }
     },
+    "/v1/recipes/{recipe_id}/versions/{version_id}/mold": {
+      "post": {
+        "operationId": "convert_recipe_version_mold",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "recipe_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Recipe Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "version_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Version Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RecipeMoldConversionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecipeMoldConversionOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "服务端错误"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Convert Recipe Version Mold",
+        "tags": [
+          "recipes"
+        ]
+      }
+    },
     "/v1/recipes/{recipe_id}/versions/{version_id}/servings": {
       "get": {
         "operationId": "convert_recipe_version_servings",
@@ -6850,7 +7385,7 @@
                 }
               }
             },
-            "description": "参数错误"
+            "description": "Unprocessable Entity"
           },
           "500": {
             "content": {

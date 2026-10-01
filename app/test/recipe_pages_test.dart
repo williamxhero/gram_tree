@@ -338,9 +338,82 @@ Future<void> _scrollUntilVisible(
 
 void main() {
   testWidgets(
+    'mold mode converts the original recipe and restores serving mode',
+    (tester) async {
+      final server = FakeServer();
+      final state = _installRecipeApi(server);
+      final version = state.current['version'] as Map;
+      final snapshot = version['snapshot'] as Map;
+      snapshot['base_mold'] = {'shape': 'round', 'unit': 'in', 'diameter': 6};
+      await pumpApp(tester, env: TestEnv.signedIn(server: server));
+      await _openMyRecipes(tester);
+      await tester.tap(find.byKey(const ValueKey('recipe-card-$_recipeId')));
+      await tester.pumpAndSettle();
+      await _scrollUntilVisible(
+        tester,
+        find.byKey(const ValueKey('recipe-mode-mold')),
+      );
+      await tester.tap(find.byKey(const ValueKey('recipe-serving-increase')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('recipe-mode-mold')));
+      await tester.pumpAndSettle();
+      expect(
+        find.byKey(const ValueKey('recipe-serving-control')),
+        findsNothing,
+      );
+      await tester.enterText(
+        find.byKey(const ValueKey('target-mold-diameter')),
+        '8',
+      );
+      await tester.tap(find.byKey(const ValueKey('recipe-mold-apply')));
+      await tester.pumpAndSettle();
+      await _scrollUntilVisible(tester, find.text('177.78 g'));
+      await tester.tap(find.text('按场景调整'));
+      await tester.pumpAndSettle();
+      expect(find.text('原来：100 g'), findsOneWidget);
+      expect(find.textContaining('模具比例'), findsOneWidget);
+      await tester.tapAt(const Offset(10, 10));
+      await tester.pumpAndSettle();
+      await _scrollToTop(tester);
+      await _scrollUntilVisible(
+        tester,
+        find.byKey(const ValueKey('recipe-mode-serving')),
+      );
+      await tester.tap(find.byKey(const ValueKey('recipe-mode-serving')));
+      await tester.pumpAndSettle();
+      await _scrollToBottom(tester);
+      expect(find.text('100 g'), findsWidgets);
+      expect((snapshot['ingredients'] as List).first['quantity'], 100);
+    },
+  );
+
+  testWidgets('editor records an immutable base mold in the snapshot', (
+    tester,
+  ) async {
+    final server = FakeServer();
+    final state = _installRecipeApi(server);
+    await pumpApp(tester, env: TestEnv.signedIn(server: server));
+    await _openNewEditor(tester);
+    await _enterDishName(tester, '基准模具编辑测试');
+    await _scrollToTop(tester);
+    await tester.tap(find.byKey(const ValueKey('base-mold-enable')));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.byKey(const ValueKey('base-mold-diameter')),
+      '8',
+    );
+    await tester.tap(find.byKey(const ValueKey('save-recipe-button')));
+    await tester.pumpAndSettle();
+    final mold = (state.current['version'] as Map)['snapshot'] as Map;
+    expect(mold['base_mold'], {
+      'shape': 'round',
+      'unit': 'in',
+      'diameter': 8.0,
+    });
+  });
+  testWidgets(
     'small phone scrolls loaded detail before deleting from history',
     (tester) async {
-      await tester.binding.setSurfaceSize(const Size(320, 640));
       addTearDown(() => tester.binding.setSurfaceSize(null));
       final server = FakeServer();
       _installRecipeApi(server);
@@ -1092,54 +1165,61 @@ void main() {
     },
   );
 
-  testWidgets('recipe detail converts servings locally and resets with provenance', (
-    tester,
-  ) async {
-    final server = FakeServer();
-    final state = _installRecipeApi(server);
-    final detail = Map<String, dynamic>.from(state.current);
-    final version = Map<String, dynamic>.from(detail['version'] as Map);
-    final snapshot = Map<String, dynamic>.from(version['snapshot'] as Map);
-    final ingredients = [
-      for (final raw in (snapshot['ingredients'] as List))
-        Map<String, dynamic>.from(raw as Map),
-    ];
-    ingredients.first['scaling_mode'] = 'proportional';
-    snapshot['ingredients'] = ingredients;
-    final steps = [
-      for (final raw in (snapshot['steps'] as List))
-        Map<String, dynamic>.from(raw as Map),
-    ];
-    steps.first['ingredient_ids'] = ['ingredient-1'];
-    snapshot['steps'] = steps;
-    version['snapshot'] = snapshot;
-    detail['version'] = version;
-    state.current = detail;
-    state.versions[0] = detail;
+  testWidgets(
+    'recipe detail converts servings locally and resets with provenance',
+    (tester) async {
+      final server = FakeServer();
+      final state = _installRecipeApi(server);
+      final detail = Map<String, dynamic>.from(state.current);
+      final version = Map<String, dynamic>.from(detail['version'] as Map);
+      final snapshot = Map<String, dynamic>.from(version['snapshot'] as Map);
+      final ingredients = [
+        for (final raw in (snapshot['ingredients'] as List))
+          Map<String, dynamic>.from(raw as Map),
+      ];
+      ingredients.first['scaling_mode'] = 'proportional';
+      snapshot['ingredients'] = ingredients;
+      final steps = [
+        for (final raw in (snapshot['steps'] as List))
+          Map<String, dynamic>.from(raw as Map),
+      ];
+      steps.first['ingredient_ids'] = ['ingredient-1'];
+      snapshot['steps'] = steps;
+      version['snapshot'] = snapshot;
+      detail['version'] = version;
+      state.current = detail;
+      state.versions[0] = detail;
 
-    await pumpApp(tester, env: TestEnv.signedIn(server: server));
-    await _openMyRecipes(tester);
-    await tester.tap(find.byKey(const ValueKey('recipe-card-$_recipeId')));
-    await tester.pumpAndSettle();
+      await pumpApp(tester, env: TestEnv.signedIn(server: server));
+      await _openMyRecipes(tester);
+      await tester.tap(find.byKey(const ValueKey('recipe-card-$_recipeId')));
+      await tester.pumpAndSettle();
 
-    expect(find.byKey(const ValueKey('recipe-serving-control')), findsOneWidget);
-    await tester.tap(find.byKey(const ValueKey('recipe-serving-increase')));
-    await tester.pumpAndSettle();
-    await _scrollToBottom(tester);
-    expect(find.text('200 g'), findsWidgets);
-    expect(find.text('按场景调整'), findsOneWidget);
-    await _scrollToTop(tester);
-    await tester.tap(find.byKey(const ValueKey('recipe-serving-reset')));
-    await tester.pumpAndSettle();
-    expect(find.byKey(const ValueKey('recipe-serving-value')), findsOneWidget);
-    expect(find.text('2'), findsWidgets);
+      expect(
+        find.byKey(const ValueKey('recipe-serving-control')),
+        findsOneWidget,
+      );
+      await tester.tap(find.byKey(const ValueKey('recipe-serving-increase')));
+      await tester.pumpAndSettle();
+      await _scrollToBottom(tester);
+      expect(find.text('200 g'), findsWidgets);
+      expect(find.text('按场景调整'), findsOneWidget);
+      await _scrollToTop(tester);
+      await tester.tap(find.byKey(const ValueKey('recipe-serving-reset')));
+      await tester.pumpAndSettle();
+      expect(
+        find.byKey(const ValueKey('recipe-serving-value')),
+        findsOneWidget,
+      );
+      expect(find.text('2'), findsWidgets);
 
-    await tester.tap(find.byKey(const ValueKey('recipe-serving-increase')));
-    await tester.pumpAndSettle();
-    await _scrollToBottom(tester);
-    await tester.tap(find.text('按场景调整'));
-    await tester.pumpAndSettle();
-    expect(find.text('原来：100 g'), findsOneWidget);
-    expect(find.text('现在：200 g'), findsOneWidget);
-  });
+      await tester.tap(find.byKey(const ValueKey('recipe-serving-increase')));
+      await tester.pumpAndSettle();
+      await _scrollToBottom(tester);
+      await tester.tap(find.text('按场景调整'));
+      await tester.pumpAndSettle();
+      expect(find.text('原来：100 g'), findsOneWidget);
+      expect(find.text('现在：200 g'), findsOneWidget);
+    },
+  );
 }

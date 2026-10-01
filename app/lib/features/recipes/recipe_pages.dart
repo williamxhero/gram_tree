@@ -12,6 +12,7 @@ import '../../ingredients/ingredient_provider.dart';
 import '../../l10n/app_localizations.dart';
 import '../../recipes/recipe_draft.dart';
 import '../../recipes/recipe_repository.dart';
+import '../../recipes/mold_conversion.dart';
 import '../../recipes/serving_conversion.dart';
 import 'recipe_photo_panel.dart';
 import '../../storage/local_store.dart';
@@ -384,6 +385,10 @@ class _RecipeEditorPageState extends ConsumerState<RecipeEditorPage> {
       setState(() => _error = l10n.recipeInvalidNumber);
       return false;
     }
+    if (_form.baseMold != null && !_validMold(_form.baseMold!)) {
+      setState(() => _error = l10n.recipeInvalidNumber);
+      return false;
+    }
     return true;
   }
 
@@ -662,6 +667,8 @@ class _RecipeInfoFields extends StatelessWidget {
           },
         ),
         const SizedBox(height: 8),
+        _BaseMoldEditor(form: form, onChanged: onChanged),
+        const SizedBox(height: 8),
         _text(
           label: l10n.recipeDifficulty,
           value: form.difficulty,
@@ -719,6 +726,181 @@ class _RecipeInfoFields extends StatelessWidget {
     );
   }
 }
+
+class _BaseMoldEditor extends StatelessWidget {
+  const _BaseMoldEditor({required this.form, required this.onChanged});
+
+  final RecipeForm form;
+  final VoidCallback onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final mold = form.baseMold;
+    if (mold == null) {
+      return OutlinedButton.icon(
+        key: const ValueKey('base-mold-enable'),
+        onPressed: () {
+          form.baseMold = MoldSpec(
+            shape: MoldSpecShapeEnum.round,
+            unit: MoldSpecUnitEnum.in_,
+            diameter: 6,
+          );
+          onChanged();
+        },
+        icon: const Icon(Icons.cake_outlined),
+        label: const Text('添加基准模具'),
+      );
+    }
+    final shape = mold.shape;
+    final round = shape == MoldSpecShapeEnum.round;
+    final square = shape == MoldSpecShapeEnum.square;
+    return Card(
+      key: const ValueKey('base-mold-editor'),
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const Text('基准模具'),
+            const SizedBox(height: 8),
+            DropdownButtonFormField<MoldSpecShapeEnum>(
+              key: const ValueKey('base-mold-shape'),
+              initialValue: shape,
+              decoration: const InputDecoration(labelText: '形状'),
+              items: const [
+                DropdownMenuItem(
+                  value: MoldSpecShapeEnum.round,
+                  child: Text('圆模'),
+                ),
+                DropdownMenuItem(
+                  value: MoldSpecShapeEnum.square,
+                  child: Text('方模'),
+                ),
+                DropdownMenuItem(
+                  value: MoldSpecShapeEnum.rectangular,
+                  child: Text('长方模'),
+                ),
+                DropdownMenuItem(
+                  value: MoldSpecShapeEnum.custom,
+                  child: Text('自定义尺寸'),
+                ),
+              ],
+              onChanged: (value) {
+                if (value == null) return;
+                form.baseMold = _moldWith(
+                  mold,
+                  shape: value,
+                  unit: value == MoldSpecShapeEnum.round
+                      ? mold.unit
+                      : MoldSpecUnitEnum.cm,
+                );
+                onChanged();
+              },
+            ),
+            const SizedBox(height: 8),
+            if (round)
+              Row(
+                children: [
+                  Expanded(
+                    child: _number(
+                      key: const ValueKey('base-mold-diameter'),
+                      label: '直径',
+                      value: mold.diameter ?? 0,
+                      onChanged: (value) {
+                        form.baseMold = _moldWith(
+                          mold,
+                          diameter: double.tryParse(value),
+                        );
+                        onChanged();
+                      },
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: DropdownButtonFormField<MoldSpecUnitEnum>(
+                      key: const ValueKey('base-mold-unit'),
+                      initialValue: mold.unit ?? MoldSpecUnitEnum.cm,
+                      decoration: const InputDecoration(labelText: '单位'),
+                      items: const [
+                        DropdownMenuItem(
+                          value: MoldSpecUnitEnum.in_,
+                          child: Text('英寸'),
+                        ),
+                        DropdownMenuItem(
+                          value: MoldSpecUnitEnum.cm,
+                          child: Text('厘米'),
+                        ),
+                      ],
+                      onChanged: (value) {
+                        if (value == null) return;
+                        form.baseMold = _moldWith(mold, unit: value);
+                        onChanged();
+                      },
+                    ),
+                  ),
+                ],
+              )
+            else
+              Row(
+                children: [
+                  Expanded(
+                    child: _number(
+                      key: const ValueKey('base-mold-width'),
+                      label: square ? '边长（厘米）' : '宽（厘米）',
+                      value: mold.side ?? mold.width ?? 0,
+                      onChanged: (value) {
+                        final parsed = double.tryParse(value);
+                        form.baseMold = _moldWith(
+                          mold,
+                          side: square ? parsed : null,
+                          width: parsed,
+                        );
+                        onChanged();
+                      },
+                    ),
+                  ),
+                  if (!square) ...[
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: _number(
+                        key: const ValueKey('base-mold-length'),
+                        label: '长（厘米）',
+                        value: mold.length ?? 0,
+                        onChanged: (value) {
+                          form.baseMold = _moldWith(
+                            mold,
+                            length: double.tryParse(value),
+                          );
+                          onChanged();
+                        },
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+MoldSpec _moldWith(
+  MoldSpec value, {
+  MoldSpecShapeEnum? shape,
+  MoldSpecUnitEnum? unit,
+  double? diameter,
+  double? side,
+  double? width,
+  double? length,
+}) => MoldSpec(
+  shape: shape ?? value.shape,
+  unit: unit ?? value.unit,
+  diameter: diameter ?? value.diameter,
+  side: side ?? value.side,
+  width: width ?? value.width,
+  length: length ?? value.length,
+);
 
 class _IngredientEditorCard extends StatefulWidget {
   const _IngredientEditorCard({
@@ -1331,10 +1513,14 @@ class RecipeDetailPage extends ConsumerStatefulWidget {
   ConsumerState<RecipeDetailPage> createState() => _RecipeDetailPageState();
 }
 
+enum _RecipeScaleMode { servings, mold }
+
 class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
   RecipeDetail? _detail;
   String? _error;
   int? _targetServings;
+  _RecipeScaleMode _scaleMode = _RecipeScaleMode.servings;
+  MoldSpec? _targetMold;
 
   @override
   void initState() {
@@ -1349,6 +1535,7 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
           ? await repo.get(widget.recipeId)
           : await repo.getVersion(widget.recipeId, widget.versionId!);
       _targetServings = _detail!.version.snapshot.servings;
+      _targetMold = _detail!.version.snapshot.baseMold;
       if (mounted) setState(() {});
     } catch (_) {
       if (mounted) {
@@ -1411,12 +1598,25 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
         step.id: '${index + 1}. ${step.instruction}',
     };
     final targetServings = _targetServings ?? snapshot.servings;
-    final conversion = _recipeServingConversion(snapshot, derived, targetServings);
-    final convertedById = {
-      for (final item in conversion.ingredients) item.id: item,
+    final servingConversion = _recipeServingConversion(
+      snapshot,
+      derived,
+      targetServings,
+    );
+    final moldConversion = snapshot.baseMold == null || _targetMold == null
+        ? null
+        : _recipeMoldConversion(snapshot, _targetMold!);
+    final convertedServingById = {
+      for (final item in servingConversion.ingredients) item.id: item,
     };
-    final convertedStepsById = {
-      for (final item in conversion.steps) item.id: item,
+    final convertedMoldById = {
+      for (final item in moldConversion?.ingredients ?? const []) item.id: item,
+    };
+    final convertedServingStepsById = {
+      for (final item in servingConversion.steps) item.id: item,
+    };
+    final convertedMoldStepsById = {
+      for (final item in moldConversion?.steps ?? const []) item.id: item,
     };
     return Scaffold(
       appBar: AppBar(
@@ -1504,11 +1704,35 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
             ],
           ),
           const SizedBox(height: 12),
-          _ServingControl(
-            conversion: conversion,
-            onChanged: (value) => setState(() => _targetServings = value),
-            onReset: () => setState(() => _targetServings = snapshot.servings),
-          ),
+          if (snapshot.baseMold != null) ...[
+            _ScaleModeControl(
+              mode: _scaleMode,
+              onServing: () => setState(() {
+                _scaleMode = _RecipeScaleMode.servings;
+                _targetServings = snapshot.servings;
+              }),
+              onMold: () => setState(() {
+                _scaleMode = _RecipeScaleMode.mold;
+                _targetMold ??= snapshot.baseMold;
+              }),
+            ),
+            const SizedBox(height: 8),
+          ],
+          if (_scaleMode == _RecipeScaleMode.servings)
+            _ServingControl(
+              conversion: servingConversion,
+              onChanged: (value) => setState(() => _targetServings = value),
+              onReset: () =>
+                  setState(() => _targetServings = snapshot.servings),
+            )
+          else if (moldConversion != null)
+            _MoldControl(
+              original: snapshot.baseMold!,
+              target: _targetMold!,
+              conversion: moldConversion,
+              onTargetChanged: (value) => setState(() => _targetMold = value),
+              onReset: () => setState(() => _targetMold = snapshot.baseMold),
+            ),
           const SizedBox(height: 16),
           if ((derived.allergens ?? const []).isNotEmpty ||
               derived.allergensIncomplete == true)
@@ -1535,7 +1759,12 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
             for (final ingredient in entry.value)
               _IngredientDetailRow(
                 ingredient: ingredient,
-                converted: convertedById[ingredient.id],
+                converted: _scaleMode == _RecipeScaleMode.servings
+                    ? convertedServingById[ingredient.id]
+                    : null,
+                moldConverted: _scaleMode == _RecipeScaleMode.mold
+                    ? convertedMoldById[ingredient.id]
+                    : null,
               ),
           ],
           const SizedBox(height: 20),
@@ -1548,7 +1777,12 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
             _StepDetailTile(
               index: index,
               step: step,
-              converted: convertedStepsById[step.id],
+              converted: _scaleMode == _RecipeScaleMode.servings
+                  ? convertedServingStepsById[step.id]
+                  : null,
+              moldConverted: _scaleMode == _RecipeScaleMode.mold
+                  ? convertedMoldStepsById[step.id]
+                  : null,
               ingredientNames: ingredientNames,
               stepLabels: stepLabels,
               l10n: l10n,
@@ -1563,6 +1797,276 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
       ),
     );
   }
+}
+
+class _ScaleModeControl extends StatelessWidget {
+  const _ScaleModeControl({
+    required this.mode,
+    required this.onServing,
+    required this.onMold,
+  });
+
+  final _RecipeScaleMode mode;
+  final VoidCallback onServing;
+  final VoidCallback onMold;
+
+  @override
+  Widget build(BuildContext context) => Row(
+    children: [
+      Expanded(
+        child: OutlinedButton.icon(
+          key: const ValueKey('recipe-mode-serving'),
+          onPressed: onServing,
+          icon: const Icon(Icons.people_outline),
+          label: const Text('按份数'),
+          style: mode == _RecipeScaleMode.servings
+              ? OutlinedButton.styleFrom(
+                  backgroundColor: Theme.of(context)
+                      .colorScheme
+                      .primaryContainer,
+                )
+              : null,
+        ),
+      ),
+      const SizedBox(width: 8),
+      Expanded(
+        child: OutlinedButton.icon(
+          key: const ValueKey('recipe-mode-mold'),
+          onPressed: onMold,
+          icon: const Icon(Icons.cake_outlined),
+          label: const Text('按模具'),
+          style: mode == _RecipeScaleMode.mold
+              ? OutlinedButton.styleFrom(
+                  backgroundColor: Theme.of(context)
+                      .colorScheme
+                      .primaryContainer,
+                )
+              : null,
+        ),
+      ),
+    ],
+  );
+}
+
+class _MoldControl extends StatelessWidget {
+  const _MoldControl({
+    required this.original,
+    required this.target,
+    required this.conversion,
+    required this.onTargetChanged,
+    required this.onReset,
+  });
+
+  final MoldSpec original;
+  final MoldSpec target;
+  final MoldConversionResult conversion;
+  final ValueChanged<MoldSpec> onTargetChanged;
+  final VoidCallback onReset;
+
+  @override
+  Widget build(BuildContext context) {
+    final changed = conversion.areaRatio != 1;
+    final round = target.shape == MoldSpecShapeEnum.round;
+    final square = target.shape == MoldSpecShapeEnum.square;
+    return Card(
+      key: const ValueKey('recipe-mold-control'),
+      margin: EdgeInsets.zero,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              children: [
+                const Expanded(child: Text('模具换算')),
+                TextButton(
+                  key: const ValueKey('recipe-mold-reset'),
+                  onPressed: changed ? onReset : null,
+                  child: const Text('恢复原模具'),
+                ),
+              ],
+            ),
+            Text(
+              '原模具：${_moldLabel(original)} · 底面积比例 ${conversion.areaRatio.toStringAsFixed(2)}',
+              key: const ValueKey('recipe-mold-ratio'),
+            ),
+            const SizedBox(height: 8),
+            DropdownButtonFormField<MoldSpecShapeEnum>(
+              key: const ValueKey('target-mold-shape'),
+              initialValue: target.shape,
+              decoration: const InputDecoration(labelText: '目标模具形状'),
+              items: const [
+                DropdownMenuItem(
+                  value: MoldSpecShapeEnum.round,
+                  child: Text('圆模'),
+                ),
+                DropdownMenuItem(
+                  value: MoldSpecShapeEnum.square,
+                  child: Text('方模'),
+                ),
+                DropdownMenuItem(
+                  value: MoldSpecShapeEnum.rectangular,
+                  child: Text('长方模'),
+                ),
+                DropdownMenuItem(
+                  value: MoldSpecShapeEnum.custom,
+                  child: Text('自定义尺寸'),
+                ),
+              ],
+              onChanged: (value) {
+                if (value == null) return;
+                onTargetChanged(
+                  _targetMoldWith(
+                    target,
+                    shape: value,
+                    unit: value == MoldSpecShapeEnum.round
+                        ? target.unit
+                        : MoldSpecUnitEnum.cm,
+                  ),
+                );
+              },
+            ),
+            const SizedBox(height: 8),
+            if (round)
+              Row(
+                children: [
+                  Expanded(
+                    child: _number(
+                      key: const ValueKey('target-mold-diameter'),
+                      label: '目标直径',
+                      value: target.diameter ?? 0,
+                      onChanged: (value) => onTargetChanged(
+                        _targetMoldWith(
+                          target,
+                          diameter: double.tryParse(value),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: DropdownButtonFormField<MoldSpecUnitEnum>(
+                      key: const ValueKey('target-mold-unit'),
+                      initialValue: target.unit ?? MoldSpecUnitEnum.cm,
+                      decoration: const InputDecoration(labelText: '单位'),
+                      items: const [
+                        DropdownMenuItem(
+                          value: MoldSpecUnitEnum.in_,
+                          child: Text('英寸'),
+                        ),
+                        DropdownMenuItem(
+                          value: MoldSpecUnitEnum.cm,
+                          child: Text('厘米'),
+                        ),
+                      ],
+                      onChanged: (value) {
+                        if (value != null) {
+                          onTargetChanged(_targetMoldWith(target, unit: value));
+                        }
+                      },
+                    ),
+                  ),
+                ],
+              )
+            else
+              Row(
+                children: [
+                  Expanded(
+                    child: _number(
+                      key: const ValueKey('target-mold-width'),
+                      label: square ? '目标边长（厘米）' : '目标宽（厘米）',
+                      value: target.side ?? target.width ?? 0,
+                      onChanged: (value) {
+                        final parsed = double.tryParse(value);
+                        onTargetChanged(
+                          _targetMoldWith(
+                            target,
+                            side: square ? parsed : null,
+                            width: parsed,
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                  if (!square) ...[
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: _number(
+                        key: const ValueKey('target-mold-length'),
+                        label: '目标长（厘米）',
+                        value: target.length ?? 0,
+                        onChanged: (value) => onTargetChanged(
+                          _targetMoldWith(
+                            target,
+                            length: double.tryParse(value),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            const SizedBox(height: 8),
+            Text('温度保持不变；时间不按比例放大，以成熟判断为准。'),
+            OutlinedButton(
+              key: const ValueKey('recipe-mold-apply'),
+              onPressed: () {},
+              child: const Text('应用模具换算'),
+            ),
+            for (final warning in conversion.warnings)
+              Padding(
+                padding: const EdgeInsets.only(top: 4),
+                child: Text(
+                  warning.message,
+                  style: TextStyle(color: GramTreeColors.of(context).accent),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+MoldSpec _targetMoldWith(
+  MoldSpec value, {
+  MoldSpecShapeEnum? shape,
+  MoldSpecUnitEnum? unit,
+  double? diameter,
+  double? side,
+  double? width,
+  double? length,
+}) => MoldSpec(
+  shape: shape ?? value.shape,
+  unit: unit ?? value.unit,
+  diameter: diameter ?? value.diameter,
+  side: side ?? value.side,
+  width: width ?? value.width,
+  length: length ?? value.length,
+);
+
+bool _validMold(MoldSpec mold) {
+  if (mold.shape == MoldSpecShapeEnum.round) {
+    return mold.diameter != null && mold.diameter! > 0;
+  }
+  if (mold.unit != null && mold.unit != MoldSpecUnitEnum.cm) return false;
+  if (mold.shape == MoldSpecShapeEnum.square) {
+    final side = mold.side ?? mold.width;
+    return side != null && side > 0;
+  }
+  return mold.width != null &&
+      mold.width! > 0 &&
+      mold.length != null &&
+      mold.length! > 0;
+}
+
+String _moldLabel(MoldSpec mold) {
+  final unit = mold.unit?.value ?? 'cm';
+  return switch (mold.shape) {
+    MoldSpecShapeEnum.round => '${mold.diameter} $unit 圆模',
+    MoldSpecShapeEnum.square => '${mold.side ?? mold.width} cm 方模',
+    _ => '${mold.width} × ${mold.length} cm 模具',
+  };
 }
 
 class _ServingControl extends StatelessWidget {
@@ -1651,10 +2155,11 @@ class _ServingControl extends StatelessWidget {
                 padding: const EdgeInsets.only(top: 4),
                 child: Text(
                   warning.message,
-                  key: ValueKey('recipe-serving-warning-${warning.ingredientId}'),
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: colors.accent,
+                  key: ValueKey(
+                    'recipe-serving-warning-${warning.ingredientId}',
                   ),
+                  style: Theme.of(context).textTheme.bodySmall
+                      ?.copyWith(color: colors.accent),
                 ),
               ),
           ],
@@ -1702,27 +2207,43 @@ class _RecipePhotoDisplay extends StatelessWidget {
 }
 
 class _IngredientDetailRow extends StatelessWidget {
-  const _IngredientDetailRow({required this.ingredient, this.converted});
+  const _IngredientDetailRow({
+    required this.ingredient,
+    this.converted,
+    this.moldConverted,
+  });
   final RecipeIngredient ingredient;
   final ConvertedServingIngredient? converted;
+  final ConvertedMoldIngredient? moldConverted;
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final adjusted = converted != null &&
-        converted!.displayQuantity != converted!.originalQuantity;
-    final quantity = adjusted
-        ? '${_quantityText(converted!.displayQuantity)} ${converted!.unit}'
+    final adjusted = converted != null
+        ? converted!.displayQuantity != converted!.originalQuantity
+        : moldConverted != null &&
+              moldConverted!.displayQuantity != moldConverted!.originalQuantity;
+    final convertedQuantity =
+        converted?.displayQuantity ?? moldConverted?.displayQuantity;
+    final convertedUnit = converted?.unit ?? moldConverted?.unit;
+    final convertedRule = converted?.rule ?? moldConverted?.rule;
+    final quantity =
+        adjusted && convertedQuantity != null && convertedUnit != null
+        ? '${_quantityText(convertedQuantity)} $convertedUnit'
         : '${_quantityText(ingredient.quantity)} ${ingredient.unit}';
-    final originalQuantity = '${_quantityText(ingredient.quantity)} ${ingredient.unit}';
+    final originalQuantity =
+        '${_quantityText(ingredient.quantity)} ${ingredient.unit}';
     final source = ingredient.quantitySource;
-    final showSource = adjusted ||
+    final showSource =
+        adjusted ||
         (source != null && source.source_.value != sourceTypeAuthorFilled);
     final sourceType = adjusted
         ? sourceTypeScenarioAdjusted
         : source?.source_.value ?? sourceTypeAuthorFilled;
     final sourceBasis = adjusted
-        ? _servingRuleLabel(converted!.rule)
+        ? moldConverted != null
+              ? _conversionRuleLabel(convertedRule ?? '')
+              : _servingRuleLabel(convertedRule ?? '')
         : source?.basis?.isNotEmpty == true
         ? source!.basis!
         : sourceType == sourceTypeAuthorFilled
@@ -1777,6 +2298,7 @@ class _StepDetailTile extends StatelessWidget {
     required this.index,
     required this.step,
     this.converted,
+    this.moldConverted,
     required this.ingredientNames,
     required this.stepLabels,
     required this.l10n,
@@ -1785,6 +2307,7 @@ class _StepDetailTile extends StatelessWidget {
   final int index;
   final RecipeStep step;
   final ConvertedServingStep? converted;
+  final ConvertedMoldStep? moldConverted;
   final Map<String, String> ingredientNames;
   final Map<String, String> stepLabels;
   final AppLocalizations l10n;
@@ -1866,6 +2389,16 @@ class _StepDetailTile extends StatelessWidget {
                 const SizedBox(width: 8),
                 Expanded(child: Text(l10n.recipeBatchWarning)),
               ],
+            ),
+          ),
+        if (moldConverted?.donenessWarning == true)
+          Container(
+            key: ValueKey('recipe-step-doneness-warning-${step.id}'),
+            margin: const EdgeInsets.fromLTRB(8, 4, 8, 8),
+            padding: const EdgeInsets.all(10),
+            color: GramTreeColors.of(context).accent.withValues(alpha: 0.12),
+            child: Text(
+              '${moldConverted!.timeAdvisory} ${moldConverted!.donenessWarningText}',
             ),
           ),
         if (step.durationSource != null ||
@@ -2182,16 +2715,24 @@ String _formatDate(BuildContext context, String value) {
 String _quantityText(num value) {
   final number = value.toDouble();
   if (number == number.roundToDouble()) return number.toInt().toString();
-  return number.toStringAsFixed(2).replaceFirst(RegExp(r'0+$'), '').replaceFirst(
-    RegExp(r'\.$'),
-    '',
-  );
+  return number
+      .toStringAsFixed(2)
+      .replaceFirst(RegExp(r'0+$'), '')
+      .replaceFirst(RegExp(r'\.$'), '');
 }
 
 String _servingRuleLabel(String rule) => switch (rule) {
   'proportional' => '按比例换算',
   'unchanged' => '保持原值不变',
   'round' => '按个取整',
+  _ => rule,
+};
+
+String _conversionRuleLabel(String rule) => switch (rule) {
+  'proportional' => '按比例换算',
+  'mold_ratio' => '模具比例',
+  'unchanged' => '保持原值不变',
+  'round' => '阶梯取整',
   _ => rule,
 };
 
@@ -2226,6 +2767,34 @@ ServingConversionResult _recipeServingConversion(
   ],
   totalTimeSeconds: derived.totalTimeSeconds,
   activeTimeSeconds: derived.activeTimeSeconds,
+);
+
+MoldConversionResult _recipeMoldConversion(
+  RecipeSnapshot snapshot,
+  MoldSpec target,
+) => convertMold(
+  originalMold: snapshot.baseMold!,
+  targetMold: target,
+  ingredients: [
+    for (final item in snapshot.ingredients ?? const [])
+      MoldIngredientInput(
+        id: item.id,
+        displayName: item.displayName,
+        quantity: item.quantity.toDouble(),
+        unit: item.unit,
+        scalingMode: item.scalingMode.value,
+      ),
+  ],
+  steps: [
+    for (final item in snapshot.steps ?? const [])
+      MoldStepInput(
+        id: item.id,
+        instruction: item.instruction,
+        durationSeconds: item.durationSeconds ?? 0,
+        temperatureCelsius: item.temperatureCelsius?.toDouble(),
+        heat: item.heat,
+      ),
+  ],
 );
 
 String _replacementLabel(Object? value) {

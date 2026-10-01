@@ -50,3 +50,4 @@ flutter:
   generate: true
   assets:
     - assets/serving_conversion_cases.json
+    - assets/mold_conversion_cases.json

@@ -68,6 +68,11 @@ lib/src/model/identity_out.dart
 lib/src/model/ingredient_attributes.dart
 lib/src/model/ingredient_detail.dart
 lib/src/model/merge_relation.dart
+lib/src/model/mold_conversion.dart
+lib/src/model/mold_conversion_ingredient.dart
+lib/src/model/mold_conversion_step.dart
+lib/src/model/mold_conversion_warning.dart
+lib/src/model/mold_spec.dart
 lib/src/model/normalize_candidate.dart
 lib/src/model/normalize_item.dart
 lib/src/model/normalize_request.dart
@@ -91,6 +96,8 @@ lib/src/model/recipe_image_upload.dart
 lib/src/model/recipe_ingredient.dart
 lib/src/model/recipe_list.dart
 lib/src/model/recipe_list_item.dart
+lib/src/model/recipe_mold_conversion_out.dart
+lib/src/model/recipe_mold_conversion_request.dart
 lib/src/model/recipe_replacement.dart
 lib/src/model/recipe_serving_conversion_out.dart
 lib/src/model/recipe_snapshot.dart
