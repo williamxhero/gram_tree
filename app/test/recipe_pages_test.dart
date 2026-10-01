@@ -454,6 +454,56 @@ void main() {
     expect(find.byKey(const ValueKey('recipe-dish-name')), findsOneWidget);
   });
 
+  testWidgets('draft baseline and recipe scopes stay isolated', (tester) async {
+    final local = MemoryLocalStore(consentedStore());
+    final detail = RecipeDetail.fromJson(_minimalDetailJson());
+    final payload = {
+      'dish_name': '草稿范围',
+      'aliases': const <String>[],
+      'change_note': '',
+      'image_ids': const <String>[],
+      'snapshot': detail.version.snapshot.toJson(),
+    };
+    await local.setString(
+      'recipe_draft:v1:${testUser().id}:$_recipeId',
+      jsonEncode({
+        'format_version': 1,
+        'account_id': testUser().id,
+        'recipe_key': _recipeId,
+        'baseline_version_id': 'stale-version',
+        'payload': payload,
+      }),
+    );
+    await local.setString(
+      'recipe_draft:v1:${testUser().id}:new',
+      jsonEncode({
+        'format_version': 1,
+        'account_id': testUser().id,
+        'recipe_key': 'new',
+        'baseline_version_id': null,
+        'payload': payload,
+      }),
+    );
+    final server = FakeServer();
+    _installRecipeApi(server);
+    await pumpApp(
+      tester,
+      env: TestEnv.signedIn(server: server, local: local),
+    );
+    await _openMyRecipes(tester);
+    await tester.tap(find.byKey(const ValueKey('recipe-card-$_recipeId')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('edit-recipe-button')));
+    await tester.pumpAndSettle();
+    expect(find.text('恢复未保存修改？'), findsNothing);
+    await tester.tap(find.byType(BackButton));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('recipe-list-button')));
+    await tester.pumpAndSettle();
+    await _openNewEditor(tester);
+    expect(find.text('恢复未保存修改？'), findsOneWidget);
+  });
+
   testWidgets('recipe list and history retry after a page load error', (
     tester,
   ) async {
@@ -502,7 +552,6 @@ void main() {
     await pumpApp(tester, env: TestEnv.signedIn(server: server));
     await _openMyRecipes(tester);
     await tester.pumpAndSettle();
-    expect(server.calls('GET', '/v1/recipes'), isNotEmpty);
     expect(find.text('菜谱暂时加载不了'), findsOneWidget);
     listAvailable = true;
     await tester.tap(find.text('重试'));

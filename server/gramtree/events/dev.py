@@ -1,14 +1,13 @@
-"""开发和测试环境才挂载的辅助接口：查询当前登录用户的事件收据。
+"""开发和测试环境才挂载的辅助接口：查询当前登录用户已入库的事件条数。
 
-只用于端到端测试确认经验层事件的条数和菜谱版本保存事件的固定收据字段。
-这些接口只返回测试合同登记的最小字段，不提供通用事件明细查询；正式环境不挂载，也不进
+只用于端到端测试确认"服务端每条事件只收到一次"（SPEC-010.1 票 7：安卓模拟器离线
+补传、网页版端到端）——只回一个数字，不回事件内容，也不回具体记录的任何字段，不是
+票 1 定下的"事件表没有对外可读明细接口"这条规矩的例外。正式环境不挂载，也不进
 OpenAPI 描述，写法照抄 `gramtree.accounts.dev`。
 
 内部实现直接调用票 3 已经有的 `gramtree.events.queries.query_events`，不另开一条
 查询路径。
 """
-
-import uuid
 
 from fastapi import APIRouter, Query
 
@@ -36,31 +35,3 @@ def count_events(
     if device_id is not None:
         events = [e for e in events if e.device_id == device_id]
     return {"count": len(events)}
-
-
-@router.get("/recipe-version-saved")
-def recipe_version_saved_receipt(
-    auth: CurrentAuth,
-    session: SessionDep,
-    version_id: uuid.UUID,
-) -> dict[str, list[dict[str, object]]]:
-    """Return the fixed, owner-scoped receipt contract for one recipe save."""
-    events = query_events(
-        session,
-        user_id=auth.user.id,
-        event_type="recipe.version_saved",
-        correlation_field="recipe_version_id",
-        correlation_value=str(version_id),
-    )
-    return {
-        "items": [
-            {
-                "event_id": str(event.id),
-                "recipe_version_id": event.content.get("recipe_version_id"),
-                "previous_version_id": event.content.get("previous_version_id"),
-                "edit_operations": event.content.get("edit_operations", []),
-                "ai_assisted": event.content.get("ai_assisted", False),
-            }
-            for event in events
-        ]
-    }

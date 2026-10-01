@@ -1609,7 +1609,10 @@ class _IngredientDetailRow extends StatelessWidget {
             originalValue: ingredient.quantitySource?.original,
             basisText: ingredient.quantitySource?.basis?.isNotEmpty == true
                 ? ingredient.quantitySource!.basis!
-                : l10n.recipeSourceAuthorFilled,
+                : ingredient.quantitySource?.source_.value ==
+                      sourceTypeAuthorFilled
+                ? l10n.recipeSourceAuthorFilled
+                : '',
             required: false,
             feedbackEnabled: false,
             onAction: (_) {},
@@ -1663,7 +1666,9 @@ class _StepDetailTile extends StatelessWidget {
       originalValue: source.original,
       basisText: source.basis?.isNotEmpty == true
           ? source.basis!
-          : l10n.recipeSourceAuthorFilled,
+          : source.source_.value == sourceTypeAuthorFilled
+          ? l10n.recipeSourceAuthorFilled
+          : '',
       required: false,
       feedbackEnabled: false,
       onAction: (_) {},
