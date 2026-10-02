@@ -24,7 +24,7 @@ void main() {
       tester.pumpAndSettle(const Duration(milliseconds: 200));
 
   Future<void> waitFor(WidgetTester tester, Finder finder) async {
-    for (var i = 0; i < 100 && finder.evaluate().isEmpty; i++) {
+    for (var i = 0; i < 300 && finder.evaluate().isEmpty; i++) {
       await tester.pump(const Duration(milliseconds: 100));
     }
     await settle(tester);

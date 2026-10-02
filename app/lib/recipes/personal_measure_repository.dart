@@ -31,9 +31,13 @@ class PersonalMeasureRepository {
       if (value is! Map || value['account_id'] != accountId) return [];
       final items = value['items'];
       if (items is! List) return [];
-      return items.map((item) => PersonalMeasureOut.fromJson(
-        Map<String, dynamic>.from(item as Map),
-      )).toList(growable: false);
+      return items
+          .map(
+            (item) => PersonalMeasureOut.fromJson(
+              Map<String, dynamic>.from(item as Map),
+            ),
+          )
+          .toList(growable: false);
     } catch (_) {
       return [];
     }
@@ -68,32 +72,45 @@ class PersonalMeasureRepository {
   }
 
   Future<PersonalMeasureOut> create(PersonalMeasureInput input) async {
-    final response = await api.createPersonalMeasure(personalMeasureInput: input);
+    final response = await api.createPersonalMeasure(
+      personalMeasureInput: input,
+    );
     final value = response.data!;
     await _cache([...cached(), value]);
     offline = false;
     return value;
   }
 
-  Future<PersonalMeasureOut> update(String id, PersonalMeasureUpdate input) async {
+  Future<PersonalMeasureOut> update(
+    String id,
+    PersonalMeasureUpdate input,
+  ) async {
     final response = await api.updatePersonalMeasure(
       measureId: id,
       personalMeasureUpdate: input,
     );
     final value = response.data!;
-    await _cache([for (final item in cached()) if (item.id == id) value else item]);
+    await _cache([
+      for (final item in cached())
+        if (item.id == id) value else item,
+    ]);
     offline = false;
     return value;
   }
 
   Future<void> delete(String id) async {
     await api.deletePersonalMeasure(measureId: id);
-    await _cache([for (final item in cached()) if (item.id != id) item]);
+    await _cache([
+      for (final item in cached())
+        if (item.id != id) item,
+    ]);
     offline = false;
   }
 }
 
-final personalMeasureRepositoryProvider = Provider<PersonalMeasureRepository>((ref) {
+final personalMeasureRepositoryProvider = Provider<PersonalMeasureRepository>((
+  ref,
+) {
   final accountId = ref.watch(authProvider).value?.id;
   if (accountId == null) throw StateError('个人量具需要登录');
   return PersonalMeasureRepository(
@@ -103,6 +120,7 @@ final personalMeasureRepositoryProvider = Provider<PersonalMeasureRepository>((r
   );
 });
 
-final personalMeasuresProvider = FutureProvider.autoDispose<List<PersonalMeasureOut>>(
-  (ref) => ref.watch(personalMeasureRepositoryProvider).list(),
-);
+final personalMeasuresProvider =
+    FutureProvider.autoDispose<List<PersonalMeasureOut>>(
+      (ref) => ref.watch(personalMeasureRepositoryProvider).list(),
+    );

@@ -197,7 +197,11 @@ class FakeServer extends Interceptor {
     });
     on('POST', '/v1/me/consents', (_) => (204, null));
     final personalMeasures = <Map<String, dynamic>>[];
-    on('GET', '/v1/me/measures', (_) => (200, {'items': personalMeasures, 'next_cursor': null}));
+    on(
+      'GET',
+      '/v1/me/measures',
+      (_) => (200, {'items': personalMeasures, 'next_cursor': null}),
+    );
     on('POST', '/v1/me/measures', (r) {
       final body = Map<String, dynamic>.from(r.body as Map);
       final value = {
@@ -227,12 +231,16 @@ class FakeServer extends Interceptor {
       return (200, current);
     });
     on('DELETE', '/v1/me/measures/66666666-6666-4666-8666-666666666666', (_) {
-      personalMeasures.removeWhere((item) => item['id'] == '66666666-6666-4666-8666-666666666666');
+      personalMeasures.removeWhere(
+        (item) => item['id'] == '66666666-6666-4666-8666-666666666666',
+      );
       return (204, null);
     });
     on('GET', '/v1/me/measures/66666666-6666-4666-8666-666666666666', (_) {
       final item = personalMeasures.firstOrNull;
-      return item == null ? FakeServer.error(404, 'not_found', '没有找到') : (200, item);
+      return item == null
+          ? FakeServer.error(404, 'not_found', '没有找到')
+          : (200, item);
     });
     on('POST', '/v1/analytics/events', (_) => (204, null));
     on('POST', '/v1/events/upload', (r) {

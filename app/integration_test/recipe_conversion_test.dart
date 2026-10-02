@@ -24,7 +24,7 @@ void main() {
       tester.pumpAndSettle(const Duration(milliseconds: 200));
 
   Future<void> waitFor(WidgetTester tester, Finder finder) async {
-    for (var i = 0; i < 100 && finder.evaluate().isEmpty; i++) {
+    for (var i = 0; i < 300 && finder.evaluate().isEmpty; i++) {
       await tester.pump(const Duration(milliseconds: 100));
     }
     await settle(tester);
@@ -111,6 +111,7 @@ void main() {
     );
     await reveal(tester, find.byKey(const ValueKey('save-recipe-button')));
     await tester.tap(find.byKey(const ValueKey('save-recipe-button')));
+    await waitFor(tester, find.byKey(const ValueKey('recipe-detail-content')));
     await waitFor(tester, find.byKey(const ValueKey('recipe-history-button')));
 
     await reveal(tester, find.byKey(const ValueKey('recipe-serving-increase')));

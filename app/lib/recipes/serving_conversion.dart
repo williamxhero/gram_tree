@@ -246,8 +246,7 @@ ServingConversionResult convertServings({
               ServingConversionWarning(
                 code: 'round_deviation',
                 ingredientId: item.id,
-                message:
-                    '${item.displayName}取整后与按比例结果相差较大，请按口味微调其他用量。',
+                message: '${item.displayName}取整后与按比例结果相差较大，请按口味微调其他用量。',
               ),
             );
           }
@@ -292,8 +291,11 @@ ServingConversionResult convertServings({
   ];
   final total =
       totalTimeSeconds ??
-      steps.fold<int>(0, (maximum, step) =>
-          step.durationSeconds > maximum ? step.durationSeconds : maximum);
+      steps.fold<int>(
+        0,
+        (maximum, step) =>
+            step.durationSeconds > maximum ? step.durationSeconds : maximum,
+      );
   final active =
       activeTimeSeconds ??
       steps
