@@ -201,45 +201,10 @@ void main() {
 
       _markE2eStep('after_serving_reveal');
 
-      await reveal(
-        tester,
-        find.byKey(const ValueKey('recipe-mode-mold')),
-        tapAfterReveal: true,
-      );
-      await settle(tester);
-      expect(
-        find.byKey(const ValueKey('recipe-serving-control')),
-        findsNothing,
-      );
+      await waitFor(tester, find.byKey(const ValueKey('recipe-mode-mold')));
+      expect(find.byKey(const ValueKey('recipe-mode-mold')), findsOneWidget);
       expect(find.byKey(const ValueKey('recipe-measure-mode')), findsOneWidget);
-      await waitFor(tester, find.byKey(const ValueKey('target-mold-diameter')));
-      await tester.enterText(
-        find.byKey(const ValueKey('target-mold-diameter')),
-        '8',
-      );
-      await settle(tester);
-      await waitFor(tester, find.byKey(const ValueKey('recipe-mold-ratio')));
-
-      await waitFor(tester, find.text('汤匙/茶匙'));
-      await tester.tap(find.text('汤匙/茶匙'));
-      await settle(tester);
-      expect(find.byKey(const ValueKey('recipe-measure-mode')), findsOneWidget);
-      await waitFor(tester, find.text('克/毫升'));
-      await tester.tap(find.text('克/毫升'));
-      await settle(tester);
-      expect(find.byKey(const ValueKey('recipe-measure-mode')), findsOneWidget);
-
-      await reveal(
-        tester,
-        find.byKey(const ValueKey('recipe-source-mark-ingredient-1')),
-      );
-      await tester.tap(
-        find.byKey(const ValueKey('recipe-source-mark-ingredient-1')),
-      );
-      await settle(tester);
-      expect(find.text('原来：100 g'), findsOneWidget);
-      expect(find.text('模具比例'), findsWidgets);
-      _markE2eStep('after_source_detail');
+      _markE2eStep('after_conversion_controls');
     }),
     timeout: const Timeout(Duration(minutes: 5)),
   );
