@@ -209,6 +209,7 @@ void main() {
       _markE2eStep('after_serving_tap');
       await settle(tester);
       _markE2eStep('after_serving_settle');
+      await waitFor(tester, find.byKey(const ValueKey('recipe-serving-reset')));
       await tester.tap(find.byKey(const ValueKey('recipe-serving-reset')));
       await settle(tester);
 
