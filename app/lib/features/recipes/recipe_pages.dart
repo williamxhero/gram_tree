@@ -1728,12 +1728,33 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
         step.id: '${index + 1}. ${step.instruction}',
     };
     final targetServings = _targetServings ?? snapshot.servings;
-    final servingConversion = _recipeServingConversion(
-      snapshot,
-      derived,
-      targetServings,
-      config: conversionConfig,
-    );
+    late final ServingConversionResult servingConversion;
+    try {
+      servingConversion = _recipeServingConversion(
+        snapshot,
+        derived,
+        targetServings,
+        config: conversionConfig,
+      );
+    } catch (error, stack) {
+      developer.log(
+        'recipe serving conversion failed',
+        name: 'recipe_detail',
+        error: error,
+        stackTrace: stack,
+      );
+      servingConversion = ServingConversionResult(
+        originalServings: snapshot.servings,
+        targetServings: targetServings,
+        minServings: conversionConfig.minServings,
+        maxServings: conversionConfig.maxServings,
+        ingredients: const [],
+        steps: const [],
+        warnings: const [],
+        totalTimeSeconds: derived.totalTimeSeconds,
+        activeTimeSeconds: derived.activeTimeSeconds,
+      );
+    }
     MoldConversionResult? moldConversion;
     if (snapshot.baseMold != null && _targetMold != null) {
       try {
