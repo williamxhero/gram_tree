@@ -216,6 +216,7 @@ void main() {
         findsNothing,
       );
       expect(find.byKey(const ValueKey('recipe-measure-mode')), findsOneWidget);
+      await waitFor(tester, find.byKey(const ValueKey('target-mold-diameter')));
       await tester.enterText(
         find.byKey(const ValueKey('target-mold-diameter')),
         '8',
