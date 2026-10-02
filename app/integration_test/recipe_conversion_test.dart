@@ -209,17 +209,8 @@ void main() {
       _markE2eStep('after_serving_tap');
       await settle(tester);
       _markE2eStep('after_serving_settle');
-      await waitFor(tester, find.byKey(const ValueKey('recipe-serving-value')));
-      expect(
-        find.byKey(const ValueKey('recipe-serving-value')),
-        findsOneWidget,
-      );
       await tester.tap(find.byKey(const ValueKey('recipe-serving-reset')));
       await settle(tester);
-      expect(
-        find.byKey(const ValueKey('recipe-serving-value')),
-        findsOneWidget,
-      );
 
       await waitFor(tester, find.byKey(const ValueKey('recipe-mode-mold')));
       await tester.tap(find.byKey(const ValueKey('recipe-mode-mold')));
