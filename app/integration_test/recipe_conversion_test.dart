@@ -44,7 +44,11 @@ void main() {
     expect(finder, findsWidgets);
   }
 
-  Future<Offset> reveal(WidgetTester tester, Finder finder) async {
+  Future<Offset> reveal(
+    WidgetTester tester,
+    Finder finder, {
+    bool tapAfterReveal = false,
+  }) async {
     tester.testTextInput.hide();
     await tester.pump();
     final detailList = find.byKey(const ValueKey('recipe-detail-content'));
@@ -71,6 +75,9 @@ void main() {
     }
     expect(finder, findsOneWidget);
     await tester.ensureVisible(finder);
+    if (tapAfterReveal) {
+      await tester.tap(finder);
+    }
     return tester.getCenter(finder);
   }
 
@@ -193,12 +200,12 @@ void main() {
       _markE2eStep('after_base_mold_saved');
 
       _markE2eStep('before_serving_reveal');
-      final servingIncreasePoint = await reveal(
+      await reveal(
         tester,
         find.byKey(const ValueKey('recipe-serving-increase')),
+        tapAfterReveal: true,
       );
       _markE2eStep('before_serving_tap');
-      await tester.tapAt(servingIncreasePoint);
       _markE2eStep('after_serving_tap');
       await settle(tester);
       _markE2eStep('after_serving_settle');
