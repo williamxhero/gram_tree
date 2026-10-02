@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:developer' as developer;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -1564,7 +1565,13 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
       _targetMold = _detail!.version.snapshot.baseMold;
       if (mounted) setState(() {});
       unawaited(_loadDisplayMetadata(_detail!));
-    } catch (_) {
+    } catch (error, stack) {
+      developer.log(
+        'recipe detail load failed',
+        name: 'recipe_detail',
+        error: error,
+        stackTrace: stack,
+      );
       if (mounted) {
         setState(() => _error = 'not_found');
       }
