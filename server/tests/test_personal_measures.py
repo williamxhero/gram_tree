@@ -289,3 +289,10 @@ def test_recipe_display_composes_serving_and_mold_conversion(api: Api) -> None:
     assert mold_item["converted_quantity"] == 177.78
     assert mold_item["conversion_rule"] == "mold_ratio"
     assert mold_item["display_quantity"] == 177.78
+
+    empty_optional = api.client.get(
+        path,
+        params={"mode": "base", "measure_id": "", "target_mold": ""},
+        headers=headers,
+    )
+    assert empty_optional.status_code == 200, empty_optional.text

@@ -58,7 +58,7 @@ def _parse_optional_measure_id(raw: str | None) -> uuid.UUID | None:
 
 
 def _parse_target_mold(raw: str | None) -> MoldSpec | None:
-    if raw is None:
+    if not raw:
         return None
     try:
         value = json.loads(raw)

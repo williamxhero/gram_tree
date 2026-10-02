@@ -55,6 +55,9 @@ Dio _baseDio(Ref ref) {
   dio.interceptors.add(
     InterceptorsWrapper(
       onRequest: (options, handler) {
+        options.queryParameters.removeWhere(
+          (key, value) => value == null || value == '',
+        );
         if (ref.read(offlineSimulationProvider)) {
           handler.reject(
             DioException(
