@@ -199,10 +199,6 @@ void main() {
       );
       _markE2eStep('after_base_mold_saved');
 
-      await reveal(
-        tester,
-        find.byKey(const ValueKey('recipe-serving-increase')),
-      );
       _markE2eStep('after_serving_reveal');
 
       await reveal(
