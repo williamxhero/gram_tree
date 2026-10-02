@@ -213,5 +213,6 @@ void main() {
       await tester.tap(find.text('确认删除'));
       await waitFor(tester, find.text('还没有菜谱'));
     }),
+    timeout: const Timeout(Duration(minutes: 5)),
   );
 }

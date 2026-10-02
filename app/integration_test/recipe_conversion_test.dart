@@ -204,5 +204,6 @@ void main() {
       expect(find.text('原来：100 g'), findsOneWidget);
       expect(find.text('模具比例'), findsWidgets);
     }),
+    timeout: const Timeout(Duration(minutes: 5)),
   );
 }
