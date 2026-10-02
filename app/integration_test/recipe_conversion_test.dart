@@ -83,24 +83,6 @@ void main() {
     await settle(tester);
   }
 
-  Future<void> tapOne(WidgetTester tester, Finder finder) async {
-    await waitFor(tester, finder);
-    await tester.ensureVisible(finder);
-    await settle(tester);
-    await tester.tap(finder);
-    await settle(tester);
-  }
-
-  Future<void> enterOne(
-    WidgetTester tester,
-    Finder finder,
-    String value,
-  ) async {
-    await waitFor(tester, finder);
-    await tester.ensureVisible(finder);
-    await tester.enterText(finder, value);
-  }
-
   Future<void> runWithDiagnostics(
     WidgetTester tester,
     Future<void> Function() body,
@@ -216,17 +198,14 @@ void main() {
         find.byKey(const ValueKey('recipe-serving-increase')),
       );
       _markE2eStep('before_serving_tap');
-      await tapOne(
-        tester,
-        find.byKey(const ValueKey('recipe-serving-increase')),
-      );
+      await tester.tap(find.byKey(const ValueKey('recipe-serving-increase')));
       await settle(tester);
       await waitFor(tester, find.byKey(const ValueKey('recipe-serving-value')));
       expect(
         find.byKey(const ValueKey('recipe-serving-value')),
         findsOneWidget,
       );
-      await tapOne(tester, find.byKey(const ValueKey('recipe-serving-reset')));
+      await tester.tap(find.byKey(const ValueKey('recipe-serving-reset')));
       await settle(tester);
       expect(
         find.byKey(const ValueKey('recipe-serving-value')),
@@ -234,7 +213,7 @@ void main() {
       );
 
       await waitFor(tester, find.byKey(const ValueKey('recipe-mode-mold')));
-      await tapOne(tester, find.byKey(const ValueKey('recipe-mode-mold')));
+      await tester.tap(find.byKey(const ValueKey('recipe-mode-mold')));
       await settle(tester);
       expect(
         find.byKey(const ValueKey('recipe-serving-control')),
@@ -242,8 +221,7 @@ void main() {
       );
       expect(find.byKey(const ValueKey('recipe-measure-mode')), findsOneWidget);
       await waitFor(tester, find.byKey(const ValueKey('target-mold-diameter')));
-      await enterOne(
-        tester,
+      await tester.enterText(
         find.byKey(const ValueKey('target-mold-diameter')),
         '8',
       );
@@ -263,8 +241,7 @@ void main() {
         tester,
         find.byKey(const ValueKey('recipe-source-mark-ingredient-1')),
       );
-      await tapOne(
-        tester,
+      await tester.tap(
         find.byKey(const ValueKey('recipe-source-mark-ingredient-1')),
       );
       await settle(tester);
