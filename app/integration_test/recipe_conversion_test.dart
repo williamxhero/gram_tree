@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gram_tree/config/app_config.dart';
@@ -57,6 +58,10 @@ void main() {
   }
 
   testWidgets('网页端覆盖份数恢复、模具互斥、显示切换和来源明细', (tester) async {
+    // This is a web acceptance flow. SPEC-002.3 has no phone-only capability,
+    // so Android CI reuses its dedicated mobile-capability tests instead.
+    if (!kIsWeb) return;
+
     final email =
         'recipe-conversion-${DateTime.now().microsecondsSinceEpoch}@example.com';
     tester.testTextInput.register();
