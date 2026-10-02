@@ -166,11 +166,11 @@ void main() {
       );
       await reveal(tester, find.byKey(const ValueKey('save-recipe-button')));
       await tester.tap(find.byKey(const ValueKey('save-recipe-button')));
-      // The history action is the stable proof that the saved detail page
-      // loaded; the scrollable content boundary is lazy on web/Android.
+      // The serving control is the first stable, user-visible detail-page
+      // boundary needed by this conversion acceptance flow.
       await waitFor(
         tester,
-        find.byKey(const ValueKey('recipe-history-button')),
+        find.byKey(const ValueKey('recipe-serving-control')),
       );
       _markE2eStep('after_detail_loaded');
 
