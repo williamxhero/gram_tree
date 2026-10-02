@@ -159,13 +159,15 @@ void main() {
       );
       await reveal(tester, find.byKey(const ValueKey('save-recipe-button')));
       await tester.tap(find.byKey(const ValueKey('save-recipe-button')));
-      // The serving control is the first stable, user-visible detail-page
-      // boundary needed by this conversion acceptance flow.
       await waitFor(
         tester,
-        find.byKey(const ValueKey('recipe-serving-control')),
+        find.byKey(const ValueKey('recipe-detail-content')),
       );
       _markE2eStep('after_detail_loaded');
+      await waitFor(
+        tester,
+        find.byKey(const ValueKey('recipe-history-button')),
+      );
       await tester.tap(find.byKey(const ValueKey('edit-recipe-button')));
       await waitFor(tester, find.byKey(const ValueKey('recipe-dish-name')));
       await reveal(tester, find.byKey(const ValueKey('base-mold-enable')));
@@ -180,9 +182,13 @@ void main() {
       await tester.tap(find.byKey(const ValueKey('save-recipe-button')));
       await waitFor(
         tester,
-        find.byKey(const ValueKey('recipe-serving-control')),
+        find.byKey(const ValueKey('recipe-detail-content')),
       );
       _markE2eStep('after_base_mold_saved');
+      await waitFor(
+        tester,
+        find.byKey(const ValueKey('recipe-history-button')),
+      );
 
       await reveal(
         tester,
