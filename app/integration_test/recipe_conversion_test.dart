@@ -35,7 +35,10 @@ void main() {
   Future<void> reveal(WidgetTester tester, Finder finder) async {
     tester.testTextInput.hide();
     await tester.pump();
-    final list = find.byType(ListView).last;
+    final detailList = find.byKey(const ValueKey('recipe-detail-content'));
+    final list = detailList.evaluate().isNotEmpty
+        ? detailList
+        : find.byType(ListView).last;
     for (var i = 0; i < 12; i++) {
       await tester.drag(list, const Offset(0, 500));
       await tester.pump(const Duration(milliseconds: 100));
