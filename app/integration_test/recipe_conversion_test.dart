@@ -44,7 +44,7 @@ void main() {
     expect(finder, findsWidgets);
   }
 
-  Future<void> reveal(WidgetTester tester, Finder finder) async {
+  Future<Offset> reveal(WidgetTester tester, Finder finder) async {
     tester.testTextInput.hide();
     await tester.pump();
     final detailList = find.byKey(const ValueKey('recipe-detail-content'));
@@ -71,6 +71,7 @@ void main() {
     }
     expect(finder, findsOneWidget);
     await tester.ensureVisible(finder);
+    return tester.getCenter(finder);
   }
 
   Future<void> tapText(WidgetTester tester, String text) async {
@@ -192,12 +193,12 @@ void main() {
       _markE2eStep('after_base_mold_saved');
 
       _markE2eStep('before_serving_reveal');
-      await reveal(
+      final servingIncreasePoint = await reveal(
         tester,
         find.byKey(const ValueKey('recipe-serving-increase')),
       );
       _markE2eStep('before_serving_tap');
-      await tester.tap(find.byKey(const ValueKey('recipe-serving-increase')));
+      await tester.tapAt(servingIncreasePoint);
       await settle(tester);
       await waitFor(tester, find.byKey(const ValueKey('recipe-serving-value')));
       expect(
