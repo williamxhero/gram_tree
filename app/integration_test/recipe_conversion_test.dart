@@ -166,15 +166,13 @@ void main() {
       );
       await reveal(tester, find.byKey(const ValueKey('save-recipe-button')));
       await tester.tap(find.byKey(const ValueKey('save-recipe-button')));
-      await waitFor(
-        tester,
-        find.byKey(const ValueKey('recipe-detail-content')),
-      );
-      _markE2eStep('after_detail_loaded');
+      // The history action is the stable proof that the saved detail page
+      // loaded; the scrollable content boundary is lazy on web/Android.
       await waitFor(
         tester,
         find.byKey(const ValueKey('recipe-history-button')),
       );
+      _markE2eStep('after_detail_loaded');
 
       await reveal(
         tester,
