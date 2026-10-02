@@ -143,6 +143,14 @@ void main() {
 
       await reveal(
         tester,
+        find.byKey(const ValueKey('recipe-ingredient-search')),
+      );
+      await tester.enterText(
+        find.byKey(const ValueKey('recipe-ingredient-search')),
+        '面粉',
+      );
+      await reveal(
+        tester,
         find.byKey(const ValueKey('recipe-ingredient-quantity')),
       );
       await tester.enterText(
