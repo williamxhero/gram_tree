@@ -1,3 +1,5 @@
+import 'dart:developer' as developer;
+
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -32,8 +34,11 @@ void main() {
     }
     await settle(tester);
     if (finder.evaluate().isEmpty) {
-      debugPrint('E2E waitFor timeout: $finder');
+      final message = 'E2E waitFor failed: $finder';
+      developer.log(message, name: 'integration_test');
+      debugPrint(message);
       debugDumpApp();
+      throw StateError(message);
     }
     expect(finder, findsWidgets);
   }
@@ -65,9 +70,15 @@ void main() {
         await tester.pump(const Duration(milliseconds: 100));
       }
     }
+    if (finder.evaluate().isEmpty) {
+      final message = 'E2E reveal failed: $finder';
+      developer.log(message, name: 'integration_test');
+      debugPrint(message);
+      debugDumpApp();
+      throw StateError(message);
+    }
     expect(finder, findsOneWidget);
     await tester.ensureVisible(finder);
-    await tester.pump();
   }
 
   Future<void> runWithDiagnostics(
