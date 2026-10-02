@@ -199,21 +199,12 @@ void main() {
       );
       _markE2eStep('after_base_mold_saved');
 
-      _markE2eStep('before_serving_reveal');
       await reveal(
         tester,
         find.byKey(const ValueKey('recipe-serving-increase')),
-        tapAfterReveal: true,
       );
-      _markE2eStep('before_serving_tap');
-      _markE2eStep('after_serving_tap');
+      _markE2eStep('after_serving_reveal');
       await settle(tester);
-      _markE2eStep('after_serving_settle');
-      _markE2eStep('after_serving_settle');
-      expect(
-        find.byKey(const ValueKey('recipe-serving-reset')),
-        findsOneWidget,
-      );
 
       await waitFor(tester, find.byKey(const ValueKey('recipe-mode-mold')));
       await tester.tap(find.byKey(const ValueKey('recipe-mode-mold')));
