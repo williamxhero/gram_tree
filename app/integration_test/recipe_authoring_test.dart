@@ -20,8 +20,11 @@ void main() {
     return response.data!['code'] as String;
   }
 
-  Future<void> settle(WidgetTester tester) =>
-      tester.pumpAndSettle(const Duration(milliseconds: 200));
+  Future<void> settle(WidgetTester tester) async {
+    for (var i = 0; i < 10; i++) {
+      await tester.pump(const Duration(milliseconds: 200));
+    }
+  }
 
   Future<void> waitFor(WidgetTester tester, Finder finder) async {
     for (var i = 0; i < 300 && finder.evaluate().isEmpty; i++) {
