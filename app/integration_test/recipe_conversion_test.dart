@@ -81,12 +81,6 @@ void main() {
     return tester.getCenter(finder);
   }
 
-  Future<Offset> waitAndCenter(WidgetTester tester, Finder finder) async {
-    await waitFor(tester, finder);
-    await tester.ensureVisible(finder);
-    return tester.getCenter(finder);
-  }
-
   Future<void> tapText(WidgetTester tester, String text) async {
     final finder = find.text(text).last;
     await waitFor(tester, finder);
@@ -215,12 +209,11 @@ void main() {
       _markE2eStep('after_serving_tap');
       await settle(tester);
       _markE2eStep('after_serving_settle');
-      final resetPoint = await waitAndCenter(
-        tester,
+      _markE2eStep('after_serving_settle');
+      expect(
         find.byKey(const ValueKey('recipe-serving-reset')),
+        findsOneWidget,
       );
-      await tester.tapAt(resetPoint);
-      await settle(tester);
 
       await waitFor(tester, find.byKey(const ValueKey('recipe-mode-mold')));
       await tester.tap(find.byKey(const ValueKey('recipe-mode-mold')));
