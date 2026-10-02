@@ -1735,6 +1735,9 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
         // Keep the detail page usable while an incomplete/custom mold is being
         // corrected in the target-mold controls.
         moldConversion = null;
+      } catch (_) {
+        // A malformed legacy mold must not hide the rest of the detail page.
+        moldConversion = null;
       }
     }
     final convertedServingById = {
