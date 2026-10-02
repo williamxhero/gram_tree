@@ -199,7 +199,9 @@ void main() {
       );
       _markE2eStep('before_serving_tap');
       await tester.tapAt(servingIncreasePoint);
+      _markE2eStep('after_serving_tap');
       await settle(tester);
+      _markE2eStep('after_serving_settle');
       await waitFor(tester, find.byKey(const ValueKey('recipe-serving-value')));
       expect(
         find.byKey(const ValueKey('recipe-serving-value')),
