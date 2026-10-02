@@ -210,10 +210,12 @@ void main() {
       );
       _markE2eStep('after_base_mold_saved');
 
+      _markE2eStep('before_serving_reveal');
       await reveal(
         tester,
         find.byKey(const ValueKey('recipe-serving-increase')),
       );
+      _markE2eStep('before_serving_tap');
       await tapOne(
         tester,
         find.byKey(const ValueKey('recipe-serving-increase')),
