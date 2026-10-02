@@ -43,9 +43,18 @@ void main() {
       await tester.drag(list, const Offset(0, 500));
       await tester.pump(const Duration(milliseconds: 100));
     }
-    for (var i = 0; i < 30 && finder.evaluate().isEmpty; i++) {
-      await tester.drag(list, const Offset(0, -500));
-      await tester.pump(const Duration(milliseconds: 100));
+    if (detailList.evaluate().isNotEmpty) {
+      await tester.scrollUntilVisible(
+        finder,
+        500,
+        scrollable: detailList,
+        maxScrolls: 40,
+      );
+    } else {
+      for (var i = 0; i < 30 && finder.evaluate().isEmpty; i++) {
+        await tester.drag(list, const Offset(0, -500));
+        await tester.pump(const Duration(milliseconds: 100));
+      }
     }
     expect(finder, findsOneWidget);
     await tester.ensureVisible(finder);
