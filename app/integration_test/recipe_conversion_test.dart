@@ -149,13 +149,6 @@ void main() {
         find.byKey(const ValueKey('recipe-ingredient-quantity')),
         '100',
       );
-      await reveal(tester, find.byKey(const ValueKey('base-mold-enable')));
-      await tester.tap(find.byKey(const ValueKey('base-mold-enable')));
-      await settle(tester);
-      await tester.enterText(
-        find.byKey(const ValueKey('base-mold-diameter')),
-        '6',
-      );
       await reveal(
         tester,
         find.byKey(const ValueKey('recipe-step-instruction')),
@@ -173,6 +166,23 @@ void main() {
         find.byKey(const ValueKey('recipe-serving-control')),
       );
       _markE2eStep('after_detail_loaded');
+      await tester.tap(find.byKey(const ValueKey('edit-recipe-button')));
+      await waitFor(tester, find.byKey(const ValueKey('recipe-dish-name')));
+      await reveal(tester, find.byKey(const ValueKey('base-mold-enable')));
+      await tester.tap(find.byKey(const ValueKey('base-mold-enable')));
+      await settle(tester);
+      await reveal(tester, find.byKey(const ValueKey('base-mold-diameter')));
+      await tester.enterText(
+        find.byKey(const ValueKey('base-mold-diameter')),
+        '6',
+      );
+      await reveal(tester, find.byKey(const ValueKey('save-recipe-button')));
+      await tester.tap(find.byKey(const ValueKey('save-recipe-button')));
+      await waitFor(
+        tester,
+        find.byKey(const ValueKey('recipe-serving-control')),
+      );
+      _markE2eStep('after_base_mold_saved');
 
       await reveal(
         tester,
