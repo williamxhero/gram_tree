@@ -2663,7 +2663,7 @@ class _IngredientDetailRow extends StatelessWidget {
               basisText: sourceBasis,
               showAuthorMark: noDensity && sourceType == sourceTypeAuthorFilled,
               required: false,
-              feedbackEnabled: true,
+              feedbackEnabled: false,
               onAction: null,
             ),
         ],
@@ -2726,8 +2726,8 @@ class _StepDetailTile extends StatelessWidget {
           ? l10n.recipeSourceAuthorFilled
           : '',
       required: false,
-      feedbackEnabled: true,
-      onAction: (_) {},
+      feedbackEnabled: false,
+      onAction: null,
     );
   }
 
