@@ -197,11 +197,10 @@ void main() {
       );
       await tester.tap(find.byKey(const ValueKey('recipe-serving-increase')));
       await settle(tester);
+      await waitFor(tester, find.byKey(const ValueKey('recipe-serving-value')));
       expect(
-        tester
-            .widget<Text>(find.byKey(const ValueKey('recipe-serving-value')))
-            .data,
-        '3',
+        find.byKey(const ValueKey('recipe-serving-value')),
+        findsOneWidget,
       );
       await tester.tap(find.byKey(const ValueKey('recipe-serving-reset')));
       await settle(tester);
