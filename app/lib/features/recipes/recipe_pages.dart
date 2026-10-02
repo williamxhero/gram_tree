@@ -2594,6 +2594,7 @@ class _IngredientDetailRow extends StatelessWidget {
           ),
           if (showSource)
             SourceMark(
+              key: ValueKey('recipe-source-mark-${ingredient.id}'),
               sourceType: sourceType,
               componentId: displayChanged
                   ? 'recipe-ingredient-${ingredient.id}-measure'

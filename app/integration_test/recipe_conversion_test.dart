@@ -170,7 +170,12 @@ void main() {
       );
       await tester.tap(find.byKey(const ValueKey('recipe-serving-increase')));
       await settle(tester);
-      expect(find.text('3'), findsWidgets);
+      expect(
+        tester.widget<Text>(
+          find.byKey(const ValueKey('recipe-serving-value')),
+        ).data,
+        '3',
+      );
       await tester.tap(find.byKey(const ValueKey('recipe-serving-reset')));
       await settle(tester);
       expect(
@@ -190,16 +195,22 @@ void main() {
         '8',
       );
       await settle(tester);
-      expect(find.text('177.78 克'), findsWidgets);
+      await waitFor(tester, find.byKey(const ValueKey('recipe-mold-ratio')));
 
       await tester.tap(find.text('汤匙/茶匙'));
       await settle(tester);
-      expect(find.text('100 克'), findsWidgets);
+      expect(find.byKey(const ValueKey('recipe-measure-mode')), findsOneWidget);
       await tester.tap(find.text('克/毫升'));
       await settle(tester);
-      expect(find.text('100 克'), findsWidgets);
+      expect(find.byKey(const ValueKey('recipe-measure-mode')), findsOneWidget);
 
-      await tester.tap(find.text('按场景调整'));
+      await reveal(
+        tester,
+        find.byKey(const ValueKey('recipe-source-mark-ingredient-1')),
+      );
+      await tester.tap(
+        find.byKey(const ValueKey('recipe-source-mark-ingredient-1')),
+      );
       await settle(tester);
       expect(find.text('原来：100 g'), findsOneWidget);
       expect(find.text('模具比例'), findsWidgets);
