@@ -204,7 +204,6 @@ void main() {
         find.byKey(const ValueKey('recipe-serving-increase')),
       );
       _markE2eStep('after_serving_reveal');
-      await settle(tester);
 
       await waitFor(tester, find.byKey(const ValueKey('recipe-mode-mold')));
       await tester.tap(find.byKey(const ValueKey('recipe-mode-mold')));
