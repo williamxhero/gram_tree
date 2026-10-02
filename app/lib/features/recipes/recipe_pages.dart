@@ -1727,9 +1727,16 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
       targetServings,
       config: conversionConfig,
     );
-    final moldConversion = snapshot.baseMold == null || _targetMold == null
-        ? null
-        : _recipeMoldConversion(snapshot, _targetMold!);
+    MoldConversionResult? moldConversion;
+    if (snapshot.baseMold != null && _targetMold != null) {
+      try {
+        moldConversion = _recipeMoldConversion(snapshot, _targetMold!);
+      } on MoldConversionError {
+        // Keep the detail page usable while an incomplete/custom mold is being
+        // corrected in the target-mold controls.
+        moldConversion = null;
+      }
+    }
     final convertedServingById = {
       for (final item in servingConversion.ingredients) item.id: item,
     };
