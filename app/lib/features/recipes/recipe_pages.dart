@@ -328,7 +328,9 @@ class _RecipeEditorPageState extends ConsumerState<RecipeEditorPage> {
       if (!mounted) return;
       ScaffoldMessenger.of(context)
           .showSnackBar(SnackBar(content: Text(l10n.recipeSaveSuccess)));
-      context.go('/recipes/${detail.id}');
+      // Replace the editor route so saving a new version cannot reuse a stale
+      // RecipeDetailPage state when the destination path is unchanged.
+      context.pushReplacement('/recipes/${detail.id}');
     } catch (error) {
       if (mounted) {
         setState(() => _error = l10n.recipeSaveFailed(_message(error)));
