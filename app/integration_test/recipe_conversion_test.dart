@@ -209,6 +209,7 @@ void main() {
         findsOneWidget,
       );
 
+      await waitFor(tester, find.byKey(const ValueKey('recipe-mode-mold')));
       await tester.tap(find.byKey(const ValueKey('recipe-mode-mold')));
       await settle(tester);
       expect(
@@ -224,9 +225,11 @@ void main() {
       await settle(tester);
       await waitFor(tester, find.byKey(const ValueKey('recipe-mold-ratio')));
 
+      await waitFor(tester, find.text('汤匙/茶匙'));
       await tester.tap(find.text('汤匙/茶匙'));
       await settle(tester);
       expect(find.byKey(const ValueKey('recipe-measure-mode')), findsOneWidget);
+      await waitFor(tester, find.text('克/毫升'));
       await tester.tap(find.text('克/毫升'));
       await settle(tester);
       expect(find.byKey(const ValueKey('recipe-measure-mode')), findsOneWidget);
