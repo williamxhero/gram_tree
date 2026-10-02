@@ -71,7 +71,6 @@ void main() {
     }
     expect(finder, findsOneWidget);
     await tester.ensureVisible(finder);
-    await tester.pump();
   }
 
   Future<void> tapText(WidgetTester tester, String text) async {
