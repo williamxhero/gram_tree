@@ -40,7 +40,7 @@ done
 status=0
 for target in "${targets[@]}"; do
   echo "== $target"
-  "$FLUTTER" drive --profile --no-web-resources-cdn \
+  "$FLUTTER" drive --verbose --profile --no-web-resources-cdn \
     --driver=test_driver/integration_test.dart \
     --target="$target" \
     -d web-server --browser-name=chrome --headless \
