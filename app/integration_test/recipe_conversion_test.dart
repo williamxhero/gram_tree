@@ -29,6 +29,10 @@ void main() {
       await tester.pump(const Duration(milliseconds: 100));
     }
     await settle(tester);
+    if (finder.evaluate().isEmpty) {
+      debugPrint('E2E waitFor timeout: $finder');
+      debugDumpApp();
+    }
     expect(finder, findsWidgets);
   }
 
