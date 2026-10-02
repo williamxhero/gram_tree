@@ -171,9 +171,9 @@ void main() {
       await tester.tap(find.byKey(const ValueKey('recipe-serving-increase')));
       await settle(tester);
       expect(
-        tester.widget<Text>(
-          find.byKey(const ValueKey('recipe-serving-value')),
-        ).data,
+        tester
+            .widget<Text>(find.byKey(const ValueKey('recipe-serving-value')))
+            .data,
         '3',
       );
       await tester.tap(find.byKey(const ValueKey('recipe-serving-reset')));
