@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gramtree_api/gramtree_api.dart'
@@ -6,6 +8,7 @@ import 'package:gramtree_api/gramtree_api.dart'
 import '../app/theme.dart';
 import '../events/event_recorder.dart';
 import '../l10n/app_localizations.dart';
+import 'intent_dispatcher.dart';
 import 'source_types.dart';
 
 /// 这次组合的 `composition_id`，通过 [BuildContext] 往下传给任何组件（SPEC-009.1
@@ -83,7 +86,7 @@ class SourceMark extends ConsumerWidget {
   /// 触发意图的统一入口（就是 `CompositionView` 传给每个组件 builder 的
   /// `onAction`，见 `composition_view.dart`）——"这次不用"/"以后别这样"走的是
   /// 票 5（#81）已有的意图派发，这里不另写处理路径。
-  final void Function(ActionDescriptor action) onAction;
+  final void Function(ActionDescriptor action)? onAction;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -129,6 +132,22 @@ class SourceMark extends ConsumerWidget {
 
   Future<void> _open(BuildContext context, WidgetRef ref) async {
     final compositionId = CompositionIdScope.of(context);
+    Future<void> dispatchFeedback(ActionDescriptor action) async {
+      if (onAction != null) {
+        onAction!(action);
+        return;
+      }
+      if (!context.mounted) return;
+      await ref
+          .read(intentDispatcherProvider)
+          .dispatch(
+            context,
+            compositionId: compositionId ?? 'recipe-detail',
+            componentId: componentId,
+            action: action,
+          );
+    }
+
     await ref
         .read(eventRecorderProvider)
         .record(
@@ -155,13 +174,15 @@ class SourceMark extends ConsumerWidget {
             ? null
             : () {
                 Navigator.of(sheetContext).pop();
-                onAction(
-                  ActionDescriptor(
-                    intent: 'skip_this_time',
-                    params: _feedbackParams(
-                      componentId,
-                      sourceType,
-                      compositionId,
+                unawaited(
+                  dispatchFeedback(
+                    ActionDescriptor(
+                      intent: 'skip_this_time',
+                      params: _feedbackParams(
+                        componentId,
+                        sourceType,
+                        compositionId,
+                      ),
                     ),
                   ),
                 );
@@ -170,13 +191,15 @@ class SourceMark extends ConsumerWidget {
             ? null
             : () {
                 Navigator.of(sheetContext).pop();
-                onAction(
-                  ActionDescriptor(
-                    intent: 'dont_do_again',
-                    params: _feedbackParams(
-                      componentId,
-                      sourceType,
-                      compositionId,
+                unawaited(
+                  dispatchFeedback(
+                    ActionDescriptor(
+                      intent: 'dont_do_again',
+                      params: _feedbackParams(
+                        componentId,
+                        sourceType,
+                        compositionId,
+                      ),
                     ),
                   ),
                 );

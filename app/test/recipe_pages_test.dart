@@ -1353,11 +1353,11 @@ void main() {
     await _scrollToBottom(tester);
 
     expect(find.text('20 克'), findsWidgets);
-    expect(find.text('作者填写'), findsWidgets);
-    await tapVisible(tester, find.text('作者填写').last);
+    expect(find.text('按场景调整'), findsWidgets);
+    await tapVisible(tester, find.text('按场景调整').last);
     expect(find.text('原来：20 g'), findsOneWidget);
     expect(find.text('现在：20 克'), findsOneWidget);
-    expect(find.text('没有密度数据，保留克数'), findsOneWidget);
+    expect(find.textContaining('没有密度数据，保留克数'), findsOneWidget);
   });
 
   testWidgets('recipe detail picks among multiple home measures', (

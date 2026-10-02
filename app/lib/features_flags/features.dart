@@ -1,9 +1,12 @@
+import 'dart:convert';
+
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gramtree_api/gramtree_api.dart';
 
 import '../api/api_client.dart';
 import '../privacy/consent.dart';
+import '../storage/local_store.dart';
 
 /// 服务端下发的能力开关（服务端配置项 feature.*）。
 ///
@@ -20,17 +23,34 @@ enum Feature {
   final String key;
 }
 
-/// 启动时从服务端拉取 App 配置。拉取失败时按“全部关闭”处理。
-/// 同意隐私政策之前不联网，全部视为关闭；同意后自动重新拉取。
+const _clientConfigCacheKey = 'client_config:v1';
+
 final clientConfigProvider = FutureProvider<ClientConfig>((ref) async {
   if (!ref.watch(privacyConsentProvider)) {
     return ClientConfig(features: const {}, params: const {});
   }
-  final response = await ref
-      .watch(apiClientProvider)
-      .getConfigApi()
-      .clientConfig();
-  return response.data!;
+  final store = ref.watch(localStoreProvider);
+  try {
+    final response = await ref
+        .watch(apiClientProvider)
+        .getConfigApi()
+        .clientConfig();
+    final config = response.data!;
+    await store.setString(_clientConfigCacheKey, jsonEncode(config.toJson()));
+    return config;
+  } catch (_) {
+    final cached = store.getString(_clientConfigCacheKey);
+    if (cached != null) {
+      try {
+        return ClientConfig.fromJson(
+          Map<String, dynamic>.from(jsonDecode(cached) as Map),
+        );
+      } catch (_) {
+        // Ignore a stale or corrupt cache and use safe defaults below.
+      }
+    }
+    return ClientConfig(features: const {}, params: const {});
+  }
 });
 
 class RecipeConversionConfig {

@@ -796,13 +796,7 @@ class _BaseMoldEditor extends StatelessWidget {
               ],
               onChanged: (value) {
                 if (value == null) return;
-                form.baseMold = _moldWith(
-                  mold,
-                  shape: value,
-                  unit: value == MoldSpecShapeEnum.round
-                      ? mold.unit
-                      : MoldSpecUnitEnum.cm,
-                );
+                form.baseMold = _moldForShape(mold, value);
                 onChanged();
               },
             ),
@@ -896,6 +890,19 @@ class _BaseMoldEditor extends StatelessWidget {
       ),
     );
   }
+}
+
+MoldSpec _moldForShape(MoldSpec value, MoldSpecShapeEnum shape) {
+  final round = shape == MoldSpecShapeEnum.round;
+  final square = shape == MoldSpecShapeEnum.square;
+  return MoldSpec(
+    shape: shape,
+    unit: round ? value.unit ?? MoldSpecUnitEnum.cm : MoldSpecUnitEnum.cm,
+    diameter: round ? value.diameter ?? 6 : null,
+    side: square ? value.side ?? value.width ?? 15 : null,
+    width: round || square ? null : value.width ?? 15,
+    length: round || square ? null : value.length ?? 15,
+  );
 }
 
 MoldSpec _moldWith(
@@ -1866,6 +1873,7 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
           if (_scaleMode == _RecipeScaleMode.servings) ...[
             _ServingControl(
               conversion: servingConversion,
+              ingredientNames: ingredientNames,
               onChanged: (value) => setState(() => _targetServings = value),
               onReset: () =>
                   setState(() => _targetServings = snapshot.servings),
@@ -1876,6 +1884,7 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
               original: snapshot.baseMold!,
               target: _targetMold!,
               conversion: moldConversion,
+              ingredientNames: ingredientNames,
               onTargetChanged: (value) => setState(() => _targetMold = value),
               onReset: () => setState(() => _targetMold = snapshot.baseMold),
             ),
@@ -2013,6 +2022,7 @@ class _MoldControl extends StatelessWidget {
     required this.original,
     required this.target,
     required this.conversion,
+    required this.ingredientNames,
     required this.onTargetChanged,
     required this.onReset,
   });
@@ -2020,6 +2030,7 @@ class _MoldControl extends StatelessWidget {
   final MoldSpec original;
   final MoldSpec target;
   final MoldConversionResult conversion;
+  final Map<String, String> ingredientNames;
   final ValueChanged<MoldSpec> onTargetChanged;
   final VoidCallback onReset;
 
@@ -2083,15 +2094,7 @@ class _MoldControl extends StatelessWidget {
               ],
               onChanged: (value) {
                 if (value == null) return;
-                onTargetChanged(
-                  _targetMoldWith(
-                    target,
-                    shape: value,
-                    unit: value == MoldSpecShapeEnum.round
-                        ? target.unit
-                        : MoldSpecUnitEnum.cm,
-                  ),
-                );
+                onTargetChanged(_moldForShape(target, value));
               },
             ),
             const SizedBox(height: 8),
@@ -2194,7 +2197,12 @@ class _MoldControl extends StatelessWidget {
                     const SizedBox(width: 6),
                     Expanded(
                       child: Text(
-                        warning.message,
+                        warning.code == 'round_deviation'
+                            ? l10n.recipeMoldRoundWarning(
+                                ingredientNames[warning.ingredientId] ??
+                                    l10n.recipeIngredients,
+                              )
+                            : l10n.recipeMoldTimeAdvisory,
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
                           color: Theme.of(context).colorScheme.error,
                         ),
@@ -2258,11 +2266,13 @@ String _moldLabel(MoldSpec mold, AppLocalizations l10n) {
 class _ServingControl extends StatelessWidget {
   const _ServingControl({
     required this.conversion,
+    required this.ingredientNames,
     required this.onChanged,
     required this.onReset,
   });
 
   final ServingConversionResult conversion;
+  final Map<String, String> ingredientNames;
   final ValueChanged<int> onChanged;
   final VoidCallback onReset;
 
@@ -2347,7 +2357,12 @@ class _ServingControl extends StatelessWidget {
                     const SizedBox(width: 6),
                     Expanded(
                       child: Text(
-                        warning.message,
+                        warning.code == 'round_deviation'
+                            ? l10n.recipeServingRoundWarning(
+                                ingredientNames[warning.ingredientId] ??
+                                    l10n.recipeIngredients,
+                              )
+                            : warning.message,
                         key: ValueKey(
                           'recipe-serving-warning-${warning.ingredientId}',
                         ),
@@ -2526,9 +2541,13 @@ class _IngredientDetailRow extends StatelessWidget {
     final systemDisplayChanged =
         displayed != null && displayed!.rule != 'base' && !noDensity;
     final displayChanged = systemDisplayChanged || noDensity;
+    final conversionRule = contract?.conversionRule.value;
     final conversionPresent =
-        converted != null || moldConverted != null || contract != null;
-    final systemChanged = adjusted || systemDisplayChanged;
+        converted != null ||
+        moldConverted != null ||
+        (conversionRule != null && conversionRule != 'base');
+    final systemChanged = conversionPresent || systemDisplayChanged;
+    final valueChanged = adjusted || systemDisplayChanged;
     final originalQuantity =
         '${_quantityText(ingredient.quantity)} ${ingredient.unit}';
     final source = ingredient.quantitySource;
@@ -2539,26 +2558,31 @@ class _IngredientDetailRow extends StatelessWidget {
     final sourceType = systemChanged
         ? sourceTypeScenarioAdjusted
         : source?.source_.value ?? sourceTypeAuthorFilled;
+    final conversionBasis = conversionPresent
+        ? (moldConverted != null || conversionRule == 'mold_ratio'
+              ? _conversionRuleLabel(convertedRule ?? '', l10n)
+              : _servingRuleLabel(convertedRule ?? '', l10n))
+        : null;
     final String sourceBasis;
-    if (systemDisplayChanged) {
+    if (systemDisplayChanged && conversionBasis != null) {
+      sourceBasis =
+          '$conversionBasis；${displayed!.rule == 'personal_measure' ? l10n.recipeMeasureDisplayOnly : l10n.recipeMeasureStandardDisplayOnly}';
+    } else if (systemDisplayChanged) {
       sourceBasis = displayed!.rule == 'personal_measure'
           ? l10n.recipeMeasureDisplayOnly
           : l10n.recipeMeasureStandardDisplayOnly;
+    } else if (noDensity && conversionBasis != null) {
+      sourceBasis = '$conversionBasis；${l10n.recipeMeasureNoDensity}';
     } else if (noDensity) {
       sourceBasis = l10n.recipeMeasureNoDensity;
-    } else if (conversionPresent) {
-      sourceBasis =
-          moldConverted != null ||
-              contract?.conversionRule.value == 'mold_ratio'
-          ? _conversionRuleLabel(convertedRule ?? '', l10n)
-          : _servingRuleLabel(convertedRule ?? '', l10n);
+    } else if (conversionBasis != null) {
+      sourceBasis = conversionBasis;
     } else if (source?.basis?.isNotEmpty == true) {
       sourceBasis = source!.basis!;
     } else {
       sourceBasis = l10n.recipeSourceAuthorFilled;
     }
     return ListTile(
-      contentPadding: EdgeInsets.zero,
       title: Row(
         children: [
           Expanded(
@@ -2573,8 +2597,8 @@ class _IngredientDetailRow extends StatelessWidget {
               sourceType: sourceType,
               componentId: displayChanged
                   ? 'recipe-ingredient-${ingredient.id}-measure'
-                  : adjusted
-                  ? 'recipe-ingredient-${ingredient.id}-serving'
+                  : conversionPresent
+                  ? 'recipe-ingredient-${ingredient.id}-conversion'
                   : 'recipe-ingredient-${ingredient.id}-quantity',
               value: quantity,
               originalValue: displayed != null || conversionPresent
@@ -2584,7 +2608,7 @@ class _IngredientDetailRow extends StatelessWidget {
               showAuthorMark: noDensity && sourceType == sourceTypeAuthorFilled,
               required: false,
               feedbackEnabled: true,
-              onAction: (_) {},
+              onAction: null,
             ),
         ],
       ),
@@ -2601,7 +2625,7 @@ class _IngredientDetailRow extends StatelessWidget {
         style: GramTreeColors.of(context).numberStyle(
           (Theme.of(context).textTheme.bodyMedium ?? const TextStyle())
               .copyWith(
-                color: systemChanged ? GramTreeColors.of(context).accent : null,
+                color: valueChanged ? GramTreeColors.of(context).accent : null,
               ),
         ),
       ),

@@ -176,10 +176,7 @@ def _is_baking_step(step: MoldStepInput) -> bool:
         for value in (step.action, step.instruction, step.cookware, step.heat)
         if value
     )
-    return any(
-        marker in context
-        for marker in ("烤", "焙", "烘", "烤箱", "oven", "bake", "roast")
-    )
+    return any(marker in context for marker in ("烤", "焙", "烘", "烤箱", "oven", "bake", "roast"))
 
 
 def convert_mold(

@@ -3,6 +3,7 @@
 import base64
 import binascii
 import json
+import uuid
 from typing import Annotated, Any, Literal
 
 from fastapi import APIRouter, Depends, Query, status
@@ -40,6 +41,20 @@ def _errors(*codes: int) -> dict[int | str, dict[str, Any]]:
     for code in codes:
         responses[code] = {"model": ErrorResponse}
     return responses
+
+
+def _parse_optional_measure_id(raw: str | None) -> uuid.UUID | None:
+    if not raw:
+        return None
+    try:
+        value = uuid.UUID(raw)
+    except ValueError as exc:
+        raise ApiError(
+            422, "invalid_request", "请求参数有误", "measure_id 不是有效的 UUID"
+        ) from exc
+    if value.version != 4:
+        raise ApiError(422, "invalid_request", "请求参数有误", "measure_id 不是有效的 UUID v4")
+    return value
 
 
 def _parse_target_mold(raw: str | None) -> MoldSpec | None:
@@ -152,7 +167,7 @@ def display_current_recipe_ingredients(
     auth: CurrentAuth,
     session: SessionDep,
     mode: Literal["base", "standard", "home"] = Query(),
-    measure_id: IdV4 | None = None,
+    raw_measure_id: str | None = Query(default=None, alias="measure_id"),
     target_servings: int | None = Query(default=None, ge=1),
     target_mold: str | None = Query(default=None, description="JSON encoded target mold"),
 ) -> RecipeIngredientDisplayOut:
@@ -161,7 +176,7 @@ def display_current_recipe_ingredients(
         auth.user,
         recipe_id,
         mode,
-        measure_id=measure_id,
+        measure_id=_parse_optional_measure_id(raw_measure_id),
         target_servings=target_servings,
         target_mold=_parse_target_mold(target_mold),
     )
@@ -178,7 +193,7 @@ def display_recipe_version_ingredients(
     auth: CurrentAuth,
     session: SessionDep,
     mode: Literal["base", "standard", "home"] = Query(),
-    measure_id: IdV4 | None = None,
+    raw_measure_id: str | None = Query(default=None, alias="measure_id"),
     target_servings: int | None = Query(default=None, ge=1),
     target_mold: str | None = Query(default=None, description="JSON encoded target mold"),
 ) -> RecipeIngredientDisplayOut:
@@ -187,7 +202,7 @@ def display_recipe_version_ingredients(
         auth.user,
         recipe_id,
         mode,
-        measure_id=measure_id,
+        measure_id=_parse_optional_measure_id(raw_measure_id),
         version_id=version_id,
         target_servings=target_servings,
         target_mold=_parse_target_mold(target_mold),

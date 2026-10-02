@@ -25,8 +25,17 @@ def test_author_saves_base_mold_and_converts_without_mutating_snapshot(api: Api)
     ]
     body["snapshot"]["steps"] = [
         {
+            "id": "rest",
+            "instruction": "静置面团",
+            "action": "静置",
+            "cookware": "案板",
+            "duration_seconds": 600,
+        },
+        {
             "id": "bake",
             "instruction": "烤至成熟",
+            "action": "烘烤",
+            "cookware": "烤箱",
             "duration_seconds": 1800,
             "temperature_celsius": 170,
             "doneness": "竹签插入不粘",
@@ -47,9 +56,11 @@ def test_author_saves_base_mold_and_converts_without_mutating_snapshot(api: Api)
     assert conversion["ingredients"][0]["rule"] == "mold_ratio"
     assert conversion["ingredients"][1]["display_quantity"] == 5
     assert conversion["ingredients"][1]["rule"] == "round"
-    assert conversion["steps"][0]["duration_seconds"] == 1800
-    assert conversion["steps"][0]["temperature_celsius"] == 170
-    assert "成熟判断" in conversion["steps"][0]["time_advisory"]
+    assert conversion["steps"][0]["doneness_warning"] is False
+    assert conversion["steps"][0]["time_advisory"] is None
+    assert conversion["steps"][1]["duration_seconds"] == 1800
+    assert conversion["steps"][1]["temperature_celsius"] == 170
+    assert "成熟判断" in conversion["steps"][1]["time_advisory"]
     assert api.client.get(f"/v1/recipes/{saved['id']}", headers=headers).json() == saved
 
 
@@ -95,35 +106,3 @@ def test_mold_conversion_matches_shared_fixture(api: Api, case: dict) -> None:
         assert step["temperature_celsius"] == expected["step"]["temperature_celsius"]
         assert bool(step["time_advisory"]) is expected["step"]["has_time_advisory"]
         assert step["doneness_warning"] is expected["step"]["doneness_warning"]
-
-
-def test_mold_doneness_advice_only_applies_to_baking_steps() -> None:
-    from gramtree.recipes.mold_conversion import MoldInput, MoldStepInput, convert_mold
-
-    result = convert_mold(
-        original_mold=MoldInput(shape="round", unit="cm", diameter=15),
-        target_mold=MoldInput(shape="round", unit="cm", diameter=18),
-        ingredients=[],
-        steps=[
-            MoldStepInput(
-                id="rest",
-                instruction="静置面团",
-                duration_seconds=600,
-                action="静置",
-                cookware="案板",
-            ),
-            MoldStepInput(
-                id="bake",
-                instruction="烤至成熟",
-                duration_seconds=1800,
-                temperature_celsius=170,
-                cookware="烤箱",
-            ),
-        ],
-    )
-
-    assert result.steps[0].doneness_warning is False
-    assert result.steps[0].time_advisory is None
-    assert result.steps[1].doneness_warning is True
-    assert result.steps[1].time_advisory
-    assert [warning.code for warning in result.warnings] == ["doneness_check"]
