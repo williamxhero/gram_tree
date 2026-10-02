@@ -1764,10 +1764,25 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
       } on MoldConversionError {
         // Keep the detail page usable while an incomplete/custom mold is being
         // corrected in the target-mold controls.
-        moldConversion = null;
+        moldConversion = MoldConversionResult(
+          originalMold: snapshot.baseMold!,
+          targetMold: _targetMold!,
+          areaRatio: 0,
+          ingredients: const [],
+          steps: const [],
+          warnings: const [],
+        );
       } catch (_) {
-        // A malformed legacy mold must not hide the rest of the detail page.
-        moldConversion = null;
+        // A malformed legacy mold must not hide the detail page or its target
+        // controls; recompute after the user supplies compatible dimensions.
+        moldConversion = MoldConversionResult(
+          originalMold: snapshot.baseMold!,
+          targetMold: _targetMold!,
+          areaRatio: 0,
+          ingredients: const [],
+          steps: const [],
+          warnings: const [],
+        );
       }
     }
     final convertedServingById = {
