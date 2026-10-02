@@ -44,10 +44,7 @@ void main() {
       await tester.pump(const Duration(milliseconds: 100));
     }
     if (detailList.evaluate().isNotEmpty) {
-      final detailScrollable = find.descendant(
-        of: detailList,
-        matching: find.byType(Scrollable),
-      );
+      final detailScrollable = find.byType(Scrollable).last;
       await tester.scrollUntilVisible(
         finder,
         500,
