@@ -6,6 +6,11 @@ import 'package:gram_tree/config/app_config.dart';
 import 'package:gram_tree/main.dart' as app;
 import 'package:integration_test/integration_test.dart';
 
+void _markE2eStep(String step) {
+  final binding = IntegrationTestWidgetsFlutterBinding.instance;
+  binding.reportData = {...?binding.reportData, 'e2e_step': step};
+}
+
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
@@ -84,6 +89,12 @@ void main() {
     try {
       await body();
     } catch (error, stack) {
+      final binding = IntegrationTestWidgetsFlutterBinding.instance;
+      binding.reportData = {
+        ...?binding.reportData,
+        'e2e_error': error.toString(),
+        'e2e_stack': stack.toString(),
+      };
       debugPrint('E2E failure: $error');
       debugDumpApp();
       debugPrint(stack.toString());
@@ -159,6 +170,7 @@ void main() {
         tester,
         find.byKey(const ValueKey('recipe-detail-content')),
       );
+      _markE2eStep('after_detail_loaded');
       await waitFor(
         tester,
         find.byKey(const ValueKey('recipe-history-button')),
@@ -214,6 +226,7 @@ void main() {
       await settle(tester);
       expect(find.text('原来：100 g'), findsOneWidget);
       expect(find.text('模具比例'), findsWidgets);
+      _markE2eStep('after_source_detail');
     }),
     timeout: const Timeout(Duration(minutes: 5)),
   );
