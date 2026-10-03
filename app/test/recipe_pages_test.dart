@@ -1945,6 +1945,75 @@ void main() {
     }
   });
 
+  testWidgets('recipe detail rounds shared half-up boundary cases', (
+    tester,
+  ) async {
+    // Same table the server conversion tests use, so offline App rounding and
+    // server Decimal ROUND_HALF_UP cannot drift apart at .xx5 boundaries.
+    final cases = await _loadFixture(
+      tester,
+      'assets/rounding_boundary_cases.json',
+    );
+    for (final caseData in cases) {
+      final input = Map<String, dynamic>.from(caseData['input'] as Map);
+      final expected = Map<String, dynamic>.from(caseData['expected'] as Map);
+      final source = Map<String, dynamic>.from(
+        (input['ingredients'] as List).single as Map,
+      );
+      final mold = caseData['kind'] == 'mold';
+      final server = FakeServer();
+      final state = _installRecipeApi(server);
+      _replaceRecipeSnapshot(state, {
+        if (mold) 'base_mold': input['original_mold'],
+        if (!mold) 'servings': input['original_servings'],
+        'ingredients': input['ingredients'],
+        'steps': input['steps'],
+      });
+      await _openRecipeDetailForFixture(tester, server);
+      if (mold) {
+        final moldMode = find.byKey(const ValueKey('recipe-mode-mold'));
+        await _scrollUntilVisible(tester, moldMode);
+        await tester.tap(moldMode);
+        await _fixtureSettle(tester);
+        await _setTargetMoldFromFixture(
+          tester,
+          Map<String, dynamic>.from(input['target_mold'] as Map),
+        );
+        expect(
+          tester
+              .widget<Text>(find.byKey(const ValueKey('recipe-mold-ratio')))
+              .data,
+          contains(
+            (expected['area_ratio'] as num).toDouble().toStringAsFixed(2),
+          ),
+        );
+      } else {
+        await _scrollUntilVisible(
+          tester,
+          find.byKey(const ValueKey('recipe-serving-control')),
+        );
+        final steps =
+            (input['target_servings'] as int) -
+            (input['original_servings'] as int);
+        expect(steps, isPositive);
+        for (var i = 0; i < steps; i++) {
+          await tester.tap(
+            find.byKey(const ValueKey('recipe-serving-increase')),
+          );
+          await _fixtureSettle(tester);
+        }
+      }
+      await _expectFixtureIngredient(tester, {
+        'id': source['id'],
+        'unit': source['unit'],
+        'original_quantity': source['quantity'],
+        'display_quantity': expected['display_quantity'],
+        'rule': mold ? 'mold_ratio' : 'proportional',
+      }, expectConversionSource: true);
+      await _resetPage(tester);
+    }
+  });
+
   testWidgets(
     'recipe detail executes every shared measure display fixture case',
     (tester) async {

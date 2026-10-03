@@ -21,6 +21,7 @@ ASSETS = [
     "assets/serving_conversion_cases.json",
     "assets/mold_conversion_cases.json",
     "assets/measure_display_cases.json",
+    "assets/rounding_boundary_cases.json",
 ]
 
 

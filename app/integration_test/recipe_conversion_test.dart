@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gram_tree/config/app_config.dart';
 import 'package:gram_tree/main.dart' as app;
-import 'package:gram_tree/recipes/measure_display.dart';
 import 'package:integration_test/integration_test.dart';
 
 void _markE2eStep(String step) {
@@ -254,27 +253,31 @@ void main() {
       // Display mode switching is also an HTTP-backed contract. The local
       // fallback keeps the page usable, while the real server response is
       // asserted below with a separately authenticated contract account.
+      // Assert what the user (and a screen reader) sees: which display option
+      // is announced as selected, and the converted amount staying visible.
+      final semantics = tester.ensureSemantics();
       await reveal(tester, find.byKey(const ValueKey('recipe-measure-mode')));
-      final displaySelector = find.byKey(
-        const ValueKey('recipe-display-mode-selector'),
-      );
       await tapText(tester, '汤匙/茶匙');
-      await waitFor(tester, displaySelector);
       expect(
-        tester
-            .widget<SegmentedButton<MeasureDisplayMode>>(displaySelector)
-            .selected,
-        {MeasureDisplayMode.standard},
+        tester.getSemantics(find.text('汤匙/茶匙').last),
+        isSemantics(isSelected: true),
+      );
+      expect(
+        tester.getSemantics(find.text('克/毫升').last),
+        isSemantics(isSelected: false),
       );
       await waitFor(tester, find.text('177.78 克'));
       await tapText(tester, '克/毫升');
-      await waitFor(tester, displaySelector);
       expect(
-        tester
-            .widget<SegmentedButton<MeasureDisplayMode>>(displaySelector)
-            .selected,
-        {MeasureDisplayMode.base},
+        tester.getSemantics(find.text('克/毫升').last),
+        isSemantics(isSelected: true),
       );
+      expect(
+        tester.getSemantics(find.text('汤匙/茶匙').last),
+        isSemantics(isSelected: false),
+      );
+      await waitFor(tester, find.text('177.78 克'));
+      semantics.dispose();
       _markE2eStep('after_display_mode_switching');
 
       final contractEmail =
