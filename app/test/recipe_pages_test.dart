@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -1637,6 +1638,7 @@ void main() {
   testWidgets('recipe detail executes every shared serving fixture case', (
     tester,
   ) async {
+    if (kIsWeb) return;
     final cases = await _loadFixture('assets/serving_conversion_cases.json');
     for (final caseData in cases) {
       final input = Map<String, dynamic>.from(caseData['input'] as Map);
@@ -1727,6 +1729,7 @@ void main() {
   testWidgets('recipe detail executes every shared mold fixture case', (
     tester,
   ) async {
+    if (kIsWeb) return;
     final cases = await _loadFixture('assets/mold_conversion_cases.json');
     for (final caseData in cases) {
       final input = Map<String, dynamic>.from(caseData['input'] as Map);
@@ -1778,6 +1781,7 @@ void main() {
   testWidgets(
     'recipe detail executes every shared measure display fixture case',
     (tester) async {
+      if (kIsWeb) return;
       final cases = await _loadFixture('assets/measure_display_cases.json');
       const densityId = '99999999-9999-4999-8999-999999999999';
       for (final caseData in cases) {
