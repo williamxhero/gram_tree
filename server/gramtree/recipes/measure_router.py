@@ -10,7 +10,14 @@ from sqlalchemy.exc import IntegrityError
 from gramtree.accounts.deps import CurrentAuth
 from gramtree.core.errors import ERROR_RESPONSES, ApiError, ErrorResponse, NotFound
 from gramtree.core.ids import IdV4
-from gramtree.core.pagination import Page, PageParams, decode_cursor, encode_cursor, page_params
+from gramtree.core.pagination import (
+    Page,
+    PageParams,
+    check_limit,
+    decode_cursor,
+    encode_cursor,
+    page_params,
+)
 from gramtree.core.time import Timestamp, utcnow
 from gramtree.deps import SessionDep
 from gramtree.recipes.measure_display import display_amount
@@ -142,9 +149,7 @@ def display_personal_measure(
 def list_personal_measures(
     auth: CurrentAuth, session: SessionDep, page: PageDep
 ) -> Page[PersonalMeasureOut]:
-    maximum = int(config.get(session, "api.page_size_max"))
-    if page.limit > maximum:
-        raise ApiError(422, "invalid_request", "请求参数有误", f"limit 不能超过 {maximum}")
+    check_limit(page.limit, config.get(session, "api.page_size_max"))
     query = select(PersonalMeasure).where(PersonalMeasure.owner_id == auth.user.id)
     if page.cursor:
         timestamp, row_id = decode_cursor(page.cursor)
