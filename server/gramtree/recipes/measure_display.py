@@ -12,6 +12,10 @@ def _rounded_fraction(value: float) -> tuple[float, str]:
         return 0.0, "0"
     whole = int(value)
     remainder = value - whole
+    if remainder < 0.125 and whole == 0:
+        # "0 勺" is not measurable; tiny positive amounts use the smallest
+        # common fraction, and the grams shown alongside stay exact.
+        return 0.25, "1/4"
     if remainder < 0.125:
         rounded = float(whole)
     else:
@@ -34,7 +38,7 @@ def _rounded_fraction(value: float) -> tuple[float, str]:
     return rounded, f"{int(rounded)} {label}" if int(rounded) else label
 
 
-def _quantity_text(value: float) -> str:
+def quantity_text(value: float) -> str:
     return str(int(value)) if value == int(value) else f"{value:.2f}".rstrip("0").rstrip(".")
 
 
@@ -51,7 +55,7 @@ def _base_result(base_quantity: float, base_unit: str, density: float | None) ->
     unit_text = "克" if unit == "g" else "毫升"
     grams = _grams(base_quantity, unit, density) if unit == "ml" else base_quantity
     return {
-        "text": f"{_quantity_text(base_quantity)} {unit_text}",
+        "text": f"{quantity_text(base_quantity)} {unit_text}",
         "display_quantity": float(base_quantity),
         "display_unit": unit,
         "grams": None if unit == "ml" and density is None else grams,
@@ -75,7 +79,7 @@ def _standard_result(base_quantity: float, base_unit: str, density: float | None
     )
     _, fraction_text = _rounded_fraction(millilitres / size)
     grams = _grams(base_quantity, base_unit, density)
-    grams_text = f"（{_quantity_text(grams)} 克）" if grams is not None else ""
+    grams_text = f"（{quantity_text(grams)} 克）" if grams is not None else ""
     return {
         "text": f"{fraction_text} {unit}{grams_text}",
         "display_quantity": quantity,
@@ -117,9 +121,9 @@ def display_amount(
     quantity, fraction_text = _rounded_fraction(millilitres / capacity)
     grams = _grams(base_quantity, base_unit, density)
     grams_text = (
-        f"（{_quantity_text(grams)} 克）"
+        f"（{quantity_text(grams)} 克）"
         if grams is not None
-        else f"（{_quantity_text(base_quantity)} 毫升）"
+        else f"（{quantity_text(base_quantity)} 毫升）"
     )
     return {
         "text": f"约 {fraction_text} {measure['name']}{grams_text}",

@@ -380,21 +380,6 @@ String _fixtureUnitText(String unit) => switch (unit) {
   _ => unit,
 };
 
-String _fixtureRuleText(String rule) => switch (rule) {
-  'proportional' => '按比例换算',
-  'unchanged' => '保持原值不变',
-  'round' => '按个取整',
-  'mold_ratio' => '模具比例',
-  _ => rule,
-};
-
-String _fixtureDisplayBasis(String rule) => switch (rule) {
-  'standard_measure' => '常用量具换算；菜谱基础值未改变',
-  'personal_measure' => '个人量具只改变显示，菜谱基础值未改变',
-  'no_density' => '没有密度数据，保留克数',
-  _ => rule,
-};
-
 Future<void> _expectFixtureIngredient(
   WidgetTester tester,
   Map<String, dynamic> expected, {
@@ -1715,6 +1700,43 @@ void main() {
       expect(find.text('现在：150 克'), findsOneWidget);
     },
   );
+
+  testWidgets('recipe detail keeps counted ingredients in count units', (
+    tester,
+  ) async {
+    final server = FakeServer();
+    final state = _installRecipeApi(
+      server,
+      standardIngredientId: _standardIngredientId,
+    );
+    _replaceRecipeSnapshot(state, {
+      'ingredients': [
+        {
+          'id': 'egg',
+          'ingredient_id': _standardIngredientId,
+          'display_name': '鸡蛋',
+          'quantity': 3,
+          'unit': '个',
+          'base_quantity': 150,
+          'base_unit': 'g',
+          'scaling_mode': 'round',
+        },
+      ],
+      'steps': const [],
+    });
+    await pumpApp(tester, env: TestEnv.signedIn(server: server));
+    await _openMyRecipes(tester);
+    await tester.tap(find.byKey(const ValueKey('recipe-card-$_recipeId')));
+    await tester.pumpAndSettle();
+    await _scrollToBottom(tester);
+    expect(find.text('3 个'), findsWidgets);
+
+    await _scrollToTop(tester);
+    await tester.tap(find.byKey(const ValueKey('recipe-serving-increase')));
+    await tester.pumpAndSettle();
+    await _scrollToBottom(tester);
+    expect(find.text('5 个'), findsWidgets);
+  });
 
   testWidgets('recipe detail switches display mode without changing source', (
     tester,

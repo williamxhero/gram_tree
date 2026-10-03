@@ -231,6 +231,10 @@ ServingConversionResult convertServings({
   if (minServings < 1 || maxServings < minServings) {
     throw ServingConversionError('invalid_servings_config', '份数范围配置有误');
   }
+  // Always allow the original recipe to open and reset, even when its author
+  // recorded a serving count outside the configured adjustment range.
+  minServings = originalServings < minServings ? originalServings : minServings;
+  maxServings = originalServings > maxServings ? originalServings : maxServings;
   if (targetServings < minServings || targetServings > maxServings) {
     throw ServingConversionError(
       'invalid_servings',

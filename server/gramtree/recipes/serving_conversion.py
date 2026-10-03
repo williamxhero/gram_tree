@@ -147,6 +147,10 @@ def convert_servings(
         raise ServingConversionError("invalid_servings", "原菜谱份数必须至少为 1")
     if min_servings < 1 or max_servings < min_servings:
         raise ServingConversionError("invalid_servings_config", "份数范围配置有误")
+    # A recipe written outside the configured adjustment range must still open
+    # at its own serving count, so the range always includes the original.
+    min_servings = min(min_servings, original_servings)
+    max_servings = max(max_servings, original_servings)
     if target_servings < min_servings or target_servings > max_servings:
         raise ServingConversionError(
             "invalid_servings",

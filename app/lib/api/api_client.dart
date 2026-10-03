@@ -55,6 +55,8 @@ Dio _baseDio(Ref ref) {
   dio.interceptors.add(
     InterceptorsWrapper(
       onRequest: (options, handler) {
+        // The generated Dart client includes nullable optional query fields;
+        // omit them so FastAPI does not parse an absent value as an empty one.
         options.queryParameters.removeWhere(
           (key, value) => value == null || value == '',
         );

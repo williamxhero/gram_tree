@@ -54,6 +54,9 @@ const _fractions = <double>[0.25, 1 / 3, 0.5, 2 / 3, 0.75, 1];
   if (value <= 0) return (value: 0, text: '0');
   var whole = value.floor();
   final remainder = value - whole;
+  if (remainder < 0.125 && whole == 0) {
+    return (value: 0.25, text: '1/4');
+  }
   if (remainder < 0.125) return (value: whole.toDouble(), text: '$whole');
   final fraction = _fractions.reduce(
     (a, b) => (a - remainder).abs() <= (b - remainder).abs() ? a : b,

@@ -192,6 +192,56 @@ def test_omitted_scaling_mode_uses_ingredient_default_but_explicit_mode_wins(api
     assert explicit_conversion.json()["conversion"]["ingredients"][0]["display_quantity"] == 1.5
 
 
+def test_original_serving_outside_adjustment_bounds_still_opens(api: Api) -> None:
+    headers = bearer(api.login("serving-original-outside-bounds@example.com"))
+    body = recipe_input("超范围原方")
+    body["snapshot"]["servings"] = 30
+    body["snapshot"]["steps"] = []
+    created = api.client.post("/v1/recipes", json=body, headers=headers)
+    assert created.status_code == 201, created.text
+    saved = created.json()
+    response = api.client.get(
+        f"/v1/recipes/{saved['id']}/servings",
+        params={"target_servings": 30},
+        headers=headers,
+    )
+    assert response.status_code == 200, response.text
+    conversion = response.json()["conversion"]
+    assert conversion["target_servings"] == 30
+    assert conversion["min_servings"] == 1
+    assert conversion["max_servings"] == 30
+
+
+def test_display_keeps_count_units_for_library_ingredients(api: Api) -> None:
+    assert cli(["ingredients", "import", str(SEED_PATH)]) == 0
+    headers = bearer(api.login("display-count@example.com"))
+    body = recipe_input("计数显示")
+    body["snapshot"]["ingredients"] = [
+        {
+            "id": "egg",
+            "ingredient_id": "b097f5a9-0641-4f00-9666-dad68756638c",
+            "display_name": "鸡蛋",
+            "quantity": 3,
+            "unit": "个",
+            "scaling_mode": "round",
+        }
+    ]
+    body["snapshot"]["steps"] = []
+    created = api.client.post("/v1/recipes", json=body, headers=headers)
+    assert created.status_code == 201, created.text
+    saved = created.json()
+    response = api.client.get(
+        f"/v1/recipes/{saved['id']}/display",
+        params={"mode": "base", "target_servings": 1},
+        headers=headers,
+    )
+    assert response.status_code == 200, response.text
+    item = response.json()["display"]["ingredients"][0]
+    assert item["text"] == "2 个"
+    assert item["display_quantity"] == 2
+    assert item["display_unit"] == "个"
+
+
 def test_null_scaling_mode_means_unset(api: Api) -> None:
     """A null mode is the same as omitting it: library default, else proportional."""
     assert cli(["ingredients", "import", str(SEED_PATH)]) == 0

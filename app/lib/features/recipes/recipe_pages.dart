@@ -3236,6 +3236,23 @@ String _quantityText(num value) {
       .replaceFirst(RegExp(r'\.$'), '');
 }
 
+const _countDisplayUnits = {
+  '个',
+  '只',
+  '颗',
+  '粒',
+  '瓣',
+  '头',
+  '根',
+  '条',
+  '片',
+  '块',
+  '张',
+  '棵',
+  '朵',
+  '枚',
+};
+
 const _scalingLibraryDefaultValue = 'library_default';
 
 String _scalingModeLabel(String rule, AppLocalizations l10n) => switch (rule) {
@@ -3281,9 +3298,6 @@ DisplayedAmount? _displayedAmount(
       baseUnit: contractBaseUnit,
     );
   }
-  final baseUnit =
-      ingredient.baseUnit?.value ?? _displayBaseUnit(ingredient.unit);
-  if (baseUnit == null) return null;
   final convertedQuantity =
       convertedMold?.displayQuantity ??
       converted?.displayQuantity ??
@@ -3292,6 +3306,18 @@ DisplayedAmount? _displayedAmount(
       convertedMold?.originalQuantity ??
       converted?.originalQuantity ??
       ingredient.quantity.toDouble();
+  if (_countDisplayUnits.contains(ingredient.unit.trim().toLowerCase())) {
+    return DisplayedAmount(
+      text: '${_quantityText(convertedQuantity)} ${ingredient.unit}',
+      displayQuantity: convertedQuantity,
+      displayUnit: ingredient.unit,
+      grams: null,
+      rule: 'base',
+    );
+  }
+  final baseUnit =
+      ingredient.baseUnit?.value ?? _displayBaseUnit(ingredient.unit);
+  if (baseUnit == null) return null;
   if (baseUnit == 'count') {
     return DisplayedAmount(
       text: '${_quantityText(convertedQuantity)} ${ingredient.unit}',

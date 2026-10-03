@@ -23,5 +23,15 @@
     "name": "home measure can use stored millilitres",
     "input": {"base_quantity": 30, "base_unit": "ml", "density": null, "mode": "home", "measure": {"name": "量杯", "kind": "cup", "capacity_ml": 15}},
     "expected": {"text": "约 2 量杯（30 毫升）", "display_quantity": 2.0, "display_unit": "量杯", "grams": null, "rule": "personal_measure"}
+  },
+  {
+    "name": "tiny home amount stays measurable",
+    "input": {"base_quantity": 1, "base_unit": "g", "density": 1.0, "mode": "home", "measure": {"name": "白瓷勺", "kind": "spoon", "capacity_ml": 15}},
+    "expected": {"text": "约 1/4 白瓷勺（1 克）", "display_quantity": 0.25, "display_unit": "白瓷勺", "grams": 1.0, "rule": "personal_measure"}
+  },
+  {
+    "name": "tiny standard amount stays measurable",
+    "input": {"base_quantity": 0.5, "base_unit": "g", "density": 1.0, "mode": "standard", "measure": null},
+    "expected": {"text": "1/4 茶匙（0.5 克）", "display_quantity": 0.25, "display_unit": "茶匙", "grams": 0.5, "rule": "standard_measure"}
   }
 ]
