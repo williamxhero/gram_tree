@@ -423,6 +423,11 @@
   "recipeMeasureModeNoHome": "还没有登记自家量具，请先到“我的”登记。",
   "recipeMeasureDisplayOnly": "个人量具只改变显示，菜谱基础值未改变",
   "recipeMeasureNoDensity": "没有密度数据，保留克数",
+  "recipeMeasureGram": "克",
+  "recipeMeasureMillilitre": "毫升",
+  "recipeMeasureTablespoon": "汤匙",
+  "recipeMeasureTeaspoon": "茶匙",
+  "recipeMeasureApproximate": "约",
   "@compositionLastUpdatedAt": {
     "description": "上次更新时间",
     "placeholders": {"time": {"type": "String"}}

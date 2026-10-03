@@ -23,7 +23,7 @@ enum Feature {
   final String key;
 }
 
-const _clientConfigCacheKey = 'client_config:v1';
+const _conversionConfigCacheKey = 'client_config:conversion:v1';
 
 final clientConfigProvider = FutureProvider<ClientConfig>((ref) async {
   if (!ref.watch(privacyConsentProvider)) {
@@ -36,14 +36,22 @@ final clientConfigProvider = FutureProvider<ClientConfig>((ref) async {
         .getConfigApi()
         .clientConfig();
     final config = response.data!;
-    await store.setString(_clientConfigCacheKey, jsonEncode(config.toJson()));
+    // Feature flags are server-authoritative and must fail closed. Only cache
+    // conversion parameters needed to keep an already loaded recipe useful
+    // offline.
+    await store.setString(
+      _conversionConfigCacheKey,
+      jsonEncode({'params': config.params}),
+    );
     return config;
   } catch (_) {
-    final cached = store.getString(_clientConfigCacheKey);
+    final cached = store.getString(_conversionConfigCacheKey);
     if (cached != null) {
       try {
-        return ClientConfig.fromJson(
-          Map<String, dynamic>.from(jsonDecode(cached) as Map),
+        final decoded = Map<String, dynamic>.from(jsonDecode(cached) as Map);
+        return ClientConfig(
+          features: const {},
+          params: decoded['params'] ?? const <String, dynamic>{},
         );
       } catch (_) {
         // Ignore a stale or corrupt cache and use safe defaults below.

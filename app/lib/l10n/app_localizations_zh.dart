@@ -1101,4 +1101,19 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get recipeMeasureNoDensity => '没有密度数据，保留克数';
+
+  @override
+  String get recipeMeasureGram => '克';
+
+  @override
+  String get recipeMeasureMillilitre => '毫升';
+
+  @override
+  String get recipeMeasureTablespoon => '汤匙';
+
+  @override
+  String get recipeMeasureTeaspoon => '茶匙';
+
+  @override
+  String get recipeMeasureApproximate => '约';
 }

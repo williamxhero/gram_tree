@@ -212,8 +212,8 @@ void main() {
       );
       _markE2eStep('after_base_mold_saved');
 
-      // Serving conversion remains observable through the keyed controls; exact
-      // numeric rendering is covered by the fixture-backed page tests.
+      // The user-visible serving amount is part of this web acceptance flow;
+      // exhaustive fixture permutations remain in native/page tests.
       await waitFor(tester, find.byKey(const ValueKey('recipe-serving-value')));
       await reveal(
         tester,
@@ -222,6 +222,7 @@ void main() {
       );
       await settle(tester);
       await waitFor(tester, find.byKey(const ValueKey('recipe-serving-value')));
+      await waitFor(tester, find.text('150 克'));
       await reveal(
         tester,
         find.byKey(const ValueKey('recipe-serving-reset')),
@@ -231,8 +232,8 @@ void main() {
       await waitFor(tester, find.byKey(const ValueKey('recipe-serving-value')));
       _markE2eStep('after_serving_increase_reset');
 
-      // Mold conversion and provenance are exercised through stable controls;
-      // exact localized values/details are covered by page/API fixture tests.
+      // Mold conversion, the visible amount, and provenance are exercised
+      // here; exhaustive fixture permutations remain in native/page tests.
       await reveal(
         tester,
         find.byKey(const ValueKey('recipe-mode-mold')),
@@ -246,6 +247,7 @@ void main() {
       );
       await settle(tester);
       await waitFor(tester, find.byKey(const ValueKey('recipe-mold-ratio')));
+      await waitFor(tester, find.text('177.78 克'));
       await waitFor(tester, find.byKey(const ValueKey('recipe-measure-mode')));
       _markE2eStep('after_mold_eight_inch');
 
@@ -264,6 +266,7 @@ void main() {
             .selected,
         {MeasureDisplayMode.standard},
       );
+      await waitFor(tester, find.text('177.78 克'));
       await tapText(tester, '克/毫升');
       await waitFor(tester, displaySelector);
       expect(

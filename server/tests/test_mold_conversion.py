@@ -13,6 +13,11 @@ CASES = json.loads(
         encoding="utf-8"
     )
 )
+ROUNDING_CASES = json.loads(
+    (Path(__file__).parents[2] / "app" / "assets" / "rounding_boundary_cases.json").read_text(
+        encoding="utf-8"
+    )
+)
 
 
 def test_author_saves_base_mold_and_converts_without_mutating_snapshot(api: Api) -> None:
@@ -106,3 +111,33 @@ def test_mold_conversion_matches_shared_fixture(api: Api, case: dict) -> None:
         assert step["temperature_celsius"] == expected["step"]["temperature_celsius"]
         assert bool(step["time_advisory"]) is expected["step"]["has_time_advisory"]
         assert step["doneness_warning"] is expected["step"]["doneness_warning"]
+
+
+@pytest.mark.parametrize(
+    "case",
+    [case for case in ROUNDING_CASES if case["kind"] == "mold"],
+    ids=[case["name"] for case in ROUNDING_CASES if case["kind"] == "mold"],
+)
+def test_mold_conversion_matches_decimal_half_up_boundary(api: Api, case: dict) -> None:
+    headers = bearer(api.login(f"mold-rounding-{case['name']}@example.com"))
+    source = case["input"]
+    body = recipe_input(f"边界-{case['name']}")
+    body["snapshot"].update(
+        {
+            "base_mold": source["original_mold"],
+            "ingredients": source["ingredients"],
+            "steps": source["steps"],
+        }
+    )
+    created = api.client.post("/v1/recipes", json=body, headers=headers)
+    assert created.status_code == 201, created.text
+    saved = created.json()
+    response = api.client.post(
+        f"/v1/recipes/{saved['id']}/mold",
+        json={"target_mold": source["target_mold"]},
+        headers=headers,
+    )
+    assert response.status_code == 200, response.text
+    actual = response.json()["conversion"]
+    assert actual["area_ratio"] == case["expected"]["area_ratio"]
+    assert actual["ingredients"][0]["display_quantity"] == case["expected"]["display_quantity"]

@@ -341,10 +341,14 @@ void _expectFixtureDisplayOutput(
   Map<String, dynamic> input,
   Map<String, dynamic> expected,
 ) {
-  // Every fixture is driven through the real detail-page display selector;
-  // exact localized quantity formatting is covered by the shared kernel/API
-  // tests and is intentionally not duplicated in this widget assertion.
   expect(find.byKey(const ValueKey('recipe-measure-mode')), findsOneWidget);
+  final amount = find.byKey(
+    const ValueKey('recipe-ingredient-amount-display-ingredient'),
+  );
+  expect(amount, findsOneWidget);
+  final actual = tester.widget<Text>(amount);
+  expect(actual.data, expected['text']);
+  expect(actual.data, contains(expected['display_unit'] as String));
   if (input['mode'] == 'home') {
     final measure = Map<String, dynamic>.from(input['measure'] as Map);
     expect(find.textContaining(measure['name'] as String), findsWidgets);
@@ -1379,6 +1383,7 @@ void main() {
         find.byKey(const ValueKey('recipe-serving-control')),
         findsOneWidget,
       );
+      expect(find.text('按场景调整'), findsNothing);
       await tester.tap(find.byKey(const ValueKey('recipe-serving-increase')));
       await tester.pumpAndSettle();
       await _scrollToBottom(tester);
@@ -1524,8 +1529,9 @@ void main() {
     await _scrollToBottom(tester);
 
     expect(find.text('20 克'), findsWidgets);
-    expect(find.text('按场景调整'), findsWidgets);
-    await tapVisible(tester, find.text('按场景调整').last);
+    expect(find.text('按场景调整'), findsNothing);
+    expect(find.text('作者填写'), findsWidgets);
+    await tapVisible(tester, find.text('作者填写').last);
     expect(find.text('原来：20 g'), findsOneWidget);
     expect(find.text('现在：20 克'), findsOneWidget);
     expect(find.textContaining('没有密度数据，保留克数'), findsOneWidget);
@@ -1638,6 +1644,8 @@ void main() {
   testWidgets('recipe detail executes every shared serving fixture case', (
     tester,
   ) async {
+    // Exhaustive fake-server fixture loops run in native/page tests; the web
+    // acceptance flow in integration_test covers the user-visible modes.
     if (kIsWeb) return;
     final cases = await _loadFixture('assets/serving_conversion_cases.json');
     for (final caseData in cases) {
@@ -1729,6 +1737,8 @@ void main() {
   testWidgets('recipe detail executes every shared mold fixture case', (
     tester,
   ) async {
+    // Exhaustive fake-server fixture loops run in native/page tests; the web
+    // acceptance flow in integration_test covers the user-visible modes.
     if (kIsWeb) return;
     final cases = await _loadFixture('assets/mold_conversion_cases.json');
     for (final caseData in cases) {
@@ -1781,6 +1791,8 @@ void main() {
   testWidgets(
     'recipe detail executes every shared measure display fixture case',
     (tester) async {
+      // Exhaustive fake-server fixture loops run in native/page tests; the web
+      // acceptance flow in integration_test covers the user-visible modes.
       if (kIsWeb) return;
       final cases = await _loadFixture('assets/measure_display_cases.json');
       const densityId = '99999999-9999-4999-8999-999999999999';

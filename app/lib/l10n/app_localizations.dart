@@ -2122,6 +2122,21 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'没有密度数据，保留克数'**
   String get recipeMeasureNoDensity;
+
+  /// **'克'**
+  String get recipeMeasureGram;
+
+  /// **'毫升'**
+  String get recipeMeasureMillilitre;
+
+  /// **'汤匙'**
+  String get recipeMeasureTablespoon;
+
+  /// **'茶匙'**
+  String get recipeMeasureTeaspoon;
+
+  /// **'约'**
+  String get recipeMeasureApproximate;
 }
 
 class _AppLocalizationsDelegate

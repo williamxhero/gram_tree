@@ -1,5 +1,7 @@
 import 'package:gramtree_api/gramtree_api.dart';
 
+import '../l10n/app_localizations.dart';
+
 enum MeasureDisplayMode { base, standard, home }
 
 class DisplayMeasureInput {
@@ -25,6 +27,8 @@ class DisplayedAmount {
     required this.displayUnit,
     required this.grams,
     required this.rule,
+    this.baseQuantity,
+    this.baseUnit,
   });
 
   final String text;
@@ -32,6 +36,8 @@ class DisplayedAmount {
   final String displayUnit;
   final double? grams;
   final String rule;
+  final double? baseQuantity;
+  final String? baseUnit;
 
   Map<String, dynamic> toJson() => {
     'text': text,
@@ -95,6 +101,8 @@ DisplayedAmount _base(DisplayMeasureInput input, {String? rule}) {
     displayUnit: unit,
     grams: unit == 'ml' && input.density == null ? null : grams,
     rule: rule ?? 'base',
+    baseQuantity: input.baseQuantity,
+    baseUnit: input.baseUnit,
   );
 }
 
@@ -123,7 +131,35 @@ DisplayedAmount _standard(DisplayMeasureInput input) {
     displayUnit: candidate.$2,
     grams: grams,
     rule: 'standard_measure',
+    baseQuantity: input.baseQuantity,
+    baseUnit: input.baseUnit,
   );
+}
+
+String localizedDisplayedAmount(
+  DisplayedAmount amount,
+  AppLocalizations l10n,
+) {
+  final unit = switch (amount.displayUnit) {
+    'g' => l10n.recipeMeasureGram,
+    'ml' => l10n.recipeMeasureMillilitre,
+    '汤匙' => l10n.recipeMeasureTablespoon,
+    '茶匙' => l10n.recipeMeasureTeaspoon,
+    _ => amount.displayUnit,
+  };
+  if (amount.rule == 'base' || amount.rule == 'no_density') {
+    return '${_quantityText(amount.displayQuantity)} $unit';
+  }
+  final fraction = _roundedFraction(amount.displayQuantity).text;
+  final parenthetical = amount.grams != null
+      ? '（${_quantityText(amount.grams!)} ${l10n.recipeMeasureGram}）'
+      : amount.baseUnit == 'ml' && amount.baseQuantity != null
+      ? '（${_quantityText(amount.baseQuantity!)} ${l10n.recipeMeasureMillilitre}）'
+      : '';
+  final prefix = amount.rule == 'personal_measure'
+      ? '${l10n.recipeMeasureApproximate} '
+      : '';
+  return '$prefix$fraction $unit$parenthetical';
 }
 
 DisplayedAmount displayAmount(DisplayMeasureInput input) {
@@ -162,6 +198,8 @@ DisplayedAmount displayAmount(DisplayMeasureInput input) {
         displayUnit: measure.name,
         grams: grams,
         rule: 'personal_measure',
+        baseQuantity: input.baseQuantity,
+        baseUnit: input.baseUnit,
       );
   }
 }

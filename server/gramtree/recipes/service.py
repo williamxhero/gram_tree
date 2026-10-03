@@ -95,6 +95,11 @@ _VOLUME_SPOONS = {
     "茶匙": 5.0,
     "tsp": 5.0,
 }
+_SCALING_MODE_BY_ATTRIBUTE: dict[str, Literal["proportional", "unchanged", "round"]] = {
+    "线性": "proportional",
+    "固定": "unchanged",
+    "阶梯": "round",
+}
 _MAX_IMAGE_BYTES = 15 * 1024 * 1024
 _MAX_IMAGE_PIXELS = 40_000_000
 _SIGNED_URL_TTL = 900
@@ -147,6 +152,27 @@ def _ingredient_attributes(session: Session, ingredient_id: uuid.UUID) -> Ingred
     )
 
 
+def _effective_scaling_mode(
+    session: Session, ingredient: RecipeIngredient
+) -> Literal["proportional", "unchanged", "round"]:
+    """Resolve an omitted recipe mode from the standard ingredient attribute.
+
+    Pydantic keeps the public field default as ``proportional`` for backwards
+    compatible request/response schemas. ``model_fields_set`` is the only
+    reliable way to distinguish that default from an omitted request value
+    before the normalized snapshot is persisted.
+    """
+    if "scaling_mode" in ingredient.model_fields_set or ingredient.ingredient_id is None:
+        return ingredient.scaling_mode
+    try:
+        attributes = _ingredient_attributes(session, ingredient.ingredient_id)
+    except Exception:
+        return ingredient.scaling_mode
+    if attributes.scaling is None:
+        return ingredient.scaling_mode
+    return _SCALING_MODE_BY_ATTRIBUTE.get(attributes.scaling.value, ingredient.scaling_mode)
+
+
 def _base_quantity(session: Session, ingredient: RecipeIngredient) -> tuple[float, str]:
     """Convert a kitchen quantity to g/ml/count and reject unknown conversions."""
     unit = ingredient.unit.strip().casefold()
@@ -184,7 +210,13 @@ def _base_quantity(session: Session, ingredient: RecipeIngredient) -> tuple[floa
 
 def _normalize_ingredient(session: Session, ingredient: RecipeIngredient) -> RecipeIngredient:
     base_quantity, base_unit = _base_quantity(session, ingredient)
-    return ingredient.model_copy(update={"base_quantity": base_quantity, "base_unit": base_unit})
+    return ingredient.model_copy(
+        update={
+            "base_quantity": base_quantity,
+            "base_unit": base_unit,
+            "scaling_mode": _effective_scaling_mode(session, ingredient),
+        }
+    )
 
 
 def _validate_snapshot(session: Session, snapshot: RecipeSnapshot) -> RecipeSnapshot:

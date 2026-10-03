@@ -6,6 +6,8 @@
 /// persistence dependency.
 library;
 
+import 'decimal_rounding.dart';
+
 class ServingConversionError implements Exception {
   ServingConversionError(this.code, this.message, [this.detail]);
 
@@ -236,7 +238,7 @@ ServingConversionResult convertServings({
       case 'unchanged':
         display = item.quantity;
       case 'round':
-        display = theoretical.roundToDouble();
+        display = roundHalfUp(theoretical, fractionDigits: 0);
         if (display < 1) display = 1;
         if (theoretical != 0) {
           deviationRatio = (display - theoretical).abs() / theoretical.abs();
@@ -314,4 +316,5 @@ ServingConversionResult convertServings({
   );
 }
 
-double _roundTwoDecimals(double value) => (value * 100).round() / 100;
+double _roundTwoDecimals(double value) =>
+    roundHalfUp(value, fractionDigits: 2);

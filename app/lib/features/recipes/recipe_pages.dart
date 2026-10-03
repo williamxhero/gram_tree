@@ -1988,6 +1988,9 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
                 moldConverted: _scaleMode == _RecipeScaleMode.mold
                     ? convertedMoldById[ingredient.id]
                     : null,
+                conversionTargetChanged: _scaleMode == _RecipeScaleMode.servings
+                    ? targetServings != snapshot.servings
+                    : snapshot.baseMold != _targetMold,
                 displayed: displayedById[ingredient.id],
                 contract: contractById[ingredient.id],
               ),
@@ -2096,6 +2099,8 @@ class _MoldControl extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
+    final colors = GramTreeColors.of(context);
+    final warningColor = Theme.of(context).colorScheme.onSurfaceVariant;
     final changed = conversion.areaRatio != 1;
     final round = target.shape == MoldSpecShapeEnum.round;
     final square = target.shape == MoldSpecShapeEnum.square;
@@ -2125,6 +2130,9 @@ class _MoldControl extends StatelessWidget {
                 conversion.areaRatio.toStringAsFixed(2),
               ),
               key: const ValueKey('recipe-mold-ratio'),
+              style: colors.numberStyle(
+                Theme.of(context).textTheme.bodyMedium ?? const TextStyle(),
+              ),
             ),
             const SizedBox(height: 8),
             DropdownButtonFormField<MoldSpecShapeEnum>(
@@ -2251,7 +2259,7 @@ class _MoldControl extends StatelessWidget {
                     Icon(
                       Icons.warning_amber_outlined,
                       size: 18,
-                      color: Theme.of(context).colorScheme.error,
+                      color: warningColor,
                     ),
                     const SizedBox(width: 6),
                     Expanded(
@@ -2266,7 +2274,7 @@ class _MoldControl extends StatelessWidget {
                           'recipe-mold-warning-${warning.ingredientId}',
                         ),
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: Theme.of(context).colorScheme.error,
+                          color: warningColor,
                         ),
                       ),
                     ),
@@ -2342,6 +2350,7 @@ class _ServingControl extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final colors = GramTreeColors.of(context);
+    final warningColor = Theme.of(context).colorScheme.onSurfaceVariant;
     final changed = conversion.targetServings != conversion.originalServings;
     return ComponentCard(
       key: const ValueKey('recipe-serving-control'),
@@ -2414,7 +2423,7 @@ class _ServingControl extends StatelessWidget {
                     Icon(
                       Icons.warning_amber_outlined,
                       size: 18,
-                      color: Theme.of(context).colorScheme.error,
+                      color: warningColor,
                     ),
                     const SizedBox(width: 6),
                     Expanded(
@@ -2429,7 +2438,7 @@ class _ServingControl extends StatelessWidget {
                           'recipe-serving-warning-${warning.ingredientId}',
                         ),
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: Theme.of(context).colorScheme.error,
+                          color: warningColor,
                         ),
                       ),
                     ),
@@ -2500,6 +2509,7 @@ class _DisplayModeControl extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
+    final colors = GramTreeColors.of(context);
     return ComponentCard(
       key: const ValueKey('recipe-measure-mode'),
       detail: ComponentDescriptorDetailEnum.standard,
@@ -2550,6 +2560,10 @@ class _DisplayModeControl extends StatelessWidget {
                       value: measure.id,
                       child: Text(
                         '${measure.name} · ${l10n.personalMeasuresCapacityValue(measure.capacityMl.toString())}',
+                        style: colors.numberStyle(
+                          Theme.of(context).textTheme.bodyMedium ??
+                              const TextStyle(),
+                        ),
                       ),
                     ),
                 ],
@@ -2573,12 +2587,14 @@ class _IngredientDetailRow extends StatelessWidget {
     required this.ingredient,
     this.converted,
     this.moldConverted,
+    required this.conversionTargetChanged,
     this.displayed,
     this.contract,
   });
   final RecipeIngredient ingredient;
   final ConvertedServingIngredient? converted;
   final ConvertedMoldIngredient? moldConverted;
+  final bool conversionTargetChanged;
   final DisplayedAmount? displayed;
   final RecipeDisplayedIngredient? contract;
 
@@ -2599,17 +2615,20 @@ class _IngredientDetailRow extends StatelessWidget {
     final servingQuantity = adjusted && convertedUnit != null
         ? '${_quantityText(convertedQuantity)} $convertedUnit'
         : '${_quantityText(ingredient.quantity)} ${ingredient.unit}';
-    final quantity = displayed?.text ?? servingQuantity;
+    final quantity = displayed == null
+        ? servingQuantity
+        : localizedDisplayedAmount(displayed!, l10n);
     final noDensity = displayed?.rule == 'no_density';
     final systemDisplayChanged =
         displayed != null && displayed!.rule != 'base' && !noDensity;
     final displayChanged = systemDisplayChanged || noDensity;
     final conversionRule = contract?.conversionRule.value;
+    final actualConversionChanged = adjusted;
     final conversionPresent =
-        converted != null ||
-        moldConverted != null ||
-        (conversionRule != null && conversionRule != 'base');
-    final systemChanged = conversionPresent || systemDisplayChanged;
+        conversionTargetChanged ||
+        actualConversionChanged ||
+        systemDisplayChanged;
+    final systemChanged = conversionPresent;
     final valueChanged = adjusted || systemDisplayChanged;
     final originalQuantity =
         '${_quantityText(ingredient.quantity)} ${ingredient.unit}';
@@ -2686,6 +2705,7 @@ class _IngredientDetailRow extends StatelessWidget {
           if (_replacementLabel(ingredient.replacement).isNotEmpty)
             '${l10n.recipeReplacement}：${_replacementLabel(ingredient.replacement)}',
         ].join(' · '),
+        key: ValueKey('recipe-ingredient-amount-${ingredient.id}'),
         style: GramTreeColors.of(context).numberStyle(
           (Theme.of(context).textTheme.bodyMedium ?? const TextStyle())
               .copyWith(
@@ -2741,6 +2761,7 @@ class _StepDetailTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final warningColor = Theme.of(context).colorScheme.onSurfaceVariant;
     final references = (step.ingredientIds ?? const [])
         .map((id) => ingredientNames[id])
         .whereType<String>()
@@ -2780,8 +2801,8 @@ class _StepDetailTile extends StatelessWidget {
             margin: const EdgeInsets.fromLTRB(8, 4, 8, 8),
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.error
-                  .withValues(alpha: 0.12),
+              color: Theme.of(context).colorScheme.surfaceContainerHighest
+                  .withValues(alpha: 0.6),
               borderRadius: BorderRadius.circular(10),
             ),
             child: Row(
@@ -2789,7 +2810,7 @@ class _StepDetailTile extends StatelessWidget {
                 Icon(
                   Icons.info_outline,
                   size: 18,
-                  color: Theme.of(context).colorScheme.error,
+                  color: warningColor,
                 ),
                 const SizedBox(width: 8),
                 Expanded(child: Text(l10n.recipeBatchWarning)),
@@ -2801,21 +2822,22 @@ class _StepDetailTile extends StatelessWidget {
             key: ValueKey('recipe-step-doneness-warning-${step.id}'),
             margin: const EdgeInsets.fromLTRB(8, 4, 8, 8),
             padding: const EdgeInsets.all(10),
-            color: Theme.of(context).colorScheme.error.withValues(alpha: 0.12),
+            color: Theme.of(context).colorScheme.surfaceContainerHighest
+                .withValues(alpha: 0.6),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Icon(
                   Icons.warning_amber_outlined,
                   size: 18,
-                  color: Theme.of(context).colorScheme.error,
+                  color: warningColor,
                 ),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
                     '${l10n.recipeMoldTimeAdvisory} ${l10n.recipeMoldDonenessWarning}',
                     style: TextStyle(
-                      color: Theme.of(context).colorScheme.error,
+                      color: warningColor,
                     ),
                   ),
                 ),
@@ -3162,12 +3184,24 @@ DisplayedAmount? _displayedAmount(
   required PersonalMeasureOut? measure,
 }) {
   if (contract != null) {
+    final contractBaseUnit =
+        ingredient.baseUnit?.value ?? _displayBaseUnit(ingredient.unit);
+    var contractBaseQuantity =
+        ingredient.baseQuantity?.toDouble() ?? ingredient.quantity.toDouble();
+    final contractQuantity = contract.convertedQuantity?.toDouble();
+    if (contractBaseUnit != 'count' &&
+        contractQuantity != null &&
+        ingredient.quantity != 0) {
+      contractBaseQuantity *= contractQuantity / ingredient.quantity;
+    }
     return DisplayedAmount(
       text: contract.text,
       displayQuantity: contract.displayQuantity.toDouble(),
       displayUnit: contract.displayUnit,
       grams: contract.grams?.toDouble(),
       rule: contract.rule.value,
+      baseQuantity: contractBaseQuantity,
+      baseUnit: contractBaseUnit,
     );
   }
   final baseUnit =

@@ -5,12 +5,19 @@ from pathlib import Path
 
 import pytest
 
+from gramtree.cli import main as cli
 from tests.accounts_support import Api, bearer
 from tests.test_conventions import assert_error_shape
 from tests.test_recipes import recipe_input
 
 FIXTURE_PATH = Path(__file__).parents[2] / "app" / "assets" / "serving_conversion_cases.json"
 CASES = json.loads(FIXTURE_PATH.read_text(encoding="utf-8"))
+ROUNDING_CASES = json.loads(
+    (Path(__file__).parents[2] / "app" / "assets" / "rounding_boundary_cases.json").read_text(
+        encoding="utf-8"
+    )
+)
+SEED_PATH = Path(__file__).parents[1] / "data" / "ingredients"
 
 
 def _recipe_body(case: dict) -> dict:
@@ -101,3 +108,85 @@ def test_serving_conversion_keeps_private_recipe_scope(api: Api) -> None:
         headers=other_headers,
     )
     assert_error_shape(response, 404, "not_found")
+
+
+@pytest.mark.parametrize(
+    "case",
+    [case for case in ROUNDING_CASES if case["kind"] == "serving"],
+    ids=[case["name"] for case in ROUNDING_CASES if case["kind"] == "serving"],
+)
+def test_serving_conversion_matches_decimal_half_up_boundary(api: Api, case: dict) -> None:
+    headers = bearer(api.login(f"serving-rounding-{case['name']}@example.com"))
+    body = recipe_input(f"边界-{case['name']}")
+    body["snapshot"].update(
+        {
+            "servings": case["input"]["original_servings"],
+            "ingredients": case["input"]["ingredients"],
+            "steps": case["input"]["steps"],
+        }
+    )
+    created = api.client.post("/v1/recipes", json=body, headers=headers)
+    assert created.status_code == 201, created.text
+    saved = created.json()
+    response = api.client.get(
+        f"/v1/recipes/{saved['id']}/servings",
+        params={"target_servings": case["input"]["target_servings"]},
+        headers=headers,
+    )
+    assert response.status_code == 200, response.text
+    actual = response.json()["conversion"]["ingredients"][0]["display_quantity"]
+    assert actual == case["expected"]["display_quantity"]
+
+
+def test_omitted_scaling_mode_uses_ingredient_default_but_explicit_mode_wins(api: Api) -> None:
+    assert cli(["ingredients", "import", str(SEED_PATH)]) == 0
+    ingredient_id = "b097f5a9-0641-4f00-9666-dad68756638c"
+    headers = bearer(api.login("scaling-default@example.com"))
+
+    omitted = recipe_input("默认阶梯")
+    omitted["snapshot"]["ingredients"] = [
+        {
+            "id": "egg",
+            "ingredient_id": ingredient_id,
+            "display_name": "鸡蛋",
+            "quantity": 3,
+            "unit": "个",
+        }
+    ]
+    omitted["snapshot"]["steps"] = []
+    created = api.client.post("/v1/recipes", json=omitted, headers=headers)
+    assert created.status_code == 201, created.text
+    saved = created.json()
+    saved_ingredient = saved["version"]["snapshot"]["ingredients"][0]
+    assert saved_ingredient["scaling_mode"] == "round"
+    conversion = api.client.get(
+        f"/v1/recipes/{saved['id']}/servings",
+        params={"target_servings": 1},
+        headers=headers,
+    )
+    assert conversion.status_code == 200, conversion.text
+    assert conversion.json()["conversion"]["ingredients"][0]["display_quantity"] == 2
+
+    explicit = recipe_input("显式线性")
+    explicit["snapshot"]["ingredients"] = [
+        {
+            "id": "egg",
+            "ingredient_id": ingredient_id,
+            "display_name": "鸡蛋",
+            "quantity": 3,
+            "unit": "个",
+            "scaling_mode": "proportional",
+        }
+    ]
+    explicit["snapshot"]["steps"] = []
+    explicit_created = api.client.post("/v1/recipes", json=explicit, headers=headers)
+    assert explicit_created.status_code == 201, explicit_created.text
+    explicit_saved = explicit_created.json()
+    assert explicit_saved["version"]["snapshot"]["ingredients"][0]["scaling_mode"] == "proportional"
+    explicit_conversion = api.client.get(
+        f"/v1/recipes/{explicit_saved['id']}/servings",
+        params={"target_servings": 1},
+        headers=headers,
+    )
+    assert explicit_conversion.status_code == 200, explicit_conversion.text
+    assert explicit_conversion.json()["conversion"]["ingredients"][0]["display_quantity"] == 1.5

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gramtree_api/gramtree_api.dart';
 
 import '../../api/api_client.dart';
+import '../../app/theme.dart';
 import '../../l10n/app_localizations.dart';
 import '../../recipes/personal_measure_repository.dart';
 import '../../ui_protocol/components/component_scaffold.dart';
@@ -15,6 +16,7 @@ class PersonalMeasuresPage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context);
+    final colors = GramTreeColors.of(context);
     final measures = ref.watch(personalMeasuresProvider);
     return Scaffold(
       appBar: AppBar(title: Text(l10n.personalMeasuresTitle)),
@@ -68,6 +70,10 @@ class PersonalMeasuresPage extends ConsumerWidget {
                     Expanded(
                       child: Text(
                         '${_kindLabel(item.kind.value, l10n)} · ${l10n.personalMeasuresCapacityValue(item.capacityMl.toString())}',
+                        style: colors.numberStyle(
+                          Theme.of(context).textTheme.bodyMedium ??
+                              const TextStyle(),
+                        ),
                       ),
                     ),
                     IconButton(
