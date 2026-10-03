@@ -1760,7 +1760,11 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
     MoldConversionResult? moldConversion;
     if (snapshot.baseMold != null && _targetMold != null) {
       try {
-        moldConversion = _recipeMoldConversion(snapshot, _targetMold!);
+        moldConversion = _recipeMoldConversion(
+          snapshot,
+          _targetMold!,
+          config: conversionConfig,
+        );
       } on MoldConversionError {
         // Keep the detail page usable while an incomplete/custom mold is being
         // corrected in the target-mold controls.
@@ -2258,6 +2262,9 @@ class _MoldControl extends StatelessWidget {
                                     l10n.recipeIngredients,
                               )
                             : l10n.recipeMoldTimeAdvisory,
+                        key: ValueKey(
+                          'recipe-mold-warning-${warning.ingredientId}',
+                        ),
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
                           color: Theme.of(context).colorScheme.error,
                         ),
@@ -2504,6 +2511,7 @@ class _DisplayModeControl extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             SegmentedButton<MeasureDisplayMode>(
+              key: const ValueKey('recipe-display-mode-selector'),
               showSelectedIcon: false,
               segments: [
                 ButtonSegment(
@@ -3272,8 +3280,9 @@ ServingConversionResult _recipeServingConversion(
 
 MoldConversionResult _recipeMoldConversion(
   RecipeSnapshot snapshot,
-  MoldSpec target,
-) => convertMold(
+  MoldSpec target, {
+  required RecipeConversionConfig config,
+}) => convertMold(
   originalMold: snapshot.baseMold!,
   targetMold: target,
   ingredients: [
@@ -3298,6 +3307,7 @@ MoldConversionResult _recipeMoldConversion(
         cookware: item.cookware,
       ),
   ],
+  roundDeviationThreshold: config.roundDeviationThreshold,
 );
 
 String _replacementLabel(Object? value) {

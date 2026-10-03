@@ -163,6 +163,7 @@ class SourceMark extends ConsumerWidget {
       context: context,
       showDragHandle: true,
       builder: (sheetContext) => WhyPanel(
+        key: const ValueKey('why-panel'),
         sourceType: sourceType,
         value: value,
         originalValue: originalValue,
