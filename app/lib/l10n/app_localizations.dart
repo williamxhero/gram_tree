@@ -2123,18 +2123,33 @@ abstract class AppLocalizations {
   /// **'没有密度数据，保留克数'**
   String get recipeMeasureNoDensity;
 
+  /// No description provided for @recipeMeasureGram.
+  ///
+  /// In zh, this message translates to:
   /// **'克'**
   String get recipeMeasureGram;
 
+  /// No description provided for @recipeMeasureMillilitre.
+  ///
+  /// In zh, this message translates to:
   /// **'毫升'**
   String get recipeMeasureMillilitre;
 
+  /// No description provided for @recipeMeasureTablespoon.
+  ///
+  /// In zh, this message translates to:
   /// **'汤匙'**
   String get recipeMeasureTablespoon;
 
+  /// No description provided for @recipeMeasureTeaspoon.
+  ///
+  /// In zh, this message translates to:
   /// **'茶匙'**
   String get recipeMeasureTeaspoon;
 
+  /// No description provided for @recipeMeasureApproximate.
+  ///
+  /// In zh, this message translates to:
   /// **'约'**
   String get recipeMeasureApproximate;
 }
