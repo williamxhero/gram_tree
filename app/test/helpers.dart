@@ -620,6 +620,7 @@ Future<TestEnv> pumpApp(
   double textScale = 1.0,
   Size size = const Size(360, 780),
   Map<String, bool> features = const {},
+  bool settle = true,
 }) async {
   final e = env ?? TestEnv.signedIn(features: features);
   await _setView(
@@ -631,7 +632,13 @@ Future<TestEnv> pumpApp(
   await tester.pumpWidget(
     ProviderScope(overrides: e.overrides, child: const GramTreeApp()),
   );
-  await tester.pumpAndSettle();
+  if (settle) {
+    await tester.pumpAndSettle();
+  } else {
+    for (var i = 0; i < 10; i++) {
+      await tester.pump(const Duration(milliseconds: 200));
+    }
+  }
   return e;
 }
 

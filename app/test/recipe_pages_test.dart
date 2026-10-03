@@ -282,6 +282,12 @@ Future<List<Map<String, dynamic>>> _loadFixture(String asset) async {
   return [for (final item in decoded) Map<String, dynamic>.from(item as Map)];
 }
 
+Future<void> _fixtureSettle(WidgetTester tester) async {
+  for (var i = 0; i < 10; i++) {
+    await tester.pump(const Duration(milliseconds: 200));
+  }
+}
+
 Future<void> _setTargetMoldFromFixture(
   WidgetTester tester,
   Map<String, dynamic> target,
@@ -296,9 +302,9 @@ Future<void> _setTargetMoldFromFixture(
   final shapeField = find.byKey(const ValueKey('target-mold-shape'));
   await tester.ensureVisible(shapeField);
   await tester.tap(shapeField);
-  await tester.pumpAndSettle();
+  await _fixtureSettle(tester);
   await tester.tap(find.text(shapeLabel).last);
-  await tester.pumpAndSettle();
+  await _fixtureSettle(tester);
   if (shape == 'round') {
     await tester.enterText(
       find.byKey(const ValueKey('target-mold-diameter')),
@@ -319,7 +325,7 @@ Future<void> _setTargetMoldFromFixture(
       '${target['length']}',
     );
   }
-  await tester.pumpAndSettle();
+  await _fixtureSettle(tester);
 }
 
 String _fixtureQuantityText(num value) {
@@ -346,17 +352,25 @@ void _expectFixtureDisplayOutput(
 
 Future<void> _resetPage(WidgetTester tester) async {
   await tester.pumpWidget(const SizedBox());
-  await tester.pumpAndSettle();
+  await _fixtureSettle(tester);
 }
 
 Future<void> _openRecipeDetailForFixture(
   WidgetTester tester,
   FakeServer server,
 ) async {
-  await pumpApp(tester, env: TestEnv.signedIn(server: server));
-  await _openMyRecipes(tester);
+  await pumpApp(
+    tester,
+    env: TestEnv.signedIn(server: server),
+    settle: false,
+  );
+  await _fixtureSettle(tester);
+  await tester.tap(find.byKey(const ValueKey('primary-create-button')));
+  await _fixtureSettle(tester);
+  await tester.tap(find.byKey(const ValueKey('my-recipes-entry')));
+  await _fixtureSettle(tester);
   await tester.tap(find.byKey(const ValueKey('recipe-card-$_recipeId')));
-  await tester.pumpAndSettle();
+  await _fixtureSettle(tester);
 }
 
 Future<void> _openNewEditor(WidgetTester tester) async {
@@ -414,6 +428,22 @@ Future<void> _scrollToTop(WidgetTester tester) async {
   for (var i = 0; i < 3; i++) {
     await tester.drag(list, const Offset(0, 3000));
     await tester.pumpAndSettle();
+  }
+}
+
+Future<void> _fixtureScrollToBottom(WidgetTester tester) async {
+  final list = find.byType(ListView).last;
+  for (var i = 0; i < 3; i++) {
+    await tester.drag(list, const Offset(0, -3000));
+    await _fixtureSettle(tester);
+  }
+}
+
+Future<void> _fixtureScrollToTop(WidgetTester tester) async {
+  final list = find.byType(ListView).last;
+  for (var i = 0; i < 3; i++) {
+    await tester.drag(list, const Offset(0, 3000));
+    await _fixtureSettle(tester);
   }
 }
 
@@ -1634,13 +1664,13 @@ void main() {
           : find.byKey(const ValueKey('recipe-serving-decrease'));
       for (var i = 0; i < (target - original).abs(); i++) {
         await tester.tap(step);
-        await tester.pumpAndSettle();
+        await _fixtureSettle(tester);
       }
       expect(
         find.byKey(const ValueKey('recipe-serving-value')),
         findsOneWidget,
       );
-      await _scrollToTop(tester);
+      await _fixtureScrollToTop(tester);
       await _scrollUntilVisible(
         tester,
         find.byKey(const ValueKey('recipe-serving-control')),
@@ -1654,7 +1684,7 @@ void main() {
           findsWidgets,
         );
       }
-      await _scrollToBottom(tester);
+      await _fixtureScrollToBottom(tester);
       for (final raw in (expected['ingredients'] as List)) {
         final item = Map<String, dynamic>.from(raw as Map);
         expect(
@@ -1680,7 +1710,7 @@ void main() {
         final tile = find.byKey(ValueKey('recipe-step-$index'));
         await _scrollUntilVisible(tester, tile);
         await tester.tap(tile);
-        await tester.pumpAndSettle();
+        await _fixtureSettle(tester);
         expect(
           find.byKey(
             ValueKey('recipe-step-batch-warning-${expectedStep['id']}'),
@@ -1689,9 +1719,9 @@ void main() {
         );
       }
       if (target != original) {
-        await _scrollToTop(tester);
+        await _fixtureScrollToTop(tester);
         await tester.tap(find.byKey(const ValueKey('recipe-serving-reset')));
-        await tester.pumpAndSettle();
+        await _fixtureSettle(tester);
         expect(find.text('$original'), findsWidgets);
       }
       await _resetPage(tester);
@@ -1718,14 +1748,14 @@ void main() {
         find.byKey(const ValueKey('recipe-mode-mold')),
       );
       await tester.tap(find.byKey(const ValueKey('recipe-mode-mold')));
-      await tester.pumpAndSettle();
+      await _fixtureSettle(tester);
       await _setTargetMoldFromFixture(
         tester,
         Map<String, dynamic>.from(input['target_mold'] as Map),
       );
       expect(find.byKey(const ValueKey('recipe-mold-control')), findsOneWidget);
       expect(find.byKey(const ValueKey('recipe-mold-ratio')), findsOneWidget);
-      await _scrollToBottom(tester);
+      await _fixtureScrollToBottom(tester);
       final expectedStep = expected['step'];
       if (expectedStep != null) {
         final sourceSteps = [
@@ -1738,7 +1768,7 @@ void main() {
           final tile = find.byKey(ValueKey('recipe-step-$index'));
           await _scrollUntilVisible(tester, tile);
           await tester.tap(tile);
-          await tester.pumpAndSettle();
+          await _fixtureSettle(tester);
           expect(
             find.byKey(const ValueKey('recipe-step-doneness-warning-bake')),
             findsOneWidget,
@@ -1830,12 +1860,12 @@ void main() {
           _ => '自家量具',
         };
         await tester.tap(find.text(label));
-        await tester.pumpAndSettle();
+        await _fixtureSettle(tester);
         expect(
           find.byKey(const ValueKey('recipe-display-mode-selector')),
           findsOneWidget,
         );
-        await _scrollToBottom(tester);
+        await _fixtureScrollToBottom(tester);
         _expectFixtureDisplayOutput(tester, input, expected);
         await _resetPage(tester);
       }
