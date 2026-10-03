@@ -423,9 +423,11 @@ Future<void> _expectFixtureDisplayOutput(
   expect(
     actual.data,
     contains(
-      input['mode'] == 'base'
-          ? _fixtureUnitText(input['base_unit'] as String)
-          : expected['display_unit'] as String,
+      _fixtureUnitText(
+        input['mode'] == 'base'
+            ? input['base_unit'] as String
+            : expected['display_unit'] as String,
+      ),
     ),
   );
   final source = find.byKey(
@@ -458,10 +460,10 @@ Future<void> _expectFixtureStep(
   final expansion = tester.widget<ExpansionTile>(tile);
   final title = expansion.title;
   expect(title, isA<Text>());
-  expect((title! as Text).data, '${index + 1}. ${expected['instruction']}');
+  expect((title as Text).data, '${index + 1}. ${expected['instruction']}');
   final subtitle = expansion.subtitle;
   expect(subtitle, isA<Text>());
-  final subtitleText = (subtitle! as Text).data ?? '';
+  final subtitleText = (subtitle as Text).data ?? '';
   expect(subtitleText, contains('${expected['duration_seconds']} 秒'));
   final temperature = expected['temperature_celsius'];
   if (temperature != null) {
