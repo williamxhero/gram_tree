@@ -1,12 +1,12 @@
 import 'dart:convert';
 
-import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gramtree_api/gramtree_api.dart';
 
 import 'package:gram_tree/storage/local_store.dart';
+import 'package:gram_tree/ui_protocol/source_mark.dart';
 
 import 'helpers.dart';
 
@@ -284,8 +284,11 @@ Future<List<Map<String, dynamic>>> _loadFixture(String asset) async {
 }
 
 Future<void> _fixtureSettle(WidgetTester tester) async {
-  for (var i = 0; i < 10; i++) {
-    await tester.pump(const Duration(milliseconds: 200));
+  // Never use pumpAndSettle here: the app has long-lived timers and the web
+  // test binding can otherwise wait forever. A short, fixed pump budget is
+  // enough for FakeServer responses and the resulting frame updates.
+  for (var i = 0; i < 5; i++) {
+    await tester.pump(const Duration(milliseconds: 50));
   }
 }
 
@@ -318,13 +321,16 @@ Future<void> _setTargetMoldFromFixture(
     );
   } else {
     await tester.enterText(
-      find.byKey(const ValueKey('target-mold-width')),
-      '${target['width']}',
-    );
-    await tester.enterText(
       find.byKey(const ValueKey('target-mold-length')),
       '${target['length']}',
     );
+    await _fixtureSettle(tester);
+    final width = find.byKey(const ValueKey('target-mold-width'));
+    await tester.ensureVisible(width);
+    await tester.tap(width);
+    await tester.enterText(width, '${target['width']}');
+    tester.widget<TextFormField>(width).onChanged!('${target['width']}');
+    await _fixtureSettle(tester);
   }
   await _fixtureSettle(tester);
 }
@@ -336,21 +342,158 @@ String _fixtureQuantityText(num value) {
       : number.toString();
 }
 
-void _expectFixtureDisplayOutput(
+String _fixtureUnitText(String unit) => switch (unit) {
+  'g' => '克',
+  'ml' => '毫升',
+  _ => unit,
+};
+
+String _fixtureRuleText(String rule) => switch (rule) {
+  'proportional' => '按比例换算',
+  'unchanged' => '保持原值不变',
+  'round' => '按个取整',
+  'mold_ratio' => '模具比例',
+  _ => rule,
+};
+
+String _fixtureDisplayBasis(String rule) => switch (rule) {
+  'standard_measure' => '按比例换算；常用量具换算；菜谱基础值未改变',
+  'personal_measure' => '按比例换算；个人量具只改变显示，菜谱基础值未改变',
+  'no_density' => '没有密度数据，保留克数',
+  _ => rule,
+};
+
+Future<void> _expectFixtureIngredient(
+  WidgetTester tester,
+  Map<String, dynamic> expected, {
+  required bool expectConversionSource,
+}) async {
+  final id = expected['id'] as String;
+  final amount = find.byKey(ValueKey('recipe-ingredient-amount-$id'));
+  await _scrollUntilVisible(tester, amount);
+  final actual = tester.widget<Text>(amount);
+  final expectedText =
+      '${_fixtureQuantityText(expected['display_quantity'] as num)} '
+      '${_fixtureUnitText(expected['unit'] as String)}';
+  expect(actual.data, expectedText, reason: 'ingredient=$id');
+
+  final source = find.byKey(ValueKey('recipe-source-mark-$id'));
+  if (!expectConversionSource) {
+    expect(source, findsNothing, reason: 'ingredient=$id should be unchanged');
+    return;
+  }
+  expect(source, findsOneWidget, reason: 'ingredient=$id source mark');
+  final mark = tester.widget<SourceMark>(source);
+  expect(mark.value, expectedText, reason: 'ingredient=$id source value');
+  expect(
+    mark.originalValue,
+    '${_fixtureQuantityText(expected['original_quantity'] as num)} '
+    '${expected['unit'] as String}',
+    reason: 'ingredient=$id source original value',
+  );
+  expect(
+    mark.basisText,
+    _fixtureRuleText(expected['rule'] as String),
+    reason: 'ingredient=$id conversion rule',
+  );
+}
+
+Future<void> _expectFixtureDisplayOutput(
   WidgetTester tester,
   Map<String, dynamic> input,
   Map<String, dynamic> expected,
-) {
+) async {
   expect(find.byKey(const ValueKey('recipe-measure-mode')), findsOneWidget);
   final amount = find.byKey(
     const ValueKey('recipe-ingredient-amount-display-ingredient'),
   );
-  expect(amount, findsOneWidget);
+  await _scrollUntilVisible(tester, amount);
+  // The fixture's Chinese unit words are already the app's locale. Only
+  // normalize canonical g/ml tokens if a fixture adds one; never normalize
+  // quantities, fractions, or measure names.
+  final expectedText = (expected['text'] as String)
+      .replaceAll(' g', ' 克')
+      .replaceAll(' ml', ' 毫升');
+  for (var i = 0; i < 40; i++) {
+    if (tester.widget<Text>(amount).data == expectedText) break;
+    await tester.pump(const Duration(milliseconds: 50));
+  }
   final actual = tester.widget<Text>(amount);
-  expect(actual.data, isNotEmpty);
+  expect(actual.data, expectedText);
+  expect(
+    actual.data,
+    contains(
+      input['mode'] == 'base'
+          ? _fixtureUnitText(input['base_unit'] as String)
+          : expected['display_unit'] as String,
+    ),
+  );
+  final source = find.byKey(
+    const ValueKey('recipe-source-mark-display-ingredient'),
+  );
+  final rule = expected['rule'] as String;
+  if (rule == 'base') {
+    expect(source, findsNothing);
+  } else {
+    expect(source, findsOneWidget);
+    final mark = tester.widget<SourceMark>(source);
+    expect(mark.value, expectedText);
+    expect(mark.basisText, _fixtureDisplayBasis(rule));
+  }
   if (input['mode'] == 'home') {
     final measure = Map<String, dynamic>.from(input['measure'] as Map);
     expect(find.textContaining(measure['name'] as String), findsWidgets);
+  }
+}
+
+Future<void> _expectFixtureStep(
+  WidgetTester tester, {
+  required int index,
+  required Map<String, dynamic> source,
+  required Map<String, dynamic> expected,
+  required bool mold,
+}) async {
+  final tile = find.byKey(ValueKey('recipe-step-$index'));
+  await _scrollUntilVisible(tester, tile);
+  final expansion = tester.widget<ExpansionTile>(tile);
+  final title = expansion.title;
+  expect(title, isA<Text>());
+  expect((title! as Text).data, '${index + 1}. ${expected['instruction']}');
+  final subtitle = expansion.subtitle;
+  expect(subtitle, isA<Text>());
+  final subtitleText = (subtitle! as Text).data ?? '';
+  expect(subtitleText, contains('${expected['duration_seconds']} 秒'));
+  final temperature = expected['temperature_celsius'];
+  if (temperature != null) {
+    expect(subtitleText, contains('$temperature'));
+  }
+  final heat = expected['heat'];
+  if (heat != null) expect(subtitleText, contains(heat as String));
+
+  final warning = find.byKey(
+    ValueKey(
+      mold
+          ? 'recipe-step-doneness-warning-${source['id']}'
+          : 'recipe-step-batch-warning-${source['id']}',
+    ),
+  );
+  final warningExpected = mold
+      ? expected['doneness_warning'] == true
+      : expected['batch_warning'] == true;
+  if (!warningExpected) {
+    expect(warning, findsNothing, reason: 'step=${source['id']} warning');
+    return;
+  }
+  await tester.tap(tile);
+  await _fixtureSettle(tester);
+  expect(warning, findsOneWidget, reason: 'step=${source['id']} warning');
+  if (!mold) {
+    expect(find.text(expected['batch_warning_text'] as String), findsOneWidget);
+  } else {
+    if (expected['has_time_advisory'] == true) {
+      expect(find.textContaining('时间不按模具比例放大'), findsOneWidget);
+    }
+    expect(find.textContaining('请以成熟判断为准'), findsOneWidget);
   }
 }
 
@@ -428,22 +571,6 @@ Future<void> _scrollToTop(WidgetTester tester) async {
   for (var i = 0; i < 3; i++) {
     await tester.drag(list, const Offset(0, 3000));
     await tester.pumpAndSettle();
-  }
-}
-
-Future<void> _fixtureScrollToBottom(WidgetTester tester) async {
-  final list = find.byType(ListView).last;
-  for (var i = 0; i < 3; i++) {
-    await tester.drag(list, const Offset(0, -3000));
-    await _fixtureSettle(tester);
-  }
-}
-
-Future<void> _fixtureScrollToTop(WidgetTester tester) async {
-  final list = find.byType(ListView).last;
-  for (var i = 0; i < 3; i++) {
-    await tester.drag(list, const Offset(0, 3000));
-    await _fixtureSettle(tester);
   }
 }
 
@@ -1643,9 +1770,6 @@ void main() {
   testWidgets('recipe detail executes every shared serving fixture case', (
     tester,
   ) async {
-    // Exhaustive fake-server fixture loops run in native/page tests; the web
-    // acceptance flow in integration_test covers the user-visible modes.
-    if (kIsWeb) return;
     final cases = await _loadFixture('assets/serving_conversion_cases.json');
     for (final caseData in cases) {
       final input = Map<String, dynamic>.from(caseData['input'] as Map);
@@ -1664,70 +1788,72 @@ void main() {
       );
       final original = input['original_servings'] as int;
       final target = input['target_servings'] as int;
-      final step = target >= original
+      final stepControl = target >= original
           ? find.byKey(const ValueKey('recipe-serving-increase'))
           : find.byKey(const ValueKey('recipe-serving-decrease'));
       for (var i = 0; i < (target - original).abs(); i++) {
-        await tester.tap(step);
+        await tester.tap(stepControl);
         await _fixtureSettle(tester);
       }
-      expect(
-        find.byKey(const ValueKey('recipe-serving-value')),
-        findsOneWidget,
-      );
-      await _fixtureScrollToTop(tester);
-      await _scrollUntilVisible(
-        tester,
-        find.byKey(const ValueKey('recipe-serving-control')),
-      );
-      for (final raw in (expected['warnings'] as List)) {
-        final item = Map<String, dynamic>.from(raw as Map);
-        expect(
-          find.byKey(
-            ValueKey('recipe-serving-warning-${item['ingredient_id']}'),
-          ),
-          findsWidgets,
-        );
-      }
-      await _fixtureScrollToBottom(tester);
-      for (final raw in (expected['ingredients'] as List)) {
-        final item = Map<String, dynamic>.from(raw as Map);
-        expect(
-          find.textContaining(
-            _fixtureQuantityText(item['display_quantity'] as num),
-          ),
-          findsWidgets,
-        );
-      }
-      final expectedSteps = [
-        for (final raw in (expected['steps'] as List))
+      final servingValue = find.byKey(const ValueKey('recipe-serving-value'));
+      expect(servingValue, findsOneWidget);
+      expect(tester.widget<Text>(servingValue).data, '$target');
+
+      final expectedWarnings = {
+        for (final raw in (expected['warnings'] as List))
+          (Map<String, dynamic>.from(raw as Map)['ingredient_id'] as String),
+      };
+      final expectedIngredients = [
+        for (final raw in (expected['ingredients'] as List))
           Map<String, dynamic>.from(raw as Map),
       ];
+      expect(
+        expectedIngredients,
+        hasLength((input['ingredients'] as List).length),
+      );
+      for (final raw in (input['ingredients'] as List)) {
+        final id = (raw as Map)['id'] as String;
+        final warning = find.byKey(ValueKey('recipe-serving-warning-$id'));
+        if (expectedWarnings.contains(id)) {
+          expect(warning, findsOneWidget, reason: 'ingredient=$id warning');
+        } else {
+          expect(warning, findsNothing, reason: 'ingredient=$id warning');
+        }
+      }
+      for (final ingredient in expectedIngredients) {
+        await _expectFixtureIngredient(
+          tester,
+          ingredient,
+          expectConversionSource: target != original,
+        );
+      }
+
       final sourceSteps = [
         for (final raw in (input['steps'] as List))
           Map<String, dynamic>.from(raw as Map),
       ];
-      for (final expectedStep in expectedSteps) {
-        if (expectedStep['batch_warning'] != true) continue;
-        final index = sourceSteps.indexWhere(
-          (step) => step['id'] == expectedStep['id'],
-        );
-        final tile = find.byKey(ValueKey('recipe-step-$index'));
-        await _scrollUntilVisible(tester, tile);
-        await tester.tap(tile);
-        await _fixtureSettle(tester);
-        expect(
-          find.byKey(
-            ValueKey('recipe-step-batch-warning-${expectedStep['id']}'),
-          ),
-          findsOneWidget,
+      final expectedSteps = [
+        for (final raw in (expected['steps'] as List))
+          Map<String, dynamic>.from(raw as Map),
+      ];
+      expect(expectedSteps, hasLength(sourceSteps.length));
+      for (var index = 0; index < expectedSteps.length; index++) {
+        expect(expectedSteps[index]['id'], sourceSteps[index]['id']);
+        await _expectFixtureStep(
+          tester,
+          index: index,
+          source: sourceSteps[index],
+          expected: expectedSteps[index],
+          mold: false,
         );
       }
+
       if (target != original) {
-        await _fixtureScrollToTop(tester);
-        await tester.tap(find.byKey(const ValueKey('recipe-serving-reset')));
+        final reset = find.byKey(const ValueKey('recipe-serving-reset'));
+        await _scrollUntilVisible(tester, reset, delta: const Offset(0, 500));
+        await tester.tap(reset);
         await _fixtureSettle(tester);
-        expect(find.text('$original'), findsWidgets);
+        expect(tester.widget<Text>(servingValue).data, '$original');
       }
       await _resetPage(tester);
     }
@@ -1736,9 +1862,6 @@ void main() {
   testWidgets('recipe detail executes every shared mold fixture case', (
     tester,
   ) async {
-    // Exhaustive fake-server fixture loops run in native/page tests; the web
-    // acceptance flow in integration_test covers the user-visible modes.
-    if (kIsWeb) return;
     final cases = await _loadFixture('assets/mold_conversion_cases.json');
     for (final caseData in cases) {
       final input = Map<String, dynamic>.from(caseData['input'] as Map);
@@ -1751,37 +1874,55 @@ void main() {
         'steps': input['steps'],
       });
       await _openRecipeDetailForFixture(tester, server);
-      await _scrollUntilVisible(
-        tester,
-        find.byKey(const ValueKey('recipe-mode-mold')),
-      );
-      await tester.tap(find.byKey(const ValueKey('recipe-mode-mold')));
+      final moldMode = find.byKey(const ValueKey('recipe-mode-mold'));
+      await _scrollUntilVisible(tester, moldMode);
+      await tester.tap(moldMode);
       await _fixtureSettle(tester);
       await _setTargetMoldFromFixture(
         tester,
         Map<String, dynamic>.from(input['target_mold'] as Map),
       );
       expect(find.byKey(const ValueKey('recipe-mold-control')), findsOneWidget);
-      expect(find.byKey(const ValueKey('recipe-mold-ratio')), findsOneWidget);
-      await _fixtureScrollToBottom(tester);
+      final ratio = find.byKey(const ValueKey('recipe-mold-ratio'));
+      expect(ratio, findsOneWidget);
+      expect(
+        tester.widget<Text>(ratio).data,
+        contains((expected['area_ratio'] as num).toDouble().toStringAsFixed(2)),
+      );
+
+      final expectedIngredients = [
+        for (final raw in (expected['ingredients'] as List))
+          Map<String, dynamic>.from(raw as Map),
+      ];
+      expect(
+        expectedIngredients,
+        hasLength((input['ingredients'] as List).length),
+      );
+      for (final ingredient in expectedIngredients) {
+        await _expectFixtureIngredient(
+          tester,
+          ingredient,
+          expectConversionSource: true,
+        );
+      }
+
+      final sourceSteps = [
+        for (final raw in (input['steps'] as List))
+          Map<String, dynamic>.from(raw as Map),
+      ];
       final expectedStep = expected['step'];
-      if (expectedStep != null) {
-        final sourceSteps = [
-          for (final raw in (input['steps'] as List))
-            Map<String, dynamic>.from(raw as Map),
-        ];
+      if (expectedStep == null) {
+        expect(sourceSteps, isEmpty);
+      } else {
         final step = Map<String, dynamic>.from(expectedStep as Map);
-        final index = sourceSteps.indexWhere((item) => item['id'] == 'bake');
-        if (step['doneness_warning'] == true) {
-          final tile = find.byKey(ValueKey('recipe-step-$index'));
-          await _scrollUntilVisible(tester, tile);
-          await tester.tap(tile);
-          await _fixtureSettle(tester);
-          expect(
-            find.byKey(const ValueKey('recipe-step-doneness-warning-bake')),
-            findsOneWidget,
-          );
-        }
+        expect(sourceSteps, hasLength(1));
+        await _expectFixtureStep(
+          tester,
+          index: 0,
+          source: sourceSteps.single,
+          expected: {...sourceSteps.single, ...step},
+          mold: true,
+        );
       }
       await _resetPage(tester);
     }
@@ -1790,9 +1931,6 @@ void main() {
   testWidgets(
     'recipe detail executes every shared measure display fixture case',
     (tester) async {
-      // Exhaustive fake-server fixture loops run in native/page tests; the web
-      // acceptance flow in integration_test covers the user-visible modes.
-      if (kIsWeb) return;
       final cases = await _loadFixture('assets/measure_display_cases.json');
       const densityId = '99999999-9999-4999-8999-999999999999';
       for (final caseData in cases) {
@@ -1821,6 +1959,7 @@ void main() {
           densityJson['id'] = densityId;
           densityJson['attributes'] = {
             'density': {
+              'estimate': false,
               'value': density,
               'source': 'display fixture',
               'status': 'verified',
@@ -1876,8 +2015,13 @@ void main() {
           find.byKey(const ValueKey('recipe-display-mode-selector')),
           findsOneWidget,
         );
-        await _fixtureScrollToBottom(tester);
-        _expectFixtureDisplayOutput(tester, input, expected);
+        if (mode == 'home') {
+          await _scrollUntilVisible(
+            tester,
+            find.byKey(const ValueKey('recipe-measure-picker')),
+          );
+        }
+        await _expectFixtureDisplayOutput(tester, input, expected);
         await _resetPage(tester);
       }
     },

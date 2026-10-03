@@ -635,8 +635,11 @@ Future<TestEnv> pumpApp(
   if (settle) {
     await tester.pumpAndSettle();
   } else {
-    for (var i = 0; i < 10; i++) {
-      await tester.pump(const Duration(milliseconds: 200));
+    // Keep the non-settling path bounded for browser page tests. The fake
+    // interceptor completes synchronously; a few short frames flush the route
+    // and provider updates without waiting on app-wide timers.
+    for (var i = 0; i < 5; i++) {
+      await tester.pump(const Duration(milliseconds: 50));
     }
   }
   return e;
