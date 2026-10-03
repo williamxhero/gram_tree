@@ -2212,22 +2212,27 @@ class _MoldControl extends StatelessWidget {
               Row(
                 children: [
                   Expanded(
-                    child: _number(
-                      key: const ValueKey('target-mold-width'),
-                      label: square
-                          ? l10n.recipeMoldTargetSide
-                          : l10n.recipeMoldTargetWidth,
-                      value: target.side ?? target.width ?? 0,
-                      onChanged: (value) {
-                        final parsed = double.tryParse(value);
-                        onTargetChanged(
-                          _targetMoldWith(
-                            target,
-                            side: square ? parsed : null,
-                            width: parsed,
-                          ),
-                        );
-                      },
+                    child: KeyedSubtree(
+                      // A square's side controller must not survive a switch
+                      // to a rectangle with a different default width.
+                      key: ValueKey('target-mold-width-${target.shape}'),
+                      child: _number(
+                        key: const ValueKey('target-mold-width'),
+                        label: square
+                            ? l10n.recipeMoldTargetSide
+                            : l10n.recipeMoldTargetWidth,
+                        value: target.side ?? target.width ?? 0,
+                        onChanged: (value) {
+                          final parsed = double.tryParse(value);
+                          onTargetChanged(
+                            _targetMoldWith(
+                              target,
+                              side: square ? parsed : null,
+                              width: parsed,
+                            ),
+                          );
+                        },
+                      ),
                     ),
                   ),
                   if (!square) ...[

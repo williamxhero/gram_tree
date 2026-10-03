@@ -278,8 +278,13 @@ void _replaceRecipeSnapshot(_RecipeApiState state, Map<String, dynamic> patch) {
     ..add(detail);
 }
 
-Future<List<Map<String, dynamic>>> _loadFixture(String asset) async {
-  final decoded = jsonDecode(await rootBundle.loadString(asset)) as List;
+Future<List<Map<String, dynamic>>> _loadFixture(
+  WidgetTester tester,
+  String asset,
+) async {
+  // Web assets arrive via real browser I/O, outside the widget fake clock.
+  final contents = await tester.runAsync(() => rootBundle.loadString(asset));
+  final decoded = jsonDecode(contents!) as List;
   return [for (final item in decoded) Map<String, dynamic>.from(item as Map)];
 }
 
@@ -329,7 +334,6 @@ Future<void> _setTargetMoldFromFixture(
     await tester.ensureVisible(width);
     await tester.tap(width);
     await tester.enterText(width, '${target['width']}');
-    tester.widget<TextFormField>(width).onChanged!('${target['width']}');
     await _fixtureSettle(tester);
   }
   await _fixtureSettle(tester);
@@ -1772,7 +1776,7 @@ void main() {
   testWidgets('recipe detail executes every shared serving fixture case', (
     tester,
   ) async {
-    final cases = await _loadFixture('assets/serving_conversion_cases.json');
+    final cases = await _loadFixture(tester, 'assets/serving_conversion_cases.json');
     for (final caseData in cases) {
       final input = Map<String, dynamic>.from(caseData['input'] as Map);
       final expected = Map<String, dynamic>.from(caseData['expected'] as Map);
@@ -1864,7 +1868,7 @@ void main() {
   testWidgets('recipe detail executes every shared mold fixture case', (
     tester,
   ) async {
-    final cases = await _loadFixture('assets/mold_conversion_cases.json');
+    final cases = await _loadFixture(tester, 'assets/mold_conversion_cases.json');
     for (final caseData in cases) {
       final input = Map<String, dynamic>.from(caseData['input'] as Map);
       final expected = Map<String, dynamic>.from(caseData['expected'] as Map);
@@ -1933,7 +1937,7 @@ void main() {
   testWidgets(
     'recipe detail executes every shared measure display fixture case',
     (tester) async {
-      final cases = await _loadFixture('assets/measure_display_cases.json');
+      final cases = await _loadFixture(tester, 'assets/measure_display_cases.json');
       const densityId = '99999999-9999-4999-8999-999999999999';
       for (final caseData in cases) {
         final input = Map<String, dynamic>.from(caseData['input'] as Map);
