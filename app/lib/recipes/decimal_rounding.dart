@@ -16,19 +16,13 @@ double roundHalfUp(double value, {int fractionDigits = 2}) {
     throw ArgumentError.value(value, 'value', '必须是有限数');
   }
   if (fractionDigits < 0) {
-    throw ArgumentError.value(
-      fractionDigits,
-      'fractionDigits',
-      '必须是非负整数',
-    );
+    throw ArgumentError.value(fractionDigits, 'fractionDigits', '必须是非负整数');
   }
 
   final text = value.abs().toString().toLowerCase();
   final exponentParts = text.split('e');
   final mantissa = exponentParts.first;
-  final exponent = exponentParts.length == 2
-      ? int.parse(exponentParts[1])
-      : 0;
+  final exponent = exponentParts.length == 2 ? int.parse(exponentParts[1]) : 0;
   final dot = mantissa.indexOf('.');
   final mantissaFractionDigits = dot == -1 ? 0 : mantissa.length - dot - 1;
   final digitsText = mantissa.replaceAll('.', '');

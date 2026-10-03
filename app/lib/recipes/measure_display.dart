@@ -136,10 +136,7 @@ DisplayedAmount _standard(DisplayMeasureInput input) {
   );
 }
 
-String localizedDisplayedAmount(
-  DisplayedAmount amount,
-  AppLocalizations l10n,
-) {
+String localizedDisplayedAmount(DisplayedAmount amount, AppLocalizations l10n) {
   final unit = switch (amount.displayUnit) {
     'g' => l10n.recipeMeasureGram,
     'ml' => l10n.recipeMeasureMillilitre,

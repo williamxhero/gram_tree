@@ -161,10 +161,10 @@ MoldConversionResult convertMold({
       case 'unchanged':
         display = item.quantity;
       case 'round':
-        display = roundHalfUp(theoretical, fractionDigits: 0).clamp(
-          1,
-          double.infinity,
-        );
+        display = roundHalfUp(
+          theoretical,
+          fractionDigits: 0,
+        ).clamp(1, double.infinity);
         rule = 'round';
         if (theoretical != 0) {
           deviationRatio = (display - theoretical).abs() / theoretical.abs();
@@ -272,5 +272,4 @@ double _positive(num? value, String field) {
   return value.toDouble();
 }
 
-double _roundTwoDecimals(double value) =>
-    roundHalfUp(value, fractionDigits: 2);
+double _roundTwoDecimals(double value) => roundHalfUp(value, fractionDigits: 2);

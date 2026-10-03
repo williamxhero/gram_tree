@@ -2273,9 +2273,8 @@ class _MoldControl extends StatelessWidget {
                         key: ValueKey(
                           'recipe-mold-warning-${warning.ingredientId}',
                         ),
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: warningColor,
-                        ),
+                        style: Theme.of(context).textTheme.bodySmall
+                            ?.copyWith(color: warningColor),
                       ),
                     ),
                   ],
@@ -2437,9 +2436,8 @@ class _ServingControl extends StatelessWidget {
                         key: ValueKey(
                           'recipe-serving-warning-${warning.ingredientId}',
                         ),
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: warningColor,
-                        ),
+                        style: Theme.of(context).textTheme.bodySmall
+                            ?.copyWith(color: warningColor),
                       ),
                     ),
                   ],
@@ -2807,11 +2805,7 @@ class _StepDetailTile extends StatelessWidget {
             ),
             child: Row(
               children: [
-                Icon(
-                  Icons.info_outline,
-                  size: 18,
-                  color: warningColor,
-                ),
+                Icon(Icons.info_outline, size: 18, color: warningColor),
                 const SizedBox(width: 8),
                 Expanded(child: Text(l10n.recipeBatchWarning)),
               ],
@@ -2836,9 +2830,7 @@ class _StepDetailTile extends StatelessWidget {
                 Expanded(
                   child: Text(
                     '${l10n.recipeMoldTimeAdvisory} ${l10n.recipeMoldDonenessWarning}',
-                    style: TextStyle(
-                      color: warningColor,
-                    ),
+                    style: TextStyle(color: warningColor),
                   ),
                 ),
               ],

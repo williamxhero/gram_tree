@@ -59,7 +59,9 @@ void main() {
           ingredients: [
             for (final rawIngredient in input['ingredients'] as List)
               () {
-                final ingredient = Map<String, dynamic>.from(rawIngredient as Map);
+                final ingredient = Map<String, dynamic>.from(
+                  rawIngredient as Map,
+                );
                 return MoldIngredientInput(
                   id: ingredient['id'] as String,
                   displayName: ingredient['display_name'] as String,
@@ -77,10 +79,10 @@ void main() {
                 return MoldStepInput(
                   id: step['id'] as String,
                   instruction: step['instruction'] as String,
-                  durationSeconds:
-                      (step['duration_seconds'] as num? ?? 0).toInt(),
-                  temperatureCelsius:
-                      (step['temperature_celsius'] as num?)?.toDouble(),
+                  durationSeconds: (step['duration_seconds'] as num? ?? 0)
+                      .toInt(),
+                  temperatureCelsius: (step['temperature_celsius'] as num?)
+                      ?.toDouble(),
                   heat: step['heat'] as String?,
                   action: step['action'] as String?,
                   cookware: step['cookware'] as String?,

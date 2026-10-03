@@ -316,5 +316,4 @@ ServingConversionResult convertServings({
   );
 }
 
-double _roundTwoDecimals(double value) =>
-    roundHalfUp(value, fractionDigits: 2);
+double _roundTwoDecimals(double value) => roundHalfUp(value, fractionDigits: 2);
