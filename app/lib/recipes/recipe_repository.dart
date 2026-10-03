@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gramtree_api/gramtree_api.dart';
 
@@ -38,6 +40,79 @@ class RecipeRepository {
       recipeId: recipeId,
       versionId: versionId,
     );
+    return response.data!;
+  }
+
+  /// Fetch a server conversion when the caller needs a shareable/public result.
+  /// Recipe details use the same pure kernel locally so this is not required for
+  /// the offline serving control.
+  Future<RecipeServingConversionOut> convertServings(
+    String recipeId,
+    int targetServings, {
+    String? versionId,
+  }) async {
+    final response = versionId == null
+        ? await _recipes.convertCurrentRecipeServings(
+            recipeId: recipeId,
+            targetServings: targetServings,
+          )
+        : await _recipes.convertRecipeVersionServings(
+            recipeId: recipeId,
+            versionId: versionId,
+            targetServings: targetServings,
+          );
+    return response.data!;
+  }
+
+  Future<RecipeMoldConversionOut> convertMold(
+    String recipeId,
+    MoldSpec targetMold, {
+    String? versionId,
+  }) async {
+    final request = RecipeMoldConversionRequest(targetMold: targetMold);
+    final response = versionId == null
+        ? await _recipes.convertCurrentRecipeMold(
+            recipeId: recipeId,
+            recipeMoldConversionRequest: request,
+          )
+        : await _recipes.convertRecipeVersionMold(
+            recipeId: recipeId,
+            versionId: versionId,
+            recipeMoldConversionRequest: request,
+          );
+    return response.data!;
+  }
+
+  /// Fetch the server-owned display contract for a recipe version.
+  /// Detail pages may use their matching local kernel while offline; this
+  /// method is the shareable HTTP seam with immutable source provenance.
+  Future<RecipeIngredientDisplayOut> displayIngredients(
+    String recipeId, {
+    required String mode,
+    String? measureId,
+    int? targetServings,
+    MoldSpec? targetMold,
+    String? versionId,
+  }) async {
+    final targetMoldJson = targetMold == null
+        ? null
+        : jsonEncode(targetMold.toJson());
+    final response = versionId == null
+        ? await _recipes.displayCurrentRecipeIngredients(
+            recipeId: recipeId,
+            mode: mode,
+            measureId: measureId,
+            targetServings: targetServings,
+            targetMold: targetMoldJson,
+          )
+        : await _recipes.displayRecipeVersionIngredients(
+            recipeId: recipeId,
+            versionId: versionId,
+            mode: mode,
+            measureId: measureId,
+            targetServings: targetServings,
+            targetMold: targetMoldJson,
+          );
     return response.data!;
   }
 
@@ -394,6 +469,7 @@ class RecipeForm {
     this.totalTimeSeconds = 0,
     this.activeTimeSeconds = 0,
     this.changeNote = '',
+    this.baseMold,
     List<RecipeIngredientDraft>? ingredients,
     List<RecipeStepDraft>? steps,
     List<String>? imageIds,
@@ -410,6 +486,7 @@ class RecipeForm {
     dishName: name,
     aliases: [...?aliases],
     servings: snapshot.servings,
+    baseMold: snapshot.baseMold,
     difficulty: snapshot.difficulty ?? '',
     dishType: snapshot.dishType ?? '',
     tags: [...?snapshot.tags],
@@ -465,12 +542,14 @@ class RecipeForm {
   int totalTimeSeconds;
   int activeTimeSeconds;
   String changeNote;
+  MoldSpec? baseMold;
   List<RecipeIngredientDraft> ingredients;
   List<RecipeStepDraft> steps;
   List<String> imageIds;
 
   RecipeSnapshot get snapshot => RecipeSnapshot(
     activeTimeSeconds: activeTimeSeconds,
+    baseMold: baseMold,
     difficulty: difficulty,
     dishType: dishType,
     formatVersion: RecipeSnapshotFormatVersionEnum.number1,

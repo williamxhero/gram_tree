@@ -2,7 +2,9 @@
 
 import base64
 import binascii
-from typing import Annotated, Any
+import json
+import uuid
+from typing import Annotated, Any, Literal
 
 from fastapi import APIRouter, Depends, Query, status
 from fastapi.responses import Response
@@ -14,12 +16,17 @@ from gramtree.core.pagination import PageParams, page_params
 from gramtree.deps import RedisDep, SessionDep, SettingsDep
 from gramtree.recipes import service
 from gramtree.recipes.schemas import (
+    MoldSpec,
     RecipeCreate,
     RecipeDetail,
     RecipeImageOut,
     RecipeImageStagedOut,
     RecipeImageUpload,
+    RecipeIngredientDisplayOut,
     RecipeList,
+    RecipeMoldConversionOut,
+    RecipeMoldConversionRequest,
+    RecipeServingConversionOut,
     RecipeVersionCreate,
     RecipeVersionHistory,
 )
@@ -34,6 +41,32 @@ def _errors(*codes: int) -> dict[int | str, dict[str, Any]]:
     for code in codes:
         responses[code] = {"model": ErrorResponse}
     return responses
+
+
+def _parse_optional_measure_id(raw: str | None) -> uuid.UUID | None:
+    if not raw:
+        return None
+    try:
+        value = uuid.UUID(raw)
+    except ValueError as exc:
+        raise ApiError(
+            422, "invalid_request", "请求参数有误", "measure_id 不是有效的 UUID"
+        ) from exc
+    if value.version != 4:
+        raise ApiError(422, "invalid_request", "请求参数有误", "measure_id 不是有效的 UUID v4")
+    return value
+
+
+def _parse_target_mold(raw: str | None) -> MoldSpec | None:
+    if not raw:
+        return None
+    try:
+        value = json.loads(raw)
+        if not isinstance(value, dict):
+            raise ValueError
+        return MoldSpec.model_validate(value)
+    except (TypeError, ValueError, json.JSONDecodeError) as exc:
+        raise ApiError(422, "invalid_mold", "目标模具参数有误") from exc
 
 
 @router.post("", response_model=RecipeDetail, status_code=201, responses=_errors(401, 409))
@@ -96,6 +129,86 @@ def read_staged_recipe_image(
     )
 
 
+@router.get(
+    "/{recipe_id}/servings",
+    response_model=RecipeServingConversionOut,
+    responses=_errors(401, 404, 422),
+)
+def convert_current_recipe_servings(
+    recipe_id: IdV4,
+    auth: CurrentAuth,
+    session: SessionDep,
+    target_servings: int = Query(),
+) -> RecipeServingConversionOut:
+    return service.convert_recipe_servings(session, auth.user, recipe_id, target_servings)
+
+
+@router.post(
+    "/{recipe_id}/mold",
+    response_model=RecipeMoldConversionOut,
+    responses=_errors(401, 404, 422),
+)
+def convert_current_recipe_mold(
+    recipe_id: IdV4,
+    body: RecipeMoldConversionRequest,
+    auth: CurrentAuth,
+    session: SessionDep,
+) -> RecipeMoldConversionOut:
+    return service.convert_recipe_mold(session, auth.user, recipe_id, body.target_mold)
+
+
+@router.get(
+    "/{recipe_id}/display",
+    response_model=RecipeIngredientDisplayOut,
+    responses=_errors(401, 404, 422),
+)
+def display_current_recipe_ingredients(
+    recipe_id: IdV4,
+    auth: CurrentAuth,
+    session: SessionDep,
+    mode: Literal["base", "standard", "home"] = Query(),
+    raw_measure_id: str | None = Query(default=None, alias="measure_id"),
+    target_servings: int | None = Query(default=None, ge=1),
+    target_mold: str | None = Query(default=None, description="JSON encoded target mold"),
+) -> RecipeIngredientDisplayOut:
+    return service.display_recipe_ingredients(
+        session,
+        auth.user,
+        recipe_id,
+        mode,
+        measure_id=_parse_optional_measure_id(raw_measure_id),
+        target_servings=target_servings,
+        target_mold=_parse_target_mold(target_mold),
+    )
+
+
+@router.get(
+    "/{recipe_id}/versions/{version_id}/display",
+    response_model=RecipeIngredientDisplayOut,
+    responses=_errors(401, 404, 422),
+)
+def display_recipe_version_ingredients(
+    recipe_id: IdV4,
+    version_id: IdV4,
+    auth: CurrentAuth,
+    session: SessionDep,
+    mode: Literal["base", "standard", "home"] = Query(),
+    raw_measure_id: str | None = Query(default=None, alias="measure_id"),
+    target_servings: int | None = Query(default=None, ge=1),
+    target_mold: str | None = Query(default=None, description="JSON encoded target mold"),
+) -> RecipeIngredientDisplayOut:
+    return service.display_recipe_ingredients(
+        session,
+        auth.user,
+        recipe_id,
+        mode,
+        measure_id=_parse_optional_measure_id(raw_measure_id),
+        version_id=version_id,
+        target_servings=target_servings,
+        target_mold=_parse_target_mold(target_mold),
+    )
+
+
 @router.get("/{recipe_id}", response_model=RecipeDetail, responses=_errors(401, 404))
 def get_recipe(
     recipe_id: IdV4, auth: CurrentAuth, session: SessionDep, settings: SettingsDep
@@ -134,6 +247,38 @@ def list_recipe_versions(
         limit=page.limit,
         maximum=int(config.get(session, "api.page_size_max")),
     )
+
+
+@router.get(
+    "/{recipe_id}/versions/{version_id}/servings",
+    response_model=RecipeServingConversionOut,
+    responses=_errors(401, 404, 422),
+)
+def convert_recipe_version_servings(
+    recipe_id: IdV4,
+    version_id: IdV4,
+    auth: CurrentAuth,
+    session: SessionDep,
+    target_servings: int = Query(),
+) -> RecipeServingConversionOut:
+    return service.convert_recipe_servings(
+        session, auth.user, recipe_id, target_servings, version_id
+    )
+
+
+@router.post(
+    "/{recipe_id}/versions/{version_id}/mold",
+    response_model=RecipeMoldConversionOut,
+    responses=_errors(401, 404, 422),
+)
+def convert_recipe_version_mold(
+    recipe_id: IdV4,
+    version_id: IdV4,
+    body: RecipeMoldConversionRequest,
+    auth: CurrentAuth,
+    session: SessionDep,
+) -> RecipeMoldConversionOut:
+    return service.convert_recipe_mold(session, auth.user, recipe_id, body.target_mold, version_id)
 
 
 @router.get(

@@ -43,6 +43,43 @@ ITEMS: tuple[ConfigItem, ...] = (
         minimum=1,
         maximum=500,
     ),
+    # —— 菜谱份数换算（SPEC-002.3） ——
+    ConfigItem(
+        "recipe.servings_min",
+        "int",
+        1,
+        "份数换算允许的最小目标份数",
+        minimum=1,
+        maximum=1000,
+        public=True,
+    ),
+    ConfigItem(
+        "recipe.servings_max",
+        "int",
+        20,
+        "份数换算允许的最大目标份数",
+        minimum=1,
+        maximum=1000,
+        public=True,
+    ),
+    ConfigItem(
+        "recipe.scaling_round_deviation_threshold",
+        "float",
+        0.20,
+        "阶梯食材取整后与按比例结果相差超过此比例时提示",
+        minimum=0.0,
+        maximum=1.0,
+        public=True,
+    ),
+    ConfigItem(
+        "recipe.scaling_batch_multiplier",
+        "float",
+        2.0,
+        "目标份数达到原份数此倍数时显示分批下锅提示",
+        minimum=1.0,
+        maximum=10.0,
+        public=True,
+    ),
     # —— 账号与登录（SPEC-013.2） ——
     ConfigItem(
         "auth.email_code_ttl_minutes",

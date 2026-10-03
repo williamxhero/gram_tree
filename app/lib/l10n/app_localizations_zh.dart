@@ -637,6 +637,172 @@ class AppLocalizationsZh extends AppLocalizations {
   String get recipeServings => '份数';
 
   @override
+  String get recipeServingsAdjust => '调整份数';
+
+  @override
+  String get recipeServingsDecrease => '减少一份';
+
+  @override
+  String get recipeServingsIncrease => '增加一份';
+
+  @override
+  String get recipeServingsUnit => '份';
+
+  @override
+  String recipeServingsRange(int min, int max) {
+    return '可调范围：$min–$max 份';
+  }
+
+  @override
+  String get recipeServingsReset => '恢复原份数';
+
+  @override
+  String get recipeBatchWarning => '注意分批下锅，时间以成熟判断为准。';
+
+  @override
+  String get recipeRuleProportional => '按比例换算';
+
+  @override
+  String get recipeRuleUnchanged => '保持原值不变';
+
+  @override
+  String get recipeRuleRound => '按个取整';
+
+  @override
+  String get recipeRuleMoldRatio => '模具比例';
+
+  @override
+  String get recipeModeServing => '按份数';
+
+  @override
+  String get recipeModeMold => '按模具';
+
+  @override
+  String get recipeMoldConversion => '模具换算';
+
+  @override
+  String get recipeMoldReset => '恢复原模具';
+
+  @override
+  String recipeMoldOriginal(String mold, String ratio) {
+    return '原模具：$mold · 底面积比例 $ratio';
+  }
+
+  @override
+  String get recipeMoldTargetShape => '目标模具形状';
+
+  @override
+  String get recipeMoldRound => '圆模';
+
+  @override
+  String get recipeMoldSquare => '方模';
+
+  @override
+  String get recipeMoldRectangular => '长方模';
+
+  @override
+  String get recipeMoldCustom => '自定义尺寸';
+
+  @override
+  String get recipeMoldDiameter => '直径';
+
+  @override
+  String get recipeMoldTargetDiameter => '目标直径';
+
+  @override
+  String get recipeMoldUnit => '单位';
+
+  @override
+  String get recipeMoldInch => '英寸';
+
+  @override
+  String get recipeMoldCm => '厘米';
+
+  @override
+  String get recipeMoldSide => '边长（厘米）';
+
+  @override
+  String get recipeMoldWidth => '宽（厘米）';
+
+  @override
+  String get recipeMoldLength => '长（厘米）';
+
+  @override
+  String get recipeMoldTargetSide => '目标边长（厘米）';
+
+  @override
+  String get recipeMoldTargetWidth => '目标宽（厘米）';
+
+  @override
+  String get recipeMoldTargetLength => '目标长（厘米）';
+
+  @override
+  String get recipeMoldBakingNote => '温度保持不变；时间不按比例放大，以成熟判断为准。';
+
+  @override
+  String get recipeMoldTimeAdvisory => '时间不按模具比例放大，建议从原时间开始检查，以成熟判断为准。';
+
+  @override
+  String get recipeMoldDonenessWarning => '请以成熟判断为准，不要只看计时。';
+
+  @override
+  String recipeServingRoundWarning(String name) {
+    return '$name取整后与按比例结果相差较大，请按口味微调其他用量。';
+  }
+
+  @override
+  String recipeMoldRoundWarning(String name) {
+    return '$name取整后与模具比例结果相差较大，请按实际情况微调其他用量。';
+  }
+
+  @override
+  String get recipeMeasureStandardDisplayOnly => '常用量具换算；菜谱基础值未改变';
+
+  @override
+  String recipeReplacementValue(String label) {
+    return '$label';
+  }
+
+  @override
+  String get sourceAuthorFilled => '作者填写';
+
+  @override
+  String get sourceTasteAdjusted => '按你的口味换算';
+
+  @override
+  String get sourceScenarioAdjusted => '按场景调整';
+
+  @override
+  String get sourceAiEstimated => 'AI 估算';
+
+  @override
+  String get sourceVerified => '已验证';
+
+  @override
+  String whyOriginal(String value) {
+    return '原来：$value';
+  }
+
+  @override
+  String whyCurrent(String value) {
+    return '现在：$value';
+  }
+
+  @override
+  String get whyRequired => '这是必显内容，不能关掉';
+
+  @override
+  String get whySkipThisTime => '这次不用';
+
+  @override
+  String get whyDontDoAgain => '以后别这样';
+
+  @override
+  String sourceSemantics(String source) {
+    return '来源：$source，点开查看为什么';
+  }
+
+  @override
   String get recipeDifficulty => '难度';
 
   @override
@@ -852,4 +1018,102 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get recipeAiAssisted => 'AI 协助';
+
+  @override
+  String get personalMeasuresTitle => '自家量具';
+
+  @override
+  String get personalMeasuresIntro =>
+      '把空量具放在厨房秤上归零，装满水后的克数就是容量（毫升）。只影响显示，不会修改菜谱。';
+
+  @override
+  String get personalMeasuresOffline => '离线：正在使用已缓存的量具；登记、修改和删除需要联网。';
+
+  @override
+  String get personalMeasuresAdd => '登记量具';
+
+  @override
+  String get personalMeasuresEmpty => '还没有登记量具';
+
+  @override
+  String get personalMeasuresDeleteTooltip => '删除量具';
+
+  @override
+  String get personalMeasuresDeleteTitle => '删除量具？';
+
+  @override
+  String personalMeasuresDeleteBody(Object name) {
+    return '删除“$name”不会改动菜谱。';
+  }
+
+  @override
+  String get personalMeasuresEdit => '修改量具';
+
+  @override
+  String get personalMeasuresRegister => '登记量具';
+
+  @override
+  String get personalMeasuresName => '量具名称';
+
+  @override
+  String get personalMeasuresKind => '种类';
+
+  @override
+  String get personalMeasuresCapacity => '满水容量（毫升）';
+
+  @override
+  String personalMeasuresCapacityValue(Object value) {
+    return '$value 毫升';
+  }
+
+  @override
+  String get personalMeasuresValidation => '名称需为 1–64 个字，容量需大于 0 且不超过 10000 毫升';
+
+  @override
+  String get personalMeasuresSpoon => '勺';
+
+  @override
+  String get personalMeasuresBowl => '碗';
+
+  @override
+  String get personalMeasuresCup => '杯';
+
+  @override
+  String get recipeMeasureModeTitle => '用量显示方式';
+
+  @override
+  String get recipeMeasureModeBase => '克/毫升';
+
+  @override
+  String get recipeMeasureModeStandard => '汤匙/茶匙';
+
+  @override
+  String get recipeMeasureModeHome => '自家量具';
+
+  @override
+  String get recipeMeasureChoose => '选择量具';
+
+  @override
+  String get recipeMeasureModeNoHome => '还没有登记自家量具，请先到“我的”登记。';
+
+  @override
+  String get recipeMeasureDisplayOnly => '个人量具只改变显示，菜谱基础值未改变';
+
+  @override
+  String get recipeMeasureNoDensity => '没有密度数据，保留克数';
+
+  @override
+  String get recipeMeasureGram => '克';
+
+  @override
+  String get recipeMeasureMillilitre => '毫升';
+
+  @override
+  String get recipeMeasureTablespoon => '汤匙';
+
+  @override
+  String get recipeMeasureTeaspoon => '茶匙';
+
+  @override
+  String get recipeMeasureApproximate => '约';
 }

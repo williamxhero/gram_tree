@@ -10,7 +10,7 @@ import uuid
 import warnings
 from collections.abc import Iterable
 from datetime import UTC, datetime, timedelta
-from typing import Any
+from typing import Any, Literal, cast
 
 from redis import Redis
 from sqlalchemy import delete, or_, select, update
@@ -23,6 +23,8 @@ from gramtree.core.time import utcnow
 from gramtree.events import service as event_service
 from gramtree.ingredients.attributes import IngredientAttributes
 from gramtree.ingredients.models import Ingredient, IngredientAttribute
+from gramtree.recipes.measure_display import display_amount
+from gramtree.recipes.measure_models import PersonalMeasure
 from gramtree.recipes.models import (
     Dish,
     DishAlias,
@@ -32,26 +34,50 @@ from gramtree.recipes.models import (
     RecipeSaveOutbox,
     RecipeVersion,
 )
+from gramtree.recipes.mold_conversion import (
+    MoldConversionError,
+    MoldIngredientInput,
+    MoldInput,
+    MoldStepInput,
+    convert_mold,
+)
 from gramtree.recipes.schemas import (
     DishInput,
     DishOut,
+    MoldSpec,
     NutritionEstimate,
     RecipeAuthor,
     RecipeCreate,
     RecipeDerived,
     RecipeDetail,
+    RecipeDisplayedIngredient,
     RecipeImageOut,
     RecipeImageStagedOut,
     RecipeIngredient,
+    RecipeIngredientDisplay,
+    RecipeIngredientDisplayOut,
     RecipeList,
     RecipeListItem,
+    RecipeMoldConversionOut,
+    RecipeServingConversionOut,
     RecipeSnapshot,
     RecipeVersionCreate,
     RecipeVersionHistory,
     RecipeVersionOut,
     RecipeVersionSummary,
 )
+from gramtree.recipes.schemas import MoldConversion as MoldConversionSchema
+from gramtree.recipes.schemas import (
+    ServingConversion as ServingConversionSchema,
+)
+from gramtree.recipes.serving_conversion import (
+    ServingConversionError,
+    ServingIngredientInput,
+    ServingStepInput,
+    convert_servings,
+)
 from gramtree.recipes.storage import make_recipe_storage
+from gramtree.runtime_config import service as config
 from gramtree.settings import Settings
 
 logger = logging.getLogger("gramtree.recipes")
@@ -68,6 +94,11 @@ _VOLUME_SPOONS = {
     "小勺": 5.0,
     "茶匙": 5.0,
     "tsp": 5.0,
+}
+_SCALING_MODE_BY_ATTRIBUTE: dict[str, Literal["proportional", "unchanged", "round"]] = {
+    "线性": "proportional",
+    "固定": "unchanged",
+    "阶梯": "round",
 }
 _MAX_IMAGE_BYTES = 15 * 1024 * 1024
 _MAX_IMAGE_PIXELS = 40_000_000
@@ -121,6 +152,27 @@ def _ingredient_attributes(session: Session, ingredient_id: uuid.UUID) -> Ingred
     )
 
 
+def _effective_scaling_mode(
+    session: Session, ingredient: RecipeIngredient
+) -> Literal["proportional", "unchanged", "round"]:
+    """Resolve an omitted recipe mode from the standard ingredient attribute.
+
+    Pydantic keeps the public field default as ``proportional`` for backwards
+    compatible request/response schemas. ``model_fields_set`` is the only
+    reliable way to distinguish that default from an omitted request value
+    before the normalized snapshot is persisted.
+    """
+    if "scaling_mode" in ingredient.model_fields_set or ingredient.ingredient_id is None:
+        return ingredient.scaling_mode
+    try:
+        attributes = _ingredient_attributes(session, ingredient.ingredient_id)
+    except Exception:
+        return ingredient.scaling_mode
+    if attributes.scaling is None:
+        return ingredient.scaling_mode
+    return _SCALING_MODE_BY_ATTRIBUTE.get(attributes.scaling.value, ingredient.scaling_mode)
+
+
 def _base_quantity(session: Session, ingredient: RecipeIngredient) -> tuple[float, str]:
     """Convert a kitchen quantity to g/ml/count and reject unknown conversions."""
     unit = ingredient.unit.strip().casefold()
@@ -158,7 +210,13 @@ def _base_quantity(session: Session, ingredient: RecipeIngredient) -> tuple[floa
 
 def _normalize_ingredient(session: Session, ingredient: RecipeIngredient) -> RecipeIngredient:
     base_quantity, base_unit = _base_quantity(session, ingredient)
-    return ingredient.model_copy(update={"base_quantity": base_quantity, "base_unit": base_unit})
+    return ingredient.model_copy(
+        update={
+            "base_quantity": base_quantity,
+            "base_unit": base_unit,
+            "scaling_mode": _effective_scaling_mode(session, ingredient),
+        }
+    )
 
 
 def _validate_snapshot(session: Session, snapshot: RecipeSnapshot) -> RecipeSnapshot:
@@ -764,6 +822,7 @@ def _operations(previous: RecipeSnapshot, current: RecipeSnapshot) -> list[dict[
         )
     for field in (
         "servings",
+        "base_mold",
         "total_time_seconds",
         "active_time_seconds",
         "difficulty",
@@ -867,6 +926,373 @@ def get_version(
     if version is None:
         raise NotFound()
     return _detail(session, settings, recipe, version)
+
+
+def display_recipe_ingredients(
+    session: Session,
+    owner: User,
+    recipe_id: uuid.UUID,
+    mode: Literal["base", "standard", "home"],
+    measure_id: uuid.UUID | None = None,
+    version_id: uuid.UUID | None = None,
+    target_servings: int | None = None,
+    target_mold: MoldSpec | None = None,
+) -> RecipeIngredientDisplayOut:
+    """Return display amounts for an owned immutable recipe version.
+
+    The recipe/version boundary is intentionally separate from the standalone
+    measure endpoint: callers receive the source amount alongside the rendered
+    amount, while density and personal-measure ownership stay server-side.
+    """
+    recipe = _owned_recipe(session, owner, recipe_id)
+    if version_id is None:
+        version = session.get(RecipeVersion, recipe.current_version_id)
+    else:
+        version = session.scalar(
+            select(RecipeVersion).where(
+                RecipeVersion.id == version_id,
+                RecipeVersion.recipe_id == recipe.id,
+            )
+        )
+    if version is None:
+        raise NotFound("菜谱版本不存在")
+    if target_servings is not None and target_mold is not None:
+        raise ApiError(422, "invalid_request", "请求参数有误", "份数换算和模具换算不能同时使用")
+
+    snapshot = RecipeSnapshot.model_validate(version.snapshot)
+    conversion_by_id: dict[
+        str,
+        tuple[float, str, Literal["base", "proportional", "unchanged", "round", "mold_ratio"]],
+    ] = {item.id: (float(item.quantity), item.unit, "base") for item in snapshot.ingredients}
+    if target_servings is not None:
+        derived = RecipeDerived.model_validate(version.derived)
+        try:
+            serving_conversion = convert_servings(
+                original_servings=snapshot.servings,
+                target_servings=target_servings,
+                ingredients=[
+                    ServingIngredientInput(
+                        id=item.id,
+                        display_name=item.display_name,
+                        quantity=item.quantity,
+                        unit=item.unit,
+                        scaling_mode=item.scaling_mode,
+                    )
+                    for item in snapshot.ingredients
+                ],
+                steps=[
+                    ServingStepInput(
+                        id=step.id,
+                        instruction=step.instruction,
+                        ingredient_ids=tuple(step.ingredient_ids),
+                        duration_seconds=step.duration_seconds,
+                        temperature_celsius=step.temperature_celsius,
+                        heat=step.heat,
+                        unattended=step.unattended,
+                    )
+                    for step in snapshot.steps
+                ],
+                min_servings=int(config.get(session, "recipe.servings_min")),
+                max_servings=int(config.get(session, "recipe.servings_max")),
+                round_deviation_threshold=float(
+                    config.get(session, "recipe.scaling_round_deviation_threshold")
+                ),
+                batch_multiplier=float(config.get(session, "recipe.scaling_batch_multiplier")),
+                total_time_seconds=derived.total_time_seconds,
+                active_time_seconds=derived.active_time_seconds,
+            )
+        except ServingConversionError as exc:
+            raise ApiError(422, exc.code, exc.message, exc.detail) from exc
+        conversion_by_id = {
+            item.id: (
+                item.display_quantity,
+                item.unit,
+                cast(
+                    Literal["base", "proportional", "unchanged", "round", "mold_ratio"],
+                    item.rule,
+                ),
+            )
+            for item in serving_conversion.ingredients
+        }
+    elif target_mold is not None:
+        if snapshot.base_mold is None:
+            raise ApiError(422, "missing_base_mold", "这份菜谱没有记录基准模具")
+        try:
+            mold_conversion = convert_mold(
+                original_mold=MoldInput(**snapshot.base_mold.model_dump(mode="json")),
+                target_mold=MoldInput(**target_mold.model_dump(mode="json")),
+                round_deviation_threshold=float(
+                    config.get(session, "recipe.scaling_round_deviation_threshold")
+                ),
+                ingredients=[
+                    MoldIngredientInput(
+                        id=item.id,
+                        display_name=item.display_name,
+                        quantity=item.quantity,
+                        unit=item.unit,
+                        scaling_mode=item.scaling_mode,
+                    )
+                    for item in snapshot.ingredients
+                ],
+                steps=[
+                    MoldStepInput(
+                        id=step.id,
+                        instruction=step.instruction,
+                        duration_seconds=step.duration_seconds,
+                        temperature_celsius=step.temperature_celsius,
+                        heat=step.heat,
+                        action=step.action,
+                        cookware=step.cookware,
+                        doneness=step.doneness,
+                    )
+                    for step in snapshot.steps
+                ],
+            )
+        except MoldConversionError as exc:
+            raise ApiError(422, exc.code, exc.message, exc.detail) from exc
+        conversion_by_id = {
+            item.id: (
+                item.display_quantity,
+                item.unit,
+                cast(
+                    Literal["base", "proportional", "unchanged", "round", "mold_ratio"],
+                    item.rule,
+                ),
+            )
+            for item in mold_conversion.ingredients
+        }
+
+    personal_measure: PersonalMeasure | None = None
+    if measure_id is not None:
+        personal_measure = session.scalar(
+            select(PersonalMeasure).where(
+                PersonalMeasure.id == measure_id,
+                PersonalMeasure.owner_id == owner.id,
+            )
+        )
+        if personal_measure is None:
+            raise NotFound()
+    if mode == "home" and personal_measure is None:
+        raise ApiError(422, "invalid_request", "请求参数有误", "自家量具模式需要 measure_id")
+
+    measure = (
+        {
+            "name": personal_measure.name,
+            "kind": personal_measure.kind,
+            "capacity_ml": personal_measure.capacity_ml,
+        }
+        if personal_measure is not None
+        else None
+    )
+    amounts: list[RecipeDisplayedIngredient] = []
+    for item in snapshot.ingredients:
+        original_quantity = float(item.quantity)
+        original_unit = item.unit
+        converted_quantity, converted_unit, conversion_rule = conversion_by_id[item.id]
+        base_quantity = item.base_quantity
+        base_unit = item.base_unit
+        # Versions written before normalization can still be read safely.
+        if base_quantity is None or base_unit is None:
+            normalized = _display_base_quantity(original_quantity, original_unit)
+            if normalized is None:
+                base_quantity, base_unit = original_quantity, "count"
+            else:
+                base_quantity, base_unit = normalized
+        if base_unit != "count" and original_quantity != 0:
+            base_quantity = float(base_quantity) * converted_quantity / original_quantity
+        elif base_unit == "count":
+            base_quantity = converted_quantity
+        if base_unit == "count":
+            result = {
+                "text": f"{_quantity_text(float(base_quantity))} {original_unit}",
+                "display_quantity": float(base_quantity),
+                "display_unit": original_unit,
+                "grams": None,
+                "rule": "base",
+            }
+        else:
+            density = None
+            if item.ingredient_id is not None:
+                attributes = _ingredient_data(session, item.ingredient_id)
+                if attributes.density is not None:
+                    density = attributes.density.value
+            result = display_amount(
+                base_quantity=float(base_quantity),
+                base_unit=base_unit,
+                density=density,
+                mode=mode,
+                measure=measure,
+            )
+        amounts.append(
+            RecipeDisplayedIngredient(
+                id=item.id,
+                display_name=item.display_name,
+                original_quantity=original_quantity,
+                original_unit=original_unit,
+                converted_quantity=converted_quantity,
+                converted_unit=converted_unit,
+                conversion_rule=conversion_rule,
+                **result,
+            )
+        )
+    return RecipeIngredientDisplayOut(
+        display=RecipeIngredientDisplay(
+            recipe_id=recipe.id,
+            version_id=version.id,
+            mode=mode,
+            measure_id=measure_id,
+            ingredients=amounts,
+        )
+    )
+
+
+def _display_base_quantity(quantity: float, unit: str) -> tuple[float, str] | None:
+    normalized = unit.strip().casefold()
+    if normalized in _MASS_UNITS:
+        return quantity * _MASS_UNITS[normalized], "g"
+    if normalized in _VOLUME_UNITS:
+        return quantity * _VOLUME_UNITS[normalized], "ml"
+    if normalized in _VOLUME_SPOONS:
+        return quantity * _VOLUME_SPOONS[normalized], "ml"
+    return None
+
+
+def _quantity_text(value: float) -> str:
+    return str(int(value)) if value == int(value) else f"{value:.2f}".rstrip("0").rstrip(".")
+
+
+def convert_recipe_servings(
+    session: Session,
+    owner: User,
+    recipe_id: uuid.UUID,
+    target_servings: int,
+    version_id: uuid.UUID | None = None,
+) -> RecipeServingConversionOut:
+    """Return a deterministic, read-only conversion for an owned recipe version."""
+    recipe = _owned_recipe(session, owner, recipe_id)
+    if version_id is None:
+        version = session.get(RecipeVersion, recipe.current_version_id)
+    else:
+        version = session.scalar(
+            select(RecipeVersion).where(
+                RecipeVersion.id == version_id,
+                RecipeVersion.recipe_id == recipe.id,
+            )
+        )
+    if version is None:
+        raise NotFound("菜谱版本不存在")
+
+    snapshot = RecipeSnapshot.model_validate(version.snapshot)
+    derived = RecipeDerived.model_validate(version.derived)
+    try:
+        conversion = convert_servings(
+            original_servings=snapshot.servings,
+            target_servings=target_servings,
+            ingredients=[
+                ServingIngredientInput(
+                    id=item.id,
+                    display_name=item.display_name,
+                    quantity=item.quantity,
+                    unit=item.unit,
+                    scaling_mode=item.scaling_mode,
+                )
+                for item in snapshot.ingredients
+            ],
+            steps=[
+                ServingStepInput(
+                    id=step.id,
+                    instruction=step.instruction,
+                    ingredient_ids=tuple(step.ingredient_ids),
+                    duration_seconds=step.duration_seconds,
+                    temperature_celsius=step.temperature_celsius,
+                    heat=step.heat,
+                )
+                for step in snapshot.steps
+            ],
+            min_servings=int(config.get(session, "recipe.servings_min")),
+            max_servings=int(config.get(session, "recipe.servings_max")),
+            round_deviation_threshold=float(
+                config.get(session, "recipe.scaling_round_deviation_threshold")
+            ),
+            batch_multiplier=float(config.get(session, "recipe.scaling_batch_multiplier")),
+            total_time_seconds=derived.total_time_seconds,
+            active_time_seconds=derived.active_time_seconds,
+        )
+    except ServingConversionError as exc:
+        raise ApiError(422, exc.code, exc.message, exc.detail) from exc
+    return RecipeServingConversionOut(
+        recipe_id=recipe.id,
+        version_id=version.id,
+        conversion=ServingConversionSchema.model_validate(conversion.as_dict()),
+    )
+
+
+def convert_recipe_mold(
+    session: Session,
+    owner: User,
+    recipe_id: uuid.UUID,
+    target_mold: MoldSpec,
+    version_id: uuid.UUID | None = None,
+) -> RecipeMoldConversionOut:
+    """Return a deterministic, read-only bottom-area conversion for an owned version."""
+    recipe = _owned_recipe(session, owner, recipe_id)
+    if version_id is None:
+        version = session.get(RecipeVersion, recipe.current_version_id)
+    else:
+        version = session.scalar(
+            select(RecipeVersion).where(
+                RecipeVersion.id == version_id,
+                RecipeVersion.recipe_id == recipe.id,
+            )
+        )
+    if version is None:
+        raise NotFound("菜谱版本不存在")
+
+    snapshot = RecipeSnapshot.model_validate(version.snapshot)
+    if snapshot.base_mold is None:
+        raise ApiError(422, "missing_base_mold", "这份菜谱没有记录基准模具")
+
+    def mold_input(value: MoldSpec) -> MoldInput:
+        return MoldInput(**value.model_dump(mode="json"))
+
+    try:
+        conversion = convert_mold(
+            original_mold=mold_input(snapshot.base_mold),
+            target_mold=mold_input(target_mold),
+            round_deviation_threshold=float(
+                config.get(session, "recipe.scaling_round_deviation_threshold")
+            ),
+            ingredients=[
+                MoldIngredientInput(
+                    id=item.id,
+                    display_name=item.display_name,
+                    quantity=item.quantity,
+                    unit=item.unit,
+                    scaling_mode=item.scaling_mode,
+                )
+                for item in snapshot.ingredients
+            ],
+            steps=[
+                MoldStepInput(
+                    id=step.id,
+                    instruction=step.instruction,
+                    duration_seconds=step.duration_seconds,
+                    temperature_celsius=step.temperature_celsius,
+                    heat=step.heat,
+                    action=step.action,
+                    cookware=step.cookware,
+                    doneness=step.doneness,
+                )
+                for step in snapshot.steps
+            ],
+        )
+    except MoldConversionError as exc:
+        raise ApiError(422, exc.code, exc.message, exc.detail) from exc
+    return RecipeMoldConversionOut(
+        recipe_id=recipe.id,
+        version_id=version.id,
+        conversion=MoldConversionSchema.model_validate(conversion.as_dict()),
+    )
 
 
 def list_versions(

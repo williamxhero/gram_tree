@@ -1,9 +1,12 @@
+import 'dart:convert';
+
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gramtree_api/gramtree_api.dart';
 
 import '../api/api_client.dart';
 import '../privacy/consent.dart';
+import '../storage/local_store.dart';
 
 /// 服务端下发的能力开关（服务端配置项 feature.*）。
 ///
@@ -20,17 +23,72 @@ enum Feature {
   final String key;
 }
 
-/// 启动时从服务端拉取 App 配置。拉取失败时按“全部关闭”处理。
-/// 同意隐私政策之前不联网，全部视为关闭；同意后自动重新拉取。
+const _conversionConfigCacheKey = 'client_config:conversion:v1';
+
 final clientConfigProvider = FutureProvider<ClientConfig>((ref) async {
   if (!ref.watch(privacyConsentProvider)) {
     return ClientConfig(features: const {}, params: const {});
   }
-  final response = await ref
-      .watch(apiClientProvider)
-      .getConfigApi()
-      .clientConfig();
-  return response.data!;
+  final store = ref.watch(localStoreProvider);
+  try {
+    final response = await ref
+        .watch(apiClientProvider)
+        .getConfigApi()
+        .clientConfig();
+    final config = response.data!;
+    // Feature flags are server-authoritative and must fail closed. Only cache
+    // conversion parameters needed to keep an already loaded recipe useful
+    // offline.
+    await store.setString(
+      _conversionConfigCacheKey,
+      jsonEncode({'params': config.params}),
+    );
+    return config;
+  } catch (_) {
+    final cached = store.getString(_conversionConfigCacheKey);
+    if (cached != null) {
+      try {
+        final decoded = Map<String, dynamic>.from(jsonDecode(cached) as Map);
+        return ClientConfig(
+          features: const {},
+          params: decoded['params'] ?? const <String, dynamic>{},
+        );
+      } catch (_) {
+        // Ignore a stale or corrupt cache and use safe defaults below.
+      }
+    }
+    return ClientConfig(features: const {}, params: const {});
+  }
+});
+
+class RecipeConversionConfig {
+  const RecipeConversionConfig({
+    required this.minServings,
+    required this.maxServings,
+    required this.roundDeviationThreshold,
+    required this.batchMultiplier,
+  });
+
+  final int minServings;
+  final int maxServings;
+  final double roundDeviationThreshold;
+  final double batchMultiplier;
+}
+
+final recipeConversionConfigProvider = Provider<RecipeConversionConfig>((ref) {
+  final params = ref.watch(clientConfigProvider).value?.params;
+  final values = params is Map ? params : const <Object?, Object?>{};
+  num number(String key, num fallback) =>
+      values[key] is num ? values[key] as num : fallback;
+  return RecipeConversionConfig(
+    minServings: number('recipe.servings_min', 1).toInt(),
+    maxServings: number('recipe.servings_max', 20).toInt(),
+    roundDeviationThreshold: number(
+      'recipe.scaling_round_deviation_threshold',
+      0.20,
+    ).toDouble(),
+    batchMultiplier: number('recipe.scaling_batch_multiplier', 2.0).toDouble(),
+  );
 });
 
 /// 某个能力当前是否开启。配置还没拉到或拉取失败时一律视为关闭。

@@ -1,0 +1,62 @@
+[
+  {
+    "name": "round_six_to_eight",
+    "input": {
+      "original_mold": {"shape": "round", "unit": "in", "diameter": 6},
+      "target_mold": {"shape": "round", "unit": "in", "diameter": 8},
+      "ingredients": [
+        {"id": "flour", "display_name": "面粉", "quantity": 100, "unit": "g", "scaling_mode": "proportional"},
+        {"id": "egg", "display_name": "鸡蛋", "quantity": 3, "unit": "个", "scaling_mode": "round"},
+        {"id": "salt", "display_name": "盐", "quantity": 2, "unit": "g", "scaling_mode": "unchanged"}
+      ],
+      "steps": [
+        {"id": "bake", "instruction": "烤至成熟", "duration_seconds": 1800, "temperature_celsius": 170, "heat": "上下火"}
+      ]
+    },
+    "expected": {
+      "area_ratio": 1.78,
+      "ingredients": [
+        {"id": "flour", "original_quantity": 100, "display_quantity": 177.78, "unit": "g", "rule": "mold_ratio"},
+        {"id": "egg", "original_quantity": 3, "display_quantity": 5, "unit": "个", "rule": "round"},
+        {"id": "salt", "original_quantity": 2, "display_quantity": 2, "unit": "g", "rule": "unchanged"}
+      ],
+      "step": {"duration_seconds": 1800, "temperature_celsius": 170, "has_time_advisory": true, "doneness_warning": true}
+    }
+  },
+  {
+    "name": "round_to_square",
+    "input": {
+      "original_mold": {"shape": "round", "unit": "cm", "diameter": 15},
+      "target_mold": {"shape": "square", "unit": "cm", "width": 15, "length": 15},
+      "ingredients": [
+        {"id": "batter", "display_name": "面糊", "quantity": 200, "unit": "g", "scaling_mode": "proportional"}
+      ],
+      "steps": []
+    },
+    "expected": {
+      "area_ratio": 1.27,
+      "ingredients": [
+        {"id": "batter", "original_quantity": 200, "display_quantity": 254.65, "unit": "g", "rule": "mold_ratio"}
+      ],
+      "step": null
+    }
+  },
+  {
+    "name": "square_to_rectangular",
+    "input": {
+      "original_mold": {"shape": "square", "unit": "cm", "side": 20},
+      "target_mold": {"shape": "rectangular", "unit": "cm", "width": 20, "length": 30},
+      "ingredients": [
+        {"id": "batter", "display_name": "面糊", "quantity": 300, "unit": "g", "scaling_mode": "proportional"}
+      ],
+      "steps": []
+    },
+    "expected": {
+      "area_ratio": 1.5,
+      "ingredients": [
+        {"id": "batter", "original_quantity": 300, "display_quantity": 450, "unit": "g", "rule": "mold_ratio"}
+      ],
+      "step": null
+    }
+  }
+]
