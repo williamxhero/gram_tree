@@ -1794,6 +1794,7 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
       );
     }
     MoldConversionResult? moldConversion;
+    String? moldConversionError;
     if (snapshot.baseMold != null && _targetMold != null) {
       try {
         moldConversion = _recipeMoldConversion(
@@ -1803,27 +1804,13 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
           libraryRules: _libraryScalingRules,
         );
       } on MoldConversionError {
-        // Keep the detail page usable while an incomplete/custom mold is being
-        // corrected in the target-mold controls.
-        moldConversion = MoldConversionResult(
-          originalMold: snapshot.baseMold!,
-          targetMold: _targetMold!,
-          areaRatio: 0,
-          ingredients: const [],
-          steps: const [],
-          warnings: const [],
-        );
+        // Keep the target controls visible, but never present an invalid
+        // request as a fabricated zero-ratio conversion.
+        moldConversionError = l10n.recipeMoldInvalid;
       } catch (_) {
-        // A malformed legacy mold must not hide the detail page or its target
-        // controls; recompute after the user supplies compatible dimensions.
-        moldConversion = MoldConversionResult(
-          originalMold: snapshot.baseMold!,
-          targetMold: _targetMold!,
-          areaRatio: 0,
-          ingredients: const [],
-          steps: const [],
-          warnings: const [],
-        );
+        // A malformed legacy mold must remain visible and actionable without
+        // inventing conversion output.
+        moldConversionError = l10n.recipeMoldInvalid;
       }
     }
     final convertedServingById = {
@@ -2010,11 +1997,12 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
                   setState(() => _targetServings = snapshot.servings),
             ),
             const SizedBox(height: 8),
-          ] else if (moldConversion != null)
+          ] else
             _MoldControl(
               original: snapshot.baseMold!,
               target: _targetMold!,
               conversion: moldConversion,
+              errorText: moldConversionError,
               ingredientNames: ingredientNames,
               onTargetChanged: (value) => setState(() => _targetMold = value),
               onReset: () => setState(() => _targetMold = snapshot.baseMold),
@@ -2156,6 +2144,7 @@ class _MoldControl extends StatelessWidget {
     required this.original,
     required this.target,
     required this.conversion,
+    required this.errorText,
     required this.ingredientNames,
     required this.onTargetChanged,
     required this.onReset,
@@ -2163,7 +2152,8 @@ class _MoldControl extends StatelessWidget {
 
   final MoldSpec original;
   final MoldSpec target;
-  final MoldConversionResult conversion;
+  final MoldConversionResult? conversion;
+  final String? errorText;
   final Map<String, String> ingredientNames;
   final ValueChanged<MoldSpec> onTargetChanged;
   final VoidCallback onReset;
@@ -2173,7 +2163,7 @@ class _MoldControl extends StatelessWidget {
     final l10n = AppLocalizations.of(context);
     final colors = GramTreeColors.of(context);
     final warningColor = Theme.of(context).colorScheme.onSurfaceVariant;
-    final changed = conversion.areaRatio != 1;
+    final changed = target != original;
     final round = target.shape == MoldSpecShapeEnum.round;
     final square = target.shape == MoldSpecShapeEnum.square;
     return ComponentCard(
@@ -2196,16 +2186,22 @@ class _MoldControl extends StatelessWidget {
                 ),
               ],
             ),
-            Text(
-              l10n.recipeMoldOriginal(
-                _moldLabel(original, l10n),
-                conversion.areaRatio.toStringAsFixed(2),
+            if (conversion != null)
+              Text(
+                l10n.recipeMoldOriginal(
+                  _moldLabel(original, l10n),
+                  conversion!.areaRatio.toStringAsFixed(2),
+                ),
+                key: const ValueKey('recipe-mold-ratio'),
+                style: colors.numberStyle(
+                  Theme.of(context).textTheme.bodyMedium ?? const TextStyle(),
+                ),
+              )
+            else
+              _SmallHint(
+                key: const ValueKey('recipe-mold-error'),
+                text: errorText ?? l10n.recipeMoldInvalid,
               ),
-              key: const ValueKey('recipe-mold-ratio'),
-              style: colors.numberStyle(
-                Theme.of(context).textTheme.bodyMedium ?? const TextStyle(),
-              ),
-            ),
             const SizedBox(height: 8),
             DropdownButtonFormField<MoldSpecShapeEnum>(
               key: const ValueKey('target-mold-shape'),
@@ -2327,7 +2323,7 @@ class _MoldControl extends StatelessWidget {
               ),
             const SizedBox(height: 8),
             Text(l10n.recipeMoldBakingNote),
-            for (final warning in conversion.warnings)
+            for (final warning in conversion?.warnings ?? const [])
               Padding(
                 padding: const EdgeInsets.only(top: 4),
                 child: Row(

@@ -69,6 +69,28 @@ def test_author_saves_base_mold_and_converts_without_mutating_snapshot(api: Api)
     assert api.client.get(f"/v1/recipes/{saved['id']}", headers=headers).json() == saved
 
 
+def test_invalid_target_mold_returns_structured_http_error(api: Api) -> None:
+    headers = bearer(api.login("mold-invalid@example.com"))
+    body = recipe_input("无效模具")
+    body["snapshot"]["base_mold"] = {
+        "shape": "round",
+        "unit": "in",
+        "diameter": 6,
+    }
+    created = api.client.post("/v1/recipes", json=body, headers=headers)
+    assert created.status_code == 201, created.text
+
+    response = api.client.post(
+        f"/v1/recipes/{created.json()['id']}/mold",
+        json={"target_mold": {"shape": "round", "unit": "in", "diameter": 0}},
+        headers=headers,
+    )
+    assert response.status_code == 422
+    error = response.json()["error"]
+    assert error["code"] == "invalid_request"
+    assert error["message"]
+
+
 @pytest.mark.parametrize("case", CASES, ids=[case["name"] for case in CASES])
 def test_mold_conversion_matches_shared_fixture(api: Api, case: dict) -> None:
     headers = bearer(api.login(f"mold-fixture-{case['name']}@example.com"))

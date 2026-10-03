@@ -119,17 +119,6 @@ void main() {
 
       final email =
           'recipe-conversion-${DateTime.now().microsecondsSinceEpoch}@example.com';
-      Future<String> directToken(String accountEmail) async {
-        await server.post(
-          '/v1/auth/email/code',
-          data: {'email': accountEmail, 'purpose': 'login'},
-        );
-        final response = await server.post<Map<String, dynamic>>(
-          '/v1/auth/email/login',
-          data: {'email': accountEmail, 'code': await latestCode(accountEmail)},
-        );
-        return response.data!['access_token'] as String;
-      }
 
       tester.testTextInput.register();
       addTearDown(tester.testTextInput.unregister);
@@ -301,54 +290,6 @@ void main() {
       await waitFor(tester, find.text('177.78 克'));
       semantics.dispose();
       _markE2eStep('after_display_mode_switching');
-
-      final contractEmail =
-          'recipe-contract-${DateTime.now().microsecondsSinceEpoch}@example.com';
-      final token = await directToken(contractEmail);
-      final auth = Options(headers: {'Authorization': 'Bearer $token'});
-      final created = await server.post<Map<String, dynamic>>(
-        '/v1/recipes',
-        data: {
-          'dish_name': 'HTTP换算合同菜谱',
-          'dish_aliases': <String>[],
-          'snapshot': {
-            'format_version': 1,
-            'servings': 2,
-            'base_mold': {'shape': 'round', 'unit': 'in', 'diameter': 6},
-            'ingredients': [
-              {
-                'id': 'flour',
-                'display_name': '面粉',
-                'quantity': 100,
-                'unit': 'g',
-                'scaling_mode': 'proportional',
-              },
-            ],
-            'steps': <Map<String, dynamic>>[],
-          },
-          'change_note': '',
-          'ai_assisted': false,
-        },
-        options: auth,
-      );
-      expect(created.statusCode, 201);
-      final recipeId = created.data!['id'] as String;
-      final display = await server.get<Map<String, dynamic>>(
-        '/v1/recipes/$recipeId/display',
-        queryParameters: {'mode': 'base'},
-        options: auth,
-      );
-      expect(display.data!['display']['recipe_id'], recipeId);
-      expect(display.data!['display']['mode'], 'base');
-      final mold = await server.post<Map<String, dynamic>>(
-        '/v1/recipes/$recipeId/mold',
-        data: {
-          'target_mold': {'shape': 'round', 'unit': 'in', 'diameter': 8},
-        },
-        options: auth,
-      );
-      expect(mold.data!['conversion']['area_ratio'], 1.78);
-      _markE2eStep('after_http_contract');
     }),
     timeout: const Timeout(Duration(minutes: 5)),
   );

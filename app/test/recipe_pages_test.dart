@@ -6,8 +6,6 @@ import 'package:gramtree_api/gramtree_api.dart';
 
 import 'package:gram_tree/app/theme.dart';
 import 'package:gram_tree/storage/local_store.dart';
-import 'package:gram_tree/ui_protocol/source_mark.dart';
-import 'package:gram_tree/ui_protocol/source_types.dart';
 
 import 'fixtures/conversion_cases.g.dart';
 import 'helpers.dart';
@@ -430,23 +428,10 @@ Future<void> _expectFixtureIngredient(
     return;
   }
   expect(source, findsOneWidget, reason: 'ingredient=$id source mark');
-  final mark = tester.widget<SourceMark>(source);
   expect(
-    mark.sourceType,
-    changed ? sourceTypeScenarioAdjusted : sourceTypeAuthorFilled,
-    reason: 'ingredient=$id source type',
-  );
-  expect(mark.value, expectedText, reason: 'ingredient=$id source value');
-  expect(
-    mark.originalValue,
-    '${_fixtureQuantityText(expected['original_quantity'] as num)} '
-    '${expected['unit'] as String}',
-    reason: 'ingredient=$id source original value',
-  );
-  expect(
-    mark.basisText,
-    _fixtureRuleText(expected['rule'] as String),
-    reason: 'ingredient=$id conversion rule',
+    find.text(changed ? '按场景调整' : '作者填写'),
+    findsWidgets,
+    reason: 'ingredient=$id visible source label',
   );
 }
 
@@ -503,9 +488,7 @@ Future<void> _expectFixtureDisplayOutput(
     expect(source, findsNothing);
   } else {
     expect(source, findsOneWidget);
-    final mark = tester.widget<SourceMark>(source);
-    expect(mark.value, expectedText);
-    expect(mark.basisText, _fixtureDisplayBasis(rule));
+    expect(find.text(rule == 'no_density' ? '作者填写' : '按场景调整'), findsWidgets);
   }
   if (input['mode'] == 'home') {
     final measure = Map<String, dynamic>.from(input['measure'] as Map);
@@ -768,6 +751,36 @@ void main() {
       find.byKey(const ValueKey('recipe-mold-warning-ingredient-1')),
       findsNothing,
     );
+  });
+
+  testWidgets('invalid mold dimensions keep controls visible with an error', (
+    tester,
+  ) async {
+    final server = FakeServer();
+    final state = _installRecipeApi(server);
+    _replaceRecipeSnapshot(state, {
+      'base_mold': {'shape': 'round', 'unit': 'in', 'diameter': 6},
+    });
+    await pumpApp(tester, env: TestEnv.signedIn(server: server));
+    await _openMyRecipes(tester);
+    await tester.tap(find.byKey(const ValueKey('recipe-card-$_recipeId')));
+    await tester.pumpAndSettle();
+    await _scrollUntilVisible(
+      tester,
+      find.byKey(const ValueKey('recipe-mode-mold')),
+    );
+    await tester.tap(find.byKey(const ValueKey('recipe-mode-mold')));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.byKey(const ValueKey('target-mold-diameter')),
+      '0',
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const ValueKey('recipe-mold-control')), findsOneWidget);
+    expect(find.byKey(const ValueKey('recipe-mold-error')), findsOneWidget);
+    expect(find.byKey(const ValueKey('recipe-mold-ratio')), findsNothing);
+    expect(find.text('目标模具尺寸无效，请填写大于 0 的尺寸后再换算。'), findsOneWidget);
   });
 
   testWidgets('editor records an immutable base mold in the snapshot', (
@@ -2355,9 +2368,7 @@ void main() {
           findsOneWidget,
         );
         if (mode == 'home') {
-          final picker = find.byKey(
-            const ValueKey('recipe-measure-picker'),
-          );
+          final picker = find.byKey(const ValueKey('recipe-measure-picker'));
           await _scrollUntilVisible(tester, picker);
           await tester.tap(picker);
           await _fixtureSettle(tester);

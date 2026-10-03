@@ -757,6 +757,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get recipeMoldDonenessWarning => '请以成熟判断为准，不要只看计时。';
 
   @override
+  String get recipeMoldInvalid => '目标模具尺寸无效，请填写大于 0 的尺寸后再换算。';
+
+  @override
   String recipeServingRoundWarning(String name) {
     return '$name取整后与按比例结果相差较大，请按口味微调其他用量。';
   }

@@ -319,6 +319,7 @@
   "recipeMoldBakingNote": "温度保持不变；时间不按比例放大，以成熟判断为准。",
   "recipeMoldTimeAdvisory": "时间不按模具比例放大，建议从原时间开始检查，以成熟判断为准。",
   "recipeMoldDonenessWarning": "请以成熟判断为准，不要只看计时。",
+  "recipeMoldInvalid": "目标模具尺寸无效，请填写大于 0 的尺寸后再换算。",
   "recipeServingRoundWarning": "{name}取整后与按比例结果相差较大，请按口味微调其他用量。",
   "recipeMoldRoundWarning": "{name}取整后与模具比例结果相差较大，请按实际情况微调其他用量。",
   "recipeMeasureStandardDisplayOnly": "常用量具换算；菜谱基础值未改变",

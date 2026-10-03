@@ -1492,6 +1492,12 @@ abstract class AppLocalizations {
   /// **'请以成熟判断为准，不要只看计时。'**
   String get recipeMoldDonenessWarning;
 
+  /// No description provided for @recipeMoldInvalid.
+  ///
+  /// In zh, this message translates to:
+  /// **'目标模具尺寸无效，请填写大于 0 的尺寸后再换算。'**
+  String get recipeMoldInvalid;
+
   /// No description provided for @recipeServingRoundWarning.
   ///
   /// In zh, this message translates to:
