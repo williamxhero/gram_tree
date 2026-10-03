@@ -155,22 +155,23 @@ def _ingredient_attributes(session: Session, ingredient_id: uuid.UUID) -> Ingred
 def _effective_scaling_mode(
     session: Session, ingredient: RecipeIngredient
 ) -> Literal["proportional", "unchanged", "round"]:
-    """Resolve an omitted recipe mode from the standard ingredient attribute.
+    """Resolve an unset recipe mode from the standard ingredient attribute.
 
-    Pydantic keeps the public field default as ``proportional`` for backwards
-    compatible request/response schemas. ``model_fields_set`` is the only
-    reliable way to distinguish that default from an omitted request value
-    before the normalized snapshot is persisted.
+    An omitted or null ``scaling_mode`` means the author did not choose one;
+    the saved snapshot always stores the resolved mode so a version keeps
+    converting the same way even if the ingredient library changes later.
     """
-    if "scaling_mode" in ingredient.model_fields_set or ingredient.ingredient_id is None:
+    if ingredient.scaling_mode is not None:
         return ingredient.scaling_mode
+    if ingredient.ingredient_id is None:
+        return "proportional"
     try:
         attributes = _ingredient_attributes(session, ingredient.ingredient_id)
     except Exception:
-        return ingredient.scaling_mode
+        return "proportional"
     if attributes.scaling is None:
-        return ingredient.scaling_mode
-    return _SCALING_MODE_BY_ATTRIBUTE.get(attributes.scaling.value, ingredient.scaling_mode)
+        return "proportional"
+    return _SCALING_MODE_BY_ATTRIBUTE.get(attributes.scaling.value, "proportional")
 
 
 def _base_quantity(session: Session, ingredient: RecipeIngredient) -> tuple[float, str]:
@@ -976,7 +977,7 @@ def display_recipe_ingredients(
                         display_name=item.display_name,
                         quantity=item.quantity,
                         unit=item.unit,
-                        scaling_mode=item.scaling_mode,
+                        scaling_mode=_effective_scaling_mode(session, item),
                     )
                     for item in snapshot.ingredients
                 ],
@@ -989,6 +990,7 @@ def display_recipe_ingredients(
                         temperature_celsius=step.temperature_celsius,
                         heat=step.heat,
                         unattended=step.unattended,
+                        depends_on=tuple(step.depends_on),
                     )
                     for step in snapshot.steps
                 ],
@@ -1030,7 +1032,7 @@ def display_recipe_ingredients(
                         display_name=item.display_name,
                         quantity=item.quantity,
                         unit=item.unit,
-                        scaling_mode=item.scaling_mode,
+                        scaling_mode=_effective_scaling_mode(session, item),
                     )
                     for item in snapshot.ingredients
                 ],
@@ -1194,7 +1196,7 @@ def convert_recipe_servings(
                     display_name=item.display_name,
                     quantity=item.quantity,
                     unit=item.unit,
-                    scaling_mode=item.scaling_mode,
+                    scaling_mode=_effective_scaling_mode(session, item),
                 )
                 for item in snapshot.ingredients
             ],
@@ -1206,6 +1208,8 @@ def convert_recipe_servings(
                     duration_seconds=step.duration_seconds,
                     temperature_celsius=step.temperature_celsius,
                     heat=step.heat,
+                    unattended=step.unattended,
+                    depends_on=tuple(step.depends_on),
                 )
                 for step in snapshot.steps
             ],
@@ -1268,7 +1272,7 @@ def convert_recipe_mold(
                     display_name=item.display_name,
                     quantity=item.quantity,
                     unit=item.unit,
-                    scaling_mode=item.scaling_mode,
+                    scaling_mode=_effective_scaling_mode(session, item),
                 )
                 for item in snapshot.ingredients
             ],

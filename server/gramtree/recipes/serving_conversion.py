@@ -44,6 +44,7 @@ class ServingStepInput:
     temperature_celsius: float | None = None
     heat: str | None = None
     unattended: bool = False
+    depends_on: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -99,6 +100,26 @@ def _number(value: Decimal) -> float:
 
 def _whole(value: Decimal) -> float:
     return float(value.quantize(Decimal("1"), rounding=ROUND_HALF_UP))
+
+
+def _critical_path_seconds(steps: list[ServingStepInput]) -> int:
+    """Longest chain of step durations through ``depends_on``.
+
+    Unknown dependency IDs are ignored; saved snapshots are validated to be
+    acyclic before conversion, so the recursion always terminates.
+    """
+    by_id = {step.id: step for step in steps}
+    finish: dict[str, int] = {}
+
+    def finish_at(step: ServingStepInput) -> int:
+        if step.id not in finish:
+            finish[step.id] = step.duration_seconds + max(
+                (finish_at(by_id[dep]) for dep in step.depends_on if dep in by_id),
+                default=0,
+            )
+        return finish[step.id]
+
+    return max((finish_at(step) for step in steps), default=0)
 
 
 def convert_servings(
@@ -197,9 +218,16 @@ def convert_servings(
         )
         for step in steps
     )
+    # Step durations and heat never scale with servings, so re-estimating the
+    # times gives the same definition as the recipe's derived values:
+    # total = the longest depends_on chain (independent steps may overlap) and
+    # active = the sum of steps that need attention. Active time can exceed
+    # elapsed total time when independent attention-required steps overlap
+    # (e.g. the shared half_servings_rounding fixture: total 600, active 720).
+    # Callers pass the saved derived values so an author's override still wins.
     total = total_time_seconds
     if total is None:
-        total = max((step.duration_seconds for step in steps), default=0)
+        total = _critical_path_seconds(steps)
     active = active_time_seconds
     if active is None:
         active = sum(step.duration_seconds for step in steps if not step.unattended)

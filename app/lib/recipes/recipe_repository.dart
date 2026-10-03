@@ -210,7 +210,7 @@ class RecipeIngredientDraft {
     this.baseUnit = 'g',
     this.preparation = '',
     this.group = '',
-    this.scalingMode = RecipeIngredientScalingModeEnum.proportional,
+    this.scalingMode,
     this.optional = false,
     this.functional = false,
     this.replacement,
@@ -278,7 +278,10 @@ class RecipeIngredientDraft {
   String baseUnit;
   String preparation;
   String group;
-  RecipeIngredientScalingModeEnum scalingMode;
+
+  /// The author's explicit choice; `null` leaves it to the standard
+  /// ingredient's library default (resolved by the server on save).
+  RecipeIngredientScalingModeEnum? scalingMode;
   bool optional;
   bool functional;
   RecipeReplacementDraft? replacement;
@@ -310,7 +313,7 @@ class RecipeIngredientDraft {
     'base_unit': baseUnit,
     'preparation': preparation,
     'group': group,
-    'scaling_mode': scalingMode.value,
+    'scaling_mode': scalingMode?.value,
     'optional': optional,
     'functional': functional,
     'replacement': replacement?.toJson(),
@@ -582,12 +585,11 @@ RecipeIngredientBaseUnitEnum _baseUnit(String value) => switch (value) {
   _ => RecipeIngredientBaseUnitEnum.g,
 };
 
-RecipeIngredientScalingModeEnum _scalingMode(Object? value) {
+RecipeIngredientScalingModeEnum? _scalingMode(Object? value) {
   final raw = value?.toString();
-  return RecipeIngredientScalingModeEnum.values.firstWhere(
-    (item) => item.value == raw,
-    orElse: () => RecipeIngredientScalingModeEnum.proportional,
-  );
+  return RecipeIngredientScalingModeEnum.values
+      .where((item) => item.value == raw)
+      .firstOrNull;
 }
 
 String? _optionalText(String value) {

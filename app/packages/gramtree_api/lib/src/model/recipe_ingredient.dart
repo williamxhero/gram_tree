@@ -43,7 +43,7 @@ class RecipeIngredient {
 
     this.replacement,
 
-    required this.scalingMode,
+    this.scalingMode,
 
     required this.unit,
   });
@@ -102,8 +102,9 @@ class RecipeIngredient {
   @JsonKey(name: r'replacement', required: false, includeIfNull: false)
   final Object? replacement;
 
-  @JsonKey(name: r'scaling_mode', required: true, includeIfNull: false)
-  final RecipeIngredientScalingModeEnum scalingMode;
+  /// 缩放方式；不填时用标准食材库的默认值，未收录的食材按比例
+  @JsonKey(name: r'scaling_mode', required: false, includeIfNull: false)
+  final RecipeIngredientScalingModeEnum? scalingMode;
 
   @JsonKey(name: r'unit', required: true, includeIfNull: false)
   final String unit;
@@ -141,7 +142,7 @@ class RecipeIngredient {
       quantity.hashCode +
       quantitySource.hashCode +
       replacement.hashCode +
-      scalingMode.hashCode +
+      (scalingMode == null ? 0 : scalingMode.hashCode) +
       unit.hashCode;
 
   factory RecipeIngredient.fromJson(Map<String, dynamic> json) =>
@@ -177,11 +178,17 @@ enum RecipeIngredientBaseUnitEnum {
   String toString() => value;
 }
 
+/// 缩放方式；不填时用标准食材库的默认值，未收录的食材按比例
 enum RecipeIngredientScalingModeEnum {
+  /// 缩放方式；不填时用标准食材库的默认值，未收录的食材按比例
   @JsonValue(r'proportional')
   proportional(r'proportional'),
+
+  /// 缩放方式；不填时用标准食材库的默认值，未收录的食材按比例
   @JsonValue(r'unchanged')
   unchanged(r'unchanged'),
+
+  /// 缩放方式；不填时用标准食材库的默认值，未收录的食材按比例
   @JsonValue(r'round')
   round(r'round');
 

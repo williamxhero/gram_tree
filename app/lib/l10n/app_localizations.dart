@@ -946,6 +946,24 @@ abstract class AppLocalizations {
   /// **'总时长 {total} 分钟 · 动手 {active} 分钟'**
   String recipeDuration(int total, int active);
 
+  /// No description provided for @recipeDurationServingNote.
+  ///
+  /// In zh, this message translates to:
+  /// **'按 {servings} 份重新估算：步骤时长和火候不随份数变化，总时长和动手时长不变。'**
+  String recipeDurationServingNote(int servings);
+
+  /// No description provided for @recipeDurationBatchNote.
+  ///
+  /// In zh, this message translates to:
+  /// **'份量变大后可能要分批下锅，实际用时会更长，以成熟判断为准。'**
+  String get recipeDurationBatchNote;
+
+  /// No description provided for @recipeDurationMoldNote.
+  ///
+  /// In zh, this message translates to:
+  /// **'换模具后烘烤时间不按底面积比例放大，时长按原步骤估算，以成熟判断为准。'**
+  String get recipeDurationMoldNote;
+
   /// No description provided for @recipeAllergens.
   ///
   /// In zh, this message translates to:
@@ -1677,6 +1695,18 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'按个取整'**
   String get recipeScalingRound;
+
+  /// No description provided for @recipeScalingLibraryDefault.
+  ///
+  /// In zh, this message translates to:
+  /// **'跟随食材库默认（{mode}）'**
+  String recipeScalingLibraryDefault(String mode);
+
+  /// No description provided for @recipeScalingLibraryDefaultUnknown.
+  ///
+  /// In zh, this message translates to:
+  /// **'跟随食材库默认（没有默认值时按比例）'**
+  String get recipeScalingLibraryDefaultUnknown;
 
   /// No description provided for @recipeOptionalToggle.
   ///

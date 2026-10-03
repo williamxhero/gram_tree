@@ -53,6 +53,7 @@ class ServingStepInput {
     this.temperatureCelsius,
     this.heat,
     this.unattended = false,
+    this.dependsOn = const [],
   });
 
   factory ServingStepInput.fromJson(Map<String, dynamic> json) =>
@@ -67,6 +68,10 @@ class ServingStepInput {
         temperatureCelsius: (json['temperature_celsius'] as num?)?.toDouble(),
         heat: json['heat'] as String?,
         unattended: json['unattended'] == true,
+        dependsOn: [
+          for (final id in (json['depends_on'] as List? ?? const []))
+            id as String,
+        ],
       );
 
   final String id;
@@ -76,6 +81,7 @@ class ServingStepInput {
   final double? temperatureCelsius;
   final String? heat;
   final bool unattended;
+  final List<String> dependsOn;
 }
 
 class ConvertedServingIngredient {
@@ -197,6 +203,16 @@ class ServingConversionResult {
 
 const _batchWarning = '注意分批下锅，时间以成熟判断为准。';
 
+/// Map a standard ingredient's library `scaling` attribute to a conversion
+/// rule, mirroring `_SCALING_MODE_BY_ATTRIBUTE` on the server. Returns `null`
+/// when the library has no usable default.
+String? scalingRuleForLibraryAttribute(String? value) => switch (value) {
+  '线性' => 'proportional',
+  '固定' => 'unchanged',
+  '阶梯' => 'round',
+  _ => null,
+};
+
 ServingConversionResult convertServings({
   required int originalServings,
   required int targetServings,
@@ -291,13 +307,14 @@ ServingConversionResult convertServings({
             : null,
       ),
   ];
-  final total =
-      totalTimeSeconds ??
-      steps.fold<int>(
-        0,
-        (maximum, step) =>
-            step.durationSeconds > maximum ? step.durationSeconds : maximum,
-      );
+  // Step durations and heat never scale with servings, so the re-estimated
+  // times follow the recipe's derived definition: total is the longest
+  // depends_on chain (independent steps may overlap) and active is the sum of
+  // steps that need attention. Active time can exceed elapsed total time when
+  // independent attention-required steps overlap (the shared
+  // half_servings_rounding fixture: total 600, active 720). Callers pass the
+  // saved derived values so an author's explicit override still wins.
+  final total = totalTimeSeconds ?? _criticalPathSeconds(steps);
   final active =
       activeTimeSeconds ??
       steps
@@ -317,3 +334,27 @@ ServingConversionResult convertServings({
 }
 
 double _roundTwoDecimals(double value) => roundHalfUp(value, fractionDigits: 2);
+
+/// Longest chain of step durations through `dependsOn`; unknown IDs are
+/// ignored and saved snapshots are validated to be acyclic.
+int _criticalPathSeconds(List<ServingStepInput> steps) {
+  final byId = {for (final step in steps) step.id: step};
+  final finish = <String, int>{};
+  int finishAt(ServingStepInput step) {
+    final known = finish[step.id];
+    if (known != null) return known;
+    var start = 0;
+    for (final id in step.dependsOn) {
+      final dependency = byId[id];
+      if (dependency == null) continue;
+      final value = finishAt(dependency);
+      if (value > start) start = value;
+    }
+    return finish[step.id] = start + step.durationSeconds;
+  }
+
+  return steps.fold<int>(0, (maximum, step) {
+    final value = finishAt(step);
+    return value > maximum ? value : maximum;
+  });
+}

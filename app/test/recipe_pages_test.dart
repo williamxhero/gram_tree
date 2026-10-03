@@ -4,8 +4,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gramtree_api/gramtree_api.dart';
 
+import 'package:gram_tree/app/theme.dart';
 import 'package:gram_tree/storage/local_store.dart';
 import 'package:gram_tree/ui_protocol/source_mark.dart';
+import 'package:gram_tree/ui_protocol/source_types.dart';
 
 import 'fixtures/conversion_cases.g.dart';
 import 'helpers.dart';
@@ -142,20 +144,31 @@ Map<String, dynamic> _minimalDetailJson({
   return json;
 }
 
-Map<String, dynamic> _standardIngredientJson() => IngredientDetail(
-  aliases: const ['鸡蛋'],
-  attributes: IngredientAttributes(),
-  category: '蛋类',
-  id: _standardIngredientId,
-  pinyin: 'jidan',
-  pinyinInitials: 'JD',
-  standardName: '鸡蛋',
-  version: 'ingredient-v1',
-).toJson();
+Map<String, dynamic> _standardIngredientJson({String? scaling}) =>
+    IngredientDetail(
+      aliases: const ['鸡蛋'],
+      attributes: IngredientAttributes(
+        scaling: scaling == null
+            ? null
+            : TextAttribute(
+                estimate: false,
+                source_: '食材库',
+                status: AttributeStatus.verified,
+                value: scaling,
+              ),
+      ),
+      category: '蛋类',
+      id: _standardIngredientId,
+      pinyin: 'jidan',
+      pinyinInitials: 'JD',
+      standardName: '鸡蛋',
+      version: 'ingredient-v1',
+    ).toJson();
 
 _RecipeApiState _installRecipeApi(
   FakeServer server, {
   String? standardIngredientId,
+  String? standardIngredientScaling,
 }) {
   final first = _minimalDetailJson(standardIngredientId: standardIngredientId);
   final state = _RecipeApiState(first, [first]);
@@ -164,7 +177,7 @@ _RecipeApiState _installRecipeApi(
     return (
       200,
       {
-        'added': [_standardIngredientJson()],
+        'added': [_standardIngredientJson(scaling: standardIngredientScaling)],
         'current_version': 'ingredient-v1',
         'merged': const [],
         'modified': const [],
@@ -278,6 +291,18 @@ void _replaceRecipeSnapshot(_RecipeApiState state, Map<String, dynamic> patch) {
     ..add(detail);
 }
 
+void _replaceRecipeDerived(_RecipeApiState state, Map<String, dynamic> patch) {
+  final detail = Map<String, dynamic>.from(state.current);
+  final version = Map<String, dynamic>.from(detail['version'] as Map);
+  version['derived'] = Map<String, dynamic>.from(version['derived'] as Map)
+    ..addAll(patch);
+  detail['version'] = version;
+  state.current = detail;
+  state.versions
+    ..clear()
+    ..add(detail);
+}
+
 Future<List<Map<String, dynamic>>> _loadFixture(
   WidgetTester tester,
   String asset,
@@ -366,8 +391,8 @@ String _fixtureRuleText(String rule) => switch (rule) {
 };
 
 String _fixtureDisplayBasis(String rule) => switch (rule) {
-  'standard_measure' => '按比例换算；常用量具换算；菜谱基础值未改变',
-  'personal_measure' => '按比例换算；个人量具只改变显示，菜谱基础值未改变',
+  'standard_measure' => '常用量具换算；菜谱基础值未改变',
+  'personal_measure' => '个人量具只改变显示，菜谱基础值未改变',
   'no_density' => '没有密度数据，保留克数',
   _ => rule,
 };
@@ -375,7 +400,7 @@ String _fixtureDisplayBasis(String rule) => switch (rule) {
 Future<void> _expectFixtureIngredient(
   WidgetTester tester,
   Map<String, dynamic> expected, {
-  required bool expectConversionSource,
+  required bool conversionActive,
 }) async {
   final id = expected['id'] as String;
   final amount = find.byKey(ValueKey('recipe-ingredient-amount-$id'));
@@ -386,13 +411,31 @@ Future<void> _expectFixtureIngredient(
       '${_fixtureUnitText(expected['unit'] as String)}';
   expect(actual.data, expectedText, reason: 'ingredient=$id');
 
+  // Accent and "按场景调整" mean "the system changed this for you": only a
+  // value whose displayed quantity differs from the original gets them.
+  final changed =
+      conversionActive &&
+      (expected['display_quantity'] as num) !=
+          (expected['original_quantity'] as num);
+  final accent = GramTreeColors.of(tester.element(amount)).accent;
+  expect(
+    actual.style?.color == accent,
+    changed,
+    reason: 'ingredient=$id accent only when the value changed',
+  );
+
   final source = find.byKey(ValueKey('recipe-source-mark-$id'));
-  if (!expectConversionSource) {
+  if (!conversionActive) {
     expect(source, findsNothing, reason: 'ingredient=$id should be unchanged');
     return;
   }
   expect(source, findsOneWidget, reason: 'ingredient=$id source mark');
   final mark = tester.widget<SourceMark>(source);
+  expect(
+    mark.sourceType,
+    changed ? sourceTypeScenarioAdjusted : sourceTypeAuthorFilled,
+    reason: 'ingredient=$id source type',
+  );
   expect(mark.value, expectedText, reason: 'ingredient=$id source value');
   expect(
     mark.originalValue,
@@ -405,6 +448,19 @@ Future<void> _expectFixtureIngredient(
     _fixtureRuleText(expected['rule'] as String),
     reason: 'ingredient=$id conversion rule',
   );
+}
+
+String _fixtureMinutesText(int totalSeconds, int activeSeconds) =>
+    '总时长 ${(totalSeconds / 60).ceil()} 分钟 · '
+    '动手 ${(activeSeconds / 60).ceil()} 分钟';
+
+String _fixtureMoldLabel(Map<String, dynamic> mold) {
+  final unit = mold['unit'] == 'in' ? '英寸' : '厘米';
+  return switch (mold['shape']) {
+    'round' => '${mold['diameter']} $unit 圆模',
+    'square' => '${mold['side'] ?? mold['width']} 厘米 方模',
+    _ => '${mold['width']} × ${mold['length']} 厘米 模具换算',
+  };
 }
 
 Future<void> _expectFixtureDisplayOutput(
@@ -472,14 +528,25 @@ Future<void> _expectFixtureStep(
   expect((title as Text).data, '${index + 1}. ${expected['instruction']}');
   final subtitle = expansion.subtitle;
   expect(subtitle, isA<Text>());
-  final subtitleText = (subtitle as Text).data ?? '';
-  expect(subtitleText, contains('${expected['duration_seconds']} 秒'));
+  final segments = ((subtitle as Text).data ?? '').split(' · ');
+  // Times, temperature and heat never scale: each must show the exact value.
+  expect(
+    segments,
+    contains('${expected['duration_seconds']} 秒'),
+    reason: 'step=${source['id']} duration',
+  );
   final temperature = expected['temperature_celsius'];
   if (temperature != null) {
-    expect(subtitleText, contains('$temperature'));
+    expect(
+      segments,
+      contains('温度（摄氏度）：$temperature'),
+      reason: 'step=${source['id']} temperature',
+    );
   }
   final heat = expected['heat'];
-  if (heat != null) expect(subtitleText, contains(heat as String));
+  if (heat != null) {
+    expect(segments, contains('火候：$heat'), reason: 'step=${source['id']} heat');
+  }
 
   final warning = find.byKey(
     ValueKey(
@@ -1221,6 +1288,97 @@ void main() {
     expect(find.text('鸡蛋'), findsOneWidget);
   });
 
+  testWidgets(
+    'editor leaves the scaling mode to the library default unless chosen',
+    (tester) async {
+      final server = FakeServer();
+      _installRecipeApi(server, standardIngredientScaling: '阶梯');
+      await pumpApp(tester, env: TestEnv.signedIn(server: server));
+      await _openNewEditor(tester);
+      await _enterDishName(tester, '默认缩放方式测试');
+      await _scrollToTop(tester);
+      await _scrollUntilVisible(
+        tester,
+        find.byKey(const ValueKey('recipe-ingredient-search')),
+      );
+      await tester.enterText(
+        find.byKey(const ValueKey('recipe-ingredient-search')),
+        '鸡蛋',
+      );
+      final searchButton = find.byKey(
+        const ValueKey('recipe-search-ingredient'),
+      );
+      await tester.ensureVisible(searchButton);
+      await tester.tap(searchButton, warnIfMissed: false);
+      final result = find.byKey(
+        ValueKey('ingredient-result-$_standardIngredientId-ingredient-1'),
+      );
+      for (var i = 0; i < 40 && result.evaluate().isEmpty; i++) {
+        await tester.pump(const Duration(milliseconds: 100));
+      }
+      await tester.ensureVisible(result);
+      await tester.tap(result, warnIfMissed: false);
+      await tester.pumpAndSettle();
+
+      final advanced = find.byKey(
+        const ValueKey('recipe-ingredient-advanced-ingredient-1'),
+      );
+      await _scrollUntilVisible(tester, advanced);
+      await tester.tap(advanced);
+      await tester.pumpAndSettle();
+      await _scrollUntilVisible(
+        tester,
+        find.byKey(const ValueKey('recipe-ingredient-scaling-ingredient-1')),
+      );
+      expect(find.text('跟随食材库默认（按个取整）'), findsOneWidget);
+
+      await _scrollToTop(tester);
+      await tester.tap(find.byKey(const ValueKey('save-recipe-button')));
+      await tester.pumpAndSettle();
+      final saved = server.calls('POST', '/v1/recipes').single.body as Map;
+      final ingredient =
+          ((saved['snapshot'] as Map)['ingredients'] as List).single as Map;
+      expect(ingredient['ingredient_id'], _standardIngredientId);
+      expect(ingredient.containsKey('scaling_mode'), isFalse);
+    },
+  );
+
+  testWidgets(
+    'offline detail conversion applies the cached library default mode',
+    (tester) async {
+      final server = FakeServer();
+      final state = _installRecipeApi(server, standardIngredientScaling: '阶梯');
+      _replaceRecipeSnapshot(state, {
+        'servings': 2,
+        'ingredients': [
+          {
+            'id': 'egg',
+            'ingredient_id': _standardIngredientId,
+            'display_name': '鸡蛋',
+            'quantity': 3,
+            'unit': '个',
+          },
+        ],
+        'steps': const [],
+      });
+      await _openRecipeDetailForFixture(tester, server);
+      final decrease = find.byKey(const ValueKey('recipe-serving-decrease'));
+      await _scrollUntilVisible(tester, decrease);
+      await tester.tap(decrease);
+      await _fixtureSettle(tester);
+
+      // No display endpoint is installed, so this is the local kernel: 3 eggs
+      // for 1 of 2 servings round to 2 instead of showing 1.5.
+      await _expectFixtureIngredient(tester, {
+        'id': 'egg',
+        'unit': '个',
+        'original_quantity': 3,
+        'display_quantity': 2,
+        'rule': 'round',
+      }, conversionActive: true);
+    },
+  );
+
   testWidgets('recipe detail displays a free-text replacement', (tester) async {
     final server = FakeServer();
     final state = _installRecipeApi(server);
@@ -1632,7 +1790,17 @@ void main() {
     await _scrollUntilVisible(tester, find.text('自家量具'));
     await tester.tap(find.text('自家量具'));
     await tester.pumpAndSettle();
-    expect(find.byKey(const ValueKey('recipe-measure-picker')), findsOneWidget);
+    final picker = find.byKey(const ValueKey('recipe-measure-picker'));
+    expect(picker, findsOneWidget);
+    // Home-measure mode requires an explicit utensil choice; it must not
+    // silently select the first registered measure.
+    await _scrollToBottom(tester);
+    expect(find.text('100 克'), findsWidgets);
+    await _scrollToTop(tester);
+    await _scrollUntilVisible(tester, picker);
+    await tester.tap(picker);
+    await tester.pumpAndSettle();
+    await tapVisible(tester, find.textContaining('白瓷勺').last);
     await _scrollToBottom(tester);
     expect(find.textContaining('白瓷勺'), findsWidgets);
     expect(find.textContaining('100 克'), findsWidgets);
@@ -1762,14 +1930,25 @@ void main() {
     await _scrollUntilVisible(tester, find.text('自家量具'));
     await tester.tap(find.text('自家量具'));
     await _scrollToBottom(tester);
-    expect(find.textContaining('约 1/2 白瓷勺（6 克）'), findsOneWidget);
+    // The picker starts without a selected measure, so the base quantity is
+    // shown until the user chooses a specific registered utensil.
+    expect(find.text('6 克'), findsWidgets);
 
     await _scrollToTop(tester);
     await _scrollUntilVisible(
       tester,
       find.byKey(const ValueKey('recipe-measure-picker')),
     );
-    await tester.tap(find.byKey(const ValueKey('recipe-measure-picker')));
+    final picker = find.byKey(const ValueKey('recipe-measure-picker'));
+    await tester.tap(picker);
+    await tester.pumpAndSettle();
+    await tapVisible(tester, find.textContaining('白瓷勺').last);
+    await _scrollToBottom(tester);
+    expect(find.textContaining('约 1/2 白瓷勺（6 克）'), findsOneWidget);
+
+    await _scrollToTop(tester);
+    await _scrollUntilVisible(tester, picker);
+    await tester.tap(picker);
     await tester.pumpAndSettle();
     await tapVisible(tester, find.textContaining('陶瓷碗').last);
     await _scrollToBottom(tester);
@@ -1795,6 +1974,12 @@ void main() {
         'ingredients': input['ingredients'],
         'steps': input['steps'],
       });
+      // The server HTTP test proves the saved version derives exactly these
+      // times from the same snapshot; the page must show them re-estimated.
+      _replaceRecipeDerived(state, {
+        'total_time_seconds': expected['total_time_seconds'],
+        'active_time_seconds': expected['active_time_seconds'],
+      });
       await _openRecipeDetailForFixture(tester, server);
       await _scrollUntilVisible(
         tester,
@@ -1813,9 +1998,46 @@ void main() {
       expect(servingValue, findsOneWidget);
       expect(tester.widget<Text>(servingValue).data, '$target');
 
+      final expectedSteps = [
+        for (final raw in (expected['steps'] as List))
+          Map<String, dynamic>.from(raw as Map),
+      ];
+      final duration = find.byKey(const ValueKey('recipe-duration'));
+      await _scrollUntilVisible(tester, duration, delta: const Offset(0, 500));
+      expect(
+        find.descendant(
+          of: duration,
+          matching: find.text(
+            _fixtureMinutesText(
+              expected['total_time_seconds'] as int,
+              expected['active_time_seconds'] as int,
+            ),
+          ),
+        ),
+        findsOneWidget,
+        reason: 're-estimated total and active time',
+      );
+      final durationNote = find.byKey(const ValueKey('recipe-duration-note'));
+      if (target == original) {
+        expect(durationNote, findsNothing);
+      } else {
+        final largeBatch = expectedSteps.any(
+          (step) => step['batch_warning'] == true,
+        );
+        final expectedNote =
+            '按 $target 份重新估算：步骤时长和火候不随份数变化，总时长和动手时长不变。'
+            '${largeBatch ? '份量变大后可能要分批下锅，实际用时会更长，以成熟判断为准。' : ''}';
+        expect(
+          find.descendant(of: durationNote, matching: find.text(expectedNote)),
+          findsOneWidget,
+          reason: 'time explanation',
+        );
+      }
+
       final expectedWarnings = {
         for (final raw in (expected['warnings'] as List))
-          (Map<String, dynamic>.from(raw as Map)['ingredient_id'] as String),
+          (Map<String, dynamic>.from(raw as Map)['ingredient_id'] as String):
+              Map<String, dynamic>.from(raw),
       };
       final expectedIngredients = [
         for (final raw in (expected['ingredients'] as List))
@@ -1828,26 +2050,31 @@ void main() {
       for (final raw in (input['ingredients'] as List)) {
         final id = (raw as Map)['id'] as String;
         final warning = find.byKey(ValueKey('recipe-serving-warning-$id'));
-        if (expectedWarnings.contains(id)) {
-          expect(warning, findsOneWidget, reason: 'ingredient=$id warning');
-        } else {
+        final expectedWarning = expectedWarnings[id];
+        if (expectedWarning == null) {
           expect(warning, findsNothing, reason: 'ingredient=$id warning');
+          continue;
         }
+        await _scrollUntilVisible(tester, warning, delta: const Offset(0, 500));
+        // The App localizes the warning by its code and ingredient name; the
+        // Chinese wording matches the server's message for round_deviation.
+        expect(expectedWarning['code'], 'round_deviation');
+        expect(
+          tester.widget<Text>(warning).data,
+          expectedWarning['message'],
+          reason: 'ingredient=$id warning text',
+        );
       }
       for (final ingredient in expectedIngredients) {
         await _expectFixtureIngredient(
           tester,
           ingredient,
-          expectConversionSource: target != original,
+          conversionActive: target != original,
         );
       }
 
       final sourceSteps = [
         for (final raw in (input['steps'] as List))
-          Map<String, dynamic>.from(raw as Map),
-      ];
-      final expectedSteps = [
-        for (final raw in (expected['steps'] as List))
           Map<String, dynamic>.from(raw as Map),
       ];
       expect(expectedSteps, hasLength(sourceSteps.length));
@@ -1868,6 +2095,7 @@ void main() {
         await tester.tap(reset);
         await _fixtureSettle(tester);
         expect(tester.widget<Text>(servingValue).data, '$original');
+        expect(durationNote, findsNothing);
       }
       await _resetPage(tester);
     }
@@ -1900,11 +2128,32 @@ void main() {
         Map<String, dynamic>.from(input['target_mold'] as Map),
       );
       expect(find.byKey(const ValueKey('recipe-mold-control')), findsOneWidget);
+      // Serving and mold conversion never apply together.
+      expect(
+        find.byKey(const ValueKey('recipe-serving-control')),
+        findsNothing,
+      );
       final ratio = find.byKey(const ValueKey('recipe-mold-ratio'));
       expect(ratio, findsOneWidget);
       expect(
         tester.widget<Text>(ratio).data,
-        contains((expected['area_ratio'] as num).toDouble().toStringAsFixed(2)),
+        '原模具：'
+        '${_fixtureMoldLabel(Map<String, dynamic>.from(input['original_mold'] as Map))}'
+        ' · 底面积比例 '
+        '${(expected['area_ratio'] as num).toDouble().toStringAsFixed(2)}',
+      );
+      final durationNote = find.byKey(const ValueKey('recipe-duration-note'));
+      await _scrollUntilVisible(
+        tester,
+        durationNote,
+        delta: const Offset(0, 500),
+      );
+      expect(
+        find.descendant(
+          of: durationNote,
+          matching: find.text('换模具后烘烤时间不按底面积比例放大，时长按原步骤估算，以成熟判断为准。'),
+        ),
+        findsOneWidget,
       );
 
       final expectedIngredients = [
@@ -1919,7 +2168,7 @@ void main() {
         await _expectFixtureIngredient(
           tester,
           ingredient,
-          expectConversionSource: true,
+          conversionActive: true,
         );
       }
 
@@ -1983,9 +2232,10 @@ void main() {
           tester
               .widget<Text>(find.byKey(const ValueKey('recipe-mold-ratio')))
               .data,
-          contains(
-            (expected['area_ratio'] as num).toDouble().toStringAsFixed(2),
-          ),
+          '原模具：'
+          '${_fixtureMoldLabel(Map<String, dynamic>.from(input['original_mold'] as Map))}'
+          ' · 底面积比例 '
+          '${(expected['area_ratio'] as num).toDouble().toStringAsFixed(2)}',
         );
       } else {
         await _scrollUntilVisible(
@@ -2009,7 +2259,7 @@ void main() {
         'original_quantity': source['quantity'],
         'display_quantity': expected['display_quantity'],
         'rule': mold ? 'mold_ratio' : 'proportional',
-      }, expectConversionSource: true);
+      }, conversionActive: true);
       await _resetPage(tester);
     }
   });
@@ -2105,10 +2355,16 @@ void main() {
           findsOneWidget,
         );
         if (mode == 'home') {
-          await _scrollUntilVisible(
-            tester,
-            find.byKey(const ValueKey('recipe-measure-picker')),
+          final picker = find.byKey(
+            const ValueKey('recipe-measure-picker'),
           );
+          await _scrollUntilVisible(tester, picker);
+          await tester.tap(picker);
+          await _fixtureSettle(tester);
+          final measureName =
+              (input['measure'] as Map<String, dynamic>)['name'] as String;
+          await tapVisible(tester, find.textContaining(measureName).last);
+          await _fixtureSettle(tester);
         }
         await _expectFixtureDisplayOutput(tester, input, expected);
         await _resetPage(tester);

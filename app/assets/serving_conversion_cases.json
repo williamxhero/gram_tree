@@ -100,5 +100,129 @@
       "total_time_seconds": 120,
       "active_time_seconds": 180
     }
+  },
+{
+  "name": "sequential_unattended_and_round_unchanged",
+  "input": {
+    "original_servings": 2,
+    "target_servings": 1,
+    "ingredients": [
+      {
+        "id": "rice",
+        "display_name": "大米",
+        "quantity": 200,
+        "unit": "g",
+        "scaling_mode": "proportional"
+      },
+      {
+        "id": "salt",
+        "display_name": "盐",
+        "quantity": 3,
+        "unit": "g",
+        "scaling_mode": "unchanged"
+      },
+      {
+        "id": "egg",
+        "display_name": "鸡蛋",
+        "quantity": 1,
+        "unit": "个",
+        "scaling_mode": "round"
+      }
+    ],
+    "steps": [
+      {
+        "id": "marinate",
+        "instruction": "腌制入味",
+        "ingredient_ids": [
+          "rice"
+        ],
+        "duration_seconds": 600,
+        "temperature_celsius": 25,
+        "heat": "室温",
+        "unattended": true
+      },
+      {
+        "id": "cook",
+        "instruction": "炒熟",
+        "ingredient_ids": [
+          "rice",
+          "egg"
+        ],
+        "duration_seconds": 120,
+        "temperature_celsius": 180,
+        "heat": "中火",
+        "depends_on": [
+          "marinate"
+        ]
+      }
+    ]
+  },
+  "expected": {
+    "original_servings": 2,
+    "target_servings": 1,
+    "min_servings": 1,
+    "max_servings": 20,
+    "ingredients": [
+      {
+        "id": "rice",
+        "display_name": "大米",
+        "original_quantity": 200,
+        "display_quantity": 100,
+        "unit": "g",
+        "rule": "proportional",
+        "deviation_ratio": null,
+        "deviation_warning": false
+      },
+      {
+        "id": "salt",
+        "display_name": "盐",
+        "original_quantity": 3,
+        "display_quantity": 3,
+        "unit": "g",
+        "rule": "unchanged",
+        "deviation_ratio": null,
+        "deviation_warning": false
+      },
+      {
+        "id": "egg",
+        "display_name": "鸡蛋",
+        "original_quantity": 1,
+        "display_quantity": 1,
+        "unit": "个",
+        "rule": "round",
+        "deviation_ratio": 1,
+        "deviation_warning": true
+      }
+    ],
+    "steps": [
+      {
+        "id": "marinate",
+        "instruction": "腌制入味",
+        "duration_seconds": 600,
+        "temperature_celsius": 25,
+        "heat": "室温",
+        "batch_warning": false,
+        "batch_warning_text": null
+      },
+      {
+        "id": "cook",
+        "instruction": "炒熟",
+        "duration_seconds": 120,
+        "temperature_celsius": 180,
+        "heat": "中火",
+        "batch_warning": false,
+        "batch_warning_text": null
+      }
+    ],
+    "warnings": [
+      {
+        "code": "round_deviation",
+        "ingredient_id": "egg",
+        "message": "鸡蛋取整后与按比例结果相差较大，请按口味微调其他用量。"
+      }
+    ],
+    "total_time_seconds": 720,
+    "active_time_seconds": 120
   }
+}
 ]

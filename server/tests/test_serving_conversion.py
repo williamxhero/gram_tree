@@ -190,3 +190,33 @@ def test_omitted_scaling_mode_uses_ingredient_default_but_explicit_mode_wins(api
     )
     assert explicit_conversion.status_code == 200, explicit_conversion.text
     assert explicit_conversion.json()["conversion"]["ingredients"][0]["display_quantity"] == 1.5
+
+
+def test_null_scaling_mode_means_unset(api: Api) -> None:
+    """A null mode is the same as omitting it: library default, else proportional."""
+    assert cli(["ingredients", "import", str(SEED_PATH)]) == 0
+    headers = bearer(api.login("scaling-null@example.com"))
+    body = recipe_input("空缩放方式")
+    body["snapshot"]["ingredients"] = [
+        {
+            "id": "egg",
+            "ingredient_id": "b097f5a9-0641-4f00-9666-dad68756638c",
+            "display_name": "鸡蛋",
+            "quantity": 3,
+            "unit": "个",
+            "scaling_mode": None,
+        },
+        {
+            "id": "custom",
+            "display_name": "自制酱",
+            "quantity": 30,
+            "unit": "g",
+            "scaling_mode": None,
+        },
+    ]
+    body["snapshot"]["steps"] = []
+    created = api.client.post("/v1/recipes", json=body, headers=headers)
+    assert created.status_code == 201, created.text
+    saved = created.json()
+    modes = [item["scaling_mode"] for item in saved["version"]["snapshot"]["ingredients"]]
+    assert modes == ["round", "proportional"]

@@ -3298,14 +3298,21 @@
             "title": "Replacement"
           },
           "scaling_mode": {
-            "default": "proportional",
-            "enum": [
-              "proportional",
-              "unchanged",
-              "round"
+            "anyOf": [
+              {
+                "enum": [
+                  "proportional",
+                  "unchanged",
+                  "round"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
             ],
-            "title": "Scaling Mode",
-            "type": "string"
+            "description": "缩放方式；不填时用标准食材库的默认值，未收录的食材按比例",
+            "title": "Scaling Mode"
           },
           "unit": {
             "maxLength": 20,

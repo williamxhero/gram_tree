@@ -227,6 +227,9 @@
   "recipeRestore": "恢复",
   "recipeAuthorVersion": "第 {version} 版 · {servings} 份",
   "recipeDuration": "总时长 {total} 分钟 · 动手 {active} 分钟",
+  "recipeDurationServingNote": "按 {servings} 份重新估算：步骤时长和火候不随份数变化，总时长和动手时长不变。",
+  "recipeDurationBatchNote": "份量变大后可能要分批下锅，实际用时会更长，以成熟判断为准。",
+  "recipeDurationMoldNote": "换模具后烘烤时间不按底面积比例放大，时长按原步骤估算，以成熟判断为准。",
   "recipeAllergens": "过敏原：{items}{incomplete}",
   "recipeNutrition": "每份营养：估算值{incomplete}",
   "recipeIngredients": "食材",
@@ -350,6 +353,8 @@
   "recipeScalingProportional": "按比例",
   "recipeScalingUnchanged": "保持不变",
   "recipeScalingRound": "按个取整",
+  "recipeScalingLibraryDefault": "跟随食材库默认（{mode}）",
+  "recipeScalingLibraryDefaultUnknown": "跟随食材库默认（没有默认值时按比例）",
   "recipeOptionalToggle": "可选食材",
   "recipeFunctionalToggle": "功能性用料",
   "recipeReplacement": "替代品",
@@ -446,6 +451,12 @@
       "total": {"type": "int"},
       "active": {"type": "int"}
     }
+  },
+  "@recipeDurationServingNote": {
+    "placeholders": {"servings": {"type": "int"}}
+  },
+  "@recipeScalingLibraryDefault": {
+    "placeholders": {"mode": {"type": "String"}}
   },
   "@recipeAllergens": {
     "placeholders": {

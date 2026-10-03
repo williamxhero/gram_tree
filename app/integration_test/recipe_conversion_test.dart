@@ -229,6 +229,12 @@ void main() {
       );
       await settle(tester);
       await waitFor(tester, find.byKey(const ValueKey('recipe-serving-value')));
+      expect(
+        tester
+            .widget<Text>(find.byKey(const ValueKey('recipe-serving-value')))
+            .data,
+        '2',
+      );
       _markE2eStep('after_serving_increase_reset');
 
       // Mold conversion, the visible amount, and provenance are exercised
@@ -239,6 +245,11 @@ void main() {
         tapAfterReveal: true,
       );
       await settle(tester);
+      expect(
+        find.byKey(const ValueKey('recipe-serving-control')),
+        findsNothing,
+        reason: 'serving control is hidden in mutually exclusive mold mode',
+      );
       await waitFor(tester, find.byKey(const ValueKey('target-mold-diameter')));
       await tester.enterText(
         find.byKey(const ValueKey('target-mold-diameter')),
@@ -248,6 +259,17 @@ void main() {
       await waitFor(tester, find.byKey(const ValueKey('recipe-mold-ratio')));
       await waitFor(tester, find.text('177.78 克'));
       await waitFor(tester, find.byKey(const ValueKey('recipe-measure-mode')));
+      final flourSource = find.byKey(
+        const ValueKey('recipe-source-mark-ingredient-1'),
+      );
+      await reveal(tester, flourSource, tapAfterReveal: true);
+      await waitFor(tester, find.text('原来：100 g'));
+      await waitFor(tester, find.text('现在：177.78 克'));
+      await waitFor(tester, find.text('模具比例'));
+      expect(find.byKey(const ValueKey('why-panel')), findsOneWidget);
+      await tester.pageBack();
+      await settle(tester);
+      expect(find.byKey(const ValueKey('why-panel')), findsNothing);
       _markE2eStep('after_mold_eight_inch');
 
       // Display mode switching is also an HTTP-backed contract. The local

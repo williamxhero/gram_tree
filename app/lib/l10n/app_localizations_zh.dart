@@ -466,6 +466,17 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
+  String recipeDurationServingNote(int servings) {
+    return '按 $servings 份重新估算：步骤时长和火候不随份数变化，总时长和动手时长不变。';
+  }
+
+  @override
+  String get recipeDurationBatchNote => '份量变大后可能要分批下锅，实际用时会更长，以成熟判断为准。';
+
+  @override
+  String get recipeDurationMoldNote => '换模具后烘烤时间不按底面积比例放大，时长按原步骤估算，以成熟判断为准。';
+
+  @override
   String recipeAllergens(String items, String incomplete) {
     return '过敏原：$items$incomplete';
   }
@@ -858,6 +869,14 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get recipeScalingRound => '按个取整';
+
+  @override
+  String recipeScalingLibraryDefault(String mode) {
+    return '跟随食材库默认（$mode）';
+  }
+
+  @override
+  String get recipeScalingLibraryDefaultUnknown => '跟随食材库默认（没有默认值时按比例）';
 
   @override
   String get recipeOptionalToggle => '可选食材';

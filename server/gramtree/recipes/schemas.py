@@ -82,7 +82,11 @@ class RecipeIngredient(BaseModel):
     optional: bool = False
     replacement: RecipeReplacement | str | None = None
     functional: bool = False
-    scaling_mode: Literal["proportional", "unchanged", "round"] = "proportional"
+    # 不填（或 null）表示作者没有设置：保存时用标准食材库的默认值，未收录的食材按比例。
+    # 保存下来的版本快照里总是具体的缩放方式。
+    scaling_mode: Literal["proportional", "unchanged", "round"] | None = Field(
+        default=None, description="缩放方式；不填时用标准食材库的默认值，未收录的食材按比例"
+    )
     quantity_source: ValueSource | None = None
 
     @field_validator("display_name", "unit")
