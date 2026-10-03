@@ -127,11 +127,13 @@ void main() {
         );
         final response = await server.post<Map<String, dynamic>>(
           '/v1/auth/email/login',
-          data: {'email': accountEmail, 'code': await latestCode(accountEmail)},
+          data: {
+            'email': accountEmail,
+            'code': await latestCode(accountEmail),
+          },
         );
         return response.data!['access_token'] as String;
       }
-
       tester.testTextInput.register();
       addTearDown(tester.testTextInput.unregister);
 
@@ -214,7 +216,10 @@ void main() {
 
       // Serving conversion: use the keyed controls instead of matching nearby
       // text, and verify both adjustment and restoration on the real detail page.
-      await reveal(tester, find.byKey(const ValueKey('recipe-serving-value')));
+      await reveal(
+        tester,
+        find.byKey(const ValueKey('recipe-serving-value')),
+      );
       final originalServing = tester
           .widget<Text>(find.byKey(const ValueKey('recipe-serving-value')))
           .data;
