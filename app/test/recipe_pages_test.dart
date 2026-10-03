@@ -329,12 +329,6 @@ String _fixtureQuantityText(num value) {
       : number.toString();
 }
 
-String _fixtureUnitText(String unit) => switch (unit) {
-  'g' => '克',
-  'ml' => '毫升',
-  _ => unit,
-};
-
 void _expectFixtureDisplayOutput(
   WidgetTester tester,
   Map<String, dynamic> input,
