@@ -1,13 +1,13 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gramtree_api/gramtree_api.dart';
 
 import 'package:gram_tree/storage/local_store.dart';
 import 'package:gram_tree/ui_protocol/source_mark.dart';
 
+import 'fixtures/conversion_cases.g.dart';
 import 'helpers.dart';
 
 const _recipeId = '11111111-1111-4111-8111-111111111111';
@@ -282,9 +282,14 @@ Future<List<Map<String, dynamic>>> _loadFixture(
   WidgetTester tester,
   String asset,
 ) async {
-  // Web assets arrive via real browser I/O, outside the widget fake clock.
-  final contents = await tester.runAsync(() => rootBundle.loadString(asset));
-  final decoded = jsonDecode(contents!) as List;
+  // rootBundle hangs under `flutter test --platform chrome`, so the shared
+  // tables are embedded by tool/gen_conversion_fixtures.sh (kept in sync by
+  // conversion_fixtures_sync_test.dart).
+  final contents = embeddedConversionCases[asset];
+  if (contents == null) {
+    fail('fixture not embedded, run tool/gen_conversion_fixtures.sh: $asset');
+  }
+  final decoded = jsonDecode(contents) as List;
   return [for (final item in decoded) Map<String, dynamic>.from(item as Map)];
 }
 
