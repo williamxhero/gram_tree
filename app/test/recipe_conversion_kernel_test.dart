@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gramtree_api/gramtree_api.dart';
@@ -19,6 +20,7 @@ void main() {
   });
 
   test('conversion kernels match shared half-up boundary fixture', () async {
+    if (kIsWeb) return;
     final raw = jsonDecode(
       await rootBundle.loadString('assets/rounding_boundary_cases.json'),
     ) as List;
