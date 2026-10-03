@@ -359,11 +359,7 @@ Future<void> _openRecipeDetailForFixture(
   WidgetTester tester,
   FakeServer server,
 ) async {
-  await pumpApp(
-    tester,
-    env: TestEnv.signedIn(server: server),
-    settle: false,
-  );
+  await pumpApp(tester, env: TestEnv.signedIn(server: server), settle: false);
   await _fixtureSettle(tester);
   await tester.tap(find.byKey(const ValueKey('primary-create-button')));
   await _fixtureSettle(tester);
