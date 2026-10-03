@@ -1776,7 +1776,10 @@ void main() {
   testWidgets('recipe detail executes every shared serving fixture case', (
     tester,
   ) async {
-    final cases = await _loadFixture(tester, 'assets/serving_conversion_cases.json');
+    final cases = await _loadFixture(
+      tester,
+      'assets/serving_conversion_cases.json',
+    );
     for (final caseData in cases) {
       final input = Map<String, dynamic>.from(caseData['input'] as Map);
       final expected = Map<String, dynamic>.from(caseData['expected'] as Map);
@@ -1868,7 +1871,10 @@ void main() {
   testWidgets('recipe detail executes every shared mold fixture case', (
     tester,
   ) async {
-    final cases = await _loadFixture(tester, 'assets/mold_conversion_cases.json');
+    final cases = await _loadFixture(
+      tester,
+      'assets/mold_conversion_cases.json',
+    );
     for (final caseData in cases) {
       final input = Map<String, dynamic>.from(caseData['input'] as Map);
       final expected = Map<String, dynamic>.from(caseData['expected'] as Map);
@@ -1937,7 +1943,10 @@ void main() {
   testWidgets(
     'recipe detail executes every shared measure display fixture case',
     (tester) async {
-      final cases = await _loadFixture(tester, 'assets/measure_display_cases.json');
+      final cases = await _loadFixture(
+        tester,
+        'assets/measure_display_cases.json',
+      );
       const densityId = '99999999-9999-4999-8999-999999999999';
       for (final caseData in cases) {
         final input = Map<String, dynamic>.from(caseData['input'] as Map);
