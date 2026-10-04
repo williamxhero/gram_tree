@@ -1,6 +1,7 @@
 import 'package:gramtree_api/gramtree_api.dart';
 
 import '../l10n/app_localizations.dart';
+import 'decimal_rounding.dart';
 
 enum MeasureDisplayMode { base, standard, home }
 
@@ -87,14 +88,15 @@ double? _grams(double quantity, String unit, double? density) {
   return null;
 }
 
-String _quantityText(double value) => value > 0 && value < 0.005
-    ? '<0.01'
-    : value == value.roundToDouble()
-    ? value.toInt().toString()
-    : value
-          .toStringAsFixed(2)
-          .replaceFirst(RegExp(r'0+$'), '')
-          .replaceFirst(RegExp(r'\.$'), '');
+String _quantityText(double value) {
+  if (value > 0 && value < 0.005) return '<0.01';
+  if (value == value.roundToDouble()) return value.toInt().toString();
+  final rounded = roundHalfUp(value, fractionDigits: 2);
+  return rounded
+      .toStringAsFixed(2)
+      .replaceFirst(RegExp(r'0+$'), '')
+      .replaceFirst(RegExp(r'\.$'), '');
+}
 
 DisplayedAmount _base(DisplayMeasureInput input, {String? rule}) {
   final unit = input.baseUnit == 'g' ? 'g' : 'ml';

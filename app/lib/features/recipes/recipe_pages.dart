@@ -12,6 +12,7 @@ import '../../auth/auth_controller.dart';
 import '../../features_flags/features.dart';
 import '../../ingredients/ingredient_provider.dart';
 import '../../l10n/app_localizations.dart';
+import '../../recipes/decimal_rounding.dart';
 import '../../recipes/measure_display.dart';
 import '../../recipes/personal_measure_repository.dart';
 import '../../recipes/recipe_draft.dart';
@@ -2645,15 +2646,27 @@ class _DisplayModeControl extends StatelessWidget {
               segments: [
                 ButtonSegment(
                   value: MeasureDisplayMode.base,
-                  label: Text(l10n.recipeMeasureModeBase),
+                  label: Semantics(
+                    key: const ValueKey('recipe-display-mode-base'),
+                    selected: mode == MeasureDisplayMode.base,
+                    child: Text(l10n.recipeMeasureModeBase),
+                  ),
                 ),
                 ButtonSegment(
                   value: MeasureDisplayMode.standard,
-                  label: Text(l10n.recipeMeasureModeStandard),
+                  label: Semantics(
+                    key: const ValueKey('recipe-display-mode-standard'),
+                    selected: mode == MeasureDisplayMode.standard,
+                    child: Text(l10n.recipeMeasureModeStandard),
+                  ),
                 ),
                 ButtonSegment(
                   value: MeasureDisplayMode.home,
-                  label: Text(l10n.recipeMeasureModeHome),
+                  label: Semantics(
+                    key: const ValueKey('recipe-display-mode-home'),
+                    selected: mode == MeasureDisplayMode.home,
+                    child: Text(l10n.recipeMeasureModeHome),
+                  ),
                   enabled: hasHomeMeasures,
                 ),
               ],
@@ -2735,9 +2748,11 @@ class _IngredientDetailRow extends StatelessWidget {
     final servingQuantity = adjusted && convertedUnit != null
         ? '${_quantityText(convertedQuantity)} $convertedUnit'
         : '${_quantityText(ingredient.quantity)} ${ingredient.unit}';
-    final quantity = displayed == null
-        ? servingQuantity
-        : localizedDisplayedAmount(displayed!, l10n);
+    final quantity =
+        contract?.text ??
+        (displayed == null
+            ? servingQuantity
+            : localizedDisplayedAmount(displayed!, l10n));
     final noDensity = displayed?.rule == 'no_density';
     final noDensityBasis = l10n.recipeMeasureNoDensity(
       displayed?.baseUnit == 'ml'
@@ -2836,13 +2851,14 @@ class _IngredientDetailRow extends StatelessWidget {
                   : conversionPresent
                   ? 'recipe-ingredient-${ingredient.id}-conversion'
                   : 'recipe-ingredient-${ingredient.id}-quantity',
-              value: quantity,
+              value: serverSource?.value ?? quantity,
               originalValue:
                   serverSource?.originalValue ??
                   (displayed != null || conversionPresent
                       ? originalQuantity
                       : originalSourceValue),
               basisText: sourceBasis,
+              citation: serverSource?.basis.citation,
               required: false,
               // SPEC-002.3 has no recipe-adjustment handler yet; deterministic
               // conversion details stay read-only instead of emitting no-op actions.
@@ -3310,7 +3326,8 @@ String _quantityText(num value) {
   final number = value.toDouble();
   if (number > 0 && number < 0.005) return '<0.01';
   if (number == number.roundToDouble()) return number.toInt().toString();
-  return number
+  final rounded = roundHalfUp(number, fractionDigits: 2);
+  return rounded
       .toStringAsFixed(2)
       .replaceFirst(RegExp(r'0+$'), '')
       .replaceFirst(RegExp(r'\.$'), '');
