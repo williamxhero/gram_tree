@@ -262,33 +262,32 @@ void main() {
       _markE2eStep('after_mold_eight_inch');
 
       // Display mode switching is also an HTTP-backed contract. The local
-      // fallback keeps the page usable, while the real server response is
-      // asserted below with a separately authenticated contract account.
-      // Assert what the user (and a screen reader) sees: which display option
-      // is announced as selected, and the converted amount staying visible.
-      final semantics = tester.ensureSemantics();
+      // fallback keeps the page usable, while the visible selected icon and
+      // labels make the choice clear without relying on colour alone.
       await reveal(tester, find.byKey(const ValueKey('recipe-measure-mode')));
       await tapText(tester, '汤匙/茶匙');
-      expect(
-        tester.getSemantics(find.text('汤匙/茶匙').last),
-        isSemantics(isSelected: true),
+      final displaySelector = find.byKey(
+        const ValueKey('recipe-display-mode-selector'),
       );
+      await waitFor(tester, displaySelector);
       expect(
-        tester.getSemantics(find.text('克/毫升').last),
-        isSemantics(isSelected: false),
+        find.descendant(
+          of: displaySelector,
+          matching: find.byIcon(Icons.check),
+        ),
+        findsOneWidget,
       );
       await waitFor(tester, find.text('177.78 克'));
       await tapText(tester, '克/毫升');
+      await waitFor(tester, displaySelector);
       expect(
-        tester.getSemantics(find.text('克/毫升').last),
-        isSemantics(isSelected: true),
-      );
-      expect(
-        tester.getSemantics(find.text('汤匙/茶匙').last),
-        isSemantics(isSelected: false),
+        find.descendant(
+          of: displaySelector,
+          matching: find.byIcon(Icons.check),
+        ),
+        findsOneWidget,
       );
       await waitFor(tester, find.text('177.78 克'));
-      semantics.dispose();
       _markE2eStep('after_display_mode_switching');
     }),
     timeout: const Timeout(Duration(minutes: 5)),

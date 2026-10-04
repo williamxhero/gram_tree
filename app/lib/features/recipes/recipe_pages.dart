@@ -2613,7 +2613,9 @@ class _DisplayModeControl extends StatelessWidget {
           children: [
             SegmentedButton<MeasureDisplayMode>(
               key: const ValueKey('recipe-display-mode-selector'),
-              showSelectedIcon: false,
+              // Keep selection visible even when colour is unavailable; the
+              // segmented control also exposes selected semantics.
+              showSelectedIcon: true,
               segments: [
                 ButtonSegment(
                   value: MeasureDisplayMode.base,
