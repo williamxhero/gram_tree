@@ -414,18 +414,16 @@ Future<void> _expectFixtureIngredient(
     return;
   }
   if (!changed) {
-    // Unchanged results show the original value and applied rule as text,
-    // without an "adjusted" mark.
-    expect(
-      find.descendant(
-        of: amount,
-        matchRoot: true,
-        matching: find.textContaining('$expectedText · 原值 '),
-      ),
-      findsOneWidget,
-      reason: 'ingredient=$id unchanged rule detail',
-    );
-    expect(source, findsNothing, reason: 'ingredient=$id should be unchanged');
+    // A system conversion still has a unified WhyPanel affordance even when
+    // its deterministic rule preserves the numeric value.
+    expect(source, findsOneWidget, reason: 'ingredient=$id rule source mark');
+    expect(find.text('按场景调整'), findsWidgets);
+    final ruleDetail = switch (expected['rule'] as String) {
+      'unchanged' => '保持原值不变',
+      'round' => '按个取整',
+      _ => '按比例换算',
+    };
+    expect(find.textContaining(ruleDetail), findsWidgets);
     return;
   }
   expect(find.text(expectedText), findsWidgets, reason: 'ingredient=$id');

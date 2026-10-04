@@ -299,7 +299,13 @@ ServingConversionResult convertServings({
         id: item.id,
         displayName: item.displayName,
         originalQuantity: item.quantity,
-        displayQuantity: _roundTwoDecimals(display),
+        // An identity conversion and an unchanged rule must not invent a
+        // precision loss that makes the page claim the system changed it.
+        displayQuantity:
+            item.scalingMode == 'unchanged' ||
+                targetServings == originalServings
+            ? display
+            : _roundTwoDecimals(display),
         unit: item.unit,
         rule: item.scalingMode,
         deviationRatio: deviationRatio,

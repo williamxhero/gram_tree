@@ -5,6 +5,16 @@
     "expected": {"text": "30 克", "display_quantity": 30.0, "display_unit": "g", "grams": 30.0, "rule": "base"}
   },
   {
+    "name": "base quantity uses decimal half up",
+    "input": {"base_quantity": 1.005, "base_unit": "g", "density": null, "mode": "base", "measure": null},
+    "expected": {"text": "1.01 克", "display_quantity": 1.005, "display_unit": "g", "grams": 1.005, "rule": "base"}
+  },
+  {
+    "name": "base quantity keeps three decimal source",
+    "input": {"base_quantity": 1.234, "base_unit": "g", "density": null, "mode": "base", "measure": null},
+    "expected": {"text": "1.23 克", "display_quantity": 1.234, "display_unit": "g", "grams": 1.234, "rule": "base"}
+  },
+  {
     "name": "standard tablespoon uses density",
     "input": {"base_quantity": 15, "base_unit": "g", "density": 1.0, "mode": "standard", "measure": null},
     "expected": {"text": "1 汤匙（15 克）", "display_quantity": 1.0, "display_unit": "汤匙", "grams": 15.0, "rule": "standard_measure"}

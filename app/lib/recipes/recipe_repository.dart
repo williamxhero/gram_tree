@@ -211,6 +211,7 @@ class RecipeIngredientDraft {
     this.preparation = '',
     this.group = '',
     this.scalingMode,
+    this.quantitySource,
     this.optional = false,
     this.functional = false,
     this.replacement,
@@ -229,7 +230,9 @@ class RecipeIngredientDraft {
         baseUnit: value.baseUnit?.value ?? 'g',
         preparation: value.preparation ?? '',
         group: value.group ?? '',
-        scalingMode: value.scalingMode,
+        scalingMode:
+            value.scalingMode ?? RecipeIngredientScalingModeEnum.proportional,
+        quantitySource: value.quantitySource,
         optional: value.optional == true,
         functional: value.functional == true,
         replacement: value.replacement is String
@@ -257,6 +260,7 @@ class RecipeIngredientDraft {
       preparation: _string(value['preparation']) ?? '',
       group: _string(value['group']) ?? '',
       scalingMode: _scalingMode(value['scaling_mode']),
+      quantitySource: _valueSource(value['quantity_source']),
       optional: value['optional'] == true,
       functional: value['functional'] == true,
       replacement: replacement is String
@@ -282,6 +286,7 @@ class RecipeIngredientDraft {
   /// The author's explicit choice; `null` leaves it to the standard
   /// ingredient's library default (resolved by the server on save).
   RecipeIngredientScalingModeEnum? scalingMode;
+  ValueSource? quantitySource;
   bool optional;
   bool functional;
   RecipeReplacementDraft? replacement;
@@ -297,7 +302,7 @@ class RecipeIngredientDraft {
     optional: optional,
     preparation: _optionalText(preparation),
     quantity: quantity,
-    quantitySource: _authorSource(quantity.toString()),
+    quantitySource: quantitySource ?? _authorSource(quantity.toString()),
     replacement: replacement?.toModel(),
     scalingMode: scalingMode,
     unit: unit.trim().isEmpty ? 'g' : unit.trim(),
@@ -314,6 +319,7 @@ class RecipeIngredientDraft {
     'preparation': preparation,
     'group': group,
     'scaling_mode': scalingMode?.value,
+    'quantity_source': quantitySource?.toJson(),
     'optional': optional,
     'functional': functional,
     'replacement': replacement?.toJson(),
@@ -590,6 +596,22 @@ RecipeIngredientScalingModeEnum? _scalingMode(Object? value) {
   return RecipeIngredientScalingModeEnum.values
       .where((item) => item.value == raw)
       .firstOrNull;
+}
+
+ValueSource? _valueSource(Object? value) {
+  if (value is! Map) return null;
+  final source = value['source'];
+  final raw = source?.toString();
+  final sourceType = ValueSourceSource_Enum.values
+      .where((item) => item.value == raw)
+      .firstOrNull;
+  if (sourceType == null) return null;
+  return ValueSource(
+    basis: _string(value['basis']) ?? '',
+    confidence: (value['confidence'] as num?)?.toDouble(),
+    original: _string(value['original']),
+    source_: sourceType,
+  );
 }
 
 String? _optionalText(String value) {

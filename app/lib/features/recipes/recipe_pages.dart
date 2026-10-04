@@ -1648,6 +1648,12 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
   Future<void> _refreshDisplayMetadata() async {
     final detail = _detail;
     if (detail == null) return;
+    if (mounted) {
+      setState(() {
+        _displayContractKey = null;
+        _displayContract = null;
+      });
+    }
     await _loadDisplayMetadata(detail);
   }
 
@@ -1657,6 +1663,7 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
     required MoldSpec? targetMold,
     required MeasureDisplayMode displayMode,
     required String? measureId,
+    required String? measureFingerprint,
   }) {
     final activeMold = _scaleMode == _RecipeScaleMode.mold ? targetMold : null;
     final activeServings = _scaleMode == _RecipeScaleMode.servings
@@ -1667,6 +1674,7 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
       widget.versionId,
       displayMode.name,
       measureId,
+      measureFingerprint,
       activeServings,
       activeMold?.toJson(),
     ].toString();
@@ -1869,6 +1877,9 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
       targetMold: _targetMold,
       displayMode: _displayMode,
       measureId: selectedMeasure?.id,
+      measureFingerprint: selectedMeasure == null
+          ? null
+          : '${selectedMeasure.id}:${selectedMeasure.name}:${selectedMeasure.capacityMl}:${selectedMeasure.updatedAt}',
     );
     final contractById = {
       for (final item in _displayContract?.display.ingredients ?? const [])
@@ -2750,13 +2761,18 @@ class _IngredientDetailRow extends StatelessWidget {
     final source = ingredient.quantitySource;
     final serverSource = contract?.source_;
     final sourceType =
-        serverSource?.sourceType.value ??
-        (systemChanged
-            ? sourceTypeScenarioAdjusted
-            : source?.source_.value ?? sourceTypeAuthorFilled);
+        conversionActive &&
+            serverSource?.sourceType.value == sourceTypeAuthorFilled
+        ? sourceTypeScenarioAdjusted
+        : serverSource?.sourceType.value ??
+              (conversionActive || systemChanged
+                  ? sourceTypeScenarioAdjusted
+                  : source?.source_.value ?? sourceTypeAuthorFilled);
     final showSource = serverSource != null
-        ? serverSource.sourceType.value != sourceTypeAuthorFilled
+        ? serverSource.sourceType.value != sourceTypeAuthorFilled ||
+              conversionActive
         : systemChanged ||
+              conversionActive ||
               (source != null &&
                   source.source_.value != sourceTypeAuthorFilled);
     final conversionBasis = conversionPresent
@@ -3349,8 +3365,15 @@ DisplayedAmount? _displayedAmount(
       contract?.convertedQuantity?.toDouble() ??
       convertedMold?.displayQuantity ??
       converted?.displayQuantity;
-  final tinyProportional =
+  final proportional =
       exactScale != null &&
+      {'proportional', 'mold_ratio'}.contains(
+        contract?.conversionRule.value ??
+            convertedMold?.rule ??
+            converted?.rule,
+      );
+  final tinyProportional =
+      proportional &&
       roundedQuantity == 0 &&
       ingredient.quantity != 0 &&
       {'proportional', 'mold_ratio'}.contains(
@@ -3364,7 +3387,7 @@ DisplayedAmount? _displayedAmount(
     var contractBaseQuantity =
         ingredient.baseQuantity?.toDouble() ?? ingredient.quantity.toDouble();
     final contractQuantity = contract.convertedQuantity?.toDouble();
-    if (contractBaseUnit != 'count' && tinyProportional) {
+    if (contractBaseUnit != 'count' && proportional) {
       contractBaseQuantity *= exactScale;
     } else if (contractBaseUnit != 'count' &&
         contractQuantity != null &&

@@ -200,7 +200,10 @@ MoldConversionResult convertMold({
         id: item.id,
         displayName: item.displayName,
         originalQuantity: item.quantity,
-        displayQuantity: _roundTwoDecimals(display),
+        // Preserve identity and unchanged values at source precision.
+        displayQuantity: item.scalingMode == 'unchanged' || ratio == 1
+            ? display
+            : _roundTwoDecimals(display),
         unit: item.unit,
         rule: rule,
         deviationRatio: deviationRatio,

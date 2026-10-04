@@ -83,13 +83,14 @@
           <label>显示方式 <select id="display" onchange="update()"><option value="base">克 / 毫升</option><option value="standard">常用量具</option><option value="home">自家量具</option></select></label>
         </div>
         <div id="alert" class="alert" style="margin-top:12px">份量已超过原方 2 倍：注意分批下锅，时间以成熟判断为准。</div>
-        <div class="section"><div class="head"><h3>食材 · 5 份</h3><span class="source changed">按场景调整</span></div>
+        <div id="mold-panel" class="section" hidden><div class="head"><h3>模具结果</h3><span class="source changed">按模具调整</span></div><p class="subtle">目标模具：<select id="target-mold" onchange="moldUpdate()"><option value="8">8 寸圆模</option><option value="20">20 厘米方模</option></select> · 底面积比例 <span id="mold-ratio">1.78</span>。温度不变，时间以成熟判断为准。</p><div class="ingredient"><strong>鸡腿肉</strong><span id="mold-chicken" class="amount changed">533 克</span><div class="meta"><span class="pill">原方 300 克</span><span class="rule">模具比例</span></div></div><div class="ingredient"><strong>干辣椒</strong><span id="mold-pepper" class="amount changed">6 个</span><div class="meta"><span class="pill">原方 3 个</span><span class="rule">模具比例后取整</span></div></div></div>
+        <div id="serving-output" class="section"><div class="head"><h3 id="ingredient-title">食材 · 5 份</h3><span class="source changed">按场景调整</span></div>
           <div class="ingredient"><strong>鸡腿肉</strong><span id="chicken" class="amount changed">750 克</span><div class="meta"><span class="pill">原方 300 克</span><span class="rule">按比例 × 2.5</span></div></div>
           <div class="ingredient"><strong>干辣椒</strong><span id="pepper" class="amount changed">8 个</span><div class="meta"><span class="pill">理论值 7.5 个</span><span class="rule">阶梯取整</span><button class="secondary small" onclick="toggleWhy('pepper-why')">查看依据</button></div><div id="pepper-why" class="why" hidden>原值 3 个 × 2.5 = 7.5 个，按个取整为 8 个；与理论值偏差未超过 20%。</div></div>
           <div class="ingredient"><strong>盐</strong><span class="amount">3 克</span><div class="meta"><span class="pill">原值 3 克</span><span class="rule">保持原值不变</span></div></div>
         </div>
         <div class="section"><div class="head"><h3>步骤提示</h3><span class="pill">提醒</span></div><p class="subtle">腌制 15 分钟、大火炒 2 分钟：时长和火候不随份数变化。份量变大时注意分批下锅，时间以成熟判断为准。</p></div>
-        <div class="actions"><span class="subtle">显示的是 5 份，不会改动原方</span><button onclick="resetServings()">恢复原方 2 份</button></div>
+        <div class="actions"><span id="summary" class="subtle">显示的是 5 份，不会改动原方</span><button onclick="resetServings()">恢复原方 2 份</button></div>
       </section>
       <aside class="card">
         <div class="head"><h2>换算依据</h2><span class="pill">为什么</span></div>
@@ -100,10 +101,43 @@
     </div>
   </main>
   <script>
+    let currentMode = '份数';
     function toggleWhy(id) { const el = document.getElementById(id); el.hidden = !el.hidden; }
-    function mode(button, value) { document.querySelectorAll('.modebar button').forEach((b) => { b.classList.remove('active'); b.setAttribute('aria-pressed', 'false'); }); button.classList.add('active'); button.setAttribute('aria-pressed', 'true'); document.querySelector('.pill').textContent = '当前模式：' + value; document.getElementById('serving-panel').hidden = value !== '份数'; }
-    function update() { const value = Number(document.getElementById('servings').value || 2); document.getElementById('chicken').textContent = (300 * value / 2).toFixed(0) + ' 克'; document.getElementById('pepper').textContent = Math.max(1, Math.round(3 * value / 2)) + ' 个'; document.getElementById('alert').hidden = value < 4; }
-    function resetServings() { document.getElementById('servings').value = 2; update(); }
+    function mode(button, value) {
+      currentMode = value;
+      document.querySelectorAll('.modebar button').forEach((b) => { b.classList.remove('active'); b.setAttribute('aria-pressed', 'false'); });
+      button.classList.add('active'); button.setAttribute('aria-pressed', 'true');
+      document.querySelector('.pill').textContent = '当前模式：' + value;
+      document.getElementById('serving-panel').hidden = value !== '份数';
+      document.getElementById('serving-output').hidden = value === '模具';
+      document.getElementById('mold-panel').hidden = value !== '模具';
+      document.getElementById('alert').hidden = value !== '份数' || Number(document.getElementById('servings').value || 2) < 4;
+      if (value === '模具') moldUpdate(); else update();
+    }
+    function update() {
+      if (currentMode !== '份数') return;
+      const value = Number(document.getElementById('servings').value || 2);
+      const display = document.getElementById('display').value;
+      const grams = 300 * value / 2;
+      document.getElementById('chicken').textContent = display === 'home' ? '约 4 又 1/2 勺' : grams.toFixed(0) + ' 克';
+      document.getElementById('pepper').textContent = Math.max(1, Math.round(3 * value / 2)) + ' 个';
+      document.getElementById('ingredient-title').textContent = '食材 · ' + value + ' 份';
+      document.getElementById('summary').textContent = '显示的是 ' + value + ' 份，不会改动原方';
+      document.getElementById('alert').hidden = value < 4;
+    }
+    function moldUpdate() {
+      const diameter = Number(document.getElementById('target-mold').value || 8);
+      const ratio = (diameter / 6) ** 2;
+      document.getElementById('mold-ratio').textContent = ratio.toFixed(2);
+      document.getElementById('mold-chicken').textContent = (300 * ratio).toFixed(0) + ' 克';
+      document.getElementById('mold-pepper').textContent = Math.max(1, Math.round(3 * ratio)) + ' 个';
+    }
+    function resetServings() {
+      document.getElementById('servings').value = 2;
+      const servingButton = document.querySelector('.modebar button');
+      mode(servingButton, '份数');
+      update();
+    }
     update();
   </script>
 </body>
