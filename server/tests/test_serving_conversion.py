@@ -4,8 +4,6 @@ import json
 from pathlib import Path
 
 import pytest
-from sqlalchemy import text
-
 from gramtree.cli import main as cli
 from tests.accounts_support import Api, bearer
 from tests.test_conventions import assert_error_shape
@@ -385,7 +383,9 @@ def test_identity_conversion_preserves_precision_and_author_provenance(api: Api)
     assert items[1]["source"]["value"] == "1.234 g"
 
 
-def test_legacy_null_scaling_mode_uses_stable_proportional_fallback(api: Api, engine) -> None:
+def test_legacy_null_scaling_mode_uses_stable_proportional_fallback(
+    api: Api, legacy_null_scaling_snapshot
+) -> None:
     assert cli(["ingredients", "import", str(SEED_PATH)]) == 0
     headers = bearer(api.login("legacy-scaling-null@example.com"))
     body = recipe_input("旧版本空缩放方式")
@@ -403,15 +403,7 @@ def test_legacy_null_scaling_mode_uses_stable_proportional_fallback(api: Api, en
     created = api.client.post("/v1/recipes", json=body, headers=headers)
     assert created.status_code == 201, created.text
     saved = created.json()
-    with engine.begin() as connection:
-        connection.execute(
-            text(
-                "UPDATE recipe_versions "
-                "SET snapshot = jsonb_set(snapshot, '{ingredients,0,scaling_mode}', 'null'::jsonb) "
-                "WHERE id = :version_id"
-            ),
-            {"version_id": saved["version"]["id"]},
-        )
+    legacy_null_scaling_snapshot(saved["version"]["id"])
 
     response = api.client.get(
         f"/v1/recipes/{saved['id']}/servings",
