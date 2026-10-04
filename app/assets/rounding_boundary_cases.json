@@ -139,5 +139,33 @@
       "area_ratio": 1.5,
       "display_quantity": 1.73
     }
+  },
+  {
+    "name": "mold_tiny_decimal_product",
+    "kind": "mold",
+    "input": {
+      "original_mold": {"shape": "square", "unit": "cm", "side": 10},
+      "target_mold": {
+        "shape": "rectangular",
+        "unit": "cm",
+        "width": 15,
+        "length": 10
+      },
+      "ingredients": [
+        {
+          "id": "tiny-mold",
+          "display_name": "模具微量",
+          "quantity": 0.0033333333333333,
+          "unit": "g",
+          "scaling_mode": "proportional"
+        }
+      ],
+      "steps": []
+    },
+    "expected": {
+      "area_ratio": 1.5,
+      "display_quantity": 0,
+      "source_value": "<0.01 g"
+    }
   }
 ]

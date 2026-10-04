@@ -428,4 +428,7 @@ def test_mold_conversion_matches_decimal_half_up_boundary(api: Api, case: dict) 
     assert response.status_code == 200, response.text
     actual = response.json()["conversion"]
     assert actual["area_ratio"] == case["expected"]["area_ratio"]
-    assert actual["ingredients"][0]["display_quantity"] == case["expected"]["display_quantity"]
+    item = actual["ingredients"][0]
+    assert item["display_quantity"] == case["expected"]["display_quantity"]
+    if "source_value" in case["expected"]:
+        assert item["source"]["value"] == case["expected"]["source_value"]

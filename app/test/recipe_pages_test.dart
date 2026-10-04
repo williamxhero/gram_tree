@@ -2004,13 +2004,12 @@ void main() {
       '/v1/recipes/$_recipeId/versions/$_firstVersionId/display',
       (_) {
         displayCalls++;
-        final updated = measureItems.single['updated_at'] == '2026-10-03T00:00:00Z';
+        final updated =
+            measureItems.single['updated_at'] == '2026-10-03T00:00:00Z';
         final name = updated ? '更新后的勺' : '同一把勺';
         final capacity = (measureItems.single['capacity_ml'] as num).toDouble();
         final quantity = 100 / density / capacity;
-        final text = updated
-            ? '约 2 1/2 更新后的勺（100 克）'
-            : '约 10 同一把勺（100 克）';
+        final text = updated ? '约 2 1/2 更新后的勺（100 克）' : '约 10 同一把勺（100 克）';
         return (
           200,
           {

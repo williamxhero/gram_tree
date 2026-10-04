@@ -209,9 +209,14 @@ MoldConversionResult convertMold({
         id: item.id,
         displayName: item.displayName,
         originalQuantity: item.quantity,
-        // Preserve identity and unchanged values at source precision.
+        // Preserve identity and unchanged values at source precision. A
+        // proportional amount is rounded once from the decimal product, as the
+        // server quantizes it; a 12-digit intermediate could round
+        // 0.00499999999999995 up to 0.005 and then to 0.01.
         displayQuantity: item.scalingMode == 'unchanged' || isIdentity
             ? display
+            : item.scalingMode == 'proportional'
+            ? scaleByDecimalRatio(item.quantity, ratio, fractionDigits: 2)
             : _roundTwoDecimals(display),
         unit: item.unit,
         rule: rule,

@@ -306,10 +306,20 @@ ServingConversionResult convertServings({
         originalQuantity: item.quantity,
         // An identity conversion and an unchanged rule must not invent a
         // precision loss that makes the page claim the system changed it.
+        // A proportional amount is rounded once from the exact ratio, as the
+        // server quantizes its Decimal product; rounding the 12-digit
+        // theoretical value first turns 0.0049999999999999994 into 0.01.
         displayQuantity:
             item.scalingMode == 'unchanged' ||
                 targetServings == originalServings
             ? display
+            : item.scalingMode == 'proportional'
+            ? scaleByIntegerRatio(
+                item.quantity,
+                targetServings,
+                originalServings,
+                fractionDigits: 2,
+              )
             : _roundTwoDecimals(display),
         unit: item.unit,
         rule: item.scalingMode,

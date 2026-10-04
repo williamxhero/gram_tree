@@ -1914,9 +1914,23 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
           displayMode: _displayMode,
           densities: _densities,
           measure: selectedMeasure,
-          exactScale: _scaleMode == _RecipeScaleMode.servings
-              ? targetServings / snapshot.servings
-              : moldConversion?.scale,
+          // Scale in decimal form, like the server's exact Decimal product;
+          // a binary product such as 0.024999999999999997 * 0.2 is already
+          // 0.005 and would show a tiny amount as 0.01.
+          scaleExactly: _scaleMode == _RecipeScaleMode.servings
+              ? (quantity) => scaleByIntegerRatio(
+                  quantity,
+                  targetServings,
+                  snapshot.servings,
+                  fractionDigits: _exactScaleDigits,
+                )
+              : moldConversion == null
+              ? null
+              : (quantity) => scaleByDecimalRatio(
+                  quantity,
+                  moldConversion!.scale,
+                  fractionDigits: _exactScaleDigits,
+                ),
         ),
     };
     return Scaffold(
@@ -3336,6 +3350,10 @@ String _formatDate(BuildContext context, String value) {
       '${MaterialLocalizations.of(context).formatTimeOfDay(TimeOfDay.fromDateTime(local))}';
 }
 
+// Exact scaled amounts keep enough decimals that a product just below the
+// 0.005 display threshold cannot be rounded up to it before formatting.
+const _exactScaleDigits = 20;
+
 String _quantityText(num value) {
   final number = value.toDouble();
   if (number > 0 && number < 0.005) return '<0.01';
@@ -3387,7 +3405,7 @@ DisplayedAmount? _displayedAmount(
   required MeasureDisplayMode displayMode,
   required Map<String, double> densities,
   required PersonalMeasureOut? measure,
-  double? exactScale,
+  double Function(double quantity)? scaleExactly,
 }) {
   // A positive proportional amount that rounds to `0` keeps its exact scaled
   // value, so it is shown as "<0.01" instead of disappearing. Every other
@@ -3397,7 +3415,7 @@ DisplayedAmount? _displayedAmount(
       convertedMold?.displayQuantity ??
       converted?.displayQuantity;
   final proportional =
-      exactScale != null &&
+      scaleExactly != null &&
       {'proportional', 'mold_ratio'}.contains(
         contract?.conversionRule.value ??
             convertedMold?.rule ??
@@ -3419,7 +3437,7 @@ DisplayedAmount? _displayedAmount(
         ingredient.baseQuantity?.toDouble() ?? ingredient.quantity.toDouble();
     final contractQuantity = contract.convertedQuantity?.toDouble();
     if (contractBaseUnit != 'count' && proportional) {
-      contractBaseQuantity *= exactScale;
+      contractBaseQuantity = scaleExactly(contractBaseQuantity);
     } else if (contractBaseUnit != 'count' &&
         contractQuantity != null &&
         ingredient.quantity != 0) {
@@ -3449,7 +3467,7 @@ DisplayedAmount? _displayedAmount(
       ingredient.quantity.toDouble();
   if (_countDisplayUnits.contains(ingredient.unit.trim().toLowerCase())) {
     final shownQuantity = tinyProportional
-        ? ingredient.quantity.toDouble() * exactScale
+        ? scaleExactly(ingredient.quantity.toDouble())
         : convertedQuantity;
     return DisplayedAmount(
       text: '${_quantityText(shownQuantity)} ${ingredient.unit}',
@@ -3464,7 +3482,7 @@ DisplayedAmount? _displayedAmount(
   if (baseUnit == null) return null;
   if (baseUnit == 'count') {
     final shownQuantity = tinyProportional
-        ? ingredient.quantity.toDouble() * exactScale
+        ? scaleExactly(ingredient.quantity.toDouble())
         : convertedQuantity;
     return DisplayedAmount(
       text: '${_quantityText(shownQuantity)} ${ingredient.unit}',
@@ -3477,7 +3495,7 @@ DisplayedAmount? _displayedAmount(
   var baseQuantity =
       ingredient.baseQuantity?.toDouble() ?? ingredient.quantity.toDouble();
   if (tinyProportional) {
-    baseQuantity *= exactScale;
+    baseQuantity = scaleExactly(baseQuantity);
   } else if (originalQuantity != 0) {
     baseQuantity *= convertedQuantity / originalQuantity;
   }
