@@ -259,6 +259,7 @@ class _MeasureDialogState extends ConsumerState<_MeasureDialog> {
             TextField(
               key: const ValueKey('measure-capacity'),
               controller: _capacity,
+              style: const TextStyle(fontFamily: numberFont),
               keyboardType: const TextInputType.numberWithOptions(
                 decimal: true,
               ),

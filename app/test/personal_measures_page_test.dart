@@ -57,6 +57,49 @@ void main() {
     expect(find.text('还没有登记量具'), findsOneWidget);
   });
 
+  testWidgets('refreshes measures changed on another device after restart', (
+    tester,
+  ) async {
+    final server = FakeServer();
+    var name = '白瓷勺';
+    server.on(
+      'GET',
+      '/v1/me/measures',
+      (_) => (
+        200,
+        {
+          'items': [
+            {
+              'id': '88888888-8888-4888-8888-888888888888',
+              'name': name,
+              'kind': 'spoon',
+              'capacity_ml': 15,
+              'created_at': '2026-10-02T00:00:00Z',
+              'updated_at': '2026-10-02T00:00:00Z',
+            },
+          ],
+          'next_cursor': null,
+        },
+      ),
+    );
+    final env = TestEnv.signedIn(server: server);
+    await pumpApp(tester, env: env);
+    await tester.tap(find.text('我的'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('personal-measures-entry')));
+    await tester.pumpAndSettle();
+    expect(find.text('白瓷勺'), findsOneWidget);
+
+    name = '另一设备量具';
+    await restartApp(tester, env);
+    await tester.tap(find.text('我的'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('personal-measures-entry')));
+    await tester.pumpAndSettle();
+    expect(find.text('另一设备量具'), findsOneWidget);
+    expect(find.text('白瓷勺'), findsNothing);
+  });
+
   testWidgets('offline page reads account-scoped cached measures', (
     tester,
   ) async {
@@ -85,12 +128,9 @@ void main() {
     expect(find.text('离线小碗'), findsOneWidget);
     expect(find.textContaining('离线：正在使用已缓存'), findsOneWidget);
     expect(find.byKey(const ValueKey('measure-add')), findsOneWidget);
-    expect(
-      tester
-          .widget<FilledButton>(find.byKey(const ValueKey('measure-add')))
-          .onPressed,
-      isNull,
-    );
+    await tester.tap(find.byKey(const ValueKey('measure-add')));
+    await tester.pumpAndSettle();
+    expect(find.text('登记自家量具'), findsNothing);
   });
 
   for (final (brightness, scale) in [

@@ -401,13 +401,13 @@ Future<void> _expectFixtureIngredient(
           (expected['original_quantity'] as num);
 
   final source = find.byKey(ValueKey('recipe-source-mark-$id'));
-  if (!conversionActive) {
+  if (!conversionActive || !changed) {
     expect(source, findsNothing, reason: 'ingredient=$id should be unchanged');
     return;
   }
   expect(source, findsOneWidget, reason: 'ingredient=$id source mark');
   expect(
-    find.text(changed ? '按场景调整' : '作者填写'),
+    find.text('按场景调整'),
     findsWidgets,
     reason: 'ingredient=$id visible source label',
   );
@@ -462,11 +462,11 @@ Future<void> _expectFixtureDisplayOutput(
     const ValueKey('recipe-source-mark-display-ingredient'),
   );
   final rule = expected['rule'] as String;
-  if (rule == 'base') {
+  if (rule == 'base' || rule == 'no_density') {
     expect(source, findsNothing);
   } else {
     expect(source, findsOneWidget);
-    expect(find.text(rule == 'no_density' ? '作者填写' : '按场景调整'), findsWidgets);
+    expect(find.text('按场景调整'), findsWidgets);
   }
   if (input['mode'] == 'home') {
     final measure = Map<String, dynamic>.from(input['measure'] as Map);
@@ -1215,6 +1215,12 @@ void main() {
     expect(find.text('水'), findsOneWidget);
     expect(find.textContaining('把水烧开'), findsOneWidget);
     expect(find.text('暂无营养估算'), findsOneWidget);
+    await _scrollToTop(tester);
+    expect(
+      find.byKey(const ValueKey('recipe-mold-unavailable')),
+      findsOneWidget,
+    );
+    expect(find.text('这份菜谱没有记录基准模具，暂时只能按份数显示。'), findsOneWidget);
   });
 
   for (final (name, brightness, scale) in [
@@ -1980,11 +1986,11 @@ void main() {
 
     expect(find.text('20 克'), findsWidgets);
     expect(find.text('按场景调整'), findsNothing);
-    expect(find.text('作者填写'), findsWidgets);
-    await tapVisible(tester, find.text('作者填写').last);
-    expect(find.text('原来：20 g'), findsOneWidget);
-    expect(find.text('现在：20 克'), findsOneWidget);
-    expect(find.textContaining('没有密度数据，保留克数'), findsOneWidget);
+    expect(find.text('作者填写'), findsNothing);
+    expect(
+      find.byKey(const ValueKey('recipe-source-mark-ingredient-1')),
+      findsNothing,
+    );
   });
 
   testWidgets('recipe detail picks among multiple home measures', (

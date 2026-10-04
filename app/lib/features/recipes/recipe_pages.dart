@@ -1989,7 +1989,11 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
               }),
             ),
             const SizedBox(height: 8),
-          ],
+          ] else
+            _SmallHint(
+              key: const ValueKey('recipe-mold-unavailable'),
+              text: l10n.recipeMoldUnavailable,
+            ),
           if (_scaleMode == _RecipeScaleMode.servings) ...[
             _ServingControl(
               conversion: servingConversion,
@@ -2260,10 +2264,7 @@ class _MoldControl extends StatelessWidget {
                       label: l10n.recipeMoldTargetDiameter,
                       value: target.diameter ?? 0,
                       onChanged: (value) => onTargetChanged(
-                        _targetMoldWith(
-                          target,
-                          diameter: double.tryParse(value),
-                        ),
+                        _moldWith(target, diameter: double.tryParse(value)),
                       ),
                     ),
                   ),
@@ -2287,7 +2288,7 @@ class _MoldControl extends StatelessWidget {
                       ],
                       onChanged: (value) {
                         if (value != null) {
-                          onTargetChanged(_targetMoldWith(target, unit: value));
+                          onTargetChanged(_moldWith(target, unit: value));
                         }
                       },
                     ),
@@ -2311,7 +2312,7 @@ class _MoldControl extends StatelessWidget {
                         onChanged: (value) {
                           final parsed = double.tryParse(value);
                           onTargetChanged(
-                            _targetMoldWith(
+                            _moldWith(
                               target,
                               side: square ? parsed : null,
                               width: parsed,
@@ -2329,10 +2330,7 @@ class _MoldControl extends StatelessWidget {
                         label: l10n.recipeMoldTargetLength,
                         value: target.length ?? 0,
                         onChanged: (value) => onTargetChanged(
-                          _targetMoldWith(
-                            target,
-                            length: double.tryParse(value),
-                          ),
+                          _moldWith(target, length: double.tryParse(value)),
                         ),
                       ),
                     ),
@@ -2377,23 +2375,6 @@ class _MoldControl extends StatelessWidget {
     );
   }
 }
-
-MoldSpec _targetMoldWith(
-  MoldSpec value, {
-  MoldSpecShapeEnum? shape,
-  MoldSpecUnitEnum? unit,
-  double? diameter,
-  double? side,
-  double? width,
-  double? length,
-}) => MoldSpec(
-  shape: shape ?? value.shape,
-  unit: unit ?? value.unit,
-  diameter: diameter ?? value.diameter,
-  side: side ?? value.side,
-  width: width ?? value.width,
-  length: length ?? value.length,
-);
 
 bool _validMold(MoldSpec mold) {
   if (mold.shape == MoldSpecShapeEnum.round) {
@@ -2712,6 +2693,11 @@ class _IngredientDetailRow extends StatelessWidget {
         ? servingQuantity
         : localizedDisplayedAmount(displayed!, l10n);
     final noDensity = displayed?.rule == 'no_density';
+    final noDensityBasis = l10n.recipeMeasureNoDensity(
+      displayed?.baseUnit == 'ml'
+          ? l10n.recipeMeasureMillilitre
+          : l10n.recipeMeasureGram,
+    );
     final systemDisplayChanged =
         displayed != null && displayed!.rule != 'base' && !noDensity;
     final displayChanged = systemDisplayChanged || noDensity;
@@ -2729,8 +2715,6 @@ class _IngredientDetailRow extends StatelessWidget {
     final source = ingredient.quantitySource;
     final showSource =
         systemChanged ||
-        noDensity ||
-        conversionActive ||
         (source != null && source.source_.value != sourceTypeAuthorFilled);
     final sourceType = systemChanged
         ? sourceTypeScenarioAdjusted
@@ -2749,9 +2733,9 @@ class _IngredientDetailRow extends StatelessWidget {
           ? l10n.recipeMeasureDisplayOnly
           : l10n.recipeMeasureStandardDisplayOnly;
     } else if (noDensity && conversionBasis != null) {
-      sourceBasis = '$conversionBasis；${l10n.recipeMeasureNoDensity}';
+      sourceBasis = '$conversionBasis；$noDensityBasis';
     } else if (noDensity) {
-      sourceBasis = l10n.recipeMeasureNoDensity;
+      sourceBasis = noDensityBasis;
     } else if (conversionBasis != null) {
       sourceBasis = conversionBasis;
     } else if (source?.basis?.isNotEmpty == true) {
@@ -2783,9 +2767,6 @@ class _IngredientDetailRow extends StatelessWidget {
                   ? originalQuantity
                   : source?.original,
               basisText: sourceBasis,
-              showAuthorMark:
-                  (noDensity || conversionActive) &&
-                  sourceType == sourceTypeAuthorFilled,
               required: false,
               feedbackEnabled: false,
               onAction: null,

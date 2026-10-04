@@ -6,14 +6,40 @@
 # `flutter test --platform chrome` 下读资产会卡住不返回（见
 # docs/adr/0005-界面描述协议共享契约.md），内嵌成编译期常量后两种平台都能跑同一份表。
 # JSON 文件本身仍然是唯一来源（服务端测试直接读它）；改了测试表就重跑这个脚本，
-# 把生成结果一起提交，不要手改生成的 .g.dart。`flutter test` 里有一条检查会比对两者。
+# 把生成结果一起提交，不要手改生成的 .g.dart。`--check` 会比对两者。
 set -euo pipefail
+
+CHECK=false
+case "${1:-}" in
+  --check)
+    CHECK=true
+    shift
+    ;;
+  "")
+    ;;
+  *)
+    printf 'usage: %s [--check]\n' "$0" >&2
+    exit 2
+    ;;
+esac
+if (($# != 0)); then
+  printf 'usage: %s [--check]\n' "$0" >&2
+  exit 2
+fi
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 OUT="$ROOT/app/test/fixtures/conversion_cases.g.dart"
 PYTHON="${PYTHON:-python3}"
 
-"$PYTHON" - "$ROOT/app" "$OUT" <<'PY'
+if [[ "$CHECK" == true ]]; then
+  TEMP_DIR="$(mktemp -d)"
+  trap 'rm -rf "$TEMP_DIR"' EXIT
+  TARGET="$TEMP_DIR/conversion_cases.g.dart"
+else
+  TARGET="$OUT"
+fi
+
+"$PYTHON" - "$ROOT/app" "$TARGET" <<'PY'
 import sys
 from pathlib import Path
 
@@ -66,4 +92,14 @@ out_path.write_text("\n".join(lines), encoding="utf-8", newline="\n")
 print(f"generated {out_path} ({len(ASSETS)} fixture files)")
 PY
 
-(cd "$ROOT/app" && dart format test/fixtures/conversion_cases.g.dart)
+(cd "$ROOT/app" && dart format "$TARGET")
+
+if [[ "$CHECK" == true ]]; then
+  if cmp -s "$TARGET" "$OUT"; then
+    printf 'checked %s\n' "$OUT"
+  else
+    printf 'generated output differs from %s; run %s\n' "$OUT" "$0" >&2
+    diff -u "$OUT" "$TARGET" || true
+    exit 1
+  fi
+fi

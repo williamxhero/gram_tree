@@ -44,7 +44,7 @@ void main() {
     expect(finder, findsWidgets);
   }
 
-  Future<Offset> reveal(
+  Future<void> reveal(
     WidgetTester tester,
     Finder finder, {
     bool tapAfterReveal = false,
@@ -78,7 +78,6 @@ void main() {
     if (tapAfterReveal) {
       await tester.tap(finder);
     }
-    return tester.getCenter(finder);
   }
 
   Future<void> tapText(WidgetTester tester, String text) async {
@@ -88,6 +87,25 @@ void main() {
     await settle(tester);
     await tester.tap(finder);
     await settle(tester);
+  }
+
+  Future<Finder> tapDisplaySegment(
+    WidgetTester tester,
+    Finder selector,
+    String text,
+  ) async {
+    final label = find.descendant(of: selector, matching: find.text(text));
+    await waitFor(tester, label);
+    expect(label, findsOneWidget);
+    await tester.ensureVisible(label);
+    await settle(tester);
+    await tester.tap(label);
+    await settle(tester);
+    await waitFor(tester, label);
+    await tester.ensureVisible(label);
+    final button = find.ancestor(of: label, matching: find.byType(TextButton));
+    expect(button, findsOneWidget);
+    return button;
   }
 
   Future<void> runWithDiagnostics(
@@ -218,12 +236,7 @@ void main() {
       );
       await settle(tester);
       await waitFor(tester, find.byKey(const ValueKey('recipe-serving-value')));
-      expect(
-        tester
-            .widget<Text>(find.byKey(const ValueKey('recipe-serving-value')))
-            .data,
-        '2',
-      );
+      await waitFor(tester, find.text('2'));
       _markE2eStep('after_serving_increase_reset');
 
       // Mold conversion, the visible amount, and provenance are exercised
@@ -265,27 +278,49 @@ void main() {
       // fallback keeps the page usable, while the visible selected icon and
       // labels make the choice clear without relying on colour alone.
       await reveal(tester, find.byKey(const ValueKey('recipe-measure-mode')));
-      await tapText(tester, '汤匙/茶匙');
       final displaySelector = find.byKey(
         const ValueKey('recipe-display-mode-selector'),
       );
-      await waitFor(tester, displaySelector);
+      final standardSegment = await tapDisplaySegment(
+        tester,
+        displaySelector,
+        '汤匙/茶匙',
+      );
       expect(
         find.descendant(
-          of: displaySelector,
+          of: standardSegment,
           matching: find.byIcon(Icons.check),
         ),
         findsOneWidget,
       );
+      final baseSegment = find.ancestor(
+        of: find.descendant(of: displaySelector, matching: find.text('克/毫升')),
+        matching: find.byType(TextButton),
+      );
+      expect(baseSegment, findsOneWidget);
+      expect(
+        find.descendant(of: baseSegment, matching: find.byIcon(Icons.check)),
+        findsNothing,
+      );
       await waitFor(tester, find.text('177.78 克'));
-      await tapText(tester, '克/毫升');
-      await waitFor(tester, displaySelector);
+      final selectedBaseSegment = await tapDisplaySegment(
+        tester,
+        displaySelector,
+        '克/毫升',
+      );
       expect(
         find.descendant(
-          of: displaySelector,
+          of: selectedBaseSegment,
           matching: find.byIcon(Icons.check),
         ),
         findsOneWidget,
+      );
+      expect(
+        find.descendant(
+          of: standardSegment,
+          matching: find.byIcon(Icons.check),
+        ),
+        findsNothing,
       );
       await waitFor(tester, find.text('177.78 克'));
       _markE2eStep('after_display_mode_switching');

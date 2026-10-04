@@ -321,6 +321,7 @@
   "recipeMoldTimeAdvisory": "时间不按模具比例放大，建议从原时间开始检查，以成熟判断为准。",
   "recipeMoldDonenessWarning": "请以成熟判断为准，不要只看计时。",
   "recipeMoldInvalid": "目标模具尺寸无效，请填写大于 0 的尺寸后再换算。",
+  "recipeMoldUnavailable": "这份菜谱没有记录基准模具，暂时只能按份数显示。",
   "recipeServingRoundWarning": "{name}取整后与按比例结果相差较大，请按口味微调其他用量。",
   "recipeMoldRoundWarning": "{name}取整后与模具比例结果相差较大，请按实际情况微调其他用量。",
   "recipeMeasureStandardDisplayOnly": "常用量具换算；菜谱基础值未改变",
@@ -431,7 +432,7 @@
   "recipeMeasureChoose": "选择量具",
   "recipeMeasureModeNoHome": "还没有登记自家量具，请先到“我的”登记。",
   "recipeMeasureDisplayOnly": "个人量具只改变显示，菜谱基础值未改变",
-  "recipeMeasureNoDensity": "没有密度数据，保留克数",
+  "recipeMeasureNoDensity": "没有密度数据，保留{unit}",
   "recipeMeasureGram": "克",
   "recipeMeasureMillilitre": "毫升",
   "recipeMeasureTablespoon": "汤匙",
@@ -541,5 +542,8 @@
   },
   "@sourceSemantics": {
     "placeholders": {"source": {"type": "String"}}
+  },
+  "@recipeMeasureNoDensity": {
+    "placeholders": {"unit": {"type": "String"}}
   }
 }

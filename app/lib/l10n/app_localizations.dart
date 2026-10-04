@@ -1504,6 +1504,12 @@ abstract class AppLocalizations {
   /// **'目标模具尺寸无效，请填写大于 0 的尺寸后再换算。'**
   String get recipeMoldInvalid;
 
+  /// No description provided for @recipeMoldUnavailable.
+  ///
+  /// In zh, this message translates to:
+  /// **'这份菜谱没有记录基准模具，暂时只能按份数显示。'**
+  String get recipeMoldUnavailable;
+
   /// No description provided for @recipeServingRoundWarning.
   ///
   /// In zh, this message translates to:
@@ -2174,8 +2180,8 @@ abstract class AppLocalizations {
   /// No description provided for @recipeMeasureNoDensity.
   ///
   /// In zh, this message translates to:
-  /// **'没有密度数据，保留克数'**
-  String get recipeMeasureNoDensity;
+  /// **'没有密度数据，保留{unit}'**
+  String recipeMeasureNoDensity(String unit);
 
   /// No description provided for @recipeMeasureGram.
   ///

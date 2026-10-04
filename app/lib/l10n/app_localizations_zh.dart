@@ -763,6 +763,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get recipeMoldInvalid => '目标模具尺寸无效，请填写大于 0 的尺寸后再换算。';
 
   @override
+  String get recipeMoldUnavailable => '这份菜谱没有记录基准模具，暂时只能按份数显示。';
+
+  @override
   String recipeServingRoundWarning(String name) {
     return '$name取整后与按比例结果相差较大，请按口味微调其他用量。';
   }
@@ -1131,7 +1134,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get recipeMeasureDisplayOnly => '个人量具只改变显示，菜谱基础值未改变';
 
   @override
-  String get recipeMeasureNoDensity => '没有密度数据，保留克数';
+  String recipeMeasureNoDensity(String unit) {
+    return '没有密度数据，保留$unit';
+  }
 
   @override
   String get recipeMeasureGram => '克';
