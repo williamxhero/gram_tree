@@ -21,6 +21,8 @@ abstract class _$MoldConversionIngredientCWProxy {
 
   MoldConversionIngredient rule(MoldConversionIngredientRuleEnum rule);
 
+  MoldConversionIngredient source_(SourcedValue source_);
+
   MoldConversionIngredient unit(String unit);
 
   /// This function **does support** nullification of nullable fields. All `null` values passed to `non-nullable` fields will be ignored. You can also use `MoldConversionIngredient(...).copyWith.fieldName(...)` to override fields one at a time with nullification support.
@@ -37,6 +39,7 @@ abstract class _$MoldConversionIngredientCWProxy {
     String id,
     num originalQuantity,
     MoldConversionIngredientRuleEnum rule,
+    SourcedValue source_,
     String unit,
   });
 }
@@ -76,6 +79,10 @@ class _$MoldConversionIngredientCWProxyImpl
       this(rule: rule);
 
   @override
+  MoldConversionIngredient source_(SourcedValue source_) =>
+      this(source_: source_);
+
+  @override
   MoldConversionIngredient unit(String unit) => this(unit: unit);
 
   @override
@@ -93,6 +100,7 @@ class _$MoldConversionIngredientCWProxyImpl
     Object? id = const $CopyWithPlaceholder(),
     Object? originalQuantity = const $CopyWithPlaceholder(),
     Object? rule = const $CopyWithPlaceholder(),
+    Object? source_ = const $CopyWithPlaceholder(),
     Object? unit = const $CopyWithPlaceholder(),
   }) {
     return MoldConversionIngredient(
@@ -124,6 +132,10 @@ class _$MoldConversionIngredientCWProxyImpl
           ? _value.rule
           // ignore: cast_nullable_to_non_nullable
           : rule as MoldConversionIngredientRuleEnum,
+      source_: source_ == const $CopyWithPlaceholder()
+          ? _value.source_
+          // ignore: cast_nullable_to_non_nullable
+          : source_ as SourcedValue,
       unit: unit == const $CopyWithPlaceholder()
           ? _value.unit
           // ignore: cast_nullable_to_non_nullable
@@ -157,6 +169,7 @@ MoldConversionIngredient _$MoldConversionIngredientFromJson(
         'id',
         'original_quantity',
         'rule',
+        'source',
         'unit',
       ],
     );
@@ -174,6 +187,10 @@ MoldConversionIngredient _$MoldConversionIngredientFromJson(
         'rule',
         (v) => $enumDecode(_$MoldConversionIngredientRuleEnumEnumMap, v),
       ),
+      source_: $checkedConvert(
+        'source',
+        (v) => SourcedValue.fromJson(v as Map<String, dynamic>),
+      ),
       unit: $checkedConvert('unit', (v) => v as String),
     );
     return val;
@@ -184,6 +201,7 @@ MoldConversionIngredient _$MoldConversionIngredientFromJson(
     'displayName': 'display_name',
     'displayQuantity': 'display_quantity',
     'originalQuantity': 'original_quantity',
+    'source_': 'source',
   },
 );
 
@@ -197,6 +215,7 @@ Map<String, dynamic> _$MoldConversionIngredientToJson(
   'id': instance.id,
   'original_quantity': instance.originalQuantity,
   'rule': _$MoldConversionIngredientRuleEnumEnumMap[instance.rule]!,
+  'source': instance.source_.toJson(),
   'unit': instance.unit,
 };
 

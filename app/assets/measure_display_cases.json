@@ -15,6 +15,11 @@
     "expected": {"text": "20 克", "display_quantity": 20.0, "display_unit": "g", "grams": 20.0, "rule": "no_density"}
   },
   {
+    "name": "standard mode keeps millilitres without density",
+    "input": {"base_quantity": 30, "base_unit": "ml", "density": null, "mode": "standard", "measure": null},
+    "expected": {"text": "30 毫升", "display_quantity": 30.0, "display_unit": "ml", "grams": null, "rule": "no_density"}
+  },
+  {
     "name": "home measure rounds to half",
     "input": {"base_quantity": 6, "base_unit": "g", "density": 0.8, "mode": "home", "measure": {"name": "白瓷勺", "kind": "spoon", "capacity_ml": 15}},
     "expected": {"text": "约 1/2 白瓷勺（6 克）", "display_quantity": 0.5, "display_unit": "白瓷勺", "grams": 6.0, "rule": "personal_measure"}

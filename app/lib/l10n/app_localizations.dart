@@ -1354,6 +1354,12 @@ abstract class AppLocalizations {
   /// **'换算规则未识别'**
   String get recipeRuleUnknown;
 
+  /// No description provided for @recipeConversionRuleDetail.
+  ///
+  /// In zh, this message translates to:
+  /// **'原值 {original}，{rule}'**
+  String recipeConversionRuleDetail(String original, String rule);
+
   /// No description provided for @recipeModeServing.
   ///
   /// In zh, this message translates to:
@@ -2164,6 +2170,18 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'选择量具'**
   String get recipeMeasureChoose;
+
+  /// No description provided for @recipeMeasureRefresh.
+  ///
+  /// In zh, this message translates to:
+  /// **'刷新我的量具'**
+  String get recipeMeasureRefresh;
+
+  /// No description provided for @recipeMeasureManage.
+  ///
+  /// In zh, this message translates to:
+  /// **'登记自家量具'**
+  String get recipeMeasureManage;
 
   /// No description provided for @recipeMeasureModeNoHome.
   ///

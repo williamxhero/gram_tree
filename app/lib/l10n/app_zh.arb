@@ -296,6 +296,7 @@
   "recipeRuleRound": "按个取整",
   "recipeRuleMoldRatio": "模具比例",
   "recipeRuleUnknown": "换算规则未识别",
+  "recipeConversionRuleDetail": "原值 {original}，{rule}",
   "recipeModeServing": "按份数",
   "recipeModeMold": "按模具",
   "recipeMoldConversion": "模具换算",
@@ -430,6 +431,8 @@
   "recipeMeasureModeStandard": "汤匙/茶匙",
   "recipeMeasureModeHome": "自家量具",
   "recipeMeasureChoose": "选择量具",
+  "recipeMeasureRefresh": "刷新我的量具",
+  "recipeMeasureManage": "登记自家量具",
   "recipeMeasureModeNoHome": "还没有登记自家量具，请先到“我的”登记。",
   "recipeMeasureDisplayOnly": "个人量具只改变显示，菜谱基础值未改变",
   "recipeMeasureNoDensity": "没有密度数据，保留{unit}",
@@ -545,5 +548,11 @@
   },
   "@recipeMeasureNoDensity": {
     "placeholders": {"unit": {"type": "String"}}
+  },
+  "@recipeConversionRuleDetail": {
+    "placeholders": {
+      "original": {"type": "String"},
+      "rule": {"type": "String"}
+    }
   }
 }

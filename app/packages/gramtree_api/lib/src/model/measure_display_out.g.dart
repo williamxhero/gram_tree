@@ -15,6 +15,8 @@ abstract class _$MeasureDisplayOutCWProxy {
 
   MeasureDisplayOut rule(MeasureDisplayOutRuleEnum rule);
 
+  MeasureDisplayOut source_(SourcedValue source_);
+
   MeasureDisplayOut text(String text);
 
   /// This function **does support** nullification of nullable fields. All `null` values passed to `non-nullable` fields will be ignored. You can also use `MeasureDisplayOut(...).copyWith.fieldName(...)` to override fields one at a time with nullification support.
@@ -28,6 +30,7 @@ abstract class _$MeasureDisplayOutCWProxy {
     String displayUnit,
     num? grams,
     MeasureDisplayOutRuleEnum rule,
+    SourcedValue source_,
     String text,
   });
 }
@@ -53,6 +56,9 @@ class _$MeasureDisplayOutCWProxyImpl implements _$MeasureDisplayOutCWProxy {
   MeasureDisplayOut rule(MeasureDisplayOutRuleEnum rule) => this(rule: rule);
 
   @override
+  MeasureDisplayOut source_(SourcedValue source_) => this(source_: source_);
+
+  @override
   MeasureDisplayOut text(String text) => this(text: text);
 
   @override
@@ -67,6 +73,7 @@ class _$MeasureDisplayOutCWProxyImpl implements _$MeasureDisplayOutCWProxy {
     Object? displayUnit = const $CopyWithPlaceholder(),
     Object? grams = const $CopyWithPlaceholder(),
     Object? rule = const $CopyWithPlaceholder(),
+    Object? source_ = const $CopyWithPlaceholder(),
     Object? text = const $CopyWithPlaceholder(),
   }) {
     return MeasureDisplayOut(
@@ -86,6 +93,10 @@ class _$MeasureDisplayOutCWProxyImpl implements _$MeasureDisplayOutCWProxy {
           ? _value.rule
           // ignore: cast_nullable_to_non_nullable
           : rule as MeasureDisplayOutRuleEnum,
+      source_: source_ == const $CopyWithPlaceholder()
+          ? _value.source_
+          // ignore: cast_nullable_to_non_nullable
+          : source_ as SourcedValue,
       text: text == const $CopyWithPlaceholder()
           ? _value.text
           // ignore: cast_nullable_to_non_nullable
@@ -116,6 +127,7 @@ MeasureDisplayOut _$MeasureDisplayOutFromJson(Map<String, dynamic> json) =>
             'display_quantity',
             'display_unit',
             'rule',
+            'source',
             'text',
           ],
         );
@@ -127,6 +139,10 @@ MeasureDisplayOut _$MeasureDisplayOutFromJson(Map<String, dynamic> json) =>
             'rule',
             (v) => $enumDecode(_$MeasureDisplayOutRuleEnumEnumMap, v),
           ),
+          source_: $checkedConvert(
+            'source',
+            (v) => SourcedValue.fromJson(v as Map<String, dynamic>),
+          ),
           text: $checkedConvert('text', (v) => v as String),
         );
         return val;
@@ -134,6 +150,7 @@ MeasureDisplayOut _$MeasureDisplayOutFromJson(Map<String, dynamic> json) =>
       fieldKeyMap: const {
         'displayQuantity': 'display_quantity',
         'displayUnit': 'display_unit',
+        'source_': 'source',
       },
     );
 
@@ -143,6 +160,7 @@ Map<String, dynamic> _$MeasureDisplayOutToJson(MeasureDisplayOut instance) =>
       'display_unit': instance.displayUnit,
       'grams': ?instance.grams,
       'rule': _$MeasureDisplayOutRuleEnumEnumMap[instance.rule]!,
+      'source': instance.source_.toJson(),
       'text': instance.text,
     };
 

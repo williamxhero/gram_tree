@@ -18,6 +18,7 @@ import '../../recipes/recipe_draft.dart';
 import '../../recipes/recipe_repository.dart';
 import '../../recipes/mold_conversion.dart';
 import '../../recipes/serving_conversion.dart';
+import 'personal_measures_page.dart';
 import 'recipe_photo_panel.dart';
 import '../../storage/local_store.dart';
 import '../../ui_protocol/components/component_scaffold.dart';
@@ -1571,7 +1572,6 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
   MeasureDisplayMode _displayMode = MeasureDisplayMode.base;
   List<PersonalMeasureOut> _measures = const [];
   Map<String, double> _densities = const {};
-  Map<String, String> _libraryScalingRules = const {};
   String? _selectedMeasureId;
   RecipeIngredientDisplayOut? _displayContract;
   String? _displayContractKey;
@@ -1583,6 +1583,7 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
   }
 
   Future<void> _load() async {
+    if (mounted) setState(() => _error = null);
     try {
       final repo = ref.read(recipeRepositoryProvider);
       _detail = widget.versionId == null
@@ -1600,7 +1601,10 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
         stackTrace: stack,
       );
       if (mounted) {
-        setState(() => _error = 'not_found');
+        final code = ApiFailure.from(error).code;
+        setState(
+          () => _error = code == 'not_found' ? 'not_found' : 'load_error',
+        );
       }
     }
   }
@@ -1611,7 +1615,6 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
         if (item.ingredientId?.isNotEmpty == true) item.ingredientId!,
     ];
     final densities = <String, double>{};
-    final scalingRules = <String, String>{};
     try {
       final ingredientRepository = ref.read(ingredientRepositoryProvider);
       await ingredientRepository.sync();
@@ -1621,12 +1624,6 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
           if (item.attributes.density != null)
             item.id: item.attributes.density!.value.toDouble(),
       });
-      for (final item in ingredients) {
-        final rule = scalingRuleForLibraryAttribute(
-          item.attributes.scaling?.value,
-        );
-        if (rule != null) scalingRules[item.id] = rule;
-      }
     } catch (_) {
       // Density is optional; a missing catalogue must not hide cached measures.
     }
@@ -1639,7 +1636,6 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
     if (!mounted) return;
     setState(() {
       _densities = densities;
-      _libraryScalingRules = scalingRules;
       _measures = measures;
       // Selecting the home-measure mode must not silently choose an arbitrary
       // measure; the user explicitly picks which registered utensil to use.
@@ -1647,6 +1643,12 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
           ? _selectedMeasureId
           : null;
     });
+  }
+
+  Future<void> _refreshDisplayMetadata() async {
+    final detail = _detail;
+    if (detail == null) return;
+    await _loadDisplayMetadata(detail);
   }
 
   void _scheduleDisplayContract({
@@ -1740,7 +1742,13 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     if (_error != null) {
-      return Scaffold(body: Center(child: Text(l10n.recipeNotFound)));
+      final notFound = _error == 'not_found';
+      return Scaffold(
+        body: _RecipeError(
+          message: notFound ? l10n.recipeNotFound : l10n.recipeLoadError,
+          onRetry: notFound ? null : _load,
+        ),
+      );
     }
     final detail = _detail;
     if (detail == null) {
@@ -1772,7 +1780,6 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
         derived,
         targetServings,
         config: conversionConfig,
-        libraryRules: _libraryScalingRules,
       );
     } catch (error, stack) {
       developer.log(
@@ -1801,7 +1808,6 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
           snapshot,
           _targetMold!,
           config: conversionConfig,
-          libraryRules: _libraryScalingRules,
         );
       } on MoldConversionError {
         // Keep the target controls visible, but never present an invalid
@@ -1882,6 +1888,9 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
           displayMode: _displayMode,
           densities: _densities,
           measure: selectedMeasure,
+          exactScale: _scaleMode == _RecipeScaleMode.servings
+              ? targetServings / snapshot.servings
+              : moldConversion?.scale,
         ),
     };
     return Scaffold(
@@ -2020,6 +2029,8 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
             measures: _measures,
             selectedMeasureId: _selectedMeasureId,
             onMeasureChanged: (id) => setState(() => _selectedMeasureId = id),
+            onReload: () => unawaited(_refreshDisplayMetadata()),
+            onManageMeasures: () => context.push(PersonalMeasuresPage.path),
             onChanged: (mode) => setState(() => _displayMode = mode),
           ),
           const SizedBox(height: 16),
@@ -2568,6 +2579,8 @@ class _DisplayModeControl extends StatelessWidget {
     required this.measures,
     required this.selectedMeasureId,
     required this.onMeasureChanged,
+    required this.onReload,
+    required this.onManageMeasures,
     required this.onChanged,
   });
 
@@ -2576,6 +2589,8 @@ class _DisplayModeControl extends StatelessWidget {
   final List<PersonalMeasureOut> measures;
   final String? selectedMeasureId;
   final ValueChanged<String?> onMeasureChanged;
+  final VoidCallback onReload;
+  final VoidCallback onManageMeasures;
   final ValueChanged<MeasureDisplayMode> onChanged;
 
   @override
@@ -2592,6 +2607,25 @@ class _DisplayModeControl extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            Wrap(
+              alignment: WrapAlignment.end,
+              spacing: 8,
+              runSpacing: 4,
+              children: [
+                TextButton.icon(
+                  key: const ValueKey('recipe-measure-refresh'),
+                  onPressed: onReload,
+                  icon: const Icon(Icons.refresh),
+                  label: Text(l10n.recipeMeasureRefresh),
+                ),
+                if (!hasHomeMeasures)
+                  TextButton(
+                    key: const ValueKey('recipe-measure-manage'),
+                    onPressed: onManageMeasures,
+                    child: Text(l10n.recipeMeasureManage),
+                  ),
+              ],
+            ),
             SegmentedButton<MeasureDisplayMode>(
               key: const ValueKey('recipe-display-mode-selector'),
               // Keep selection visible even when colour is unavailable; the
@@ -2609,6 +2643,7 @@ class _DisplayModeControl extends StatelessWidget {
                 ButtonSegment(
                   value: MeasureDisplayMode.home,
                   label: Text(l10n.recipeMeasureModeHome),
+                  enabled: hasHomeMeasures,
                 ),
               ],
               selected: {mode},
@@ -2776,6 +2811,11 @@ class _IngredientDetailRow extends StatelessWidget {
       subtitle: Text(
         [
           quantity,
+          if (noDensity) noDensityBasis,
+          // Unchanged conversion results keep the author's value, so they get
+          // no adjustment mark; the applied rule stays visible as text.
+          if (conversionActive && !systemChanged && conversionBasis != null)
+            l10n.recipeConversionRuleDetail(originalQuantity, conversionBasis),
           if (ingredient.preparation?.isNotEmpty == true)
             ingredient.preparation!,
           if (ingredient.optional == true) l10n.recipeOptional,
@@ -3142,19 +3182,20 @@ class _SmallHint extends StatelessWidget {
 }
 
 class _RecipeError extends StatelessWidget {
-  const _RecipeError({required this.message, required this.onRetry});
+  const _RecipeError({required this.message, this.onRetry});
   final String message;
-  final VoidCallback onRetry;
+  final VoidCallback? onRetry;
   @override
   Widget build(BuildContext context) => Center(
     child: Column(
       mainAxisSize: MainAxisSize.min,
       children: [
         Text(message),
-        TextButton(
-          onPressed: onRetry,
-          child: Text(AppLocalizations.of(context).recipeRetry),
-        ),
+        if (onRetry != null)
+          TextButton(
+            onPressed: onRetry,
+            child: Text(AppLocalizations.of(context).recipeRetry),
+          ),
       ],
     ),
   );
@@ -3232,6 +3273,7 @@ String _formatDate(BuildContext context, String value) {
 
 String _quantityText(num value) {
   final number = value.toDouble();
+  if (number > 0 && number < 0.005) return '<0.01';
   if (number == number.roundToDouble()) return number.toInt().toString();
   return number
       .toStringAsFixed(2)
@@ -3279,21 +3321,44 @@ DisplayedAmount? _displayedAmount(
   required MeasureDisplayMode displayMode,
   required Map<String, double> densities,
   required PersonalMeasureOut? measure,
+  double? exactScale,
 }) {
+  // A positive proportional amount that rounds to `0` keeps its exact scaled
+  // value, so it is shown as "<0.01" instead of disappearing. Every other
+  // amount uses the kernel's decimal half-up result.
+  final roundedQuantity =
+      contract?.convertedQuantity?.toDouble() ??
+      convertedMold?.displayQuantity ??
+      converted?.displayQuantity;
+  final tinyProportional =
+      exactScale != null &&
+      roundedQuantity == 0 &&
+      ingredient.quantity != 0 &&
+      {'proportional', 'mold_ratio'}.contains(
+        contract?.conversionRule.value ??
+            convertedMold?.rule ??
+            converted?.rule,
+      );
   if (contract != null) {
     final contractBaseUnit =
         ingredient.baseUnit?.value ?? _displayBaseUnit(ingredient.unit);
     var contractBaseQuantity =
         ingredient.baseQuantity?.toDouble() ?? ingredient.quantity.toDouble();
     final contractQuantity = contract.convertedQuantity?.toDouble();
-    if (contractBaseUnit != 'count' &&
+    if (contractBaseUnit != 'count' && tinyProportional) {
+      contractBaseQuantity *= exactScale;
+    } else if (contractBaseUnit != 'count' &&
         contractQuantity != null &&
         ingredient.quantity != 0) {
       contractBaseQuantity *= contractQuantity / ingredient.quantity;
     }
+    final baseRule =
+        contract.rule.value == 'base' || contract.rule.value == 'no_density';
     return DisplayedAmount(
       text: contract.text,
-      displayQuantity: contract.displayQuantity.toDouble(),
+      displayQuantity: baseRule && tinyProportional
+          ? contractBaseQuantity
+          : contract.displayQuantity.toDouble(),
       displayUnit: contract.displayUnit,
       grams: contract.grams?.toDouble(),
       rule: contract.rule.value,
@@ -3332,7 +3397,9 @@ DisplayedAmount? _displayedAmount(
   }
   var baseQuantity =
       ingredient.baseQuantity?.toDouble() ?? ingredient.quantity.toDouble();
-  if (originalQuantity != 0) {
+  if (tinyProportional) {
+    baseQuantity *= exactScale;
+  } else if (originalQuantity != 0) {
     baseQuantity *= convertedQuantity / originalQuantity;
   }
   final density = densities[ingredient.ingredientId];
@@ -3388,19 +3455,16 @@ String _conversionRuleLabel(String rule, AppLocalizations l10n) =>
       _ => l10n.recipeRuleUnknown,
     };
 
-/// The recipe's own mode wins; an unset mode uses the cached standard
-/// ingredient library default (same rule as the server), else proportional.
-String _scalingRule(RecipeIngredient item, Map<String, String> libraryRules) =>
-    item.scalingMode?.value ??
-    libraryRules[item.ingredientId] ??
-    'proportional';
+/// A saved recipe version owns its scaling mode. Legacy snapshots with a null
+/// mode use the immutable proportional fallback rather than today's library.
+String _scalingRule(RecipeIngredient item) =>
+    item.scalingMode?.value ?? 'proportional';
 
 ServingConversionResult _recipeServingConversion(
   RecipeSnapshot snapshot,
   RecipeDerived derived,
   int targetServings, {
   required RecipeConversionConfig config,
-  required Map<String, String> libraryRules,
 }) => convertServings(
   originalServings: snapshot.servings,
   targetServings: targetServings,
@@ -3411,7 +3475,7 @@ ServingConversionResult _recipeServingConversion(
         displayName: item.displayName,
         quantity: item.quantity.toDouble(),
         unit: item.unit,
-        scalingMode: _scalingRule(item, libraryRules),
+        scalingMode: _scalingRule(item),
       ),
   ],
   steps: [
@@ -3439,7 +3503,6 @@ MoldConversionResult _recipeMoldConversion(
   RecipeSnapshot snapshot,
   MoldSpec target, {
   required RecipeConversionConfig config,
-  required Map<String, String> libraryRules,
 }) => convertMold(
   originalMold: snapshot.baseMold!,
   targetMold: target,
@@ -3450,7 +3513,7 @@ MoldConversionResult _recipeMoldConversion(
         displayName: item.displayName,
         quantity: item.quantity.toDouble(),
         unit: item.unit,
-        scalingMode: _scalingRule(item, libraryRules),
+        scalingMode: _scalingRule(item),
       ),
   ],
   steps: [

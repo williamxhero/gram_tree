@@ -686,6 +686,11 @@ class AppLocalizationsZh extends AppLocalizations {
   String get recipeRuleUnknown => '换算规则未识别';
 
   @override
+  String recipeConversionRuleDetail(String original, String rule) {
+    return '原值 $original，$rule';
+  }
+
+  @override
   String get recipeModeServing => '按份数';
 
   @override
@@ -1126,6 +1131,12 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get recipeMeasureChoose => '选择量具';
+
+  @override
+  String get recipeMeasureRefresh => '刷新我的量具';
+
+  @override
+  String get recipeMeasureManage => '登记自家量具';
 
   @override
   String get recipeMeasureModeNoHome => '还没有登记自家量具，请先到“我的”登记。';

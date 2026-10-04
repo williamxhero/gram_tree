@@ -34,61 +34,68 @@ class PersonalMeasuresPage extends ConsumerWidget {
             ],
           ),
         ),
-        data: (items) => ListView(
-          padding: const EdgeInsets.all(20),
-          children: [
-            Text(l10n.personalMeasuresIntro),
-            const SizedBox(height: 12),
-            if (ref.read(personalMeasureRepositoryProvider).offline)
-              Text(l10n.personalMeasuresOffline),
-            FilledButton.icon(
-              key: const ValueKey('measure-add'),
-              onPressed: ref.read(personalMeasureRepositoryProvider).offline
-                  ? null
-                  : () => _edit(context, ref),
-              icon: const Icon(Icons.add),
-              label: Text(l10n.personalMeasuresAdd),
-            ),
-            if (items.isEmpty)
-              Padding(
-                padding: EdgeInsets.symmetric(vertical: 20),
-                child: Text(l10n.personalMeasuresEmpty),
-              ),
-            for (final item in items)
-              ComponentCard(
-                key: ValueKey('measure-${item.id}'),
-                detail: ComponentDescriptorDetailEnum.standard,
-                conclusion: Text(item.name),
-                conclusionSemanticsText:
-                    '${item.name}，${_kindLabel(item.kind.value, l10n)}',
-                onTapConclusion:
-                    ref.read(personalMeasureRepositoryProvider).offline
+        data: (items) => RefreshIndicator(
+          onRefresh: () async {
+            ref.invalidate(personalMeasuresProvider);
+            await ref.read(personalMeasuresProvider.future);
+          },
+          child: ListView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: const EdgeInsets.all(20),
+            children: [
+              Text(l10n.personalMeasuresIntro),
+              const SizedBox(height: 12),
+              if (ref.read(personalMeasureRepositoryProvider).offline)
+                Text(l10n.personalMeasuresOffline),
+              FilledButton.icon(
+                key: const ValueKey('measure-add'),
+                onPressed: ref.read(personalMeasureRepositoryProvider).offline
                     ? null
-                    : () => _edit(context, ref, item),
-                standardExtra: Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        '${_kindLabel(item.kind.value, l10n)} · ${l10n.personalMeasuresCapacityValue(item.capacityMl.toString())}',
-                        style: colors.numberStyle(
-                          Theme.of(context).textTheme.bodyMedium ??
-                              const TextStyle(),
+                    : () => _edit(context, ref),
+                icon: const Icon(Icons.add),
+                label: Text(l10n.personalMeasuresAdd),
+              ),
+              if (items.isEmpty)
+                Padding(
+                  padding: EdgeInsets.symmetric(vertical: 20),
+                  child: Text(l10n.personalMeasuresEmpty),
+                ),
+              for (final item in items)
+                ComponentCard(
+                  key: ValueKey('measure-${item.id}'),
+                  detail: ComponentDescriptorDetailEnum.standard,
+                  conclusion: Text(item.name),
+                  conclusionSemanticsText:
+                      '${item.name}，${_kindLabel(item.kind.value, l10n)}',
+                  onTapConclusion:
+                      ref.read(personalMeasureRepositoryProvider).offline
+                      ? null
+                      : () => _edit(context, ref, item),
+                  standardExtra: Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          '${_kindLabel(item.kind.value, l10n)} · ${l10n.personalMeasuresCapacityValue(item.capacityMl.toString())}',
+                          style: colors.numberStyle(
+                            Theme.of(context).textTheme.bodyMedium ??
+                                const TextStyle(),
+                          ),
                         ),
                       ),
-                    ),
-                    IconButton(
-                      key: ValueKey('measure-delete-${item.id}'),
-                      tooltip: l10n.personalMeasuresDeleteTooltip,
-                      icon: const Icon(Icons.delete_outline),
-                      onPressed:
-                          ref.read(personalMeasureRepositoryProvider).offline
-                          ? null
-                          : () => _delete(context, ref, item),
-                    ),
-                  ],
+                      IconButton(
+                        key: ValueKey('measure-delete-${item.id}'),
+                        tooltip: l10n.personalMeasuresDeleteTooltip,
+                        icon: const Icon(Icons.delete_outline),
+                        onPressed:
+                            ref.read(personalMeasureRepositoryProvider).offline
+                            ? null
+                            : () => _delete(context, ref, item),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-          ],
+            ],
+          ),
         ),
       ),
     );

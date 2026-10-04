@@ -48,6 +48,7 @@ void main() {
     WidgetTester tester,
     Finder finder, {
     bool tapAfterReveal = false,
+    bool resetToTop = true,
   }) async {
     tester.testTextInput.hide();
     await tester.pump();
@@ -55,9 +56,11 @@ void main() {
     final list = detailList.evaluate().isNotEmpty
         ? detailList
         : find.byType(ListView).last;
-    for (var i = 0; i < 12; i++) {
-      await tester.drag(list, const Offset(0, 500));
-      await tester.pump(const Duration(milliseconds: 100));
+    if (resetToTop) {
+      for (var i = 0; i < 12; i++) {
+        await tester.drag(list, const Offset(0, 500));
+        await tester.pump(const Duration(milliseconds: 100));
+      }
     }
     if (detailList.evaluate().isNotEmpty) {
       final detailScrollable = find.byType(Scrollable).last;
@@ -264,12 +267,19 @@ void main() {
       final flourSource = find.byKey(
         const ValueKey('recipe-source-mark-ingredient-1'),
       );
-      await reveal(tester, flourSource, tapAfterReveal: true);
+      await reveal(
+        tester,
+        flourSource,
+        tapAfterReveal: true,
+        resetToTop: false,
+      );
       await waitFor(tester, find.text('原来：100 g'));
       await waitFor(tester, find.text('现在：177.78 克'));
       await waitFor(tester, find.text('模具比例'));
       expect(find.byKey(const ValueKey('why-panel')), findsOneWidget);
-      await tester.pageBack();
+      // Dismiss the modal sheet through its visible barrier; pageBack targets
+      // browser history on web and has no Cupertino back button to tap.
+      await tester.tapAt(const Offset(10, 10));
       await settle(tester);
       expect(find.byKey(const ValueKey('why-panel')), findsNothing);
       _markE2eStep('after_mold_eight_inch');
@@ -302,7 +312,8 @@ void main() {
         find.descendant(of: baseSegment, matching: find.byIcon(Icons.check)),
         findsNothing,
       );
-      await waitFor(tester, find.text('177.78 克'));
+      // The flour has no density, so standard spoons keep grams and say why.
+      await waitFor(tester, find.textContaining('177.78 克 · 没有密度数据，保留克'));
       final selectedBaseSegment = await tapDisplaySegment(
         tester,
         displaySelector,
@@ -324,6 +335,49 @@ void main() {
       );
       await waitFor(tester, find.text('177.78 克'));
       _markE2eStep('after_display_mode_switching');
+
+      // Register a personal measure from the detail page's empty state, then
+      // refresh in place and pick it explicitly in the real selector.
+      await reveal(
+        tester,
+        find.byKey(const ValueKey('recipe-measure-manage')),
+        tapAfterReveal: true,
+        resetToTop: false,
+      );
+      await waitFor(tester, find.byKey(const ValueKey('measure-add')));
+      await tester.tap(find.byKey(const ValueKey('measure-add')));
+      await waitFor(tester, find.byKey(const ValueKey('measure-name')));
+      await tester.enterText(
+        find.byKey(const ValueKey('measure-name')),
+        '网页白瓷勺',
+      );
+      await tester.enterText(
+        find.byKey(const ValueKey('measure-capacity')),
+        '15',
+      );
+      await tester.tap(find.byKey(const ValueKey('measure-save')));
+      await waitFor(tester, find.text('网页白瓷勺'));
+      await tester.tap(find.byType(BackButton));
+      await waitFor(tester, find.byKey(const ValueKey('recipe-measure-mode')));
+      await reveal(
+        tester,
+        find.byKey(const ValueKey('recipe-measure-refresh')),
+        tapAfterReveal: true,
+        resetToTop: false,
+      );
+      await settle(tester);
+      expect(find.byKey(const ValueKey('recipe-measure-manage')), findsNothing);
+      await tapDisplaySegment(tester, displaySelector, '自家量具');
+      final picker = find.byKey(const ValueKey('recipe-measure-picker'));
+      await waitFor(tester, picker);
+      await tester.ensureVisible(picker);
+      await tester.tap(picker);
+      await settle(tester);
+      await tester.tap(find.textContaining('网页白瓷勺').last);
+      await settle(tester);
+      // Selecting the measure keeps grams because the flour has no density.
+      await waitFor(tester, find.textContaining('177.78 克 · 没有密度数据，保留克'));
+      _markE2eStep('after_personal_measure_selection');
     }),
     timeout: const Timeout(Duration(minutes: 5)),
   );

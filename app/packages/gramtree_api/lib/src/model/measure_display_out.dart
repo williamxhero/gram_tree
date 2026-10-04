@@ -3,6 +3,7 @@
 //
 
 // ignore_for_file: unused_element
+import 'package:gramtree_api/src/model/sourced_value.dart';
 import 'package:copy_with_extension/copy_with_extension.dart';
 import 'package:json_annotation/json_annotation.dart';
 
@@ -26,6 +27,8 @@ class MeasureDisplayOut {
 
     required this.rule,
 
+    required this.source_,
+
     required this.text,
   });
 
@@ -41,6 +44,9 @@ class MeasureDisplayOut {
   @JsonKey(name: r'rule', required: true, includeIfNull: false)
   final MeasureDisplayOutRuleEnum rule;
 
+  @JsonKey(name: r'source', required: true, includeIfNull: false)
+  final SourcedValue source_;
+
   @JsonKey(name: r'text', required: true, includeIfNull: false)
   final String text;
 
@@ -52,6 +58,7 @@ class MeasureDisplayOut {
           other.displayUnit == displayUnit &&
           other.grams == grams &&
           other.rule == rule &&
+          other.source_ == source_ &&
           other.text == text;
 
   @override
@@ -60,6 +67,7 @@ class MeasureDisplayOut {
       displayUnit.hashCode +
       (grams == null ? 0 : grams.hashCode) +
       rule.hashCode +
+      source_.hashCode +
       text.hashCode;
 
   factory MeasureDisplayOut.fromJson(Map<String, dynamic> json) =>

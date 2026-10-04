@@ -269,7 +269,9 @@ ServingConversionResult convertServings({
           originalServings,
           fractionDigits: 0,
         );
-        if (display < 1) display = 1;
+        // Zero stays an intentional absence; a positive amount keeps at least
+        // one item and the deviation warning below explains the adjustment.
+        if (theoretical != 0 && display < 1) display = 1;
         if (theoretical != 0) {
           deviationRatio = (display - theoretical).abs() / theoretical.abs();
           deviationWarning = deviationRatio > roundDeviationThreshold;

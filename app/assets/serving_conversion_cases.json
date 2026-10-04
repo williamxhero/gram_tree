@@ -252,5 +252,31 @@
       "total_time_seconds": 0,
       "active_time_seconds": 0
     }
+  },
+  {
+    "name": "zero_count_and_tiny_proportional",
+    "input": {
+      "original_servings": 2,
+      "target_servings": 1,
+      "ingredients": [
+        {"id": "zero", "display_name": "零个", "quantity": 0, "unit": "个", "scaling_mode": "round"},
+        {"id": "tiny", "display_name": "微量", "quantity": 0.004, "unit": "g", "scaling_mode": "proportional"}
+      ],
+      "steps": []
+    },
+    "expected": {
+      "original_servings": 2,
+      "target_servings": 1,
+      "min_servings": 1,
+      "max_servings": 20,
+      "ingredients": [
+        {"id": "zero", "display_name": "零个", "original_quantity": 0, "display_quantity": 0, "unit": "个", "rule": "round", "deviation_ratio": null, "deviation_warning": false},
+        {"id": "tiny", "display_name": "微量", "original_quantity": 0.004, "display_quantity": 0, "unit": "g", "rule": "proportional", "deviation_ratio": null, "deviation_warning": false}
+      ],
+      "steps": [],
+      "warnings": [],
+      "total_time_seconds": 0,
+      "active_time_seconds": 0
+    }
   }
 ]

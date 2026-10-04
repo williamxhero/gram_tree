@@ -3,6 +3,7 @@
 //
 
 // ignore_for_file: unused_element
+import 'package:gramtree_api/src/model/sourced_value.dart';
 import 'package:copy_with_extension/copy_with_extension.dart';
 import 'package:json_annotation/json_annotation.dart';
 
@@ -40,6 +41,8 @@ class RecipeDisplayedIngredient {
 
     required this.rule,
 
+    required this.source_,
+
     required this.text,
   });
 
@@ -76,6 +79,9 @@ class RecipeDisplayedIngredient {
   @JsonKey(name: r'rule', required: true, includeIfNull: false)
   final RecipeDisplayedIngredientRuleEnum rule;
 
+  @JsonKey(name: r'source', required: true, includeIfNull: false)
+  final SourcedValue source_;
+
   @JsonKey(name: r'text', required: true, includeIfNull: false)
   final String text;
 
@@ -94,6 +100,7 @@ class RecipeDisplayedIngredient {
           other.originalQuantity == originalQuantity &&
           other.originalUnit == originalUnit &&
           other.rule == rule &&
+          other.source_ == source_ &&
           other.text == text;
 
   @override
@@ -109,6 +116,7 @@ class RecipeDisplayedIngredient {
       originalQuantity.hashCode +
       originalUnit.hashCode +
       rule.hashCode +
+      source_.hashCode +
       text.hashCode;
 
   factory RecipeDisplayedIngredient.fromJson(Map<String, dynamic> json) =>

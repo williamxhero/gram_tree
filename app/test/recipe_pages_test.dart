@@ -342,6 +342,10 @@ Future<void> _setTargetMoldFromFixture(
   await tester.tap(find.text(shapeLabel).last);
   await _fixtureSettle(tester);
   if (shape == 'round') {
+    await _scrollUntilVisible(
+      tester,
+      find.byKey(const ValueKey('target-mold-diameter')),
+    );
     await tester.enterText(
       find.byKey(const ValueKey('target-mold-diameter')),
       '${target['diameter']}',
@@ -387,10 +391,13 @@ Future<void> _expectFixtureIngredient(
   final id = expected['id'] as String;
   final amount = find.byKey(ValueKey('recipe-ingredient-amount-$id'));
   await _scrollUntilVisible(tester, amount);
+  // A positive amount whose rounded value is 0 stays visible as "<0.01".
+  final tiny =
+      (expected['display_quantity'] as num) == 0 &&
+      (expected['original_quantity'] as num) > 0;
   final expectedText =
-      '${_fixtureQuantityText(expected['display_quantity'] as num)} '
+      '${tiny ? '<0.01' : _fixtureQuantityText(expected['display_quantity'] as num)} '
       '${_fixtureUnitText(expected['unit'] as String)}';
-  expect(find.text(expectedText), findsWidgets, reason: 'ingredient=$id');
 
   // The visible source mark is the user-facing indication that the system
   // changed this value; the page implementation also colours the amount via
@@ -401,10 +408,27 @@ Future<void> _expectFixtureIngredient(
           (expected['original_quantity'] as num);
 
   final source = find.byKey(ValueKey('recipe-source-mark-$id'));
-  if (!conversionActive || !changed) {
+  if (!conversionActive) {
+    expect(find.text(expectedText), findsWidgets, reason: 'ingredient=$id');
     expect(source, findsNothing, reason: 'ingredient=$id should be unchanged');
     return;
   }
+  if (!changed) {
+    // Unchanged results show the original value and applied rule as text,
+    // without an "adjusted" mark.
+    expect(
+      find.descendant(
+        of: amount,
+        matchRoot: true,
+        matching: find.textContaining('$expectedText · 原值 '),
+      ),
+      findsOneWidget,
+      reason: 'ingredient=$id unchanged rule detail',
+    );
+    expect(source, findsNothing, reason: 'ingredient=$id should be unchanged');
+    return;
+  }
+  expect(find.text(expectedText), findsWidgets, reason: 'ingredient=$id');
   expect(source, findsOneWidget, reason: 'ingredient=$id source mark');
   expect(
     find.text('按场景调整'),
@@ -443,11 +467,15 @@ Future<void> _expectFixtureDisplayOutput(
   final expectedText = (expected['text'] as String)
       .replaceAll(' g', ' 克')
       .replaceAll(' ml', ' 毫升');
+  final rule = expected['rule'] as String;
+  final expectedFinder = rule == 'no_density'
+      ? find.textContaining(expectedText)
+      : find.text(expectedText);
   for (var i = 0; i < 40; i++) {
-    if (find.text(expectedText).evaluate().isNotEmpty) break;
+    if (expectedFinder.evaluate().isNotEmpty) break;
     await tester.pump(const Duration(milliseconds: 50));
   }
-  expect(find.text(expectedText), findsWidgets);
+  expect(expectedFinder, findsWidgets);
   expect(
     find.textContaining(
       _fixtureUnitText(
@@ -461,7 +489,6 @@ Future<void> _expectFixtureDisplayOutput(
   final source = find.byKey(
     const ValueKey('recipe-source-mark-display-ingredient'),
   );
-  final rule = expected['rule'] as String;
   if (rule == 'base' || rule == 'no_density') {
     expect(source, findsNothing);
   } else {
@@ -692,9 +719,9 @@ void main() {
       );
       await _scrollUntilVisible(
         tester,
-        find.byKey(const ValueKey('recipe-measure-mode')),
+        find.byKey(const ValueKey('target-mold-diameter')),
+        delta: const Offset(0, 500),
       );
-      expect(find.byKey(const ValueKey('recipe-measure-mode')), findsOneWidget);
       await tester.enterText(
         find.byKey(const ValueKey('target-mold-diameter')),
         '8',
@@ -751,6 +778,10 @@ void main() {
     );
     await tester.tap(find.byKey(const ValueKey('recipe-mode-mold')));
     await tester.pumpAndSettle();
+    await _scrollUntilVisible(
+      tester,
+      find.byKey(const ValueKey('target-mold-diameter')),
+    );
     await tester.enterText(
       find.byKey(const ValueKey('target-mold-diameter')),
       '4',
@@ -793,6 +824,10 @@ void main() {
     );
     await tester.tap(find.byKey(const ValueKey('recipe-mode-mold')));
     await tester.pumpAndSettle();
+    await _scrollUntilVisible(
+      tester,
+      find.byKey(const ValueKey('target-mold-diameter')),
+    );
     await tester.enterText(
       find.byKey(const ValueKey('target-mold-diameter')),
       '0',
@@ -1416,7 +1451,7 @@ void main() {
   );
 
   testWidgets(
-    'offline detail conversion applies the cached library default mode',
+    'offline legacy detail conversion uses the immutable proportional fallback',
     (tester) async {
       final server = FakeServer();
       final state = _installRecipeApi(server, standardIngredientScaling: '阶梯');
@@ -1439,14 +1474,14 @@ void main() {
       await tester.tap(decrease);
       await _fixtureSettle(tester);
 
-      // No display endpoint is installed, so this is the local kernel: 3 eggs
-      // for 1 of 2 servings round to 2 instead of showing 1.5.
+      // A legacy null scaling mode is immutable and falls back to proportional;
+      // the current ingredient library default must not change this snapshot.
       await _expectFixtureIngredient(tester, {
         'id': 'egg',
         'unit': '个',
         'original_quantity': 3,
-        'display_quantity': 2,
-        'rule': 'round',
+        'display_quantity': 1.5,
+        'rule': 'proportional',
       }, conversionActive: true);
     },
   );
@@ -1873,8 +1908,101 @@ void main() {
     await tester.tap(find.text('汤匙/茶匙'));
     await tester.pumpAndSettle();
     await _scrollToBottom(tester);
-    expect(find.text('100 克'), findsWidgets);
+    expect(find.textContaining('100 克'), findsWidgets);
     expect(server.calls('POST', '/v1/recipes'), isEmpty);
+  });
+
+  testWidgets('detail refreshes measures changed on another device in place', (
+    tester,
+  ) async {
+    final server = FakeServer();
+    _installRecipeApi(server);
+    var items = <Map<String, dynamic>>[];
+    server.on(
+      'GET',
+      '/v1/me/measures',
+      (_) => (200, {'items': items, 'next_cursor': null}),
+    );
+    await pumpApp(tester, env: TestEnv.signedIn(server: server));
+    await _openMyRecipes(tester);
+    await tester.tap(find.byKey(const ValueKey('recipe-card-$_recipeId')));
+    await tester.pumpAndSettle();
+    await _scrollUntilVisible(
+      tester,
+      find.byKey(const ValueKey('recipe-measure-refresh')),
+    );
+    expect(find.text('还没有登记自家量具，请先到“我的”登记。'), findsOneWidget);
+
+    items = [
+      {
+        'id': '99999999-9999-4999-8999-999999999999',
+        'name': '另一设备的勺',
+        'kind': 'spoon',
+        'capacity_ml': 15,
+        'created_at': '2026-10-02T00:00:00Z',
+        'updated_at': '2026-10-02T00:00:00Z',
+      },
+    ];
+    await tester.tap(find.byKey(const ValueKey('recipe-measure-refresh')));
+    await tester.pumpAndSettle();
+    expect(find.text('还没有登记自家量具，请先到“我的”登记。'), findsNothing);
+    await tester.tap(find.text('自家量具'));
+    await tester.pumpAndSettle();
+    await _scrollUntilVisible(
+      tester,
+      find.byKey(const ValueKey('recipe-measure-picker')),
+    );
+    await tester.tap(find.byKey(const ValueKey('recipe-measure-picker')));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('另一设备的勺'), findsWidgets);
+  });
+
+  testWidgets('detail load failures offer retry instead of not found', (
+    tester,
+  ) async {
+    final server = FakeServer();
+    final state = _installRecipeApi(server);
+    var available = false;
+    server.on('GET', '/v1/recipes/$_recipeId', (_) {
+      return available
+          ? (200, state.current)
+          : FakeServer.error(503, 'unavailable', '暂时不可用');
+    });
+    await pumpApp(tester, env: TestEnv.signedIn(server: server));
+    await _openMyRecipes(tester);
+    await tester.tap(find.byKey(const ValueKey('recipe-card-$_recipeId')));
+    await tester.pumpAndSettle();
+    expect(find.text('菜谱暂时加载不了'), findsOneWidget);
+    expect(find.text('重试'), findsOneWidget);
+
+    available = true;
+    await tester.tap(find.text('重试'));
+    await tester.pumpAndSettle();
+    expect(
+      find.byKey(const ValueKey('recipe-serving-control')),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('home measure mode is disabled until a measure is registered', (
+    tester,
+  ) async {
+    final server = FakeServer();
+    _installRecipeApi(server);
+    await pumpApp(tester, env: TestEnv.signedIn(server: server));
+    await _openMyRecipes(tester);
+    await tester.tap(find.byKey(const ValueKey('recipe-card-$_recipeId')));
+    await tester.pumpAndSettle();
+    await _scrollUntilVisible(tester, find.text('自家量具'));
+
+    await tester.tap(find.text('自家量具'));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('recipe-measure-picker')), findsNothing);
+    expect(find.byKey(const ValueKey('recipe-measure-manage')), findsOneWidget);
+
+    await tester.tap(find.byKey(const ValueKey('recipe-measure-manage')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('measure-add')), findsOneWidget);
   });
 
   testWidgets('recipe detail selects a personal measure and retains grams', (
@@ -1984,7 +2112,8 @@ void main() {
     await tester.tap(find.text('汤匙/茶匙'));
     await _scrollToBottom(tester);
 
-    expect(find.text('20 克'), findsWidgets);
+    expect(find.textContaining('20 克'), findsWidgets);
+    expect(find.textContaining('没有密度数据，保留克'), findsOneWidget);
     expect(find.text('按场景调整'), findsNothing);
     expect(find.text('作者填写'), findsNothing);
     expect(
@@ -2381,14 +2510,20 @@ void main() {
           tester,
           Map<String, dynamic>.from(input['target_mold'] as Map),
         );
+        final ratio = find.byKey(const ValueKey('recipe-mold-ratio'));
+        await _scrollUntilVisible(tester, ratio, delta: const Offset(0, 500));
         expect(
-          tester
-              .widget<Text>(find.byKey(const ValueKey('recipe-mold-ratio')))
-              .data,
-          '原模具：'
-          '${_fixtureMoldLabel(Map<String, dynamic>.from(input['original_mold'] as Map))}'
-          ' · 底面积比例 '
-          '${(expected['area_ratio'] as num).toDouble().toStringAsFixed(2)}',
+          find.descendant(
+            of: ratio,
+            matchRoot: true,
+            matching: find.text(
+              '原模具：'
+              '${_fixtureMoldLabel(Map<String, dynamic>.from(input['original_mold'] as Map))}'
+              ' · 底面积比例 '
+              '${(expected['area_ratio'] as num).toDouble().toStringAsFixed(2)}',
+            ),
+          ),
+          findsOneWidget,
         );
       } else {
         await _scrollUntilVisible(

@@ -3,6 +3,7 @@
 //
 
 // ignore_for_file: unused_element
+import 'package:gramtree_api/src/model/sourced_value.dart';
 import 'package:copy_with_extension/copy_with_extension.dart';
 import 'package:json_annotation/json_annotation.dart';
 
@@ -31,6 +32,8 @@ class MoldConversionIngredient {
     required this.originalQuantity,
 
     required this.rule,
+
+    required this.source_,
 
     required this.unit,
   });
@@ -61,6 +64,9 @@ class MoldConversionIngredient {
   @JsonKey(name: r'rule', required: true, includeIfNull: false)
   final MoldConversionIngredientRuleEnum rule;
 
+  @JsonKey(name: r'source', required: true, includeIfNull: false)
+  final SourcedValue source_;
+
   @JsonKey(name: r'unit', required: true, includeIfNull: false)
   final String unit;
 
@@ -75,6 +81,7 @@ class MoldConversionIngredient {
           other.id == id &&
           other.originalQuantity == originalQuantity &&
           other.rule == rule &&
+          other.source_ == source_ &&
           other.unit == unit;
 
   @override
@@ -86,6 +93,7 @@ class MoldConversionIngredient {
       id.hashCode +
       originalQuantity.hashCode +
       rule.hashCode +
+      source_.hashCode +
       unit.hashCode;
 
   factory MoldConversionIngredient.fromJson(Map<String, dynamic> json) =>

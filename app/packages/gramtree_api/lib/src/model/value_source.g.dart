@@ -116,6 +116,7 @@ Map<String, dynamic> _$ValueSourceToJson(ValueSource instance) =>
 
 const _$ValueSourceSource_EnumEnumMap = {
   ValueSourceSource_Enum.authorFilled: 'author_filled',
+  ValueSourceSource_Enum.scenarioAdjusted: 'scenario_adjusted',
   ValueSourceSource_Enum.aiEstimated: 'ai_estimated',
   ValueSourceSource_Enum.verified: 'verified',
 };

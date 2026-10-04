@@ -31,6 +31,8 @@ abstract class _$RecipeDisplayedIngredientCWProxy {
 
   RecipeDisplayedIngredient rule(RecipeDisplayedIngredientRuleEnum rule);
 
+  RecipeDisplayedIngredient source_(SourcedValue source_);
+
   RecipeDisplayedIngredient text(String text);
 
   /// This function **does support** nullification of nullable fields. All `null` values passed to `non-nullable` fields will be ignored. You can also use `RecipeDisplayedIngredient(...).copyWith.fieldName(...)` to override fields one at a time with nullification support.
@@ -51,6 +53,7 @@ abstract class _$RecipeDisplayedIngredientCWProxy {
     num originalQuantity,
     String originalUnit,
     RecipeDisplayedIngredientRuleEnum rule,
+    SourcedValue source_,
     String text,
   });
 }
@@ -106,6 +109,10 @@ class _$RecipeDisplayedIngredientCWProxyImpl
       this(rule: rule);
 
   @override
+  RecipeDisplayedIngredient source_(SourcedValue source_) =>
+      this(source_: source_);
+
+  @override
   RecipeDisplayedIngredient text(String text) => this(text: text);
 
   @override
@@ -127,6 +134,7 @@ class _$RecipeDisplayedIngredientCWProxyImpl
     Object? originalQuantity = const $CopyWithPlaceholder(),
     Object? originalUnit = const $CopyWithPlaceholder(),
     Object? rule = const $CopyWithPlaceholder(),
+    Object? source_ = const $CopyWithPlaceholder(),
     Object? text = const $CopyWithPlaceholder(),
   }) {
     return RecipeDisplayedIngredient(
@@ -174,6 +182,10 @@ class _$RecipeDisplayedIngredientCWProxyImpl
           ? _value.rule
           // ignore: cast_nullable_to_non_nullable
           : rule as RecipeDisplayedIngredientRuleEnum,
+      source_: source_ == const $CopyWithPlaceholder()
+          ? _value.source_
+          // ignore: cast_nullable_to_non_nullable
+          : source_ as SourcedValue,
       text: text == const $CopyWithPlaceholder()
           ? _value.text
           // ignore: cast_nullable_to_non_nullable
@@ -210,6 +222,7 @@ RecipeDisplayedIngredient _$RecipeDisplayedIngredientFromJson(
         'original_quantity',
         'original_unit',
         'rule',
+        'source',
         'text',
       ],
     );
@@ -237,6 +250,10 @@ RecipeDisplayedIngredient _$RecipeDisplayedIngredientFromJson(
         'rule',
         (v) => $enumDecode(_$RecipeDisplayedIngredientRuleEnumEnumMap, v),
       ),
+      source_: $checkedConvert(
+        'source',
+        (v) => SourcedValue.fromJson(v as Map<String, dynamic>),
+      ),
       text: $checkedConvert('text', (v) => v as String),
     );
     return val;
@@ -250,6 +267,7 @@ RecipeDisplayedIngredient _$RecipeDisplayedIngredientFromJson(
     'displayUnit': 'display_unit',
     'originalQuantity': 'original_quantity',
     'originalUnit': 'original_unit',
+    'source_': 'source',
   },
 );
 
@@ -269,6 +287,7 @@ Map<String, dynamic> _$RecipeDisplayedIngredientToJson(
   'original_quantity': instance.originalQuantity,
   'original_unit': instance.originalUnit,
   'rule': _$RecipeDisplayedIngredientRuleEnumEnumMap[instance.rule]!,
+  'source': instance.source_.toJson(),
   'text': instance.text,
 };
 

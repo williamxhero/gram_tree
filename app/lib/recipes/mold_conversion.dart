@@ -114,6 +114,7 @@ class MoldConversionResult {
     required this.originalMold,
     required this.targetMold,
     required this.areaRatio,
+    required this.scale,
     required this.ingredients,
     required this.steps,
     required this.warnings,
@@ -122,6 +123,10 @@ class MoldConversionResult {
   final MoldSpec originalMold;
   final MoldSpec targetMold;
   final double areaRatio;
+
+  /// Unrounded bottom-area ratio, used to keep tiny proportional amounts
+  /// visible instead of collapsing them to the rounded `0`.
+  final double scale;
   final List<ConvertedMoldIngredient> ingredients;
   final List<ConvertedMoldStep> steps;
   final List<MoldConversionWarning> warnings;
@@ -161,10 +166,14 @@ MoldConversionResult convertMold({
       case 'unchanged':
         display = item.quantity;
       case 'round':
-        display = roundHalfUp(
-          theoretical,
-          fractionDigits: 0,
-        ).clamp(1, double.infinity);
+        // Zero stays an intentional absence; a positive amount keeps at least
+        // one item and the deviation warning below explains the adjustment.
+        display = theoretical == 0
+            ? 0
+            : roundHalfUp(
+                theoretical,
+                fractionDigits: 0,
+              ).clamp(1, double.infinity).toDouble();
         rule = 'round';
         if (theoretical != 0) {
           deviationRatio = (display - theoretical).abs() / theoretical.abs();
@@ -229,6 +238,7 @@ MoldConversionResult convertMold({
     originalMold: originalMold,
     targetMold: targetMold,
     areaRatio: _roundTwoDecimals(ratio),
+    scale: ratio,
     ingredients: converted,
     steps: convertedSteps,
     warnings: warnings,

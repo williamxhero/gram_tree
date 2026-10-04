@@ -100,6 +100,45 @@ void main() {
     expect(find.text('白瓷勺'), findsNothing);
   });
 
+  testWidgets('pull to refresh shows measures changed on another device', (
+    tester,
+  ) async {
+    final server = FakeServer();
+    var name = '白瓷勺';
+    server.on(
+      'GET',
+      '/v1/me/measures',
+      (_) => (
+        200,
+        {
+          'items': [
+            {
+              'id': '88888888-8888-4888-8888-888888888888',
+              'name': name,
+              'kind': 'spoon',
+              'capacity_ml': 15,
+              'created_at': '2026-10-02T00:00:00Z',
+              'updated_at': '2026-10-02T00:00:00Z',
+            },
+          ],
+          'next_cursor': null,
+        },
+      ),
+    );
+    await pumpApp(tester, env: TestEnv.signedIn(server: server));
+    await tester.tap(find.text('我的'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('personal-measures-entry')));
+    await tester.pumpAndSettle();
+    expect(find.text('白瓷勺'), findsOneWidget);
+
+    name = '改名后的勺';
+    await tester.fling(find.text('白瓷勺'), const Offset(0, 400), 1000);
+    await tester.pumpAndSettle();
+    expect(find.text('改名后的勺'), findsOneWidget);
+    expect(find.text('白瓷勺'), findsNothing);
+  });
+
   testWidgets('offline page reads account-scoped cached measures', (
     tester,
   ) async {

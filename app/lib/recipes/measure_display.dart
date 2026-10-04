@@ -87,7 +87,9 @@ double? _grams(double quantity, String unit, double? density) {
   return null;
 }
 
-String _quantityText(double value) => value == value.roundToDouble()
+String _quantityText(double value) => value > 0 && value < 0.005
+    ? '<0.01'
+    : value == value.roundToDouble()
     ? value.toInt().toString()
     : value
           .toStringAsFixed(2)
@@ -110,10 +112,12 @@ DisplayedAmount _base(DisplayMeasureInput input, {String? rule}) {
 }
 
 DisplayedAmount _standard(DisplayMeasureInput input) {
-  double? millilitres = input.baseUnit == 'ml'
-      ? input.baseQuantity
-      : input.density == null
+  // Mirrors the server: without density the original g/ml amount stays
+  // visible under the explicit no-density rule.
+  final millilitres = input.density == null
       ? null
+      : input.baseUnit == 'ml'
+      ? input.baseQuantity
       : input.baseQuantity / input.density!;
   if (millilitres == null) return _base(input, rule: 'no_density');
 
