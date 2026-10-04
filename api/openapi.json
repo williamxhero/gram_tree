@@ -1668,6 +1668,9 @@
             "title": "Rule",
             "type": "string"
           },
+          "source": {
+            "$ref": "#/components/schemas/SourcedValue"
+          },
           "text": {
             "title": "Text",
             "type": "string"
@@ -1677,7 +1680,8 @@
           "text",
           "display_quantity",
           "display_unit",
-          "rule"
+          "rule",
+          "source"
         ],
         "title": "MeasureDisplayOut",
         "type": "object"
@@ -1864,6 +1868,9 @@
             "title": "Rule",
             "type": "string"
           },
+          "source": {
+            "$ref": "#/components/schemas/SourcedValue"
+          },
           "unit": {
             "title": "Unit",
             "type": "string"
@@ -1875,7 +1882,8 @@
           "original_quantity",
           "display_quantity",
           "unit",
-          "rule"
+          "rule",
+          "source"
         ],
         "title": "MoldConversionIngredient",
         "type": "object"
@@ -3005,6 +3013,9 @@
             "title": "Rule",
             "type": "string"
           },
+          "source": {
+            "$ref": "#/components/schemas/SourcedValue"
+          },
           "text": {
             "title": "Text",
             "type": "string"
@@ -3018,7 +3029,8 @@
           "text",
           "display_quantity",
           "display_unit",
-          "rule"
+          "rule",
+          "source"
         ],
         "title": "RecipeDisplayedIngredient",
         "type": "object"
@@ -4283,6 +4295,9 @@
             "title": "Rule",
             "type": "string"
           },
+          "source": {
+            "$ref": "#/components/schemas/SourcedValue"
+          },
           "unit": {
             "title": "Unit",
             "type": "string"
@@ -4294,7 +4309,8 @@
           "original_quantity",
           "display_quantity",
           "unit",
-          "rule"
+          "rule",
+          "source"
         ],
         "title": "ServingConversionIngredient",
         "type": "object"
@@ -4753,6 +4769,7 @@
           "source": {
             "enum": [
               "author_filled",
+              "scenario_adjusted",
               "ai_estimated",
               "verified"
             ],

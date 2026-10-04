@@ -124,6 +124,31 @@ def _import_density_ingredient(tmp_path: Path, density: float) -> None:
     assert cli(["ingredients", "import", str(tmp_path)]) == 0
 
 
+def test_measure_display_no_density_is_self_describing_over_http(api: Api) -> None:
+    headers = bearer(api.login("measure-no-density@example.com"))
+    for base_quantity, base_unit, expected_text in (
+        (30, "ml", "30 毫升"),
+        (20, "g", "20 克"),
+    ):
+        response = api.client.post(
+            "/v1/me/measures/display",
+            json={
+                "base_quantity": base_quantity,
+                "base_unit": base_unit,
+                "density": None,
+                "mode": "standard",
+            },
+            headers=headers,
+        )
+        assert response.status_code == 200, response.text
+        payload = response.json()
+        assert payload["text"] == expected_text
+        assert payload["rule"] == "no_density"
+        assert payload["source"]["source_type"] == "author_filled"
+        assert payload["source"]["basis"]["reason_code"] == "no_density"
+        assert "缺少密度数据" in payload["source"]["basis"]["text"]
+
+
 @pytest.mark.parametrize("case", CASES, ids=[case["name"] for case in CASES])
 def test_recipe_display_matches_shared_fixture_through_http(
     api: Api, case: dict, tmp_path: Path
@@ -180,6 +205,13 @@ def test_recipe_display_matches_shared_fixture_through_http(
     } == expected
     assert actual["original_quantity"] == source["base_quantity"]
     assert actual["original_unit"] == source["base_unit"]
+    assert actual["source"]["source_type"] in {
+        "author_filled",
+        "scenario_adjusted",
+        "ai_estimated",
+        "verified",
+    }
+    assert actual["source"]["basis"]["text"]
 
     current = api.client.get(
         f"/v1/recipes/{saved['id']}/display",
@@ -272,6 +304,8 @@ def test_recipe_display_composes_serving_and_mold_conversion(api: Api) -> None:
     assert serving_item["converted_quantity"] == 200
     assert serving_item["conversion_rule"] == "proportional"
     assert serving_item["display_quantity"] == 200
+    assert serving_item["source"]["source_type"] == "scenario_adjusted"
+    assert serving_item["source"]["original_value"] == "100 g"
 
     mold = api.client.get(
         path,
@@ -289,6 +323,8 @@ def test_recipe_display_composes_serving_and_mold_conversion(api: Api) -> None:
     assert mold_item["converted_quantity"] == 177.78
     assert mold_item["conversion_rule"] == "mold_ratio"
     assert mold_item["display_quantity"] == 177.78
+    assert mold_item["source"]["source_type"] == "scenario_adjusted"
+    assert mold_item["source"]["original_value"] == "100 g"
 
     empty_optional = api.client.get(
         path,

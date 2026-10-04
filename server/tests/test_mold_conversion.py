@@ -59,6 +59,9 @@ def test_author_saves_base_mold_and_converts_without_mutating_snapshot(api: Api)
     assert conversion["area_ratio"] == 1.78
     assert conversion["ingredients"][0]["display_quantity"] == 177.78
     assert conversion["ingredients"][0]["rule"] == "mold_ratio"
+    assert conversion["ingredients"][0]["source"]["source_type"] == "scenario_adjusted"
+    assert conversion["ingredients"][0]["source"]["original_value"] == "100 g"
+    assert conversion["ingredients"][0]["source"]["basis"]["reason_code"] == "mold_conversion"
     assert conversion["ingredients"][1]["display_quantity"] == 5
     assert conversion["ingredients"][1]["rule"] == "round"
     assert conversion["steps"][0]["doneness_warning"] is False
@@ -89,6 +92,46 @@ def test_invalid_target_mold_returns_structured_http_error(api: Api) -> None:
     error = response.json()["error"]
     assert error["code"] == "invalid_request"
     assert error["message"]
+
+
+@pytest.mark.parametrize(
+    ("quantity", "expected_quantity", "expected_warning"),
+    [(0, 0, False), (0.001, 1, True)],
+)
+def test_mold_round_preserves_zero_and_warns_on_tiny_positive(
+    api: Api, quantity: float, expected_quantity: float, expected_warning: bool
+) -> None:
+    headers = bearer(api.login(f"mold-round-zero-{quantity}@example.com"))
+    body = recipe_input(f"模具取整边界-{quantity}")
+    body["snapshot"].update(
+        {
+            "base_mold": {"shape": "round", "unit": "cm", "diameter": 4},
+            "ingredients": [
+                {
+                    "id": "counted",
+                    "display_name": "计数食材",
+                    "quantity": quantity,
+                    "unit": "个",
+                    "scaling_mode": "round",
+                }
+            ],
+            "steps": [],
+        }
+    )
+    created = api.client.post("/v1/recipes", json=body, headers=headers)
+    assert created.status_code == 201, created.text
+    saved = created.json()
+    response = api.client.post(
+        f"/v1/recipes/{saved['id']}/mold",
+        json={"target_mold": {"shape": "round", "unit": "cm", "diameter": 2}},
+        headers=headers,
+    )
+    assert response.status_code == 200, response.text
+    conversion = response.json()["conversion"]
+    item = conversion["ingredients"][0]
+    assert item["display_quantity"] == expected_quantity
+    assert item["deviation_warning"] is expected_warning
+    assert bool(conversion["warnings"]) is expected_warning
 
 
 @pytest.mark.parametrize("case", CASES, ids=[case["name"] for case in CASES])

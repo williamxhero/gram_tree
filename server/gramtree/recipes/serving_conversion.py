@@ -171,7 +171,15 @@ def convert_servings(
         if item.scaling_mode == "unchanged":
             display = original
         elif item.scaling_mode == "round":
-            display = max(Decimal("1"), Decimal(str(_whole(theoretical))))
+            # Zero is an intentional absence, not one whole item. Positive
+            # values still need at least one count so a tiny ratio does not
+            # silently disappear; the deviation calculation below warns about
+            # that unavoidable adjustment.
+            display = (
+                Decimal("0")
+                if theoretical == 0
+                else max(Decimal("1"), Decimal(str(_whole(theoretical))))
+            )
             if theoretical != 0:
                 deviation_ratio = float(abs(display - theoretical) / abs(theoretical))
                 deviation_warning = deviation_ratio > round_deviation_threshold

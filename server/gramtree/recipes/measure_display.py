@@ -40,8 +40,11 @@ def _rounded_fraction(value: float) -> tuple[float, str]:
 
 
 def quantity_text(value: float) -> str:
+    """Render a quantity without turning a small positive amount into ``0``."""
     if value == int(value):
         return str(int(value))
+    if 0 < value < 0.005:
+        return "<0.01"
     rounded = Decimal(str(value)).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
     return format(rounded, "f").rstrip("0").rstrip(".")
 
@@ -54,13 +57,18 @@ def _grams(base_quantity: float, base_unit: str, density: float | None) -> float
     return None
 
 
+def _display_number(value: float) -> float:
+    """Keep numeric display precision aligned with conversion output."""
+    return float(Decimal(str(value)).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP))
+
+
 def _base_result(base_quantity: float, base_unit: str, density: float | None) -> dict[str, Any]:
     unit = "g" if base_unit == "g" else "ml"
     unit_text = "克" if unit == "g" else "毫升"
     grams = _grams(base_quantity, unit, density) if unit == "ml" else base_quantity
     return {
         "text": f"{quantity_text(base_quantity)} {unit_text}",
-        "display_quantity": float(base_quantity),
+        "display_quantity": _display_number(base_quantity),
         "display_unit": unit,
         "grams": None if unit == "ml" and density is None else grams,
         "rule": "base",
@@ -68,7 +76,11 @@ def _base_result(base_quantity: float, base_unit: str, density: float | None) ->
 
 
 def _standard_result(base_quantity: float, base_unit: str, density: float | None) -> dict[str, Any]:
-    millilitres = base_quantity if base_unit == "ml" else None
+    # Millilitres can only be compared with spoon capacities when the caller
+    # has enough provenance to say how the ingredient behaves.  Without
+    # density, keep the original ml visible instead of presenting a possibly
+    # misleading fraction of a standard measure.
+    millilitres = base_quantity if base_unit == "ml" and density is not None else None
     if millilitres is None and density is not None:
         millilitres = base_quantity / density
     if millilitres is None:

@@ -20,9 +20,10 @@ from gramtree.core.pagination import (
 )
 from gramtree.core.time import Timestamp, utcnow
 from gramtree.deps import SessionDep
-from gramtree.recipes.measure_display import display_amount
+from gramtree.recipes.measure_display import display_amount, quantity_text
 from gramtree.recipes.measure_models import PersonalMeasure
 from gramtree.runtime_config import service as config
+from gramtree.ui_protocol.protocol import SourceBasis, SourcedValue
 
 router = APIRouter(prefix="/me/measures", tags=["personal-measures"])
 _ERRORS = {
@@ -97,6 +98,7 @@ class MeasureDisplayOut(BaseModel):
     display_unit: str
     grams: float | None = None
     rule: Literal["base", "standard_measure", "personal_measure", "no_density"]
+    source: SourcedValue
 
 
 def _owned(session: SessionDep, auth: CurrentAuth, measure_id: IdV4) -> PersonalMeasure:
@@ -116,6 +118,28 @@ def _commit(session: SessionDep) -> None:
     except IntegrityError as exc:
         session.rollback()
         raise ApiError(409, "measure_name_taken", "这个量具名称已登记，请换一个名称") from exc
+
+
+def _display_source(body: MeasureDisplayRequest, result: dict[str, object]) -> SourcedValue:
+    original_unit = "克" if body.base_unit == "g" else "毫升"
+    original_value = f"{quantity_text(body.base_quantity)} {original_unit}"
+    changed = result["rule"] not in {"base", "no_density"}
+    if result["rule"] == "no_density":
+        basis_text = f"缺少密度数据，保留原始{original_unit}用量。"
+        reason_code = "no_density"
+    elif changed:
+        display_name = "自家量具" if body.mode == "home" else "常用量具"
+        basis_text = f"按{display_name}显示，仅改变显示方式，不修改原始用量。"
+        reason_code = "measure_display"
+    else:
+        basis_text = "作者提供的基础用量。"
+        reason_code = "author_filled"
+    return SourcedValue(
+        source_type="scenario_adjusted" if changed else "author_filled",
+        value=str(result["text"]),
+        original_value=original_value if changed else None,
+        basis=SourceBasis(reason_code=reason_code, text=basis_text),
+    )
 
 
 @router.post("/display", response_model=MeasureDisplayOut, responses=_ERRORS)
@@ -142,7 +166,7 @@ def display_personal_measure(
             else None
         ),
     )
-    return MeasureDisplayOut.model_validate(result)
+    return MeasureDisplayOut.model_validate({**result, "source": _display_source(body, result)})
 
 
 @router.get("", response_model=Page[PersonalMeasureOut], responses=_ERRORS)

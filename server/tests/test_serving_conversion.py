@@ -4,6 +4,7 @@ import json
 from pathlib import Path
 
 import pytest
+from sqlalchemy import text
 
 from gramtree.cli import main as cli
 from tests.accounts_support import Api, bearer
@@ -38,7 +39,19 @@ def _assert_conversion(actual: dict, expected: dict) -> None:
     assert actual["target_servings"] == expected["target_servings"]
     assert actual["min_servings"] == expected["min_servings"]
     assert actual["max_servings"] == expected["max_servings"]
-    assert actual["ingredients"] == expected["ingredients"]
+    legacy_ingredient_fields = (
+        "id",
+        "display_name",
+        "original_quantity",
+        "display_quantity",
+        "unit",
+        "rule",
+        "deviation_ratio",
+        "deviation_warning",
+    )
+    assert [
+        {key: item[key] for key in legacy_ingredient_fields} for item in actual["ingredients"]
+    ] == expected["ingredients"]
     assert actual["steps"] == expected["steps"]
     assert actual["warnings"] == expected["warnings"]
     assert actual["total_time_seconds"] == expected["total_time_seconds"]
@@ -230,6 +243,31 @@ def test_display_keeps_count_units_for_library_ingredients(api: Api) -> None:
     created = api.client.post("/v1/recipes", json=body, headers=headers)
     assert created.status_code == 201, created.text
     saved = created.json()
+    snapshot_item = saved["version"]["snapshot"]["ingredients"][0]
+    assert snapshot_item["base_quantity"] == 3
+    assert snapshot_item["base_unit"] == "count"
+    assert saved["version"]["derived"]["nutrition_per_serving"] == {
+        "energy_kcal": 107.25,
+        "protein_g": 9.45,
+        "fat_g": 7.12,
+        "carbohydrate_g": 0.53,
+        "sodium_mg": 106.5,
+        "estimated": True,
+        "incomplete": False,
+    }
+    response = api.client.get(
+        f"/v1/recipes/{saved['id']}/servings",
+        params={"target_servings": 1},
+        headers=headers,
+    )
+    assert response.status_code == 200, response.text
+    conversion_item = response.json()["conversion"]["ingredients"][0]
+    assert conversion_item["display_quantity"] == 2
+    assert conversion_item["unit"] == "个"
+    assert conversion_item["source"]["source_type"] == "scenario_adjusted"
+    assert conversion_item["source"]["original_value"] == "3 个"
+    assert conversion_item["source"]["basis"]["reason_code"] == "serving_conversion"
+
     response = api.client.get(
         f"/v1/recipes/{saved['id']}/display",
         params={"mode": "base", "target_servings": 1},
@@ -240,6 +278,108 @@ def test_display_keeps_count_units_for_library_ingredients(api: Api) -> None:
     assert item["text"] == "2 个"
     assert item["display_quantity"] == 2
     assert item["display_unit"] == "个"
+    assert item["source"]["source_type"] == "scenario_adjusted"
+    assert item["source"]["original_value"] == "3 个"
+    assert item["source"]["basis"]["text"]
+
+
+@pytest.mark.parametrize(
+    ("quantity", "expected_quantity", "expected_warning"),
+    [(0, 0, False), (0.01, 1, True)],
+)
+def test_serving_round_preserves_zero_and_warns_on_tiny_positive(
+    api: Api, quantity: float, expected_quantity: float, expected_warning: bool
+) -> None:
+    headers = bearer(api.login(f"serving-round-zero-{quantity}@example.com"))
+    body = recipe_input(f"份数取整边界-{quantity}")
+    body["snapshot"]["ingredients"] = [
+        {
+            "id": "counted",
+            "display_name": "计数食材",
+            "quantity": quantity,
+            "unit": "个",
+            "scaling_mode": "round",
+        }
+    ]
+    body["snapshot"]["steps"] = []
+    created = api.client.post("/v1/recipes", json=body, headers=headers)
+    assert created.status_code == 201, created.text
+    saved = created.json()
+    response = api.client.get(
+        f"/v1/recipes/{saved['id']}/servings",
+        params={"target_servings": 1},
+        headers=headers,
+    )
+    assert response.status_code == 200, response.text
+    item = response.json()["conversion"]["ingredients"][0]
+    assert item["display_quantity"] == expected_quantity
+    assert item["deviation_warning"] is expected_warning
+    assert bool(response.json()["conversion"]["warnings"]) is expected_warning
+
+
+def test_proportional_tiny_quantity_has_stable_display_text(api: Api) -> None:
+    headers = bearer(api.login("serving-proportional-tiny@example.com"))
+    body = recipe_input("比例微量")
+    body["snapshot"]["ingredients"] = [
+        {
+            "id": "tiny",
+            "display_name": "微量食材",
+            "quantity": 0.004,
+            "unit": "g",
+            "scaling_mode": "proportional",
+        }
+    ]
+    body["snapshot"]["steps"] = []
+    created = api.client.post("/v1/recipes", json=body, headers=headers)
+    assert created.status_code == 201, created.text
+    saved = created.json()
+    response = api.client.get(
+        f"/v1/recipes/{saved['id']}/display",
+        params={"mode": "base", "target_servings": 1},
+        headers=headers,
+    )
+    assert response.status_code == 200, response.text
+    item = response.json()["display"]["ingredients"][0]
+    assert item["converted_quantity"] == 0
+    assert item["display_quantity"] == 0
+    assert item["text"] == "<0.01 克"
+
+
+def test_legacy_null_scaling_mode_uses_stable_proportional_fallback(api: Api, engine) -> None:
+    assert cli(["ingredients", "import", str(SEED_PATH)]) == 0
+    headers = bearer(api.login("legacy-scaling-null@example.com"))
+    body = recipe_input("旧版本空缩放方式")
+    body["snapshot"]["ingredients"] = [
+        {
+            "id": "egg",
+            "ingredient_id": "b097f5a9-0641-4f00-9666-dad68756638c",
+            "display_name": "鸡蛋",
+            "quantity": 3,
+            "unit": "个",
+            "scaling_mode": "round",
+        }
+    ]
+    body["snapshot"]["steps"] = []
+    created = api.client.post("/v1/recipes", json=body, headers=headers)
+    assert created.status_code == 201, created.text
+    saved = created.json()
+    with engine.begin() as connection:
+        connection.execute(
+            text(
+                "UPDATE recipe_versions "
+                "SET snapshot = jsonb_set(snapshot, '{ingredients,0,scaling_mode}', 'null'::jsonb) "
+                "WHERE id = :version_id"
+            ),
+            {"version_id": saved["version"]["id"]},
+        )
+
+    response = api.client.get(
+        f"/v1/recipes/{saved['id']}/servings",
+        params={"target_servings": 1},
+        headers=headers,
+    )
+    assert response.status_code == 200, response.text
+    assert response.json()["conversion"]["ingredients"][0]["display_quantity"] == 1.5
 
 
 def test_null_scaling_mode_means_unset(api: Api) -> None:

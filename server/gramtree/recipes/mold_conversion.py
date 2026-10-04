@@ -215,7 +215,10 @@ def convert_mold(
             display = original
             rule = "unchanged"
         elif item.scaling_mode == "round":
-            display = max(Decimal("1"), _whole(theoretical))
+            # Preserve an explicit zero; a positive amount rounds up to one
+            # count and is covered by the deviation warning below when the
+            # adjustment is materially different.
+            display = Decimal("0") if theoretical == 0 else max(Decimal("1"), _whole(theoretical))
             rule = "round"
             if theoretical != 0:
                 deviation_ratio = float(abs(display - theoretical) / abs(theoretical))

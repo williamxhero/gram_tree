@@ -10,8 +10,9 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator, model_valida
 
 from gramtree.core.ids import IdV4
 from gramtree.core.time import Timestamp
+from gramtree.ui_protocol.protocol import SourcedValue
 
-SourceType = Literal["author_filled", "ai_estimated", "verified"]
+SourceType = Literal["author_filled", "scenario_adjusted", "ai_estimated", "verified"]
 MoldShape = Literal["round", "square", "rectangular", "custom"]
 MoldUnit = Literal["cm", "in", "inch"]
 
@@ -192,6 +193,7 @@ class MoldConversionIngredient(BaseModel):
     display_quantity: float
     unit: str
     rule: Literal["mold_ratio", "unchanged", "round"]
+    source: SourcedValue
     deviation_ratio: float | None = None
     deviation_warning: bool = False
 
@@ -405,6 +407,7 @@ class ServingConversionIngredient(BaseModel):
     display_quantity: float
     unit: str
     rule: Literal["proportional", "unchanged", "round"]
+    source: SourcedValue
     deviation_ratio: float | None = None
     deviation_warning: bool = False
 
@@ -462,6 +465,7 @@ class RecipeDisplayedIngredient(BaseModel):
     display_unit: str
     grams: float | None = None
     rule: Literal["base", "standard_measure", "personal_measure", "no_density"]
+    source: SourcedValue
 
 
 class RecipeIngredientDisplay(BaseModel):
