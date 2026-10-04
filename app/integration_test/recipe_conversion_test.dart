@@ -275,7 +275,7 @@ void main() {
       );
       await waitFor(tester, find.text('原来：100 g'));
       await waitFor(tester, find.text('现在：177.78 克'));
-      await waitFor(tester, find.text('模具比例'));
+      await waitFor(tester, find.textContaining('模具底面积比例'));
       expect(find.byKey(const ValueKey('why-panel')), findsOneWidget);
       // Dismiss the modal sheet through its visible barrier; pageBack targets
       // browser history on web and has no Cupertino back button to tap.
