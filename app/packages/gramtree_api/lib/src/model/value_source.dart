@@ -71,8 +71,6 @@ class ValueSource {
 enum ValueSourceSource_Enum {
   @JsonValue(r'author_filled')
   authorFilled(r'author_filled'),
-  @JsonValue(r'scenario_adjusted')
-  scenarioAdjusted(r'scenario_adjusted'),
   @JsonValue(r'ai_estimated')
   aiEstimated(r'ai_estimated'),
   @JsonValue(r'verified')
