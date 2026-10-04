@@ -83,11 +83,11 @@
           <label>显示方式 <select id="display" onchange="update()"><option value="base">克 / 毫升</option><option value="standard">常用量具</option><option value="home">自家量具</option></select></label>
         </div>
         <div id="alert" class="alert" style="margin-top:12px">份量已超过原方 2 倍：注意分批下锅，时间以成熟判断为准。</div>
-        <div class="section"><div class="head"><h3>食材 · 5 份</h3><span class="source changed">系统换算</span></div>
-          <div class="ingredient"><strong>鸡腿肉</strong><span id="chicken" class="amount changed">750 克</span><div class="meta"><span class="pill">原方 300 克</span><span class="source changed">按比例 × 2.5</span></div></div>
-          <div class="ingredient"><strong>干辣椒</strong><span id="pepper" class="amount changed">8 个</span><div class="meta"><span class="pill">理论值 7.5 个</span><span class="source changed">阶梯取整</span><button class="secondary small" onclick="toggleWhy('pepper-why')">查看依据</button></div><div id="pepper-why" class="why" hidden>原值 3 个 × 2.5 = 7.5 个，按个取整为 8 个；与理论值偏差未超过 20%。</div></div>
-          <div class="ingredient"><strong>腌制时间</strong><span class="amount">15 分钟</span><div class="meta"><span class="pill">原方 15 分钟</span><span class="source verified">不变</span></div></div>
-          <div class="ingredient"><strong>大火炒</strong><span class="amount">2 分钟</span><div class="meta"><span class="pill">温度不变</span><span class="source verified">不变</span></div></div>
+        <div class="section"><div class="head"><h3>食材 · 5 份</h3><span class="source changed">按场景调整</span></div>
+          <div class="ingredient"><strong>鸡腿肉</strong><span id="chicken" class="amount changed">750 克</span><div class="meta"><span class="pill">原方 300 克</span><span class="rule">按比例 × 2.5</span></div></div>
+          <div class="ingredient"><strong>干辣椒</strong><span id="pepper" class="amount changed">8 个</span><div class="meta"><span class="pill">理论值 7.5 个</span><span class="rule">阶梯取整</span><button class="secondary small" onclick="toggleWhy('pepper-why')">查看依据</button></div><div id="pepper-why" class="why" hidden>原值 3 个 × 2.5 = 7.5 个，按个取整为 8 个；与理论值偏差未超过 20%。</div></div>
+          <div class="ingredient"><strong>腌制时间</strong><span class="amount">15 分钟</span><div class="meta"><span class="pill">原方 15 分钟</span><span class="pill">不变</span></div></div>
+          <div class="ingredient"><strong>大火炒</strong><span class="amount">2 分钟</span><div class="meta"><span class="pill">温度不变</span><span class="pill">不变</span></div></div>
         </div>
         <div class="section"><div class="head"><h3>步骤提示</h3><span class="source changed">按场景调整</span></div><p class="subtle">大火炒：先分两锅下料。时间不自动翻倍，看到“表面变白”再出锅。</p></div>
         <div class="actions"><span class="subtle">显示的是 5 份，不会改动原方</span><button onclick="resetServings()">恢复原方 2 份</button></div>

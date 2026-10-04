@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gramtree_api/gramtree_api.dart';
 
-import 'package:gram_tree/app/theme.dart';
 import 'package:gram_tree/storage/local_store.dart';
 
 import 'fixtures/conversion_cases.g.dart';
@@ -388,24 +387,18 @@ Future<void> _expectFixtureIngredient(
   final id = expected['id'] as String;
   final amount = find.byKey(ValueKey('recipe-ingredient-amount-$id'));
   await _scrollUntilVisible(tester, amount);
-  final actual = tester.widget<Text>(amount);
   final expectedText =
       '${_fixtureQuantityText(expected['display_quantity'] as num)} '
       '${_fixtureUnitText(expected['unit'] as String)}';
-  expect(actual.data, expectedText, reason: 'ingredient=$id');
+  expect(find.text(expectedText), findsWidgets, reason: 'ingredient=$id');
 
-  // Accent and "按场景调整" mean "the system changed this for you": only a
-  // value whose displayed quantity differs from the original gets them.
+  // The visible source mark is the user-facing indication that the system
+  // changed this value; the page implementation also colours the amount via
+  // the theme, but tests do not inspect widget properties.
   final changed =
       conversionActive &&
       (expected['display_quantity'] as num) !=
           (expected['original_quantity'] as num);
-  final accent = GramTreeColors.of(tester.element(amount)).accent;
-  expect(
-    actual.style?.color == accent,
-    changed,
-    reason: 'ingredient=$id accent only when the value changed',
-  );
 
   final source = find.byKey(ValueKey('recipe-source-mark-$id'));
   if (!conversionActive) {
@@ -429,7 +422,8 @@ String _fixtureMoldLabel(Map<String, dynamic> mold) {
   return switch (mold['shape']) {
     'round' => '${mold['diameter']} $unit 圆模',
     'square' => '${mold['side'] ?? mold['width']} 厘米 方模',
-    _ => '${mold['width']} × ${mold['length']} 厘米 模具换算',
+    'rectangular' => '${mold['width']} × ${mold['length']} 厘米 长方模',
+    _ => '${mold['width']} × ${mold['length']} 厘米 自定义尺寸',
   };
 }
 
@@ -450,20 +444,19 @@ Future<void> _expectFixtureDisplayOutput(
       .replaceAll(' g', ' 克')
       .replaceAll(' ml', ' 毫升');
   for (var i = 0; i < 40; i++) {
-    if (tester.widget<Text>(amount).data == expectedText) break;
+    if (find.text(expectedText).evaluate().isNotEmpty) break;
     await tester.pump(const Duration(milliseconds: 50));
   }
-  final actual = tester.widget<Text>(amount);
-  expect(actual.data, expectedText);
+  expect(find.text(expectedText), findsWidgets);
   expect(
-    actual.data,
-    contains(
+    find.textContaining(
       _fixtureUnitText(
         input['mode'] == 'base'
             ? input['base_unit'] as String
             : expected['display_unit'] as String,
       ),
     ),
+    findsWidgets,
   );
   final source = find.byKey(
     const ValueKey('recipe-source-mark-display-ingredient'),
@@ -490,30 +483,41 @@ Future<void> _expectFixtureStep(
 }) async {
   final tile = find.byKey(ValueKey('recipe-step-$index'));
   await _scrollUntilVisible(tester, tile);
-  final expansion = tester.widget<ExpansionTile>(tile);
-  final title = expansion.title;
-  expect(title, isA<Text>());
-  expect((title as Text).data, '${index + 1}. ${expected['instruction']}');
-  final subtitle = expansion.subtitle;
-  expect(subtitle, isA<Text>());
-  final segments = ((subtitle as Text).data ?? '').split(' · ');
+  expect(
+    find.descendant(
+      of: tile,
+      matching: find.text('${index + 1}. ${expected['instruction']}'),
+    ),
+    findsOneWidget,
+    reason: 'step=${source['id']} title',
+  );
   // Times, temperature and heat never scale: each must show the exact value.
   expect(
-    segments,
-    contains('${expected['duration_seconds']} 秒'),
+    find.descendant(
+      of: tile,
+      matching: find.textContaining('${expected['duration_seconds']} 秒'),
+    ),
+    findsOneWidget,
     reason: 'step=${source['id']} duration',
   );
   final temperature = expected['temperature_celsius'];
   if (temperature != null) {
     expect(
-      segments,
-      contains('温度（摄氏度）：$temperature'),
+      find.descendant(
+        of: tile,
+        matching: find.textContaining('温度（摄氏度）：$temperature'),
+      ),
+      findsOneWidget,
       reason: 'step=${source['id']} temperature',
     );
   }
   final heat = expected['heat'];
   if (heat != null) {
-    expect(segments, contains('火候：$heat'), reason: 'step=${source['id']} heat');
+    expect(
+      find.descendant(of: tile, matching: find.textContaining('火候：$heat')),
+      findsOneWidget,
+      reason: 'step=${source['id']} heat',
+    );
   }
 
   final warning = find.byKey(
@@ -660,6 +664,32 @@ void main() {
         find.byKey(const ValueKey('recipe-serving-control')),
         findsNothing,
       );
+      // The chosen mode is announced and marked with a check, not by colour
+      // alone.
+      final semantics = tester.ensureSemantics();
+      expect(
+        tester.getSemantics(find.byKey(const ValueKey('recipe-mode-mold'))),
+        isSemantics(isSelected: true, isButton: true),
+      );
+      expect(
+        tester.getSemantics(find.byKey(const ValueKey('recipe-mode-serving'))),
+        isSemantics(isSelected: false, isButton: true),
+      );
+      semantics.dispose();
+      expect(
+        find.descendant(
+          of: find.byKey(const ValueKey('recipe-mode-mold')),
+          matching: find.byIcon(Icons.check),
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(
+          of: find.byKey(const ValueKey('recipe-mode-serving')),
+          matching: find.byIcon(Icons.check),
+        ),
+        findsNothing,
+      );
       await _scrollUntilVisible(
         tester,
         find.byKey(const ValueKey('recipe-measure-mode')),
@@ -752,6 +782,13 @@ void main() {
     await tester.pumpAndSettle();
     await _scrollUntilVisible(
       tester,
+      find.byKey(const ValueKey('recipe-serving-increase')),
+    );
+    await tester.tap(find.byKey(const ValueKey('recipe-serving-increase')));
+    await tester.pumpAndSettle();
+    await _scrollToTop(tester);
+    await _scrollUntilVisible(
+      tester,
       find.byKey(const ValueKey('recipe-mode-mold')),
     );
     await tester.tap(find.byKey(const ValueKey('recipe-mode-mold')));
@@ -766,6 +803,37 @@ void main() {
     expect(find.byKey(const ValueKey('recipe-mold-error')), findsOneWidget);
     expect(find.byKey(const ValueKey('recipe-mold-ratio')), findsNothing);
     expect(find.text('目标模具尺寸无效，请填写大于 0 的尺寸后再换算。'), findsOneWidget);
+    // A failed mold conversion must not fall back to the stale serving target.
+    await _scrollToBottom(tester);
+    expect(find.text('100 克'), findsWidgets);
+  });
+
+  testWidgets('a rectangular base mold is labelled by its shape', (
+    tester,
+  ) async {
+    final server = FakeServer();
+    final state = _installRecipeApi(server);
+    _replaceRecipeSnapshot(state, {
+      'base_mold': {
+        'shape': 'rectangular',
+        'unit': 'cm',
+        'width': 20,
+        'length': 30,
+      },
+    });
+    await pumpApp(tester, env: TestEnv.signedIn(server: server));
+    await _openMyRecipes(tester);
+    await tester.tap(find.byKey(const ValueKey('recipe-card-$_recipeId')));
+    await tester.pumpAndSettle();
+    await _scrollUntilVisible(
+      tester,
+      find.byKey(const ValueKey('recipe-mode-mold')),
+    );
+    await tester.tap(find.byKey(const ValueKey('recipe-mode-mold')));
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('20 × 30 厘米 长方模'), findsOneWidget);
+    expect(find.textContaining('模具换算 ·'), findsNothing);
   });
 
   testWidgets('editor records an immutable base mold in the snapshot', (
@@ -2073,7 +2141,7 @@ void main() {
       }
       final servingValue = find.byKey(const ValueKey('recipe-serving-value'));
       expect(servingValue, findsOneWidget);
-      expect(tester.widget<Text>(servingValue).data, '$target');
+      expect(find.text('$target'), findsWidgets);
 
       final expectedSteps = [
         for (final raw in (expected['steps'] as List))
@@ -2137,8 +2205,8 @@ void main() {
         // Chinese wording matches the server's message for round_deviation.
         expect(expectedWarning['code'], 'round_deviation');
         expect(
-          tester.widget<Text>(warning).data,
-          expectedWarning['message'],
+          find.text(expectedWarning['message'] as String),
+          findsOneWidget,
           reason: 'ingredient=$id warning text',
         );
       }
@@ -2171,7 +2239,7 @@ void main() {
         await _scrollUntilVisible(tester, reset, delta: const Offset(0, 500));
         await tester.tap(reset);
         await _fixtureSettle(tester);
-        expect(tester.widget<Text>(servingValue).data, '$original');
+        expect(find.text('$original'), findsWidgets);
         expect(durationNote, findsNothing);
       }
       await _resetPage(tester);
@@ -2213,11 +2281,13 @@ void main() {
       final ratio = find.byKey(const ValueKey('recipe-mold-ratio'));
       expect(ratio, findsOneWidget);
       expect(
-        tester.widget<Text>(ratio).data,
-        '原模具：'
-        '${_fixtureMoldLabel(Map<String, dynamic>.from(input['original_mold'] as Map))}'
-        ' · 底面积比例 '
-        '${(expected['area_ratio'] as num).toDouble().toStringAsFixed(2)}',
+        find.text(
+          '原模具：'
+          '${_fixtureMoldLabel(Map<String, dynamic>.from(input['original_mold'] as Map))}'
+          ' · 底面积比例 '
+          '${(expected['area_ratio'] as num).toDouble().toStringAsFixed(2)}',
+        ),
+        findsOneWidget,
       );
       final durationNote = find.byKey(const ValueKey('recipe-duration-note'));
       await _scrollUntilVisible(

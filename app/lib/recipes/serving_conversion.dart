@@ -246,11 +246,16 @@ ServingConversionResult convertServings({
     throw ServingConversionError('invalid_servings_config', '换算阈值配置有误');
   }
 
-  final ratio = targetServings / originalServings;
   final convertedIngredients = <ConvertedServingIngredient>[];
   final warnings = <ServingConversionWarning>[];
   for (final item in ingredients) {
-    final theoretical = item.quantity * ratio;
+    // Keep the multiplication/division in decimal form, matching the server's
+    // Decimal(str(quantity)) arithmetic instead of rounding a binary product.
+    final theoretical = scaleByIntegerRatio(
+      item.quantity,
+      targetServings,
+      originalServings,
+    );
     var display = theoretical;
     double? deviationRatio;
     var deviationWarning = false;
@@ -258,7 +263,12 @@ ServingConversionResult convertServings({
       case 'unchanged':
         display = item.quantity;
       case 'round':
-        display = roundHalfUp(theoretical, fractionDigits: 0);
+        display = scaleByIntegerRatio(
+          item.quantity,
+          targetServings,
+          originalServings,
+          fractionDigits: 0,
+        );
         if (display < 1) display = 1;
         if (theoretical != 0) {
           deviationRatio = (display - theoretical).abs() / theoretical.abs();

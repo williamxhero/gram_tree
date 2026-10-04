@@ -27,12 +27,12 @@ const sourceTypes = <String>{
 };
 
 /// 来源类型的中文标签，来源标记和"为什么"面板共用。
-String sourceTypeLabel(String sourceType, [AppLocalizations? l10n]) =>
+String sourceTypeLabel(String sourceType, AppLocalizations l10n) =>
     switch (sourceType) {
-      sourceTypeAuthorFilled => l10n?.sourceAuthorFilled ?? '作者填写',
-      sourceTypeTasteAdjusted => l10n?.sourceTasteAdjusted ?? '按你的口味换算',
-      sourceTypeScenarioAdjusted => l10n?.sourceScenarioAdjusted ?? '按场景调整',
-      sourceTypeAiEstimated => l10n?.sourceAiEstimated ?? 'AI 估算',
-      sourceTypeVerified => l10n?.sourceVerified ?? '已验证',
+      sourceTypeAuthorFilled => l10n.sourceAuthorFilled,
+      sourceTypeTasteAdjusted => l10n.sourceTasteAdjusted,
+      sourceTypeScenarioAdjusted => l10n.sourceScenarioAdjusted,
+      sourceTypeAiEstimated => l10n.sourceAiEstimated,
+      sourceTypeVerified => l10n.sourceVerified,
       _ => sourceType,
     };

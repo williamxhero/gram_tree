@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from decimal import ROUND_HALF_UP, Decimal
 from typing import Any
 
 _FRACTIONS = (0.25, 1 / 3, 0.5, 2 / 3, 0.75, 1.0)
@@ -39,7 +40,10 @@ def _rounded_fraction(value: float) -> tuple[float, str]:
 
 
 def quantity_text(value: float) -> str:
-    return str(int(value)) if value == int(value) else f"{value:.2f}".rstrip("0").rstrip(".")
+    if value == int(value):
+        return str(int(value))
+    rounded = Decimal(str(value)).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+    return format(rounded, "f").rstrip("0").rstrip(".")
 
 
 def _grams(base_quantity: float, base_unit: str, density: float | None) -> float | None:

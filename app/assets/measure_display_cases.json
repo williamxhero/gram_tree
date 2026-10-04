@@ -33,5 +33,10 @@
     "name": "tiny standard amount stays measurable",
     "input": {"base_quantity": 0.5, "base_unit": "g", "density": 1.0, "mode": "standard", "measure": null},
     "expected": {"text": "1/4 茶匙（0.5 克）", "display_quantity": 0.25, "display_unit": "茶匙", "grams": 0.5, "rule": "standard_measure"}
+  },
+  {
+    "name": "quantity text uses decimal half up",
+    "input": {"base_quantity": 0.125, "base_unit": "g", "density": 1.0, "mode": "standard", "measure": null},
+    "expected": {"text": "1/4 茶匙（0.13 克）", "display_quantity": 0.25, "display_unit": "茶匙", "grams": 0.125, "rule": "standard_measure"}
   }
 ]

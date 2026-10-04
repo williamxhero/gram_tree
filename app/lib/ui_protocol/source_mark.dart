@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gramtree_api/gramtree_api.dart'
@@ -8,7 +6,6 @@ import 'package:gramtree_api/gramtree_api.dart'
 import '../app/theme.dart';
 import '../events/event_recorder.dart';
 import '../l10n/app_localizations.dart';
-import 'intent_dispatcher.dart';
 import 'source_types.dart';
 
 /// 这次组合的 `composition_id`，通过 [BuildContext] 往下传给任何组件（SPEC-009.1
@@ -132,21 +129,10 @@ class SourceMark extends ConsumerWidget {
 
   Future<void> _open(BuildContext context, WidgetRef ref) async {
     final compositionId = CompositionIdScope.of(context);
-    Future<void> dispatchFeedback(ActionDescriptor action) async {
-      if (onAction != null) {
-        onAction!(action);
-        return;
-      }
-      if (!context.mounted) return;
-      await ref
-          .read(intentDispatcherProvider)
-          .dispatch(
-            context,
-            compositionId: compositionId ?? 'recipe-detail',
-            componentId: componentId,
-            action: action,
-          );
-    }
+    // Feedback actions only appear when a real intent handler receives them;
+    // a read-only surface must not offer buttons that do nothing.
+    final action = onAction;
+    final canFeedback = feedbackEnabled && action != null;
 
     await ref
         .read(eventRecorderProvider)
@@ -170,37 +156,33 @@ class SourceMark extends ConsumerWidget {
         basisText: basisText,
         citation: citation,
         required: required,
-        feedbackEnabled: feedbackEnabled,
-        onSkipOnce: required || !feedbackEnabled
+        feedbackEnabled: canFeedback,
+        onSkipOnce: required || !canFeedback
             ? null
             : () {
                 Navigator.of(sheetContext).pop();
-                unawaited(
-                  dispatchFeedback(
-                    ActionDescriptor(
-                      intent: 'skip_this_time',
-                      params: _feedbackParams(
-                        componentId,
-                        sourceType,
-                        compositionId,
-                      ),
+                action(
+                  ActionDescriptor(
+                    intent: 'skip_this_time',
+                    params: _feedbackParams(
+                      componentId,
+                      sourceType,
+                      compositionId,
                     ),
                   ),
                 );
               },
-        onNeverAgain: required
+        onNeverAgain: required || !canFeedback
             ? null
             : () {
                 Navigator.of(sheetContext).pop();
-                unawaited(
-                  dispatchFeedback(
-                    ActionDescriptor(
-                      intent: 'dont_do_again',
-                      params: _feedbackParams(
-                        componentId,
-                        sourceType,
-                        compositionId,
-                      ),
+                action(
+                  ActionDescriptor(
+                    intent: 'dont_do_again',
+                    params: _feedbackParams(
+                      componentId,
+                      sourceType,
+                      compositionId,
                     ),
                   ),
                 );

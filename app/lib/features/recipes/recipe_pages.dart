@@ -1872,7 +1872,9 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
       for (final ingredient in snapshot.ingredients ?? const [])
         ingredient.id: _displayedAmount(
           ingredient,
-          convertedServingById[ingredient.id],
+          _scaleMode == _RecipeScaleMode.servings
+              ? convertedServingById[ingredient.id]
+              : null,
           convertedMold: _scaleMode == _RecipeScaleMode.mold
               ? convertedMoldById[ingredient.id]
               : null,
@@ -2104,39 +2106,55 @@ class _ScaleModeControl extends StatelessWidget {
     return Row(
       children: [
         Expanded(
-          child: OutlinedButton.icon(
+          child: _modeButton(
+            context,
             key: const ValueKey('recipe-mode-serving'),
+            selected: mode == _RecipeScaleMode.servings,
+            icon: Icons.people_outline,
+            label: l10n.recipeModeServing,
             onPressed: onServing,
-            icon: const Icon(Icons.people_outline),
-            label: Text(l10n.recipeModeServing),
-            style: mode == _RecipeScaleMode.servings
-                ? OutlinedButton.styleFrom(
-                    backgroundColor: Theme.of(context)
-                        .colorScheme
-                        .primaryContainer,
-                  )
-                : null,
           ),
         ),
         const SizedBox(width: 8),
         Expanded(
-          child: OutlinedButton.icon(
+          child: _modeButton(
+            context,
             key: const ValueKey('recipe-mode-mold'),
+            selected: mode == _RecipeScaleMode.mold,
+            icon: Icons.cake_outlined,
+            label: l10n.recipeModeMold,
             onPressed: onMold,
-            icon: const Icon(Icons.cake_outlined),
-            label: Text(l10n.recipeModeMold),
-            style: mode == _RecipeScaleMode.mold
-                ? OutlinedButton.styleFrom(
-                    backgroundColor: Theme.of(context)
-                        .colorScheme
-                        .primaryContainer,
-                  )
-                : null,
           ),
         ),
       ],
     );
   }
+
+  // The selected mode is announced as selected and shows a check icon, so the
+  // choice never depends on the background colour alone.
+  Widget _modeButton(
+    BuildContext context, {
+    required Key key,
+    required bool selected,
+    required IconData icon,
+    required String label,
+    required VoidCallback onPressed,
+  }) => MergeSemantics(
+    child: Semantics(
+      selected: selected,
+      child: OutlinedButton.icon(
+        key: key,
+        onPressed: onPressed,
+        icon: Icon(selected ? Icons.check : icon),
+        label: Text(label),
+        style: selected
+            ? OutlinedButton.styleFrom(
+                backgroundColor: Theme.of(context).colorScheme.primaryContainer,
+              )
+            : null,
+      ),
+    ),
+  );
 }
 
 class _MoldControl extends StatelessWidget {
@@ -2400,8 +2418,10 @@ String _moldLabel(MoldSpec mold, AppLocalizations l10n) {
     MoldSpecShapeEnum.round => '${mold.diameter} $unit ${l10n.recipeMoldRound}',
     MoldSpecShapeEnum.square =>
       '${mold.side ?? mold.width} ${l10n.recipeMoldCm} ${l10n.recipeMoldSquare}',
+    MoldSpecShapeEnum.rectangular =>
+      '${mold.width} × ${mold.length} ${l10n.recipeMoldCm} ${l10n.recipeMoldRectangular}',
     _ =>
-      '${mold.width} × ${mold.length} ${l10n.recipeMoldCm} ${l10n.recipeMoldConversion}',
+      '${mold.width} × ${mold.length} ${l10n.recipeMoldCm} ${l10n.recipeMoldCustom}',
   };
 }
 

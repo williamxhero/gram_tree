@@ -223,6 +223,34 @@
     ],
     "total_time_seconds": 720,
     "active_time_seconds": 120
+    }
+  },
+  {
+    "name": "decimal_half_up_ratio",
+    "input": {
+      "original_servings": 2,
+      "target_servings": 3,
+      "ingredients": [
+        {"id": "one fifteen", "display_name": "一十五", "quantity": 1.15, "unit": "g", "scaling_mode": "proportional"},
+        {"id": "zero thirty five", "display_name": "零点三五", "quantity": 0.35, "unit": "g", "scaling_mode": "proportional"},
+        {"id": "two oh five", "display_name": "二点零五", "quantity": 2.05, "unit": "g", "scaling_mode": "proportional"}
+      ],
+      "steps": []
+    },
+    "expected": {
+      "original_servings": 2,
+      "target_servings": 3,
+      "min_servings": 1,
+      "max_servings": 20,
+      "ingredients": [
+        {"id": "one fifteen", "display_name": "一十五", "original_quantity": 1.15, "display_quantity": 1.73, "unit": "g", "rule": "proportional", "deviation_ratio": null, "deviation_warning": false},
+        {"id": "zero thirty five", "display_name": "零点三五", "original_quantity": 0.35, "display_quantity": 0.53, "unit": "g", "rule": "proportional", "deviation_ratio": null, "deviation_warning": false},
+        {"id": "two oh five", "display_name": "二点零五", "original_quantity": 2.05, "display_quantity": 3.08, "unit": "g", "rule": "proportional", "deviation_ratio": null, "deviation_warning": false}
+      ],
+      "steps": [],
+      "warnings": [],
+      "total_time_seconds": 0,
+      "active_time_seconds": 0
+    }
   }
-}
 ]
