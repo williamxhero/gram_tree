@@ -283,6 +283,9 @@ class WhyPanel extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final l10n = AppLocalizations.of(context);
+    final explanation = basisText.isEmpty
+        ? l10n.sourceBasisUnavailable
+        : basisText;
     return SafeArea(
       child: Padding(
         padding: const EdgeInsets.fromLTRB(20, 4, 20, 20),
@@ -304,7 +307,7 @@ class WhyPanel extends StatelessWidget {
             ],
             Text(l10n.whyCurrent(value), style: theme.textTheme.bodyMedium),
             const SizedBox(height: 12),
-            Text(basisText, style: theme.textTheme.bodyMedium),
+            Text(explanation, style: theme.textTheme.bodyMedium),
             if (citation != null) ...[
               const SizedBox(height: 6),
               Text(

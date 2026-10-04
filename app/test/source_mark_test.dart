@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gram_tree/app/theme.dart';
+import 'package:gram_tree/l10n/app_localizations.dart';
+import 'package:gram_tree/ui_protocol/source_mark.dart';
 
 import 'helpers.dart';
 
@@ -154,6 +156,26 @@ void main() {
       'component_id': 'c3',
       'source_type': 'taste_adjusted',
     });
+  });
+
+  testWidgets('来源依据为空时仍显示本地化的可用说明', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: const Scaffold(
+          body: WhyPanel(
+            sourceType: 'verified',
+            value: '6 克',
+            basisText: '',
+            required: true,
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('暂无可显示的依据'), findsOneWidget);
   });
 
   testWidgets('必显内容上的面板没有这次不用/以后别这样，只说明这是必显内容', (tester) async {

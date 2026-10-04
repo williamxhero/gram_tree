@@ -1348,6 +1348,12 @@ abstract class AppLocalizations {
   /// **'模具比例'**
   String get recipeRuleMoldRatio;
 
+  /// No description provided for @recipeRuleUnknown.
+  ///
+  /// In zh, this message translates to:
+  /// **'换算规则未识别'**
+  String get recipeRuleUnknown;
+
   /// No description provided for @recipeModeServing.
   ///
   /// In zh, this message translates to:
@@ -1551,6 +1557,18 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'已验证'**
   String get sourceVerified;
+
+  /// No description provided for @sourceUnknown.
+  ///
+  /// In zh, this message translates to:
+  /// **'来源未标注'**
+  String get sourceUnknown;
+
+  /// No description provided for @sourceBasisUnavailable.
+  ///
+  /// In zh, this message translates to:
+  /// **'暂无可显示的依据'**
+  String get sourceBasisUnavailable;
 
   /// No description provided for @whyOriginal.
   ///

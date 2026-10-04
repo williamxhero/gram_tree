@@ -683,6 +683,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get recipeRuleMoldRatio => '模具比例';
 
   @override
+  String get recipeRuleUnknown => '换算规则未识别';
+
+  @override
   String get recipeModeServing => '按份数';
 
   @override
@@ -791,6 +794,12 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get sourceVerified => '已验证';
+
+  @override
+  String get sourceUnknown => '来源未标注';
+
+  @override
+  String get sourceBasisUnavailable => '暂无可显示的依据';
 
   @override
   String whyOriginal(String value) {

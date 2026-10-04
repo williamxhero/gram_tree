@@ -3285,7 +3285,7 @@ String _servingRuleLabel(String rule, AppLocalizations l10n) => switch (rule) {
   'proportional' => l10n.recipeRuleProportional,
   'unchanged' => l10n.recipeRuleUnchanged,
   'round' => l10n.recipeRuleRound,
-  _ => rule,
+  _ => l10n.recipeRuleUnknown,
 };
 
 DisplayedAmount? _displayedAmount(
@@ -3402,7 +3402,7 @@ String _conversionRuleLabel(String rule, AppLocalizations l10n) =>
             : l10n.recipeRuleProportional,
       'unchanged' => l10n.recipeRuleUnchanged,
       'round' => l10n.recipeRuleRound,
-      _ => rule,
+      _ => l10n.recipeRuleUnknown,
     };
 
 /// The recipe's own mode wins; an unset mode uses the cached standard

@@ -34,5 +34,5 @@ String sourceTypeLabel(String sourceType, AppLocalizations l10n) =>
       sourceTypeScenarioAdjusted => l10n.sourceScenarioAdjusted,
       sourceTypeAiEstimated => l10n.sourceAiEstimated,
       sourceTypeVerified => l10n.sourceVerified,
-      _ => sourceType,
+      _ => l10n.sourceUnknown,
     };
