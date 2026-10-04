@@ -286,6 +286,75 @@ def test_identity_mold_conversion_preserves_precision_and_author_provenance(api:
     assert items[1]["source"]["value"] == "1.234 g"
 
 
+def test_equal_area_mold_change_is_a_scenario_conversion_without_rounding(api: Api) -> None:
+    """A different mold with the same bottom area is still a chosen scenario.
+
+    The App marks any structurally different target mold as an active
+    conversion, so the server provenance must agree even when the area ratio
+    is exactly 1; values keep author precision and no rounding warning appears.
+    """
+    headers = bearer(api.login("mold-equal-area@example.com"))
+    body = recipe_input("等面积换模具")
+    body["snapshot"].update(
+        {
+            "base_mold": {"shape": "square", "unit": "cm", "side": 10},
+            "ingredients": [
+                {
+                    "id": "batter",
+                    "display_name": "面糊",
+                    "quantity": 100,
+                    "unit": "g",
+                    "scaling_mode": "proportional",
+                },
+                {
+                    "id": "lemon",
+                    "display_name": "柠檬",
+                    "quantity": 0.5,
+                    "unit": "个",
+                    "scaling_mode": "round",
+                },
+            ],
+            "steps": [],
+        }
+    )
+    created = api.client.post("/v1/recipes", json=body, headers=headers)
+    assert created.status_code == 201, created.text
+    saved = created.json()
+    target = {"shape": "rectangular", "unit": "cm", "width": 5, "length": 20}
+
+    response = api.client.post(
+        f"/v1/recipes/{saved['id']}/mold",
+        json={"target_mold": target},
+        headers=headers,
+    )
+    assert response.status_code == 200, response.text
+    conversion = response.json()["conversion"]
+    assert conversion["area_ratio"] == 1
+    assert conversion["warnings"] == []
+    items = conversion["ingredients"]
+    assert [item["display_quantity"] for item in items] == [100, 0.5]
+    assert [item["deviation_warning"] for item in items] == [False, False]
+    assert [item["source"]["source_type"] for item in items] == [
+        "scenario_adjusted",
+        "scenario_adjusted",
+    ]
+    assert [item["source"]["original_value"] for item in items] == ["100 g", "0.5 个"]
+    assert all("底面积比例为 1" in item["source"]["basis"]["text"] for item in items)
+
+    display = api.client.get(
+        f"/v1/recipes/{saved['id']}/display",
+        params={"mode": "base", "target_mold": json.dumps(target)},
+        headers=headers,
+    )
+    assert display.status_code == 200, display.text
+    shown = display.json()["display"]["ingredients"]
+    assert [item["display_quantity"] for item in shown] == [100, 0.5]
+    assert [item["source"]["source_type"] for item in shown] == [
+        "scenario_adjusted",
+        "scenario_adjusted",
+    ]
+
+
 @pytest.mark.parametrize("case", CASES, ids=[case["name"] for case in CASES])
 def test_mold_conversion_matches_shared_fixture(api: Api, case: dict) -> None:
     headers = bearer(api.login(f"mold-fixture-{case['name']}@example.com"))
@@ -320,6 +389,8 @@ def test_mold_conversion_matches_shared_fixture(api: Api, case: dict) -> None:
         }
         for item in actual["ingredients"]
     ] == expected["ingredients"]
+    if "warnings" in expected:
+        assert actual["warnings"] == expected["warnings"]
     if expected["step"] is None:
         assert actual["steps"] == []
     else:

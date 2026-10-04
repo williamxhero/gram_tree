@@ -46,5 +46,32 @@
       "area_ratio": 1.01,
       "display_quantity": 1.01
     }
+  },
+  {
+    "name": "mold_decimal_product_half_up",
+    "kind": "mold",
+    "input": {
+      "original_mold": {"shape": "square", "unit": "cm", "side": 10},
+      "target_mold": {
+        "shape": "rectangular",
+        "unit": "cm",
+        "width": 15,
+        "length": 10
+      },
+      "ingredients": [
+        {
+          "id": "boundary",
+          "display_name": "边界用量",
+          "quantity": 1.15,
+          "unit": "g",
+          "scaling_mode": "proportional"
+        }
+      ],
+      "steps": []
+    },
+    "expected": {
+      "area_ratio": 1.5,
+      "display_quantity": 1.73
+    }
   }
 ]

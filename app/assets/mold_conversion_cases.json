@@ -58,5 +58,26 @@
       ],
       "step": null
     }
+  },
+  {
+    "name": "equal_area_shape_change_keeps_fractional_count",
+    "input": {
+      "original_mold": {"shape": "square", "unit": "cm", "side": 10},
+      "target_mold": {"shape": "rectangular", "unit": "cm", "width": 5, "length": 20},
+      "ingredients": [
+        {"id": "batter", "display_name": "面糊", "quantity": 100, "unit": "g", "scaling_mode": "proportional"},
+        {"id": "lemon", "display_name": "柠檬", "quantity": 0.5, "unit": "个", "scaling_mode": "round"}
+      ],
+      "steps": []
+    },
+    "expected": {
+      "area_ratio": 1,
+      "ingredients": [
+        {"id": "batter", "original_quantity": 100, "display_quantity": 100, "unit": "g", "rule": "mold_ratio"},
+        {"id": "lemon", "original_quantity": 0.5, "display_quantity": 0.5, "unit": "个", "rule": "round"}
+      ],
+      "warnings": [],
+      "step": null
+    }
   }
 ]

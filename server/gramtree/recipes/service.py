@@ -1202,6 +1202,16 @@ def _serving_conversion_payload(
     return payload
 
 
+def _mold_changed(original: MoldSpec | None, target: MoldSpec | None) -> bool:
+    """Whether the user chose a different mold, even one with equal area.
+
+    The App compares the whole mold spec, so an equal-area shape change is
+    still a scenario conversion; comparing only the area ratio would make the
+    two sides disagree about provenance.
+    """
+    return original is not None and target is not None and original != target
+
+
 def _mold_conversion_payload(
     conversion: MoldConversion, snapshot: RecipeSnapshot
 ) -> dict[str, object]:
@@ -1222,7 +1232,7 @@ def _mold_conversion_payload(
                 rule=cast(_ConversionRule, item.rule),
                 area_ratio=conversion.area_ratio,
                 conversion_ratio=exact_ratio,
-                conversion_requested=exact_ratio != 1,
+                conversion_requested=_mold_changed(original_mold, target_mold),
             ),
         }
         for original, item in zip(snapshot.ingredients, conversion.ingredients, strict=True)
@@ -1420,7 +1430,7 @@ def display_recipe_ingredients(
             target_mold=target_mold,
             conversion_requested=(
                 (target_servings is not None and target_servings != snapshot.servings)
-                or (target_mold is not None and conversion_scale not in {None, 1})
+                or _mold_changed(snapshot.base_mold, target_mold)
             ),
         )
         amounts.append(

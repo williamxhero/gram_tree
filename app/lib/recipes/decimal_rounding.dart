@@ -39,6 +39,37 @@ double scaleByIntegerRatio(
   return value.isNegative ? -result : result;
 }
 
+/// Multiply two finite doubles as the decimals they print as, matching the
+/// server's `Decimal(str(value)) * Decimal(str(ratio))`, then keep
+/// [fractionDigits] places (half-up) so later display rounding sees the exact
+/// product instead of a binary approximation such as `1.7249999999999999`.
+double scaleByDecimalRatio(
+  double value,
+  double ratio, {
+  int fractionDigits = 12,
+}) {
+  if (!value.isFinite || !ratio.isFinite) {
+    throw ArgumentError('数值和比例都必须是有限数');
+  }
+  if (fractionDigits < 0) {
+    throw ArgumentError.value(fractionDigits, 'fractionDigits', '必须是非负整数');
+  }
+  final (valueDigits, valueScale) = _decimalParts(value.abs());
+  final (ratioDigits, ratioScale) = _decimalParts(ratio.abs());
+  var numerator = valueDigits * ratioDigits;
+  var denominator = BigInt.one;
+  final scale = valueScale + ratioScale;
+  if (scale >= 0) {
+    denominator = _tenPower(scale);
+  } else {
+    numerator *= _tenPower(-scale);
+  }
+  numerator *= _tenPower(fractionDigits);
+  final rounded = _roundRational(numerator, denominator);
+  final result = rounded.toDouble() / _tenPower(fractionDigits).toDouble();
+  return value.isNegative != ratio.isNegative ? -result : result;
+}
+
 /// Round [value] to [fractionDigits] decimal places, half away from zero.
 ///
 /// This matches `Decimal(str(value)).quantize(..., ROUND_HALF_UP)` for finite

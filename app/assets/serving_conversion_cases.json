@@ -278,5 +278,29 @@
       "total_time_seconds": 0,
       "active_time_seconds": 0
     }
+  },
+  {
+    "name": "identity_keeps_fractional_count",
+    "input": {
+      "original_servings": 2,
+      "target_servings": 2,
+      "ingredients": [
+        {"id": "lemon", "display_name": "柠檬", "quantity": 0.5, "unit": "个", "scaling_mode": "round"}
+      ],
+      "steps": []
+    },
+    "expected": {
+      "original_servings": 2,
+      "target_servings": 2,
+      "min_servings": 1,
+      "max_servings": 20,
+      "ingredients": [
+        {"id": "lemon", "display_name": "柠檬", "original_quantity": 0.5, "display_quantity": 0.5, "unit": "个", "rule": "round", "deviation_ratio": 0, "deviation_warning": false}
+      ],
+      "steps": [],
+      "warnings": [],
+      "total_time_seconds": 0,
+      "active_time_seconds": 0
+    }
   }
 ]

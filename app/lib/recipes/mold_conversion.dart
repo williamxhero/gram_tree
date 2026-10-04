@@ -155,7 +155,9 @@ MoldConversionResult convertMold({
   final converted = <ConvertedMoldIngredient>[];
   final warnings = <MoldConversionWarning>[];
   for (final item in ingredients) {
-    final theoretical = item.quantity * ratio;
+    // Multiply in decimal form like the server's Decimal(str(quantity)) * ratio,
+    // so a binary product such as 1.15 * 1.5 cannot round to 1.72 here.
+    final theoretical = scaleByDecimalRatio(item.quantity, ratio);
     var display = theoretical;
     var rule = item.scalingMode;
     double? deviationRatio;
@@ -166,9 +168,12 @@ MoldConversionResult convertMold({
       case 'unchanged':
         display = item.quantity;
       case 'round':
-        // Zero stays an intentional absence; a positive amount keeps at least
-        // one item and the deviation warning below explains the adjustment.
-        display = theoretical == 0
+        // An equal-area mold keeps the author's count (e.g. 0.5 个). Otherwise
+        // zero stays an intentional absence, and a positive amount keeps at
+        // least one item; the deviation warning below explains the adjustment.
+        display = ratio == 1
+            ? item.quantity
+            : theoretical == 0
             ? 0
             : roundHalfUp(
                 theoretical,
@@ -256,6 +261,10 @@ double _area(MoldSpec mold) {
       final radius = diameter / 2;
       return math.pi * radius * radius;
     case MoldSpecShapeEnum.square:
+      // Same rule as the server schema: side and width name one edge.
+      if (mold.side != null && mold.width != null && mold.side != mold.width) {
+        throw MoldConversionError('invalid_mold', '方模的 side 与 width 必须一致');
+      }
       final side = _positive(mold.side ?? mold.width, 'side') * factor;
       if (mold.length != null &&
           mold.length != mold.side &&

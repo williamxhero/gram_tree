@@ -263,15 +263,20 @@ ServingConversionResult convertServings({
       case 'unchanged':
         display = item.quantity;
       case 'round':
-        display = scaleByIntegerRatio(
-          item.quantity,
-          targetServings,
-          originalServings,
-          fractionDigits: 0,
-        );
-        // Zero stays an intentional absence; a positive amount keeps at least
-        // one item and the deviation warning below explains the adjustment.
-        if (theoretical != 0 && display < 1) display = 1;
+        // An identity ratio keeps the author's count (e.g. 0.5 个). Otherwise
+        // zero stays an intentional absence, and a positive amount keeps at
+        // least one item; the deviation warning below explains the adjustment.
+        if (targetServings == originalServings) {
+          display = item.quantity;
+        } else {
+          display = scaleByIntegerRatio(
+            item.quantity,
+            targetServings,
+            originalServings,
+            fractionDigits: 0,
+          );
+          if (theoretical != 0 && display < 1) display = 1;
+        }
         if (theoretical != 0) {
           deviationRatio = (display - theoretical).abs() / theoretical.abs();
           deviationWarning = deviationRatio > roundDeviationThreshold;

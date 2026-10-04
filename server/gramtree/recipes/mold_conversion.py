@@ -219,8 +219,14 @@ def convert_mold(
         elif item.scaling_mode == "round":
             # Preserve an explicit zero; a positive amount rounds up to one
             # count and is covered by the deviation warning below when the
-            # adjustment is materially different.
-            display = Decimal("0") if theoretical == 0 else max(Decimal("1"), _whole(theoretical))
+            # adjustment is materially different. An equal-area mold keeps the
+            # author's count (e.g. 0.5 个) instead of rounding and warning.
+            if ratio == 1:
+                display = original
+            elif theoretical == 0:
+                display = Decimal("0")
+            else:
+                display = max(Decimal("1"), _whole(theoretical))
             rule = "round"
             if theoretical != 0:
                 deviation_ratio = float(abs(display - theoretical) / abs(theoretical))
