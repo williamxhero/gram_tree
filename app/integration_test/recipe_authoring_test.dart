@@ -195,10 +195,7 @@ void main() {
       await waitFor(tester, find.byKey(const ValueKey('recipe-list-button')));
       await tester.tap(find.byKey(const ValueKey('recipe-list-button')));
       await waitFor(tester, find.text('网页版验收菜谱'));
-      final recipeCard = find.ancestor(
-        of: find.text('网页版验收菜谱'),
-        matching: find.byType(ListTile),
-      );
+      final recipeCard = find.bySemanticsLabel('网页版验收菜谱');
       expect(recipeCard, findsOneWidget);
       await tester.tap(recipeCard);
       // The public, always-built content boundary signals that the HTTP detail
