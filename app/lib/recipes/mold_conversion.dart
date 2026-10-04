@@ -151,10 +151,11 @@ MoldConversionResult convertMold({
 }) {
   final sourceArea = _area(originalMold);
   final targetArea = _area(targetMold);
-  // Canonicalize the ratio as a decimal before identity checks. This keeps
-  // equal-area molds such as 0.3 × 0.3 and 0.1 × 0.9 at exactly 1 instead
-  // of letting a binary division turn a fractional count into one whole item.
-  final ratio = roundHalfUp(targetArea / sourceArea, fractionDigits: 12);
+  // Keep the ratio at full available precision for multiplication. Identity
+  // is determined from the canonicalized decimal areas, not by rounding the
+  // ratio itself (a tiny but real non-identity must still match the server).
+  final ratio = targetArea / sourceArea;
+  final isIdentity = targetArea == sourceArea;
   final converted = <ConvertedMoldIngredient>[];
   final warnings = <MoldConversionWarning>[];
   for (final item in ingredients) {
@@ -174,7 +175,7 @@ MoldConversionResult convertMold({
         // An equal-area mold keeps the author's count (e.g. 0.5 个). Otherwise
         // zero stays an intentional absence, and a positive amount keeps at
         // least one item; the deviation warning below explains the adjustment.
-        display = ratio == 1
+        display = isIdentity
             ? item.quantity
             : theoretical == 0
             ? 0
@@ -209,7 +210,7 @@ MoldConversionResult convertMold({
         displayName: item.displayName,
         originalQuantity: item.quantity,
         // Preserve identity and unchanged values at source precision.
-        displayQuantity: item.scalingMode == 'unchanged' || ratio == 1
+        displayQuantity: item.scalingMode == 'unchanged' || isIdentity
             ? display
             : _roundTwoDecimals(display),
         unit: item.unit,
@@ -263,9 +264,14 @@ double _area(MoldSpec mold) {
       final diameter = scaleByDecimalRatio(
         _positive(mold.diameter, 'diameter'),
         factor,
+        fractionDigits: 15,
       );
-      final radius = scaleByIntegerRatio(diameter, 1, 2);
-      return scaleByDecimalRatio(math.pi, scaleByDecimalRatio(radius, radius));
+      final radius = scaleByIntegerRatio(diameter, 1, 2, fractionDigits: 15);
+      return scaleByDecimalRatio(
+        math.pi,
+        scaleByDecimalRatio(radius, radius, fractionDigits: 15),
+        fractionDigits: 15,
+      );
     case MoldSpecShapeEnum.square:
       // Same rule as the server schema: side and width name one edge.
       if (mold.side != null && mold.width != null && mold.side != mold.width) {
@@ -274,21 +280,27 @@ double _area(MoldSpec mold) {
       final side = scaleByDecimalRatio(
         _positive(mold.side ?? mold.width, 'side'),
         factor,
+        fractionDigits: 15,
       );
       if (mold.length != null &&
           mold.length != mold.side &&
           mold.length != mold.width) {
         throw MoldConversionError('invalid_mold', '方模的边长必须相等');
       }
-      return scaleByDecimalRatio(side, side);
+      return scaleByDecimalRatio(side, side, fractionDigits: 15);
     case MoldSpecShapeEnum.rectangular:
     case MoldSpecShapeEnum.custom:
-      final width = scaleByDecimalRatio(_positive(mold.width, 'width'), factor);
+      final width = scaleByDecimalRatio(
+        _positive(mold.width, 'width'),
+        factor,
+        fractionDigits: 15,
+      );
       final length = scaleByDecimalRatio(
         _positive(mold.length, 'length'),
         factor,
+        fractionDigits: 15,
       );
-      return scaleByDecimalRatio(width, length);
+      return scaleByDecimalRatio(width, length, fractionDigits: 15);
   }
 }
 
