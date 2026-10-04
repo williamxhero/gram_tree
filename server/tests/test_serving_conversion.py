@@ -1,6 +1,8 @@
 """Serving conversion contract through the public HTTP API."""
 
 import json
+import os
+import subprocess
 from pathlib import Path
 
 import pytest
@@ -450,7 +452,7 @@ def test_identity_conversion_preserves_precision_and_author_provenance(api: Api)
 
 
 def test_legacy_null_scaling_mode_uses_stable_proportional_fallback(
-    api: Api, legacy_null_scaling_snapshot
+    api: Api, database_url: str
 ) -> None:
     assert cli(["ingredients", "import", str(SEED_PATH)]) == 0
     headers = bearer(api.login("legacy-scaling-null@example.com"))
@@ -469,7 +471,26 @@ def test_legacy_null_scaling_mode_uses_stable_proportional_fallback(
     created = api.client.post("/v1/recipes", json=body, headers=headers)
     assert created.status_code == 201, created.text
     saved = created.json()
-    legacy_null_scaling_snapshot(saved["version"]["id"])
+    env = os.environ.copy()
+    env["GRAMTREE_ENV"] = "test"
+    env["GRAMTREE_DATABASE_URL"] = database_url
+    env["GRAMTREE_REDIS_URL"] = os.environ["GRAMTREE_REDIS_URL"]
+    fixture = subprocess.run(
+        [
+            "uv",
+            "run",
+            "gramtree",
+            "recipes",
+            "seed-legacy-scaling-mode",
+            saved["version"]["id"],
+        ],
+        cwd=os.path.dirname(os.path.dirname(__file__)),
+        env=env,
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    assert "旧版缩放方式" in fixture.stdout
 
     response = api.client.get(
         f"/v1/recipes/{saved['id']}/servings",
