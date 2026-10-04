@@ -33,10 +33,12 @@ double scaleByIntegerRatio(
   } else {
     scaledNumerator *= _tenPower(-decimalScale);
   }
-  scaledNumerator *= _tenPower(fractionDigits);
-  final rounded = _roundRational(scaledNumerator, scaledDenominator);
-  final result = rounded.toDouble() / _tenPower(fractionDigits).toDouble();
-  return value.isNegative ? -result : result;
+  return _scaleRational(
+    scaledNumerator,
+    scaledDenominator,
+    fractionDigits: fractionDigits,
+    negative: value.isNegative,
+  );
 }
 
 /// Multiply two finite doubles as the decimals they print as, matching the
@@ -64,10 +66,12 @@ double scaleByDecimalRatio(
   } else {
     numerator *= _tenPower(-scale);
   }
-  numerator *= _tenPower(fractionDigits);
-  final rounded = _roundRational(numerator, denominator);
-  final result = rounded.toDouble() / _tenPower(fractionDigits).toDouble();
-  return value.isNegative != ratio.isNegative ? -result : result;
+  return _scaleRational(
+    numerator,
+    denominator,
+    fractionDigits: fractionDigits,
+    negative: value.isNegative != ratio.isNegative,
+  );
 }
 
 /// Round [value] to [fractionDigits] decimal places, half away from zero.
@@ -112,6 +116,18 @@ double roundHalfUp(double value, {int fractionDigits = 2}) {
     BigInt.parse(mantissa.replaceAll('.', '')),
     mantissaFractionDigits - exponent,
   );
+}
+
+double _scaleRational(
+  BigInt numerator,
+  BigInt denominator, {
+  required int fractionDigits,
+  required bool negative,
+}) {
+  final scaledNumerator = numerator * _tenPower(fractionDigits);
+  final rounded = _roundRational(scaledNumerator, denominator);
+  final result = rounded.toDouble() / _tenPower(fractionDigits).toDouble();
+  return negative ? -result : result;
 }
 
 BigInt _roundRational(BigInt numerator, BigInt denominator) {

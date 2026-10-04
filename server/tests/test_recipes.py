@@ -98,6 +98,49 @@ def _create(api: Api, email: str = "author@example.com") -> tuple[dict, dict[str
     return response.json(), headers
 
 
+def test_recipe_version_preserves_quantity_source_through_http(api: Api) -> None:
+    body = recipe_input("用量来源")
+    body["snapshot"]["ingredients"][0]["quantity_source"] = {
+        "source": "ai_estimated",
+        "original": "300",
+        "basis": "按同类菜谱估算",
+        "confidence": 0.6,
+    }
+    headers = bearer(api.login("quantity-source@example.com"))
+    created = api.client.post("/v1/recipes", json=body, headers=headers)
+    assert created.status_code == 201, created.text
+    saved = created.json()
+    initial_source = saved["version"]["snapshot"]["ingredients"][0]["quantity_source"]
+    assert initial_source["source"] == "ai_estimated"
+    assert initial_source["basis"] == "按同类菜谱估算"
+
+    edited = recipe_input("用量来源")
+    edited["snapshot"]["ingredients"][0].update(
+        {
+            "quantity": 320,
+            "quantity_source": {
+                "source": "author_filled",
+                "original": "320",
+                "basis": None,
+                "confidence": None,
+            },
+        }
+    )
+    version = api.client.post(
+        f"/v1/recipes/{saved['id']}/versions",
+        json=edited,
+        headers=headers,
+    )
+    assert version.status_code == 201, version.text
+    saved_source = version.json()["version"]["snapshot"]["ingredients"][0]["quantity_source"]
+    assert saved_source == {
+        "source": "author_filled",
+        "original": "320",
+        "confidence": None,
+        "basis": None,
+    }
+
+
 def test_recipe_save_event_is_visible_once_to_its_owner(api: Api, database_url: str) -> None:
     saved, headers = _create(api, "events@example.com")
     response = api.client.get(

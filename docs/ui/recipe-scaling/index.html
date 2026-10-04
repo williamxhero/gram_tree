@@ -44,6 +44,7 @@
     .seg { display: inline-flex; flex-wrap: wrap; gap: 6px; }
     .seg button { background: transparent; color: var(--ink); border-color: var(--line); }
     .seg button[aria-pressed="true"] { background: var(--ink); color: var(--card); border-color: var(--ink); }
+    .seg button[aria-pressed="true"]::before { content: "✓ "; }
     .pill { display: inline-flex; align-items: center; border-radius: 999px; padding: 4px 9px; font-size: 12px; border: 1px solid var(--line); color: var(--muted); }
     .amount { font-family: "DM Mono", ui-monospace, monospace; white-space: nowrap; }
     .amount.changed { color: var(--sauce); font-weight: 500; }
@@ -142,22 +143,24 @@
     </div>
   </main>
   <div id="why-panel" data-component="WhyPanel" class="why-scrim" hidden>
-    <section class="why-sheet" role="dialog" aria-modal="true" aria-labelledby="why-title">
+    <section class="why-sheet" role="dialog" aria-modal="true" aria-labelledby="why-title" aria-describedby="why-description">
       <span class="grab" aria-hidden="true"></span>
       <h3 id="why-title"></h3>
-      <p>来源类型：<strong id="why-source"></strong></p>
-      <div class="why-cmp">
-        <div><small>原来：</small><span id="why-from" class="amount"></span></div>
-        <span aria-hidden="true">→</span>
-        <div><small>现在：</small><span id="why-to" class="amount"></span></div>
+      <div id="why-description">
+        <p>来源类型：<strong id="why-source"></strong></p>
+        <div class="why-cmp">
+          <div><small>原来：</small><span id="why-from" class="amount"></span></div>
+          <span aria-hidden="true">→</span>
+          <div><small>现在：</small><span id="why-to" class="amount"></span></div>
+        </div>
+        <p><strong>依据：</strong><span id="why-basis"></span></p>
+        <p class="subtle small">规则版本：确定性换算 v1 · 只改变显示，不改动原方</p>
+        <p id="why-readonly" class="subtle small">本页是只读换算样稿，反馈动作暂不可用。</p>
       </div>
-      <p><strong>依据：</strong><span id="why-basis"></span></p>
-      <p class="subtle small">规则版本：确定性换算 v1 · 只改变显示，不改动原方</p>
-      <div class="why-actions" aria-describedby="why-readonly">
+      <div class="why-actions">
         <button type="button" id="why-skip" disabled>这次不用</button>
         <button type="button" id="why-never" disabled>以后别这样</button>
       </div>
-      <p id="why-readonly" class="subtle small">本页是只读换算样稿，反馈动作暂不可用。</p>
       <button type="button" id="why-close">关闭</button>
     </section>
   </div>

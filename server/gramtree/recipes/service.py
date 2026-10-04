@@ -1067,14 +1067,14 @@ def _convert_snapshot_mold(
 _ConversionRule = Literal["base", "proportional", "unchanged", "round", "mold_ratio"]
 
 
-def _amount_text(quantity: float, unit: str) -> str:
-    value = float(quantity)
+def _amount_text(quantity: float | Decimal, unit: str) -> str:
+    value = quantity if isinstance(quantity, Decimal) else Decimal(str(quantity))
     if value == 0:
         rendered = "0"
-    elif 0 < value < 0.005:
+    elif Decimal("0") < value < Decimal("0.005"):
         rendered = "<0.01"
     else:
-        rendered = format(Decimal(str(value)).normalize(), "f")
+        rendered = format(value.normalize(), "f")
     return f"{rendered} {unit}"
 
 
@@ -1138,22 +1138,24 @@ def _conversion_source(
     original_servings: int | None = None,
     target_servings: int | None = None,
     area_ratio: float | None = None,
-    conversion_ratio: float | None = None,
+    conversion_ratio: Decimal | None = None,
     conversion_requested: bool = False,
 ) -> SourcedValue:
     original_value = _amount_text(ingredient.quantity, ingredient.unit)
     value = _amount_text(display_quantity, display_unit)
     # Kernels intentionally keep the legacy two-decimal numeric contract. For
-    # a tiny positive proportional result, use the exact value only to avoid
-    # exposing a misleading ``0 g`` in the provenance text.
+    # a tiny positive proportional result, use the exact decimal product only
+    # to avoid exposing a misleading ``0 g`` in the provenance text. Keeping
+    # the ratio decimal here is important for boundaries such as
+    # 0.024999999999999997 * (1 / 5).
     if (
         display_quantity == 0
         and ingredient.quantity > 0
         and rule in {"proportional", "mold_ratio"}
         and conversion_ratio is not None
     ):
-        exact_quantity = ingredient.quantity * conversion_ratio
-        if 0 < exact_quantity < 0.005:
+        exact_quantity = Decimal(str(ingredient.quantity)) * conversion_ratio
+        if Decimal("0") < exact_quantity < Decimal("0.005"):
             value = _amount_text(exact_quantity, display_unit)
     changed = (
         conversion_requested
@@ -1193,7 +1195,9 @@ def _serving_conversion_payload(
                 rule=cast(_ConversionRule, item.rule),
                 original_servings=conversion.original_servings,
                 target_servings=conversion.target_servings,
-                conversion_ratio=(conversion.target_servings / conversion.original_servings),
+                conversion_ratio=(
+                    Decimal(conversion.target_servings) / Decimal(conversion.original_servings)
+                ),
                 conversion_requested=(conversion.target_servings != conversion.original_servings),
             ),
         }
@@ -1218,9 +1222,8 @@ def _mold_conversion_payload(
     payload = conversion.as_dict()
     original_mold = MoldSpec.model_validate(conversion.original_mold)
     target_mold = MoldSpec.model_validate(conversion.target_mold)
-    exact_ratio = float(
-        mold_area(MoldInput(**target_mold.model_dump(mode="json")))
-        / mold_area(MoldInput(**original_mold.model_dump(mode="json")))
+    exact_ratio = mold_area(MoldInput(**target_mold.model_dump(mode="json"))) / mold_area(
+        MoldInput(**original_mold.model_dump(mode="json"))
     )
     payload["ingredients"] = [
         {

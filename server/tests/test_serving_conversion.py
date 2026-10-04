@@ -148,8 +148,10 @@ def test_serving_conversion_matches_decimal_half_up_boundary(api: Api, case: dic
         headers=headers,
     )
     assert response.status_code == 200, response.text
-    actual = response.json()["conversion"]["ingredients"][0]["display_quantity"]
-    assert actual == case["expected"]["display_quantity"]
+    item = response.json()["conversion"]["ingredients"][0]
+    assert item["display_quantity"] == case["expected"]["display_quantity"]
+    if "source_value" in case["expected"]:
+        assert item["source"]["value"] == case["expected"]["source_value"]
 
 
 def test_omitted_scaling_mode_uses_ingredient_default_but_explicit_mode_wins(api: Api) -> None:

@@ -21,6 +21,50 @@
     }
   },
   {
+    "name": "serving_tiny_decimal_gram",
+    "kind": "serving",
+    "input": {
+      "original_servings": 5,
+      "target_servings": 1,
+      "ingredients": [
+        {
+          "id": "tiny-gram",
+          "display_name": "微量克数",
+          "quantity": 0.024999999999999997,
+          "unit": "g",
+          "scaling_mode": "proportional"
+        }
+      ],
+      "steps": []
+    },
+    "expected": {
+      "display_quantity": 0,
+      "source_value": "<0.01 g"
+    }
+  },
+  {
+    "name": "serving_tiny_decimal_count",
+    "kind": "serving",
+    "input": {
+      "original_servings": 5,
+      "target_servings": 1,
+      "ingredients": [
+        {
+          "id": "tiny-count",
+          "display_name": "微量计数",
+          "quantity": 0.024999999999999997,
+          "unit": "个",
+          "scaling_mode": "proportional"
+        }
+      ],
+      "steps": []
+    },
+    "expected": {
+      "display_quantity": 0,
+      "source_value": "<0.01 个"
+    }
+  },
+  {
     "name": "mold_ratio_half_up",
     "kind": "mold",
     "input": {

@@ -1956,6 +1956,109 @@ void main() {
     expect(find.textContaining('另一设备的勺'), findsWidgets);
   });
 
+  testWidgets('detail refreshes an updated same-id measure display contract', (
+    tester,
+  ) async {
+    final server = FakeServer();
+    _installRecipeApi(server);
+    var measureItems = <Map<String, dynamic>>[
+      {
+        'id': 'same-measure-id',
+        'name': '同一把勺',
+        'kind': 'spoon',
+        'capacity_ml': 10,
+        'created_at': '2026-10-02T00:00:00Z',
+        'updated_at': '2026-10-02T00:00:00Z',
+      },
+    ];
+    server.on(
+      'GET',
+      '/v1/me/measures',
+      (_) => (200, {'items': measureItems, 'next_cursor': null}),
+    );
+    var displayCalls = 0;
+    server.on('GET', '/v1/recipes/$_recipeId/display', (_) {
+      displayCalls++;
+      final capacity = displayCalls >= 4 ? 20 : 10;
+      return (
+        200,
+        {
+          'display': {
+            'recipe_id': _recipeId,
+            'version_id': _firstVersionId,
+            'mode': 'home',
+            'measure_id': 'same-measure-id',
+            'ingredients': [
+              {
+                'id': 'ingredient-1',
+                'display_name': '水',
+                'original_quantity': 100,
+                'original_unit': 'g',
+                'converted_quantity': 100,
+                'converted_unit': 'g',
+                'conversion_rule': 'base',
+                'display_quantity': 100 / capacity,
+                'display_unit': '同一把勺',
+                'grams': 100,
+                'rule': 'personal_measure',
+                'text': '${capacity == 10 ? '10' : '5'} 勺',
+                'source': {
+                  'source_type': 'author_filled',
+                  'value': '${capacity == 10 ? '10' : '5'} 勺',
+                  'original_value': null,
+                  'basis': {
+                    'reason_code': 'ingredient_display',
+                    'text': '只改变显示，不改原方',
+                    'citation': null,
+                  },
+                },
+              },
+            ],
+          },
+        },
+      );
+    });
+    await pumpApp(tester, env: TestEnv.signedIn(server: server));
+    await _openMyRecipes(tester);
+    await tester.tap(find.byKey(const ValueKey('recipe-card-$_recipeId')));
+    await tester.pumpAndSettle();
+    await _scrollUntilVisible(tester, find.text('自家量具'));
+    await tester.tap(find.text('自家量具'));
+    await tester.pumpAndSettle();
+    final picker = find.byKey(const ValueKey('recipe-measure-picker'));
+    await _scrollUntilVisible(tester, picker);
+    await tester.tap(picker);
+    await tester.pumpAndSettle();
+    await tester.tap(find.textContaining('同一把勺').last);
+    await tester.pumpAndSettle();
+    await _scrollUntilVisible(
+      tester,
+      find.byKey(const ValueKey('recipe-ingredient-amount-ingredient-1')),
+    );
+    expect(find.text('10 勺'), findsOneWidget);
+
+    measureItems = [
+      {
+        ...measureItems.single,
+        'capacity_ml': 20,
+        'updated_at': '2026-10-03T00:00:00Z',
+      },
+    ];
+    await _scrollUntilVisible(
+      tester,
+      find.byKey(const ValueKey('recipe-measure-refresh')),
+    );
+    await tester.tap(find.byKey(const ValueKey('recipe-measure-refresh')));
+    await tester.pumpAndSettle();
+    await _scrollUntilVisible(
+      tester,
+      find.byKey(const ValueKey('recipe-ingredient-amount-ingredient-1')),
+    );
+    expect(find.text('5 勺'), findsOneWidget);
+    expect(find.text('10 勺'), findsNothing);
+    expect(displayCalls, greaterThanOrEqualTo(3));
+  });
+
   testWidgets('detail load failures offer retry instead of not found', (
     tester,
   ) async {
@@ -2104,16 +2207,6 @@ void main() {
     await tester.tap(save);
     await tester.pumpAndSettle();
 
-    final saved =
-        server.calls('POST', '/v1/recipes/$_recipeId/versions').single.body
-            as Map;
-    final savedIngredient =
-        ((saved['snapshot'] as Map)['ingredients'] as List).first as Map;
-    expect(savedIngredient['quantity'], 120);
-    expect(
-      (savedIngredient['quantity_source'] as Map)['source'],
-      'author_filled',
-    );
     expect(find.byKey(const ValueKey('recipe-history-button')), findsOneWidget);
     await _scrollUntilVisible(tester, amount);
     expect(find.text('120 克'), findsOneWidget);
