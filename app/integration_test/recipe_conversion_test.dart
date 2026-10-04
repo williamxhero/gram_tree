@@ -92,23 +92,16 @@ void main() {
     await settle(tester);
   }
 
-  Future<Finder> tapDisplaySegment(
-    WidgetTester tester,
-    Finder selector,
-    String text,
-  ) async {
-    final label = find.descendant(of: selector, matching: find.text(text));
+  Future<Finder> tapDisplaySegment(WidgetTester tester, String keyName) async {
+    final label = find.byKey(ValueKey(keyName));
     await waitFor(tester, label);
-    expect(label, findsOneWidget);
     await tester.ensureVisible(label);
     await settle(tester);
     await tester.tap(label);
     await settle(tester);
     await waitFor(tester, label);
-    await tester.ensureVisible(label);
-    final button = find.ancestor(of: label, matching: find.byType(TextButton));
-    expect(button, findsOneWidget);
-    return button;
+    expect(tester.getSemantics(label), isSemantics(isSelected: true));
+    return label;
   }
 
   Future<void> runWithDiagnostics(
@@ -288,50 +281,31 @@ void main() {
       // fallback keeps the page usable, while the visible selected icon and
       // labels make the choice clear without relying on colour alone.
       await reveal(tester, find.byKey(const ValueKey('recipe-measure-mode')));
-      final displaySelector = find.byKey(
-        const ValueKey('recipe-display-mode-selector'),
-      );
       final standardSegment = await tapDisplaySegment(
         tester,
-        displaySelector,
-        '汤匙/茶匙',
+        'recipe-display-mode-standard',
       );
       expect(
-        find.descendant(
-          of: standardSegment,
-          matching: find.byIcon(Icons.check),
-        ),
-        findsOneWidget,
+        tester.getSemantics(standardSegment),
+        isSemantics(isSelected: true),
       );
-      final baseSegment = find.ancestor(
-        of: find.descendant(of: displaySelector, matching: find.text('克/毫升')),
-        matching: find.byType(TextButton),
+      final baseSegment = find.byKey(
+        const ValueKey('recipe-display-mode-base'),
       );
-      expect(baseSegment, findsOneWidget);
-      expect(
-        find.descendant(of: baseSegment, matching: find.byIcon(Icons.check)),
-        findsNothing,
-      );
+      expect(tester.getSemantics(baseSegment), isSemantics(isSelected: false));
       // The flour has no density, so standard spoons keep grams and say why.
       await waitFor(tester, find.textContaining('177.78 克 · 没有密度数据，保留克'));
       final selectedBaseSegment = await tapDisplaySegment(
         tester,
-        displaySelector,
-        '克/毫升',
+        'recipe-display-mode-base',
       );
       expect(
-        find.descendant(
-          of: selectedBaseSegment,
-          matching: find.byIcon(Icons.check),
-        ),
-        findsOneWidget,
+        tester.getSemantics(selectedBaseSegment),
+        isSemantics(isSelected: true),
       );
       expect(
-        find.descendant(
-          of: standardSegment,
-          matching: find.byIcon(Icons.check),
-        ),
-        findsNothing,
+        tester.getSemantics(standardSegment),
+        isSemantics(isSelected: false),
       );
       await waitFor(tester, find.text('177.78 克'));
       _markE2eStep('after_display_mode_switching');
@@ -367,7 +341,7 @@ void main() {
       );
       await settle(tester);
       expect(find.byKey(const ValueKey('recipe-measure-manage')), findsNothing);
-      await tapDisplaySegment(tester, displaySelector, '自家量具');
+      await tapDisplaySegment(tester, 'recipe-display-mode-home');
       final picker = find.byKey(const ValueKey('recipe-measure-picker'));
       await waitFor(tester, picker);
       await tester.ensureVisible(picker);
