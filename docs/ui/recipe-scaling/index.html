@@ -153,10 +153,11 @@
       </div>
       <p><strong>依据：</strong><span id="why-basis"></span></p>
       <p class="subtle small">规则版本：确定性换算 v1 · 只改变显示，不改动原方</p>
-      <div class="why-actions">
-        <button type="button" id="why-skip">这次不用</button>
-        <button type="button" id="why-never">以后别这样</button>
+      <div class="why-actions" aria-describedby="why-readonly">
+        <button type="button" id="why-skip" disabled>这次不用</button>
+        <button type="button" id="why-never" disabled>以后别这样</button>
       </div>
+      <p id="why-readonly" class="subtle small">本页是只读换算样稿，反馈动作暂不可用。</p>
       <button type="button" id="why-close">关闭</button>
     </section>
   </div>
@@ -425,11 +426,6 @@
       $('why-close').focus();
     }
 
-    function recordWhyAction(message) {
-      closeWhy();
-      $('alerts').innerHTML = `<div class="alert">${message}（仅为视觉样稿）</div>`;
-    }
-
     function closeWhy() {
       if ($('why-panel').hidden) return;
       $('why-panel').hidden = true;
@@ -464,8 +460,6 @@
       if (mark) openWhy(mark.dataset.why, mark);
     });
     $('why-close').addEventListener('click', closeWhy);
-    $('why-skip').addEventListener('click', () => recordWhyAction('已记录：这次不用'));
-    $('why-never').addEventListener('click', () => recordWhyAction('已记录：以后别这样'));
     $('why-panel').addEventListener('click', (event) => { if (event.target === event.currentTarget) closeWhy(); });
     document.addEventListener('keydown', (event) => {
       if ($('why-panel').hidden) return;
@@ -476,7 +470,8 @@
         // Cycle through both registered feedback actions and Close, wrapping
         // only at the shared dialog boundaries.
         event.preventDefault();
-        const controls = [$('why-skip'), $('why-never'), $('why-close')];
+        const controls = [$('why-skip'), $('why-never'), $('why-close')]
+          .filter((control) => !control.disabled);
         const active = controls.indexOf(document.activeElement);
         const next = event.shiftKey
           ? (active <= 0 ? controls.length - 1 : active - 1)
