@@ -2748,19 +2748,26 @@ class _IngredientDetailRow extends StatelessWidget {
     final originalQuantity =
         '${_quantityText(ingredient.quantity)} ${ingredient.unit}';
     final source = ingredient.quantitySource;
-    final showSource =
-        systemChanged ||
-        (source != null && source.source_.value != sourceTypeAuthorFilled);
-    final sourceType = systemChanged
-        ? sourceTypeScenarioAdjusted
-        : source?.source_.value ?? sourceTypeAuthorFilled;
+    final serverSource = contract?.source_;
+    final sourceType =
+        serverSource?.sourceType.value ??
+        (systemChanged
+            ? sourceTypeScenarioAdjusted
+            : source?.source_.value ?? sourceTypeAuthorFilled);
+    final showSource = serverSource != null
+        ? serverSource.sourceType.value != sourceTypeAuthorFilled
+        : systemChanged ||
+              (source != null &&
+                  source.source_.value != sourceTypeAuthorFilled);
     final conversionBasis = conversionPresent
         ? (moldConverted != null || conversionRule == 'mold_ratio'
               ? _conversionRuleLabel(convertedRule ?? '', l10n)
               : _servingRuleLabel(convertedRule ?? '', l10n))
         : null;
     final String sourceBasis;
-    if (systemDisplayChanged && conversionBasis != null) {
+    if (serverSource != null) {
+      sourceBasis = serverSource.basis.text;
+    } else if (systemDisplayChanged && conversionBasis != null) {
       sourceBasis =
           '$conversionBasis；${displayed!.rule == 'personal_measure' ? l10n.recipeMeasureDisplayOnly : l10n.recipeMeasureStandardDisplayOnly}';
     } else if (systemDisplayChanged) {
@@ -2778,6 +2785,22 @@ class _IngredientDetailRow extends StatelessWidget {
     } else {
       sourceBasis = l10n.recipeSourceAuthorFilled;
     }
+    final originalSourceValue = serverSource?.originalValue ?? source?.original;
+    final subtitleDetails = [
+      if (noDensity) noDensityBasis,
+      // Unchanged conversion results keep the author's value, so they get
+      // no adjustment mark; the applied rule stays visible as text.
+      if (conversionActive && !systemChanged && conversionBasis != null)
+        l10n.recipeConversionRuleDetail(originalQuantity, conversionBasis),
+      if (ingredient.preparation?.isNotEmpty == true) ingredient.preparation!,
+      if (ingredient.optional == true) l10n.recipeOptional,
+      if (ingredient.functional == true) l10n.recipeFunctionalToggle,
+      if (_replacementLabel(ingredient.replacement).isNotEmpty)
+        '${l10n.recipeReplacement}：${_replacementLabel(ingredient.replacement)}',
+    ];
+    final subtitleStyle = GramTreeColors.of(
+      context,
+    ).numberStyle(Theme.of(context).textTheme.bodyMedium ?? const TextStyle());
     return ListTile(
       title: Row(
         children: [
@@ -2798,38 +2821,34 @@ class _IngredientDetailRow extends StatelessWidget {
                   ? 'recipe-ingredient-${ingredient.id}-conversion'
                   : 'recipe-ingredient-${ingredient.id}-quantity',
               value: quantity,
-              originalValue: displayed != null || conversionPresent
-                  ? originalQuantity
-                  : source?.original,
+              originalValue:
+                  serverSource?.originalValue ??
+                  (displayed != null || conversionPresent
+                      ? originalQuantity
+                      : originalSourceValue),
               basisText: sourceBasis,
               required: false,
+              // SPEC-002.3 has no recipe-adjustment handler yet; deterministic
+              // conversion details stay read-only instead of emitting no-op actions.
               feedbackEnabled: false,
               onAction: null,
             ),
         ],
       ),
-      subtitle: Text(
-        [
-          quantity,
-          if (noDensity) noDensityBasis,
-          // Unchanged conversion results keep the author's value, so they get
-          // no adjustment mark; the applied rule stays visible as text.
-          if (conversionActive && !systemChanged && conversionBasis != null)
-            l10n.recipeConversionRuleDetail(originalQuantity, conversionBasis),
-          if (ingredient.preparation?.isNotEmpty == true)
-            ingredient.preparation!,
-          if (ingredient.optional == true) l10n.recipeOptional,
-          if (ingredient.functional == true) l10n.recipeFunctionalToggle,
-          if (_replacementLabel(ingredient.replacement).isNotEmpty)
-            '${l10n.recipeReplacement}：${_replacementLabel(ingredient.replacement)}',
-        ].join(' · '),
-        key: ValueKey('recipe-ingredient-amount-${ingredient.id}'),
-        style: GramTreeColors.of(context).numberStyle(
-          (Theme.of(context).textTheme.bodyMedium ?? const TextStyle())
-              .copyWith(
-                color: valueChanged ? GramTreeColors.of(context).accent : null,
-              ),
+      subtitle: Text.rich(
+        TextSpan(
+          children: [
+            TextSpan(
+              text: quantity,
+              style: valueChanged
+                  ? TextStyle(color: GramTreeColors.of(context).accent)
+                  : null,
+            ),
+            for (final detail in subtitleDetails) TextSpan(text: ' · $detail'),
+          ],
         ),
+        key: ValueKey('recipe-ingredient-amount-${ingredient.id}'),
+        style: subtitleStyle,
       ),
     );
   }
