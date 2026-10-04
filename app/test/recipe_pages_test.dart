@@ -421,6 +421,7 @@ Future<void> _expectFixtureIngredient(
     final ruleDetail = switch (expected['rule'] as String) {
       'unchanged' => '保持原值不变',
       'round' => '按个取整',
+      'mold_ratio' => '模具比例',
       _ => '按比例换算',
     };
     expect(find.textContaining(ruleDetail), findsWidgets);
@@ -1982,6 +1983,167 @@ void main() {
     );
   });
 
+  testWidgets('detail shows the server display of the version on screen', (
+    tester,
+  ) async {
+    final server = FakeServer();
+    _installRecipeApi(server);
+    Map<String, dynamic> display(String versionId, String text, String note) =>
+        {
+          'display': {
+            'recipe_id': _recipeId,
+            'version_id': versionId,
+            'mode': 'base',
+            'measure_id': null,
+            'ingredients': [
+              {
+                'id': 'ingredient-1',
+                'display_name': '水',
+                'original_quantity': 100,
+                'original_unit': 'g',
+                'converted_quantity': 100,
+                'converted_unit': 'g',
+                'conversion_rule': 'base',
+                'display_quantity': 100,
+                'display_unit': 'g',
+                'grams': 100,
+                'rule': 'base',
+                'text': text,
+                'source': {
+                  'source_type': 'verified',
+                  'value': text,
+                  'original_value': null,
+                  'basis': {
+                    'reason_code': 'ingredient_display',
+                    'text': '服务端核对过这份用量',
+                    'citation': note,
+                  },
+                },
+              },
+            ],
+          },
+        };
+    // A newer version saved on another device must not leak into the page
+    // that is still showing version one.
+    server.on(
+      'GET',
+      '/v1/recipes/$_recipeId/display',
+      (_) => (200, display(_secondVersionId, '999 克', '另一台设备的新版本')),
+    );
+    server.on(
+      'GET',
+      '/v1/recipes/$_recipeId/versions/$_firstVersionId/display',
+      (_) => (200, display(_firstVersionId, '约 100 克', '核对记录 2026-10-01')),
+    );
+    await pumpApp(tester, env: TestEnv.signedIn(server: server));
+    await _openMyRecipes(tester);
+    await tester.tap(find.byKey(const ValueKey('recipe-card-$_recipeId')));
+    await tester.pumpAndSettle();
+    final amount = find.byKey(
+      const ValueKey('recipe-ingredient-amount-ingredient-1'),
+    );
+    await _scrollUntilVisible(tester, amount);
+
+    expect(find.text('约 100 克'), findsOneWidget);
+    expect(find.text('999 克'), findsNothing);
+    await tester.tap(
+      find.byKey(const ValueKey('recipe-source-mark-ingredient-1')),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('已验证'), findsWidgets);
+    expect(find.text('现在：约 100 克'), findsOneWidget);
+    expect(find.text('服务端核对过这份用量'), findsOneWidget);
+    expect(find.text('核对记录 2026-10-01'), findsOneWidget);
+    expect(find.text('另一台设备的新版本'), findsNothing);
+  });
+
+  testWidgets('editing an estimated amount saves it as the author value', (
+    tester,
+  ) async {
+    final server = FakeServer();
+    final state = _installRecipeApi(server);
+    final detail = Map<String, dynamic>.from(state.current);
+    final version = Map<String, dynamic>.from(detail['version'] as Map);
+    final snapshot = Map<String, dynamic>.from(version['snapshot'] as Map);
+    final ingredient =
+        Map<String, dynamic>.from(
+            (snapshot['ingredients'] as List).first as Map,
+          )
+          ..['quantity_source'] = {
+            'source': 'ai_estimated',
+            'original': '100',
+            'basis': '按同类菜谱估算',
+            'confidence': 0.6,
+          };
+    snapshot['ingredients'] = [ingredient];
+    version['snapshot'] = snapshot;
+    detail['version'] = version;
+    state.current = detail;
+    state.versions
+      ..clear()
+      ..add(detail);
+
+    await pumpApp(tester, env: TestEnv.signedIn(server: server));
+    await _openMyRecipes(tester);
+    await tester.tap(find.byKey(const ValueKey('recipe-card-$_recipeId')));
+    await tester.pumpAndSettle();
+    final amount = find.byKey(
+      const ValueKey('recipe-ingredient-amount-ingredient-1'),
+    );
+    await _scrollUntilVisible(tester, amount);
+    expect(find.text('AI 估算'), findsOneWidget);
+
+    await tester.tap(find.byKey(const ValueKey('edit-recipe-button')));
+    await tester.pumpAndSettle();
+    final quantity = find.byKey(const ValueKey('recipe-ingredient-quantity'));
+    await _scrollUntilVisible(tester, quantity);
+    await tester.enterText(quantity, '120');
+    await tester.pumpAndSettle();
+    final save = find.byKey(const ValueKey('save-recipe-button'));
+    await _scrollUntilVisible(tester, save, delta: const Offset(0, 500));
+    await tester.tap(save);
+    await tester.pumpAndSettle();
+
+    final saved =
+        server.calls('POST', '/v1/recipes/$_recipeId/versions').single.body
+            as Map;
+    final savedIngredient =
+        ((saved['snapshot'] as Map)['ingredients'] as List).first as Map;
+    expect(savedIngredient['quantity'], 120);
+    expect(
+      (savedIngredient['quantity_source'] as Map)['source'],
+      'author_filled',
+    );
+    expect(find.byKey(const ValueKey('recipe-history-button')), findsOneWidget);
+    await _scrollUntilVisible(tester, amount);
+    expect(find.text('120 克'), findsOneWidget);
+    expect(find.text('AI 估算'), findsNothing);
+  });
+
+  testWidgets('a square base mold with conflicting edges is not converted', (
+    tester,
+  ) async {
+    final server = FakeServer();
+    final state = _installRecipeApi(server);
+    _replaceRecipeSnapshot(state, {
+      'base_mold': {'shape': 'square', 'unit': 'cm', 'side': 20, 'width': 18},
+    });
+    await pumpApp(tester, env: TestEnv.signedIn(server: server));
+    await _openMyRecipes(tester);
+    await tester.tap(find.byKey(const ValueKey('recipe-card-$_recipeId')));
+    await tester.pumpAndSettle();
+    final moldMode = find.byKey(const ValueKey('recipe-mode-mold'));
+    await _scrollUntilVisible(tester, moldMode);
+    await tester.tap(moldMode);
+    await tester.pumpAndSettle();
+
+    // Same rule as the server: side and width of a square must agree, so the
+    // offline kernel shows the error instead of guessing which edge is right.
+    expect(find.byKey(const ValueKey('recipe-mold-control')), findsOneWidget);
+    expect(find.byKey(const ValueKey('recipe-mold-error')), findsOneWidget);
+    expect(find.byKey(const ValueKey('recipe-mold-ratio')), findsNothing);
+  });
+
   testWidgets('home measure mode is disabled until a measure is registered', (
     tester,
   ) async {
@@ -2450,6 +2612,21 @@ void main() {
           ingredient,
           conversionActive: true,
         );
+      }
+      if (expected['warnings'] case final List<dynamic> warnings) {
+        // Warnings render in the mold control beside the ratio.
+        await _scrollUntilVisible(tester, ratio, delta: const Offset(0, 500));
+        final warned = {
+          for (final raw in warnings) (raw as Map)['ingredient_id'] as String,
+        };
+        for (final ingredient in expectedIngredients) {
+          final id = ingredient['id'] as String;
+          expect(
+            find.byKey(ValueKey('recipe-mold-warning-$id')),
+            warned.contains(id) ? findsOneWidget : findsNothing,
+            reason: 'ingredient=$id mold warning',
+          );
+        }
       }
 
       final sourceSteps = [

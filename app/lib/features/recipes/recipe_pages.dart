@@ -529,6 +529,7 @@ class _RecipeEditorPageState extends ConsumerState<RecipeEditorPage> {
         title: Text(_loaded == null ? l10n.newRecipe : l10n.recipeContinueEdit),
       ),
       body: ListView(
+        key: const ValueKey('recipe-editor-content'),
         padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
         children: [
           FilledButton(
@@ -1094,6 +1095,9 @@ class _IngredientEditorCardState extends State<_IngredientEditorCard> {
                     value: item.quantity,
                     onChanged: (value) {
                       item.quantity = double.tryParse(value) ?? 0;
+                      // A typed amount is the author's own value, whatever
+                      // estimated or verified it before.
+                      item.quantitySource = null;
                       onChanged();
                     },
                   ),
@@ -1106,6 +1110,7 @@ class _IngredientEditorCardState extends State<_IngredientEditorCard> {
                     value: item.unit,
                     onChanged: (value) {
                       item.unit = value;
+                      item.quantitySource = null;
                       onChanged();
                     },
                   ),
@@ -1135,6 +1140,7 @@ class _IngredientEditorCardState extends State<_IngredientEditorCard> {
                         value: item.baseQuantity,
                         onChanged: (value) {
                           item.baseQuantity = double.tryParse(value) ?? 0;
+                          item.quantitySource = null;
                           onChanged();
                         },
                       ),
@@ -1147,6 +1153,7 @@ class _IngredientEditorCardState extends State<_IngredientEditorCard> {
                         value: item.baseUnit,
                         onChanged: (value) {
                           item.baseUnit = value;
+                          item.quantitySource = null;
                           onChanged();
                         },
                       ),
@@ -1672,7 +1679,7 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
         : null;
     final key = [
       widget.recipeId,
-      widget.versionId,
+      _detail?.version.id ?? widget.versionId,
       displayMode.name,
       measureId,
       measureFingerprint,
@@ -1709,7 +1716,9 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
             measureId: measureId,
             targetServings: targetServings,
             targetMold: targetMold,
-            versionId: widget.versionId,
+            // Pin the request to the version on screen: the current-recipe
+            // endpoint could already serve a newer version saved elsewhere.
+            versionId: _detail?.version.id ?? widget.versionId,
           );
       if (!mounted || _displayContractKey != key) return;
       setState(() => _displayContract = result);
@@ -1882,8 +1891,13 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
           ? null
           : '${selectedMeasure.id}:${selectedMeasure.name}:${selectedMeasure.capacityMl}:${selectedMeasure.updatedAt}',
     );
+    // Only a contract computed from the version on screen may replace the
+    // local kernel's values.
+    final contract = _displayContract?.display.versionId == detail.version.id
+        ? _displayContract
+        : null;
     final contractById = {
-      for (final item in _displayContract?.display.ingredients ?? const [])
+      for (final item in contract?.display.ingredients ?? const [])
         item.id: item,
     };
     final displayedById = {
