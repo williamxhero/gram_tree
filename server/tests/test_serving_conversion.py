@@ -411,6 +411,39 @@ def test_proportional_tiny_quantity_has_stable_display_text(api: Api) -> None:
     assert item["text"] == "<0.01 克"
 
 
+def test_subthreshold_decimal_product_stays_visible_at_display_boundary(api: Api) -> None:
+    headers = bearer(api.login("serving-decimal-tiny-boundary@example.com"))
+    body = recipe_input("十进制微量边界")
+    body["snapshot"].update(
+        {
+            "servings": 3,
+            "ingredients": [
+                {
+                    "id": "tiny-boundary",
+                    "display_name": "边界微量",
+                    "quantity": 0.00115384615384614,
+                    "unit": "g",
+                    "scaling_mode": "proportional",
+                }
+            ],
+            "steps": [],
+        }
+    )
+    created = api.client.post("/v1/recipes", json=body, headers=headers)
+    assert created.status_code == 201, created.text
+    saved = created.json()
+    response = api.client.get(
+        f"/v1/recipes/{saved['id']}/display",
+        params={"mode": "base", "target_servings": 13},
+        headers=headers,
+    )
+    assert response.status_code == 200, response.text
+    item = response.json()["display"]["ingredients"][0]
+    assert item["converted_quantity"] == 0
+    assert item["display_quantity"] == 0
+    assert item["text"] == "<0.01 克"
+
+
 def test_identity_conversion_preserves_precision_and_author_provenance(api: Api) -> None:
     headers = bearer(api.login("serving-identity-precision@example.com"))
     body = recipe_input("原方精度")

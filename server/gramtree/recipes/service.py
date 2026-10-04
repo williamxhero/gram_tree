@@ -1312,16 +1312,16 @@ def display_recipe_ingredients(
         raise ApiError(422, "invalid_request", "请求参数有误", "份数换算和模具换算不能同时使用")
 
     snapshot = RecipeSnapshot.model_validate(version.snapshot)
-    conversion_by_id: dict[str, tuple[float, str, _ConversionRule, float | None]] = {
+    conversion_by_id: dict[str, tuple[float, str, _ConversionRule, Decimal | None]] = {
         item.id: (float(item.quantity), item.unit, "base", None) for item in snapshot.ingredients
     }
     converted: Iterable[ConvertedIngredient | ConvertedMoldIngredient] = ()
-    conversion_scale: float | None = None
+    conversion_scale: Decimal | None = None
     if target_servings is not None:
         derived = RecipeDerived.model_validate(version.derived)
         serving_conversion = _convert_snapshot_servings(session, snapshot, derived, target_servings)
         converted = serving_conversion.ingredients
-        conversion_scale = target_servings / snapshot.servings
+        conversion_scale = Decimal(target_servings) / Decimal(snapshot.servings)
     elif target_mold is not None:
         mold_conversion = _convert_snapshot_mold(session, snapshot, target_mold)
         converted = mold_conversion.ingredients
@@ -1329,7 +1329,7 @@ def display_recipe_ingredients(
             raise ApiError(422, "missing_base_mold", "这份菜谱没有记录基准模具")
         original_mold = MoldInput(**snapshot.base_mold.model_dump(mode="json"))
         requested_mold = MoldInput(**target_mold.model_dump(mode="json"))
-        conversion_scale = float(mold_area(requested_mold) / mold_area(original_mold))
+        conversion_scale = mold_area(requested_mold) / mold_area(original_mold)
     for item in converted:
         rule = cast(_ConversionRule, item.rule)
         exact_scale = conversion_scale if rule in {"proportional", "mold_ratio"} else None
@@ -1369,9 +1369,11 @@ def display_recipe_ingredients(
         converted_quantity, converted_unit, conversion_rule, exact_scale = conversion_by_id[item.id]
         tiny_exact_quantity = None
         if exact_scale is not None and exact_scale != 1 and converted_quantity == 0:
-            candidate = original_quantity * exact_scale
-            if 0 < candidate < 0.005:
-                tiny_exact_quantity = candidate
+            # Compare the exact product before converting to float. A value
+            # just below 0.005 must stay visible as <0.01, not become 0.
+            candidate_decimal = Decimal(str(item.quantity)) * exact_scale
+            if Decimal("0") < candidate_decimal < Decimal("0.005"):
+                tiny_exact_quantity = float(candidate_decimal)
         effective_quantity = (
             original_quantity
             if exact_scale == 1
