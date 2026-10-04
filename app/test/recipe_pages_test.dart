@@ -1738,6 +1738,48 @@ void main() {
     expect(find.text('5 个'), findsWidgets);
   });
 
+  testWidgets(
+    'recipe detail opens and converts an original serving count above the range',
+    (tester) async {
+      final server = FakeServer();
+      final state = _installRecipeApi(server);
+      _replaceRecipeSnapshot(state, {'servings': 30});
+      await pumpApp(tester, env: TestEnv.signedIn(server: server));
+      await _openMyRecipes(tester);
+      await tester.tap(find.byKey(const ValueKey('recipe-card-$_recipeId')));
+      await tester.pumpAndSettle();
+
+      final servingControl = find.byKey(
+        const ValueKey('recipe-serving-control'),
+      );
+      expect(
+        find.descendant(of: servingControl, matching: find.text('30')),
+        findsOneWidget,
+      );
+      expect(find.text('可调范围：1–30 份'), findsOneWidget);
+      await _scrollToBottom(tester);
+      expect(find.text('100 克'), findsWidgets);
+
+      await _scrollToTop(tester);
+      await tester.tap(find.byKey(const ValueKey('recipe-serving-decrease')));
+      await tester.pumpAndSettle();
+      expect(
+        find.descendant(of: servingControl, matching: find.text('29')),
+        findsOneWidget,
+      );
+      await _scrollToBottom(tester);
+      expect(find.text('96.67 克'), findsWidgets);
+      expect(find.text('按场景调整'), findsOneWidget);
+
+      await _scrollToTop(tester);
+      await tester.tap(find.byKey(const ValueKey('recipe-serving-reset')));
+      await tester.pumpAndSettle();
+      await _scrollToBottom(tester);
+      expect(find.text('100 克'), findsWidgets);
+      expect(find.text('按场景调整'), findsNothing);
+    },
+  );
+
   testWidgets('recipe detail switches display mode without changing source', (
     tester,
   ) async {
