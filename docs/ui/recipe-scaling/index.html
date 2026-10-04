@@ -171,6 +171,7 @@
     const MAX_SERVINGS = 12;
     const BATCH_MULTIPLIER = 2;
     const ROUND_DEVIATION_LIMIT = 0.2;
+    const ORIGINAL_MOLD_KEY = 'round-6in';
     const DEFAULT_MOLD = 'round-8in';
     const ORIGINAL_MOLD = { name: '6 寸圆模', shape: 'round', unit: 'in', diameter: 6 };
     const TARGET_MOLDS = {
@@ -255,7 +256,7 @@
     function scenarioActive() {
       return state.mode === 'servings'
         ? state.servings !== ORIGINAL_SERVINGS
-        : state.moldKey !== 'round-6in';
+        : state.moldKey !== ORIGINAL_MOLD_KEY;
     }
 
     function convert() {
@@ -408,7 +409,7 @@
     function resetToOriginal() {
       state.mode = 'servings';
       state.servings = ORIGINAL_SERVINGS;
-      state.moldKey = DEFAULT_MOLD;
+      state.moldKey = ORIGINAL_MOLD_KEY;
       state.display = 'base';
       render();
     }

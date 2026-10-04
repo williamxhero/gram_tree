@@ -21,6 +21,28 @@
     }
   },
   {
+    "name": "serving_downward_half_up",
+    "kind": "serving",
+    "input": {
+      "original_servings": 3,
+      "target_servings": 2,
+      "ingredients": [
+        {
+          "id": "downward-boundary",
+          "display_name": "向下边界用量",
+          "quantity": 1.0125,
+          "unit": "g",
+          "scaling_mode": "proportional"
+        }
+      ],
+      "steps": []
+    },
+    "expected": {
+      "display_quantity": 0.68,
+      "source_value": "0.68 g"
+    }
+  },
+  {
     "name": "serving_tiny_decimal_gram",
     "kind": "serving",
     "input": {

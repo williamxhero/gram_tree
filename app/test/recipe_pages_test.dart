@@ -1960,7 +1960,7 @@ void main() {
     tester,
   ) async {
     final server = FakeServer();
-    _installRecipeApi(server);
+    _installRecipeApi(server, standardIngredientId: _standardIngredientId);
     var measureItems = <Map<String, dynamic>>[
       {
         'id': 'same-measure-id',
@@ -1971,53 +1971,85 @@ void main() {
         'updated_at': '2026-10-02T00:00:00Z',
       },
     ];
+    var density = 1.0;
+    var displayCalls = 0;
     server.on(
       'GET',
       '/v1/me/measures',
       (_) => (200, {'items': measureItems, 'next_cursor': null}),
     );
-    var displayCalls = 0;
-    server.on('GET', '/v1/recipes/$_recipeId/display', (_) {
-      displayCalls++;
-      final capacity = displayCalls >= 4 ? 20 : 10;
+    server.on('GET', '/v1/ingredients/changes', (_) {
+      final ingredient = _standardIngredientJson();
+      ingredient['attributes'] = {
+        'density': {
+          'estimate': false,
+          'value': density,
+          'source': '同一 ID 更新',
+          'status': 'verified',
+        },
+      };
       return (
         200,
         {
-          'display': {
-            'recipe_id': _recipeId,
-            'version_id': _firstVersionId,
-            'mode': 'home',
-            'measure_id': 'same-measure-id',
-            'ingredients': [
-              {
-                'id': 'ingredient-1',
-                'display_name': '水',
-                'original_quantity': 100,
-                'original_unit': 'g',
-                'converted_quantity': 100,
-                'converted_unit': 'g',
-                'conversion_rule': 'base',
-                'display_quantity': 100 / capacity,
-                'display_unit': '同一把勺',
-                'grams': 100,
-                'rule': 'personal_measure',
-                'text': '${capacity == 10 ? '10' : '5'} 勺',
-                'source': {
-                  'source_type': 'author_filled',
-                  'value': '${capacity == 10 ? '10' : '5'} 勺',
-                  'original_value': null,
-                  'basis': {
-                    'reason_code': 'ingredient_display',
-                    'text': '只改变显示，不改原方',
-                    'citation': null,
-                  },
-                },
-              },
-            ],
-          },
+          'added': [ingredient],
+          'current_version': 'ingredient-v1',
+          'merged': const [],
+          'modified': const [],
+          'releases': const [],
         },
       );
     });
+    server.on(
+      'GET',
+      '/v1/recipes/$_recipeId/versions/$_firstVersionId/display',
+      (_) {
+        displayCalls++;
+        final updated = measureItems.single['updated_at'] == '2026-10-03T00:00:00Z';
+        final name = updated ? '更新后的勺' : '同一把勺';
+        final capacity = (measureItems.single['capacity_ml'] as num).toDouble();
+        final quantity = 100 / density / capacity;
+        final text = updated
+            ? '约 2 1/2 更新后的勺（100 克）'
+            : '约 10 同一把勺（100 克）';
+        return (
+          200,
+          {
+            'display': {
+              'recipe_id': _recipeId,
+              'version_id': _firstVersionId,
+              'mode': 'home',
+              'measure_id': 'same-measure-id',
+              'ingredients': [
+                {
+                  'id': 'ingredient-1',
+                  'display_name': '水',
+                  'original_quantity': 100,
+                  'original_unit': 'g',
+                  'converted_quantity': 100,
+                  'converted_unit': 'g',
+                  'conversion_rule': 'base',
+                  'display_quantity': quantity,
+                  'display_unit': name,
+                  'grams': 100,
+                  'rule': 'personal_measure',
+                  'text': text,
+                  'source': {
+                    'source_type': 'scenario_adjusted',
+                    'value': text,
+                    'original_value': '100 克',
+                    'basis': {
+                      'reason_code': 'ingredient_display',
+                      'text': '按自家量具显示，仅改变显示方式，不修改原始用量。',
+                      'citation': null,
+                    },
+                  },
+                },
+              ],
+            },
+          },
+        );
+      },
+    );
     await pumpApp(tester, env: TestEnv.signedIn(server: server));
     await _openMyRecipes(tester);
     await tester.tap(find.byKey(const ValueKey('recipe-card-$_recipeId')));
@@ -2035,15 +2067,18 @@ void main() {
       tester,
       find.byKey(const ValueKey('recipe-ingredient-amount-ingredient-1')),
     );
-    expect(find.text('10 勺'), findsOneWidget);
+    expect(find.text('约 10 同一把勺（100 克）'), findsOneWidget);
+    final callsBeforeRefresh = displayCalls;
 
     measureItems = [
       {
         ...measureItems.single,
+        'name': '更新后的勺',
         'capacity_ml': 20,
         'updated_at': '2026-10-03T00:00:00Z',
       },
     ];
+    density = 2.0;
     await _scrollUntilVisible(
       tester,
       find.byKey(const ValueKey('recipe-measure-refresh')),
@@ -2054,9 +2089,9 @@ void main() {
       tester,
       find.byKey(const ValueKey('recipe-ingredient-amount-ingredient-1')),
     );
-    expect(find.text('5 勺'), findsOneWidget);
-    expect(find.text('10 勺'), findsNothing);
-    expect(displayCalls, greaterThanOrEqualTo(3));
+    expect(find.text('约 2 1/2 更新后的勺（100 克）'), findsOneWidget);
+    expect(find.text('约 10 同一把勺（100 克）'), findsNothing);
+    expect(displayCalls, greaterThan(callsBeforeRefresh));
   });
 
   testWidgets('detail load failures offer retry instead of not found', (
@@ -2801,11 +2836,11 @@ void main() {
         final steps =
             (input['target_servings'] as int) -
             (input['original_servings'] as int);
-        expect(steps, isPositive);
-        for (var i = 0; i < steps; i++) {
-          await tester.tap(
-            find.byKey(const ValueKey('recipe-serving-increase')),
-          );
+        final button = steps >= 0
+            ? find.byKey(const ValueKey('recipe-serving-increase'))
+            : find.byKey(const ValueKey('recipe-serving-decrease'));
+        for (var i = 0; i < steps.abs(); i++) {
+          await tester.tap(button);
           await _fixtureSettle(tester);
         }
       }
