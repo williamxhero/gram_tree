@@ -195,8 +195,9 @@ void main() {
       await waitFor(tester, find.byKey(const ValueKey('recipe-list-button')));
       await tester.tap(find.byKey(const ValueKey('recipe-list-button')));
       await waitFor(tester, find.text('网页版验收菜谱'));
-      final recipeCard = find.bySemanticsLabel('网页版验收菜谱');
+      final recipeCard = find.text('网页版验收菜谱').last;
       expect(recipeCard, findsOneWidget);
+      await tester.ensureVisible(recipeCard);
       await tester.tap(recipeCard);
       // The public, always-built content boundary signals that the HTTP detail
       // has loaded. On a small phone the delete control is a lazy sliver child;
