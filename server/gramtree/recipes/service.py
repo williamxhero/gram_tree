@@ -11,6 +11,7 @@ import warnings
 from collections.abc import Iterable
 from dataclasses import asdict
 from datetime import UTC, datetime, timedelta
+from decimal import Decimal
 from typing import Any, Literal, cast
 
 from redis import Redis
@@ -1067,7 +1068,14 @@ _ConversionRule = Literal["base", "proportional", "unchanged", "round", "mold_ra
 
 
 def _amount_text(quantity: float, unit: str) -> str:
-    return f"{quantity_text(float(quantity))} {unit}"
+    value = float(quantity)
+    if value == 0:
+        rendered = "0"
+    elif 0 < value < 0.005:
+        rendered = "<0.01"
+    else:
+        rendered = format(Decimal(str(value)).normalize(), "f")
+    return f"{rendered} {unit}"
 
 
 def _source_type(ingredient: RecipeIngredient, *, changed: bool) -> SourceType:
@@ -1130,9 +1138,22 @@ def _conversion_source(
     original_servings: int | None = None,
     target_servings: int | None = None,
     area_ratio: float | None = None,
+    conversion_ratio: float | None = None,
 ) -> SourcedValue:
     original_value = _amount_text(ingredient.quantity, ingredient.unit)
     value = _amount_text(display_quantity, display_unit)
+    # Kernels intentionally keep the legacy two-decimal numeric contract. For
+    # a tiny positive proportional result, use the exact value only to avoid
+    # exposing a misleading ``0 g`` in the provenance text.
+    if (
+        display_quantity == 0
+        and ingredient.quantity > 0
+        and rule in {"proportional", "mold_ratio"}
+        and conversion_ratio is not None
+    ):
+        exact_quantity = ingredient.quantity * conversion_ratio
+        if 0 < exact_quantity < 0.005:
+            value = _amount_text(exact_quantity, display_unit)
     changed = display_quantity != float(ingredient.quantity) or display_unit != ingredient.unit
     mold = area_ratio is not None
     rule_text = _conversion_rule_text(rule, mold=mold)
@@ -1167,6 +1188,7 @@ def _serving_conversion_payload(
                 rule=cast(_ConversionRule, item.rule),
                 original_servings=conversion.original_servings,
                 target_servings=conversion.target_servings,
+                conversion_ratio=(conversion.target_servings / conversion.original_servings),
             ),
         }
         for original, item in zip(snapshot.ingredients, conversion.ingredients, strict=True)
@@ -1178,6 +1200,12 @@ def _mold_conversion_payload(
     conversion: MoldConversion, snapshot: RecipeSnapshot
 ) -> dict[str, object]:
     payload = conversion.as_dict()
+    original_mold = MoldSpec.model_validate(conversion.original_mold)
+    target_mold = MoldSpec.model_validate(conversion.target_mold)
+    exact_ratio = float(
+        mold_area(MoldInput(**target_mold.model_dump(mode="json")))
+        / mold_area(MoldInput(**original_mold.model_dump(mode="json")))
+    )
     payload["ingredients"] = [
         {
             **asdict(item),
@@ -1187,6 +1215,7 @@ def _mold_conversion_payload(
                 display_unit=item.unit,
                 rule=cast(_ConversionRule, item.rule),
                 area_ratio=conversion.area_ratio,
+                conversion_ratio=exact_ratio,
             ),
         }
         for original, item in zip(snapshot.ingredients, conversion.ingredients, strict=True)

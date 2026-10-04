@@ -12,7 +12,7 @@ from gramtree.core.ids import IdV4
 from gramtree.core.time import Timestamp
 from gramtree.ui_protocol.protocol import SourcedValue
 
-SourceType = Literal["author_filled", "scenario_adjusted", "ai_estimated", "verified"]
+SourceType = Literal["author_filled", "ai_estimated", "verified"]
 MoldShape = Literal["round", "square", "rectangular", "custom"]
 MoldUnit = Literal["cm", "in", "inch"]
 

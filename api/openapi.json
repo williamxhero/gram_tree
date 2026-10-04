@@ -4769,7 +4769,6 @@
           "source": {
             "enum": [
               "author_filled",
-              "scenario_adjusted",
               "ai_estimated",
               "verified"
             ],

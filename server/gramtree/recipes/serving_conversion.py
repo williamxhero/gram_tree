@@ -202,12 +202,17 @@ def convert_servings(
                 "菜谱包含无法识别的缩放方式",
                 f"ingredients[{item.id}].scaling_mode={item.scaling_mode}",
             )
+        # Keep author precision for fixed values and for an identity ratio;
+        # rounding those cases would make an unchanged amount look adjusted.
+        display_quantity = (
+            float(original) if item.scaling_mode == "unchanged" or ratio == 1 else _number(display)
+        )
         ingredients_out.append(
             ConvertedIngredient(
                 id=item.id,
                 display_name=item.display_name,
                 original_quantity=float(original),
-                display_quantity=_number(display),
+                display_quantity=display_quantity,
                 unit=item.unit,
                 rule=item.scaling_mode,
                 deviation_ratio=deviation_ratio,

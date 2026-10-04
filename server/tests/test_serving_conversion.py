@@ -341,8 +341,48 @@ def test_proportional_tiny_quantity_has_stable_display_text(api: Api) -> None:
     assert response.status_code == 200, response.text
     item = response.json()["display"]["ingredients"][0]
     assert item["converted_quantity"] == 0
-    assert item["display_quantity"] == 0
+    assert item["display_quantity"] == 0.002
     assert item["text"] == "<0.01 克"
+
+
+def test_identity_conversion_preserves_precision_and_author_provenance(api: Api) -> None:
+    headers = bearer(api.login("serving-identity-precision@example.com"))
+    body = recipe_input("原方精度")
+    body["snapshot"]["ingredients"] = [
+        {
+            "id": "fixed-small",
+            "display_name": "固定微量",
+            "quantity": 0.004,
+            "unit": "g",
+            "scaling_mode": "unchanged",
+        },
+        {
+            "id": "precise",
+            "display_name": "精确用量",
+            "quantity": 1.234,
+            "unit": "g",
+            "scaling_mode": "proportional",
+        },
+    ]
+    body["snapshot"]["steps"] = []
+    created = api.client.post("/v1/recipes", json=body, headers=headers)
+    assert created.status_code == 201, created.text
+    saved = created.json()
+    response = api.client.get(
+        f"/v1/recipes/{saved['id']}/servings",
+        params={"target_servings": 2},
+        headers=headers,
+    )
+    assert response.status_code == 200, response.text
+    items = response.json()["conversion"]["ingredients"]
+    assert [item["display_quantity"] for item in items] == [0.004, 1.234]
+    assert [item["source"]["source_type"] for item in items] == [
+        "author_filled",
+        "author_filled",
+    ]
+    assert [item["source"]["original_value"] for item in items] == [None, None]
+    assert items[0]["source"]["value"] == "<0.01 g"
+    assert items[1]["source"]["value"] == "1.234 g"
 
 
 def test_legacy_null_scaling_mode_uses_stable_proportional_fallback(api: Api, engine) -> None:

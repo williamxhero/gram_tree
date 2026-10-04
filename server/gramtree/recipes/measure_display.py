@@ -57,18 +57,13 @@ def _grams(base_quantity: float, base_unit: str, density: float | None) -> float
     return None
 
 
-def _display_number(value: float) -> float:
-    """Keep numeric display precision aligned with conversion output."""
-    return float(Decimal(str(value)).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP))
-
-
 def _base_result(base_quantity: float, base_unit: str, density: float | None) -> dict[str, Any]:
     unit = "g" if base_unit == "g" else "ml"
     unit_text = "克" if unit == "g" else "毫升"
     grams = _grams(base_quantity, unit, density) if unit == "ml" else base_quantity
     return {
         "text": f"{quantity_text(base_quantity)} {unit_text}",
-        "display_quantity": _display_number(base_quantity),
+        "display_quantity": float(base_quantity),
         "display_unit": unit,
         "grams": None if unit == "ml" and density is None else grams,
         "rule": "base",

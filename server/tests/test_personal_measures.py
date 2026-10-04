@@ -124,6 +124,25 @@ def _import_density_ingredient(tmp_path: Path, density: float) -> None:
     assert cli(["ingredients", "import", str(tmp_path)]) == 0
 
 
+def test_measure_display_preserves_tiny_base_quantity_over_http(api: Api) -> None:
+    headers = bearer(api.login("measure-tiny-base@example.com"))
+    response = api.client.post(
+        "/v1/me/measures/display",
+        json={
+            "base_quantity": 0.002,
+            "base_unit": "g",
+            "density": None,
+            "mode": "base",
+        },
+        headers=headers,
+    )
+    assert response.status_code == 200, response.text
+    payload = response.json()
+    assert payload["display_quantity"] == 0.002
+    assert payload["text"] == "<0.01 克"
+    assert payload["rule"] == "base"
+
+
 def test_measure_display_no_density_is_self_describing_over_http(api: Api) -> None:
     headers = bearer(api.login("measure-no-density@example.com"))
     for base_quantity, base_unit, expected_text in (
@@ -322,7 +341,7 @@ def test_recipe_display_composes_serving_and_mold_conversion(api: Api) -> None:
     mold_item = mold.json()["display"]["ingredients"][0]
     assert mold_item["converted_quantity"] == 177.78
     assert mold_item["conversion_rule"] == "mold_ratio"
-    assert mold_item["display_quantity"] == 177.78
+    assert mold_item["display_quantity"] == pytest.approx(100 * 64 / 36)
     assert mold_item["source"]["source_type"] == "scenario_adjusted"
     assert mold_item["source"]["original_value"] == "100 g"
 

@@ -134,6 +134,51 @@ def test_mold_round_preserves_zero_and_warns_on_tiny_positive(
     assert bool(conversion["warnings"]) is expected_warning
 
 
+def test_identity_mold_conversion_preserves_precision_and_author_provenance(api: Api) -> None:
+    headers = bearer(api.login("mold-identity-precision@example.com"))
+    body = recipe_input("原模具精度")
+    body["snapshot"].update(
+        {
+            "base_mold": {"shape": "round", "unit": "cm", "diameter": 15},
+            "ingredients": [
+                {
+                    "id": "fixed-small",
+                    "display_name": "固定微量",
+                    "quantity": 0.004,
+                    "unit": "g",
+                    "scaling_mode": "unchanged",
+                },
+                {
+                    "id": "precise",
+                    "display_name": "精确用量",
+                    "quantity": 1.234,
+                    "unit": "g",
+                    "scaling_mode": "proportional",
+                },
+            ],
+            "steps": [],
+        }
+    )
+    created = api.client.post("/v1/recipes", json=body, headers=headers)
+    assert created.status_code == 201, created.text
+    saved = created.json()
+    response = api.client.post(
+        f"/v1/recipes/{saved['id']}/mold",
+        json={"target_mold": {"shape": "round", "unit": "cm", "diameter": 15}},
+        headers=headers,
+    )
+    assert response.status_code == 200, response.text
+    items = response.json()["conversion"]["ingredients"]
+    assert [item["display_quantity"] for item in items] == [0.004, 1.234]
+    assert [item["source"]["source_type"] for item in items] == [
+        "author_filled",
+        "author_filled",
+    ]
+    assert [item["source"]["original_value"] for item in items] == [None, None]
+    assert items[0]["source"]["value"] == "<0.01 g"
+    assert items[1]["source"]["value"] == "1.234 g"
+
+
 @pytest.mark.parametrize("case", CASES, ids=[case["name"] for case in CASES])
 def test_mold_conversion_matches_shared_fixture(api: Api, case: dict) -> None:
     headers = bearer(api.login(f"mold-fixture-{case['name']}@example.com"))
