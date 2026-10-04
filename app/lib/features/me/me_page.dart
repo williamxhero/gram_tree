@@ -6,6 +6,7 @@ import '../../api/api_client.dart';
 import '../../auth/auth_controller.dart';
 import '../../l10n/app_localizations.dart';
 import '../../widgets/tab_page.dart';
+import '../recipes/personal_measures_page.dart';
 import '../recipes/recipe_pages.dart';
 import 'account_data.dart';
 import 'settings_page.dart';
@@ -67,6 +68,14 @@ class MePage extends ConsumerWidget {
             subtitle: Text(l10n.myRecipesSubtitle),
             trailing: const Icon(Icons.chevron_right),
             onTap: () => context.push(RecipeListPage.path),
+          ),
+          ListTile(
+            key: const ValueKey('personal-measures-entry'),
+            contentPadding: EdgeInsets.zero,
+            title: Text(l10n.personalMeasuresTitle),
+            subtitle: Text(l10n.personalMeasuresCapacity),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => context.push(PersonalMeasuresPage.path),
           ),
           ListTile(
             contentPadding: EdgeInsets.zero,

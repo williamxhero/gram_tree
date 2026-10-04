@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gramtree_api/gramtree_api.dart';
 
@@ -38,6 +40,79 @@ class RecipeRepository {
       recipeId: recipeId,
       versionId: versionId,
     );
+    return response.data!;
+  }
+
+  /// Fetch a server conversion when the caller needs a shareable/public result.
+  /// Recipe details use the same pure kernel locally so this is not required for
+  /// the offline serving control.
+  Future<RecipeServingConversionOut> convertServings(
+    String recipeId,
+    int targetServings, {
+    String? versionId,
+  }) async {
+    final response = versionId == null
+        ? await _recipes.convertCurrentRecipeServings(
+            recipeId: recipeId,
+            targetServings: targetServings,
+          )
+        : await _recipes.convertRecipeVersionServings(
+            recipeId: recipeId,
+            versionId: versionId,
+            targetServings: targetServings,
+          );
+    return response.data!;
+  }
+
+  Future<RecipeMoldConversionOut> convertMold(
+    String recipeId,
+    MoldSpec targetMold, {
+    String? versionId,
+  }) async {
+    final request = RecipeMoldConversionRequest(targetMold: targetMold);
+    final response = versionId == null
+        ? await _recipes.convertCurrentRecipeMold(
+            recipeId: recipeId,
+            recipeMoldConversionRequest: request,
+          )
+        : await _recipes.convertRecipeVersionMold(
+            recipeId: recipeId,
+            versionId: versionId,
+            recipeMoldConversionRequest: request,
+          );
+    return response.data!;
+  }
+
+  /// Fetch the server-owned display contract for a recipe version.
+  /// Detail pages may use their matching local kernel while offline; this
+  /// method is the shareable HTTP seam with immutable source provenance.
+  Future<RecipeIngredientDisplayOut> displayIngredients(
+    String recipeId, {
+    required String mode,
+    String? measureId,
+    int? targetServings,
+    MoldSpec? targetMold,
+    String? versionId,
+  }) async {
+    final targetMoldJson = targetMold == null
+        ? null
+        : jsonEncode(targetMold.toJson());
+    final response = versionId == null
+        ? await _recipes.displayCurrentRecipeIngredients(
+            recipeId: recipeId,
+            mode: mode,
+            measureId: measureId,
+            targetServings: targetServings,
+            targetMold: targetMoldJson,
+          )
+        : await _recipes.displayRecipeVersionIngredients(
+            recipeId: recipeId,
+            versionId: versionId,
+            mode: mode,
+            measureId: measureId,
+            targetServings: targetServings,
+            targetMold: targetMoldJson,
+          );
     return response.data!;
   }
 
@@ -135,7 +210,8 @@ class RecipeIngredientDraft {
     this.baseUnit = 'g',
     this.preparation = '',
     this.group = '',
-    this.scalingMode = RecipeIngredientScalingModeEnum.proportional,
+    this.scalingMode,
+    this.quantitySource,
     this.optional = false,
     this.functional = false,
     this.replacement,
@@ -154,7 +230,9 @@ class RecipeIngredientDraft {
         baseUnit: value.baseUnit?.value ?? 'g',
         preparation: value.preparation ?? '',
         group: value.group ?? '',
-        scalingMode: value.scalingMode,
+        scalingMode:
+            value.scalingMode ?? RecipeIngredientScalingModeEnum.proportional,
+        quantitySource: value.quantitySource,
         optional: value.optional == true,
         functional: value.functional == true,
         replacement: value.replacement is String
@@ -182,6 +260,7 @@ class RecipeIngredientDraft {
       preparation: _string(value['preparation']) ?? '',
       group: _string(value['group']) ?? '',
       scalingMode: _scalingMode(value['scaling_mode']),
+      quantitySource: _valueSource(value['quantity_source']),
       optional: value['optional'] == true,
       functional: value['functional'] == true,
       replacement: replacement is String
@@ -203,7 +282,12 @@ class RecipeIngredientDraft {
   String baseUnit;
   String preparation;
   String group;
-  RecipeIngredientScalingModeEnum scalingMode;
+
+  /// New editor rows may leave this null for server-side default resolution;
+  /// loaded legacy snapshots materialize proportional before editing so their
+  /// historical behavior cannot drift with later library updates.
+  RecipeIngredientScalingModeEnum? scalingMode;
+  ValueSource? quantitySource;
   bool optional;
   bool functional;
   RecipeReplacementDraft? replacement;
@@ -219,7 +303,7 @@ class RecipeIngredientDraft {
     optional: optional,
     preparation: _optionalText(preparation),
     quantity: quantity,
-    quantitySource: _authorSource(quantity.toString()),
+    quantitySource: quantitySource ?? _authorSource(quantity.toString()),
     replacement: replacement?.toModel(),
     scalingMode: scalingMode,
     unit: unit.trim().isEmpty ? 'g' : unit.trim(),
@@ -235,7 +319,8 @@ class RecipeIngredientDraft {
     'base_unit': baseUnit,
     'preparation': preparation,
     'group': group,
-    'scaling_mode': scalingMode.value,
+    'scaling_mode': scalingMode?.value,
+    'quantity_source': quantitySource?.toJson(),
     'optional': optional,
     'functional': functional,
     'replacement': replacement?.toJson(),
@@ -394,6 +479,7 @@ class RecipeForm {
     this.totalTimeSeconds = 0,
     this.activeTimeSeconds = 0,
     this.changeNote = '',
+    this.baseMold,
     List<RecipeIngredientDraft>? ingredients,
     List<RecipeStepDraft>? steps,
     List<String>? imageIds,
@@ -410,6 +496,7 @@ class RecipeForm {
     dishName: name,
     aliases: [...?aliases],
     servings: snapshot.servings,
+    baseMold: snapshot.baseMold,
     difficulty: snapshot.difficulty ?? '',
     dishType: snapshot.dishType ?? '',
     tags: [...?snapshot.tags],
@@ -465,12 +552,14 @@ class RecipeForm {
   int totalTimeSeconds;
   int activeTimeSeconds;
   String changeNote;
+  MoldSpec? baseMold;
   List<RecipeIngredientDraft> ingredients;
   List<RecipeStepDraft> steps;
   List<String> imageIds;
 
   RecipeSnapshot get snapshot => RecipeSnapshot(
     activeTimeSeconds: activeTimeSeconds,
+    baseMold: baseMold,
     difficulty: difficulty,
     dishType: dishType,
     formatVersion: RecipeSnapshotFormatVersionEnum.number1,
@@ -503,11 +592,26 @@ RecipeIngredientBaseUnitEnum _baseUnit(String value) => switch (value) {
   _ => RecipeIngredientBaseUnitEnum.g,
 };
 
-RecipeIngredientScalingModeEnum _scalingMode(Object? value) {
+RecipeIngredientScalingModeEnum? _scalingMode(Object? value) {
   final raw = value?.toString();
-  return RecipeIngredientScalingModeEnum.values.firstWhere(
-    (item) => item.value == raw,
-    orElse: () => RecipeIngredientScalingModeEnum.proportional,
+  return RecipeIngredientScalingModeEnum.values
+      .where((item) => item.value == raw)
+      .firstOrNull;
+}
+
+ValueSource? _valueSource(Object? value) {
+  if (value is! Map) return null;
+  final source = value['source'];
+  final raw = source?.toString();
+  final sourceType = ValueSourceSource_Enum.values
+      .where((item) => item.value == raw)
+      .firstOrNull;
+  if (sourceType == null) return null;
+  return ValueSource(
+    basis: _string(value['basis']) ?? '',
+    confidence: (value['confidence'] as num?)?.toDouble(),
+    original: _string(value['original']),
+    source_: sourceType,
   );
 }
 

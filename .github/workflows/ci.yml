@@ -127,6 +127,9 @@ jobs:
           flutter-version: ${{ env.FLUTTER_VERSION }}
           channel: stable
           cache: true
+      - name: 校验换算测试表生成结果
+        working-directory: .
+        run: tool/gen_conversion_fixtures.sh --check
       - run: flutter pub get
       - run: dart format --output=none --set-exit-if-changed lib test integration_test test_driver
       - run: flutter analyze

@@ -11,6 +11,7 @@ gramtree accounts purge [--as-of 时间]
 import argparse
 import json
 import sys
+import uuid
 from typing import Any
 
 from gramtree.db import make_engine, make_session_factory
@@ -64,6 +65,33 @@ def cmd_recipes(args: argparse.Namespace) -> int:
         from gramtree.tasks.jobs import drain_recipe_save_outbox
 
         print(f"已投递 {drain_recipe_save_outbox()} 条菜谱版本事件")
+        return 0
+    if args.action == "seed-legacy-scaling-mode":
+        if get_settings().env != "test":
+            print("这个命令只允许在 test 环境使用", file=sys.stderr)
+            return 1
+        from gramtree.recipes.models import RecipeVersion
+
+        try:
+            version_id = uuid.UUID(args.version_id)
+        except ValueError:
+            print("版本 ID 无效", file=sys.stderr)
+            return 1
+        with _session() as session:
+            version = session.get(RecipeVersion, version_id)
+            if version is None:
+                print("未找到菜谱版本", file=sys.stderr)
+                return 1
+            snapshot = dict(version.snapshot)
+            ingredients = list(snapshot.get("ingredients", []))
+            if not ingredients:
+                print("菜谱版本没有食材", file=sys.stderr)
+                return 1
+            ingredients[0] = {**ingredients[0], "scaling_mode": None}
+            snapshot["ingredients"] = ingredients
+            version.snapshot = snapshot
+            session.commit()
+        print(f"已将版本 {args.version_id} 的首个食材标记为旧版缩放方式")
         return 0
     if args.action == "save-event-receipt":
         from sqlalchemy import select
@@ -212,6 +240,11 @@ def build_parser() -> argparse.ArgumentParser:
         "drain-save-events",
         help="重试未投递的菜谱版本经验事件",
     )
+    legacy_scaling = recipes_sub.add_parser(
+        "seed-legacy-scaling-mode",
+        help="仅测试环境：把版本首个食材标记为旧版空缩放方式",
+    )
+    legacy_scaling.add_argument("version_id")
     receipt = recipes_sub.add_parser(
         "save-event-receipt",
         help="输出一条菜谱版本经验事件的验收收据",

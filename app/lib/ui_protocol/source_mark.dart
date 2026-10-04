@@ -5,6 +5,7 @@ import 'package:gramtree_api/gramtree_api.dart'
 
 import '../app/theme.dart';
 import '../events/event_recorder.dart';
+import '../l10n/app_localizations.dart';
 import 'source_types.dart';
 
 /// 这次组合的 `composition_id`，通过 [BuildContext] 往下传给任何组件（SPEC-009.1
@@ -76,20 +77,23 @@ class SourceMark extends ConsumerWidget {
   /// 触发意图的统一入口（就是 `CompositionView` 传给每个组件 builder 的
   /// `onAction`，见 `composition_view.dart`）——"这次不用"/"以后别这样"走的是
   /// 票 5（#81）已有的意图派发，这里不另写处理路径。
-  final void Function(ActionDescriptor action) onAction;
+  final void Function(ActionDescriptor action)? onAction;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    if (sourceType == sourceTypeAuthorFilled) return const SizedBox.shrink();
+    if (sourceType == sourceTypeAuthorFilled) {
+      return const SizedBox.shrink();
+    }
 
     final theme = Theme.of(context);
     final colors = GramTreeColors.of(context);
     final color = _colorFor(sourceType, colors, theme);
     final dashed = sourceType == sourceTypeAiEstimated;
 
+    final l10n = AppLocalizations.of(context);
     return Semantics(
       button: true,
-      label: '来源：${sourceTypeLabel(sourceType)}，点开查看为什么',
+      label: l10n.sourceSemantics(sourceTypeLabel(sourceType, l10n)),
       excludeSemantics: true,
       child: InkWell(
         borderRadius: BorderRadius.circular(999),
@@ -107,7 +111,7 @@ class SourceMark extends ConsumerWidget {
                       borderRadius: BorderRadius.circular(999),
                     ),
               child: Text(
-                sourceTypeLabel(sourceType),
+                sourceTypeLabel(sourceType, l10n),
                 style: theme.textTheme.labelSmall?.copyWith(color: color),
               ),
             ),
@@ -119,6 +123,11 @@ class SourceMark extends ConsumerWidget {
 
   Future<void> _open(BuildContext context, WidgetRef ref) async {
     final compositionId = CompositionIdScope.of(context);
+    // Feedback actions only appear when a real intent handler receives them;
+    // a read-only surface must not offer buttons that do nothing.
+    final action = onAction;
+    final canFeedback = feedbackEnabled && action != null;
+
     await ref
         .read(eventRecorderProvider)
         .record(
@@ -134,18 +143,19 @@ class SourceMark extends ConsumerWidget {
       context: context,
       showDragHandle: true,
       builder: (sheetContext) => WhyPanel(
+        key: const ValueKey('why-panel'),
         sourceType: sourceType,
         value: value,
         originalValue: originalValue,
         basisText: basisText,
         citation: citation,
         required: required,
-        feedbackEnabled: feedbackEnabled,
-        onSkipOnce: required || !feedbackEnabled
+        feedbackEnabled: canFeedback,
+        onSkipOnce: required || !canFeedback
             ? null
             : () {
                 Navigator.of(sheetContext).pop();
-                onAction(
+                action(
                   ActionDescriptor(
                     intent: 'skip_this_time',
                     params: _feedbackParams(
@@ -156,11 +166,11 @@ class SourceMark extends ConsumerWidget {
                   ),
                 );
               },
-        onNeverAgain: required
+        onNeverAgain: required || !canFeedback
             ? null
             : () {
                 Navigator.of(sheetContext).pop();
-                onAction(
+                action(
                   ActionDescriptor(
                     intent: 'dont_do_again',
                     params: _feedbackParams(
@@ -266,6 +276,10 @@ class WhyPanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context);
+    final explanation = basisText.isEmpty
+        ? l10n.sourceBasisUnavailable
+        : basisText;
     return SafeArea(
       child: Padding(
         padding: const EdgeInsets.fromLTRB(20, 4, 20, 20),
@@ -274,17 +288,20 @@ class WhyPanel extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              sourceTypeLabel(sourceType),
+              sourceTypeLabel(sourceType, l10n),
               style: theme.textTheme.titleMedium,
             ),
             const SizedBox(height: 12),
             if (originalValue != null) ...[
-              Text('原来：$originalValue', style: theme.textTheme.bodyMedium),
+              Text(
+                l10n.whyOriginal(originalValue!),
+                style: theme.textTheme.bodyMedium,
+              ),
               const SizedBox(height: 2),
             ],
-            Text('现在：$value', style: theme.textTheme.bodyMedium),
+            Text(l10n.whyCurrent(value), style: theme.textTheme.bodyMedium),
             const SizedBox(height: 12),
-            Text(basisText, style: theme.textTheme.bodyMedium),
+            Text(explanation, style: theme.textTheme.bodyMedium),
             if (citation != null) ...[
               const SizedBox(height: 6),
               Text(
@@ -299,7 +316,7 @@ class WhyPanel extends StatelessWidget {
               const SizedBox.shrink()
             else if (required)
               Text(
-                '这是必显内容，不能关掉',
+                l10n.whyRequired,
                 style: theme.textTheme.bodySmall?.copyWith(
                   color: theme.colorScheme.onSurfaceVariant,
                 ),
@@ -310,14 +327,14 @@ class WhyPanel extends StatelessWidget {
                   Expanded(
                     child: OutlinedButton(
                       onPressed: onSkipOnce,
-                      child: const Text('这次不用'),
+                      child: Text(l10n.whySkipThisTime),
                     ),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
                     child: OutlinedButton(
                       onPressed: onNeverAgain,
-                      child: const Text('以后别这样'),
+                      child: Text(l10n.whyDontDoAgain),
                     ),
                   ),
                 ],

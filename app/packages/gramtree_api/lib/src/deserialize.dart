@@ -44,7 +44,14 @@ import 'package:gramtree_api/src/model/health_response.dart';
 import 'package:gramtree_api/src/model/identity_out.dart';
 import 'package:gramtree_api/src/model/ingredient_attributes.dart';
 import 'package:gramtree_api/src/model/ingredient_detail.dart';
+import 'package:gramtree_api/src/model/measure_display_out.dart';
+import 'package:gramtree_api/src/model/measure_display_request.dart';
 import 'package:gramtree_api/src/model/merge_relation.dart';
+import 'package:gramtree_api/src/model/mold_conversion.dart';
+import 'package:gramtree_api/src/model/mold_conversion_ingredient.dart';
+import 'package:gramtree_api/src/model/mold_conversion_step.dart';
+import 'package:gramtree_api/src/model/mold_conversion_warning.dart';
+import 'package:gramtree_api/src/model/mold_spec.dart';
 import 'package:gramtree_api/src/model/normalize_candidate.dart';
 import 'package:gramtree_api/src/model/normalize_item.dart';
 import 'package:gramtree_api/src/model/normalize_request.dart';
@@ -54,7 +61,11 @@ import 'package:gramtree_api/src/model/nutrition.dart';
 import 'package:gramtree_api/src/model/nutrition_attribute.dart';
 import 'package:gramtree_api/src/model/nutrition_estimate.dart';
 import 'package:gramtree_api/src/model/page_description.dart';
+import 'package:gramtree_api/src/model/page_personal_measure_out.dart';
 import 'package:gramtree_api/src/model/page_unrecorded_ingredient_item.dart';
+import 'package:gramtree_api/src/model/personal_measure_input.dart';
+import 'package:gramtree_api/src/model/personal_measure_out.dart';
+import 'package:gramtree_api/src/model/personal_measure_update.dart';
 import 'package:gramtree_api/src/model/profile_update.dart';
 import 'package:gramtree_api/src/model/purchase_unit.dart';
 import 'package:gramtree_api/src/model/purchase_units_attribute.dart';
@@ -62,13 +73,19 @@ import 'package:gramtree_api/src/model/recipe_author.dart';
 import 'package:gramtree_api/src/model/recipe_create.dart';
 import 'package:gramtree_api/src/model/recipe_derived.dart';
 import 'package:gramtree_api/src/model/recipe_detail.dart';
+import 'package:gramtree_api/src/model/recipe_displayed_ingredient.dart';
 import 'package:gramtree_api/src/model/recipe_image_out.dart';
 import 'package:gramtree_api/src/model/recipe_image_staged_out.dart';
 import 'package:gramtree_api/src/model/recipe_image_upload.dart';
 import 'package:gramtree_api/src/model/recipe_ingredient.dart';
+import 'package:gramtree_api/src/model/recipe_ingredient_display.dart';
+import 'package:gramtree_api/src/model/recipe_ingredient_display_out.dart';
 import 'package:gramtree_api/src/model/recipe_list.dart';
 import 'package:gramtree_api/src/model/recipe_list_item.dart';
+import 'package:gramtree_api/src/model/recipe_mold_conversion_out.dart';
+import 'package:gramtree_api/src/model/recipe_mold_conversion_request.dart';
 import 'package:gramtree_api/src/model/recipe_replacement.dart';
+import 'package:gramtree_api/src/model/recipe_serving_conversion_out.dart';
 import 'package:gramtree_api/src/model/recipe_snapshot.dart';
 import 'package:gramtree_api/src/model/recipe_step.dart';
 import 'package:gramtree_api/src/model/recipe_version_create.dart';
@@ -81,6 +98,10 @@ import 'package:gramtree_api/src/model/release_note.dart';
 import 'package:gramtree_api/src/model/search_ingredient_out.dart';
 import 'package:gramtree_api/src/model/search_query.dart';
 import 'package:gramtree_api/src/model/search_result.dart';
+import 'package:gramtree_api/src/model/serving_conversion.dart';
+import 'package:gramtree_api/src/model/serving_conversion_ingredient.dart';
+import 'package:gramtree_api/src/model/serving_conversion_step.dart';
+import 'package:gramtree_api/src/model/serving_conversion_warning.dart';
 import 'package:gramtree_api/src/model/skip_adjustment_request.dart';
 import 'package:gramtree_api/src/model/skip_adjustment_result.dart';
 import 'package:gramtree_api/src/model/source_basis.dart';
@@ -243,9 +264,29 @@ ReturnType deserialize<ReturnType, BaseType>(
     case 'IngredientDetail':
       return IngredientDetail.fromJson(value as Map<String, dynamic>)
           as ReturnType;
+    case 'MeasureDisplayOut':
+      return MeasureDisplayOut.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'MeasureDisplayRequest':
+      return MeasureDisplayRequest.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
     case 'MergeRelation':
       return MergeRelation.fromJson(value as Map<String, dynamic>)
           as ReturnType;
+    case 'MoldConversion':
+      return MoldConversion.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'MoldConversionIngredient':
+      return MoldConversionIngredient.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'MoldConversionStep':
+      return MoldConversionStep.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'MoldConversionWarning':
+      return MoldConversionWarning.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'MoldSpec':
+      return MoldSpec.fromJson(value as Map<String, dynamic>) as ReturnType;
     case 'NormalizeCandidate':
       return NormalizeCandidate.fromJson(value as Map<String, dynamic>)
           as ReturnType;
@@ -272,10 +313,22 @@ ReturnType deserialize<ReturnType, BaseType>(
     case 'PageDescription':
       return PageDescription.fromJson(value as Map<String, dynamic>)
           as ReturnType;
+    case 'PagePersonalMeasureOut':
+      return PagePersonalMeasureOut.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
     case 'PageUnrecordedIngredientItem':
       return PageUnrecordedIngredientItem.fromJson(
             value as Map<String, dynamic>,
           )
+          as ReturnType;
+    case 'PersonalMeasureInput':
+      return PersonalMeasureInput.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'PersonalMeasureOut':
+      return PersonalMeasureOut.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'PersonalMeasureUpdate':
+      return PersonalMeasureUpdate.fromJson(value as Map<String, dynamic>)
           as ReturnType;
     case 'ProfileUpdate':
       return ProfileUpdate.fromJson(value as Map<String, dynamic>)
@@ -294,6 +347,9 @@ ReturnType deserialize<ReturnType, BaseType>(
           as ReturnType;
     case 'RecipeDetail':
       return RecipeDetail.fromJson(value as Map<String, dynamic>) as ReturnType;
+    case 'RecipeDisplayedIngredient':
+      return RecipeDisplayedIngredient.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
     case 'RecipeImageOut':
       return RecipeImageOut.fromJson(value as Map<String, dynamic>)
           as ReturnType;
@@ -306,13 +362,28 @@ ReturnType deserialize<ReturnType, BaseType>(
     case 'RecipeIngredient':
       return RecipeIngredient.fromJson(value as Map<String, dynamic>)
           as ReturnType;
+    case 'RecipeIngredientDisplay':
+      return RecipeIngredientDisplay.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'RecipeIngredientDisplayOut':
+      return RecipeIngredientDisplayOut.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
     case 'RecipeList':
       return RecipeList.fromJson(value as Map<String, dynamic>) as ReturnType;
     case 'RecipeListItem':
       return RecipeListItem.fromJson(value as Map<String, dynamic>)
           as ReturnType;
+    case 'RecipeMoldConversionOut':
+      return RecipeMoldConversionOut.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'RecipeMoldConversionRequest':
+      return RecipeMoldConversionRequest.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
     case 'RecipeReplacement':
       return RecipeReplacement.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'RecipeServingConversionOut':
+      return RecipeServingConversionOut.fromJson(value as Map<String, dynamic>)
           as ReturnType;
     case 'RecipeSnapshot':
       return RecipeSnapshot.fromJson(value as Map<String, dynamic>)
@@ -346,6 +417,18 @@ ReturnType deserialize<ReturnType, BaseType>(
       return SearchQuery.fromJson(value as Map<String, dynamic>) as ReturnType;
     case 'SearchResult':
       return SearchResult.fromJson(value as Map<String, dynamic>) as ReturnType;
+    case 'ServingConversion':
+      return ServingConversion.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'ServingConversionIngredient':
+      return ServingConversionIngredient.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'ServingConversionStep':
+      return ServingConversionStep.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'ServingConversionWarning':
+      return ServingConversionWarning.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
     case 'SkipAdjustmentRequest':
       return SkipAdjustmentRequest.fromJson(value as Map<String, dynamic>)
           as ReturnType;

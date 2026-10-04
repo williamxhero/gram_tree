@@ -227,6 +227,9 @@
   "recipeRestore": "恢复",
   "recipeAuthorVersion": "第 {version} 版 · {servings} 份",
   "recipeDuration": "总时长 {total} 分钟 · 动手 {active} 分钟",
+  "recipeDurationServingNote": "按 {servings} 份重新估算：步骤时长和火候不随份数变化，总时长和动手时长不变。",
+  "recipeDurationBatchNote": "份量变大后可能要分批下锅，实际用时会更长，以成熟判断为准。",
+  "recipeDurationMoldNote": "换模具后烘烤时间不按底面积比例放大，时长按原步骤估算，以成熟判断为准。",
   "recipeAllergens": "过敏原：{items}{incomplete}",
   "recipeNutrition": "每份营养：估算值{incomplete}",
   "recipeIngredients": "食材",
@@ -281,6 +284,62 @@
   "recipeListSummary": "第 {version} 版 · {servings} 份 · {minutes} 分钟",
   "recipeAliases": "别名（用逗号分隔）",
   "recipeServings": "份数",
+  "recipeServingsAdjust": "调整份数",
+  "recipeServingsDecrease": "减少一份",
+  "recipeServingsIncrease": "增加一份",
+  "recipeServingsUnit": "份",
+  "recipeServingsRange": "可调范围：{min}–{max} 份",
+  "recipeServingsReset": "恢复原份数",
+  "recipeBatchWarning": "注意分批下锅，时间以成熟判断为准。",
+  "recipeRuleProportional": "按比例换算",
+  "recipeRuleUnchanged": "保持原值不变",
+  "recipeRuleRound": "按个取整",
+  "recipeRuleMoldRatio": "模具比例",
+  "recipeRuleUnknown": "换算规则未识别",
+  "recipeConversionRuleDetail": "原值 {original}，{rule}",
+  "recipeModeServing": "按份数",
+  "recipeModeMold": "按模具",
+  "recipeMoldConversion": "模具换算",
+  "recipeMoldReset": "恢复原模具",
+  "recipeMoldOriginal": "原模具：{mold} · 底面积比例 {ratio}",
+  "recipeMoldTargetShape": "目标模具形状",
+  "recipeMoldRound": "圆模",
+  "recipeMoldSquare": "方模",
+  "recipeMoldRectangular": "长方模",
+  "recipeMoldCustom": "自定义尺寸",
+  "recipeMoldDiameter": "直径",
+  "recipeMoldTargetDiameter": "目标直径",
+  "recipeMoldUnit": "单位",
+  "recipeMoldInch": "英寸",
+  "recipeMoldCm": "厘米",
+  "recipeMoldSide": "边长（厘米）",
+  "recipeMoldWidth": "宽（厘米）",
+  "recipeMoldLength": "长（厘米）",
+  "recipeMoldTargetSide": "目标边长（厘米）",
+  "recipeMoldTargetWidth": "目标宽（厘米）",
+  "recipeMoldTargetLength": "目标长（厘米）",
+  "recipeMoldBakingNote": "温度保持不变；时间不按比例放大，以成熟判断为准。",
+  "recipeMoldTimeAdvisory": "时间不按模具比例放大，建议从原时间开始检查，以成熟判断为准。",
+  "recipeMoldDonenessWarning": "请以成熟判断为准，不要只看计时。",
+  "recipeMoldInvalid": "目标模具尺寸无效，请填写大于 0 的尺寸后再换算。",
+  "recipeMoldUnavailable": "这份菜谱没有记录基准模具，暂时只能按份数显示。",
+  "recipeServingRoundWarning": "{name}取整后与按比例结果相差较大，请按口味微调其他用量。",
+  "recipeMoldRoundWarning": "{name}取整后与模具比例结果相差较大，请按实际情况微调其他用量。",
+  "recipeMeasureStandardDisplayOnly": "常用量具换算；菜谱基础值未改变",
+  "recipeReplacementValue": "{label}",
+  "sourceAuthorFilled": "作者填写",
+  "sourceTasteAdjusted": "按你的口味换算",
+  "sourceScenarioAdjusted": "按场景调整",
+  "sourceAiEstimated": "AI 估算",
+  "sourceVerified": "已验证",
+  "sourceUnknown": "来源未标注",
+  "sourceBasisUnavailable": "暂无可显示的依据",
+  "whyOriginal": "原来：{value}",
+  "whyCurrent": "现在：{value}",
+  "whyRequired": "这是必显内容，不能关掉",
+  "whySkipThisTime": "这次不用",
+  "whyDontDoAgain": "以后别这样",
+  "sourceSemantics": "来源：{source}，点开查看为什么",
   "recipeDifficulty": "难度",
   "recipeDishType": "菜型",
   "recipeTags": "标签（用逗号分隔）",
@@ -300,6 +359,8 @@
   "recipeScalingProportional": "按比例",
   "recipeScalingUnchanged": "保持不变",
   "recipeScalingRound": "按个取整",
+  "recipeScalingLibraryDefault": "跟随食材库默认（{mode}）",
+  "recipeScalingLibraryDefaultUnknown": "跟随食材库默认（没有默认值时按比例）",
   "recipeOptionalToggle": "可选食材",
   "recipeFunctionalToggle": "功能性用料",
   "recipeReplacement": "替代品",
@@ -347,6 +408,39 @@
   "recipeSaveSuccess": "已保存为新版本",
   "recipeSearchNoResults": "没有找到标准食材，可以继续填写未收录食材",
   "recipeAiAssisted": "AI 协助",
+  "personalMeasuresTitle": "自家量具",
+  "personalMeasuresIntro": "把空量具放在厨房秤上归零，装满水后的克数就是容量（毫升）。只影响显示，不会修改菜谱。",
+  "personalMeasuresOffline": "离线：正在使用已缓存的量具；登记、修改和删除需要联网。",
+  "personalMeasuresAdd": "登记量具",
+  "personalMeasuresEmpty": "还没有登记量具",
+  "personalMeasuresDeleteTooltip": "删除量具",
+  "personalMeasuresDeleteTitle": "删除量具？",
+  "personalMeasuresDeleteBody": "删除“{name}”不会改动菜谱。",
+  "personalMeasuresEdit": "修改量具",
+  "personalMeasuresRegister": "登记量具",
+  "personalMeasuresName": "量具名称",
+  "personalMeasuresKind": "种类",
+  "personalMeasuresCapacity": "满水容量（毫升）",
+  "personalMeasuresCapacityValue": "{value} 毫升",
+  "personalMeasuresValidation": "名称需为 1–64 个字，容量需大于 0 且不超过 10000 毫升",
+  "personalMeasuresSpoon": "勺",
+  "personalMeasuresBowl": "碗",
+  "personalMeasuresCup": "杯",
+  "recipeMeasureModeTitle": "用量显示方式",
+  "recipeMeasureModeBase": "克/毫升",
+  "recipeMeasureModeStandard": "汤匙/茶匙",
+  "recipeMeasureModeHome": "自家量具",
+  "recipeMeasureChoose": "选择量具",
+  "recipeMeasureRefresh": "刷新我的量具",
+  "recipeMeasureManage": "登记自家量具",
+  "recipeMeasureModeNoHome": "还没有登记自家量具，请先到“我的”登记。",
+  "recipeMeasureDisplayOnly": "个人量具只改变显示，菜谱基础值未改变",
+  "recipeMeasureNoDensity": "没有密度数据，保留{unit}",
+  "recipeMeasureGram": "克",
+  "recipeMeasureMillilitre": "毫升",
+  "recipeMeasureTablespoon": "汤匙",
+  "recipeMeasureTeaspoon": "茶匙",
+  "recipeMeasureApproximate": "约",
   "@compositionLastUpdatedAt": {
     "description": "上次更新时间",
     "placeholders": {"time": {"type": "String"}}
@@ -365,6 +459,12 @@
       "total": {"type": "int"},
       "active": {"type": "int"}
     }
+  },
+  "@recipeDurationServingNote": {
+    "placeholders": {"servings": {"type": "int"}}
+  },
+  "@recipeScalingLibraryDefault": {
+    "placeholders": {"mode": {"type": "String"}}
   },
   "@recipeAllergens": {
     "placeholders": {
@@ -415,5 +515,44 @@
   },
   "@recipeOperationCount": {
     "placeholders": {"count": {"type": "int"}}
+  },
+  "@recipeServingsRange": {
+    "placeholders": {
+      "min": {"type": "int"},
+      "max": {"type": "int"}
+    }
+  },
+  "@recipeMoldOriginal": {
+    "placeholders": {
+      "mold": {"type": "String"},
+      "ratio": {"type": "String"}
+    }
+  },
+  "@recipeServingRoundWarning": {
+    "placeholders": {"name": {"type": "String"}}
+  },
+  "@recipeMoldRoundWarning": {
+    "placeholders": {"name": {"type": "String"}}
+  },
+  "@recipeReplacementValue": {
+    "placeholders": {"label": {"type": "String"}}
+  },
+  "@whyOriginal": {
+    "placeholders": {"value": {"type": "String"}}
+  },
+  "@whyCurrent": {
+    "placeholders": {"value": {"type": "String"}}
+  },
+  "@sourceSemantics": {
+    "placeholders": {"source": {"type": "String"}}
+  },
+  "@recipeMeasureNoDensity": {
+    "placeholders": {"unit": {"type": "String"}}
+  },
+  "@recipeConversionRuleDetail": {
+    "placeholders": {
+      "original": {"type": "String"},
+      "rule": {"type": "String"}
+    }
   }
 }

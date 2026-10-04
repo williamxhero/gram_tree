@@ -10,6 +10,7 @@
 | [`account-privacy.html`](account-privacy.html) | 账号与隐私样稿（可直接用浏览器打开） | SPEC-013.2 账号与隐私 | claude.ai Project 里的“账号与隐私”样稿 |
 | [`recipe-detail/`](recipe-detail/) | 菜谱详情页样稿（熟手常做）的源文件：`index.html` 和 `project/` 下的组件（`Kit`、`Main`、`Pro`、`Why`、`canvas.json`） | 菜谱详情页 | claude.ai Project 里的“菜谱详情页”画布 |
 | [`recipe-authoring/`](recipe-authoring/) | 结构化菜谱作者工作台样稿：编辑、详情预览、版本历史、我的菜谱；支持浅色/深色和交互展开 | #20 SPEC-002.2 | 本地 HTML 样稿（浏览器可直接打开） |
+| [`recipe-scaling/`](recipe-scaling/) | 份数、模具、个人量具换算详情页样稿：统一高亮、原值/规则明细、模式互斥和浅色/深色交互 | #21 SPEC-002.3 | Artifact 服务暂不可用；本地 HTML 样稿（浏览器可直接打开） |
 
 ## 说明
 

@@ -1,0 +1,50 @@
+[
+  {
+    "name": "serving_proportional_half_up",
+    "kind": "serving",
+    "input": {
+      "original_servings": 2,
+      "target_servings": 3,
+      "ingredients": [
+        {
+          "id": "boundary",
+          "display_name": "边界用量",
+          "quantity": 0.67,
+          "unit": "g",
+          "scaling_mode": "proportional"
+        }
+      ],
+      "steps": []
+    },
+    "expected": {
+      "display_quantity": 1.01
+    }
+  },
+  {
+    "name": "mold_ratio_half_up",
+    "kind": "mold",
+    "input": {
+      "original_mold": {"shape": "square", "unit": "cm", "side": 10},
+      "target_mold": {
+        "shape": "rectangular",
+        "unit": "cm",
+        "width": 10.05,
+        "length": 10
+      },
+      "ingredients": [
+        {
+          "id": "boundary",
+          "display_name": "边界用量",
+          "quantity": 1,
+          "unit": "g",
+          "scaling_mode": "proportional"
+        }
+      ],
+      "steps": []
+    },
+    "expected": {
+      "area_ratio": 1.01,
+      "display_quantity": 1.01
+    }
+  }
+]

@@ -1,0 +1,282 @@
+[
+  {
+    "name": "half_servings_rounding",
+    "input": {
+      "original_servings": 2,
+      "target_servings": 1,
+      "ingredients": [
+        {"id": "rice", "display_name": "大米", "quantity": 200, "unit": "g", "scaling_mode": "proportional"},
+        {"id": "salt", "display_name": "盐", "quantity": 3, "unit": "g", "scaling_mode": "unchanged"},
+        {"id": "egg", "display_name": "鸡蛋", "quantity": 3, "unit": "个", "scaling_mode": "round"}
+      ],
+      "steps": [
+        {"id": "marinate", "instruction": "腌制入味", "ingredient_ids": ["rice"], "duration_seconds": 600, "temperature_celsius": 25, "heat": "室温"},
+        {"id": "cook", "instruction": "炒熟", "ingredient_ids": ["rice", "egg"], "duration_seconds": 120, "temperature_celsius": 180, "heat": "中火"}
+      ]
+    },
+    "expected": {
+      "original_servings": 2,
+      "target_servings": 1,
+      "min_servings": 1,
+      "max_servings": 20,
+      "ingredients": [
+        {"id": "rice", "display_name": "大米", "original_quantity": 200, "display_quantity": 100, "unit": "g", "rule": "proportional", "deviation_ratio": null, "deviation_warning": false},
+        {"id": "salt", "display_name": "盐", "original_quantity": 3, "display_quantity": 3, "unit": "g", "rule": "unchanged", "deviation_ratio": null, "deviation_warning": false},
+        {"id": "egg", "display_name": "鸡蛋", "original_quantity": 3, "display_quantity": 2, "unit": "个", "rule": "round", "deviation_ratio": 0.3333333333333333, "deviation_warning": true}
+      ],
+      "steps": [
+        {"id": "marinate", "instruction": "腌制入味", "duration_seconds": 600, "temperature_celsius": 25, "heat": "室温", "batch_warning": false, "batch_warning_text": null},
+        {"id": "cook", "instruction": "炒熟", "duration_seconds": 120, "temperature_celsius": 180, "heat": "中火", "batch_warning": false, "batch_warning_text": null}
+      ],
+      "warnings": [
+        {"code": "round_deviation", "ingredient_id": "egg", "message": "鸡蛋取整后与按比例结果相差较大，请按口味微调其他用量。"}
+      ],
+      "total_time_seconds": 600,
+      "active_time_seconds": 720
+    }
+  },
+  {
+    "name": "original_servings",
+    "input": {
+      "original_servings": 2,
+      "target_servings": 2,
+      "ingredients": [
+        {"id": "rice", "display_name": "大米", "quantity": 200, "unit": "g", "scaling_mode": "proportional"},
+        {"id": "salt", "display_name": "盐", "quantity": 3, "unit": "g", "scaling_mode": "unchanged"},
+        {"id": "egg", "display_name": "鸡蛋", "quantity": 3, "unit": "个", "scaling_mode": "round"}
+      ],
+      "steps": [
+        {"id": "cook", "instruction": "炒熟", "ingredient_ids": ["rice", "egg"], "duration_seconds": 120, "temperature_celsius": 180, "heat": "中火"}
+      ]
+    },
+    "expected": {
+      "original_servings": 2,
+      "target_servings": 2,
+      "min_servings": 1,
+      "max_servings": 20,
+      "ingredients": [
+        {"id": "rice", "display_name": "大米", "original_quantity": 200, "display_quantity": 200, "unit": "g", "rule": "proportional", "deviation_ratio": null, "deviation_warning": false},
+        {"id": "salt", "display_name": "盐", "original_quantity": 3, "display_quantity": 3, "unit": "g", "rule": "unchanged", "deviation_ratio": null, "deviation_warning": false},
+        {"id": "egg", "display_name": "鸡蛋", "original_quantity": 3, "display_quantity": 3, "unit": "个", "rule": "round", "deviation_ratio": 0, "deviation_warning": false}
+      ],
+      "steps": [
+        {"id": "cook", "instruction": "炒熟", "duration_seconds": 120, "temperature_celsius": 180, "heat": "中火", "batch_warning": false, "batch_warning_text": null}
+      ],
+      "warnings": [],
+      "total_time_seconds": 120,
+      "active_time_seconds": 120
+    }
+  },
+  {
+    "name": "double_servings_batch_warning",
+    "input": {
+      "original_servings": 2,
+      "target_servings": 4,
+      "ingredients": [
+        {"id": "rice", "display_name": "大米", "quantity": 200, "unit": "g", "scaling_mode": "proportional"},
+        {"id": "salt", "display_name": "盐", "quantity": 3, "unit": "g", "scaling_mode": "unchanged"},
+        {"id": "egg", "display_name": "鸡蛋", "quantity": 3, "unit": "个", "scaling_mode": "round"}
+      ],
+      "steps": [
+        {"id": "rest", "instruction": "静置", "ingredient_ids": [], "duration_seconds": 60, "temperature_celsius": 25, "heat": "室温"},
+        {"id": "cook", "instruction": "炒熟", "ingredient_ids": ["rice", "egg"], "duration_seconds": 120, "temperature_celsius": 180, "heat": "中火"}
+      ]
+    },
+    "expected": {
+      "original_servings": 2,
+      "target_servings": 4,
+      "min_servings": 1,
+      "max_servings": 20,
+      "ingredients": [
+        {"id": "rice", "display_name": "大米", "original_quantity": 200, "display_quantity": 400, "unit": "g", "rule": "proportional", "deviation_ratio": null, "deviation_warning": false},
+        {"id": "salt", "display_name": "盐", "original_quantity": 3, "display_quantity": 3, "unit": "g", "rule": "unchanged", "deviation_ratio": null, "deviation_warning": false},
+        {"id": "egg", "display_name": "鸡蛋", "original_quantity": 3, "display_quantity": 6, "unit": "个", "rule": "round", "deviation_ratio": 0, "deviation_warning": false}
+      ],
+      "steps": [
+        {"id": "rest", "instruction": "静置", "duration_seconds": 60, "temperature_celsius": 25, "heat": "室温", "batch_warning": false, "batch_warning_text": null},
+        {"id": "cook", "instruction": "炒熟", "duration_seconds": 120, "temperature_celsius": 180, "heat": "中火", "batch_warning": true, "batch_warning_text": "注意分批下锅，时间以成熟判断为准。"}
+      ],
+      "warnings": [],
+      "total_time_seconds": 120,
+      "active_time_seconds": 180
+    }
+  },
+{
+  "name": "sequential_unattended_and_round_unchanged",
+  "input": {
+    "original_servings": 2,
+    "target_servings": 1,
+    "ingredients": [
+      {
+        "id": "rice",
+        "display_name": "大米",
+        "quantity": 200,
+        "unit": "g",
+        "scaling_mode": "proportional"
+      },
+      {
+        "id": "salt",
+        "display_name": "盐",
+        "quantity": 3,
+        "unit": "g",
+        "scaling_mode": "unchanged"
+      },
+      {
+        "id": "egg",
+        "display_name": "鸡蛋",
+        "quantity": 1,
+        "unit": "个",
+        "scaling_mode": "round"
+      }
+    ],
+    "steps": [
+      {
+        "id": "marinate",
+        "instruction": "腌制入味",
+        "ingredient_ids": [
+          "rice"
+        ],
+        "duration_seconds": 600,
+        "temperature_celsius": 25,
+        "heat": "室温",
+        "unattended": true
+      },
+      {
+        "id": "cook",
+        "instruction": "炒熟",
+        "ingredient_ids": [
+          "rice",
+          "egg"
+        ],
+        "duration_seconds": 120,
+        "temperature_celsius": 180,
+        "heat": "中火",
+        "depends_on": [
+          "marinate"
+        ]
+      }
+    ]
+  },
+  "expected": {
+    "original_servings": 2,
+    "target_servings": 1,
+    "min_servings": 1,
+    "max_servings": 20,
+    "ingredients": [
+      {
+        "id": "rice",
+        "display_name": "大米",
+        "original_quantity": 200,
+        "display_quantity": 100,
+        "unit": "g",
+        "rule": "proportional",
+        "deviation_ratio": null,
+        "deviation_warning": false
+      },
+      {
+        "id": "salt",
+        "display_name": "盐",
+        "original_quantity": 3,
+        "display_quantity": 3,
+        "unit": "g",
+        "rule": "unchanged",
+        "deviation_ratio": null,
+        "deviation_warning": false
+      },
+      {
+        "id": "egg",
+        "display_name": "鸡蛋",
+        "original_quantity": 1,
+        "display_quantity": 1,
+        "unit": "个",
+        "rule": "round",
+        "deviation_ratio": 1,
+        "deviation_warning": true
+      }
+    ],
+    "steps": [
+      {
+        "id": "marinate",
+        "instruction": "腌制入味",
+        "duration_seconds": 600,
+        "temperature_celsius": 25,
+        "heat": "室温",
+        "batch_warning": false,
+        "batch_warning_text": null
+      },
+      {
+        "id": "cook",
+        "instruction": "炒熟",
+        "duration_seconds": 120,
+        "temperature_celsius": 180,
+        "heat": "中火",
+        "batch_warning": false,
+        "batch_warning_text": null
+      }
+    ],
+    "warnings": [
+      {
+        "code": "round_deviation",
+        "ingredient_id": "egg",
+        "message": "鸡蛋取整后与按比例结果相差较大，请按口味微调其他用量。"
+      }
+    ],
+    "total_time_seconds": 720,
+    "active_time_seconds": 120
+    }
+  },
+  {
+    "name": "decimal_half_up_ratio",
+    "input": {
+      "original_servings": 2,
+      "target_servings": 3,
+      "ingredients": [
+        {"id": "one fifteen", "display_name": "一十五", "quantity": 1.15, "unit": "g", "scaling_mode": "proportional"},
+        {"id": "zero thirty five", "display_name": "零点三五", "quantity": 0.35, "unit": "g", "scaling_mode": "proportional"},
+        {"id": "two oh five", "display_name": "二点零五", "quantity": 2.05, "unit": "g", "scaling_mode": "proportional"}
+      ],
+      "steps": []
+    },
+    "expected": {
+      "original_servings": 2,
+      "target_servings": 3,
+      "min_servings": 1,
+      "max_servings": 20,
+      "ingredients": [
+        {"id": "one fifteen", "display_name": "一十五", "original_quantity": 1.15, "display_quantity": 1.73, "unit": "g", "rule": "proportional", "deviation_ratio": null, "deviation_warning": false},
+        {"id": "zero thirty five", "display_name": "零点三五", "original_quantity": 0.35, "display_quantity": 0.53, "unit": "g", "rule": "proportional", "deviation_ratio": null, "deviation_warning": false},
+        {"id": "two oh five", "display_name": "二点零五", "original_quantity": 2.05, "display_quantity": 3.08, "unit": "g", "rule": "proportional", "deviation_ratio": null, "deviation_warning": false}
+      ],
+      "steps": [],
+      "warnings": [],
+      "total_time_seconds": 0,
+      "active_time_seconds": 0
+    }
+  },
+  {
+    "name": "zero_count_and_tiny_proportional",
+    "input": {
+      "original_servings": 2,
+      "target_servings": 1,
+      "ingredients": [
+        {"id": "zero", "display_name": "零个", "quantity": 0, "unit": "个", "scaling_mode": "round"},
+        {"id": "tiny", "display_name": "微量", "quantity": 0.004, "unit": "g", "scaling_mode": "proportional"}
+      ],
+      "steps": []
+    },
+    "expected": {
+      "original_servings": 2,
+      "target_servings": 1,
+      "min_servings": 1,
+      "max_servings": 20,
+      "ingredients": [
+        {"id": "zero", "display_name": "零个", "original_quantity": 0, "display_quantity": 0, "unit": "个", "rule": "round", "deviation_ratio": null, "deviation_warning": false},
+        {"id": "tiny", "display_name": "微量", "original_quantity": 0.004, "display_quantity": 0, "unit": "g", "rule": "proportional", "deviation_ratio": null, "deviation_warning": false}
+      ],
+      "steps": [],
+      "warnings": [],
+      "total_time_seconds": 0,
+      "active_time_seconds": 0
+    }
+  }
+]

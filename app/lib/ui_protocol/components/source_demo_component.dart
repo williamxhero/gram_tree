@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gramtree_api/gramtree_api.dart';
 
 import '../component_registry.dart';
+import '../../l10n/app_localizations.dart';
 import '../source_mark.dart';
 import '../source_overrides.dart';
 import '../source_types.dart';
@@ -45,6 +46,7 @@ Widget buildSourceDemoComponent(
   return Consumer(
     builder: (context, ref, _) {
       final theme = Theme.of(context);
+      final l10n = AppLocalizations.of(context);
       final override = ref.watch(sourceOverridesProvider)[component.id];
       // 有覆盖值时整组字段都从覆盖值来（哪怕 originalValue/citation 是 null，也是
       // "退回原值后就没有原值/引用了"这个合法状态，不该退回协议原始数据里的旧值）；
@@ -83,7 +85,7 @@ Widget buildSourceDemoComponent(
         detail: component.detail,
         conclusion: conclusionRow,
         conclusionSemanticsText: showMark
-            ? '$conclusion，来源：${sourceTypeLabel(sourceType)}'
+            ? '$conclusion，来源：${sourceTypeLabel(sourceType, l10n)}'
             : conclusion,
         showPrimaryButton: false,
       );

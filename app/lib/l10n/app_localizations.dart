@@ -946,6 +946,24 @@ abstract class AppLocalizations {
   /// **'总时长 {total} 分钟 · 动手 {active} 分钟'**
   String recipeDuration(int total, int active);
 
+  /// No description provided for @recipeDurationServingNote.
+  ///
+  /// In zh, this message translates to:
+  /// **'按 {servings} 份重新估算：步骤时长和火候不随份数变化，总时长和动手时长不变。'**
+  String recipeDurationServingNote(int servings);
+
+  /// No description provided for @recipeDurationBatchNote.
+  ///
+  /// In zh, this message translates to:
+  /// **'份量变大后可能要分批下锅，实际用时会更长，以成熟判断为准。'**
+  String get recipeDurationBatchNote;
+
+  /// No description provided for @recipeDurationMoldNote.
+  ///
+  /// In zh, this message translates to:
+  /// **'换模具后烘烤时间不按底面积比例放大，时长按原步骤估算，以成熟判断为准。'**
+  String get recipeDurationMoldNote;
+
   /// No description provided for @recipeAllergens.
   ///
   /// In zh, this message translates to:
@@ -1264,6 +1282,342 @@ abstract class AppLocalizations {
   /// **'份数'**
   String get recipeServings;
 
+  /// No description provided for @recipeServingsAdjust.
+  ///
+  /// In zh, this message translates to:
+  /// **'调整份数'**
+  String get recipeServingsAdjust;
+
+  /// No description provided for @recipeServingsDecrease.
+  ///
+  /// In zh, this message translates to:
+  /// **'减少一份'**
+  String get recipeServingsDecrease;
+
+  /// No description provided for @recipeServingsIncrease.
+  ///
+  /// In zh, this message translates to:
+  /// **'增加一份'**
+  String get recipeServingsIncrease;
+
+  /// No description provided for @recipeServingsUnit.
+  ///
+  /// In zh, this message translates to:
+  /// **'份'**
+  String get recipeServingsUnit;
+
+  /// No description provided for @recipeServingsRange.
+  ///
+  /// In zh, this message translates to:
+  /// **'可调范围：{min}–{max} 份'**
+  String recipeServingsRange(int min, int max);
+
+  /// No description provided for @recipeServingsReset.
+  ///
+  /// In zh, this message translates to:
+  /// **'恢复原份数'**
+  String get recipeServingsReset;
+
+  /// No description provided for @recipeBatchWarning.
+  ///
+  /// In zh, this message translates to:
+  /// **'注意分批下锅，时间以成熟判断为准。'**
+  String get recipeBatchWarning;
+
+  /// No description provided for @recipeRuleProportional.
+  ///
+  /// In zh, this message translates to:
+  /// **'按比例换算'**
+  String get recipeRuleProportional;
+
+  /// No description provided for @recipeRuleUnchanged.
+  ///
+  /// In zh, this message translates to:
+  /// **'保持原值不变'**
+  String get recipeRuleUnchanged;
+
+  /// No description provided for @recipeRuleRound.
+  ///
+  /// In zh, this message translates to:
+  /// **'按个取整'**
+  String get recipeRuleRound;
+
+  /// No description provided for @recipeRuleMoldRatio.
+  ///
+  /// In zh, this message translates to:
+  /// **'模具比例'**
+  String get recipeRuleMoldRatio;
+
+  /// No description provided for @recipeRuleUnknown.
+  ///
+  /// In zh, this message translates to:
+  /// **'换算规则未识别'**
+  String get recipeRuleUnknown;
+
+  /// No description provided for @recipeConversionRuleDetail.
+  ///
+  /// In zh, this message translates to:
+  /// **'原值 {original}，{rule}'**
+  String recipeConversionRuleDetail(String original, String rule);
+
+  /// No description provided for @recipeModeServing.
+  ///
+  /// In zh, this message translates to:
+  /// **'按份数'**
+  String get recipeModeServing;
+
+  /// No description provided for @recipeModeMold.
+  ///
+  /// In zh, this message translates to:
+  /// **'按模具'**
+  String get recipeModeMold;
+
+  /// No description provided for @recipeMoldConversion.
+  ///
+  /// In zh, this message translates to:
+  /// **'模具换算'**
+  String get recipeMoldConversion;
+
+  /// No description provided for @recipeMoldReset.
+  ///
+  /// In zh, this message translates to:
+  /// **'恢复原模具'**
+  String get recipeMoldReset;
+
+  /// No description provided for @recipeMoldOriginal.
+  ///
+  /// In zh, this message translates to:
+  /// **'原模具：{mold} · 底面积比例 {ratio}'**
+  String recipeMoldOriginal(String mold, String ratio);
+
+  /// No description provided for @recipeMoldTargetShape.
+  ///
+  /// In zh, this message translates to:
+  /// **'目标模具形状'**
+  String get recipeMoldTargetShape;
+
+  /// No description provided for @recipeMoldRound.
+  ///
+  /// In zh, this message translates to:
+  /// **'圆模'**
+  String get recipeMoldRound;
+
+  /// No description provided for @recipeMoldSquare.
+  ///
+  /// In zh, this message translates to:
+  /// **'方模'**
+  String get recipeMoldSquare;
+
+  /// No description provided for @recipeMoldRectangular.
+  ///
+  /// In zh, this message translates to:
+  /// **'长方模'**
+  String get recipeMoldRectangular;
+
+  /// No description provided for @recipeMoldCustom.
+  ///
+  /// In zh, this message translates to:
+  /// **'自定义尺寸'**
+  String get recipeMoldCustom;
+
+  /// No description provided for @recipeMoldDiameter.
+  ///
+  /// In zh, this message translates to:
+  /// **'直径'**
+  String get recipeMoldDiameter;
+
+  /// No description provided for @recipeMoldTargetDiameter.
+  ///
+  /// In zh, this message translates to:
+  /// **'目标直径'**
+  String get recipeMoldTargetDiameter;
+
+  /// No description provided for @recipeMoldUnit.
+  ///
+  /// In zh, this message translates to:
+  /// **'单位'**
+  String get recipeMoldUnit;
+
+  /// No description provided for @recipeMoldInch.
+  ///
+  /// In zh, this message translates to:
+  /// **'英寸'**
+  String get recipeMoldInch;
+
+  /// No description provided for @recipeMoldCm.
+  ///
+  /// In zh, this message translates to:
+  /// **'厘米'**
+  String get recipeMoldCm;
+
+  /// No description provided for @recipeMoldSide.
+  ///
+  /// In zh, this message translates to:
+  /// **'边长（厘米）'**
+  String get recipeMoldSide;
+
+  /// No description provided for @recipeMoldWidth.
+  ///
+  /// In zh, this message translates to:
+  /// **'宽（厘米）'**
+  String get recipeMoldWidth;
+
+  /// No description provided for @recipeMoldLength.
+  ///
+  /// In zh, this message translates to:
+  /// **'长（厘米）'**
+  String get recipeMoldLength;
+
+  /// No description provided for @recipeMoldTargetSide.
+  ///
+  /// In zh, this message translates to:
+  /// **'目标边长（厘米）'**
+  String get recipeMoldTargetSide;
+
+  /// No description provided for @recipeMoldTargetWidth.
+  ///
+  /// In zh, this message translates to:
+  /// **'目标宽（厘米）'**
+  String get recipeMoldTargetWidth;
+
+  /// No description provided for @recipeMoldTargetLength.
+  ///
+  /// In zh, this message translates to:
+  /// **'目标长（厘米）'**
+  String get recipeMoldTargetLength;
+
+  /// No description provided for @recipeMoldBakingNote.
+  ///
+  /// In zh, this message translates to:
+  /// **'温度保持不变；时间不按比例放大，以成熟判断为准。'**
+  String get recipeMoldBakingNote;
+
+  /// No description provided for @recipeMoldTimeAdvisory.
+  ///
+  /// In zh, this message translates to:
+  /// **'时间不按模具比例放大，建议从原时间开始检查，以成熟判断为准。'**
+  String get recipeMoldTimeAdvisory;
+
+  /// No description provided for @recipeMoldDonenessWarning.
+  ///
+  /// In zh, this message translates to:
+  /// **'请以成熟判断为准，不要只看计时。'**
+  String get recipeMoldDonenessWarning;
+
+  /// No description provided for @recipeMoldInvalid.
+  ///
+  /// In zh, this message translates to:
+  /// **'目标模具尺寸无效，请填写大于 0 的尺寸后再换算。'**
+  String get recipeMoldInvalid;
+
+  /// No description provided for @recipeMoldUnavailable.
+  ///
+  /// In zh, this message translates to:
+  /// **'这份菜谱没有记录基准模具，暂时只能按份数显示。'**
+  String get recipeMoldUnavailable;
+
+  /// No description provided for @recipeServingRoundWarning.
+  ///
+  /// In zh, this message translates to:
+  /// **'{name}取整后与按比例结果相差较大，请按口味微调其他用量。'**
+  String recipeServingRoundWarning(String name);
+
+  /// No description provided for @recipeMoldRoundWarning.
+  ///
+  /// In zh, this message translates to:
+  /// **'{name}取整后与模具比例结果相差较大，请按实际情况微调其他用量。'**
+  String recipeMoldRoundWarning(String name);
+
+  /// No description provided for @recipeMeasureStandardDisplayOnly.
+  ///
+  /// In zh, this message translates to:
+  /// **'常用量具换算；菜谱基础值未改变'**
+  String get recipeMeasureStandardDisplayOnly;
+
+  /// No description provided for @recipeReplacementValue.
+  ///
+  /// In zh, this message translates to:
+  /// **'{label}'**
+  String recipeReplacementValue(String label);
+
+  /// No description provided for @sourceAuthorFilled.
+  ///
+  /// In zh, this message translates to:
+  /// **'作者填写'**
+  String get sourceAuthorFilled;
+
+  /// No description provided for @sourceTasteAdjusted.
+  ///
+  /// In zh, this message translates to:
+  /// **'按你的口味换算'**
+  String get sourceTasteAdjusted;
+
+  /// No description provided for @sourceScenarioAdjusted.
+  ///
+  /// In zh, this message translates to:
+  /// **'按场景调整'**
+  String get sourceScenarioAdjusted;
+
+  /// No description provided for @sourceAiEstimated.
+  ///
+  /// In zh, this message translates to:
+  /// **'AI 估算'**
+  String get sourceAiEstimated;
+
+  /// No description provided for @sourceVerified.
+  ///
+  /// In zh, this message translates to:
+  /// **'已验证'**
+  String get sourceVerified;
+
+  /// No description provided for @sourceUnknown.
+  ///
+  /// In zh, this message translates to:
+  /// **'来源未标注'**
+  String get sourceUnknown;
+
+  /// No description provided for @sourceBasisUnavailable.
+  ///
+  /// In zh, this message translates to:
+  /// **'暂无可显示的依据'**
+  String get sourceBasisUnavailable;
+
+  /// No description provided for @whyOriginal.
+  ///
+  /// In zh, this message translates to:
+  /// **'原来：{value}'**
+  String whyOriginal(String value);
+
+  /// No description provided for @whyCurrent.
+  ///
+  /// In zh, this message translates to:
+  /// **'现在：{value}'**
+  String whyCurrent(String value);
+
+  /// No description provided for @whyRequired.
+  ///
+  /// In zh, this message translates to:
+  /// **'这是必显内容，不能关掉'**
+  String get whyRequired;
+
+  /// No description provided for @whySkipThisTime.
+  ///
+  /// In zh, this message translates to:
+  /// **'这次不用'**
+  String get whySkipThisTime;
+
+  /// No description provided for @whyDontDoAgain.
+  ///
+  /// In zh, this message translates to:
+  /// **'以后别这样'**
+  String get whyDontDoAgain;
+
+  /// No description provided for @sourceSemantics.
+  ///
+  /// In zh, this message translates to:
+  /// **'来源：{source}，点开查看为什么'**
+  String sourceSemantics(String source);
+
   /// No description provided for @recipeDifficulty.
   ///
   /// In zh, this message translates to:
@@ -1377,6 +1731,18 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'按个取整'**
   String get recipeScalingRound;
+
+  /// No description provided for @recipeScalingLibraryDefault.
+  ///
+  /// In zh, this message translates to:
+  /// **'跟随食材库默认（{mode}）'**
+  String recipeScalingLibraryDefault(String mode);
+
+  /// No description provided for @recipeScalingLibraryDefaultUnknown.
+  ///
+  /// In zh, this message translates to:
+  /// **'跟随食材库默认（没有默认值时按比例）'**
+  String get recipeScalingLibraryDefaultUnknown;
 
   /// No description provided for @recipeOptionalToggle.
   ///
@@ -1666,6 +2032,204 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'AI 协助'**
   String get recipeAiAssisted;
+
+  /// No description provided for @personalMeasuresTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'自家量具'**
+  String get personalMeasuresTitle;
+
+  /// No description provided for @personalMeasuresIntro.
+  ///
+  /// In zh, this message translates to:
+  /// **'把空量具放在厨房秤上归零，装满水后的克数就是容量（毫升）。只影响显示，不会修改菜谱。'**
+  String get personalMeasuresIntro;
+
+  /// No description provided for @personalMeasuresOffline.
+  ///
+  /// In zh, this message translates to:
+  /// **'离线：正在使用已缓存的量具；登记、修改和删除需要联网。'**
+  String get personalMeasuresOffline;
+
+  /// No description provided for @personalMeasuresAdd.
+  ///
+  /// In zh, this message translates to:
+  /// **'登记量具'**
+  String get personalMeasuresAdd;
+
+  /// No description provided for @personalMeasuresEmpty.
+  ///
+  /// In zh, this message translates to:
+  /// **'还没有登记量具'**
+  String get personalMeasuresEmpty;
+
+  /// No description provided for @personalMeasuresDeleteTooltip.
+  ///
+  /// In zh, this message translates to:
+  /// **'删除量具'**
+  String get personalMeasuresDeleteTooltip;
+
+  /// No description provided for @personalMeasuresDeleteTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'删除量具？'**
+  String get personalMeasuresDeleteTitle;
+
+  /// No description provided for @personalMeasuresDeleteBody.
+  ///
+  /// In zh, this message translates to:
+  /// **'删除“{name}”不会改动菜谱。'**
+  String personalMeasuresDeleteBody(Object name);
+
+  /// No description provided for @personalMeasuresEdit.
+  ///
+  /// In zh, this message translates to:
+  /// **'修改量具'**
+  String get personalMeasuresEdit;
+
+  /// No description provided for @personalMeasuresRegister.
+  ///
+  /// In zh, this message translates to:
+  /// **'登记量具'**
+  String get personalMeasuresRegister;
+
+  /// No description provided for @personalMeasuresName.
+  ///
+  /// In zh, this message translates to:
+  /// **'量具名称'**
+  String get personalMeasuresName;
+
+  /// No description provided for @personalMeasuresKind.
+  ///
+  /// In zh, this message translates to:
+  /// **'种类'**
+  String get personalMeasuresKind;
+
+  /// No description provided for @personalMeasuresCapacity.
+  ///
+  /// In zh, this message translates to:
+  /// **'满水容量（毫升）'**
+  String get personalMeasuresCapacity;
+
+  /// No description provided for @personalMeasuresCapacityValue.
+  ///
+  /// In zh, this message translates to:
+  /// **'{value} 毫升'**
+  String personalMeasuresCapacityValue(Object value);
+
+  /// No description provided for @personalMeasuresValidation.
+  ///
+  /// In zh, this message translates to:
+  /// **'名称需为 1–64 个字，容量需大于 0 且不超过 10000 毫升'**
+  String get personalMeasuresValidation;
+
+  /// No description provided for @personalMeasuresSpoon.
+  ///
+  /// In zh, this message translates to:
+  /// **'勺'**
+  String get personalMeasuresSpoon;
+
+  /// No description provided for @personalMeasuresBowl.
+  ///
+  /// In zh, this message translates to:
+  /// **'碗'**
+  String get personalMeasuresBowl;
+
+  /// No description provided for @personalMeasuresCup.
+  ///
+  /// In zh, this message translates to:
+  /// **'杯'**
+  String get personalMeasuresCup;
+
+  /// No description provided for @recipeMeasureModeTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'用量显示方式'**
+  String get recipeMeasureModeTitle;
+
+  /// No description provided for @recipeMeasureModeBase.
+  ///
+  /// In zh, this message translates to:
+  /// **'克/毫升'**
+  String get recipeMeasureModeBase;
+
+  /// No description provided for @recipeMeasureModeStandard.
+  ///
+  /// In zh, this message translates to:
+  /// **'汤匙/茶匙'**
+  String get recipeMeasureModeStandard;
+
+  /// No description provided for @recipeMeasureModeHome.
+  ///
+  /// In zh, this message translates to:
+  /// **'自家量具'**
+  String get recipeMeasureModeHome;
+
+  /// No description provided for @recipeMeasureChoose.
+  ///
+  /// In zh, this message translates to:
+  /// **'选择量具'**
+  String get recipeMeasureChoose;
+
+  /// No description provided for @recipeMeasureRefresh.
+  ///
+  /// In zh, this message translates to:
+  /// **'刷新我的量具'**
+  String get recipeMeasureRefresh;
+
+  /// No description provided for @recipeMeasureManage.
+  ///
+  /// In zh, this message translates to:
+  /// **'登记自家量具'**
+  String get recipeMeasureManage;
+
+  /// No description provided for @recipeMeasureModeNoHome.
+  ///
+  /// In zh, this message translates to:
+  /// **'还没有登记自家量具，请先到“我的”登记。'**
+  String get recipeMeasureModeNoHome;
+
+  /// No description provided for @recipeMeasureDisplayOnly.
+  ///
+  /// In zh, this message translates to:
+  /// **'个人量具只改变显示，菜谱基础值未改变'**
+  String get recipeMeasureDisplayOnly;
+
+  /// No description provided for @recipeMeasureNoDensity.
+  ///
+  /// In zh, this message translates to:
+  /// **'没有密度数据，保留{unit}'**
+  String recipeMeasureNoDensity(String unit);
+
+  /// No description provided for @recipeMeasureGram.
+  ///
+  /// In zh, this message translates to:
+  /// **'克'**
+  String get recipeMeasureGram;
+
+  /// No description provided for @recipeMeasureMillilitre.
+  ///
+  /// In zh, this message translates to:
+  /// **'毫升'**
+  String get recipeMeasureMillilitre;
+
+  /// No description provided for @recipeMeasureTablespoon.
+  ///
+  /// In zh, this message translates to:
+  /// **'汤匙'**
+  String get recipeMeasureTablespoon;
+
+  /// No description provided for @recipeMeasureTeaspoon.
+  ///
+  /// In zh, this message translates to:
+  /// **'茶匙'**
+  String get recipeMeasureTeaspoon;
+
+  /// No description provided for @recipeMeasureApproximate.
+  ///
+  /// In zh, this message translates to:
+  /// **'约'**
+  String get recipeMeasureApproximate;
 }
 
 class _AppLocalizationsDelegate

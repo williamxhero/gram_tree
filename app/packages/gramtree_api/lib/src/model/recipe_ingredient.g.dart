@@ -31,7 +31,7 @@ abstract class _$RecipeIngredientCWProxy {
 
   RecipeIngredient replacement(Object? replacement);
 
-  RecipeIngredient scalingMode(RecipeIngredientScalingModeEnum scalingMode);
+  RecipeIngredient scalingMode(RecipeIngredientScalingModeEnum? scalingMode);
 
   RecipeIngredient unit(String unit);
 
@@ -54,7 +54,7 @@ abstract class _$RecipeIngredientCWProxy {
     num quantity,
     ValueSource? quantitySource,
     Object? replacement,
-    RecipeIngredientScalingModeEnum scalingMode,
+    RecipeIngredientScalingModeEnum? scalingMode,
     String unit,
   });
 }
@@ -109,7 +109,7 @@ class _$RecipeIngredientCWProxyImpl implements _$RecipeIngredientCWProxy {
       this(replacement: replacement);
 
   @override
-  RecipeIngredient scalingMode(RecipeIngredientScalingModeEnum scalingMode) =>
+  RecipeIngredient scalingMode(RecipeIngredientScalingModeEnum? scalingMode) =>
       this(scalingMode: scalingMode);
 
   @override
@@ -190,7 +190,7 @@ class _$RecipeIngredientCWProxyImpl implements _$RecipeIngredientCWProxy {
       scalingMode: scalingMode == const $CopyWithPlaceholder()
           ? _value.scalingMode
           // ignore: cast_nullable_to_non_nullable
-          : scalingMode as RecipeIngredientScalingModeEnum,
+          : scalingMode as RecipeIngredientScalingModeEnum?,
       unit: unit == const $CopyWithPlaceholder()
           ? _value.unit
           // ignore: cast_nullable_to_non_nullable
@@ -209,60 +209,53 @@ extension $RecipeIngredientCopyWith on RecipeIngredient {
 // JsonSerializableGenerator
 // **************************************************************************
 
-RecipeIngredient _$RecipeIngredientFromJson(Map<String, dynamic> json) =>
-    $checkedCreate(
-      'RecipeIngredient',
+RecipeIngredient _$RecipeIngredientFromJson(
+  Map<String, dynamic> json,
+) => $checkedCreate(
+  'RecipeIngredient',
+  json,
+  ($checkedConvert) {
+    $checkKeys(
       json,
-      ($checkedConvert) {
-        $checkKeys(
-          json,
-          requiredKeys: const [
-            'display_name',
-            'id',
-            'quantity',
-            'scaling_mode',
-            'unit',
-          ],
-        );
-        final val = RecipeIngredient(
-          baseQuantity: $checkedConvert('base_quantity', (v) => v as num?),
-          baseUnit: $checkedConvert(
-            'base_unit',
-            (v) =>
-                $enumDecodeNullable(_$RecipeIngredientBaseUnitEnumEnumMap, v),
-          ),
-          displayName: $checkedConvert('display_name', (v) => v as String),
-          functional: $checkedConvert('functional', (v) => v as bool? ?? false),
-          group: $checkedConvert('group', (v) => v as String?),
-          id: $checkedConvert('id', (v) => v as String),
-          ingredientId: $checkedConvert('ingredient_id', (v) => v as String?),
-          optional: $checkedConvert('optional', (v) => v as bool? ?? false),
-          preparation: $checkedConvert('preparation', (v) => v as String?),
-          quantity: $checkedConvert('quantity', (v) => v as num),
-          quantitySource: $checkedConvert(
-            'quantity_source',
-            (v) => v == null
-                ? null
-                : ValueSource.fromJson(v as Map<String, dynamic>),
-          ),
-          replacement: $checkedConvert('replacement', (v) => v),
-          scalingMode: $checkedConvert(
-            'scaling_mode',
-            (v) => $enumDecode(_$RecipeIngredientScalingModeEnumEnumMap, v),
-          ),
-          unit: $checkedConvert('unit', (v) => v as String),
-        );
-        return val;
-      },
-      fieldKeyMap: const {
-        'baseQuantity': 'base_quantity',
-        'baseUnit': 'base_unit',
-        'displayName': 'display_name',
-        'ingredientId': 'ingredient_id',
-        'quantitySource': 'quantity_source',
-        'scalingMode': 'scaling_mode',
-      },
+      requiredKeys: const ['display_name', 'id', 'quantity', 'unit'],
     );
+    final val = RecipeIngredient(
+      baseQuantity: $checkedConvert('base_quantity', (v) => v as num?),
+      baseUnit: $checkedConvert(
+        'base_unit',
+        (v) => $enumDecodeNullable(_$RecipeIngredientBaseUnitEnumEnumMap, v),
+      ),
+      displayName: $checkedConvert('display_name', (v) => v as String),
+      functional: $checkedConvert('functional', (v) => v as bool? ?? false),
+      group: $checkedConvert('group', (v) => v as String?),
+      id: $checkedConvert('id', (v) => v as String),
+      ingredientId: $checkedConvert('ingredient_id', (v) => v as String?),
+      optional: $checkedConvert('optional', (v) => v as bool? ?? false),
+      preparation: $checkedConvert('preparation', (v) => v as String?),
+      quantity: $checkedConvert('quantity', (v) => v as num),
+      quantitySource: $checkedConvert(
+        'quantity_source',
+        (v) =>
+            v == null ? null : ValueSource.fromJson(v as Map<String, dynamic>),
+      ),
+      replacement: $checkedConvert('replacement', (v) => v),
+      scalingMode: $checkedConvert(
+        'scaling_mode',
+        (v) => $enumDecodeNullable(_$RecipeIngredientScalingModeEnumEnumMap, v),
+      ),
+      unit: $checkedConvert('unit', (v) => v as String),
+    );
+    return val;
+  },
+  fieldKeyMap: const {
+    'baseQuantity': 'base_quantity',
+    'baseUnit': 'base_unit',
+    'displayName': 'display_name',
+    'ingredientId': 'ingredient_id',
+    'quantitySource': 'quantity_source',
+    'scalingMode': 'scaling_mode',
+  },
+);
 
 Map<String, dynamic> _$RecipeIngredientToJson(RecipeIngredient instance) =>
     <String, dynamic>{
@@ -279,7 +272,7 @@ Map<String, dynamic> _$RecipeIngredientToJson(RecipeIngredient instance) =>
       'quantity_source': ?instance.quantitySource?.toJson(),
       'replacement': ?instance.replacement,
       'scaling_mode':
-          _$RecipeIngredientScalingModeEnumEnumMap[instance.scalingMode]!,
+          ?_$RecipeIngredientScalingModeEnumEnumMap[instance.scalingMode],
       'unit': instance.unit,
     };
 
