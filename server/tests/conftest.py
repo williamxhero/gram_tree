@@ -70,30 +70,6 @@ def engine(database_url: str) -> Iterator[Engine]:
     eng.dispose()
 
 
-@pytest.fixture
-def legacy_null_scaling_snapshot(engine: Engine):
-    """Narrow legacy-state fixture; business assertions remain HTTP-only.
-
-    Versions written before SPEC-002.3 normalization can contain a null
-    ``scaling_mode``. No public API can create that historical row today, so
-    this migration-boundary fixture mutates only that one JSON field after an
-    HTTP-created version. Tests must assert behavior through the public API.
-    """
-
-    def set_null(version_id: str) -> None:
-        with engine.begin() as connection:
-            connection.execute(
-                text(
-                    "UPDATE recipe_versions "
-                    "SET snapshot = jsonb_set(snapshot, '{ingredients,0,scaling_mode}', "
-                    "'null'::jsonb) WHERE id = :version_id"
-                ),
-                {"version_id": version_id},
-            )
-
-    return set_null
-
-
 @pytest.fixture(autouse=True)
 def _clean_state(engine: Engine) -> Iterator[None]:
     Redis.from_url(TEST_REDIS_URL).flushdb()
