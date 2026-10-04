@@ -283,8 +283,9 @@ class RecipeIngredientDraft {
   String preparation;
   String group;
 
-  /// The author's explicit choice; `null` leaves it to the standard
-  /// ingredient's library default (resolved by the server on save).
+  /// New editor rows may leave this null for server-side default resolution;
+  /// loaded legacy snapshots materialize proportional before editing so their
+  /// historical behavior cannot drift with later library updates.
   RecipeIngredientScalingModeEnum? scalingMode;
   ValueSource? quantitySource;
   bool optional;
