@@ -302,5 +302,29 @@
       "total_time_seconds": 0,
       "active_time_seconds": 0
     }
+  },
+  {
+    "name": "tiny_proportional_count_stays_visible",
+    "input": {
+      "original_servings": 2,
+      "target_servings": 1,
+      "ingredients": [
+        {"id": "tiny-count", "display_name": "微量计数", "quantity": 0.004, "unit": "个", "scaling_mode": "proportional"}
+      ],
+      "steps": []
+    },
+    "expected": {
+      "original_servings": 2,
+      "target_servings": 1,
+      "min_servings": 1,
+      "max_servings": 20,
+      "ingredients": [
+        {"id": "tiny-count", "display_name": "微量计数", "original_quantity": 0.004, "display_quantity": 0, "unit": "个", "rule": "proportional", "deviation_ratio": null, "deviation_warning": false}
+      ],
+      "steps": [],
+      "warnings": [],
+      "total_time_seconds": 0,
+      "active_time_seconds": 0
+    }
   }
 ]

@@ -311,9 +311,12 @@
         ? `原模具${ORIGINAL_MOLD.name}底面积 ${areaText(current.originalArea)}，目标${current.target.name}底面积 ${areaText(current.targetArea)}，底面积比例约 ${ratioText(current.ratio)}。`
         : `目标 ${state.servings} 份 ÷ 原方 ${ORIGINAL_SERVINGS} 份，比例 ${quantityText(current.ratio)}。`;
       const theory = `${amountText(row.quantity, row.unit)} × 比例 = ${amountText(roundHalfUp(row.theoretical, 2), row.unit)}`;
+      if (row.scaling === 'unchanged') {
+        return `${scope}：这是作者填写的固定用量，保持 ${amountText(row.quantity, row.unit)} 不变，不按比例调整。`;
+      }
       if (row.scaling === 'round') {
-        const over = row.deviation > ROUND_DEVIATION_LIMIT;
-        const deviation = quantityText(roundHalfUp(row.deviation * 100, 2));
+        const over = (row.deviation ?? 0) > ROUND_DEVIATION_LIMIT;
+        const deviation = quantityText(roundHalfUp((row.deviation ?? 0) * 100, 2));
         return `${scope}${theory}，按个数四舍五入取整为 ${amountText(row.value, row.unit)}（最少 1 个），与理论值相差 ${deviation}%，${over ? '超过 20%，请按口味微调其他用量' : '未超过 20%'}。`;
       }
       const precision = state.mode === 'mold' ? '用未取整的比例计算，再保留两位小数（四舍五入）' : '保留两位小数（四舍五入）';
@@ -410,12 +413,13 @@
       const row = current.rows.find((item) => item.id === id);
       if (!row || (!row.changed && !scenarioActive())) return;
       lastTrigger = trigger;
-      $('why-title').textContent = `${row.name}为什么是 ${amountText(row.value, row.unit)}`;
+      const shown = displayText(row);
+      $('why-title').textContent = `${row.name}为什么是 ${shown.text}`;
       $('why-source').textContent = `按场景调整（${state.mode === 'mold' ? '模具换算' : '份数换算'}）`;
       $('why-from').textContent = `${amountText(row.quantity, row.unit)}（${originalScopeText()}）`;
-      $('why-to').textContent = `${amountText(row.value, row.unit)}（${scopeText()}）`;
+      $('why-to').textContent = `${shown.text}（${scopeText()}）`;
       $('why-to').classList.add('changed');
-      $('why-basis').textContent = basisText(row);
+      $('why-basis').textContent = [basisText(row), shown.note].filter(Boolean).join('；');
       $('why-panel').hidden = false;
       $('page').inert = true;
       $('why-close').focus();
@@ -469,9 +473,15 @@
         event.preventDefault();
         closeWhy();
       } else if (event.key === 'Tab') {
-        // 焦点留在共享面板内，避免 Tab 跑到遮罩后的页面。
+        // Cycle through both registered feedback actions and Close, wrapping
+        // only at the shared dialog boundaries.
         event.preventDefault();
-        $('why-skip').focus();
+        const controls = [$('why-skip'), $('why-never'), $('why-close')];
+        const active = controls.indexOf(document.activeElement);
+        const next = event.shiftKey
+          ? (active <= 0 ? controls.length - 1 : active - 1)
+          : (active === -1 || active === controls.length - 1 ? 0 : active + 1);
+        controls[next].focus();
       }
     });
 

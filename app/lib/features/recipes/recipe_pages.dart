@@ -3448,9 +3448,12 @@ DisplayedAmount? _displayedAmount(
       converted?.originalQuantity ??
       ingredient.quantity.toDouble();
   if (_countDisplayUnits.contains(ingredient.unit.trim().toLowerCase())) {
+    final shownQuantity = tinyProportional
+        ? ingredient.quantity.toDouble() * exactScale
+        : convertedQuantity;
     return DisplayedAmount(
-      text: '${_quantityText(convertedQuantity)} ${ingredient.unit}',
-      displayQuantity: convertedQuantity,
+      text: '${_quantityText(shownQuantity)} ${ingredient.unit}',
+      displayQuantity: shownQuantity,
       displayUnit: ingredient.unit,
       grams: null,
       rule: 'base',
@@ -3460,9 +3463,12 @@ DisplayedAmount? _displayedAmount(
       ingredient.baseUnit?.value ?? _displayBaseUnit(ingredient.unit);
   if (baseUnit == null) return null;
   if (baseUnit == 'count') {
+    final shownQuantity = tinyProportional
+        ? ingredient.quantity.toDouble() * exactScale
+        : convertedQuantity;
     return DisplayedAmount(
-      text: '${_quantityText(convertedQuantity)} ${ingredient.unit}',
-      displayQuantity: convertedQuantity,
+      text: '${_quantityText(shownQuantity)} ${ingredient.unit}',
+      displayQuantity: shownQuantity,
       displayUnit: ingredient.unit,
       grams: null,
       rule: 'base',

@@ -151,7 +151,10 @@ MoldConversionResult convertMold({
 }) {
   final sourceArea = _area(originalMold);
   final targetArea = _area(targetMold);
-  final ratio = targetArea / sourceArea;
+  // Canonicalize the ratio as a decimal before identity checks. This keeps
+  // equal-area molds such as 0.3 × 0.3 and 0.1 × 0.9 at exactly 1 instead
+  // of letting a binary division turn a fractional count into one whole item.
+  final ratio = roundHalfUp(targetArea / sourceArea, fractionDigits: 12);
   final converted = <ConvertedMoldIngredient>[];
   final warnings = <MoldConversionWarning>[];
   for (final item in ingredients) {
@@ -257,27 +260,35 @@ double _area(MoldSpec mold) {
   final factor = _unitFactor(mold.unit?.value ?? 'cm');
   switch (mold.shape) {
     case MoldSpecShapeEnum.round:
-      final diameter = _positive(mold.diameter, 'diameter') * factor;
-      final radius = diameter / 2;
-      return math.pi * radius * radius;
+      final diameter = scaleByDecimalRatio(
+        _positive(mold.diameter, 'diameter'),
+        factor,
+      );
+      final radius = scaleByIntegerRatio(diameter, 1, 2);
+      return scaleByDecimalRatio(math.pi, scaleByDecimalRatio(radius, radius));
     case MoldSpecShapeEnum.square:
       // Same rule as the server schema: side and width name one edge.
       if (mold.side != null && mold.width != null && mold.side != mold.width) {
         throw MoldConversionError('invalid_mold', '方模的 side 与 width 必须一致');
       }
-      final side = _positive(mold.side ?? mold.width, 'side') * factor;
+      final side = scaleByDecimalRatio(
+        _positive(mold.side ?? mold.width, 'side'),
+        factor,
+      );
       if (mold.length != null &&
           mold.length != mold.side &&
           mold.length != mold.width) {
         throw MoldConversionError('invalid_mold', '方模的边长必须相等');
       }
-      return side * side;
+      return scaleByDecimalRatio(side, side);
     case MoldSpecShapeEnum.rectangular:
     case MoldSpecShapeEnum.custom:
-      return _positive(mold.width, 'width') *
-          _positive(mold.length, 'length') *
-          factor *
-          factor;
+      final width = scaleByDecimalRatio(_positive(mold.width, 'width'), factor);
+      final length = scaleByDecimalRatio(
+        _positive(mold.length, 'length'),
+        factor,
+      );
+      return scaleByDecimalRatio(width, length);
   }
 }
 

@@ -79,5 +79,24 @@
       "warnings": [],
       "step": null
     }
+  },
+  {
+    "name": "decimal_equal_area_keeps_fractional_count",
+    "input": {
+      "original_mold": {"shape": "square", "unit": "cm", "side": 0.3},
+      "target_mold": {"shape": "rectangular", "unit": "cm", "width": 0.1, "length": 0.9},
+      "ingredients": [
+        {"id": "lemon", "display_name": "柠檬", "quantity": 0.5, "unit": "个", "scaling_mode": "round"}
+      ],
+      "steps": []
+    },
+    "expected": {
+      "area_ratio": 1,
+      "ingredients": [
+        {"id": "lemon", "original_quantity": 0.5, "display_quantity": 0.5, "unit": "个", "rule": "round"}
+      ],
+      "warnings": [],
+      "step": null
+    }
   }
 ]
