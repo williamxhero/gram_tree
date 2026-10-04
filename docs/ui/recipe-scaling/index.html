@@ -73,6 +73,8 @@
     .why-cmp { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 8px; padding: 12px; border-radius: 12px; background: var(--paper); }
     .why-cmp small { display: block; color: var(--muted); font-size: 12px; margin-bottom: 2px; }
     .why-cmp .amount { font-size: 18px; white-space: normal; }
+    .why-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .why-actions button { min-height: 40px; }
     .why-sheet #why-close { align-self: center; }
     @media (max-width: 850px) { .grid { grid-template-columns: 1fr; } }
     @media (max-width: 500px) { .two { grid-template-columns: 1fr; } .wrap { padding-inline: 15px; } }
@@ -151,6 +153,10 @@
       </div>
       <p><strong>依据：</strong><span id="why-basis"></span></p>
       <p class="subtle small">规则版本：确定性换算 v1 · 只改变显示，不改动原方</p>
+      <div class="why-actions">
+        <button type="button" id="why-skip">这次不用</button>
+        <button type="button" id="why-never">以后别这样</button>
+      </div>
       <button type="button" id="why-close">关闭</button>
     </section>
   </div>
@@ -229,13 +235,23 @@
       const theoretical = item.quantity * ratio;
       let value = item.quantity;
       let deviation = null;
-      if (item.scaling === 'round') {
+      if (ratio === 1) {
+        // Identity conversions preserve author precision, including fractional
+        // counts; an active scenario still gets a provenance mark below.
+        value = item.quantity;
+      } else if (item.scaling === 'round') {
         value = theoretical === 0 ? 0 : Math.max(1, roundHalfUp(theoretical, 0));
         if (theoretical !== 0) deviation = Math.abs(value - theoretical) / theoretical;
-      } else if (item.scaling === 'proportional' && ratio !== 1) {
+      } else if (item.scaling === 'proportional') {
         value = roundHalfUp(theoretical, 2);
       }
       return { ...item, theoretical, value, deviation, changed: value !== item.quantity };
+    }
+
+    function scenarioActive() {
+      return state.mode === 'servings'
+        ? state.servings !== ORIGINAL_SERVINGS
+        : state.moldKey !== 'round-6in';
     }
 
     function convert() {
@@ -305,12 +321,13 @@
     }
 
     function renderIngredients() {
+      const active = scenarioActive();
       $('ingredients').innerHTML = current.rows.map((row) => {
         const shown = displayText(row);
         const notes = [];
         if (row.scaling === 'unchanged') notes.push('固定用量，不随份数或模具变化');
         if (shown.note) notes.push(shown.note);
-        const mark = row.changed
+        const mark = active
           ? `<button type="button" class="src-mark" data-why="${row.id}" aria-label="${row.name} ${amountText(row.value, row.unit)}，按场景调整过，点开看原因">${SCENE_ICON}场景</button>`
           : '';
         const note = notes.length ? `<span class="note muted small">${notes.join(' · ')}</span>` : '';
@@ -333,7 +350,7 @@
     }
 
     function renderTexts() {
-      const anyChanged = current.rows.some((row) => row.changed);
+      const anyChanged = scenarioActive() || current.rows.some((row) => row.changed);
       let conclusion;
       let summary;
       let basis;
@@ -391,7 +408,7 @@
 
     function openWhy(id, trigger) {
       const row = current.rows.find((item) => item.id === id);
-      if (!row || !row.changed) return;
+      if (!row || (!row.changed && !scenarioActive())) return;
       lastTrigger = trigger;
       $('why-title').textContent = `${row.name}为什么是 ${amountText(row.value, row.unit)}`;
       $('why-source').textContent = `按场景调整（${state.mode === 'mold' ? '模具换算' : '份数换算'}）`;
@@ -402,6 +419,11 @@
       $('why-panel').hidden = false;
       $('page').inert = true;
       $('why-close').focus();
+    }
+
+    function recordWhyAction(message) {
+      closeWhy();
+      $('alerts').innerHTML = `<div class="alert">${message}（仅为视觉样稿）</div>`;
     }
 
     function closeWhy() {
@@ -438,6 +460,8 @@
       if (mark) openWhy(mark.dataset.why, mark);
     });
     $('why-close').addEventListener('click', closeWhy);
+    $('why-skip').addEventListener('click', () => recordWhyAction('已记录：这次不用'));
+    $('why-never').addEventListener('click', () => recordWhyAction('已记录：以后别这样'));
     $('why-panel').addEventListener('click', (event) => { if (event.target === event.currentTarget) closeWhy(); });
     document.addEventListener('keydown', (event) => {
       if ($('why-panel').hidden) return;
@@ -445,9 +469,9 @@
         event.preventDefault();
         closeWhy();
       } else if (event.key === 'Tab') {
-        // 面板里只有“关闭”一个可操作项，焦点留在面板内。
+        // 焦点留在共享面板内，避免 Tab 跑到遮罩后的页面。
         event.preventDefault();
-        $('why-close').focus();
+        $('why-skip').focus();
       }
     });
 
