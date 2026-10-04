@@ -72,6 +72,61 @@ def test_author_saves_base_mold_and_converts_without_mutating_snapshot(api: Api)
     assert api.client.get(f"/v1/recipes/{saved['id']}", headers=headers).json() == saved
 
 
+def test_version_mold_conversion_reads_requested_immutable_snapshot(api: Api) -> None:
+    headers = bearer(api.login("mold-version-author@example.com"))
+    first_body = recipe_input("版本模具")
+    first_body["snapshot"]["base_mold"] = {"shape": "round", "unit": "in", "diameter": 6}
+    first_body["snapshot"]["ingredients"] = [
+        {"id": "flour", "display_name": "面粉", "quantity": 100, "unit": "g"}
+    ]
+    first_body["snapshot"]["steps"] = []
+    first_response = api.client.post("/v1/recipes", json=first_body, headers=headers)
+    assert first_response.status_code == 201, first_response.text
+    first = first_response.json()
+
+    second_body = recipe_input("版本模具")
+    second_body["snapshot"].update(
+        {
+            "base_mold": {"shape": "round", "unit": "in", "diameter": 8},
+            "ingredients": [{"id": "flour", "display_name": "面粉", "quantity": 200, "unit": "g"}],
+            "steps": [],
+        }
+    )
+    second_response = api.client.post(
+        f"/v1/recipes/{first['id']}/versions",
+        json=second_body,
+        headers=headers,
+    )
+    assert second_response.status_code == 201, second_response.text
+    second = second_response.json()
+
+    conversion_response = api.client.post(
+        f"/v1/recipes/{first['id']}/versions/{first['version']['id']}/mold",
+        json={"target_mold": {"shape": "round", "unit": "in", "diameter": 8}},
+        headers=headers,
+    )
+    assert conversion_response.status_code == 200, conversion_response.text
+    payload = conversion_response.json()
+    assert payload["version_id"] == first["version"]["id"]
+    assert payload["conversion"]["original_mold"]["diameter"] == 6
+    ingredient = payload["conversion"]["ingredients"][0]
+    assert ingredient["original_quantity"] == 100
+    assert ingredient["display_quantity"] == 177.78
+    assert ingredient["source"]["source_type"] == "scenario_adjusted"
+    assert ingredient["source"]["original_value"] == "100 g"
+
+    first_read = api.client.get(
+        f"/v1/recipes/{first['id']}/versions/{first['version']['id']}",
+        headers=headers,
+    )
+    assert first_read.status_code == 200, first_read.text
+    assert first_read.json()["version"]["snapshot"] == first["version"]["snapshot"]
+    current_read = api.client.get(f"/v1/recipes/{first['id']}", headers=headers)
+    assert current_read.status_code == 200, current_read.text
+    assert current_read.json()["version"]["id"] == second["version"]["id"]
+    assert current_read.json()["version"]["snapshot"] == second["version"]["snapshot"]
+
+
 def test_invalid_target_mold_returns_structured_http_error(api: Api) -> None:
     headers = bearer(api.login("mold-invalid@example.com"))
     body = recipe_input("无效模具")
