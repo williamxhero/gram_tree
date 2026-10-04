@@ -125,6 +125,8 @@ def _dimensions(mold: MoldInput) -> tuple[Decimal, Decimal]:
         diameter = _positive(mold.diameter, "diameter") * factor
         return diameter, diameter
     if mold.shape == "square":
+        if mold.side is not None and mold.width is not None and mold.side != mold.width:
+            raise MoldConversionError("invalid_mold", "方模的边长必须相等", "side 与 width 不一致")
         side = mold.side if mold.side is not None else mold.width
         side_value = _positive(side, "side") * factor
         if mold.length is not None:

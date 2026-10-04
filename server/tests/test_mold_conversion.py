@@ -93,6 +93,25 @@ def test_invalid_target_mold_returns_structured_http_error(api: Api) -> None:
     assert error["code"] == "invalid_request"
     assert error["message"]
 
+    conflict = api.client.post(
+        f"/v1/recipes/{created.json()['id']}/mold",
+        json={
+            "target_mold": {
+                "shape": "square",
+                "unit": "cm",
+                "side": 10,
+                "width": 12,
+                "length": 10,
+            }
+        },
+        headers=headers,
+    )
+    assert conflict.status_code == 422
+    conflict_error = conflict.json()["error"]
+    assert conflict_error["code"] == "invalid_request"
+    detail = conflict_error["detail"] or ""
+    assert "side" in detail or "width" in detail
+
 
 @pytest.mark.parametrize(
     ("quantity", "expected_quantity", "expected_warning"),
@@ -132,6 +151,39 @@ def test_mold_round_preserves_zero_and_warns_on_tiny_positive(
     assert item["display_quantity"] == expected_quantity
     assert item["deviation_warning"] is expected_warning
     assert bool(conversion["warnings"]) is expected_warning
+
+
+def test_round_back_mold_conversion_remains_scenario_adjusted(api: Api) -> None:
+    headers = bearer(api.login("mold-round-back-source@example.com"))
+    body = recipe_input("模具取整回原值")
+    body["snapshot"].update(
+        {
+            "base_mold": {"shape": "round", "unit": "cm", "diameter": 4},
+            "ingredients": [
+                {
+                    "id": "counted",
+                    "display_name": "计数食材",
+                    "quantity": 1,
+                    "unit": "个",
+                    "scaling_mode": "round",
+                }
+            ],
+            "steps": [],
+        }
+    )
+    created = api.client.post("/v1/recipes", json=body, headers=headers)
+    assert created.status_code == 201, created.text
+    response = api.client.post(
+        f"/v1/recipes/{created.json()['id']}/mold",
+        json={"target_mold": {"shape": "round", "unit": "cm", "diameter": 2}},
+        headers=headers,
+    )
+    assert response.status_code == 200, response.text
+    item = response.json()["conversion"]["ingredients"][0]
+    assert item["display_quantity"] == 1
+    assert item["source"]["source_type"] == "scenario_adjusted"
+    assert item["source"]["original_value"] == "1 个"
+    assert "取整" in item["source"]["basis"]["text"]
 
 
 def test_identity_mold_conversion_preserves_precision_and_author_provenance(api: Api) -> None:

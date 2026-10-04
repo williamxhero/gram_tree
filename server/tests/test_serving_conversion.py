@@ -315,6 +315,71 @@ def test_serving_round_preserves_zero_and_warns_on_tiny_positive(
     assert bool(response.json()["conversion"]["warnings"]) is expected_warning
 
 
+def test_serving_and_display_share_rounded_conversion_quantity(api: Api) -> None:
+    headers = bearer(api.login("serving-display-parity@example.com"))
+    body = recipe_input("换算显示精度")
+    body["snapshot"]["servings"] = 2
+    body["snapshot"]["ingredients"] = [
+        {
+            "id": "boundary",
+            "display_name": "边界用量",
+            "quantity": 0.67,
+            "unit": "g",
+            "scaling_mode": "proportional",
+        }
+    ]
+    body["snapshot"]["steps"] = []
+    created = api.client.post("/v1/recipes", json=body, headers=headers)
+    assert created.status_code == 201, created.text
+    saved = created.json()
+    conversion = api.client.get(
+        f"/v1/recipes/{saved['id']}/servings",
+        params={"target_servings": 3},
+        headers=headers,
+    )
+    assert conversion.status_code == 200, conversion.text
+    display = api.client.get(
+        f"/v1/recipes/{saved['id']}/display",
+        params={"mode": "base", "target_servings": 3},
+        headers=headers,
+    )
+    assert display.status_code == 200, display.text
+    conversion_item = conversion.json()["conversion"]["ingredients"][0]
+    display_item = display.json()["display"]["ingredients"][0]
+    assert conversion_item["display_quantity"] == 1.01
+    assert display_item["display_quantity"] == conversion_item["display_quantity"]
+    assert display_item["text"] == "1.01 克"
+
+
+def test_round_back_conversion_remains_scenario_adjusted(api: Api) -> None:
+    headers = bearer(api.login("serving-round-back-source@example.com"))
+    body = recipe_input("取整回原值")
+    body["snapshot"]["ingredients"] = [
+        {
+            "id": "counted",
+            "display_name": "计数食材",
+            "quantity": 1,
+            "unit": "个",
+            "scaling_mode": "round",
+        }
+    ]
+    body["snapshot"]["steps"] = []
+    created = api.client.post("/v1/recipes", json=body, headers=headers)
+    assert created.status_code == 201, created.text
+    saved = created.json()
+    response = api.client.get(
+        f"/v1/recipes/{saved['id']}/servings",
+        params={"target_servings": 1},
+        headers=headers,
+    )
+    assert response.status_code == 200, response.text
+    item = response.json()["conversion"]["ingredients"][0]
+    assert item["display_quantity"] == 1
+    assert item["source"]["source_type"] == "scenario_adjusted"
+    assert item["source"]["original_value"] == "1 个"
+    assert "取整" in item["source"]["basis"]["text"]
+
+
 def test_proportional_tiny_quantity_has_stable_display_text(api: Api) -> None:
     headers = bearer(api.login("serving-proportional-tiny@example.com"))
     body = recipe_input("比例微量")
@@ -339,7 +404,7 @@ def test_proportional_tiny_quantity_has_stable_display_text(api: Api) -> None:
     assert response.status_code == 200, response.text
     item = response.json()["display"]["ingredients"][0]
     assert item["converted_quantity"] == 0
-    assert item["display_quantity"] == 0.002
+    assert item["display_quantity"] == 0
     assert item["text"] == "<0.01 克"
 
 

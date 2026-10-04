@@ -325,6 +325,16 @@ def test_recipe_display_composes_serving_and_mold_conversion(api: Api) -> None:
     assert serving_item["display_quantity"] == 200
     assert serving_item["source"]["source_type"] == "scenario_adjusted"
     assert serving_item["source"]["original_value"] == "100 g"
+    serving_conversion = api.client.get(
+        f"/v1/recipes/{saved['id']}/servings",
+        params={"target_servings": 4},
+        headers=headers,
+    )
+    assert serving_conversion.status_code == 200, serving_conversion.text
+    assert (
+        serving_item["display_quantity"]
+        == serving_conversion.json()["conversion"]["ingredients"][0]["display_quantity"]
+    )
 
     mold = api.client.get(
         path,
@@ -341,9 +351,30 @@ def test_recipe_display_composes_serving_and_mold_conversion(api: Api) -> None:
     mold_item = mold.json()["display"]["ingredients"][0]
     assert mold_item["converted_quantity"] == 177.78
     assert mold_item["conversion_rule"] == "mold_ratio"
-    assert mold_item["display_quantity"] == pytest.approx(100 * 64 / 36)
+    assert mold_item["display_quantity"] == 177.78
     assert mold_item["source"]["source_type"] == "scenario_adjusted"
     assert mold_item["source"]["original_value"] == "100 g"
+    mold_conversion = api.client.post(
+        f"/v1/recipes/{saved['id']}/mold",
+        json={"target_mold": {"shape": "round", "unit": "in", "diameter": 8}},
+        headers=headers,
+    )
+    assert mold_conversion.status_code == 200, mold_conversion.text
+    assert (
+        mold_item["display_quantity"]
+        == mold_conversion.json()["conversion"]["ingredients"][0]["display_quantity"]
+    )
+
+    standard_no_density = api.client.get(
+        path,
+        params={"mode": "standard", "target_servings": 4},
+        headers=headers,
+    )
+    assert standard_no_density.status_code == 200, standard_no_density.text
+    standard_source = standard_no_density.json()["display"]["ingredients"][0]["source"]
+    assert standard_source["basis"]["reason_code"] == "serving_conversion"
+    assert "原方" in standard_source["basis"]["text"]
+    assert "缺少密度数据" in standard_source["basis"]["text"]
 
     empty_optional = api.client.get(
         path,

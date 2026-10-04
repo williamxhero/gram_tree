@@ -1139,6 +1139,7 @@ def _conversion_source(
     target_servings: int | None = None,
     area_ratio: float | None = None,
     conversion_ratio: float | None = None,
+    conversion_requested: bool = False,
 ) -> SourcedValue:
     original_value = _amount_text(ingredient.quantity, ingredient.unit)
     value = _amount_text(display_quantity, display_unit)
@@ -1154,7 +1155,11 @@ def _conversion_source(
         exact_quantity = ingredient.quantity * conversion_ratio
         if 0 < exact_quantity < 0.005:
             value = _amount_text(exact_quantity, display_unit)
-    changed = display_quantity != float(ingredient.quantity) or display_unit != ingredient.unit
+    changed = (
+        conversion_requested
+        or display_quantity != float(ingredient.quantity)
+        or display_unit != ingredient.unit
+    )
     mold = area_ratio is not None
     rule_text = _conversion_rule_text(rule, mold=mold)
     if mold:
@@ -1189,6 +1194,7 @@ def _serving_conversion_payload(
                 original_servings=conversion.original_servings,
                 target_servings=conversion.target_servings,
                 conversion_ratio=(conversion.target_servings / conversion.original_servings),
+                conversion_requested=(conversion.target_servings != conversion.original_servings),
             ),
         }
         for original, item in zip(snapshot.ingredients, conversion.ingredients, strict=True)
@@ -1216,6 +1222,7 @@ def _mold_conversion_payload(
                 rule=cast(_ConversionRule, item.rule),
                 area_ratio=conversion.area_ratio,
                 conversion_ratio=exact_ratio,
+                conversion_requested=exact_ratio != 1,
             ),
         }
         for original, item in zip(snapshot.ingredients, conversion.ingredients, strict=True)
@@ -1233,32 +1240,38 @@ def _display_source(
     target_servings: int | None,
     original_servings: int,
     target_mold: MoldSpec | None,
+    conversion_requested: bool,
 ) -> SourcedValue:
     original_value = _amount_text(ingredient.quantity, ingredient.unit)
     conversion_changed = (
         converted_quantity != float(ingredient.quantity) or converted_unit != ingredient.unit
     )
     display_changed = result["rule"] not in {"base", "no_density"}
-    changed = conversion_changed or display_changed
+    changed = conversion_requested or conversion_changed or display_changed
     basis_parts: list[str] = []
     reason_code = "ingredient_display"
-    if target_mold is not None and conversion_rule != "base":
+    conversion_reason = False
+    if target_mold is not None and conversion_rule != "base" and conversion_requested:
         basis_parts.append(_conversion_rule_text(conversion_rule, mold=True))
         reason_code = "mold_conversion"
-    elif target_servings is not None and conversion_rule != "base":
+        conversion_reason = True
+    elif target_servings is not None and conversion_rule != "base" and conversion_requested:
         basis_parts.append(
             f"原方 {original_servings} 份调整为 {target_servings} 份，"
             f"{_conversion_rule_text(conversion_rule, mold=False)}"
         )
         reason_code = "serving_conversion"
+        conversion_reason = True
     if result["rule"] == "no_density":
         unit_name = "毫升" if ingredient.base_unit == "ml" else "克"
         basis_parts.append(f"缺少密度数据，保留原始{unit_name}用量")
-        reason_code = "no_density"
+        if not conversion_reason:
+            reason_code = "no_density"
     elif display_changed:
         display_name = "自家量具" if result["rule"] == "personal_measure" else "常用量具"
         basis_parts.append(f"仅按{display_name}显示，不修改菜谱原值")
-        reason_code = "ingredient_display"
+        if not conversion_reason:
+            reason_code = "ingredient_display"
     return _ingredient_source(
         ingredient,
         value=str(result["text"]),
@@ -1344,8 +1357,17 @@ def display_recipe_ingredients(
         original_quantity = float(item.quantity)
         original_unit = item.unit
         converted_quantity, converted_unit, conversion_rule, exact_scale = conversion_by_id[item.id]
+        tiny_exact_quantity = None
+        if exact_scale is not None and exact_scale != 1 and converted_quantity == 0:
+            candidate = original_quantity * exact_scale
+            if 0 < candidate < 0.005:
+                tiny_exact_quantity = candidate
         effective_quantity = (
-            original_quantity * exact_scale if exact_scale is not None else converted_quantity
+            original_quantity
+            if exact_scale == 1
+            else tiny_exact_quantity
+            if tiny_exact_quantity is not None
+            else converted_quantity
         )
         base_quantity = item.base_quantity
         base_unit = item.base_unit
@@ -1385,6 +1407,8 @@ def display_recipe_ingredients(
                 mode=mode,
                 measure=measure,
             )
+        if tiny_exact_quantity is not None and mode == "base":
+            result["display_quantity"] = 0.0
         source = _display_source(
             item,
             result=result,
@@ -1394,6 +1418,10 @@ def display_recipe_ingredients(
             target_servings=target_servings,
             original_servings=snapshot.servings,
             target_mold=target_mold,
+            conversion_requested=(
+                (target_servings is not None and target_servings != snapshot.servings)
+                or (target_mold is not None and conversion_scale not in {None, 1})
+            ),
         )
         amounts.append(
             RecipeDisplayedIngredient(

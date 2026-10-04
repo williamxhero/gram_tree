@@ -173,6 +173,8 @@ class MoldSpec(BaseModel):
                 raise ValueError("圆模需要提供正的直径")
             return self
         if self.shape == "square":
+            if self.side is not None and self.width is not None and self.side != self.width:
+                raise ValueError("方模的 side 与 width 必须一致")
             effective_side = self.side if self.side is not None else self.width
             if effective_side is None:
                 raise ValueError("方模需要提供正的边长")
