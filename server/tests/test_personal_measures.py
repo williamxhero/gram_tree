@@ -272,12 +272,17 @@ def test_recipe_display_matches_shared_fixture_through_http(
     } == expected
     assert actual["original_quantity"] == source["base_quantity"]
     assert actual["original_unit"] == source["base_unit"]
-    assert actual["source"]["source_type"] in {
-        "author_filled",
-        "scenario_adjusted",
-        "ai_estimated",
-        "verified",
-    }
+    if actual["rule"] in {"standard_measure", "personal_measure"}:
+        assert actual["source"]["source_type"] == "author_filled"
+        assert actual["source"]["original_value"] is None
+        assert "不修改菜谱原值" in actual["source"]["basis"]["text"]
+    else:
+        assert actual["source"]["source_type"] in {
+            "author_filled",
+            "scenario_adjusted",
+            "ai_estimated",
+            "verified",
+        }
     assert actual["source"]["basis"]["text"]
 
     current = api.client.get(

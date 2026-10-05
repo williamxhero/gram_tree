@@ -134,5 +134,66 @@
       ],
       "step": null
     }
+  },
+  {
+    "name": "tiny_ratio_round_keeps_minimum_count",
+    "input": {
+      "original_mold": {"shape": "square", "unit": "cm", "side": 1000},
+      "target_mold": {"shape": "rectangular", "unit": "cm", "width": 0.000001, "length": 0.000001},
+      "ingredients": [
+        {"id": "tiny-count", "display_name": "微量计数", "quantity": 3, "unit": "个", "scaling_mode": "round"}
+      ],
+      "steps": []
+    },
+    "expected": {
+      "area_ratio": 0,
+      "ingredients": [
+        {"id": "tiny-count", "original_quantity": 3, "display_quantity": 1, "unit": "个", "rule": "round"}
+      ],
+      "warnings": [
+        {"code": "round_deviation", "ingredient_id": "tiny-count", "message": "微量计数取整后与模具比例结果相差较大，请按实际情况微调其他用量。"}
+      ],
+      "source_value": "1 个",
+      "source_type": "scenario_adjusted",
+      "step": null
+    }
+  },
+  {
+    "name": "very_small_areas_are_not_equal_after_double_underflow",
+    "input": {
+      "original_mold": {"shape": "square", "unit": "cm", "side": 0.0000000000000001},
+      "target_mold": {"shape": "rectangular", "unit": "cm", "width": 0.0000000000000001, "length": 0.0000000000000002},
+      "ingredients": [
+        {"id": "egg", "display_name": "鸡蛋", "quantity": 3, "unit": "个", "scaling_mode": "round"}
+      ],
+      "steps": []
+    },
+    "expected": {
+      "area_ratio": 2,
+      "ingredients": [
+        {"id": "egg", "original_quantity": 3, "display_quantity": 6, "unit": "个", "rule": "round"}
+      ],
+      "step": null
+    }
+  },
+  {
+    "name": "mold_decimal_context_half_up_boundary",
+    "input": {
+      "original_mold": {"shape": "square", "unit": "cm", "side": 30},
+      "target_mold": {"shape": "square", "unit": "cm", "side": 10},
+      "ingredients": [
+        {"id": "boundary", "display_name": "边界用量", "quantity": 9.045, "unit": "g", "scaling_mode": "proportional"}
+      ],
+      "steps": []
+    },
+    "expected": {
+      "area_ratio": 0.11,
+      "ingredients": [
+        {"id": "boundary", "original_quantity": 9.045, "display_quantity": 1.01, "unit": "g", "rule": "mold_ratio"}
+      ],
+      "source_value": "1.01 g",
+      "source_type": "scenario_adjusted",
+      "step": null
+    }
   }
 ]

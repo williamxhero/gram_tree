@@ -1926,9 +1926,8 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
                 )
               : moldConversion == null
               ? null
-              : (quantity) => scaleByDecimalRatio(
+              : (quantity) => moldConversion!.scaleQuantity(
                   quantity,
-                  moldConversion!.scale,
                   fractionDigits: _exactScaleDigits,
                 ),
         ),
@@ -2795,29 +2794,36 @@ class _IngredientDetailRow extends StatelessWidget {
     // original (an `unchanged` rule, or rounding back to the same count).
     final conversionActive = conversionTargetChanged && convertedRule != null;
     final conversionPresent = conversionActive || adjusted;
-    // Accent and the "按场景调整" mark mean "the system changed this for you",
-    // so they only apply when the displayed value actually differs.
-    final systemChanged = adjusted || systemDisplayChanged;
+    // A measure conversion changes only the expression, not the recipe
+    // quantity. Accent and scene provenance are reserved for real serving/mold
+    // quantity changes; display-only provenance remains neutral.
+    final systemChanged = adjusted;
     final valueChanged = systemChanged;
     final originalQuantity =
         '${_quantityText(ingredient.quantity)} ${ingredient.unit}';
     final source = ingredient.quantitySource;
     final serverSource = contract?.source_;
-    final sourceType =
-        conversionActive &&
-            serverSource?.sourceType.value == sourceTypeAuthorFilled
+    final displayOnly = systemDisplayChanged && !conversionActive && !adjusted;
+    final sourceType = displayOnly
+        ? sourceTypeAuthorFilled
+        : conversionActive &&
+              serverSource?.sourceType.value == sourceTypeAuthorFilled
         ? sourceTypeScenarioAdjusted
         : serverSource?.sourceType.value ??
               (conversionActive || systemChanged
                   ? sourceTypeScenarioAdjusted
                   : source?.source_.value ?? sourceTypeAuthorFilled);
-    final showSource = serverSource != null
-        ? serverSource.sourceType.value != sourceTypeAuthorFilled ||
-              conversionActive
-        : systemChanged ||
-              conversionActive ||
-              (source != null &&
-                  source.source_.value != sourceTypeAuthorFilled);
+    final showSource =
+        displayOnly ||
+        (serverSource != null
+            ? serverSource.sourceType.value != sourceTypeAuthorFilled ||
+                  conversionActive ||
+                  systemDisplayChanged
+            : systemChanged ||
+                  conversionActive ||
+                  systemDisplayChanged ||
+                  (source != null &&
+                      source.source_.value != sourceTypeAuthorFilled));
     final conversionBasis = conversionPresent
         ? (moldConverted != null || conversionRule == 'mold_ratio'
               ? _conversionRuleLabel(convertedRule ?? '', l10n)
@@ -2888,6 +2894,15 @@ class _IngredientDetailRow extends StatelessWidget {
               basisText: sourceBasis,
               citation: serverSource?.basis.citation,
               required: false,
+              neutral: !systemChanged,
+              valueChanged: valueChanged,
+              showWhenAuthorFilled: displayOnly,
+              labelOverride: displayOnly
+                  ? l10n.recipeMeasureDisplaySource
+                  : null,
+              whyTitleOverride: displayOnly
+                  ? l10n.recipeMeasureDisplaySource
+                  : null,
               // SPEC-002.3 only provides deterministic provenance; adjustment
               // feedback belongs to a later recipe-adjustment contract.
               feedbackEnabled: false,

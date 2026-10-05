@@ -389,6 +389,10 @@ def test_mold_conversion_matches_shared_fixture(api: Api, case: dict) -> None:
         }
         for item in actual["ingredients"]
     ] == expected["ingredients"]
+    if "source_value" in expected:
+        assert actual["ingredients"][0]["source"]["value"] == expected["source_value"]
+    if "source_type" in expected:
+        assert actual["ingredients"][0]["source"]["source_type"] == expected["source_type"]
     if "warnings" in expected:
         assert actual["warnings"] == expected["warnings"]
     if expected["step"] is None:

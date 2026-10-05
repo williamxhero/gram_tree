@@ -1260,7 +1260,10 @@ def _display_source(
         converted_quantity != float(ingredient.quantity) or converted_unit != ingredient.unit
     )
     display_changed = result["rule"] not in {"base", "no_density"}
-    changed = conversion_requested or conversion_changed or display_changed
+    # A measure mode changes only the expression, not the recipe quantity.
+    # Keep that provenance author-neutral; scenario/taste styling is reserved
+    # for an actual serving or mold quantity conversion.
+    changed = conversion_requested or conversion_changed
     basis_parts: list[str] = []
     reason_code = "ingredient_display"
     conversion_reason = False

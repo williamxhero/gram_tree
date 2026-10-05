@@ -249,13 +249,13 @@ ServingConversionResult convertServings({
   final convertedIngredients = <ConvertedServingIngredient>[];
   final warnings = <ServingConversionWarning>[];
   for (final item in ingredients) {
-    // Keep the multiplication/division in decimal form, matching the server's
-    // Decimal(str(quantity)) arithmetic instead of rounding a binary product.
-    final theoretical = scaleByIntegerRatio(
-      item.quantity,
-      targetServings,
-      originalServings,
-    );
+    // Match the server's 28-digit Decimal ratio and product context before
+    // applying ROUND_HALF_UP for display.
+    final ratio = DecimalValue.fromNum(targetServings)
+        .dividedBy(DecimalValue.fromNum(originalServings));
+    final theoreticalDecimal = DecimalValue.fromNum(item.quantity)
+        .multipliedBy(ratio);
+    final theoretical = theoreticalDecimal.toDouble();
     var display = theoretical;
     double? deviationRatio;
     var deviationWarning = false;
@@ -269,13 +269,8 @@ ServingConversionResult convertServings({
         if (targetServings == originalServings) {
           display = item.quantity;
         } else {
-          display = scaleByIntegerRatio(
-            item.quantity,
-            targetServings,
-            originalServings,
-            fractionDigits: 0,
-          );
-          if (theoretical != 0 && display < 1) display = 1;
+          display = theoreticalDecimal.quantizedHalfUp(0).toDouble();
+          if (!theoreticalDecimal.isZero && display < 1) display = 1;
         }
         if (theoretical != 0) {
           deviationRatio = (display - theoretical).abs() / theoretical.abs();
@@ -314,12 +309,7 @@ ServingConversionResult convertServings({
                 targetServings == originalServings
             ? display
             : item.scalingMode == 'proportional'
-            ? scaleByIntegerRatio(
-                item.quantity,
-                targetServings,
-                originalServings,
-                fractionDigits: 2,
-              )
+            ? theoreticalDecimal.quantizedHalfUp(2).toDouble()
             : _roundTwoDecimals(display),
         unit: item.unit,
         rule: item.scalingMode,

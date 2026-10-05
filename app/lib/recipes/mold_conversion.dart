@@ -115,6 +115,7 @@ class MoldConversionResult {
     required this.targetMold,
     required this.areaRatio,
     required this.scale,
+    required this.decimalScale,
     required this.ingredients,
     required this.steps,
     required this.warnings,
@@ -124,9 +125,18 @@ class MoldConversionResult {
   final MoldSpec targetMold;
   final double areaRatio;
 
-  /// Unrounded bottom-area ratio, used to keep tiny proportional amounts
-  /// visible instead of collapsing them to the rounded `0`.
+  /// Binary view for layout and inexpensive comparisons.
   final double scale;
+
+  /// Context-rounded Decimal ratio used for exact boundary display calculations.
+  final DecimalValue decimalScale;
+
+  double scaleQuantity(double quantity, {int fractionDigits = 20}) =>
+      DecimalValue.fromNum(quantity)
+          .multipliedBy(decimalScale)
+          .quantizedHalfUp(fractionDigits)
+          .toDouble();
+
   final List<ConvertedMoldIngredient> ingredients;
   final List<ConvertedMoldStep> steps;
   final List<MoldConversionWarning> warnings;
@@ -151,21 +161,18 @@ MoldConversionResult convertMold({
 }) {
   final sourceArea = _area(originalMold);
   final targetArea = _area(targetMold);
-  // Derive same-shape ratios from dimensions before dividing binary area
-  // doubles; this keeps circular areas such as 4 cm -> 5 cm at 1.5625.
-  final ratio = _areaRatio(
-    originalMold,
-    targetMold,
-    sourceArea: sourceArea,
-    targetArea: targetArea,
-  );
-  final isIdentity = targetArea == sourceArea;
+  // Match the server's Decimal area division at its 28-digit context precision.
+  final ratio = targetArea.dividedBy(sourceArea);
+  final ratioDouble = ratio.toDouble();
+  final isIdentity = ratio.isOne;
   final converted = <ConvertedMoldIngredient>[];
   final warnings = <MoldConversionWarning>[];
   for (final item in ingredients) {
-    // Multiply in decimal form like the server's Decimal(str(quantity)) * ratio,
-    // so a binary product such as 1.15 * 1.5 cannot round to 1.72 here.
-    final theoretical = scaleByDecimalRatio(item.quantity, ratio);
+    // Preserve the context-rounded Decimal product until after count and
+    // display quantization, including positive products smaller than 1e-12.
+    final theoreticalDecimal = DecimalValue.fromNum(item.quantity)
+        .multipliedBy(ratio);
+    final theoretical = theoreticalDecimal.toDouble();
     var display = theoretical;
     var rule = item.scalingMode;
     double? deviationRatio;
@@ -181,14 +188,15 @@ MoldConversionResult convertMold({
         // least one item; the deviation warning below explains the adjustment.
         display = isIdentity
             ? item.quantity
-            : theoretical == 0
+            : theoreticalDecimal.isZero
             ? 0
-            : roundHalfUp(
-                theoretical,
-                fractionDigits: 0,
-              ).clamp(1, double.infinity).toDouble();
+            : theoreticalDecimal
+                  .quantizedHalfUp(0)
+                  .toDouble()
+                  .clamp(1, double.infinity)
+                  .toDouble();
         rule = 'round';
-        if (theoretical != 0) {
+        if (!theoreticalDecimal.isZero && theoretical != 0) {
           deviationRatio = (display - theoretical).abs() / theoretical.abs();
           deviationWarning = deviationRatio > roundDeviationThreshold;
           if (deviationWarning) {
@@ -220,7 +228,7 @@ MoldConversionResult convertMold({
         displayQuantity: item.scalingMode == 'unchanged' || isIdentity
             ? display
             : item.scalingMode == 'proportional'
-            ? scaleByDecimalRatio(item.quantity, ratio, fractionDigits: 2)
+            ? theoreticalDecimal.quantizedHalfUp(2).toDouble()
             : _roundTwoDecimals(display),
         unit: item.unit,
         rule: rule,
@@ -258,25 +266,19 @@ MoldConversionResult convertMold({
   return MoldConversionResult(
     originalMold: originalMold,
     targetMold: targetMold,
-    areaRatio: _roundTwoDecimals(ratio),
-    scale: ratio,
+    areaRatio: ratio.quantizedHalfUp(2).toDouble(),
+    scale: ratioDouble,
+    decimalScale: ratio,
     ingredients: converted,
     steps: convertedSteps,
     warnings: warnings,
   );
 }
 
-// Keep intermediate geometry precise enough for small valid dimensions before
-// returning to the double representation used by the public conversion result.
-const _geometryScaleDigits = 30;
-
-(double, double) _dimensions(MoldSpec mold) {
-  final factor = _unitFactor(mold.unit?.value ?? 'cm');
-  double inCentimetres(num? value, String field) => scaleByDecimalRatio(
-    _positive(value, field),
-    factor,
-    fractionDigits: _geometryScaleDigits,
-  );
+(DecimalValue, DecimalValue) _dimensions(MoldSpec mold) {
+  final factor = DecimalValue.fromNum(_unitFactor(mold.unit?.value ?? 'cm'));
+  DecimalValue inCentimetres(num? value, String field) =>
+      DecimalValue.fromNum(_positive(value, field)).multipliedBy(factor);
 
   switch (mold.shape) {
     case MoldSpecShapeEnum.round:
@@ -303,72 +305,17 @@ const _geometryScaleDigits = 30;
   }
 }
 
-double _areaRatio(
-  MoldSpec original,
-  MoldSpec target, {
-  required double sourceArea,
-  required double targetArea,
-}) {
-  final (originalWidth, originalLength) = _dimensions(original);
-  final (targetWidth, targetLength) = _dimensions(target);
-  if (original.shape == MoldSpecShapeEnum.round &&
-      target.shape == MoldSpecShapeEnum.round) {
-    final diameterRatio = divideByDecimalRatio(
-      targetWidth,
-      originalWidth,
-      fractionDigits: _geometryScaleDigits,
-    );
-    return scaleByDecimalRatio(
-      diameterRatio,
-      diameterRatio,
-      fractionDigits: _geometryScaleDigits,
-    );
-  }
-  if (original.shape != MoldSpecShapeEnum.round &&
-      target.shape != MoldSpecShapeEnum.round) {
-    final widthRatio = divideByDecimalRatio(
-      targetWidth,
-      originalWidth,
-      fractionDigits: _geometryScaleDigits,
-    );
-    final lengthRatio = divideByDecimalRatio(
-      targetLength,
-      originalLength,
-      fractionDigits: _geometryScaleDigits,
-    );
-    return scaleByDecimalRatio(
-      widthRatio,
-      lengthRatio,
-      fractionDigits: _geometryScaleDigits,
-    );
-  }
-  return divideByDecimalRatio(
-    targetArea,
-    sourceArea,
-    fractionDigits: _geometryScaleDigits,
-  );
-}
-
-double _area(MoldSpec mold) {
+DecimalValue _area(MoldSpec mold) {
   final (width, length) = _dimensions(mold);
   if (mold.shape == MoldSpecShapeEnum.round) {
-    final radius = scaleByIntegerRatio(
-      width,
-      1,
-      2,
-      fractionDigits: _geometryScaleDigits,
-    );
-    return scaleByDecimalRatio(
-      math.pi,
-      scaleByDecimalRatio(radius, radius, fractionDigits: _geometryScaleDigits),
-      fractionDigits: _geometryScaleDigits,
-    );
+    final radius = width.dividedBy(DecimalValue.fromNum(2));
+    // Same operation order and 28-significant-digit context as Python:
+    // Decimal(str(pi)) * radius * radius.
+    return DecimalValue.fromNum(math.pi)
+        .multipliedBy(radius)
+        .multipliedBy(radius);
   }
-  return scaleByDecimalRatio(
-    width,
-    length,
-    fractionDigits: _geometryScaleDigits,
-  );
+  return width.multipliedBy(length);
 }
 
 double _unitFactor(String unit) => switch (unit) {

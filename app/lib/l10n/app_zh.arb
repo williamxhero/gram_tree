@@ -435,6 +435,7 @@
   "recipeMeasureManage": "登记自家量具",
   "recipeMeasureModeNoHome": "还没有登记自家量具，请先到“我的”登记。",
   "recipeMeasureDisplayOnly": "个人量具只改变显示，菜谱基础值未改变",
+  "recipeMeasureDisplaySource": "量具表达",
   "recipeMeasureNoDensity": "没有密度数据，保留{unit}",
   "recipeMeasureGram": "克",
   "recipeMeasureMillilitre": "毫升",

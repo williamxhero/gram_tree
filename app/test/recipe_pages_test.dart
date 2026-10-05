@@ -492,7 +492,12 @@ Future<void> _expectFixtureDisplayOutput(
     expect(source, findsNothing);
   } else {
     expect(source, findsOneWidget);
-    expect(find.text('按场景调整'), findsWidgets);
+    if (rule == 'standard_measure' || rule == 'personal_measure') {
+      expect(find.text('量具表达'), findsWidgets);
+      expect(find.text('按场景调整'), findsNothing);
+    } else {
+      expect(find.text('按场景调整'), findsWidgets);
+    }
   }
   if (input['mode'] == 'home') {
     final measure = Map<String, dynamic>.from(input['measure'] as Map);
@@ -1911,6 +1916,80 @@ void main() {
     await tester.pumpAndSettle();
     await _scrollToBottom(tester);
     expect(find.textContaining('100 克'), findsWidgets);
+    expect(find.text('按场景调整'), findsNothing);
+    expect(server.calls('POST', '/v1/recipes'), isEmpty);
+  });
+
+  testWidgets('measure-only display provenance stays neutral and read-only', (
+    tester,
+  ) async {
+    final server = FakeServer();
+    _installRecipeApi(server);
+    const text = '1 汤匙（15 克）';
+    server.on(
+      'GET',
+      '/v1/recipes/$_recipeId/versions/$_firstVersionId/display',
+      (_) => (
+        200,
+        {
+          'display': {
+            'recipe_id': _recipeId,
+            'version_id': _firstVersionId,
+            'mode': 'standard',
+            'measure_id': null,
+            'ingredients': [
+              {
+                'id': 'ingredient-1',
+                'display_name': '水',
+                'original_quantity': 100,
+                'original_unit': 'g',
+                'converted_quantity': 100,
+                'converted_unit': 'g',
+                'conversion_rule': 'base',
+                'display_quantity': 1,
+                'display_unit': '汤匙',
+                'grams': 15,
+                'rule': 'standard_measure',
+                'text': text,
+                'source': {
+                  'source_type': 'scenario_adjusted',
+                  'value': text,
+                  'original_value': '100 克',
+                  'basis': {
+                    'reason_code': 'ingredient_display',
+                    'text': '仅按常用量具显示，不修改菜谱原值',
+                    'citation': null,
+                  },
+                },
+              },
+            ],
+          },
+        },
+      ),
+    );
+    await pumpApp(tester, env: TestEnv.signedIn(server: server));
+    await _openMyRecipes(tester);
+    await tester.tap(find.byKey(const ValueKey('recipe-card-$_recipeId')));
+    await tester.pumpAndSettle();
+    await _scrollUntilVisible(tester, find.text('汤匙/茶匙'));
+    await tester.tap(find.text('汤匙/茶匙'));
+    await tester.pumpAndSettle();
+    await _scrollUntilVisible(
+      tester,
+      find.byKey(const ValueKey('recipe-ingredient-amount-ingredient-1')),
+    );
+    expect(find.text(text), findsOneWidget);
+    expect(find.text('按场景调整'), findsNothing);
+    await tester.tap(
+      find.byKey(const ValueKey('recipe-source-mark-ingredient-1')),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('量具表达'), findsWidgets);
+    expect(find.text('原来：100 克'), findsOneWidget);
+    expect(find.text('现在：$text'), findsOneWidget);
+    expect(find.text('仅按常用量具显示，不修改菜谱原值'), findsOneWidget);
+    expect(find.text('这次不用'), findsNothing);
+    expect(find.text('以后别这样'), findsNothing);
     expect(server.calls('POST', '/v1/recipes'), isEmpty);
   });
 
