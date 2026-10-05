@@ -157,11 +157,11 @@
         </div>
         <p><strong>依据：</strong><span id="why-basis"></span></p>
         <p class="subtle small">规则版本：确定性换算 v1 · 只改变显示，不改动原方</p>
-        <p id="why-readonly" class="subtle small">样稿只预览反馈意图，不会保存口味偏好。</p>
+        <p id="why-readonly" class="subtle small">本页是只读换算样稿，反馈动作暂不可用。</p>
       </div>
       <div class="why-actions" aria-describedby="why-readonly">
-        <button type="button" id="why-skip">这次不用</button>
-        <button type="button" id="why-never">以后别这样</button>
+        <button type="button" id="why-skip" disabled>这次不用</button>
+        <button type="button" id="why-never" disabled>以后别这样</button>
       </div>
       <button type="button" id="why-close">关闭</button>
     </section>
@@ -444,11 +444,6 @@
       $('why-close').focus();
     }
 
-    function recordWhyAction(intent, message) {
-      closeWhy();
-      $('alerts').innerHTML = `<div class="alert">样稿预览：已触发 ${intent}（${message}），不会保存口味偏好。</div>`;
-    }
-
     function closeWhy() {
       if ($('why-panel').hidden) return;
       $('why-panel').hidden = true;
@@ -483,8 +478,6 @@
       if (mark) openWhy(mark.dataset.why, mark);
     });
     $('why-close').addEventListener('click', closeWhy);
-    $('why-skip').addEventListener('click', () => recordWhyAction('skip_this_time', '这次不用'));
-    $('why-never').addEventListener('click', () => recordWhyAction('dont_do_again', '以后别这样'));
     $('why-panel').addEventListener('click', (event) => { if (event.target === event.currentTarget) closeWhy(); });
     document.addEventListener('keydown', (event) => {
       if ($('why-panel').hidden) return;

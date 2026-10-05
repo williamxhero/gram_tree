@@ -1806,6 +1806,9 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('原来：100 g'), findsOneWidget);
       expect(find.text('现在：150 克'), findsOneWidget);
+      expect(find.textContaining('按比例换算'), findsWidgets);
+      expect(find.text('这次不用'), findsNothing);
+      expect(find.text('以后别这样'), findsNothing);
     },
   );
 
@@ -2187,8 +2190,10 @@ void main() {
     expect(find.text('现在：约 100 克'), findsOneWidget);
     expect(find.text('服务端核对过这份用量'), findsOneWidget);
     expect(find.text('核对记录 2026-10-01'), findsOneWidget);
-    expect(find.text('这次不用'), findsOneWidget);
-    expect(find.text('以后别这样'), findsOneWidget);
+    // SPEC-002.3 keeps deterministic recipe conversion provenance read-only;
+    // feedback actions belong to a later adjustment contract.
+    expect(find.text('这次不用'), findsNothing);
+    expect(find.text('以后别这样'), findsNothing);
     expect(find.text('另一台设备的新版本'), findsNothing);
   });
 

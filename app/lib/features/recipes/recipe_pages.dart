@@ -23,7 +23,6 @@ import 'personal_measures_page.dart';
 import 'recipe_photo_panel.dart';
 import '../../storage/local_store.dart';
 import '../../ui_protocol/components/component_scaffold.dart';
-import '../../ui_protocol/intent_dispatcher.dart';
 import '../../ui_protocol/source_mark.dart';
 import '../../ui_protocol/source_types.dart';
 import '../../widgets/empty_state.dart';
@@ -1775,10 +1774,6 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
     }
     final snapshot = detail.version.snapshot;
     final derived = detail.version.derived;
-    // Recipe detail is a standard-layout surface rather than a server-composed
-    // page, but source feedback still uses the registered intent dispatcher.
-    final compositionId =
-        'recipe-detail:${widget.recipeId}:${detail.version.id}';
     final conversionConfig = ref.watch(recipeConversionConfigProvider);
     final groups = <String, List<RecipeIngredient>>{};
     for (final ingredient in snapshot.ingredients ?? const []) {
@@ -2103,7 +2098,6 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
             Text(entry.key, style: Theme.of(context).textTheme.titleMedium),
             for (final ingredient in entry.value)
               _IngredientDetailRow(
-                compositionId: compositionId,
                 ingredient: ingredient,
                 converted: _scaleMode == _RecipeScaleMode.servings
                     ? convertedServingById[ingredient.id]
@@ -2126,7 +2120,6 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
           if ((snapshot.steps ?? const []).isEmpty) Text(l10n.recipeNoSteps),
           for (final (index, step) in (snapshot.steps ?? const []).indexed)
             _StepDetailTile(
-              compositionId: compositionId,
               index: index,
               step: step,
               converted: _scaleMode == _RecipeScaleMode.servings
@@ -2750,9 +2743,8 @@ class _DisplayModeControl extends StatelessWidget {
   }
 }
 
-class _IngredientDetailRow extends ConsumerWidget {
+class _IngredientDetailRow extends StatelessWidget {
   const _IngredientDetailRow({
-    required this.compositionId,
     required this.ingredient,
     this.converted,
     this.moldConverted,
@@ -2760,7 +2752,6 @@ class _IngredientDetailRow extends ConsumerWidget {
     this.displayed,
     this.contract,
   });
-  final String compositionId;
   final RecipeIngredient ingredient;
   final ConvertedServingIngredient? converted;
   final ConvertedMoldIngredient? moldConverted;
@@ -2769,21 +2760,8 @@ class _IngredientDetailRow extends ConsumerWidget {
   final RecipeDisplayedIngredient? contract;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    void onAction(ActionDescriptor action) {
-      unawaited(
-        ref
-            .read(intentDispatcherProvider)
-            .dispatch(
-              context,
-              compositionId: compositionId,
-              componentId: 'recipe-ingredient-${ingredient.id}',
-              action: action,
-            ),
-      );
-    }
-
     final contractQuantity = contract?.convertedQuantity?.toDouble();
     final convertedQuantity =
         contractQuantity ??
@@ -2910,8 +2888,10 @@ class _IngredientDetailRow extends ConsumerWidget {
               basisText: sourceBasis,
               citation: serverSource?.basis.citation,
               required: false,
-              feedbackEnabled: true,
-              onAction: onAction,
+              // SPEC-002.3 only provides deterministic provenance; adjustment
+              // feedback belongs to a later recipe-adjustment contract.
+              feedbackEnabled: false,
+              onAction: null,
             ),
         ],
       ),
@@ -2934,9 +2914,8 @@ class _IngredientDetailRow extends ConsumerWidget {
   }
 }
 
-class _StepDetailTile extends ConsumerWidget {
+class _StepDetailTile extends StatelessWidget {
   const _StepDetailTile({
-    required this.compositionId,
     required this.index,
     required this.step,
     this.converted,
@@ -2946,7 +2925,6 @@ class _StepDetailTile extends ConsumerWidget {
     required this.l10n,
   });
 
-  final String compositionId;
   final int index;
   final RecipeStep step;
   final ConvertedServingStep? converted;
@@ -2956,8 +2934,7 @@ class _StepDetailTile extends ConsumerWidget {
   final AppLocalizations l10n;
 
   Widget _sourceMark(
-    BuildContext context,
-    WidgetRef ref, {
+    BuildContext context, {
     required String field,
     required String value,
     required ValueSource? source,
@@ -2974,22 +2951,13 @@ class _StepDetailTile extends ConsumerWidget {
           ? l10n.recipeSourceAuthorFilled
           : '',
       required: false,
-      feedbackEnabled: true,
-      onAction: (action) => unawaited(
-        ref
-            .read(intentDispatcherProvider)
-            .dispatch(
-              context,
-              compositionId: compositionId,
-              componentId: 'recipe-step-${step.id}-$field',
-              action: action,
-            ),
-      ),
+      feedbackEnabled: false,
+      onAction: null,
     );
   }
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final warningColor = Theme.of(context).colorScheme.onSurfaceVariant;
     final references = (step.ingredientIds ?? const [])
         .map((id) => ingredientNames[id])
@@ -3075,21 +3043,18 @@ class _StepDetailTile extends ConsumerWidget {
             children: [
               _sourceMark(
                 context,
-                ref,
                 field: 'duration',
                 value: l10n.recipeSeconds(step.durationSeconds ?? 0),
                 source: step.durationSource,
               ),
               _sourceMark(
                 context,
-                ref,
                 field: 'heat',
                 value: step.heat ?? '',
                 source: step.heatSource,
               ),
               _sourceMark(
                 context,
-                ref,
                 field: 'temperature',
                 value: '${step.temperatureCelsius ?? 0}',
                 source: step.temperatureSource,
