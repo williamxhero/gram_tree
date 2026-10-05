@@ -36,46 +36,6 @@ double scaleByIntegerRatio(
   return value.isNegative ? -rounded : rounded;
 }
 
-/// Multiply two finite doubles as the decimals they print as, matching the
-/// server's `Decimal(str(value)) * Decimal(str(ratio))`, then keep
-/// [fractionDigits] places (half-up) so later display rounding sees the exact
-/// product instead of a binary approximation such as `1.7249999999999999`.
-double scaleByDecimalRatio(
-  double value,
-  double ratio, {
-  int fractionDigits = 12,
-  int contextPrecision = 28,
-}) {
-  if (!value.isFinite || !ratio.isFinite || value < 0 || ratio < 0) {
-    throw ArgumentError('数值和比例必须是有限非负数');
-  }
-  if (fractionDigits < 0) {
-    throw ArgumentError.value(fractionDigits, 'fractionDigits', '必须是非负整数');
-  }
-  final product = DecimalValue.fromNum(value)
-      .multipliedBy(DecimalValue.fromNum(ratio), precision: contextPrecision);
-  return product.quantizedHalfUp(fractionDigits).toDouble();
-}
-
-/// Divide two finite doubles as the decimals they print as, matching the
-/// server's `Decimal(str(value)) / Decimal(str(divisor))` before rounding.
-double divideByDecimalRatio(
-  double value,
-  double divisor, {
-  int fractionDigits = 12,
-  int contextPrecision = 28,
-}) {
-  if (!value.isFinite || !divisor.isFinite || value < 0 || divisor <= 0) {
-    throw ArgumentError('数值必须是有限非负数，除数必须是有限正数');
-  }
-  if (fractionDigits < 0) {
-    throw ArgumentError.value(fractionDigits, 'fractionDigits', '必须是非负整数');
-  }
-  final quotient = DecimalValue.fromNum(value)
-      .dividedBy(DecimalValue.fromNum(divisor), precision: contextPrecision);
-  return quotient.quantizedHalfUp(fractionDigits).toDouble();
-}
-
 /// Round [value] to [fractionDigits] decimal places, half away from zero.
 ///
 /// This matches `Decimal(str(value)).quantize(..., ROUND_HALF_UP)` for finite

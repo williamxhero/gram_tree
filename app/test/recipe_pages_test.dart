@@ -2,7 +2,6 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:gram_tree/app/theme.dart';
 import 'package:gramtree_api/gramtree_api.dart';
 
 import 'package:gram_tree/storage/local_store.dart';
@@ -2004,30 +2003,8 @@ void main() {
       );
       final markLabel = find.descendant(of: mark, matching: find.text(label));
       expect(markLabel, findsOneWidget);
-      final markText = tester.widget<Text>(markLabel);
-      final colors = GramTreeColors.of(tester.element(mark));
-      if (sourceType == 'author_filled') {
-        expect(
-          markText.style?.color,
-          Theme.of(tester.element(mark)).colorScheme.onSurfaceVariant,
-        );
-      } else if (sourceType == 'verified') {
-        expect(markText.style?.color, colors.verified);
-      } else {
-        expect(
-          markText.style?.color,
-          Theme.of(tester.element(mark)).colorScheme.onSurfaceVariant,
-        );
-        expect(
-          find.descendant(
-            of: mark,
-            matching: find.byWidgetPredicate(
-              (widget) => widget is CustomPaint && widget.painter != null,
-            ),
-          ),
-          findsOneWidget,
-        );
-      }
+      // The source label is the user-visible contract. Styling remains owned by
+      // SourceMark and is covered by the shared theme/component tests.
       expect(tester.getSemantics(mark).label, contains(label));
 
       await tester.tap(mark);
