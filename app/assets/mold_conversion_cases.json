@@ -195,5 +195,41 @@
       "source_type": "scenario_adjusted",
       "step": null
     }
+  },
+  {
+    "name": "cross_unit_inch_to_centimetre",
+    "input": {
+      "original_mold": {"shape": "round", "unit": "in", "diameter": 6},
+      "target_mold": {"shape": "round", "unit": "cm", "diameter": 12.7},
+      "ingredients": [
+        {"id": "flour", "display_name": "面粉", "quantity": 10, "unit": "g", "scaling_mode": "proportional"}
+      ],
+      "steps": []
+    },
+    "expected": {
+      "area_ratio": 0.69,
+      "ingredients": [
+        {"id": "flour", "original_quantity": 10, "display_quantity": 6.94, "unit": "g", "rule": "mold_ratio"}
+      ],
+      "step": null
+    }
+  },
+  {
+    "name": "cross_unit_centimetre_to_inch",
+    "input": {
+      "original_mold": {"shape": "round", "unit": "cm", "diameter": 15.24},
+      "target_mold": {"shape": "round", "unit": "in", "diameter": 8},
+      "ingredients": [
+        {"id": "flour", "display_name": "面粉", "quantity": 10, "unit": "g", "scaling_mode": "proportional"}
+      ],
+      "steps": []
+    },
+    "expected": {
+      "area_ratio": 1.78,
+      "ingredients": [
+        {"id": "flour", "original_quantity": 10, "display_quantity": 17.78, "unit": "g", "rule": "mold_ratio"}
+      ],
+      "step": null
+    }
   }
 ]

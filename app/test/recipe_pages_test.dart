@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:gram_tree/app/theme.dart';
 import 'package:gramtree_api/gramtree_api.dart';
 
 import 'package:gram_tree/storage/local_store.dart';
@@ -350,6 +351,18 @@ Future<void> _setTargetMoldFromFixture(
       find.byKey(const ValueKey('target-mold-diameter')),
       '${target['diameter']}',
     );
+    final unitField = find.byKey(const ValueKey('target-mold-unit'));
+    await tester.drag(
+      find.byKey(const ValueKey('recipe-detail-content')),
+      const Offset(0, 120),
+    );
+    await _fixtureSettle(tester);
+    await tester.ensureVisible(unitField);
+    await tester.tap(unitField);
+    await _fixtureSettle(tester);
+    final unitLabel = target['unit'] == 'in' ? '英寸' : '厘米';
+    await tester.tap(find.text(unitLabel).last);
+    await _fixtureSettle(tester);
   } else if (shape == 'square') {
     await tester.enterText(
       find.byKey(const ValueKey('target-mold-width')),
@@ -1920,77 +1933,118 @@ void main() {
     expect(server.calls('POST', '/v1/recipes'), isEmpty);
   });
 
-  testWidgets('measure-only display provenance stays neutral and read-only', (
+  testWidgets('measure-only display keeps real source provenance neutral', (
     tester,
   ) async {
-    final server = FakeServer();
-    _installRecipeApi(server);
     const text = '1 汤匙（15 克）';
-    server.on(
-      'GET',
-      '/v1/recipes/$_recipeId/versions/$_firstVersionId/display',
-      (_) => (
-        200,
-        {
-          'display': {
-            'recipe_id': _recipeId,
-            'version_id': _firstVersionId,
-            'mode': 'standard',
-            'measure_id': null,
-            'ingredients': [
-              {
-                'id': 'ingredient-1',
-                'display_name': '水',
-                'original_quantity': 100,
-                'original_unit': 'g',
-                'converted_quantity': 100,
-                'converted_unit': 'g',
-                'conversion_rule': 'base',
-                'display_quantity': 1,
-                'display_unit': '汤匙',
-                'grams': 15,
-                'rule': 'standard_measure',
-                'text': text,
-                'source': {
-                  'source_type': 'scenario_adjusted',
-                  'value': text,
-                  'original_value': '100 克',
-                  'basis': {
-                    'reason_code': 'ingredient_display',
-                    'text': '仅按常用量具显示，不修改菜谱原值',
-                    'citation': null,
+    for (final (sourceType, label) in [
+      ('author_filled', '量具表达'),
+      ('verified', '已验证'),
+      ('ai_estimated', 'AI 估算'),
+    ]) {
+      final server = FakeServer();
+      _installRecipeApi(server);
+      server.on(
+        'GET',
+        '/v1/recipes/$_recipeId/versions/$_firstVersionId/display',
+        (_) => (
+          200,
+          {
+            'display': {
+              'recipe_id': _recipeId,
+              'version_id': _firstVersionId,
+              'mode': 'standard',
+              'measure_id': null,
+              'ingredients': [
+                {
+                  'id': 'ingredient-1',
+                  'display_name': '水',
+                  'original_quantity': 100,
+                  'original_unit': 'g',
+                  'converted_quantity': 100,
+                  'converted_unit': 'g',
+                  'conversion_rule': 'base',
+                  'display_quantity': 1,
+                  'display_unit': '汤匙',
+                  'grams': 15,
+                  'rule': 'standard_measure',
+                  'text': text,
+                  'source': {
+                    'source_type': sourceType,
+                    'value': text,
+                    'original_value': null,
+                    'basis': {
+                      'reason_code': 'ingredient_display',
+                      'text': '仅按常用量具显示，不修改菜谱原值',
+                      'citation': null,
+                    },
                   },
                 },
-              },
-            ],
+              ],
+            },
           },
-        },
-      ),
-    );
-    await pumpApp(tester, env: TestEnv.signedIn(server: server));
-    await _openMyRecipes(tester);
-    await tester.tap(find.byKey(const ValueKey('recipe-card-$_recipeId')));
-    await tester.pumpAndSettle();
-    await _scrollUntilVisible(tester, find.text('汤匙/茶匙'));
-    await tester.tap(find.text('汤匙/茶匙'));
-    await tester.pumpAndSettle();
-    await _scrollUntilVisible(
-      tester,
-      find.byKey(const ValueKey('recipe-ingredient-amount-ingredient-1')),
-    );
-    expect(find.text(text), findsOneWidget);
-    expect(find.text('按场景调整'), findsNothing);
-    await tester.tap(
-      find.byKey(const ValueKey('recipe-source-mark-ingredient-1')),
-    );
-    await tester.pumpAndSettle();
-    expect(find.text('量具表达'), findsWidgets);
-    expect(find.text('原来：100 克'), findsOneWidget);
-    expect(find.text('现在：$text'), findsOneWidget);
-    expect(find.text('仅按常用量具显示，不修改菜谱原值'), findsOneWidget);
-    expect(find.text('这次不用'), findsNothing);
-    expect(find.text('以后别这样'), findsNothing);
-    expect(server.calls('POST', '/v1/recipes'), isEmpty);
+        ),
+      );
+      await pumpApp(tester, env: TestEnv.signedIn(server: server));
+      await _openMyRecipes(tester);
+      await tester.tap(find.byKey(const ValueKey('recipe-card-$_recipeId')));
+      await tester.pumpAndSettle();
+      await _scrollUntilVisible(tester, find.text('汤匙/茶匙'));
+      await tester.tap(find.text('汤匙/茶匙'));
+      await tester.pumpAndSettle();
+      await _scrollUntilVisible(
+        tester,
+        find.byKey(const ValueKey('recipe-ingredient-amount-ingredient-1')),
+      );
+      expect(find.text(text), findsOneWidget);
+      expect(find.text('按场景调整'), findsNothing);
+
+      final mark = find.byKey(
+        const ValueKey('recipe-source-mark-ingredient-1'),
+      );
+      final markLabel = find.descendant(of: mark, matching: find.text(label));
+      expect(markLabel, findsOneWidget);
+      final markText = tester.widget<Text>(markLabel);
+      final colors = GramTreeColors.of(tester.element(mark));
+      if (sourceType == 'author_filled') {
+        expect(
+          markText.style?.color,
+          Theme.of(tester.element(mark)).colorScheme.onSurfaceVariant,
+        );
+      } else if (sourceType == 'verified') {
+        expect(markText.style?.color, colors.verified);
+      } else {
+        expect(
+          markText.style?.color,
+          Theme.of(tester.element(mark)).colorScheme.onSurfaceVariant,
+        );
+        expect(
+          find.descendant(
+            of: mark,
+            matching: find.byWidgetPredicate(
+              (widget) => widget is CustomPaint && widget.painter != null,
+            ),
+          ),
+          findsOneWidget,
+        );
+      }
+      expect(tester.getSemantics(mark).label, contains(label));
+
+      await tester.tap(mark);
+      await tester.pumpAndSettle();
+      final whyPanel = find.byKey(const ValueKey('why-panel'));
+      expect(
+        find.descendant(of: whyPanel, matching: find.text(label)),
+        findsOneWidget,
+      );
+      expect(find.text('原来：100 g'), findsOneWidget);
+      expect(find.text('现在：$text'), findsOneWidget);
+      expect(find.text('仅按常用量具显示，不修改菜谱原值'), findsOneWidget);
+      expect(find.text('这次不用'), findsNothing);
+      expect(find.text('以后别这样'), findsNothing);
+      expect(server.calls('POST', '/v1/recipes'), isEmpty);
+      await _resetPage(tester);
+    }
   });
 
   testWidgets('detail refreshes measures changed on another device in place', (

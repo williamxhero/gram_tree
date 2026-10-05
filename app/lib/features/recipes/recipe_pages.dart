@@ -2804,15 +2804,18 @@ class _IngredientDetailRow extends StatelessWidget {
     final source = ingredient.quantitySource;
     final serverSource = contract?.source_;
     final displayOnly = systemDisplayChanged && !conversionActive && !adjusted;
-    final sourceType = displayOnly
-        ? sourceTypeAuthorFilled
-        : conversionActive &&
-              serverSource?.sourceType.value == sourceTypeAuthorFilled
+    final sourceType =
+        conversionActive &&
+            serverSource?.sourceType.value == sourceTypeAuthorFilled
         ? sourceTypeScenarioAdjusted
         : serverSource?.sourceType.value ??
               (conversionActive || systemChanged
                   ? sourceTypeScenarioAdjusted
                   : source?.source_.value ?? sourceTypeAuthorFilled);
+    final displayNeutralLabel =
+        displayOnly &&
+        (sourceType == sourceTypeAuthorFilled ||
+            sourceType == sourceTypeScenarioAdjusted);
     final showSource =
         displayOnly ||
         (serverSource != null
@@ -2894,13 +2897,16 @@ class _IngredientDetailRow extends StatelessWidget {
               basisText: sourceBasis,
               citation: serverSource?.basis.citation,
               required: false,
-              neutral: !systemChanged,
+              neutral:
+                  (displayNeutralLabel && !systemChanged) ||
+                  (sourceType == sourceTypeScenarioAdjusted && !systemChanged),
               valueChanged: valueChanged,
-              showWhenAuthorFilled: displayOnly,
-              labelOverride: displayOnly
+              showWhenAuthorFilled:
+                  displayNeutralLabel && sourceType == sourceTypeAuthorFilled,
+              labelOverride: displayNeutralLabel
                   ? l10n.recipeMeasureDisplaySource
                   : null,
-              whyTitleOverride: displayOnly
+              whyTitleOverride: displayNeutralLabel
                   ? l10n.recipeMeasureDisplaySource
                   : null,
               // SPEC-002.3 only provides deterministic provenance; adjustment
