@@ -339,8 +339,11 @@
         const notes = [];
         if (row.scaling === 'unchanged') notes.push('固定用量，不随份数或模具变化');
         if (shown.note) notes.push(shown.note);
-        const mark = active
+        const sceneAdjusted = active && row.changed;
+        const mark = sceneAdjusted
           ? `<button type="button" class="src-mark" data-why="${row.id}" aria-label="${row.name} ${shown.text}，按场景调整过，点开看原因">${SCENE_ICON}场景</button>`
+          : active
+          ? `<button type="button" class="display-mark" data-why="${row.id}" aria-label="${row.name} 的场景换算依据，当前用量未变">${SCENE_ICON}依据</button>`
           : displayAdjusted
           ? `<button type="button" class="display-mark" data-why="${row.id}" aria-label="${row.name} ${shown.text}，按量具显示，点开看原因">${SCENE_ICON}显示</button>`
           : '';
