@@ -56,6 +56,11 @@ class SourceMark extends ConsumerWidget {
     this.citation,
     required this.required,
     this.feedbackEnabled = true,
+    this.neutral = false,
+    this.valueChanged,
+    this.showWhenAuthorFilled = false,
+    this.labelOverride,
+    this.whyTitleOverride,
     required this.onAction,
   });
 
@@ -74,6 +79,23 @@ class SourceMark extends ConsumerWidget {
   /// details expose provenance read-only until a real adjustment contract exists.
   final bool feedbackEnabled;
 
+  /// Keep provenance visible without implying that the system changed the value.
+  final bool neutral;
+
+  /// Whether the current value is actually different from the original value.
+  /// When omitted, the WhyPanel derives this from [value] and [originalValue].
+  final bool? valueChanged;
+
+  /// Display-only provenance can retain author-filled data while still
+  /// explaining a unit or utensil expression.
+  final bool showWhenAuthorFilled;
+
+  /// Optional neutral label for display provenance; source type remains real.
+  final String? labelOverride;
+
+  /// Optional neutral WhyPanel title for display provenance.
+  final String? whyTitleOverride;
+
   /// 触发意图的统一入口（就是 `CompositionView` 传给每个组件 builder 的
   /// `onAction`，见 `composition_view.dart`）——"这次不用"/"以后别这样"走的是
   /// 票 5（#81）已有的意图派发，这里不另写处理路径。
@@ -81,19 +103,22 @@ class SourceMark extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    if (sourceType == sourceTypeAuthorFilled) {
+    if (sourceType == sourceTypeAuthorFilled && !showWhenAuthorFilled) {
       return const SizedBox.shrink();
     }
 
     final theme = Theme.of(context);
     final colors = GramTreeColors.of(context);
-    final color = _colorFor(sourceType, colors, theme);
-    final dashed = sourceType == sourceTypeAiEstimated;
+    final color = neutral
+        ? theme.colorScheme.onSurfaceVariant
+        : _colorFor(sourceType, colors, theme);
+    final dashed = sourceType == sourceTypeAiEstimated && !neutral;
 
     final l10n = AppLocalizations.of(context);
+    final label = labelOverride ?? sourceTypeLabel(sourceType, l10n);
     return Semantics(
       button: true,
-      label: l10n.sourceSemantics(sourceTypeLabel(sourceType, l10n)),
+      label: l10n.sourceSemantics(label),
       excludeSemantics: true,
       child: InkWell(
         borderRadius: BorderRadius.circular(999),
@@ -111,7 +136,7 @@ class SourceMark extends ConsumerWidget {
                       borderRadius: BorderRadius.circular(999),
                     ),
               child: Text(
-                sourceTypeLabel(sourceType, l10n),
+                label,
                 style: theme.textTheme.labelSmall?.copyWith(color: color),
               ),
             ),
@@ -127,6 +152,8 @@ class SourceMark extends ConsumerWidget {
     // a read-only surface must not offer buttons that do nothing.
     final action = onAction;
     final canFeedback = feedbackEnabled && action != null;
+    final currentValueChanged =
+        valueChanged ?? (originalValue != null && value != originalValue);
 
     await ref
         .read(eventRecorderProvider)
@@ -145,11 +172,13 @@ class SourceMark extends ConsumerWidget {
       builder: (sheetContext) => WhyPanel(
         key: const ValueKey('why-panel'),
         sourceType: sourceType,
+        titleOverride: whyTitleOverride,
         value: value,
         originalValue: originalValue,
         basisText: basisText,
         citation: citation,
         required: required,
+        valueChanged: currentValueChanged,
         feedbackEnabled: canFeedback,
         onSkipOnce: required || !canFeedback
             ? null
@@ -253,22 +282,26 @@ class WhyPanel extends StatelessWidget {
   const WhyPanel({
     super.key,
     required this.sourceType,
+    this.titleOverride,
     required this.value,
     this.originalValue,
     required this.basisText,
     this.citation,
     required this.required,
+    this.valueChanged = false,
     this.feedbackEnabled = true,
     this.onSkipOnce,
     this.onNeverAgain,
   });
 
   final String sourceType;
+  final String? titleOverride;
   final String value;
   final String? originalValue;
   final String basisText;
   final String? citation;
   final bool required;
+  final bool valueChanged;
   final bool feedbackEnabled;
   final VoidCallback? onSkipOnce;
   final VoidCallback? onNeverAgain;
@@ -288,7 +321,7 @@ class WhyPanel extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              sourceTypeLabel(sourceType, l10n),
+              titleOverride ?? sourceTypeLabel(sourceType, l10n),
               style: theme.textTheme.titleMedium,
             ),
             const SizedBox(height: 12),
@@ -299,7 +332,14 @@ class WhyPanel extends StatelessWidget {
               ),
               const SizedBox(height: 2),
             ],
-            Text(l10n.whyCurrent(value), style: theme.textTheme.bodyMedium),
+            Text(
+              l10n.whyCurrent(value),
+              style: valueChanged
+                  ? theme.textTheme.bodyMedium?.copyWith(
+                      color: GramTreeColors.of(context).accent,
+                    )
+                  : theme.textTheme.bodyMedium,
+            ),
             const SizedBox(height: 12),
             Text(explanation, style: theme.textTheme.bodyMedium),
             if (citation != null) ...[

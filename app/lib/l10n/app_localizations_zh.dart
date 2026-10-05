@@ -1145,6 +1145,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get recipeMeasureDisplayOnly => '个人量具只改变显示，菜谱基础值未改变';
 
   @override
+  String get recipeMeasureDisplaySource => '量具表达';
+
+  @override
   String recipeMeasureNoDensity(String unit) {
     return '没有密度数据，保留$unit';
   }

@@ -51,29 +51,20 @@ void main() {
   Future<void> reveal(WidgetTester tester, Finder finder) async {
     tester.testTextInput.hide();
     await tester.pump();
-    final detailList = find.byKey(const ValueKey('recipe-detail-content'));
-    final list = detailList.evaluate().isNotEmpty
-        ? detailList
-        : find.byType(ListView).last;
+    // The page body the user scrolls, found by its public key.
+    final detail = find.byKey(const ValueKey('recipe-detail-content'));
+    final body = detail.evaluate().isNotEmpty
+        ? detail
+        : find.byKey(const ValueKey('recipe-editor-content'));
     // Sliver children outside the viewport may not exist yet. Start from the
     // top so revealing an earlier control never scrolls in the wrong direction.
     for (var i = 0; i < 12; i++) {
-      await tester.drag(list, const Offset(0, 500));
+      await tester.drag(body, const Offset(0, 500));
       await tester.pump(const Duration(milliseconds: 100));
     }
-    if (detailList.evaluate().isNotEmpty) {
-      final detailScrollable = find.byType(Scrollable).last;
-      await tester.scrollUntilVisible(
-        finder,
-        500,
-        scrollable: detailScrollable,
-        maxScrolls: 40,
-      );
-    } else {
-      for (var i = 0; i < 30 && finder.evaluate().isEmpty; i++) {
-        await tester.drag(list, const Offset(0, -500));
-        await tester.pump(const Duration(milliseconds: 100));
-      }
+    for (var i = 0; i < 40 && finder.evaluate().isEmpty; i++) {
+      await tester.drag(body, const Offset(0, -300));
+      await tester.pump(const Duration(milliseconds: 100));
     }
     if (finder.evaluate().isEmpty) {
       final message = 'E2E reveal failed: $finder';
@@ -200,15 +191,13 @@ void main() {
       await waitFor(tester, find.byKey(const ValueKey('recipe-version-2')));
       expect(find.byKey(const ValueKey('recipe-version-1')), findsOneWidget);
       expect(find.textContaining('从第一版继续修改'), findsOneWidget);
-      await tester.tap(find.byType(BackButton));
+      await tester.tap(find.byTooltip('返回').last);
       await waitFor(tester, find.byKey(const ValueKey('recipe-list-button')));
       await tester.tap(find.byKey(const ValueKey('recipe-list-button')));
       await waitFor(tester, find.text('网页版验收菜谱'));
-      final recipeCard = find.ancestor(
-        of: find.text('网页版验收菜谱'),
-        matching: find.byType(ListTile),
-      );
+      final recipeCard = find.text('网页版验收菜谱').last;
       expect(recipeCard, findsOneWidget);
+      await tester.ensureVisible(recipeCard);
       await tester.tap(recipeCard);
       // The public, always-built content boundary signals that the HTTP detail
       // has loaded. On a small phone the delete control is a lazy sliver child;

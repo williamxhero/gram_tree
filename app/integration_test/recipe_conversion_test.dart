@@ -44,6 +44,14 @@ void main() {
     expect(finder, findsWidgets);
   }
 
+  /// The page body the user scrolls, found by its public key.
+  Finder pageBody() {
+    final detail = find.byKey(const ValueKey('recipe-detail-content'));
+    return detail.evaluate().isNotEmpty
+        ? detail
+        : find.byKey(const ValueKey('recipe-editor-content'));
+  }
+
   Future<void> reveal(
     WidgetTester tester,
     Finder finder, {
@@ -52,32 +60,22 @@ void main() {
   }) async {
     tester.testTextInput.hide();
     await tester.pump();
-    final detailList = find.byKey(const ValueKey('recipe-detail-content'));
-    final list = detailList.evaluate().isNotEmpty
-        ? detailList
-        : find.byType(ListView).last;
+    final body = pageBody();
     if (resetToTop) {
       for (var i = 0; i < 12; i++) {
-        await tester.drag(list, const Offset(0, 500));
+        await tester.drag(body, const Offset(0, 500));
         await tester.pump(const Duration(milliseconds: 100));
       }
     }
-    if (detailList.evaluate().isNotEmpty) {
-      final detailScrollable = find.byType(Scrollable).last;
-      await tester.scrollUntilVisible(
-        finder,
-        500,
-        scrollable: detailScrollable,
-        maxScrolls: 40,
-      );
-    } else {
-      for (var i = 0; i < 30 && finder.evaluate().isEmpty; i++) {
-        await tester.drag(list, const Offset(0, -500));
-        await tester.pump(const Duration(milliseconds: 100));
-      }
+    // Lazy list rows only exist once they scroll near the viewport, so keep
+    // swiping like a user until the target is built.
+    for (var i = 0; i < 40 && finder.evaluate().isEmpty; i++) {
+      await tester.drag(body, const Offset(0, -300));
+      await tester.pump(const Duration(milliseconds: 100));
     }
     expect(finder, findsOneWidget);
     await tester.ensureVisible(finder);
+    await tester.pump(const Duration(milliseconds: 100));
     if (tapAfterReveal) {
       await tester.tap(finder);
     }
@@ -331,7 +329,7 @@ void main() {
       );
       await tester.tap(find.byKey(const ValueKey('measure-save')));
       await waitFor(tester, find.text('网页白瓷勺'));
-      await tester.tap(find.byType(BackButton));
+      await tester.tap(find.byTooltip('返回').last);
       await waitFor(tester, find.byKey(const ValueKey('recipe-measure-mode')));
       await reveal(
         tester,

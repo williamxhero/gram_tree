@@ -278,5 +278,131 @@
       "total_time_seconds": 0,
       "active_time_seconds": 0
     }
+  },
+  {
+    "name": "identity_keeps_fractional_count",
+    "input": {
+      "original_servings": 2,
+      "target_servings": 2,
+      "ingredients": [
+        {"id": "lemon", "display_name": "柠檬", "quantity": 0.5, "unit": "个", "scaling_mode": "round"}
+      ],
+      "steps": []
+    },
+    "expected": {
+      "original_servings": 2,
+      "target_servings": 2,
+      "min_servings": 1,
+      "max_servings": 20,
+      "ingredients": [
+        {"id": "lemon", "display_name": "柠檬", "original_quantity": 0.5, "display_quantity": 0.5, "unit": "个", "rule": "round", "deviation_ratio": 0, "deviation_warning": false}
+      ],
+      "steps": [],
+      "warnings": [],
+      "total_time_seconds": 0,
+      "active_time_seconds": 0
+    }
+  },
+  {
+    "name": "tiny_proportional_count_stays_visible",
+    "input": {
+      "original_servings": 2,
+      "target_servings": 1,
+      "ingredients": [
+        {"id": "tiny-count", "display_name": "微量计数", "quantity": 0.004, "unit": "个", "scaling_mode": "proportional"}
+      ],
+      "steps": []
+    },
+    "expected": {
+      "original_servings": 2,
+      "target_servings": 1,
+      "min_servings": 1,
+      "max_servings": 20,
+      "ingredients": [
+        {"id": "tiny-count", "display_name": "微量计数", "original_quantity": 0.004, "display_quantity": 0, "unit": "个", "rule": "proportional", "deviation_ratio": null, "deviation_warning": false}
+      ],
+      "steps": [],
+      "warnings": [],
+      "total_time_seconds": 0,
+      "active_time_seconds": 0
+    }
+  },
+  {
+    "name": "decimal_context_half_up_boundary",
+    "input": {
+      "original_servings": 3,
+      "target_servings": 1,
+      "ingredients": [
+        {"id": "two point oh two five", "display_name": "二点零二五", "quantity": 2.025, "unit": "g", "scaling_mode": "proportional"},
+        {"id": "boundary", "display_name": "边界用量", "quantity": 0.285, "unit": "g", "scaling_mode": "proportional"}
+      ],
+      "steps": []
+    },
+    "expected": {
+      "original_servings": 3,
+      "target_servings": 1,
+      "min_servings": 1,
+      "max_servings": 20,
+      "ingredients": [
+        {"id": "two point oh two five", "display_name": "二点零二五", "original_quantity": 2.025, "display_quantity": 0.67, "unit": "g", "rule": "proportional", "deviation_ratio": null, "deviation_warning": false},
+        {"id": "boundary", "display_name": "边界用量", "original_quantity": 0.285, "display_quantity": 0.09, "unit": "g", "rule": "proportional", "deviation_ratio": null, "deviation_warning": false}
+      ],
+      "steps": [],
+      "warnings": [],
+      "total_time_seconds": 0,
+      "active_time_seconds": 0
+    }
+  },
+  {
+    "name": "custom_round_threshold_exact_boundary",
+    "input": {
+      "original_servings": 3,
+      "target_servings": 1,
+      "round_deviation_threshold": 0.1,
+      "ingredients": [
+        {"id": "counted-boundary", "display_name": "边界计数", "quantity": 10, "unit": "个", "scaling_mode": "round"}
+      ],
+      "steps": []
+    },
+    "expected": {
+      "original_servings": 3,
+      "target_servings": 1,
+      "min_servings": 1,
+      "max_servings": 20,
+      "ingredients": [
+        {"id": "counted-boundary", "display_name": "边界计数", "original_quantity": 10, "display_quantity": 3, "unit": "个", "rule": "round", "deviation_ratio": 0.1, "deviation_warning": false}
+      ],
+      "steps": [],
+      "warnings": [],
+      "total_time_seconds": 0,
+      "active_time_seconds": 0
+    }
+  },
+  {
+    "name": "custom_round_threshold_just_over_boundary",
+    "input": {
+      "original_servings": 5,
+      "target_servings": 3,
+      "round_deviation_threshold": 0.1,
+      "ingredients": [
+        {"id": "counted-just-over", "display_name": "略超边界计数", "quantity": 3.0303030303030303, "unit": "个", "scaling_mode": "round"}
+      ],
+      "steps": []
+    },
+    "expected": {
+      "original_servings": 5,
+      "target_servings": 3,
+      "min_servings": 1,
+      "max_servings": 20,
+      "ingredients": [
+        {"id": "counted-just-over", "display_name": "略超边界计数", "original_quantity": 3.0303030303030303, "display_quantity": 2, "unit": "个", "rule": "round", "deviation_ratio": 0.10000000000000001, "deviation_warning": true}
+      ],
+      "steps": [],
+      "warnings": [
+        {"code": "round_deviation", "ingredient_id": "counted-just-over", "message": "略超边界计数取整后与按比例结果相差较大，请按口味微调其他用量。"}
+      ],
+      "total_time_seconds": 0,
+      "active_time_seconds": 0
+    }
   }
 ]

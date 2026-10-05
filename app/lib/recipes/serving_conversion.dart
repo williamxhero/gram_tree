@@ -249,32 +249,44 @@ ServingConversionResult convertServings({
   final convertedIngredients = <ConvertedServingIngredient>[];
   final warnings = <ServingConversionWarning>[];
   for (final item in ingredients) {
-    // Keep the multiplication/division in decimal form, matching the server's
-    // Decimal(str(quantity)) arithmetic instead of rounding a binary product.
-    final theoretical = scaleByIntegerRatio(
-      item.quantity,
-      targetServings,
-      originalServings,
-    );
+    // Match the server's 28-digit Decimal ratio and product context before
+    // applying ROUND_HALF_UP for display.
+    final ratio = DecimalValue.fromNum(targetServings)
+        .dividedBy(DecimalValue.fromNum(originalServings));
+    final theoreticalDecimal = DecimalValue.fromNum(item.quantity)
+        .multipliedBy(ratio);
+    final theoretical = theoreticalDecimal.toDouble();
     var display = theoretical;
+    DecimalValue? displayDecimal;
     double? deviationRatio;
     var deviationWarning = false;
     switch (item.scalingMode) {
       case 'unchanged':
         display = item.quantity;
       case 'round':
-        display = scaleByIntegerRatio(
-          item.quantity,
-          targetServings,
-          originalServings,
-          fractionDigits: 0,
-        );
-        // Zero stays an intentional absence; a positive amount keeps at least
-        // one item and the deviation warning below explains the adjustment.
-        if (theoretical != 0 && display < 1) display = 1;
-        if (theoretical != 0) {
-          deviationRatio = (display - theoretical).abs() / theoretical.abs();
-          deviationWarning = deviationRatio > roundDeviationThreshold;
+        // An identity ratio keeps the author's count (e.g. 0.5 个). Otherwise
+        // zero stays an intentional absence, and a positive amount keeps at
+        // least one item; the deviation warning below explains the adjustment.
+        displayDecimal = targetServings == originalServings
+            ? DecimalValue.fromNum(item.quantity)
+            : theoreticalDecimal.quantizedHalfUp(0);
+        display = displayDecimal.toDouble();
+        if (!theoreticalDecimal.isZero &&
+            targetServings != originalServings &&
+            display < 1) {
+          displayDecimal = DecimalValue.fromNum(1);
+          display = 1;
+        }
+        if (!theoreticalDecimal.isZero) {
+          final deviation = displayDecimal.relativeDifference(
+            theoreticalDecimal,
+          );
+          deviationRatio = deviation.toDouble();
+          deviationWarning =
+              deviation.compareTo(
+                DecimalValue.fromNum(roundDeviationThreshold),
+              ) >
+              0;
           if (deviationWarning) {
             warnings.add(
               ServingConversionWarning(
@@ -301,10 +313,15 @@ ServingConversionResult convertServings({
         originalQuantity: item.quantity,
         // An identity conversion and an unchanged rule must not invent a
         // precision loss that makes the page claim the system changed it.
+        // A proportional amount is rounded once from the exact ratio, as the
+        // server quantizes its Decimal product; rounding the 12-digit
+        // theoretical value first turns 0.0049999999999999994 into 0.01.
         displayQuantity:
             item.scalingMode == 'unchanged' ||
                 targetServings == originalServings
             ? display
+            : item.scalingMode == 'proportional'
+            ? theoreticalDecimal.quantizedHalfUp(2).toDouble()
             : _roundTwoDecimals(display),
         unit: item.unit,
         rule: item.scalingMode,

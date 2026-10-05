@@ -1067,14 +1067,14 @@ def _convert_snapshot_mold(
 _ConversionRule = Literal["base", "proportional", "unchanged", "round", "mold_ratio"]
 
 
-def _amount_text(quantity: float, unit: str) -> str:
-    value = float(quantity)
+def _amount_text(quantity: float | Decimal, unit: str) -> str:
+    value = quantity if isinstance(quantity, Decimal) else Decimal(str(quantity))
     if value == 0:
         rendered = "0"
-    elif 0 < value < 0.005:
+    elif Decimal("0") < value < Decimal("0.005"):
         rendered = "<0.01"
     else:
-        rendered = format(Decimal(str(value)).normalize(), "f")
+        rendered = format(value.normalize(), "f")
     return f"{rendered} {unit}"
 
 
@@ -1138,22 +1138,24 @@ def _conversion_source(
     original_servings: int | None = None,
     target_servings: int | None = None,
     area_ratio: float | None = None,
-    conversion_ratio: float | None = None,
+    conversion_ratio: Decimal | None = None,
     conversion_requested: bool = False,
 ) -> SourcedValue:
     original_value = _amount_text(ingredient.quantity, ingredient.unit)
     value = _amount_text(display_quantity, display_unit)
     # Kernels intentionally keep the legacy two-decimal numeric contract. For
-    # a tiny positive proportional result, use the exact value only to avoid
-    # exposing a misleading ``0 g`` in the provenance text.
+    # a tiny positive proportional result, use the exact decimal product only
+    # to avoid exposing a misleading ``0 g`` in the provenance text. Keeping
+    # the ratio decimal here is important for boundaries such as
+    # 0.024999999999999997 * (1 / 5).
     if (
         display_quantity == 0
         and ingredient.quantity > 0
         and rule in {"proportional", "mold_ratio"}
         and conversion_ratio is not None
     ):
-        exact_quantity = ingredient.quantity * conversion_ratio
-        if 0 < exact_quantity < 0.005:
+        exact_quantity = Decimal(str(ingredient.quantity)) * conversion_ratio
+        if Decimal("0") < exact_quantity < Decimal("0.005"):
             value = _amount_text(exact_quantity, display_unit)
     changed = (
         conversion_requested
@@ -1193,7 +1195,9 @@ def _serving_conversion_payload(
                 rule=cast(_ConversionRule, item.rule),
                 original_servings=conversion.original_servings,
                 target_servings=conversion.target_servings,
-                conversion_ratio=(conversion.target_servings / conversion.original_servings),
+                conversion_ratio=(
+                    Decimal(conversion.target_servings) / Decimal(conversion.original_servings)
+                ),
                 conversion_requested=(conversion.target_servings != conversion.original_servings),
             ),
         }
@@ -1202,15 +1206,24 @@ def _serving_conversion_payload(
     return payload
 
 
+def _mold_changed(original: MoldSpec | None, target: MoldSpec | None) -> bool:
+    """Whether the user chose a different mold, even one with equal area.
+
+    The App compares the whole mold spec, so an equal-area shape change is
+    still a scenario conversion; comparing only the area ratio would make the
+    two sides disagree about provenance.
+    """
+    return original is not None and target is not None and original != target
+
+
 def _mold_conversion_payload(
     conversion: MoldConversion, snapshot: RecipeSnapshot
 ) -> dict[str, object]:
     payload = conversion.as_dict()
     original_mold = MoldSpec.model_validate(conversion.original_mold)
     target_mold = MoldSpec.model_validate(conversion.target_mold)
-    exact_ratio = float(
-        mold_area(MoldInput(**target_mold.model_dump(mode="json")))
-        / mold_area(MoldInput(**original_mold.model_dump(mode="json")))
+    exact_ratio = mold_area(MoldInput(**target_mold.model_dump(mode="json"))) / mold_area(
+        MoldInput(**original_mold.model_dump(mode="json"))
     )
     payload["ingredients"] = [
         {
@@ -1222,7 +1235,7 @@ def _mold_conversion_payload(
                 rule=cast(_ConversionRule, item.rule),
                 area_ratio=conversion.area_ratio,
                 conversion_ratio=exact_ratio,
-                conversion_requested=exact_ratio != 1,
+                conversion_requested=_mold_changed(original_mold, target_mold),
             ),
         }
         for original, item in zip(snapshot.ingredients, conversion.ingredients, strict=True)
@@ -1247,7 +1260,10 @@ def _display_source(
         converted_quantity != float(ingredient.quantity) or converted_unit != ingredient.unit
     )
     display_changed = result["rule"] not in {"base", "no_density"}
-    changed = conversion_requested or conversion_changed or display_changed
+    # A measure mode changes only the expression, not the recipe quantity.
+    # Keep that provenance author-neutral; scenario/taste styling is reserved
+    # for an actual serving or mold quantity conversion.
+    changed = conversion_requested or conversion_changed
     basis_parts: list[str] = []
     reason_code = "ingredient_display"
     conversion_reason = False
@@ -1302,16 +1318,16 @@ def display_recipe_ingredients(
         raise ApiError(422, "invalid_request", "请求参数有误", "份数换算和模具换算不能同时使用")
 
     snapshot = RecipeSnapshot.model_validate(version.snapshot)
-    conversion_by_id: dict[str, tuple[float, str, _ConversionRule, float | None]] = {
+    conversion_by_id: dict[str, tuple[float, str, _ConversionRule, Decimal | None]] = {
         item.id: (float(item.quantity), item.unit, "base", None) for item in snapshot.ingredients
     }
     converted: Iterable[ConvertedIngredient | ConvertedMoldIngredient] = ()
-    conversion_scale: float | None = None
+    conversion_scale: Decimal | None = None
     if target_servings is not None:
         derived = RecipeDerived.model_validate(version.derived)
         serving_conversion = _convert_snapshot_servings(session, snapshot, derived, target_servings)
         converted = serving_conversion.ingredients
-        conversion_scale = target_servings / snapshot.servings
+        conversion_scale = Decimal(target_servings) / Decimal(snapshot.servings)
     elif target_mold is not None:
         mold_conversion = _convert_snapshot_mold(session, snapshot, target_mold)
         converted = mold_conversion.ingredients
@@ -1319,7 +1335,7 @@ def display_recipe_ingredients(
             raise ApiError(422, "missing_base_mold", "这份菜谱没有记录基准模具")
         original_mold = MoldInput(**snapshot.base_mold.model_dump(mode="json"))
         requested_mold = MoldInput(**target_mold.model_dump(mode="json"))
-        conversion_scale = float(mold_area(requested_mold) / mold_area(original_mold))
+        conversion_scale = mold_area(requested_mold) / mold_area(original_mold)
     for item in converted:
         rule = cast(_ConversionRule, item.rule)
         exact_scale = conversion_scale if rule in {"proportional", "mold_ratio"} else None
@@ -1359,9 +1375,11 @@ def display_recipe_ingredients(
         converted_quantity, converted_unit, conversion_rule, exact_scale = conversion_by_id[item.id]
         tiny_exact_quantity = None
         if exact_scale is not None and exact_scale != 1 and converted_quantity == 0:
-            candidate = original_quantity * exact_scale
-            if 0 < candidate < 0.005:
-                tiny_exact_quantity = candidate
+            # Compare the exact product before converting to float. A value
+            # just below 0.005 must stay visible as <0.01, not become 0.
+            candidate_decimal = Decimal(str(item.quantity)) * exact_scale
+            if Decimal("0") < candidate_decimal < Decimal("0.005"):
+                tiny_exact_quantity = float(candidate_decimal)
         effective_quantity = (
             original_quantity
             if exact_scale == 1
@@ -1420,7 +1438,7 @@ def display_recipe_ingredients(
             target_mold=target_mold,
             conversion_requested=(
                 (target_servings is not None and target_servings != snapshot.servings)
-                or (target_mold is not None and conversion_scale not in {None, 1})
+                or _mold_changed(snapshot.base_mold, target_mold)
             ),
         )
         amounts.append(

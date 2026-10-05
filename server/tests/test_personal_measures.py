@@ -66,6 +66,54 @@ def test_personal_measures_are_account_scoped_and_syncable(api: Api) -> None:
     assert api.client.get("/v1/me/measures", headers=owner).json()["items"] == []
 
 
+def test_recipe_display_reflects_updated_same_id_measure(api: Api) -> None:
+    headers = bearer(api.login("measure-refresh@example.com"))
+    body = recipe_input("同一量具刷新")
+    body["snapshot"]["ingredients"] = [
+        {
+            "id": "display-ingredient",
+            "display_name": "水",
+            "quantity": 100,
+            "unit": "ml",
+            "scaling_mode": "proportional",
+        }
+    ]
+    body["snapshot"]["steps"] = []
+    created_measure = api.client.post(
+        "/v1/me/measures",
+        json={"name": "同一把勺", "kind": "spoon", "capacity_ml": 10},
+        headers=headers,
+    )
+    assert created_measure.status_code == 201, created_measure.text
+    measure = created_measure.json()
+    created_recipe = api.client.post("/v1/recipes", json=body, headers=headers)
+    assert created_recipe.status_code == 201, created_recipe.text
+    saved = created_recipe.json()
+    path = f"/v1/recipes/{saved['id']}/versions/{saved['version']['id']}/display"
+    params = {"mode": "home", "measure_id": measure["id"]}
+
+    before = api.client.get(path, params=params, headers=headers)
+    assert before.status_code == 200, before.text
+    before_item = before.json()["display"]["ingredients"][0]
+    assert before_item["text"] == "约 10 同一把勺（100 毫升）"
+
+    updated = api.client.patch(
+        f"/v1/me/measures/{measure['id']}",
+        json={"capacity_ml": 20},
+        headers=headers,
+    )
+    assert updated.status_code == 200, updated.text
+    assert updated.json()["id"] == measure["id"]
+    assert updated.json()["capacity_ml"] == 20
+    assert updated.json()["updated_at"] != measure["updated_at"]
+
+    after = api.client.get(path, params=params, headers=headers)
+    assert after.status_code == 200, after.text
+    after_item = after.json()["display"]["ingredients"][0]
+    assert after_item["text"] == "约 5 同一把勺（100 毫升）"
+    assert after_item["text"] != before_item["text"]
+
+
 def test_personal_measure_validation_and_duplicate_names(api: Api) -> None:
     headers = bearer(api.login("measures-validation@example.com"))
     for body in (
@@ -224,12 +272,17 @@ def test_recipe_display_matches_shared_fixture_through_http(
     } == expected
     assert actual["original_quantity"] == source["base_quantity"]
     assert actual["original_unit"] == source["base_unit"]
-    assert actual["source"]["source_type"] in {
-        "author_filled",
-        "scenario_adjusted",
-        "ai_estimated",
-        "verified",
-    }
+    if actual["rule"] in {"standard_measure", "personal_measure"}:
+        assert actual["source"]["source_type"] == "author_filled"
+        assert actual["source"]["original_value"] is None
+        assert "不修改菜谱原值" in actual["source"]["basis"]["text"]
+    else:
+        assert actual["source"]["source_type"] in {
+            "author_filled",
+            "scenario_adjusted",
+            "ai_estimated",
+            "verified",
+        }
     assert actual["source"]["basis"]["text"]
 
     current = api.client.get(

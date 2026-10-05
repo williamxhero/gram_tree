@@ -197,6 +197,7 @@ def convert_mold(
     """
     if round_deviation_threshold < 0:
         raise MoldConversionError("invalid_mold_config", "模具换算阈值配置有误")
+    round_deviation_threshold_decimal = Decimal(str(round_deviation_threshold))
     source_area = mold_area(original_mold)
     target_area = mold_area(target_mold)
     if source_area <= 0 or target_area <= 0:  # defensive: _dimensions already checks this
@@ -219,12 +220,19 @@ def convert_mold(
         elif item.scaling_mode == "round":
             # Preserve an explicit zero; a positive amount rounds up to one
             # count and is covered by the deviation warning below when the
-            # adjustment is materially different.
-            display = Decimal("0") if theoretical == 0 else max(Decimal("1"), _whole(theoretical))
+            # adjustment is materially different. An equal-area mold keeps the
+            # author's count (e.g. 0.5 个) instead of rounding and warning.
+            if ratio == 1:
+                display = original
+            elif theoretical == 0:
+                display = Decimal("0")
+            else:
+                display = max(Decimal("1"), _whole(theoretical))
             rule = "round"
             if theoretical != 0:
-                deviation_ratio = float(abs(display - theoretical) / abs(theoretical))
-                deviation_warning = deviation_ratio > round_deviation_threshold
+                deviation_decimal = abs(display - theoretical) / abs(theoretical)
+                deviation_ratio = float(deviation_decimal)
+                deviation_warning = deviation_decimal > round_deviation_threshold_decimal
                 if deviation_warning:
                     warnings.append(
                         MoldConversionWarning(

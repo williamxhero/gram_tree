@@ -61,6 +61,22 @@ def _assert_conversion(actual: dict, expected: dict) -> None:
 
 @pytest.mark.parametrize("case", CASES, ids=[case["name"] for case in CASES])
 def test_serving_conversion_matches_shared_fixture(api: Api, case: dict) -> None:
+    if "round_deviation_threshold" in case["input"]:
+        assert (
+            cli(
+                [
+                    "config",
+                    "set",
+                    "recipe.scaling_round_deviation_threshold",
+                    str(case["input"]["round_deviation_threshold"]),
+                    "--by",
+                    "test",
+                    "--reason",
+                    "共享边界 fixture",
+                ]
+            )
+            == 0
+        )
     headers = bearer(api.login(f"serving-{case['name']}@example.com"))
     created = api.client.post("/v1/recipes", json=_recipe_body(case), headers=headers)
     assert created.status_code == 201, created.text
@@ -148,8 +164,10 @@ def test_serving_conversion_matches_decimal_half_up_boundary(api: Api, case: dic
         headers=headers,
     )
     assert response.status_code == 200, response.text
-    actual = response.json()["conversion"]["ingredients"][0]["display_quantity"]
-    assert actual == case["expected"]["display_quantity"]
+    item = response.json()["conversion"]["ingredients"][0]
+    assert item["display_quantity"] == case["expected"]["display_quantity"]
+    if "source_value" in case["expected"]:
+        assert item["source"]["value"] == case["expected"]["source_value"]
 
 
 def test_omitted_scaling_mode_uses_ingredient_default_but_explicit_mode_wins(api: Api) -> None:
@@ -402,6 +420,39 @@ def test_proportional_tiny_quantity_has_stable_display_text(api: Api) -> None:
     response = api.client.get(
         f"/v1/recipes/{saved['id']}/display",
         params={"mode": "base", "target_servings": 1},
+        headers=headers,
+    )
+    assert response.status_code == 200, response.text
+    item = response.json()["display"]["ingredients"][0]
+    assert item["converted_quantity"] == 0
+    assert item["display_quantity"] == 0
+    assert item["text"] == "<0.01 克"
+
+
+def test_subthreshold_decimal_product_stays_visible_at_display_boundary(api: Api) -> None:
+    headers = bearer(api.login("serving-decimal-tiny-boundary@example.com"))
+    body = recipe_input("十进制微量边界")
+    body["snapshot"].update(
+        {
+            "servings": 3,
+            "ingredients": [
+                {
+                    "id": "tiny-boundary",
+                    "display_name": "边界微量",
+                    "quantity": 0.00115384615384614,
+                    "unit": "g",
+                    "scaling_mode": "proportional",
+                }
+            ],
+            "steps": [],
+        }
+    )
+    created = api.client.post("/v1/recipes", json=body, headers=headers)
+    assert created.status_code == 201, created.text
+    saved = created.json()
+    response = api.client.get(
+        f"/v1/recipes/{saved['id']}/display",
+        params={"mode": "base", "target_servings": 13},
         headers=headers,
     )
     assert response.status_code == 200, response.text

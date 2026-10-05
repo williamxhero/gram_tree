@@ -58,5 +58,178 @@
       ],
       "step": null
     }
+  },
+  {
+    "name": "equal_area_shape_change_keeps_fractional_count",
+    "input": {
+      "original_mold": {"shape": "square", "unit": "cm", "side": 10},
+      "target_mold": {"shape": "rectangular", "unit": "cm", "width": 5, "length": 20},
+      "ingredients": [
+        {"id": "batter", "display_name": "面糊", "quantity": 100, "unit": "g", "scaling_mode": "proportional"},
+        {"id": "lemon", "display_name": "柠檬", "quantity": 0.5, "unit": "个", "scaling_mode": "round"}
+      ],
+      "steps": []
+    },
+    "expected": {
+      "area_ratio": 1,
+      "ingredients": [
+        {"id": "batter", "original_quantity": 100, "display_quantity": 100, "unit": "g", "rule": "mold_ratio"},
+        {"id": "lemon", "original_quantity": 0.5, "display_quantity": 0.5, "unit": "个", "rule": "round"}
+      ],
+      "warnings": [],
+      "step": null
+    }
+  },
+  {
+    "name": "decimal_equal_area_keeps_fractional_count",
+    "input": {
+      "original_mold": {"shape": "square", "unit": "cm", "side": 0.3},
+      "target_mold": {"shape": "rectangular", "unit": "cm", "width": 0.1, "length": 0.9},
+      "ingredients": [
+        {"id": "lemon", "display_name": "柠檬", "quantity": 0.5, "unit": "个", "scaling_mode": "round"}
+      ],
+      "steps": []
+    },
+    "expected": {
+      "area_ratio": 1,
+      "ingredients": [
+        {"id": "lemon", "original_quantity": 0.5, "display_quantity": 0.5, "unit": "个", "rule": "round"}
+      ],
+      "warnings": [],
+      "step": null
+    }
+  },
+  {
+    "name": "tiny_dimensions_keep_area_ratio",
+    "input": {
+      "original_mold": {"shape": "square", "unit": "cm", "side": 0.00000001},
+      "target_mold": {"shape": "rectangular", "unit": "cm", "width": 0.00000001, "length": 0.00000002},
+      "ingredients": [
+        {"id": "batter", "display_name": "微量面糊", "quantity": 1.2, "unit": "g", "scaling_mode": "proportional"}
+      ],
+      "steps": []
+    },
+    "expected": {
+      "area_ratio": 2,
+      "ingredients": [
+        {"id": "batter", "original_quantity": 1.2, "display_quantity": 2.4, "unit": "g", "rule": "mold_ratio"}
+      ],
+      "step": null
+    }
+  },
+  {
+    "name": "round_decimal_ratio_half_up",
+    "input": {
+      "original_mold": {"shape": "round", "unit": "cm", "diameter": 4},
+      "target_mold": {"shape": "round", "unit": "cm", "diameter": 5},
+      "ingredients": [
+        {"id": "batter", "display_name": "面糊", "quantity": 10, "unit": "g", "scaling_mode": "proportional"}
+      ],
+      "steps": []
+    },
+    "expected": {
+      "area_ratio": 1.56,
+      "ingredients": [
+        {"id": "batter", "original_quantity": 10, "display_quantity": 15.63, "unit": "g", "rule": "mold_ratio"}
+      ],
+      "step": null
+    }
+  },
+  {
+    "name": "tiny_ratio_round_keeps_minimum_count",
+    "input": {
+      "original_mold": {"shape": "square", "unit": "cm", "side": 1000},
+      "target_mold": {"shape": "rectangular", "unit": "cm", "width": 0.000001, "length": 0.000001},
+      "ingredients": [
+        {"id": "tiny-count", "display_name": "微量计数", "quantity": 3, "unit": "个", "scaling_mode": "round"}
+      ],
+      "steps": []
+    },
+    "expected": {
+      "area_ratio": 0,
+      "ingredients": [
+        {"id": "tiny-count", "original_quantity": 3, "display_quantity": 1, "unit": "个", "rule": "round"}
+      ],
+      "warnings": [
+        {"code": "round_deviation", "ingredient_id": "tiny-count", "message": "微量计数取整后与模具比例结果相差较大，请按实际情况微调其他用量。"}
+      ],
+      "source_value": "1 个",
+      "source_type": "scenario_adjusted",
+      "step": null
+    }
+  },
+  {
+    "name": "very_small_areas_are_not_equal_after_double_underflow",
+    "input": {
+      "original_mold": {"shape": "square", "unit": "cm", "side": 0.0000000000000001},
+      "target_mold": {"shape": "rectangular", "unit": "cm", "width": 0.0000000000000001, "length": 0.0000000000000002},
+      "ingredients": [
+        {"id": "egg", "display_name": "鸡蛋", "quantity": 3, "unit": "个", "scaling_mode": "round"}
+      ],
+      "steps": []
+    },
+    "expected": {
+      "area_ratio": 2,
+      "ingredients": [
+        {"id": "egg", "original_quantity": 3, "display_quantity": 6, "unit": "个", "rule": "round"}
+      ],
+      "step": null
+    }
+  },
+  {
+    "name": "mold_decimal_context_half_up_boundary",
+    "input": {
+      "original_mold": {"shape": "square", "unit": "cm", "side": 30},
+      "target_mold": {"shape": "square", "unit": "cm", "side": 10},
+      "ingredients": [
+        {"id": "boundary", "display_name": "边界用量", "quantity": 9.045, "unit": "g", "scaling_mode": "proportional"}
+      ],
+      "steps": []
+    },
+    "expected": {
+      "area_ratio": 0.11,
+      "ingredients": [
+        {"id": "boundary", "original_quantity": 9.045, "display_quantity": 1.01, "unit": "g", "rule": "mold_ratio"}
+      ],
+      "source_value": "1.01 g",
+      "source_type": "scenario_adjusted",
+      "step": null
+    }
+  },
+  {
+    "name": "cross_unit_inch_to_centimetre",
+    "input": {
+      "original_mold": {"shape": "round", "unit": "in", "diameter": 6},
+      "target_mold": {"shape": "round", "unit": "cm", "diameter": 12.7},
+      "ingredients": [
+        {"id": "flour", "display_name": "面粉", "quantity": 10, "unit": "g", "scaling_mode": "proportional"}
+      ],
+      "steps": []
+    },
+    "expected": {
+      "area_ratio": 0.69,
+      "ingredients": [
+        {"id": "flour", "original_quantity": 10, "display_quantity": 6.94, "unit": "g", "rule": "mold_ratio"}
+      ],
+      "step": null
+    }
+  },
+  {
+    "name": "cross_unit_centimetre_to_inch",
+    "input": {
+      "original_mold": {"shape": "round", "unit": "cm", "diameter": 15.24},
+      "target_mold": {"shape": "round", "unit": "in", "diameter": 8},
+      "ingredients": [
+        {"id": "flour", "display_name": "面粉", "quantity": 10, "unit": "g", "scaling_mode": "proportional"}
+      ],
+      "steps": []
+    },
+    "expected": {
+      "area_ratio": 1.78,
+      "ingredients": [
+        {"id": "flour", "original_quantity": 10, "display_quantity": 17.78, "unit": "g", "rule": "mold_ratio"}
+      ],
+      "step": null
+    }
   }
 ]

@@ -2195,6 +2195,12 @@ abstract class AppLocalizations {
   /// **'个人量具只改变显示，菜谱基础值未改变'**
   String get recipeMeasureDisplayOnly;
 
+  /// No description provided for @recipeMeasureDisplaySource.
+  ///
+  /// In zh, this message translates to:
+  /// **'量具表达'**
+  String get recipeMeasureDisplaySource;
+
   /// No description provided for @recipeMeasureNoDensity.
   ///
   /// In zh, this message translates to:

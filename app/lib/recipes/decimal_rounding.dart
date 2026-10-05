@@ -8,12 +8,14 @@ library;
 
 /// Scale a decimal input by an integer ratio without first multiplying it as
 /// a binary floating-point number. This matches
-/// `Decimal(str(value)) * numerator / denominator` on the server.
+/// `Decimal(str(value)) * (Decimal(numerator) / Decimal(denominator))`
+/// in the server's default 28-significant-digit context.
 double scaleByIntegerRatio(
   double value,
   int numerator,
   int denominator, {
   int fractionDigits = 12,
+  int contextPrecision = 28,
 }) {
   if (numerator < 0 || denominator <= 0) {
     throw ArgumentError('比例必须是非负分子和正分母');
@@ -25,18 +27,13 @@ double scaleByIntegerRatio(
     throw ArgumentError.value(fractionDigits, 'fractionDigits', '必须是非负整数');
   }
 
-  final (digits, decimalScale) = _decimalParts(value.abs());
-  var scaledNumerator = digits * BigInt.from(numerator);
-  var scaledDenominator = BigInt.from(denominator);
-  if (decimalScale >= 0) {
-    scaledDenominator *= _tenPower(decimalScale);
-  } else {
-    scaledNumerator *= _tenPower(-decimalScale);
-  }
-  scaledNumerator *= _tenPower(fractionDigits);
-  final rounded = _roundRational(scaledNumerator, scaledDenominator);
-  final result = rounded.toDouble() / _tenPower(fractionDigits).toDouble();
-  return value.isNegative ? -result : result;
+  final ratio = DecimalValue.fromNum(
+    numerator,
+  ).dividedBy(DecimalValue.fromNum(denominator), precision: contextPrecision);
+  final product = DecimalValue.fromNum(value.abs())
+      .multipliedBy(ratio, precision: contextPrecision);
+  final rounded = product.quantizedHalfUp(fractionDigits).toDouble();
+  return value.isNegative ? -rounded : rounded;
 }
 
 /// Round [value] to [fractionDigits] decimal places, half away from zero.
@@ -65,8 +62,7 @@ double roundHalfUp(double value, {int fractionDigits = 2}) {
   final scaled = shift >= 0
       ? digits * _tenPower(shift)
       : _roundQuotient(digits, _tenPower(-shift));
-  final scale = _tenPower(fractionDigits);
-  final rounded = scaled.toDouble() / scale.toDouble();
+  final rounded = _scaledIntegerToDouble(scaled, fractionDigits);
   return value.isNegative ? -rounded : rounded;
 }
 
@@ -80,6 +76,15 @@ double roundHalfUp(double value, {int fractionDigits = 2}) {
   return (
     BigInt.parse(mantissa.replaceAll('.', '')),
     mantissaFractionDigits - exponent,
+  );
+}
+
+double _scaledIntegerToDouble(BigInt value, int fractionDigits) {
+  if (fractionDigits == 0) return value.toDouble();
+  final padded = value.toString().padLeft(fractionDigits + 1, '0');
+  final split = padded.length - fractionDigits;
+  return double.parse(
+    '${padded.substring(0, split)}.${padded.substring(split)}',
   );
 }
 
@@ -100,4 +105,151 @@ BigInt _tenPower(int exponent) {
     result *= BigInt.from(10);
   }
   return result;
+}
+
+/// Non-negative Decimal arithmetic matching Python's default context: 28
+/// significant digits with half-even arithmetic, then half-up quantization.
+class DecimalValue {
+  const DecimalValue._(this.coefficient, this.exponent);
+
+  factory DecimalValue.fromNum(num value) {
+    if (!value.isFinite || value < 0) {
+      throw ArgumentError.value(value, 'value', '必须是有限非负数');
+    }
+    if (value is int) return DecimalValue._(BigInt.from(value), 0);
+    final (digits, scale) = _decimalParts(value.toDouble());
+    return DecimalValue._(digits, -scale);
+  }
+
+  final BigInt coefficient;
+  final int exponent;
+
+  bool get isZero => coefficient == BigInt.zero;
+
+  bool get isOne => compareTo(DecimalValue.fromNum(1)) == 0;
+
+  DecimalValue multipliedBy(DecimalValue other, {int precision = 28}) =>
+      _contextMultiply(this, other, precision);
+
+  DecimalValue dividedBy(DecimalValue other, {int precision = 28}) =>
+      _contextDivide(this, other, precision);
+
+  DecimalValue quantizedHalfUp(int fractionDigits) {
+    if (fractionDigits < 0) {
+      throw ArgumentError.value(fractionDigits, 'fractionDigits', '必须是非负整数');
+    }
+    final shift = exponent + fractionDigits;
+    final rounded = shift >= 0
+        ? coefficient * _tenPower(shift)
+        : _roundRational(coefficient, _tenPower(-shift));
+    return DecimalValue._(rounded, -fractionDigits);
+  }
+
+  int compareTo(DecimalValue other) {
+    final (left, right, _) = _alignedCoefficients(this, other);
+    return left.compareTo(right);
+  }
+
+  DecimalValue absoluteDifference(DecimalValue other) {
+    final (left, right, commonExponent) = _alignedCoefficients(this, other);
+    return DecimalValue._((left - right).abs(), commonExponent);
+  }
+
+  DecimalValue relativeDifference(DecimalValue other) {
+    if (other.isZero) throw ArgumentError('相对差异的基准不能为零');
+    return absoluteDifference(other).dividedBy(other);
+  }
+
+  double toDouble() => double.parse(toString());
+
+  @override
+  String toString() {
+    final digits = coefficient.toString();
+    if (exponent >= 0) return '$digits${'0' * exponent}';
+    final scale = -exponent;
+    final padded = digits.padLeft(scale + 1, '0');
+    final split = padded.length - scale;
+    return '${padded.substring(0, split)}.${padded.substring(split)}';
+  }
+}
+
+(BigInt, BigInt, int) _alignedCoefficients(
+  DecimalValue left,
+  DecimalValue right,
+) {
+  final commonExponent = left.exponent < right.exponent
+      ? left.exponent
+      : right.exponent;
+  return (
+    left.coefficient * _tenPower(left.exponent - commonExponent),
+    right.coefficient * _tenPower(right.exponent - commonExponent),
+    commonExponent,
+  );
+}
+
+DecimalValue _contextMultiply(
+  DecimalValue left,
+  DecimalValue right,
+  int precision,
+) => _roundSignificant(
+  DecimalValue._(
+    left.coefficient * right.coefficient,
+    left.exponent + right.exponent,
+  ),
+  precision,
+);
+
+DecimalValue _contextDivide(
+  DecimalValue numerator,
+  DecimalValue denominator,
+  int precision,
+) {
+  if (precision < 1) throw ArgumentError.value(precision, 'precision');
+  if (denominator.coefficient == BigInt.zero) {
+    throw ArgumentError('除数不能为零');
+  }
+  if (numerator.coefficient == BigInt.zero) {
+    return DecimalValue._(BigInt.zero, 0);
+  }
+  final numeratorDigits = numerator.coefficient.toString().length;
+  final denominatorDigits = denominator.coefficient.toString().length;
+  var order = numeratorDigits - denominatorDigits;
+  final belowPower = order >= 0
+      ? numerator.coefficient < denominator.coefficient * _tenPower(order)
+      : numerator.coefficient * _tenPower(-order) < denominator.coefficient;
+  if (belowPower) order--;
+  // Round the exact quotient once at its final significant-digit position.
+  // Rounding guard digits first could move a value onto a half-even tie.
+  final shift = precision - 1 - order;
+  final scaledNumerator = shift >= 0
+      ? numerator.coefficient * _tenPower(shift)
+      : numerator.coefficient;
+  final scaledDenominator = shift >= 0
+      ? denominator.coefficient
+      : denominator.coefficient * _tenPower(-shift);
+  return DecimalValue._(
+    _roundRationalHalfEven(scaledNumerator, scaledDenominator),
+    numerator.exponent - denominator.exponent - shift,
+  );
+}
+
+DecimalValue _roundSignificant(DecimalValue value, int precision) {
+  if (precision < 1) throw ArgumentError.value(precision, 'precision');
+  final digits = value.coefficient.toString().length;
+  if (value.coefficient == BigInt.zero || digits <= precision) return value;
+  final remove = digits - precision;
+  final divisor = _tenPower(remove);
+  return DecimalValue._(
+    _roundRationalHalfEven(value.coefficient, divisor),
+    value.exponent + remove,
+  );
+}
+
+BigInt _roundRationalHalfEven(BigInt numerator, BigInt denominator) {
+  final quotient = numerator ~/ denominator;
+  final remainder = numerator % denominator;
+  final doubled = remainder * BigInt.from(2);
+  if (doubled > denominator) return quotient + BigInt.one;
+  if (doubled < denominator) return quotient;
+  return quotient.isEven ? quotient : quotient + BigInt.one;
 }

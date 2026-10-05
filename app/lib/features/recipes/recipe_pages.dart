@@ -529,6 +529,7 @@ class _RecipeEditorPageState extends ConsumerState<RecipeEditorPage> {
         title: Text(_loaded == null ? l10n.newRecipe : l10n.recipeContinueEdit),
       ),
       body: ListView(
+        key: const ValueKey('recipe-editor-content'),
         padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
         children: [
           FilledButton(
@@ -1094,6 +1095,9 @@ class _IngredientEditorCardState extends State<_IngredientEditorCard> {
                     value: item.quantity,
                     onChanged: (value) {
                       item.quantity = double.tryParse(value) ?? 0;
+                      // A typed amount is the author's own value, whatever
+                      // estimated or verified it before.
+                      item.quantitySource = null;
                       onChanged();
                     },
                   ),
@@ -1106,6 +1110,7 @@ class _IngredientEditorCardState extends State<_IngredientEditorCard> {
                     value: item.unit,
                     onChanged: (value) {
                       item.unit = value;
+                      item.quantitySource = null;
                       onChanged();
                     },
                   ),
@@ -1135,6 +1140,7 @@ class _IngredientEditorCardState extends State<_IngredientEditorCard> {
                         value: item.baseQuantity,
                         onChanged: (value) {
                           item.baseQuantity = double.tryParse(value) ?? 0;
+                          item.quantitySource = null;
                           onChanged();
                         },
                       ),
@@ -1147,6 +1153,7 @@ class _IngredientEditorCardState extends State<_IngredientEditorCard> {
                         value: item.baseUnit,
                         onChanged: (value) {
                           item.baseUnit = value;
+                          item.quantitySource = null;
                           onChanged();
                         },
                       ),
@@ -1672,7 +1679,7 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
         : null;
     final key = [
       widget.recipeId,
-      widget.versionId,
+      _detail?.version.id ?? widget.versionId,
       displayMode.name,
       measureId,
       measureFingerprint,
@@ -1709,7 +1716,9 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
             measureId: measureId,
             targetServings: targetServings,
             targetMold: targetMold,
-            versionId: widget.versionId,
+            // Pin the request to the version on screen: the current-recipe
+            // endpoint could already serve a newer version saved elsewhere.
+            versionId: _detail?.version.id ?? widget.versionId,
           );
       if (!mounted || _displayContractKey != key) return;
       setState(() => _displayContract = result);
@@ -1882,8 +1891,13 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
           ? null
           : '${selectedMeasure.id}:${selectedMeasure.name}:${selectedMeasure.capacityMl}:${selectedMeasure.updatedAt}',
     );
+    // Only a contract computed from the version on screen may replace the
+    // local kernel's values.
+    final contract = _displayContract?.display.versionId == detail.version.id
+        ? _displayContract
+        : null;
     final contractById = {
-      for (final item in _displayContract?.display.ingredients ?? const [])
+      for (final item in contract?.display.ingredients ?? const [])
         item.id: item,
     };
     final displayedById = {
@@ -1900,9 +1914,22 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
           displayMode: _displayMode,
           densities: _densities,
           measure: selectedMeasure,
-          exactScale: _scaleMode == _RecipeScaleMode.servings
-              ? targetServings / snapshot.servings
-              : moldConversion?.scale,
+          // Scale in decimal form, like the server's exact Decimal product;
+          // a binary product such as 0.024999999999999997 * 0.2 is already
+          // 0.005 and would show a tiny amount as 0.01.
+          scaleExactly: _scaleMode == _RecipeScaleMode.servings
+              ? (quantity) => scaleByIntegerRatio(
+                  quantity,
+                  targetServings,
+                  snapshot.servings,
+                  fractionDigits: _exactScaleDigits,
+                )
+              : moldConversion == null
+              ? null
+              : (quantity) => moldConversion!.scaleQuantity(
+                  quantity,
+                  fractionDigits: _exactScaleDigits,
+                ),
         ),
     };
     return Scaffold(
@@ -2767,14 +2794,16 @@ class _IngredientDetailRow extends StatelessWidget {
     // original (an `unchanged` rule, or rounding back to the same count).
     final conversionActive = conversionTargetChanged && convertedRule != null;
     final conversionPresent = conversionActive || adjusted;
-    // Accent and the "按场景调整" mark mean "the system changed this for you",
-    // so they only apply when the displayed value actually differs.
-    final systemChanged = adjusted || systemDisplayChanged;
+    // A measure conversion changes only the expression, not the recipe
+    // quantity. Accent and scene provenance are reserved for real serving/mold
+    // quantity changes; display-only provenance remains neutral.
+    final systemChanged = adjusted;
     final valueChanged = systemChanged;
     final originalQuantity =
         '${_quantityText(ingredient.quantity)} ${ingredient.unit}';
     final source = ingredient.quantitySource;
     final serverSource = contract?.source_;
+    final displayOnly = systemDisplayChanged && !conversionActive && !adjusted;
     final sourceType =
         conversionActive &&
             serverSource?.sourceType.value == sourceTypeAuthorFilled
@@ -2783,13 +2812,21 @@ class _IngredientDetailRow extends StatelessWidget {
               (conversionActive || systemChanged
                   ? sourceTypeScenarioAdjusted
                   : source?.source_.value ?? sourceTypeAuthorFilled);
-    final showSource = serverSource != null
-        ? serverSource.sourceType.value != sourceTypeAuthorFilled ||
-              conversionActive
-        : systemChanged ||
-              conversionActive ||
-              (source != null &&
-                  source.source_.value != sourceTypeAuthorFilled);
+    final displayNeutralLabel =
+        displayOnly &&
+        (sourceType == sourceTypeAuthorFilled ||
+            sourceType == sourceTypeScenarioAdjusted);
+    final showSource =
+        displayOnly ||
+        (serverSource != null
+            ? serverSource.sourceType.value != sourceTypeAuthorFilled ||
+                  conversionActive ||
+                  systemDisplayChanged
+            : systemChanged ||
+                  conversionActive ||
+                  systemDisplayChanged ||
+                  (source != null &&
+                      source.source_.value != sourceTypeAuthorFilled));
     final conversionBasis = conversionPresent
         ? (moldConverted != null || conversionRule == 'mold_ratio'
               ? _conversionRuleLabel(convertedRule ?? '', l10n)
@@ -2860,8 +2897,20 @@ class _IngredientDetailRow extends StatelessWidget {
               basisText: sourceBasis,
               citation: serverSource?.basis.citation,
               required: false,
-              // SPEC-002.3 has no recipe-adjustment handler yet; deterministic
-              // conversion details stay read-only instead of emitting no-op actions.
+              neutral:
+                  (displayNeutralLabel && !systemChanged) ||
+                  (sourceType == sourceTypeScenarioAdjusted && !systemChanged),
+              valueChanged: valueChanged,
+              showWhenAuthorFilled:
+                  displayNeutralLabel && sourceType == sourceTypeAuthorFilled,
+              labelOverride: displayNeutralLabel
+                  ? l10n.recipeMeasureDisplaySource
+                  : null,
+              whyTitleOverride: displayNeutralLabel
+                  ? l10n.recipeMeasureDisplaySource
+                  : null,
+              // SPEC-002.3 only provides deterministic provenance; adjustment
+              // feedback belongs to a later recipe-adjustment contract.
               feedbackEnabled: false,
               onAction: null,
             ),
@@ -3322,6 +3371,10 @@ String _formatDate(BuildContext context, String value) {
       '${MaterialLocalizations.of(context).formatTimeOfDay(TimeOfDay.fromDateTime(local))}';
 }
 
+// Exact scaled amounts keep enough decimals that a product just below the
+// 0.005 display threshold cannot be rounded up to it before formatting.
+const _exactScaleDigits = 20;
+
 String _quantityText(num value) {
   final number = value.toDouble();
   if (number > 0 && number < 0.005) return '<0.01';
@@ -3373,7 +3426,7 @@ DisplayedAmount? _displayedAmount(
   required MeasureDisplayMode displayMode,
   required Map<String, double> densities,
   required PersonalMeasureOut? measure,
-  double? exactScale,
+  double Function(double quantity)? scaleExactly,
 }) {
   // A positive proportional amount that rounds to `0` keeps its exact scaled
   // value, so it is shown as "<0.01" instead of disappearing. Every other
@@ -3383,7 +3436,7 @@ DisplayedAmount? _displayedAmount(
       convertedMold?.displayQuantity ??
       converted?.displayQuantity;
   final proportional =
-      exactScale != null &&
+      scaleExactly != null &&
       {'proportional', 'mold_ratio'}.contains(
         contract?.conversionRule.value ??
             convertedMold?.rule ??
@@ -3405,7 +3458,7 @@ DisplayedAmount? _displayedAmount(
         ingredient.baseQuantity?.toDouble() ?? ingredient.quantity.toDouble();
     final contractQuantity = contract.convertedQuantity?.toDouble();
     if (contractBaseUnit != 'count' && proportional) {
-      contractBaseQuantity *= exactScale;
+      contractBaseQuantity = scaleExactly(contractBaseQuantity);
     } else if (contractBaseUnit != 'count' &&
         contractQuantity != null &&
         ingredient.quantity != 0) {
@@ -3434,9 +3487,12 @@ DisplayedAmount? _displayedAmount(
       converted?.originalQuantity ??
       ingredient.quantity.toDouble();
   if (_countDisplayUnits.contains(ingredient.unit.trim().toLowerCase())) {
+    final shownQuantity = tinyProportional
+        ? scaleExactly(ingredient.quantity.toDouble())
+        : convertedQuantity;
     return DisplayedAmount(
-      text: '${_quantityText(convertedQuantity)} ${ingredient.unit}',
-      displayQuantity: convertedQuantity,
+      text: '${_quantityText(shownQuantity)} ${ingredient.unit}',
+      displayQuantity: shownQuantity,
       displayUnit: ingredient.unit,
       grams: null,
       rule: 'base',
@@ -3446,9 +3502,12 @@ DisplayedAmount? _displayedAmount(
       ingredient.baseUnit?.value ?? _displayBaseUnit(ingredient.unit);
   if (baseUnit == null) return null;
   if (baseUnit == 'count') {
+    final shownQuantity = tinyProportional
+        ? scaleExactly(ingredient.quantity.toDouble())
+        : convertedQuantity;
     return DisplayedAmount(
-      text: '${_quantityText(convertedQuantity)} ${ingredient.unit}',
-      displayQuantity: convertedQuantity,
+      text: '${_quantityText(shownQuantity)} ${ingredient.unit}',
+      displayQuantity: shownQuantity,
       displayUnit: ingredient.unit,
       grams: null,
       rule: 'base',
@@ -3457,7 +3516,7 @@ DisplayedAmount? _displayedAmount(
   var baseQuantity =
       ingredient.baseQuantity?.toDouble() ?? ingredient.quantity.toDouble();
   if (tinyProportional) {
-    baseQuantity *= exactScale;
+    baseQuantity = scaleExactly(baseQuantity);
   } else if (originalQuantity != 0) {
     baseQuantity *= convertedQuantity / originalQuantity;
   }
