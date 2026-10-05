@@ -262,6 +262,10 @@ MoldConversionResult convertMold({
   );
 }
 
+// Keep intermediate geometry precise enough for small valid dimensions before
+// returning to the double representation used by the public conversion result.
+const _geometryScaleDigits = 30;
+
 double _area(MoldSpec mold) {
   final factor = _unitFactor(mold.unit?.value ?? 'cm');
   switch (mold.shape) {
@@ -269,13 +273,22 @@ double _area(MoldSpec mold) {
       final diameter = scaleByDecimalRatio(
         _positive(mold.diameter, 'diameter'),
         factor,
-        fractionDigits: 15,
+        fractionDigits: _geometryScaleDigits,
       );
-      final radius = scaleByIntegerRatio(diameter, 1, 2, fractionDigits: 15);
+      final radius = scaleByIntegerRatio(
+        diameter,
+        1,
+        2,
+        fractionDigits: _geometryScaleDigits,
+      );
       return scaleByDecimalRatio(
         math.pi,
-        scaleByDecimalRatio(radius, radius, fractionDigits: 15),
-        fractionDigits: 15,
+        scaleByDecimalRatio(
+          radius,
+          radius,
+          fractionDigits: _geometryScaleDigits,
+        ),
+        fractionDigits: _geometryScaleDigits,
       );
     case MoldSpecShapeEnum.square:
       // Same rule as the server schema: side and width name one edge.
@@ -285,27 +298,35 @@ double _area(MoldSpec mold) {
       final side = scaleByDecimalRatio(
         _positive(mold.side ?? mold.width, 'side'),
         factor,
-        fractionDigits: 15,
+        fractionDigits: _geometryScaleDigits,
       );
       if (mold.length != null &&
           mold.length != mold.side &&
           mold.length != mold.width) {
         throw MoldConversionError('invalid_mold', '方模的边长必须相等');
       }
-      return scaleByDecimalRatio(side, side, fractionDigits: 15);
+      return scaleByDecimalRatio(
+        side,
+        side,
+        fractionDigits: _geometryScaleDigits,
+      );
     case MoldSpecShapeEnum.rectangular:
     case MoldSpecShapeEnum.custom:
       final width = scaleByDecimalRatio(
         _positive(mold.width, 'width'),
         factor,
-        fractionDigits: 15,
+        fractionDigits: _geometryScaleDigits,
       );
       final length = scaleByDecimalRatio(
         _positive(mold.length, 'length'),
         factor,
-        fractionDigits: 15,
+        fractionDigits: _geometryScaleDigits,
       );
-      return scaleByDecimalRatio(width, length, fractionDigits: 15);
+      return scaleByDecimalRatio(
+        width,
+        length,
+        fractionDigits: _geometryScaleDigits,
+      );
   }
 }
 

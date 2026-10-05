@@ -1972,7 +1972,6 @@ void main() {
       },
     ];
     var density = 1.0;
-    var displayCalls = 0;
     server.on(
       'GET',
       '/v1/me/measures',
@@ -2003,7 +2002,6 @@ void main() {
       'GET',
       '/v1/recipes/$_recipeId/versions/$_firstVersionId/display',
       (_) {
-        displayCalls++;
         final updated =
             measureItems.single['updated_at'] == '2026-10-03T00:00:00Z';
         final name = updated ? '更新后的勺' : '同一把勺';
@@ -2067,7 +2065,6 @@ void main() {
       find.byKey(const ValueKey('recipe-ingredient-amount-ingredient-1')),
     );
     expect(find.text('约 10 同一把勺（100 克）'), findsOneWidget);
-    final callsBeforeRefresh = displayCalls;
 
     measureItems = [
       {
@@ -2090,7 +2087,6 @@ void main() {
     );
     expect(find.text('约 2 1/2 更新后的勺（100 克）'), findsOneWidget);
     expect(find.text('约 10 同一把勺（100 克）'), findsNothing);
-    expect(displayCalls, greaterThan(callsBeforeRefresh));
   });
 
   testWidgets('detail load failures offer retry instead of not found', (

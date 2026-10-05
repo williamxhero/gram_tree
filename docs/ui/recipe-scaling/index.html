@@ -155,11 +155,11 @@
         </div>
         <p><strong>依据：</strong><span id="why-basis"></span></p>
         <p class="subtle small">规则版本：确定性换算 v1 · 只改变显示，不改动原方</p>
-        <p id="why-readonly" class="subtle small">本页是只读换算样稿，反馈动作暂不可用。</p>
+        <p id="why-readonly" class="subtle small">样稿只预览反馈意图，不会保存口味偏好。</p>
       </div>
-      <div class="why-actions">
-        <button type="button" id="why-skip" disabled>这次不用</button>
-        <button type="button" id="why-never" disabled>以后别这样</button>
+      <div class="why-actions" aria-describedby="why-readonly">
+        <button type="button" id="why-skip">这次不用</button>
+        <button type="button" id="why-never">以后别这样</button>
       </div>
       <button type="button" id="why-close">关闭</button>
     </section>
@@ -332,11 +332,16 @@
       const active = scenarioActive();
       $('ingredients').innerHTML = current.rows.map((row) => {
         const shown = displayText(row);
+        const displayAdjusted = state.display !== 'base'
+          && shown.text !== amountText(row.value, row.unit);
+        const marked = active || displayAdjusted;
+        const sourceLabel = active ? '按场景调整过' : '按量具显示';
+        const markText = active ? '场景' : '显示';
         const notes = [];
         if (row.scaling === 'unchanged') notes.push('固定用量，不随份数或模具变化');
         if (shown.note) notes.push(shown.note);
-        const mark = active
-          ? `<button type="button" class="src-mark" data-why="${row.id}" aria-label="${row.name} ${amountText(row.value, row.unit)}，按场景调整过，点开看原因">${SCENE_ICON}场景</button>`
+        const mark = marked
+          ? `<button type="button" class="src-mark" data-why="${row.id}" aria-label="${row.name} ${shown.text}，${sourceLabel}，点开看原因">${SCENE_ICON}${markText}</button>`
           : '';
         const note = notes.length ? `<span class="note muted small">${notes.join(' · ')}</span>` : '';
         return `<div class="ingredient" role="listitem"><strong>${row.name}</strong><span class="value"><span class="amount${row.changed ? ' changed' : ''}">${shown.text}</span>${mark}</span>${note}</div>`;
@@ -416,11 +421,16 @@
 
     function openWhy(id, trigger) {
       const row = current.rows.find((item) => item.id === id);
-      if (!row || (!row.changed && !scenarioActive())) return;
-      lastTrigger = trigger;
+      if (!row) return;
       const shown = displayText(row);
+      const displayAdjusted = state.display !== 'base'
+        && shown.text !== amountText(row.value, row.unit);
+      if (!row.changed && !scenarioActive() && !displayAdjusted) return;
+      lastTrigger = trigger;
       $('why-title').textContent = `${row.name}为什么是 ${shown.text}`;
-      $('why-source').textContent = `按场景调整（${state.mode === 'mold' ? '模具换算' : '份数换算'}）`;
+      $('why-source').textContent = scenarioActive()
+        ? `按场景调整（${state.mode === 'mold' ? '模具换算' : '份数换算'}）`
+        : '按量具显示';
       $('why-from').textContent = `${amountText(row.quantity, row.unit)}（${originalScopeText()}）`;
       $('why-to').textContent = `${shown.text}（${scopeText()}）`;
       $('why-to').classList.add('changed');
@@ -428,6 +438,11 @@
       $('why-panel').hidden = false;
       $('page').inert = true;
       $('why-close').focus();
+    }
+
+    function recordWhyAction(intent, message) {
+      closeWhy();
+      $('alerts').innerHTML = `<div class="alert">样稿预览：已触发 ${intent}（${message}），不会保存口味偏好。</div>`;
     }
 
     function closeWhy() {
@@ -464,6 +479,8 @@
       if (mark) openWhy(mark.dataset.why, mark);
     });
     $('why-close').addEventListener('click', closeWhy);
+    $('why-skip').addEventListener('click', () => recordWhyAction('skip_this_time', '这次不用'));
+    $('why-never').addEventListener('click', () => recordWhyAction('dont_do_again', '以后别这样'));
     $('why-panel').addEventListener('click', (event) => { if (event.target === event.currentTarget) closeWhy(); });
     document.addEventListener('keydown', (event) => {
       if ($('why-panel').hidden) return;

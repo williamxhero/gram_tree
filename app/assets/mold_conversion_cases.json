@@ -98,5 +98,23 @@
       "warnings": [],
       "step": null
     }
+  },
+  {
+    "name": "tiny_dimensions_keep_area_ratio",
+    "input": {
+      "original_mold": {"shape": "square", "unit": "cm", "side": 0.00000001},
+      "target_mold": {"shape": "rectangular", "unit": "cm", "width": 0.00000001, "length": 0.00000002},
+      "ingredients": [
+        {"id": "batter", "display_name": "微量面糊", "quantity": 1.2, "unit": "g", "scaling_mode": "proportional"}
+      ],
+      "steps": []
+    },
+    "expected": {
+      "area_ratio": 2,
+      "ingredients": [
+        {"id": "batter", "original_quantity": 1.2, "display_quantity": 2.4, "unit": "g", "rule": "mold_ratio"}
+      ],
+      "step": null
+    }
   }
 ]
