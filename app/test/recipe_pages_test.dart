@@ -605,8 +605,12 @@ Future<void> _openRecipeDetailForFixture(
     env: TestEnv.signedIn(
       server: server,
       params: {
-        if (roundDeviationThreshold != null)
-          'recipe.scaling_round_deviation_threshold': roundDeviationThreshold,
+        ...?roundDeviationThreshold == null
+            ? null
+            : {
+                'recipe.scaling_round_deviation_threshold':
+                    roundDeviationThreshold,
+              },
       },
     ),
     settle: false,

@@ -159,6 +159,7 @@ def convert_servings(
         )
     if round_deviation_threshold < 0 or batch_multiplier < 1:
         raise ServingConversionError("invalid_servings_config", "换算阈值配置有误")
+    round_deviation_threshold_decimal = Decimal(str(round_deviation_threshold))
 
     ratio = Decimal(target_servings) / Decimal(original_servings)
     ingredients_out: list[ConvertedIngredient] = []
@@ -183,8 +184,9 @@ def convert_servings(
             else:
                 display = max(Decimal("1"), Decimal(str(_whole(theoretical))))
             if theoretical != 0:
-                deviation_ratio = float(abs(display - theoretical) / abs(theoretical))
-                deviation_warning = deviation_ratio > round_deviation_threshold
+                deviation_decimal = abs(display - theoretical) / abs(theoretical)
+                deviation_ratio = float(deviation_decimal)
+                deviation_warning = deviation_decimal > round_deviation_threshold_decimal
                 if deviation_warning:
                     warnings.append(
                         ServingWarning(

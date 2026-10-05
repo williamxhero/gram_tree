@@ -197,6 +197,7 @@ def convert_mold(
     """
     if round_deviation_threshold < 0:
         raise MoldConversionError("invalid_mold_config", "模具换算阈值配置有误")
+    round_deviation_threshold_decimal = Decimal(str(round_deviation_threshold))
     source_area = mold_area(original_mold)
     target_area = mold_area(target_mold)
     if source_area <= 0 or target_area <= 0:  # defensive: _dimensions already checks this
@@ -229,8 +230,9 @@ def convert_mold(
                 display = max(Decimal("1"), _whole(theoretical))
             rule = "round"
             if theoretical != 0:
-                deviation_ratio = float(abs(display - theoretical) / abs(theoretical))
-                deviation_warning = deviation_ratio > round_deviation_threshold
+                deviation_decimal = abs(display - theoretical) / abs(theoretical)
+                deviation_ratio = float(deviation_decimal)
+                deviation_warning = deviation_decimal > round_deviation_threshold_decimal
                 if deviation_warning:
                     warnings.append(
                         MoldConversionWarning(

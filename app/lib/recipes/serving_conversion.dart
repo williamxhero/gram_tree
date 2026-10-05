@@ -278,9 +278,9 @@ ServingConversionResult convertServings({
           display = 1;
         }
         if (!theoreticalDecimal.isZero) {
-          final deviation = displayDecimal
-              .absoluteDifference(theoreticalDecimal)
-              .dividedBy(theoreticalDecimal);
+          final deviation = displayDecimal.relativeDifference(
+            theoreticalDecimal,
+          );
           deviationRatio = deviation.toDouble();
           deviationWarning =
               deviation.compareTo(

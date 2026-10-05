@@ -146,23 +146,18 @@ class DecimalValue {
   }
 
   int compareTo(DecimalValue other) {
-    final commonExponent = exponent < other.exponent
-        ? exponent
-        : other.exponent;
-    final left = coefficient * _tenPower(exponent - commonExponent);
-    final right =
-        other.coefficient * _tenPower(other.exponent - commonExponent);
+    final (left, right, _) = _alignedCoefficients(this, other);
     return left.compareTo(right);
   }
 
   DecimalValue absoluteDifference(DecimalValue other) {
-    final commonExponent = exponent < other.exponent
-        ? exponent
-        : other.exponent;
-    final left = coefficient * _tenPower(exponent - commonExponent);
-    final right =
-        other.coefficient * _tenPower(other.exponent - commonExponent);
+    final (left, right, commonExponent) = _alignedCoefficients(this, other);
     return DecimalValue._((left - right).abs(), commonExponent);
+  }
+
+  DecimalValue relativeDifference(DecimalValue other) {
+    if (other.isZero) throw ArgumentError('相对差异的基准不能为零');
+    return absoluteDifference(other).dividedBy(other);
   }
 
   double toDouble() => double.parse(toString());
@@ -176,6 +171,20 @@ class DecimalValue {
     final split = padded.length - scale;
     return '${padded.substring(0, split)}.${padded.substring(split)}';
   }
+}
+
+(BigInt, BigInt, int) _alignedCoefficients(
+  DecimalValue left,
+  DecimalValue right,
+) {
+  final commonExponent = left.exponent < right.exponent
+      ? left.exponent
+      : right.exponent;
+  return (
+    left.coefficient * _tenPower(left.exponent - commonExponent),
+    right.coefficient * _tenPower(right.exponent - commonExponent),
+    commonExponent,
+  );
 }
 
 DecimalValue _contextMultiply(

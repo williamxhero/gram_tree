@@ -377,5 +377,32 @@
       "total_time_seconds": 0,
       "active_time_seconds": 0
     }
+  },
+  {
+    "name": "custom_round_threshold_just_over_boundary",
+    "input": {
+      "original_servings": 5,
+      "target_servings": 3,
+      "round_deviation_threshold": 0.1,
+      "ingredients": [
+        {"id": "counted-just-over", "display_name": "略超边界计数", "quantity": 3.0303030303030303, "unit": "个", "scaling_mode": "round"}
+      ],
+      "steps": []
+    },
+    "expected": {
+      "original_servings": 5,
+      "target_servings": 3,
+      "min_servings": 1,
+      "max_servings": 20,
+      "ingredients": [
+        {"id": "counted-just-over", "display_name": "略超边界计数", "original_quantity": 3.0303030303030303, "display_quantity": 2, "unit": "个", "rule": "round", "deviation_ratio": 0.10000000000000001, "deviation_warning": true}
+      ],
+      "steps": [],
+      "warnings": [
+        {"code": "round_deviation", "ingredient_id": "counted-just-over", "message": "略超边界计数取整后与按比例结果相差较大，请按口味微调其他用量。"}
+      ],
+      "total_time_seconds": 0,
+      "active_time_seconds": 0
+    }
   }
 ]
