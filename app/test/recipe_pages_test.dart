@@ -597,9 +597,20 @@ Future<void> _resetPage(WidgetTester tester) async {
 
 Future<void> _openRecipeDetailForFixture(
   WidgetTester tester,
-  FakeServer server,
-) async {
-  await pumpApp(tester, env: TestEnv.signedIn(server: server), settle: false);
+  FakeServer server, {
+  double? roundDeviationThreshold,
+}) async {
+  await pumpApp(
+    tester,
+    env: TestEnv.signedIn(
+      server: server,
+      params: {
+        if (roundDeviationThreshold != null)
+          'recipe.scaling_round_deviation_threshold': roundDeviationThreshold,
+      },
+    ),
+    settle: false,
+  );
   await _fixtureSettle(tester);
   await tester.tap(find.byKey(const ValueKey('primary-create-button')));
   await _fixtureSettle(tester);
@@ -2660,7 +2671,12 @@ void main() {
         'total_time_seconds': expected['total_time_seconds'],
         'active_time_seconds': expected['active_time_seconds'],
       });
-      await _openRecipeDetailForFixture(tester, server);
+      await _openRecipeDetailForFixture(
+        tester,
+        server,
+        roundDeviationThreshold: (input['round_deviation_threshold'] as num?)
+            ?.toDouble(),
+      );
       await _scrollUntilVisible(
         tester,
         find.byKey(const ValueKey('recipe-serving-control')),

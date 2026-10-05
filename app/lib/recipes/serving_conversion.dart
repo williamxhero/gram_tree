@@ -257,6 +257,7 @@ ServingConversionResult convertServings({
         .multipliedBy(ratio);
     final theoretical = theoreticalDecimal.toDouble();
     var display = theoretical;
+    DecimalValue? displayDecimal;
     double? deviationRatio;
     var deviationWarning = false;
     switch (item.scalingMode) {
@@ -266,15 +267,26 @@ ServingConversionResult convertServings({
         // An identity ratio keeps the author's count (e.g. 0.5 个). Otherwise
         // zero stays an intentional absence, and a positive amount keeps at
         // least one item; the deviation warning below explains the adjustment.
-        if (targetServings == originalServings) {
-          display = item.quantity;
-        } else {
-          display = theoreticalDecimal.quantizedHalfUp(0).toDouble();
-          if (!theoreticalDecimal.isZero && display < 1) display = 1;
+        displayDecimal = targetServings == originalServings
+            ? DecimalValue.fromNum(item.quantity)
+            : theoreticalDecimal.quantizedHalfUp(0);
+        display = displayDecimal.toDouble();
+        if (!theoreticalDecimal.isZero &&
+            targetServings != originalServings &&
+            display < 1) {
+          displayDecimal = DecimalValue.fromNum(1);
+          display = 1;
         }
-        if (theoretical != 0) {
-          deviationRatio = (display - theoretical).abs() / theoretical.abs();
-          deviationWarning = deviationRatio > roundDeviationThreshold;
+        if (!theoreticalDecimal.isZero) {
+          final deviation = displayDecimal
+              .absoluteDifference(theoreticalDecimal)
+              .dividedBy(theoreticalDecimal);
+          deviationRatio = deviation.toDouble();
+          deviationWarning =
+              deviation.compareTo(
+                DecimalValue.fromNum(roundDeviationThreshold),
+              ) >
+              0;
           if (deviationWarning) {
             warnings.add(
               ServingConversionWarning(

@@ -175,6 +175,7 @@ MoldConversionResult convertMold({
     final theoretical = theoreticalDecimal.toDouble();
     var display = theoretical;
     var rule = item.scalingMode;
+    DecimalValue? displayDecimal;
     double? deviationRatio;
     var deviationWarning = false;
     switch (item.scalingMode) {
@@ -186,19 +187,28 @@ MoldConversionResult convertMold({
         // An equal-area mold keeps the author's count (e.g. 0.5 个). Otherwise
         // zero stays an intentional absence, and a positive amount keeps at
         // least one item; the deviation warning below explains the adjustment.
-        display = isIdentity
-            ? item.quantity
+        displayDecimal = isIdentity
+            ? DecimalValue.fromNum(item.quantity)
             : theoreticalDecimal.isZero
-            ? 0
-            : theoreticalDecimal
-                  .quantizedHalfUp(0)
-                  .toDouble()
-                  .clamp(1, double.infinity)
-                  .toDouble();
+            ? DecimalValue.fromNum(0)
+            : theoreticalDecimal.quantizedHalfUp(0);
+        if (!theoreticalDecimal.isZero &&
+            !isIdentity &&
+            displayDecimal.compareTo(DecimalValue.fromNum(1)) < 0) {
+          displayDecimal = DecimalValue.fromNum(1);
+        }
+        display = displayDecimal.toDouble();
         rule = 'round';
-        if (!theoreticalDecimal.isZero && theoretical != 0) {
-          deviationRatio = (display - theoretical).abs() / theoretical.abs();
-          deviationWarning = deviationRatio > roundDeviationThreshold;
+        if (!theoreticalDecimal.isZero) {
+          final deviation = displayDecimal
+              .absoluteDifference(theoreticalDecimal)
+              .dividedBy(theoreticalDecimal);
+          deviationRatio = deviation.toDouble();
+          deviationWarning =
+              deviation.compareTo(
+                DecimalValue.fromNum(roundDeviationThreshold),
+              ) >
+              0;
           if (deviationWarning) {
             warnings.add(
               MoldConversionWarning(

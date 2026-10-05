@@ -352,5 +352,30 @@
       "total_time_seconds": 0,
       "active_time_seconds": 0
     }
+  },
+  {
+    "name": "custom_round_threshold_exact_boundary",
+    "input": {
+      "original_servings": 3,
+      "target_servings": 1,
+      "round_deviation_threshold": 0.1,
+      "ingredients": [
+        {"id": "counted-boundary", "display_name": "边界计数", "quantity": 10, "unit": "个", "scaling_mode": "round"}
+      ],
+      "steps": []
+    },
+    "expected": {
+      "original_servings": 3,
+      "target_servings": 1,
+      "min_servings": 1,
+      "max_servings": 20,
+      "ingredients": [
+        {"id": "counted-boundary", "display_name": "边界计数", "original_quantity": 10, "display_quantity": 3, "unit": "个", "rule": "round", "deviation_ratio": 0.1, "deviation_warning": false}
+      ],
+      "steps": [],
+      "warnings": [],
+      "total_time_seconds": 0,
+      "active_time_seconds": 0
+    }
   }
 ]

@@ -61,6 +61,22 @@ def _assert_conversion(actual: dict, expected: dict) -> None:
 
 @pytest.mark.parametrize("case", CASES, ids=[case["name"] for case in CASES])
 def test_serving_conversion_matches_shared_fixture(api: Api, case: dict) -> None:
+    if "round_deviation_threshold" in case["input"]:
+        assert (
+            cli(
+                [
+                    "config",
+                    "set",
+                    "recipe.scaling_round_deviation_threshold",
+                    str(case["input"]["round_deviation_threshold"]),
+                    "--by",
+                    "test",
+                    "--reason",
+                    "共享边界 fixture",
+                ]
+            )
+            == 0
+        )
     headers = bearer(api.login(f"serving-{case['name']}@example.com"))
     created = api.client.post("/v1/recipes", json=_recipe_body(case), headers=headers)
     assert created.status_code == 201, created.text

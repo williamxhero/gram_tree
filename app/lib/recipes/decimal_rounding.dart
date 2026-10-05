@@ -155,6 +155,16 @@ class DecimalValue {
     return left.compareTo(right);
   }
 
+  DecimalValue absoluteDifference(DecimalValue other) {
+    final commonExponent = exponent < other.exponent
+        ? exponent
+        : other.exponent;
+    final left = coefficient * _tenPower(exponent - commonExponent);
+    final right =
+        other.coefficient * _tenPower(other.exponent - commonExponent);
+    return DecimalValue._((left - right).abs(), commonExponent);
+  }
+
   double toDouble() => double.parse(toString());
 
   @override
