@@ -434,7 +434,7 @@
         : '显示方式：按量具表达';
       $('why-from').textContent = `${amountText(row.quantity, row.unit)}（${originalScopeText()}）`;
       $('why-to').textContent = `${shown.text}（${scopeText()}）`;
-      $('why-to').classList.add('changed');
+      if (row.changed) $('why-to').classList.add('changed');
       $('why-basis').textContent = [basisText(row), shown.note].filter(Boolean).join('；');
       $('why-panel').hidden = false;
       $('page').inert = true;
