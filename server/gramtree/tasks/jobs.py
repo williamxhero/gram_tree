@@ -61,6 +61,16 @@ def drain_recipe_save_outbox() -> int:
     return delivered
 
 
+@celery_app.task(name="gramtree.tasks.jobs.recheck_food_safety")
+def recheck_food_safety(limit: int = 100) -> dict[str, object]:
+    """Catch a deployed policy change and process its durable recheck queue."""
+    from gramtree.recipes import food_safety
+
+    with _session_factory()() as session:
+        policy = food_safety.rules()
+        return food_safety.run_rechecks(session, policy, limit=limit)
+
+
 @celery_app.task(name="gramtree.tasks.jobs.check_api_alerts")
 def check_api_alerts() -> dict[str, object]:
     redis = Redis.from_url(get_settings().redis_url)

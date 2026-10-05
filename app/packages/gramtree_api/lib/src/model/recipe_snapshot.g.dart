@@ -11,6 +11,8 @@ abstract class _$RecipeSnapshotCWProxy {
 
   RecipeSnapshot baseMold(MoldSpec? baseMold);
 
+  RecipeSnapshot description(String? description);
+
   RecipeSnapshot difficulty(String? difficulty);
 
   RecipeSnapshot dishType(String? dishType);
@@ -36,6 +38,7 @@ abstract class _$RecipeSnapshotCWProxy {
   RecipeSnapshot call({
     int? activeTimeSeconds,
     MoldSpec? baseMold,
+    String? description,
     String? difficulty,
     String? dishType,
     RecipeSnapshotFormatVersionEnum formatVersion,
@@ -59,6 +62,10 @@ class _$RecipeSnapshotCWProxyImpl implements _$RecipeSnapshotCWProxy {
 
   @override
   RecipeSnapshot baseMold(MoldSpec? baseMold) => this(baseMold: baseMold);
+
+  @override
+  RecipeSnapshot description(String? description) =>
+      this(description: description);
 
   @override
   RecipeSnapshot difficulty(String? difficulty) => this(difficulty: difficulty);
@@ -97,6 +104,7 @@ class _$RecipeSnapshotCWProxyImpl implements _$RecipeSnapshotCWProxy {
   RecipeSnapshot call({
     Object? activeTimeSeconds = const $CopyWithPlaceholder(),
     Object? baseMold = const $CopyWithPlaceholder(),
+    Object? description = const $CopyWithPlaceholder(),
     Object? difficulty = const $CopyWithPlaceholder(),
     Object? dishType = const $CopyWithPlaceholder(),
     Object? formatVersion = const $CopyWithPlaceholder(),
@@ -115,6 +123,10 @@ class _$RecipeSnapshotCWProxyImpl implements _$RecipeSnapshotCWProxy {
           ? _value.baseMold
           // ignore: cast_nullable_to_non_nullable
           : baseMold as MoldSpec?,
+      description: description == const $CopyWithPlaceholder()
+          ? _value.description
+          // ignore: cast_nullable_to_non_nullable
+          : description as String?,
       difficulty: difficulty == const $CopyWithPlaceholder()
           ? _value.difficulty
           // ignore: cast_nullable_to_non_nullable
@@ -177,6 +189,7 @@ RecipeSnapshot _$RecipeSnapshotFromJson(Map<String, dynamic> json) =>
             (v) =>
                 v == null ? null : MoldSpec.fromJson(v as Map<String, dynamic>),
           ),
+          description: $checkedConvert('description', (v) => v as String?),
           difficulty: $checkedConvert('difficulty', (v) => v as String?),
           dishType: $checkedConvert('dish_type', (v) => v as String?),
           formatVersion: $checkedConvert(
@@ -222,6 +235,7 @@ Map<String, dynamic> _$RecipeSnapshotToJson(RecipeSnapshot instance) =>
     <String, dynamic>{
       'active_time_seconds': ?instance.activeTimeSeconds,
       'base_mold': ?instance.baseMold?.toJson(),
+      'description': ?instance.description,
       'difficulty': ?instance.difficulty,
       'dish_type': ?instance.dishType,
       'format_version':

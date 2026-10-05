@@ -25,6 +25,8 @@ class RecipeSnapshot {
 
     this.baseMold,
 
+    this.description,
+
     this.difficulty,
 
     this.dishType,
@@ -55,6 +57,9 @@ class RecipeSnapshot {
   /// 烘焙菜谱的基准模具
   @JsonKey(name: r'base_mold', required: false, includeIfNull: false)
   final MoldSpec? baseMold;
+
+  @JsonKey(name: r'description', required: false, includeIfNull: false)
+  final String? description;
 
   @JsonKey(name: r'difficulty', required: false, includeIfNull: false)
   final String? difficulty;
@@ -96,6 +101,7 @@ class RecipeSnapshot {
       other is RecipeSnapshot &&
           other.activeTimeSeconds == activeTimeSeconds &&
           other.baseMold == baseMold &&
+          other.description == description &&
           other.difficulty == difficulty &&
           other.dishType == dishType &&
           other.formatVersion == formatVersion &&
@@ -109,6 +115,7 @@ class RecipeSnapshot {
   int get hashCode =>
       activeTimeSeconds.hashCode +
       baseMold.hashCode +
+      (description == null ? 0 : description.hashCode) +
       (difficulty == null ? 0 : difficulty.hashCode) +
       (dishType == null ? 0 : dishType.hashCode) +
       formatVersion.hashCode +

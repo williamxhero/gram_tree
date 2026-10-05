@@ -1,0 +1,24 @@
+{
+  "protocol": "1.0",
+  "page_type": "recipe_detail",
+  "composition_id": "00000000-0000-4000-8000-000000000126",
+  "generated_at": "2026-10-05T10:30:00Z",
+  "cache": { "depends_on": {}, "ttl_s": 0 },
+  "experiment": null,
+  "components": [
+    {
+      "type": "food_safety",
+      "id": "safety-not-required",
+      "detail": "standard",
+      "data": {
+        "status": "unknown",
+        "conclusion": "暂时无法确认食品安全信息。",
+        "basis": "请查看菜谱步骤并确认食材彻底做熟。",
+        "result": null
+      },
+      "actions": [],
+      "reason": { "code": "recipe_safety", "text": "安全信息不可跳过" },
+      "required": false
+    }
+  ]
+}

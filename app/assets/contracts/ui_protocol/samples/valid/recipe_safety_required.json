@@ -1,0 +1,60 @@
+{
+  "protocol": "1.0",
+  "page_type": "recipe_detail",
+  "composition_id": "00000000-0000-4000-8000-000000000125",
+  "generated_at": "2026-10-05T10:30:00Z",
+  "cache": { "depends_on": {}, "ttl_s": 0 },
+  "experiment": null,
+  "components": [
+    {
+      "type": "food_safety",
+      "id": "safety-1",
+      "detail": "standard",
+      "data": {
+        "status": "available",
+        "conclusion": "禽肉需彻底加热",
+        "basis": "中心温度达到 74°C，或确认中心无粉红、汁液清澈。",
+        "result": {
+          "rules_version": "2026.10",
+          "checked_at": "2026-10-05T10:30:00Z",
+          "high_risk": false,
+          "findings": [
+            {
+              "rule_id": "poultry-cook-through",
+              "severity": "warning",
+              "message": "禽肉需彻底加热。",
+              "basis": "烹饪前无法确认是否熟透。",
+              "step_ids": ["step-1"],
+              "ingredient_ids": ["ingredient-1"],
+              "threshold_celsius": 74,
+              "rest_minutes": null
+            }
+          ]
+        }
+      },
+      "actions": [],
+      "reason": { "code": "recipe_safety", "text": "根据当前保存的菜谱版本检查" },
+      "required": true
+    },
+    {
+      "type": "allergen_notice",
+      "id": "allergen-1",
+      "detail": "standard",
+      "data": {
+        "status": "available",
+        "conclusion": "含有：大豆；过敏原信息可能不完整",
+        "basis": "根据菜谱食材对应的标准食材信息推导。",
+        "result": {
+          "rules_version": "2026.10",
+          "checked_at": "2026-10-05T10:30:00Z",
+          "allergens": ["大豆"],
+          "allergens_incomplete": true,
+          "replacement_allergens": []
+        }
+      },
+      "actions": [],
+      "reason": { "code": "recipe_safety", "text": "根据当前保存的菜谱版本检查" },
+      "required": true
+    }
+  ]
+}

@@ -17,6 +17,10 @@ class PageTypeSpec:
     required_component_types: tuple[str, ...] = ()
 
 
-ITEMS: tuple[PageTypeSpec, ...] = (PageTypeSpec("today"),)
+ITEMS: tuple[PageTypeSpec, ...] = (
+    PageTypeSpec("today"),
+    PageTypeSpec("recipe_detail", ("food_safety", "allergen_notice")),
+    PageTypeSpec("recipe_editor", ("food_safety", "allergen_notice")),
+)
 
 BY_PAGE_TYPE: dict[str, PageTypeSpec] = {item.page_type: item for item in ITEMS}

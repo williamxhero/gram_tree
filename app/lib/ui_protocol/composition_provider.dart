@@ -83,6 +83,12 @@ final compositionTimeoutMsProvider = Provider<int>((ref) {
   return raw is num ? raw.toInt() : defaultCompositionTimeoutMs;
 });
 
+typedef RecipeCompositionKey = ({
+  String pageType,
+  String? recipeId,
+  String? versionId,
+});
+
 final compositionProvider = FutureProvider.family<CompositionResult, String>(
   (ref, pageType) => fetchComposition(
     ref,
@@ -90,6 +96,17 @@ final compositionProvider = FutureProvider.family<CompositionResult, String>(
     registry: ref.watch(componentRegistryProvider),
   ),
 );
+
+final recipeCompositionProvider =
+    FutureProvider.family<CompositionResult, RecipeCompositionKey>(
+      (ref, key) => fetchComposition(
+        ref,
+        pageType: key.pageType,
+        recipeId: key.recipeId,
+        versionId: key.versionId,
+        registry: ref.watch(componentRegistryProvider),
+      ),
+    );
 
 /// 请求组合结果，并在渲染前按协议信封 Schema 和每个组件的 data Schema 各校验一次
 /// （#18 的硬性要求）。这里拿原始 JSON（而不是走生成客户端直接拿到的强类型对象）
@@ -113,22 +130,31 @@ Future<CompositionResult> fetchComposition(
   Ref ref, {
   required String pageType,
   required ComponentRegistry registry,
+  String? recipeId,
+  String? versionId,
 }) async {
   final dio = ref.read(dioProvider);
+  final safetyPage = pageType == 'recipe_detail' || pageType == 'recipe_editor';
+  final supportedTypes = registry.supportedTypes
+      .where(
+        (type) =>
+            safetyPage || (type != 'food_safety' && type != 'allergen_notice'),
+      )
+      .toList();
   final request = ComposeRequest(
     pageType: pageType,
     protocolVersion: supportedProtocolVersion,
-    supportedComponents: registry.supportedTypes.toList(),
+    supportedComponents: supportedTypes,
   );
+  final requestBody = request.toJson();
+  if (recipeId != null) requestBody['recipe_id'] = recipeId;
+  if (versionId != null) requestBody['version_id'] = versionId;
   final timeoutMs = ref.watch(compositionTimeoutMsProvider);
 
   final Map<String, dynamic> raw;
   try {
     final response = await dio
-        .post<Map<String, dynamic>>(
-          '/v1/ui/compositions',
-          data: request.toJson(),
-        )
+        .post<Map<String, dynamic>>('/v1/ui/compositions', data: requestBody)
         .timeout(Duration(milliseconds: timeoutMs));
     final data = response.data;
     if (data == null) {
@@ -289,15 +315,18 @@ Future<CompositionResult> fetchComposition(
       );
   // SPEC-009.1 票 7（#83）：成功拿到的描述连同它依赖的内容版本存到本机，供下次
   // 离线/超时时使用（见 [_fail] 的 tryCache 分支）。
-  await ref
-      .read(compositionCacheStoreProvider)
-      .save(pageType, description, DateTime.now().toUtc());
+  if (description.cache.ttlS > 0) {
+    await ref
+        .read(compositionCacheStoreProvider)
+        .save(pageType, description, DateTime.now().toUtc());
+  }
   return CompositionReady(description);
 }
 
 /// 本机是否有一份"依赖版本和现在完全一致"的缓存——离线/超时时用它，不一致（含
 /// 本机根本没存过）时返回 `null`，调用方退回标准布局。
 CachedComposition? _usableCache(Ref ref, String pageType) {
+  if (pageType == 'recipe_detail' || pageType == 'recipe_editor') return null;
   final cached = ref.read(compositionCacheStoreProvider).read(pageType);
   if (cached == null) return null;
   final cachedDependsOn = cached.description.cache.dependsOn ?? const {};

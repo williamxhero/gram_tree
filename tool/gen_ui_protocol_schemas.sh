@@ -16,7 +16,17 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 CONTRACTS_DIR="$ROOT/app/assets/contracts/ui_protocol"
 OUT="$ROOT/app/lib/ui_protocol/embedded_assets.g.dart"
 
-python3 - "$CONTRACTS_DIR" "$OUT" <<'PY'
+# Git Bash on Windows exposes the repository as /d/... while the selected
+# python.exe expects a native Windows path. Convert only at this process
+# boundary; on Linux/macOS the POSIX path is already suitable.
+PY_CONTRACTS_DIR="$CONTRACTS_DIR"
+PY_OUT="$OUT"
+if command -v cygpath >/dev/null 2>&1; then
+  PY_CONTRACTS_DIR="$(cygpath -w "$CONTRACTS_DIR")"
+  PY_OUT="$(cygpath -w "$OUT")"
+fi
+
+python3 - "$PY_CONTRACTS_DIR" "$PY_OUT" <<'PY'
 import sys
 from pathlib import Path
 

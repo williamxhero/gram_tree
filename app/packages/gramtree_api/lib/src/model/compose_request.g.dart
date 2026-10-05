@@ -11,7 +11,11 @@ abstract class _$ComposeRequestCWProxy {
 
   ComposeRequest protocolVersion(String protocolVersion);
 
+  ComposeRequest recipeId(String? recipeId);
+
   ComposeRequest supportedComponents(List<String>? supportedComponents);
+
+  ComposeRequest versionId(String? versionId);
 
   /// This function **does support** nullification of nullable fields. All `null` values passed to `non-nullable` fields will be ignored. You can also use `ComposeRequest(...).copyWith.fieldName(...)` to override fields one at a time with nullification support.
   ///
@@ -22,7 +26,9 @@ abstract class _$ComposeRequestCWProxy {
   ComposeRequest call({
     String pageType,
     String protocolVersion,
+    String? recipeId,
     List<String>? supportedComponents,
+    String? versionId,
   });
 }
 
@@ -40,8 +46,14 @@ class _$ComposeRequestCWProxyImpl implements _$ComposeRequestCWProxy {
       this(protocolVersion: protocolVersion);
 
   @override
+  ComposeRequest recipeId(String? recipeId) => this(recipeId: recipeId);
+
+  @override
   ComposeRequest supportedComponents(List<String>? supportedComponents) =>
       this(supportedComponents: supportedComponents);
+
+  @override
+  ComposeRequest versionId(String? versionId) => this(versionId: versionId);
 
   @override
   /// This function **does support** nullification of nullable fields. All `null` values passed to `non-nullable` fields will be ignored. You can also use `ComposeRequest(...).copyWith.fieldName(...)` to override fields one at a time with nullification support.
@@ -53,7 +65,9 @@ class _$ComposeRequestCWProxyImpl implements _$ComposeRequestCWProxy {
   ComposeRequest call({
     Object? pageType = const $CopyWithPlaceholder(),
     Object? protocolVersion = const $CopyWithPlaceholder(),
+    Object? recipeId = const $CopyWithPlaceholder(),
     Object? supportedComponents = const $CopyWithPlaceholder(),
+    Object? versionId = const $CopyWithPlaceholder(),
   }) {
     return ComposeRequest(
       pageType: pageType == const $CopyWithPlaceholder()
@@ -64,10 +78,18 @@ class _$ComposeRequestCWProxyImpl implements _$ComposeRequestCWProxy {
           ? _value.protocolVersion
           // ignore: cast_nullable_to_non_nullable
           : protocolVersion as String,
+      recipeId: recipeId == const $CopyWithPlaceholder()
+          ? _value.recipeId
+          // ignore: cast_nullable_to_non_nullable
+          : recipeId as String?,
       supportedComponents: supportedComponents == const $CopyWithPlaceholder()
           ? _value.supportedComponents
           // ignore: cast_nullable_to_non_nullable
           : supportedComponents as List<String>?,
+      versionId: versionId == const $CopyWithPlaceholder()
+          ? _value.versionId
+          // ignore: cast_nullable_to_non_nullable
+          : versionId as String?,
     );
   }
 }
@@ -94,17 +116,21 @@ ComposeRequest _$ComposeRequestFromJson(Map<String, dynamic> json) =>
             'protocol_version',
             (v) => v as String,
           ),
+          recipeId: $checkedConvert('recipe_id', (v) => v as String?),
           supportedComponents: $checkedConvert(
             'supported_components',
             (v) => (v as List<dynamic>?)?.map((e) => e as String).toList(),
           ),
+          versionId: $checkedConvert('version_id', (v) => v as String?),
         );
         return val;
       },
       fieldKeyMap: const {
         'pageType': 'page_type',
         'protocolVersion': 'protocol_version',
+        'recipeId': 'recipe_id',
         'supportedComponents': 'supported_components',
+        'versionId': 'version_id',
       },
     );
 
@@ -112,5 +138,7 @@ Map<String, dynamic> _$ComposeRequestToJson(ComposeRequest instance) =>
     <String, dynamic>{
       'page_type': instance.pageType,
       'protocol_version': instance.protocolVersion,
+      'recipe_id': ?instance.recipeId,
       'supported_components': ?instance.supportedComponents,
+      'version_id': ?instance.versionId,
     };

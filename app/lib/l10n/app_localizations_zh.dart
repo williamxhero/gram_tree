@@ -482,6 +482,93 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
+  String get recipeSafetyTitle => '食品安全提醒';
+
+  @override
+  String get recipeSafetyCheck => '检查食品安全';
+
+  @override
+  String get recipeSafetyChecking => '正在检查……';
+
+  @override
+  String get recipeSafetySaveBlocked => '食品安全检查未通过，请调整菜谱后再保存。';
+
+  @override
+  String get recipeSafetyHighRisk => '高风险：请谨慎处理，不能只依赖计时或颜色判断。';
+
+  @override
+  String get recipeSafetyWarning => '食品安全警告';
+
+  @override
+  String get recipeSafetyInfo => '食品安全提示';
+
+  @override
+  String get recipeSafetyNoFindings => '暂未发现需要额外提醒的安全规则。';
+
+  @override
+  String get recipeSafetyLoading => '正在检查食品安全……';
+
+  @override
+  String get recipeSafetyAwaitingCheck => '菜谱已修改，等待重新检查食品安全。保存前必须完成检查。';
+
+  @override
+  String get recipeSafetyUnavailable => '这份旧版本没有保存安全检查结果，请结合食材和步骤谨慎判断。';
+
+  @override
+  String get recipeSafetyStale => '安全规则已更新，以下结果可能已过期；请重新检查后再依赖它。';
+
+  @override
+  String recipeSafetyError(String error) {
+    return '食品安全检查暂时失败：$error';
+  }
+
+  @override
+  String recipeSafetyRulesVersion(String version) {
+    return '安全规则版本：$version';
+  }
+
+  @override
+  String recipeSafetyThreshold(String temperature) {
+    return '中心温度至少 $temperature°C';
+  }
+
+  @override
+  String recipeSafetyRest(int minutes) {
+    return '静置至少 $minutes 分钟';
+  }
+
+  @override
+  String recipeSafetySteps(String steps) {
+    return '关联步骤：$steps';
+  }
+
+  @override
+  String recipeSafetyClaims(String claims, String basis) {
+    return '禁止用语：$claims。$basis';
+  }
+
+  @override
+  String get recipeSafetyClaimRewrite => '请改写为对做法的客观描述。';
+
+  @override
+  String get recipeAllergenTitle => '过敏原提示';
+
+  @override
+  String get recipeAllergenNone => '未检测到已知过敏原';
+
+  @override
+  String get recipeAllergenIncompleteBasis => '含有未收录食材，过敏原信息可能不完整。';
+
+  @override
+  String recipeReplacementAllergens(
+    String name,
+    String allergens,
+    String incomplete,
+  ) {
+    return '替代品“$name”的过敏原：$allergens$incomplete';
+  }
+
+  @override
   String recipeNutrition(String incomplete) {
     return '每份营养：估算值$incomplete';
   }

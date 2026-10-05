@@ -44,6 +44,10 @@ def make_celery() -> Celery:
                 "task": "gramtree.tasks.jobs.purge_expired_analytics_events",
                 "schedule": crontab(hour=20, minute=30),
             },
+            "recheck-food-safety": {
+                "task": "gramtree.tasks.jobs.recheck_food_safety",
+                "schedule": 60.0,
+            },
             "drain-recipe-save-outbox": {
                 "task": "gramtree.tasks.jobs.drain_recipe_save_outbox",
                 "schedule": 60.0,

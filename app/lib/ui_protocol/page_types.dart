@@ -14,6 +14,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 /// 必显组件业务需求）。
 const Map<String, Set<String>> defaultRequiredComponentTypes = {
   'today': <String>{},
+  'recipe_detail': <String>{'food_safety', 'allergen_notice'},
+  'recipe_editor': <String>{'food_safety', 'allergen_notice'},
 };
 
 /// 测试里可以覆盖这个 provider，临时给某个页面类型注册一个必显组件类型，验证

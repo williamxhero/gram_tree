@@ -155,11 +155,24 @@ void main() {
       );
       final ingredient = find.byKey(const ValueKey('recipe-ingredient-search'));
       await reveal(tester, ingredient);
-      await tester.enterText(ingredient, '默认食材');
+      await tester.enterText(ingredient, '鸡肉');
       final step = find.byKey(const ValueKey('recipe-step-instruction'));
       await reveal(tester, step);
-      await tester.enterText(step, '完成默认步骤');
+      await tester.enterText(step, '将鸡肉炒 2 分钟');
       await settle(tester);
+      final dishName = find.byKey(const ValueKey('recipe-dish-name'));
+      await reveal(tester, dishName);
+      await tester.enterText(dishName, '降血糖网页版验收菜谱');
+      await reveal(tester, find.byKey(const ValueKey('save-recipe-button')));
+      await tester.tap(find.byKey(const ValueKey('save-recipe-button')));
+      await waitFor(tester, find.byKey(const ValueKey('recipe-save-error')));
+      expect(find.textContaining('改写'), findsWidgets);
+      expect(
+        find.byKey(const ValueKey('recipe-editor-content')),
+        findsOneWidget,
+      );
+      await reveal(tester, dishName);
+      await tester.enterText(dishName, '网页版验收菜谱');
       await reveal(tester, find.byKey(const ValueKey('save-recipe-button')));
       await tester.tap(find.byKey(const ValueKey('save-recipe-button')));
       await waitFor(
@@ -167,6 +180,14 @@ void main() {
         find.byKey(const ValueKey('recipe-history-button')),
       );
       expect(find.text('网页版验收菜谱'), findsWidgets);
+      await reveal(tester, find.byKey(const ValueKey('recipe-allergen-card')));
+      expect(find.textContaining('可能不完整'), findsWidgets);
+      await reveal(
+        tester,
+        find.byKey(const ValueKey('recipe-food-safety-card')),
+      );
+      expect(find.textContaining('74'), findsWidgets);
+      expect(find.byTooltip('关闭安全提醒'), findsNothing);
 
       await tester.tap(find.byKey(const ValueKey('recipe-history-button')));
       await waitFor(tester, find.byKey(const ValueKey('recipe-version-1')));
@@ -181,12 +202,23 @@ void main() {
       expect(find.text('网页版验收菜谱'), findsWidgets);
       await reveal(tester, find.bySemanticsLabel('这次改了什么'));
       await tester.enterText(find.bySemanticsLabel('这次改了什么'), '从第一版继续修改');
+      final doneness = find.byKey(
+        const ValueKey('recipe-step-doneness-step-1'),
+      );
+      await reveal(tester, doneness);
+      await tester.enterText(doneness, '中心无粉红、汁液清澈');
       await reveal(tester, find.byKey(const ValueKey('save-recipe-button')));
       await tester.tap(find.byKey(const ValueKey('save-recipe-button')));
       await waitFor(
         tester,
         find.byKey(const ValueKey('recipe-history-button')),
       );
+      await reveal(
+        tester,
+        find.byKey(const ValueKey('recipe-food-safety-card')),
+      );
+      expect(find.textContaining('未发现'), findsWidgets);
+      expect(find.textContaining('74'), findsNothing);
       await tester.tap(find.byKey(const ValueKey('recipe-history-button')));
       await waitFor(tester, find.byKey(const ValueKey('recipe-version-2')));
       expect(find.byKey(const ValueKey('recipe-version-1')), findsOneWidget);

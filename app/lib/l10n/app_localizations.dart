@@ -970,6 +970,148 @@ abstract class AppLocalizations {
   /// **'过敏原：{items}{incomplete}'**
   String recipeAllergens(String items, String incomplete);
 
+  /// No description provided for @recipeSafetyTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'食品安全提醒'**
+  String get recipeSafetyTitle;
+
+  /// No description provided for @recipeSafetyCheck.
+  ///
+  /// In zh, this message translates to:
+  /// **'检查食品安全'**
+  String get recipeSafetyCheck;
+
+  /// No description provided for @recipeSafetyChecking.
+  ///
+  /// In zh, this message translates to:
+  /// **'正在检查……'**
+  String get recipeSafetyChecking;
+
+  /// No description provided for @recipeSafetySaveBlocked.
+  ///
+  /// In zh, this message translates to:
+  /// **'食品安全检查未通过，请调整菜谱后再保存。'**
+  String get recipeSafetySaveBlocked;
+
+  /// No description provided for @recipeSafetyHighRisk.
+  ///
+  /// In zh, this message translates to:
+  /// **'高风险：请谨慎处理，不能只依赖计时或颜色判断。'**
+  String get recipeSafetyHighRisk;
+
+  /// No description provided for @recipeSafetyWarning.
+  ///
+  /// In zh, this message translates to:
+  /// **'食品安全警告'**
+  String get recipeSafetyWarning;
+
+  /// No description provided for @recipeSafetyInfo.
+  ///
+  /// In zh, this message translates to:
+  /// **'食品安全提示'**
+  String get recipeSafetyInfo;
+
+  /// No description provided for @recipeSafetyNoFindings.
+  ///
+  /// In zh, this message translates to:
+  /// **'暂未发现需要额外提醒的安全规则。'**
+  String get recipeSafetyNoFindings;
+
+  /// No description provided for @recipeSafetyLoading.
+  ///
+  /// In zh, this message translates to:
+  /// **'正在检查食品安全……'**
+  String get recipeSafetyLoading;
+
+  /// No description provided for @recipeSafetyAwaitingCheck.
+  ///
+  /// In zh, this message translates to:
+  /// **'菜谱已修改，等待重新检查食品安全。保存前必须完成检查。'**
+  String get recipeSafetyAwaitingCheck;
+
+  /// No description provided for @recipeSafetyUnavailable.
+  ///
+  /// In zh, this message translates to:
+  /// **'这份旧版本没有保存安全检查结果，请结合食材和步骤谨慎判断。'**
+  String get recipeSafetyUnavailable;
+
+  /// No description provided for @recipeSafetyStale.
+  ///
+  /// In zh, this message translates to:
+  /// **'安全规则已更新，以下结果可能已过期；请重新检查后再依赖它。'**
+  String get recipeSafetyStale;
+
+  /// No description provided for @recipeSafetyError.
+  ///
+  /// In zh, this message translates to:
+  /// **'食品安全检查暂时失败：{error}'**
+  String recipeSafetyError(String error);
+
+  /// No description provided for @recipeSafetyRulesVersion.
+  ///
+  /// In zh, this message translates to:
+  /// **'安全规则版本：{version}'**
+  String recipeSafetyRulesVersion(String version);
+
+  /// No description provided for @recipeSafetyThreshold.
+  ///
+  /// In zh, this message translates to:
+  /// **'中心温度至少 {temperature}°C'**
+  String recipeSafetyThreshold(String temperature);
+
+  /// No description provided for @recipeSafetyRest.
+  ///
+  /// In zh, this message translates to:
+  /// **'静置至少 {minutes} 分钟'**
+  String recipeSafetyRest(int minutes);
+
+  /// No description provided for @recipeSafetySteps.
+  ///
+  /// In zh, this message translates to:
+  /// **'关联步骤：{steps}'**
+  String recipeSafetySteps(String steps);
+
+  /// No description provided for @recipeSafetyClaims.
+  ///
+  /// In zh, this message translates to:
+  /// **'禁止用语：{claims}。{basis}'**
+  String recipeSafetyClaims(String claims, String basis);
+
+  /// No description provided for @recipeSafetyClaimRewrite.
+  ///
+  /// In zh, this message translates to:
+  /// **'请改写为对做法的客观描述。'**
+  String get recipeSafetyClaimRewrite;
+
+  /// No description provided for @recipeAllergenTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'过敏原提示'**
+  String get recipeAllergenTitle;
+
+  /// No description provided for @recipeAllergenNone.
+  ///
+  /// In zh, this message translates to:
+  /// **'未检测到已知过敏原'**
+  String get recipeAllergenNone;
+
+  /// No description provided for @recipeAllergenIncompleteBasis.
+  ///
+  /// In zh, this message translates to:
+  /// **'含有未收录食材，过敏原信息可能不完整。'**
+  String get recipeAllergenIncompleteBasis;
+
+  /// No description provided for @recipeReplacementAllergens.
+  ///
+  /// In zh, this message translates to:
+  /// **'替代品“{name}”的过敏原：{allergens}{incomplete}'**
+  String recipeReplacementAllergens(
+    String name,
+    String allergens,
+    String incomplete,
+  );
+
   /// No description provided for @recipeNutrition.
   ///
   /// In zh, this message translates to:

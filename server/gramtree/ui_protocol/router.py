@@ -20,13 +20,15 @@ cache` 模块顶部的设计说明），命中就直接返回上次的描述，�
 """
 
 import logging
+import uuid
 
 from fastapi import APIRouter
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 from gramtree.accounts.deps import CurrentAuth
 from gramtree.core.errors import ERROR_RESPONSES, ApiError
 from gramtree.deps import RedisDep, SessionDep
+from gramtree.recipes import service as recipe_service
 from gramtree.ui_protocol import cache, composition_events, experiments, service, validation
 from gramtree.ui_protocol.protocol import (
     PageDescription,
@@ -52,6 +54,22 @@ class ComposeRequest(BaseModel):
         default_factory=list,
         description="App 已登记、认识的组件类型清单；服务端只会下发这里面的类型",
     )
+    recipe_id: uuid.UUID | None = Field(
+        default=None,
+        description="菜谱详情/工作台要展示的私有菜谱；不填表示尚未保存的编辑草稿",
+    )
+    version_id: uuid.UUID | None = Field(
+        default=None,
+        description="可选的不可变菜谱版本；不填使用当前版本",
+    )
+
+    @model_validator(mode="after")
+    def validate_recipe_context(self) -> "ComposeRequest":
+        if self.version_id is not None and self.recipe_id is None:
+            raise ValueError("version_id 需要和 recipe_id 一起提供")
+        if self.page_type == "recipe_detail" and self.recipe_id is None:
+            raise ValueError("recipe_detail 需要提供 recipe_id")
+        return self
 
 
 @router.post(
@@ -70,48 +88,66 @@ def compose(
     if body.page_type not in service.COMPOSERS:
         raise ApiError(404, "unknown_page_type", "没有这个页面类型", body.page_type)
 
-    # 票 7（#83）：按用户 + 页面类型 + 场景 + 依赖版本查组合缓存（设计说明见
-    # gramtree.ui_protocol.cache 模块顶部的文档）。`service.dependency_versions()`
-    # 是"轻量版"——只读这次组合依赖哪些内容版本，不真的跑组合，查缓存不需要先付出
-    # 一次完整组合的开销。
+    # Recipe compositions are deliberately uncached: safety must be recomputed from
+    # the selected immutable version on every request.
+    recipe_page = body.page_type in {"recipe_detail", "recipe_editor"}
+    safety_context = None
+    safety_context_failed = False
+    if recipe_page and body.recipe_id is not None:
+        # Resolve ownership before the fallback-catching block. A private recipe that
+        # belongs to another user must remain an ordinary 404, never a fallback that
+        # could be mistaken for a successful read. Failures after authorization produce
+        # the standard server-error fallback still carries both mandatory safety cards.
+        try:
+            safety_context = recipe_service.recipe_safety_context(
+                session, auth.user, body.recipe_id, body.version_id
+            )
+        except ApiError as exc:
+            if exc.status == 404:
+                raise
+            safety_context_failed = True
+            logger.exception("读取菜谱安全上下文失败，整页退回安全标准布局")
+        except Exception:
+            safety_context_failed = True
+            logger.exception("读取菜谱安全上下文失败，整页退回安全标准布局")
+
     depends_on = service.dependency_versions(body.page_type, session)
     key = cache.cache_key(auth.user.id, body.page_type, DEFAULT_SCENARIO, depends_on)
-    cached = cache.get(redis, key)
-    if cached is not None:
-        # 命中缓存：不是"重新组合"，直接把上次算出来的那份描述（同一个
-        # composition_id）再发一遍。不重新写"组合展示"事件——那条事件记的是"服务端
-        # 刚刚决定了下发什么"，命中缓存时服务端什么决定都没做，只是把上次的决定又
-        # 发了一遍，写第二条事件会让"组合展示"事件的次数和"用户实际看到过几次不同
-        # 的组合结果"脱钩，污染依赖这条事件计数的分析（比如后续子 SPEC 要统计的
-        # "展示次数"）。也不重新跑 experiments.assign_today_experiment()：分组结果
-        # 本来就该稳定（stable_bucket），缓存住的描述已经带着上次分组时算出的
-        # experiment 字段。
-        return cached
+    if not recipe_page:
+        cached = cache.get(redis, key)
+        if cached is not None:
+            # A cache hit is not a new composition decision, so it does not create
+            # another composition-shown event.
+            return cached
 
-    try:
-        assignment = (
-            experiments.assign_today_experiment(session, auth.user.id)
-            if body.page_type == "today"
-            else experiments.NO_EXPERIMENT
-        )
-        description = service.compose(
-            body.page_type,
-            set(body.supported_components),
-            session=session,
-            experiment=assignment.experiment,
-            detail_overrides=assignment.detail_overrides,
-            exclude_components=assignment.dropped_components,
-        )
-    except Exception:
-        # 组合模块本身报错、或者实验分组时出了问题：不让这个错误往上冒（这个接口出
-        # 任何问题都不能卡住做饭），记录下来方便排查，返回标准布局兜底
-        # （SPEC-009.1 #79 的"服务端报错"）。
-        logger.exception("组合页面 %s 时服务端报错，整页退回标准布局", body.page_type)
+    if safety_context_failed:
         description = service.build_fallback_description(body.page_type, "server_error")
     else:
-        reason = validation.classify_invalid_description(description.model_dump(mode="json"))
-        if reason is not None:
-            description = service.build_fallback_description(body.page_type, reason)
+        try:
+            assignment = (
+                experiments.assign_today_experiment(session, auth.user.id)
+                if body.page_type == "today"
+                else experiments.NO_EXPERIMENT
+            )
+            description = service.compose(
+                body.page_type,
+                set(body.supported_components),
+                session=session,
+                experiment=assignment.experiment,
+                detail_overrides=assignment.detail_overrides,
+                exclude_components=assignment.dropped_components,
+                safety_context=safety_context,
+            )
+        except Exception:
+            # 组合模块本身报错、或者实验分组时出了问题：不让这个错误往上冒（这个接口出
+            # 任何问题都不能卡住做饭），记录下来方便排查，返回标准布局兜底
+            # （SPEC-009.1 #79 的"服务端报错"）。
+            logger.exception("组合页面 %s 时服务端报错，整页退回标准布局", body.page_type)
+            description = service.build_fallback_description(body.page_type, "server_error")
+        else:
+            reason = validation.classify_invalid_description(description.model_dump(mode="json"))
+            if reason is not None:
+                description = service.build_fallback_description(body.page_type, reason)
 
     composition_events.record_composition_shown(session, redis, auth.user.id, description)
     # 兜底描述（ttl_s=0）不会真的被写进去，见 cache.set_() 的说明——下次请求还是会

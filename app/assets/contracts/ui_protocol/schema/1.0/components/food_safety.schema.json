@@ -1,0 +1,48 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://gramtree.app/contracts/ui_protocol/1.0/components/food_safety.schema.json",
+  "title": "food_safety 组件数据",
+  "description": "必显食品安全提醒。无结果时 status 为 unknown/error，conclusion 与 basis 仍提供清楚的说明。",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["status", "conclusion", "basis", "result"],
+  "properties": {
+    "status": { "type": "string", "enum": ["available", "unknown", "error"] },
+    "conclusion": { "type": "string", "minLength": 1 },
+    "basis": { "oneOf": [{ "type": "null" }, { "type": "string", "minLength": 1 }] },
+    "result": {
+      "description": "供页面使用的安全检查结果子集；null 时必须依据 status/conclusion 显示不可确认说明。",
+      "oneOf": [
+        { "type": "null" },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["rules_version", "checked_at", "high_risk", "findings"],
+          "properties": {
+            "rules_version": { "type": "string", "minLength": 1 },
+            "checked_at": { "type": "string", "format": "date-time" },
+            "high_risk": { "type": "boolean" },
+            "findings": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["rule_id", "severity", "message", "basis", "step_ids"],
+                "properties": {
+                  "rule_id": { "type": "string", "minLength": 1 },
+                  "severity": { "type": "string", "enum": ["info", "warning", "high_risk"] },
+                  "message": { "type": "string", "minLength": 1 },
+                  "basis": { "type": "string", "minLength": 1 },
+                  "step_ids": { "type": "array", "items": { "type": "string" } },
+                  "ingredient_ids": { "type": "array", "items": { "type": "string" } },
+                  "threshold_celsius": { "oneOf": [{ "type": "null" }, { "type": "number" }] },
+                  "rest_minutes": { "oneOf": [{ "type": "null" }, { "type": "integer", "minimum": 0 }] }
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

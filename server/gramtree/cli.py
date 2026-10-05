@@ -61,6 +61,109 @@ def cmd_config(args: argparse.Namespace) -> int:
 
 
 def cmd_recipes(args: argparse.Namespace) -> int:
+    if args.action in {"safety-recheck", "safety-status", "safety-validate"}:
+        from sqlalchemy import func, select
+
+        from gramtree.recipes import food_safety
+        from gramtree.recipes.models import RecipeSafetyRecheck
+
+        try:
+            policy = food_safety.rules()
+            if args.action == "safety-validate":
+                print(_fmt({"rules_version": policy.version, "digest": policy.digest()}))
+                return 0
+            with _session() as session:
+                if args.action == "safety-recheck":
+                    if args.enqueue:
+                        queued = food_safety.queue_rechecks(session, policy)
+                        session.commit()
+                        from gramtree.tasks.jobs import recheck_food_safety
+
+                        task = recheck_food_safety.delay(limit=args.limit)
+                        print(
+                            _fmt(
+                                {
+                                    "rules_version": policy.version,
+                                    "queued": queued,
+                                    "task_id": task.id,
+                                }
+                            )
+                        )
+                        return 0
+                    result = food_safety.run_rechecks(session, policy, args.limit)
+                    print(_fmt(result))
+                    return 1 if result["failed"] else 0
+                counts = dict(
+                    session.execute(
+                        select(RecipeSafetyRecheck.status, func.count())
+                        .where(RecipeSafetyRecheck.rules_version == policy.version)
+                        .group_by(RecipeSafetyRecheck.status)
+                    ).all()
+                )
+                jobs = session.scalars(
+                    select(RecipeSafetyRecheck)
+                    .where(RecipeSafetyRecheck.rules_version == policy.version)
+                    .order_by(RecipeSafetyRecheck.created_at.desc())
+                    .limit(args.limit)
+                )
+                print(
+                    _fmt(
+                        {
+                            "rules_version": policy.version,
+                            "counts": counts,
+                            "jobs": [
+                                {
+                                    "id": str(job.id),
+                                    "version_id": str(job.version_id),
+                                    "status": job.status,
+                                    "attempts": job.attempts,
+                                    "last_error": job.last_error,
+                                    "attempted_at": job.attempted_at.isoformat()
+                                    if job.attempted_at
+                                    else None,
+                                    "completed_at": job.completed_at.isoformat()
+                                    if job.completed_at
+                                    else None,
+                                }
+                                for job in jobs
+                            ],
+                        }
+                    )
+                )
+                return 0
+        except (ValueError, OSError) as exc:
+            print(f"安全规则错误：{exc}", file=sys.stderr)
+            return 1
+    if args.action == "seed-safety-retry":
+        # A CLI fixture permits crash/retry acceptance through external boundaries.
+        if get_settings().env != "test":
+            print("这个命令只允许在 test 环境使用", file=sys.stderr)
+            return 1
+        from datetime import timedelta
+
+        from gramtree.core.time import utcnow
+        from gramtree.recipes.models import RecipeSafetyRecheck, RecipeVersion
+
+        with _session() as session:
+            job = session.get(RecipeSafetyRecheck, uuid.UUID(args.job_id))
+            if job is None:
+                return 1
+            if args.mode == "expired-lease":
+                job.status = "running"
+                job.attempted_at = utcnow() - timedelta(minutes=10)
+            elif args.mode == "invalid-snapshot":
+                version = session.get(RecipeVersion, job.version_id)
+                if version is None:
+                    return 1
+                version.snapshot = {**version.snapshot, "servings": 0}
+            elif args.mode == "repair-snapshot":
+                version = session.get(RecipeVersion, job.version_id)
+                if version is None:
+                    return 1
+                version.snapshot = {**version.snapshot, "servings": 1}
+            session.commit()
+        print(_fmt({"job_id": args.job_id, "mode": args.mode}))
+        return 0
     if args.action == "drain-save-events":
         from gramtree.tasks.jobs import drain_recipe_save_outbox
 
@@ -240,6 +343,19 @@ def build_parser() -> argparse.ArgumentParser:
         "drain-save-events",
         help="重试未投递的菜谱版本经验事件",
     )
+    safety_recheck = recipes_sub.add_parser(
+        "safety-recheck", help="按当前规则复检已有菜谱版本（可重复执行）"
+    )
+    safety_recheck.add_argument("--limit", type=int, default=100)
+    safety_recheck.add_argument(
+        "--enqueue", action="store_true", help="投递 Celery 任务而非同步执行"
+    )
+    safety_status = recipes_sub.add_parser("safety-status", help="查看食品安全复检队列状态")
+    safety_status.add_argument("--limit", type=int, default=20)
+    recipes_sub.add_parser("safety-validate", help="校验并输出当前食品安全规则版本")
+    retry = recipes_sub.add_parser("seed-safety-retry", help="仅测试环境：构造复检故障或过期租约")
+    retry.add_argument("job_id")
+    retry.add_argument("mode", choices=("expired-lease", "invalid-snapshot", "repair-snapshot"))
     legacy_scaling = recipes_sub.add_parser(
         "seed-legacy-scaling-mode",
         help="仅测试环境：把版本首个食材标记为旧版空缩放方式",
