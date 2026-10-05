@@ -34,9 +34,13 @@ class CompositionView extends ConsumerWidget {
     super.key,
     required this.pageType,
     required this.standardLayoutBuilder,
+    this.recipeId,
+    this.versionId,
   });
 
   final String pageType;
+  final String? recipeId;
+  final String? versionId;
 
   /// 这个页面类型的标准布局。加载中、请求出错、等待超时、协议或数据不合法、缺必显
   /// 组件时都会显示它——所有这些情况在 App 里看起来完全一样，不区分"为什么"，用户
@@ -45,7 +49,15 @@ class CompositionView extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final async = ref.watch(compositionProvider(pageType));
+    final async = pageType == 'recipe_detail' || pageType == 'recipe_editor'
+        ? ref.watch(
+            recipeCompositionProvider((
+              pageType: pageType,
+              recipeId: recipeId,
+              versionId: versionId,
+            )),
+          )
+        : ref.watch(compositionProvider(pageType));
     final effectiveRegistry = ref.watch(componentRegistryProvider);
     final dispatcher = ref.watch(intentDispatcherProvider);
     return async.when(

@@ -28,6 +28,8 @@ ITEMS: tuple[ComponentSpec, ...] = (
         '仅测试用：验证来源标记/"为什么"面板/反馈链路的示例组件，不是真实业务组件'
         "（SPEC-009.1 #82，真实换算内容留给以后的子 SPEC）",
     ),
+    ComponentSpec("food_safety", "食品安全提醒：结论 + 依据 + 命中明细", always_required=True),
+    ComponentSpec("allergen_notice", "过敏原提示：结论 + 依据 + 替代品明细", always_required=True),
 )
 
 BY_TYPE: dict[str, ComponentSpec] = {item.type: item for item in ITEMS}

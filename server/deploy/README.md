@@ -30,6 +30,28 @@ API 容器启动时会先执行数据库迁移。
 git pull && docker compose -f docker-compose.prod.yml up -d --build
 ```
 
+## 食品安全规则更新与复检
+
+规则在 `gramtree/recipes/data/food_safety_rules.json`，修改触发条件、阈值、用语或依据时必须增加 `version`（禁止用语表也有独立版本）。同一个版本号的内容会被数据库指纹锁定，不能替换。规则需要走代码评审；发布前确认依据和阈值。
+
+API 与 worker 部署同一份规则，更新时一起重建、重启。Celery beat 每分钟发现过期的菜谱版本并复检，每批最多 100 条，后续批次自动继续。需要立刻执行或检查状态时：
+
+```bash
+docker compose -f docker-compose.prod.yml exec worker gramtree recipes safety-validate
+docker compose -f docker-compose.prod.yml exec worker gramtree recipes safety-recheck --enqueue
+docker compose -f docker-compose.prod.yml exec worker gramtree recipes safety-status --limit 20
+# 同步处理一批，输出 checked/failed/remaining；出现失败退出码为 1
+docker compose -f docker-compose.prod.yml exec worker gramtree recipes safety-recheck --limit 100
+```
+
+队列以“菜谱版本 + 规则版本”去重，状态、尝试次数和错误类型持久化在 PostgreSQL。成功后当前安全索引和任务完成状态一起提交，`safety_at_save` 永远保留创建时结论；旧数据没有原始检查时保持空值。失败保留之前的安全索引并标记为 `retry`，下一批自动重试。任务进程退出留下的 `running` 租约 5 分钟后可重试；`safety-status` 输出每个状态的数量、最近任务和时间，日志按任务 ID 查找。投递失败时已创建的队列记录仍由 beat 处理。
+
+新版本同时保存检查时的菜名和别名等文字，复检与页面即时检查使用这份原始输入；历史数据缺少这份输入时使用当前菜名和别名，保持原始结论为空。规则更新后的旧索引在 HTTP 响应中标记 `safety.stale=true`，复检成功后恢复为 `false`。
+
+步骤计时表示整个步骤时长。豆浆的五分钟条件只接受规则表列出的独立沸腾后持续加热步骤（例如 `真正煮沸后继续煮`，`duration_seconds=300`）；把升温、沸腾或冷却混在一个步骤的总计时会保留提醒，应拆成单独步骤。其他未被规则识别的说法也保留提醒，规则表的证据条件需在评审中明确扩展。
+
+测试或外部规则卷可通过 `GRAMTREE_FOOD_SAFETY_RULES_PATH` 指定规则文件，API、worker 和维护命令必须一致。不要在运行中的两个进程上部署不同版本的文件。
+
 ## 修改服务端配置项
 
 ```bash

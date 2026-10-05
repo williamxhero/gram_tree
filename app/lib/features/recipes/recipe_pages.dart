@@ -23,6 +23,8 @@ import 'personal_measures_page.dart';
 import 'recipe_photo_panel.dart';
 import '../../storage/local_store.dart';
 import '../../ui_protocol/components/component_scaffold.dart';
+import '../../ui_protocol/recipe_safety.dart';
+import '../../ui_protocol/recipe_safety_protocol.dart';
 import '../../ui_protocol/source_mark.dart';
 import '../../ui_protocol/source_types.dart';
 import '../../widgets/empty_state.dart';
@@ -181,6 +183,11 @@ class _RecipeEditorPageState extends ConsumerState<RecipeEditorPage> {
   bool _loading = true;
   bool _loadFailed = false;
   bool _saving = false;
+  RecipeSafetyResult? _safetyResult;
+  String? _safetyError;
+  bool _safetyLoading = false;
+  bool _safetyAwaitingCheck = true;
+  int _safetyRevision = 0;
   int _editorRevision = 0;
   Timer? _draftTimer;
   Future<void>? _draftWrite;
@@ -267,7 +274,13 @@ class _RecipeEditorPageState extends ConsumerState<RecipeEditorPage> {
 
   void _changed() {
     if (!mounted) return;
-    setState(() {});
+    setState(() {
+      _safetyResult = null;
+      _safetyError = null;
+      _safetyLoading = false;
+      _safetyAwaitingCheck = true;
+      _safetyRevision++;
+    });
     _draftTimer?.cancel();
     final generation = ++_draftGeneration;
     _draftTimer = Timer(const Duration(milliseconds: 250), () {
@@ -312,6 +325,35 @@ class _RecipeEditorPageState extends ConsumerState<RecipeEditorPage> {
     _draft = null;
   }
 
+  Future<void> _checkSafety() async {
+    final revision = _safetyRevision;
+    setState(() {
+      _safetyLoading = true;
+      _safetyError = null;
+      _safetyAwaitingCheck = false;
+    });
+    try {
+      final result = await ref
+          .read(recipeRepositoryProvider)
+          .checkSafety(_form);
+      if (!mounted || revision != _safetyRevision) return;
+      setState(() {
+        _safetyResult = result;
+        _safetyAwaitingCheck = false;
+      });
+    } catch (error) {
+      if (!mounted || revision != _safetyRevision) return;
+      setState(() {
+        _safetyError = ApiFailure.from(error).message;
+        _safetyAwaitingCheck = true;
+      });
+    } finally {
+      if (mounted && revision == _safetyRevision) {
+        setState(() => _safetyLoading = false);
+      }
+    }
+  }
+
   Future<void> _save() async {
     final l10n = AppLocalizations.of(context);
     if (!_validate()) return;
@@ -322,6 +364,25 @@ class _RecipeEditorPageState extends ConsumerState<RecipeEditorPage> {
     try {
       await _flushDraft();
       final repo = ref.read(recipeRepositoryProvider);
+      // Always re-check immediately before saving. A result obtained while the
+      // form was unchanged is valid; a failed/stale check must never become a
+      // way around the server's immutable safety gate.
+      final safety = await repo.checkSafety(_form);
+      if (!mounted) return;
+      setState(() {
+        _safetyResult = safety;
+        _safetyAwaitingCheck = false;
+        _safetyError = null;
+      });
+      if (safety.canSave != true) {
+        final claims = safety.prohibitedClaims ?? const <String>[];
+        final message = claims.isEmpty
+            ? l10n.recipeSafetySaveBlocked
+            : '${l10n.recipeSafetyClaims(claims.join('、'), safety.claimBasis ?? '')} '
+                  '${l10n.recipeSafetyClaimRewrite}';
+        setState(() => _error = message);
+        return;
+      }
       final detail = _loaded == null
           ? await repo.create(_form)
           : await repo.saveVersion(
@@ -338,7 +399,11 @@ class _RecipeEditorPageState extends ConsumerState<RecipeEditorPage> {
       context.pushReplacement('/recipes/${detail.id}');
     } catch (error) {
       if (mounted) {
-        setState(() => _error = l10n.recipeSaveFailed(_message(error)));
+        final failure = ApiFailure.from(error);
+        final message = failure.code == 'prohibited_health_claim'
+            ? '${failure.message} ${l10n.recipeSafetyClaimRewrite}'
+            : l10n.recipeSaveFailed(failure.message);
+        setState(() => _error = message);
       }
     } finally {
       if (mounted) setState(() => _saving = false);
@@ -558,6 +623,35 @@ class _RecipeEditorPageState extends ConsumerState<RecipeEditorPage> {
           KeyedSubtree(
             key: ValueKey('recipe-info-$_editorRevision'),
             child: _RecipeInfoFields(form: _form, onChanged: _changed),
+          ),
+          const SizedBox(height: 8),
+          OutlinedButton.icon(
+            key: const ValueKey('recipe-safety-check'),
+            onPressed: _safetyLoading ? null : _checkSafety,
+            icon: _safetyLoading
+                ? const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Icon(Icons.health_and_safety_outlined),
+            label: Text(
+              _safetyLoading
+                  ? l10n.recipeSafetyChecking
+                  : l10n.recipeSafetyCheck,
+            ),
+          ),
+          FoodSafetyCard(
+            result: _safetyResult,
+            loading: _safetyLoading,
+            awaitingCheck: _safetyAwaitingCheck,
+            errorMessage: _safetyError,
+          ),
+          AllergenCard(
+            result: _safetyResult,
+            loading: _safetyLoading,
+            awaitingCheck: _safetyAwaitingCheck,
+            errorMessage: _safetyError,
           ),
           const SizedBox(height: 20),
           RecipePhotoPanel(
@@ -1971,6 +2065,16 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
         key: const ValueKey('recipe-detail-content'),
         padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
         children: [
+          RecipeSafetyProtocolSection(
+            result: detail.version.safety ?? detail.version.safetyAtSave,
+            legacyDerived: derived,
+            dishName: detail.dish.name,
+            snapshot: snapshot,
+            recipeId: widget.recipeId,
+            versionId: detail.version.id,
+            authoring: false,
+            loading: false,
+          ),
           _RecipePhotoDisplay(images: detail.version.images),
           if (widget.versionId == null)
             RecipePhotoPanel(
@@ -2073,16 +2177,6 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
             onChanged: (mode) => setState(() => _displayMode = mode),
           ),
           const SizedBox(height: 16),
-          if ((derived.allergens ?? const []).isNotEmpty ||
-              derived.allergensIncomplete == true)
-            _InfoSection(
-              title: l10n.recipeAllergens(
-                (derived.allergens ?? const []).join('、'),
-                derived.allergensIncomplete == true
-                    ? l10n.recipeIncomplete
-                    : '',
-              ),
-            ),
           _NutritionSection(nutrition: derived.nutritionPerServing),
           if ((derived.cookware ?? const []).isNotEmpty)
             Text(l10n.recipeCookware((derived.cookware ?? const []).join('、'))),
@@ -2129,6 +2223,10 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
                   : null,
               ingredientNames: ingredientNames,
               stepLabels: stepLabels,
+              safetyFindings:
+                  (detail.version.safety ?? detail.version.safetyAtSave)
+                      ?.findings ??
+                  const [],
               l10n: l10n,
             ),
           const SizedBox(height: 16),
@@ -2943,6 +3041,7 @@ class _StepDetailTile extends StatelessWidget {
     this.moldConverted,
     required this.ingredientNames,
     required this.stepLabels,
+    required this.safetyFindings,
     required this.l10n,
   });
 
@@ -2952,6 +3051,7 @@ class _StepDetailTile extends StatelessWidget {
   final ConvertedMoldStep? moldConverted;
   final Map<String, String> ingredientNames;
   final Map<String, String> stepLabels;
+  final List<RecipeSafetyFinding> safetyFindings;
   final AppLocalizations l10n;
 
   Widget _sourceMark(
@@ -3001,103 +3101,181 @@ class _StepDetailTile extends StatelessWidget {
         '${l10n.recipeStepDoneness}：${step.doneness}',
       if (dependencies.isNotEmpty) '${l10n.recipeStepDepends}：$dependencies',
     ].join(' · ');
-    return ExpansionTile(
-      key: ValueKey('recipe-step-$index'),
-      title: Text('${index + 1}. ${step.instruction}'),
-      subtitle: Text(
-        details.isEmpty
-            ? (step.action ?? '')
-            : '${step.action ?? ''} · $details',
-        style: GramTreeColors.of(context).numberStyle(
-          Theme.of(context).textTheme.bodyMedium ?? const TextStyle(),
+    final stepFindings = safetyFindings
+        .where(
+          (finding) => (finding.stepIds ?? const <String>[]).contains(step.id),
+        )
+        .toList();
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        ExpansionTile(
+          key: ValueKey('recipe-step-$index'),
+          title: Text('${index + 1}. ${step.instruction}'),
+          subtitle: Text(
+            details.isEmpty
+                ? (step.action ?? '')
+                : '${step.action ?? ''} · $details',
+            style: GramTreeColors.of(context).numberStyle(
+              Theme.of(context).textTheme.bodyMedium ?? const TextStyle(),
+            ),
+          ),
+          children: [
+            if (converted?.batchWarning == true)
+              Container(
+                key: ValueKey('recipe-step-batch-warning-${step.id}'),
+                margin: const EdgeInsets.fromLTRB(8, 4, 8, 8),
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.surfaceContainerHighest
+                      .withValues(alpha: 0.6),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.info_outline, size: 18, color: warningColor),
+                    const SizedBox(width: 8),
+                    Expanded(child: Text(l10n.recipeBatchWarning)),
+                  ],
+                ),
+              ),
+            if (moldConverted?.donenessWarning == true)
+              Container(
+                key: ValueKey('recipe-step-doneness-warning-${step.id}'),
+                margin: const EdgeInsets.fromLTRB(8, 4, 8, 8),
+                padding: const EdgeInsets.all(10),
+                color: Theme.of(context).colorScheme.surfaceContainerHighest
+                    .withValues(alpha: 0.6),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(
+                      Icons.warning_amber_outlined,
+                      size: 18,
+                      color: warningColor,
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        '${l10n.recipeMoldTimeAdvisory} ${l10n.recipeMoldDonenessWarning}',
+                        style: TextStyle(color: warningColor),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            if (step.durationSource != null ||
+                step.heatSource != null ||
+                step.temperatureSource != null)
+              Wrap(
+                spacing: 8,
+                children: [
+                  _sourceMark(
+                    context,
+                    field: 'duration',
+                    value: l10n.recipeSeconds(step.durationSeconds ?? 0),
+                    source: step.durationSource,
+                  ),
+                  _sourceMark(
+                    context,
+                    field: 'heat',
+                    value: step.heat ?? '',
+                    source: step.heatSource,
+                  ),
+                  _sourceMark(
+                    context,
+                    field: 'temperature',
+                    value: '${step.temperatureCelsius ?? 0}',
+                    source: step.temperatureSource,
+                  ),
+                ],
+              ),
+            if (step.notes?.isNotEmpty == true)
+              ListTile(
+                title: Text(l10n.recipeStepNotes),
+                subtitle: Text(step.notes!),
+              ),
+            if (step.why?.isNotEmpty == true)
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 8),
+                child: WhyPanel(
+                  sourceType: sourceTypeAuthorFilled,
+                  value: step.why!,
+                  basisText: l10n.recipeStepWhy,
+                  required: true,
+                ),
+              ),
+          ],
+        ),
+        for (final finding in stepFindings)
+          _StepSafetyFinding(finding: finding),
+      ],
+    );
+  }
+}
+
+class _StepSafetyFinding extends StatelessWidget {
+  const _StepSafetyFinding({required this.finding});
+
+  final RecipeSafetyFinding finding;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final highRisk = finding.severity.toString() == 'high_risk';
+    final color = highRisk
+        ? Theme.of(context).colorScheme.error
+        : Theme.of(context).colorScheme.tertiary;
+    final details = [
+      if (finding.thresholdCelsius != null)
+        l10n.recipeSafetyThreshold(finding.thresholdCelsius!.toString()),
+      if (finding.restMinutes != null)
+        l10n.recipeSafetyRest(finding.restMinutes!),
+    ];
+    return Container(
+      key: ValueKey('recipe-step-safety-finding-${finding.ruleId}'),
+      margin: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        border: Border.all(color: color),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Semantics(
+        container: true,
+        label: [finding.message, finding.basis, ...details].join('，'),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(
+              highRisk ? Icons.warning_amber_rounded : Icons.health_and_safety,
+              color: color,
+              semanticLabel: highRisk
+                  ? l10n.recipeSafetyHighRisk
+                  : l10n.recipeSafetyWarning,
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Text(
+                    finding.message,
+                    style: const TextStyle(fontWeight: FontWeight.w600),
+                  ),
+                  if (finding.basis.isNotEmpty) ...[
+                    const SizedBox(height: 4),
+                    Text(finding.basis),
+                  ],
+                  if (details.isNotEmpty) ...[
+                    const SizedBox(height: 4),
+                    Text(details.join(' · ')),
+                  ],
+                ],
+              ),
+            ),
+          ],
         ),
       ),
-      children: [
-        if (converted?.batchWarning == true)
-          Container(
-            key: ValueKey('recipe-step-batch-warning-${step.id}'),
-            margin: const EdgeInsets.fromLTRB(8, 4, 8, 8),
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.surfaceContainerHighest
-                  .withValues(alpha: 0.6),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Row(
-              children: [
-                Icon(Icons.info_outline, size: 18, color: warningColor),
-                const SizedBox(width: 8),
-                Expanded(child: Text(l10n.recipeBatchWarning)),
-              ],
-            ),
-          ),
-        if (moldConverted?.donenessWarning == true)
-          Container(
-            key: ValueKey('recipe-step-doneness-warning-${step.id}'),
-            margin: const EdgeInsets.fromLTRB(8, 4, 8, 8),
-            padding: const EdgeInsets.all(10),
-            color: Theme.of(context).colorScheme.surfaceContainerHighest
-                .withValues(alpha: 0.6),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Icon(
-                  Icons.warning_amber_outlined,
-                  size: 18,
-                  color: warningColor,
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    '${l10n.recipeMoldTimeAdvisory} ${l10n.recipeMoldDonenessWarning}',
-                    style: TextStyle(color: warningColor),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        if (step.durationSource != null ||
-            step.heatSource != null ||
-            step.temperatureSource != null)
-          Wrap(
-            spacing: 8,
-            children: [
-              _sourceMark(
-                context,
-                field: 'duration',
-                value: l10n.recipeSeconds(step.durationSeconds ?? 0),
-                source: step.durationSource,
-              ),
-              _sourceMark(
-                context,
-                field: 'heat',
-                value: step.heat ?? '',
-                source: step.heatSource,
-              ),
-              _sourceMark(
-                context,
-                field: 'temperature',
-                value: '${step.temperatureCelsius ?? 0}',
-                source: step.temperatureSource,
-              ),
-            ],
-          ),
-        if (step.notes?.isNotEmpty == true)
-          ListTile(
-            title: Text(l10n.recipeStepNotes),
-            subtitle: Text(step.notes!),
-          ),
-        if (step.why?.isNotEmpty == true)
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8),
-            child: WhyPanel(
-              sourceType: sourceTypeAuthorFilled,
-              value: step.why!,
-              basisText: l10n.recipeStepWhy,
-              required: true,
-            ),
-          ),
-      ],
     );
   }
 }
@@ -3127,13 +3305,6 @@ class _NutritionSection extends StatelessWidget {
       ),
     );
   }
-}
-
-class _InfoSection extends StatelessWidget {
-  const _InfoSection({required this.title});
-  final String title;
-  @override
-  Widget build(BuildContext context) => Text(title);
 }
 
 class RecipeHistoryPage extends ConsumerStatefulWidget {
@@ -3662,5 +3833,3 @@ String _replacementLabel(Object? value) {
   }
   return '';
 }
-
-String _message(Object error) => ApiFailure.from(error).message;

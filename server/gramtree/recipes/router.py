@@ -26,6 +26,8 @@ from gramtree.recipes.schemas import (
     RecipeList,
     RecipeMoldConversionOut,
     RecipeMoldConversionRequest,
+    RecipeSafetyCheckOut,
+    RecipeSafetyCheckRequest,
     RecipeServingConversionOut,
     RecipeVersionCreate,
     RecipeVersionHistory,
@@ -34,6 +36,21 @@ from gramtree.runtime_config import service as config
 
 router = APIRouter(prefix="/recipes", tags=["recipes"])
 PageDep = Annotated[PageParams, Depends(page_params)]
+
+
+@router.post(
+    "/safety/check",
+    response_model=RecipeSafetyCheckOut,
+    responses={**ERROR_RESPONSES, 401: {"model": ErrorResponse}},
+)
+def check_recipe_safety(
+    body: RecipeSafetyCheckRequest,
+    auth: CurrentAuth,
+    session: SessionDep,
+) -> RecipeSafetyCheckOut:
+    # Draft checks use the same validation as saving, without creating a version.
+    result = service.check_safety(session, auth.user, body)
+    return RecipeSafetyCheckOut(result=result)
 
 
 def _errors(*codes: int) -> dict[int | str, dict[str, Any]]:

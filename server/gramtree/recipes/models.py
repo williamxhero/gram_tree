@@ -78,10 +78,49 @@ class RecipeVersion(Base):
     )
     snapshot: Mapped[dict[str, Any]] = mapped_column(JSONB)
     derived: Mapped[dict[str, Any]] = mapped_column(JSONB, default=dict)
+    # Only the current safety index changes on recheck; original evidence stays immutable.
+    safety_at_save: Mapped[dict[str, Any] | None] = mapped_column(JSONB, default=None)
+    safety_current: Mapped[dict[str, Any] | None] = mapped_column(JSONB, default=None)
+    safety_rules_version: Mapped[str | None] = mapped_column(String(64), default=None, index=True)
+    # Preserve title/aliases checked at save; global dish metadata can later change.
+    safety_context: Mapped[dict[str, Any] | None] = mapped_column(JSONB, default=None)
     edit_operations: Mapped[list[dict[str, Any]]] = mapped_column(JSONB, default=list)
     change_note: Mapped[str] = mapped_column(Text, default="")
     ai_assisted: Mapped[bool] = mapped_column(default=False)
     created_at: Mapped[datetime] = mapped_column(default=utcnow)
+
+
+class FoodSafetyRuleRelease(Base):
+    """Immutable policy fingerprint; reusing a version for changed policy is rejected."""
+
+    __tablename__ = "food_safety_rule_releases"
+
+    version: Mapped[str] = mapped_column(String(64), primary_key=True)
+    digest: Mapped[str] = mapped_column(String(64))
+    payload: Mapped[dict[str, Any]] = mapped_column(JSONB)
+    discovered_at: Mapped[datetime] = mapped_column(default=utcnow)
+
+
+class RecipeSafetyRecheck(Base):
+    """Durable retry record, claimed with a database row lock by workers."""
+
+    __tablename__ = "recipe_safety_rechecks"
+    __table_args__ = (
+        UniqueConstraint("version_id", "rules_version", name="uq_recipe_safety_recheck_target"),
+        Index("ix_recipe_safety_recheck_status", "rules_version", "status"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=new_id)
+    version_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("recipe_versions.id", ondelete="CASCADE"), index=True
+    )
+    rules_version: Mapped[str] = mapped_column(ForeignKey("food_safety_rule_releases.version"))
+    status: Mapped[str] = mapped_column(String(16), default="pending")
+    attempts: Mapped[int] = mapped_column(Integer, default=0)
+    last_error: Mapped[str | None] = mapped_column(Text, default=None)
+    created_at: Mapped[datetime] = mapped_column(default=utcnow)
+    attempted_at: Mapped[datetime | None] = mapped_column(default=None)
+    completed_at: Mapped[datetime | None] = mapped_column(default=None)
 
 
 class RecipeSaveOutbox(Base):

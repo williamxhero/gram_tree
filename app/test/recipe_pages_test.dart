@@ -166,6 +166,7 @@ _RecipeApiState _installRecipeApi(
   FakeServer server, {
   String? standardIngredientId,
   String? standardIngredientScaling,
+  RecipeSafetyResult? safetyResult,
 }) {
   final first = _minimalDetailJson(standardIngredientId: standardIngredientId);
   final state = _RecipeApiState(first, [first]);
@@ -180,6 +181,26 @@ _RecipeApiState _installRecipeApi(
         'modified': const [],
         'releases': const [],
       },
+    );
+  });
+  server.on('POST', '/v1/recipes/safety/check', (_) {
+    return (
+      200,
+      RecipeSafetyCheckOut(
+        result:
+            safetyResult ??
+            RecipeSafetyResult(
+              allergens: const [],
+              allergensIncomplete: false,
+              canSave: true,
+              checkedAt: '2026-10-01T00:00:00+00:00',
+              findings: const [],
+              highRisk: false,
+              prohibitedClaims: const [],
+              replacementAllergens: const [],
+              rulesVersion: 'test-rules-v1',
+            ),
+      ).toJson(),
     );
   });
   server.on('GET', '/v1/recipes', (_) {
@@ -714,8 +735,18 @@ void main() {
         tester,
         find.byKey(const ValueKey('recipe-mode-mold')),
       );
+      await _scrollUntilVisible(
+        tester,
+        find.byKey(const ValueKey('recipe-serving-increase')),
+        delta: const Offset(0, -500),
+      );
       await tester.tap(find.byKey(const ValueKey('recipe-serving-increase')));
       await tester.pumpAndSettle();
+      await _scrollUntilVisible(
+        tester,
+        find.byKey(const ValueKey('recipe-mode-mold')),
+        delta: const Offset(0, 500),
+      );
       await tester.tap(find.byKey(const ValueKey('recipe-mode-mold')));
       await tester.pumpAndSettle();
       expect(
@@ -1281,7 +1312,11 @@ void main() {
     expect(find.text('水'), findsOneWidget);
     expect(find.textContaining('把水烧开'), findsOneWidget);
     expect(find.text('暂无营养估算'), findsOneWidget);
-    await _scrollToTop(tester);
+    await _scrollUntilVisible(
+      tester,
+      find.byKey(const ValueKey('recipe-mold-unavailable')),
+      delta: const Offset(0, 500),
+    );
     expect(
       find.byKey(const ValueKey('recipe-mold-unavailable')),
       findsOneWidget,
@@ -1707,8 +1742,102 @@ void main() {
     );
   });
 
+  testWidgets('editing after a check invalidates the rendered result', (
+    tester,
+  ) async {
+    final server = FakeServer();
+    _installRecipeApi(server);
+    await pumpApp(tester, env: TestEnv.signedIn(server: server));
+    await _openNewEditor(tester);
+    await _enterDishName(tester, '安全结果失效测试');
+
+    await _scrollUntilVisible(
+      tester,
+      find.byKey(const ValueKey('recipe-safety-check')),
+      delta: const Offset(0, 500),
+    );
+    expect(
+      find.byKey(const ValueKey('recipe-food-safety-card')),
+      findsOneWidget,
+    );
+    expect(find.byKey(const ValueKey('recipe-allergen-card')), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('recipe-safety-check')));
+    await tester.pumpAndSettle();
+    expect(find.text('暂未发现需要额外提醒的安全规则。'), findsOneWidget);
+
+    await _scrollUntilVisible(
+      tester,
+      find.byKey(const ValueKey('recipe-dish-name')),
+      delta: const Offset(0, 500),
+    );
+    await tester.enterText(
+      find.byKey(const ValueKey('recipe-dish-name')),
+      '安全结果失效测试修改版',
+    );
+    await tester.pumpAndSettle();
+    await _scrollUntilVisible(
+      tester,
+      find.byKey(const ValueKey('recipe-safety-status')),
+    );
+    expect(find.textContaining('等待重新检查食品安全'), findsWidgets);
+    expect(find.text('暂未发现需要额外提醒的安全规则。'), findsNothing);
+  });
+
+  testWidgets('prohibited claims block save with rewrite guidance', (
+    tester,
+  ) async {
+    final server = FakeServer();
+    _installRecipeApi(
+      server,
+      safetyResult: RecipeSafetyResult(
+        canSave: false,
+        checkedAt: '2026-10-01T00:00:00+00:00',
+        claimBasis: '不得声称治疗疾病',
+        findings: const [],
+        highRisk: false,
+        prohibitedClaims: const ['治愈'],
+        rulesVersion: 'test-rules-v1',
+      ),
+    );
+    await pumpApp(tester, env: TestEnv.signedIn(server: server));
+    await _openNewEditor(tester);
+    await _enterDishName(tester, '疗效用语拦截测试');
+    await _scrollUntilVisible(
+      tester,
+      find.byKey(const ValueKey('save-recipe-button')),
+      delta: const Offset(0, 500),
+    );
+    await tester.tap(find.byKey(const ValueKey('save-recipe-button')));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const ValueKey('recipe-save-error')), findsOneWidget);
+    expect(find.textContaining('不得声称治疗疾病'), findsOneWidget);
+    expect(find.textContaining('请改写为对做法的客观描述'), findsOneWidget);
+    expect(server.calls('POST', '/v1/recipes'), isEmpty);
+  });
+
   testWidgets('server save errors stay visible in the editor', (tester) async {
     final server = FakeServer();
+    server.on(
+      'POST',
+      '/v1/recipes/safety/check',
+      (_) => (
+        200,
+        RecipeSafetyCheckOut(
+          result: RecipeSafetyResult(
+            allergens: const [],
+            allergensIncomplete: false,
+            canSave: true,
+            checkedAt: '2026-10-01T00:00:00+00:00',
+            findings: const [],
+            highRisk: false,
+            prohibitedClaims: const [],
+            replacementAllergens: const [],
+            rulesVersion: 'test-rules-v1',
+          ),
+        ).toJson(),
+      ),
+    );
     server.on(
       'POST',
       '/v1/recipes',
@@ -1811,6 +1940,10 @@ void main() {
       await _openMyRecipes(tester);
       await tester.tap(find.byKey(const ValueKey('recipe-card-$_recipeId')));
       await tester.pumpAndSettle();
+      await _scrollUntilVisible(
+        tester,
+        find.byKey(const ValueKey('recipe-serving-control')),
+      );
 
       expect(
         find.byKey(const ValueKey('recipe-serving-control')),
@@ -1822,7 +1955,11 @@ void main() {
       await _scrollToBottom(tester);
       expect(find.text('150 克'), findsWidgets);
       expect(find.text('按场景调整'), findsOneWidget);
-      await _scrollToTop(tester);
+      await _scrollUntilVisible(
+        tester,
+        find.byKey(const ValueKey('recipe-serving-reset')),
+        delta: const Offset(0, 500),
+      );
       await tester.tap(find.byKey(const ValueKey('recipe-serving-reset')));
       await tester.pumpAndSettle();
       expect(
@@ -1831,6 +1968,10 @@ void main() {
       );
       expect(find.text('2'), findsWidgets);
 
+      await _scrollUntilVisible(
+        tester,
+        find.byKey(const ValueKey('recipe-serving-increase')),
+      );
       await tester.tap(find.byKey(const ValueKey('recipe-serving-increase')));
       await tester.pumpAndSettle();
       await _scrollToBottom(tester);
@@ -1874,7 +2015,11 @@ void main() {
     await _scrollToBottom(tester);
     expect(find.text('3 个'), findsWidgets);
 
-    await _scrollToTop(tester);
+    await _scrollUntilVisible(
+      tester,
+      find.byKey(const ValueKey('recipe-serving-increase')),
+      delta: const Offset(0, 500),
+    );
     await tester.tap(find.byKey(const ValueKey('recipe-serving-increase')));
     await tester.pumpAndSettle();
     await _scrollToBottom(tester);
@@ -1891,6 +2036,10 @@ void main() {
       await _openMyRecipes(tester);
       await tester.tap(find.byKey(const ValueKey('recipe-card-$_recipeId')));
       await tester.pumpAndSettle();
+      await _scrollUntilVisible(
+        tester,
+        find.byKey(const ValueKey('recipe-serving-control')),
+      );
 
       final servingControl = find.byKey(
         const ValueKey('recipe-serving-control'),
@@ -1903,7 +2052,11 @@ void main() {
       await _scrollToBottom(tester);
       expect(find.text('100 克'), findsWidgets);
 
-      await _scrollToTop(tester);
+      await _scrollUntilVisible(
+        tester,
+        find.byKey(const ValueKey('recipe-serving-decrease')),
+        delta: const Offset(0, 500),
+      );
       await tester.tap(find.byKey(const ValueKey('recipe-serving-decrease')));
       await tester.pumpAndSettle();
       expect(
@@ -1914,7 +2067,11 @@ void main() {
       expect(find.text('96.67 克'), findsWidgets);
       expect(find.text('按场景调整'), findsOneWidget);
 
-      await _scrollToTop(tester);
+      await _scrollUntilVisible(
+        tester,
+        find.byKey(const ValueKey('recipe-serving-reset')),
+        delta: const Offset(0, 500),
+      );
       await tester.tap(find.byKey(const ValueKey('recipe-serving-reset')));
       await tester.pumpAndSettle();
       await _scrollToBottom(tester);
@@ -2238,6 +2395,10 @@ void main() {
     available = true;
     await tester.tap(find.text('重试'));
     await tester.pumpAndSettle();
+    await _scrollUntilVisible(
+      tester,
+      find.byKey(const ValueKey('recipe-serving-control')),
+    );
     expect(
       find.byKey(const ValueKey('recipe-serving-control')),
       findsOneWidget,

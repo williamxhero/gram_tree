@@ -85,6 +85,11 @@ import 'package:gramtree_api/src/model/recipe_list_item.dart';
 import 'package:gramtree_api/src/model/recipe_mold_conversion_out.dart';
 import 'package:gramtree_api/src/model/recipe_mold_conversion_request.dart';
 import 'package:gramtree_api/src/model/recipe_replacement.dart';
+import 'package:gramtree_api/src/model/recipe_replacement_allergens.dart';
+import 'package:gramtree_api/src/model/recipe_safety_check_out.dart';
+import 'package:gramtree_api/src/model/recipe_safety_check_request.dart';
+import 'package:gramtree_api/src/model/recipe_safety_finding.dart';
+import 'package:gramtree_api/src/model/recipe_safety_result.dart';
 import 'package:gramtree_api/src/model/recipe_serving_conversion_out.dart';
 import 'package:gramtree_api/src/model/recipe_snapshot.dart';
 import 'package:gramtree_api/src/model/recipe_step.dart';
@@ -381,6 +386,21 @@ ReturnType deserialize<ReturnType, BaseType>(
           as ReturnType;
     case 'RecipeReplacement':
       return RecipeReplacement.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'RecipeReplacementAllergens':
+      return RecipeReplacementAllergens.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'RecipeSafetyCheckOut':
+      return RecipeSafetyCheckOut.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'RecipeSafetyCheckRequest':
+      return RecipeSafetyCheckRequest.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'RecipeSafetyFinding':
+      return RecipeSafetyFinding.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'RecipeSafetyResult':
+      return RecipeSafetyResult.fromJson(value as Map<String, dynamic>)
           as ReturnType;
     case 'RecipeServingConversionOut':
       return RecipeServingConversionOut.fromJson(value as Map<String, dynamic>)

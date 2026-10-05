@@ -231,6 +231,29 @@
   "recipeDurationBatchNote": "份量变大后可能要分批下锅，实际用时会更长，以成熟判断为准。",
   "recipeDurationMoldNote": "换模具后烘烤时间不按底面积比例放大，时长按原步骤估算，以成熟判断为准。",
   "recipeAllergens": "过敏原：{items}{incomplete}",
+  "recipeSafetyTitle": "食品安全提醒",
+  "recipeSafetyCheck": "检查食品安全",
+  "recipeSafetyChecking": "正在检查……",
+  "recipeSafetySaveBlocked": "食品安全检查未通过，请调整菜谱后再保存。",
+  "recipeSafetyHighRisk": "高风险：请谨慎处理，不能只依赖计时或颜色判断。",
+  "recipeSafetyWarning": "食品安全警告",
+  "recipeSafetyInfo": "食品安全提示",
+  "recipeSafetyNoFindings": "暂未发现需要额外提醒的安全规则。",
+  "recipeSafetyLoading": "正在检查食品安全……",
+  "recipeSafetyAwaitingCheck": "菜谱已修改，等待重新检查食品安全。保存前必须完成检查。",
+  "recipeSafetyUnavailable": "这份旧版本没有保存安全检查结果，请结合食材和步骤谨慎判断。",
+  "recipeSafetyStale": "安全规则已更新，以下结果可能已过期；请重新检查后再依赖它。",
+  "recipeSafetyError": "食品安全检查暂时失败：{error}",
+  "recipeSafetyRulesVersion": "安全规则版本：{version}",
+  "recipeSafetyThreshold": "中心温度至少 {temperature}°C",
+  "recipeSafetyRest": "静置至少 {minutes} 分钟",
+  "recipeSafetySteps": "关联步骤：{steps}",
+  "recipeSafetyClaims": "禁止用语：{claims}。{basis}",
+  "recipeSafetyClaimRewrite": "请改写为对做法的客观描述。",
+  "recipeAllergenTitle": "过敏原提示",
+  "recipeAllergenNone": "未检测到已知过敏原",
+  "recipeAllergenIncompleteBasis": "含有未收录食材，过敏原信息可能不完整。",
+  "recipeReplacementAllergens": "替代品“{name}”的过敏原：{allergens}{incomplete}",
   "recipeNutrition": "每份营养：估算值{incomplete}",
   "recipeIngredients": "食材",
   "recipeStepsTitle": "步骤",
@@ -470,6 +493,34 @@
   "@recipeAllergens": {
     "placeholders": {
       "items": {"type": "String"},
+      "incomplete": {"type": "String"}
+    }
+  },
+  "@recipeSafetyError": {
+    "placeholders": {"error": {"type": "String"}}
+  },
+  "@recipeSafetyRulesVersion": {
+    "placeholders": {"version": {"type": "String"}}
+  },
+  "@recipeSafetyThreshold": {
+    "placeholders": {"temperature": {"type": "String"}}
+  },
+  "@recipeSafetyRest": {
+    "placeholders": {"minutes": {"type": "int"}}
+  },
+  "@recipeSafetySteps": {
+    "placeholders": {"steps": {"type": "String"}}
+  },
+  "@recipeSafetyClaims": {
+    "placeholders": {
+      "claims": {"type": "String"},
+      "basis": {"type": "String"}
+    }
+  },
+  "@recipeReplacementAllergens": {
+    "placeholders": {
+      "name": {"type": "String"},
+      "allergens": {"type": "String"},
       "incomplete": {"type": "String"}
     }
   },

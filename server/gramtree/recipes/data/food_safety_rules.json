@@ -1,0 +1,144 @@
+{
+  "version": "2026.10.1",
+  "evidence_negation_prefixes": ["未", "没", "没有", "不", "不要", "无需", "不必", "尚未", "不是", "并非", "避免"],
+  "evidence_disqualifiers": ["不一定", "不代表", "不能保证", "无法保证", "未必", "仅凭", "可能仍"],
+  "core_temperature_pattern": "(?:中心温度|内部温度|肉心温度)(?:达到|达|至少|不低于|为|是|测得|\\s|[:：≥])*(?P<temperature>[0-9]+(?:\\.[0-9]+)?)\\s*(?:°C|℃|度)",
+  "rules": [
+    {
+      "id": "poultry-cook-through",
+      "trigger": {"ingredient_terms": ["鸡", "鸭", "鹅", "禽肉", "鸽", "鹌鹑"], "categories": ["禽肉", "禽类"], "exclude_ingredient_terms": ["蛋", "鸡精", "鸡粉", "鸡油", "鸡腿菇"]},
+      "severity": "warning",
+      "message": "禽肉需彻底加热；测量中心温度达到 74°C，或切开确认中心无粉红、汁液清澈。烤箱和锅的温度不能代替中心温度。",
+      "basis": "USDA FSIS Safe Minimum Internal Temperature Chart: all poultry 165°F (73.9°C). https://www.fsis.usda.gov/food-safety/safe-food-handling-and-preparation/food-safety-basics/safe-minimum-internal-temperature-chart；中心无粉红的文字判断按 SPEC-011.1 接受，不能替代温度计测量。",
+      "threshold_celsius": 74,
+      "satisfied_by": [
+        {"all": [{"kind": "core_temperature", "minimum": 74}]},
+        {"all": [{"kind": "text", "terms": [["中心无粉红", "中心没有粉红", "中心无粉色", "中心不呈粉红"]], "exclude_terms": ["未熟", "没熟", "未达到", "没有达到", "未到", "不到", "无需", "不必"]}]}
+      ]
+    },
+    {
+      "id": "pork-cook-through",
+      "trigger": {"ingredient_terms": ["猪肉", "猪排", "里脊", "五花肉"], "categories": ["猪肉"], "exclude_ingredient_terms": ["肉末", "肉馅", "绞", "碎肉", "猪肝", "猪蹄", "猪肾", "猪心", "猪肺", "猪肚", "猪肠"]},
+      "severity": "warning",
+      "message": "猪肉应有熟透判断；整块猪肉中心温度至少 63°C，并静置至少 3 分钟。",
+      "basis": "USDA FSIS Safe Minimum Internal Temperature Chart: pork steaks, chops and roasts 145°F (62.8°C), rest 3 minutes. https://www.fsis.usda.gov/food-safety/safe-food-handling-and-preparation/food-safety-basics/safe-minimum-internal-temperature-chart；文字熟透判断按 SPEC-011.1 接受。",
+      "threshold_celsius": 63,
+      "rest_minutes": 3,
+      "satisfied_by": [
+        {"scope": "ingredient_steps", "all": [{"kind": "core_temperature", "minimum": 63}, {"kind": "duration", "minimum": 180, "actions": ["静置", "休息"]}]},
+        {"all": [{"kind": "text", "terms": [["熟透", "中心无粉红", "完全熟"]], "exclude_terms": ["半熟", "未熟", "没熟", "未达到", "没有达到", "未到", "不到", "无需", "不必"]}]}
+      ]
+    },
+    {
+      "id": "pork-offal-cook-through",
+      "trigger": {"ingredient_terms": ["猪肝", "猪蹄", "猪肾", "猪心", "猪肺", "猪肚", "猪肠"]},
+      "severity": "warning",
+      "message": "猪内脏和猪蹄应充分加热并确认熟透；整块猪排的 63°C 加静置标准不能直接用于内脏。",
+      "basis": "香港食物安全中心《Safe Cooking of Pig Liver to Prevent Hepatitis E》（2026-07）：生猪肝应彻底煮熟；切片猪肝的煮/炒时间随厚度而变。本规则将该肝脏处理原则保守扩展到列出的猪内脏和猪蹄，只接受明确熟透判断，不虚构统一时长或套用整块猪肉标准。https://www.cfs.gov.hk/english/multimedia/multimedia_pub/multimedia_pub_fsf_240_03.html",
+      "satisfied_by": [{"all": [{"kind": "text", "terms": [["熟透", "烧熟煮透", "完全熟"]], "exclude_terms": ["半熟", "未熟", "没熟", "无需", "不必"]}]}]
+    },
+    {
+      "id": "ground-pork-cook-through",
+      "trigger": {"ingredient_terms": ["猪肉末", "猪肉馅", "绞猪肉", "猪绞肉", "猪碎肉"], "categories": ["猪肉"], "mode_terms": ["肉末", "肉馅", "绞", "碎肉"]},
+      "severity": "warning",
+      "message": "猪绞肉、肉末和肉馅应充分加热，中心温度至少 71°C；不能使用整块猪肉的 63°C 标准。",
+      "basis": "USDA FSIS Safe Minimum Internal Temperature Chart: ground meats 160°F (71.1°C). https://www.fsis.usda.gov/food-safety/safe-food-handling-and-preparation/food-safety-basics/safe-minimum-internal-temperature-chart",
+      "threshold_celsius": 71,
+      "satisfied_by": [{"all": [{"kind": "core_temperature", "minimum": 71}]}]
+    },
+    {
+      "id": "shellfish-cook",
+      "trigger": {"ingredient_terms": ["贝类", "蛤蜊", "花蛤", "牡蛎", "生蚝", "扇贝", "青口", "贻贝"], "categories": ["贝类"]},
+      "severity": "warning",
+      "message": "带壳贝类应加热至开口；加热后仍不开口的应丢弃。",
+      "basis": "FDA Selecting and Serving Fresh and Frozen Seafood Safely: cook clams, mussels and oysters until shells open; discard unopened shells. https://www.fda.gov/food/buy-store-serve-safe-food/selecting-and-serving-fresh-and-frozen-seafood-safely",
+      "satisfied_by": [{"all": [{"kind": "text", "terms": [["加热至开口", "煮至开口", "蒸至开口", "煮到开口", "全部开口"]]}, {"kind": "text", "terms": [["丢弃不开口", "不开口的丢弃", "不开口的应丢弃", "丢弃未开口", "未开口的丢弃"]]}]}]
+    },
+    {
+      "id": "raw-seafood",
+      "trigger": {"ingredient_terms": ["虾", "蟹", "鱼", "贝", "生蚝", "牡蛎", "蛤蜊", "青口", "海鲜"], "categories": ["水产", "海鲜", "鱼类", "贝类"], "mode_terms": ["生腌", "醉", "生食", "刺身", "生鱼片"], "recipe_terms": ["生腌", "醉虾", "醉蟹", "刺身", "生鱼片"]},
+      "severity": "warning",
+      "message": "生食、酒醉或腌制不能可靠杀灭病原体和寄生虫；孕妇、儿童、老人及免疫力较弱者应避免，充分加热更安全。",
+      "basis": "FDA seafood safety: avoid raw or undercooked seafood for vulnerable groups. https://www.fda.gov/food/buy-store-serve-safe-food/selecting-and-serving-fresh-and-frozen-seafood-safely"
+    },
+    {
+      "id": "raw-egg",
+      "trigger": {"ingredient_terms": ["鸡蛋", "鸭蛋", "鹅蛋", "鹌鹑蛋", "蛋液", "生蛋", "溏心蛋"], "categories": ["蛋类"], "mode_terms": ["生鸡蛋", "生蛋", "溏心", "半熟", "提拉米苏", "生食", "不加热", "无需加热"], "recipe_terms": ["溏心蛋", "生鸡蛋", "提拉米苏"]},
+      "severity": "info",
+      "message": "生或未熟透的鸡蛋存在食源性疾病风险；建议使用巴氏杀菌蛋或完全加热，老人、儿童、孕妇应避免生食。可生食标识也不代表零风险。",
+      "basis": "USDA FSIS Shell Eggs from Farm to Table: use pasteurized eggs for recipes served raw or undercooked. https://www.fsis.usda.gov/food-safety/safe-food-handling-and-preparation/eggs/shell-eggs-farm-table"
+    },
+    {
+      "id": "infant-honey",
+      "trigger": {"ingredient_terms": ["蜂蜜"], "tags": ["儿童", "辅食", "婴幼儿"]},
+      "severity": "warning",
+      "message": "1 岁以下婴儿不应食用蜂蜜，包括加热后的蜂蜜。",
+      "basis": "CDC Infant and Toddler Nutrition: do not give honey before 12 months. https://www.cdc.gov/infant-toddler-nutrition/foods-and-drinks/foods-and-drinks-to-avoid-or-limit.html"
+    },
+    {
+      "id": "infant-salt",
+      "trigger": {"ingredient_terms": ["盐", "酱油", "生抽", "老抽", "蚝油", "豆瓣酱"], "tags": ["儿童", "辅食", "婴幼儿"]},
+      "severity": "warning",
+      "message": "1 岁以下辅食不要额外加盐和含盐调料；儿童菜谱请确认食用年龄，减少高盐调味料。",
+      "basis": "英国 NHS《Foods to avoid giving babies and young children》：不要在婴儿食物或烹饪水中加盐，避免通常含盐较高的高汤块或肉汁；本规则按 SPEC-011.1 提醒 1 岁以下辅食不要额外加盐或含盐调味料。https://www.nhs.uk/baby/weaning-and-feeding/foods-to-avoid-giving-babies-and-young-children/"
+    },
+    {
+      "id": "toddler-whole-nuts",
+      "trigger": {"ingredient_terms": ["整颗坚果", "花生", "杏仁", "核桃", "腰果", "榛子", "开心果"], "categories": ["坚果"], "exclude_ingredient_terms": ["油", "酱", "粉", "奶", "乳"], "tags": ["儿童", "辅食", "婴幼儿"]},
+      "severity": "warning",
+      "message": "3 岁以下儿童避免整颗坚果等易噎住的食物；如使用应磨成细粉或细腻酱状，并确认适龄。",
+      "basis": "英国 NHS《Foods to avoid giving babies and young children》：5 岁以下不应食用整颗坚果，辅食中的坚果应磨碎并混入食物，坚果酱应涂在食物上而非单独喂食；CDC《Choking Hazards》将整颗或切碎的坚果、种子及大块或整勺坚果酱列为呛噎风险。本规则 3 岁以下年龄表述及细粉或细腻酱状要求沿用 SPEC-011.1，不将 3～4 岁食用整颗坚果视为安全。https://www.nhs.uk/baby/weaning-and-feeding/foods-to-avoid-giving-babies-and-young-children/；https://www.cdc.gov/infant-toddler-nutrition/foods-and-drinks/choking-hazards.html",
+      "satisfied_by": [{"all": [{"kind": "text", "terms": [["磨成细粉", "磨碎成粉", "研磨成粉", "磨成细腻酱", "打成细腻酱"]]}]}]
+    },
+    {
+      "id": "high-risk-wild-mushroom",
+      "trigger": {"ingredient_terms": ["野生菌", "野生蘑菇", "野菌", "野生菇"], "categories": ["野生菌"], "recipe_terms": ["野生菌", "野生蘑菇", "野菌"]},
+      "severity": "high_risk",
+      "message": "野生菌可能含致命毒素，烹煮不能保证安全；不要采食或使用来源不明的野生菌。",
+      "basis": "香港食物安全中心《Wild Mushrooms – Numerous Species and Numerous Toxins》（2026-08）：蘑菇毒素不能通过烹煮、罐装或冷冻去除；不要自行采摘野生蘑菇食用，购买时选择可靠商家并避免混有未知品种的蘑菇。https://www.cfs.gov.hk/english/multimedia/multimedia_pub/multimedia_pub_fsf_241_01.html"
+    },
+    {
+      "id": "high-risk-pufferfish",
+      "trigger": {"ingredient_terms": ["河豚", "河鲀"], "recipe_terms": ["河豚", "河鲀"]},
+      "severity": "high_risk",
+      "message": "河豚含强毒素，家庭烹饪无法确保去毒；请勿自行加工食用。",
+      "basis": "香港食物安全中心《Tetrodotoxin – the Deadly Poison in Puffer Fish》（2021-05）：河豚毒素可致命且耐热，烹煮、冷冻或干燥均不能去除；该来源建议不食用河豚及其加工品。本规则沿用 SPEC-011.1 对家庭自行加工食用的风险提示。https://www.cfs.gov.hk/english/multimedia/multimedia_pub/multimedia_pub_fsf_178_02.html"
+    },
+    {
+      "id": "beans-cook-through",
+      "trigger": {"ingredient_terms": ["四季豆", "扁豆", "豆角", "芸豆"], "exclude_ingredient_terms": ["罐头", "熟制"]},
+      "severity": "warning",
+      "message": "四季豆、扁豆必须彻底做熟至失去生绿色、口感熟软；短时快炒不能证明熟透。",
+      "basis": "海南省市场监管部门春节食品安全消费提示：四季豆必须充分加热，避免急火短炒；无适用所有家常份量的固定安全时长，本规则要求成熟判断。https://amr.hainan.gov.cn/zw/xfts/201701/t20170122_1589873.html",
+      "satisfied_by": [{"all": [{"kind": "text", "terms": [["彻底做熟", "烧熟煮透", "熟透", "熟软"]], "exclude_terms": ["半熟", "未熟", "没熟", "无需", "不必"]}]}]
+    },
+    {
+      "id": "fresh-daylily",
+      "trigger": {"ingredient_terms": ["鲜黄花菜", "新鲜黄花菜"], "exclude_ingredient_terms": ["干黄花菜", "干制"]},
+      "severity": "warning",
+      "message": "鲜黄花菜需先焯水并充分浸泡，弃去处理用水后再烹调；只清洗或只焯水不能代替全部处理。",
+      "basis": "中山市市场监督管理局《春季食品安全提醒》：鲜黄花菜焯水、清水浸泡后炒熟或煮透。https://www.zs.gov.cn/zszjj/gkmlpt/content/2/2392/post_2392796.html；市场监管总局《关于黄花菜的消费提示》：干制、泡发可降低风险。https://www.samr.gov.cn/cms_files/filemanager/samr/www/samrnew/xw/zj/202208/P020220829559246271233.pdf",
+      "satisfied_by": [{"scope": "ingredient_steps", "all": [{"kind": "text", "terms": [["焯水", "焯烫"]]}, {"kind": "text", "terms": [["充分浸泡", "浸泡后弃水", "浸泡并弃水"]]}]}]
+    },
+    {
+      "id": "soy-milk-boil",
+      "trigger": {"ingredient_terms": ["生豆浆", "豆浆"], "exclude_ingredient_terms": ["熟豆浆", "即饮", "熟制"]},
+      "severity": "warning",
+      "message": "生豆浆需真正煮沸后继续煮至少 5 分钟；起泡的假沸不能当作煮熟。",
+      "basis": "北京市地方政府食品安全提示：豆浆假沸后应真正沸腾并继续加热约 5 分钟。https://www.bypc.gov.cn/zfxxgk/bmdwxzjd/xzjd/ghz/fdzdgknr/cwgk/mhlc/cwgk/art/2024/art_f714e70909e847e5947a5d9bff7b88d6.html；本规则要求显式说明沸腾后的持续时间，计时不能包含升温阶段。",
+      "satisfied_by": [{"all": [{"kind": "text", "terms": [["真正煮沸后", "真正沸腾后", "煮沸后继续", "沸腾后继续"]], "exclude_terms": ["假沸后", "无需", "不必"]}, {"kind": "duration", "minimum": 300, "actions": ["煮", "沸腾"], "instruction_patterns": ["^真正煮沸后继续煮(?:\\s*(?:至少|不少于)?\\s*5\\s*分钟)?[。！!,，]?$", "^真正沸腾后继续煮(?:\\s*(?:至少|不少于)?\\s*5\\s*分钟)?[。！!,，]?$", "^煮沸后继续煮(?:\\s*(?:至少|不少于)?\\s*5\\s*分钟)?[。！!,，]?$", "^沸腾后继续煮(?:\\s*(?:至少|不少于)?\\s*5\\s*分钟)?[。！!,，]?$"]}]}]
+    },
+    {
+      "id": "sprouted-potato",
+      "trigger": {"ingredient_terms": ["土豆", "马铃薯"], "mode_terms": ["发芽", "变青", "变绿", "青皮", "绿色"]},
+      "severity": "high_risk",
+      "message": "发芽或明显变绿的土豆不宜食用，应丢弃，不要仅靠削皮或烹煮处理。",
+      "basis": "香港食物安全中心《Potatoes and Glycoalkaloids》（2020-11）：糖苷生物碱耐热，烹煮不能分解；应选择无损伤土豆，无法判断时丢弃整枚土豆。本规则对发芽或明显变绿土豆直接采用更保守的整枚丢弃建议，不接受削皮或烹煮作为消除风险的证据。https://www.cfs.gov.hk/english/multimedia/multimedia_pub/multimedia_pub_fsf_172_03.html；补充提示：https://www.cfs.gov.hk/english/multimedia/multimedia_pub/multimedia_pub_fsf_112_01.html"
+    }
+  ],
+  "prohibited_claims": {
+    "version": "2026.10.1",
+    "basis": "《中华人民共和国广告法》第十七条：非医疗、药品、医疗器械广告不得涉及疾病治疗功能；普通食品不得作疾病预防、治疗宣称。https://www.gov.cn/zhengce/2015-04/25/content_2853642.htm",
+    "terms": ["治疗", "治愈", "疗效", "降血糖", "降血压", "抗癌", "排毒", "预防疾病", "消炎", "减肥药"]
+  }
+}

@@ -116,6 +116,24 @@ class RecipeRepository {
     return response.data!;
   }
 
+  /// Check the current mutable snapshot without creating a version.
+  ///
+  /// The server owns all rule thresholds; the client only presents the
+  /// returned result. This is deliberately a separate call from save so an
+  /// author can correct a finding before committing a new immutable version.
+  Future<RecipeSafetyResult> checkSafety(RecipeForm form) async {
+    final response = await _recipes.checkRecipeSafety(
+      recipeSafetyCheckRequest: RecipeSafetyCheckRequest(
+        dishName: form.dishName,
+        dishAliases: [...form.aliases],
+        changeNote: form.changeNote,
+        description: form.description,
+        snapshot: form.snapshot,
+      ),
+    );
+    return response.data!.result;
+  }
+
   Future<RecipeDetail> create(RecipeForm form) async {
     final response = await _recipes.createRecipe(
       recipeCreate: RecipeCreate(
@@ -479,6 +497,7 @@ class RecipeForm {
     this.totalTimeSeconds = 0,
     this.activeTimeSeconds = 0,
     this.changeNote = '',
+    this.description = '',
     this.baseMold,
     List<RecipeIngredientDraft>? ingredients,
     List<RecipeStepDraft>? steps,
@@ -502,6 +521,7 @@ class RecipeForm {
     tags: [...?snapshot.tags],
     totalTimeSeconds: snapshot.totalTimeSeconds ?? 0,
     activeTimeSeconds: snapshot.activeTimeSeconds ?? 0,
+    description: snapshot.description ?? '',
     ingredients: [
       for (final item in snapshot.ingredients ?? const [])
         RecipeIngredientDraft.fromModel(item),
@@ -552,6 +572,7 @@ class RecipeForm {
   int totalTimeSeconds;
   int activeTimeSeconds;
   String changeNote;
+  String description;
   MoldSpec? baseMold;
   List<RecipeIngredientDraft> ingredients;
   List<RecipeStepDraft> steps;
@@ -560,6 +581,7 @@ class RecipeForm {
   RecipeSnapshot get snapshot => RecipeSnapshot(
     activeTimeSeconds: activeTimeSeconds,
     baseMold: baseMold,
+    description: _optionalText(description),
     difficulty: difficulty,
     dishType: dishType,
     formatVersion: RecipeSnapshotFormatVersionEnum.number1,

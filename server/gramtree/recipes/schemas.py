@@ -147,6 +147,38 @@ class RecipeDerived(BaseModel):
     nutrition_per_serving: NutritionEstimate | None = None
 
 
+class RecipeSafetyFinding(BaseModel):
+    rule_id: str
+    severity: Literal["info", "warning", "high_risk"]
+    message: str
+    basis: str
+    step_ids: list[str] = Field(default_factory=list)
+    ingredient_ids: list[str] = Field(default_factory=list)
+    threshold_celsius: float | None = None
+    rest_minutes: int | None = None
+
+
+class RecipeReplacementAllergens(BaseModel):
+    ingredient_id: str = Field(description="替代品所属的菜谱内食材 ID")
+    display_name: str
+    allergens: list[str] = Field(default_factory=list)
+    incomplete: bool = False
+
+
+class RecipeSafetyResult(BaseModel):
+    rules_version: str
+    checked_at: Timestamp
+    stale: bool = Field(default=False, description="当前检查早于已部署规则，正在等待后台复检")
+    findings: list[RecipeSafetyFinding] = Field(default_factory=list)
+    high_risk: bool = False
+    allergens: list[str] = Field(default_factory=list)
+    allergens_incomplete: bool = False
+    replacement_allergens: list[RecipeReplacementAllergens] = Field(default_factory=list)
+    prohibited_claims: list[str] = Field(default_factory=list)
+    can_save: bool = True
+    claim_basis: str | None = None
+
+
 class MoldSpec(BaseModel):
     """A recipe base or target mold, stored as part of the immutable snapshot."""
 
@@ -246,6 +278,7 @@ class RecipeSnapshot(BaseModel):
     active_time_seconds: int = Field(default=0, ge=0, le=604800)
     difficulty: str | None = None
     dish_type: str | None = None
+    description: str | None = Field(default=None, max_length=4000)
     tags: list[str] = Field(default_factory=list, max_length=50)
     ingredients: list[RecipeIngredient] = Field(default_factory=list, max_length=500)
     steps: list[RecipeStep] = Field(default_factory=list, max_length=200)
@@ -296,6 +329,26 @@ class RecipeVersionCreate(BaseModel):
     image_ids: list[IdV4] = Field(default_factory=list, max_length=10)
 
 
+class RecipeSafetyCheckRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    dish_name: str = Field(default="", max_length=200)
+    dish_aliases: list[str] = Field(default_factory=list, max_length=20)
+    description: str | None = Field(default=None, max_length=4000)
+    change_note: str = Field(default="", max_length=2000)
+    snapshot: RecipeSnapshot
+
+
+class RecipeSafetyCheckOut(BaseModel):
+    result: RecipeSafetyResult
+
+
+class RecipeSafetyRecheckOut(BaseModel):
+    rules_version: str
+    checked: int
+    failed: int = 0
+
+
 class RecipeMoldConversionRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -342,6 +395,8 @@ class RecipeVersionOut(BaseModel):
     previous_version_id: IdV4 | None = None
     snapshot: RecipeSnapshot
     derived: RecipeDerived
+    safety: RecipeSafetyResult | None = None
+    safety_at_save: RecipeSafetyResult | None = None
     edit_operations: list[dict[str, Any]]
     change_note: str
     ai_assisted: bool

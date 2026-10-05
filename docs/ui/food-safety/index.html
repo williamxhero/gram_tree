@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>味谱｜食品安全与过敏原提示样稿</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Noto+Sans+SC:wght@400;500;700&family=Noto+Serif+SC:wght@500;700&display=swap" rel="stylesheet">
+  <style>
+    :root { color-scheme: light; --paper:#F7F4EE; --card:#FFFDF9; --ink:#1B1813; --muted:#5E574C; --line:#DED8CD; --verified:#4E6B48; --soft:#EFEBE4; --soft-green:#E7EEE4; --scrim:#1B18136B; }
+    @media (prefers-color-scheme:dark) { :root { color-scheme:dark; --paper:#171511; --card:#221F1A; --ink:#F1ECE3; --muted:#B9B1A4; --line:#484238; --soft:#332F29; --soft-green:#293629; --scrim:#00000099; } }
+    * { box-sizing:border-box; } body { margin:0; background:var(--paper); color:var(--ink); font:15px/1.6 "Noto Sans SC",sans-serif; }
+    .wrap { width:min(760px,100%); margin:auto; padding:32px 18px 68px; } h1,h2,h3 { font-family:"Noto Serif SC",serif; margin:0; line-height:1.3; } h1 { font-size:clamp(27px,5vw,40px); } h2 { font-size:21px; } h3 { font-size:17px; }
+    .eyebrow,.meta,.label,.mono { font-family:"DM Mono",ui-monospace,monospace; } .eyebrow { color:var(--muted); font-size:12px; letter-spacing:.1em; } .meta,.label { color:var(--muted); font-size:12px; } .lede { color:var(--muted); margin:10px 0 20px; }
+    .card { background:var(--card); border:1px solid var(--line); border-radius:18px; padding:18px; margin-top:14px; } .head { display:flex; justify-content:space-between; align-items:start; gap:14px; } .head h2 { font-size:25px; } .tag { border:1px solid var(--line); border-radius:999px; padding:4px 10px; white-space:nowrap; color:var(--muted); font-size:12px; }
+    .required { border:1.5px solid var(--ink); } .required .label { color:var(--ink); font-weight:700; } .lock { font-size:12px; color:var(--muted); }
+    .allergen { display:flex; align-items:flex-start; gap:11px; } .icon { display:grid; place-items:center; flex:0 0 28px; width:28px; height:28px; border:1px solid var(--ink); border-radius:50%; font-weight:700; } .allergen strong { display:block; font-size:16px; } .allergen p { margin:2px 0 0; color:var(--muted); font-size:13px; }
+    .chips { display:flex; flex-wrap:wrap; gap:7px; margin-top:9px; } .chip { border:1px solid var(--line); border-radius:999px; padding:4px 10px; font-size:13px; } .chip.unknown { border-style:dashed; }
+    .alert { display:grid; grid-template-columns:auto 1fr; gap:11px; padding:13px 0; border-top:1px solid var(--line); } .alert:first-of-type { border-top:0; } .alert .symbol { font-size:22px; line-height:1.25; } .alert strong { display:block; } .alert p { margin:3px 0 0; color:var(--muted); font-size:13px; } .basis { margin-top:9px; padding:9px 11px; border-left:3px solid var(--line); background:var(--soft); color:var(--muted); font-size:12px; }
+    .high { border:2px solid var(--ink); } .high .symbol { font-size:25px; } .step { padding:13px 0 2px; border-top:1px solid var(--line); } .step:first-child { border-top:0; } .step-title { display:flex; justify-content:space-between; gap:12px; } .step p { margin:4px 0 8px; } .why { color:var(--ink); background:transparent; border:0; padding:4px 0; font:inherit; text-decoration:underline; text-underline-offset:3px; cursor:pointer; }
+    .replacement { display:flex; justify-content:space-between; gap:14px; border-top:1px solid var(--line); padding:10px 0 0; margin-top:10px; font-size:13px; } .replacement .note { color:var(--muted); text-align:right; }
+    .nutrition { display:flex; justify-content:space-between; align-items:baseline; gap:10px; } .nutrition b { font:18px "DM Mono",monospace; } .estimate { color:var(--muted); font-size:12px; }
+    .error { background:var(--soft); border-left:3px solid var(--ink); } .error strong { display:block; } .error p { color:var(--muted); margin:4px 0 0; font-size:13px; } .actions { display:flex; flex-wrap:wrap; gap:10px; margin-top:13px; } button { min-height:42px; border:1px solid var(--ink); border-radius:10px; background:var(--ink); color:var(--card); padding:0 15px; font:inherit; cursor:pointer; } button.secondary { background:transparent; color:var(--ink); border-color:var(--line); }
+    .foot { color:var(--muted); font-size:12px; margin-top:19px; } .font-controls { display:flex; justify-content:flex-end; gap:7px; margin:13px 0; } .font-controls button { min-height:32px; padding:0 9px; font-size:12px; } @media (min-width:680px) { .columns { display:grid; grid-template-columns:1fr 1fr; gap:14px; } .columns .card { margin-top:0; } }
+  </style>
+</head>
+<body>
+<main class="wrap">
+  <div class="eyebrow">SPEC-011.1 · 仅为视觉样稿</div>
+  <h1>宫保鸡丁</h1>
+  <p class="lede">第 3 版 · 保存前安全检查结果会随版本留存。安全提醒和过敏原提示不能永久关闭。</p>
+  <div class="font-controls" aria-label="字号示意"><button type="button" onclick="document.body.dataset.size='normal'">100%</button><button type="button" onclick="document.body.dataset.size='large'">130%</button><button type="button" onclick="document.body.dataset.size='huge'">160%</button></div>
+
+  <section class="card required" aria-labelledby="allergens-title">
+    <div class="head"><div><div class="label">必显 · 过敏原提示</div><h2 id="allergens-title">这道菜含有过敏原</h2></div><span class="lock">不可关闭</span></div>
+    <div class="chips" aria-label="已知过敏原"><span class="chip">大豆</span><span class="chip">小麦</span><span class="chip">花生</span><span class="chip unknown">可能不完整</span></div>
+    <p class="meta">由标准食材库推导。含“自制辣酱”这一未收录食材，过敏原列表可能不完整。</p>
+    <div class="replacement"><span>替代：花生 → 南瓜籽</span><span class="note">替代品分类：种子<br>请查看包装标签</span></div>
+  </section>
+
+  <section class="card required" aria-labelledby="safety-title">
+    <div class="head"><div><div class="label">必显 · 食品安全提醒</div><h2 id="safety-title">做之前先看这 2 条</h2></div><span class="lock">不可关闭</span></div>
+    <div class="alert"><div class="symbol" aria-hidden="true">!</div><div><strong>鸡肉需要确认中心熟透</strong><p>用食品温度计测肉最厚处，中心达到 75°C；没有温度计时，切开确认中心无粉红、没有血色，汁液清澈。</p><div class="basis">依据：香港食物安全中心“彻底煮熟”指引。温度是优先判断，外观只是无温度计时的参考。</div><button class="why" type="button">查看依据与明细</button></div></div>
+    <div class="alert"><div class="symbol" aria-hidden="true">!</div><div><strong>不要只看炒了几分钟</strong><p>表面变白、锅温或计时不能替代中心温度；修改时间、火候或温度后会重新检查。</p><div class="basis">为什么：中心未熟透可能仍有致病细菌，安全结论必须对应具体步骤。</div></div></div>
+  </section>
+
+  <div class="columns">
+    <section class="card" aria-labelledby="steps-title"><div class="head"><div><div class="label">步骤级明细</div><h2 id="steps-title">第 2 步 · 翻炒鸡肉</h2></div><span class="tag">需确认</span></div><div class="step"><div class="step-title"><strong>鸡肉下锅翻炒</strong><span class="mono">约 2 分钟</span></div><p>当前版本没有记录中心温度或明确熟透判断。</p><button class="why" type="button">查看“怎样算熟”</button></div><p class="foot">提示跟随对应步骤显示，做菜模式也会保留。</p></section>
+    <section class="card high" aria-labelledby="risk-title"><div class="head"><div><div class="label">高风险状态</div><h2 id="risk-title">当前不是高风险菜</h2></div><span class="tag">✓ 已检查</span></div><p class="meta">野生菌、河豚等高风险食材不会被普通安全提示弱化；如命中，会显示醒目文字和图形并进入更高审核等级。</p></section>
+  </div>
+
+  <section class="card" aria-labelledby="nutrition-title"><div class="head"><div><div class="label">营养信息</div><h2 id="nutrition-title">每份营养估算</h2></div><span class="estimate">估算 · 不是医疗数据</span></div><div class="nutrition"><span>能量</span><b>486 kcal</b></div><div class="nutrition"><span>蛋白质</span><b>28.4 g</b></div><p class="meta">“减脂”“控糖”等标签只描述配方或做法，不承诺治疗、降血糖或其他疗效。</p></section>
+
+  <section class="card error" aria-labelledby="error-title"><strong id="error-title">保存前需要改写这句话</strong><p>“降血糖宫保鸡丁”包含疗效类说法，不能保存。请改为描述做法的标签，例如“少油做法”或“减少额外糖分”。</p><div class="actions"><button type="button">返回修改</button><button class="secondary" type="button">查看规则依据</button></div></section>
+  <p class="foot">设计说明：页面用结论、依据、明细三层展示；安全与过敏组件使用图形和文字，不依赖颜色。样稿中的数值和结果仅作视觉示意，以服务端检查结果为准。</p>
+</main>
+<dialog id="why-panel" aria-labelledby="why-title"><h2 id="why-title">为什么要确认中心熟透</h2><p>香港食物安全中心建议用温度计确认食品中心至少 75°C。外观和计时只能作参考，不能保证中心温度。</p><p>本样稿说明来自规则数据；正式页面还会列出规则版本、命中步骤和来源链接。</p><p><a href="https://www.cfs.gov.hk/english/consumer_zone/safefood_all/five_keys_apply_cook.html" target="_blank" rel="noopener">查看官方依据</a></p><button type="button" id="close-why">关闭依据面板</button></dialog>
+<script>
+  document.body.dataset.size='normal';
+  const style=document.createElement('style');
+  style.textContent='body[data-size="large"]{font-size:19.5px}body[data-size="huge"]{font-size:24px}dialog{width:min(520px,92%);border:1px solid var(--line);border-radius:18px;background:var(--card);color:var(--ink);padding:22px;max-height:85vh;overflow:auto}dialog::backdrop{background:var(--scrim)}dialog a{color:var(--ink)}';
+  document.head.append(style);
+  const panel=document.getElementById('why-panel');
+  document.querySelectorAll('.why,.error .secondary').forEach(button=>button.addEventListener('click',()=>panel.showModal()));
+  document.getElementById('close-why').addEventListener('click',()=>panel.close());
+  document.querySelector('.error .actions button').addEventListener('click',()=>document.getElementById('error-title').scrollIntoView({behavior:'smooth'}));
+</script>
+</body>
+</html>

@@ -523,6 +523,19 @@
             "title": "Protocol Version",
             "type": "string"
           },
+          "recipe_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "菜谱详情/工作台要展示的私有菜谱；不填表示尚未保存的编辑草稿",
+            "title": "Recipe Id"
+          },
           "supported_components": {
             "description": "App 已登记、认识的组件类型清单；服务端只会下发这里面的类型",
             "items": {
@@ -530,6 +543,19 @@
             },
             "title": "Supported Components",
             "type": "array"
+          },
+          "version_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "可选的不可变菜谱版本；不填使用当前版本",
+            "title": "Version Id"
           }
         },
         "required": [
@@ -3575,6 +3601,241 @@
         "title": "RecipeReplacement",
         "type": "object"
       },
+      "RecipeReplacementAllergens": {
+        "properties": {
+          "allergens": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Allergens",
+            "type": "array"
+          },
+          "display_name": {
+            "title": "Display Name",
+            "type": "string"
+          },
+          "incomplete": {
+            "default": false,
+            "title": "Incomplete",
+            "type": "boolean"
+          },
+          "ingredient_id": {
+            "description": "替代品所属的菜谱内食材 ID",
+            "title": "Ingredient Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "ingredient_id",
+          "display_name"
+        ],
+        "title": "RecipeReplacementAllergens",
+        "type": "object"
+      },
+      "RecipeSafetyCheckOut": {
+        "properties": {
+          "result": {
+            "$ref": "#/components/schemas/RecipeSafetyResult"
+          }
+        },
+        "required": [
+          "result"
+        ],
+        "title": "RecipeSafetyCheckOut",
+        "type": "object"
+      },
+      "RecipeSafetyCheckRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "change_note": {
+            "default": "",
+            "maxLength": 2000,
+            "title": "Change Note",
+            "type": "string"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "maxLength": 4000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "dish_aliases": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 20,
+            "title": "Dish Aliases",
+            "type": "array"
+          },
+          "dish_name": {
+            "default": "",
+            "maxLength": 200,
+            "title": "Dish Name",
+            "type": "string"
+          },
+          "snapshot": {
+            "$ref": "#/components/schemas/RecipeSnapshot"
+          }
+        },
+        "required": [
+          "snapshot"
+        ],
+        "title": "RecipeSafetyCheckRequest",
+        "type": "object"
+      },
+      "RecipeSafetyFinding": {
+        "properties": {
+          "basis": {
+            "title": "Basis",
+            "type": "string"
+          },
+          "ingredient_ids": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Ingredient Ids",
+            "type": "array"
+          },
+          "message": {
+            "title": "Message",
+            "type": "string"
+          },
+          "rest_minutes": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rest Minutes"
+          },
+          "rule_id": {
+            "title": "Rule Id",
+            "type": "string"
+          },
+          "severity": {
+            "enum": [
+              "info",
+              "warning",
+              "high_risk"
+            ],
+            "title": "Severity",
+            "type": "string"
+          },
+          "step_ids": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Step Ids",
+            "type": "array"
+          },
+          "threshold_celsius": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Threshold Celsius"
+          }
+        },
+        "required": [
+          "rule_id",
+          "severity",
+          "message",
+          "basis"
+        ],
+        "title": "RecipeSafetyFinding",
+        "type": "object"
+      },
+      "RecipeSafetyResult": {
+        "properties": {
+          "allergens": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Allergens",
+            "type": "array"
+          },
+          "allergens_incomplete": {
+            "default": false,
+            "title": "Allergens Incomplete",
+            "type": "boolean"
+          },
+          "can_save": {
+            "default": true,
+            "title": "Can Save",
+            "type": "boolean"
+          },
+          "checked_at": {
+            "title": "Checked At",
+            "type": "string"
+          },
+          "claim_basis": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Claim Basis"
+          },
+          "findings": {
+            "items": {
+              "$ref": "#/components/schemas/RecipeSafetyFinding"
+            },
+            "title": "Findings",
+            "type": "array"
+          },
+          "high_risk": {
+            "default": false,
+            "title": "High Risk",
+            "type": "boolean"
+          },
+          "prohibited_claims": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Prohibited Claims",
+            "type": "array"
+          },
+          "replacement_allergens": {
+            "items": {
+              "$ref": "#/components/schemas/RecipeReplacementAllergens"
+            },
+            "title": "Replacement Allergens",
+            "type": "array"
+          },
+          "rules_version": {
+            "title": "Rules Version",
+            "type": "string"
+          },
+          "stale": {
+            "default": false,
+            "description": "当前检查早于已部署规则，正在等待后台复检",
+            "title": "Stale",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "rules_version",
+          "checked_at"
+        ],
+        "title": "RecipeSafetyResult",
+        "type": "object"
+      },
       "RecipeServingConversionOut": {
         "properties": {
           "conversion": {
@@ -3619,6 +3880,18 @@
               }
             ],
             "description": "烘焙菜谱的基准模具"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "maxLength": 4000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
           },
           "difficulty": {
             "anyOf": [
@@ -3973,6 +4246,26 @@
               }
             ],
             "title": "Previous Version Id"
+          },
+          "safety": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RecipeSafetyResult"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "safety_at_save": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RecipeSafetyResult"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "snapshot": {
             "$ref": "#/components/schemas/RecipeSnapshot"
@@ -7401,6 +7694,72 @@
           }
         },
         "summary": "Read Staged Recipe Image",
+        "tags": [
+          "recipes"
+        ]
+      }
+    },
+    "/v1/recipes/safety/check": {
+      "post": {
+        "operationId": "check_recipe_safety",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RecipeSafetyCheckRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecipeSafetyCheckOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "参数错误"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "服务端错误"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Check Recipe Safety",
         "tags": [
           "recipes"
         ]

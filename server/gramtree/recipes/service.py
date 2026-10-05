@@ -26,6 +26,7 @@ from gramtree.events import service as event_service
 from gramtree.events.registry import SourceType
 from gramtree.ingredients.attributes import IngredientAttributes
 from gramtree.ingredients.models import Ingredient, IngredientAttribute
+from gramtree.recipes import food_safety
 from gramtree.recipes.measure_display import display_amount, quantity_text
 from gramtree.recipes.measure_models import PersonalMeasure
 from gramtree.recipes.models import (
@@ -65,6 +66,8 @@ from gramtree.recipes.schemas import (
     RecipeList,
     RecipeListItem,
     RecipeMoldConversionOut,
+    RecipeSafetyCheckRequest,
+    RecipeSafetyResult,
     RecipeServingConversionOut,
     RecipeSnapshot,
     RecipeVersionCreate,
@@ -538,6 +541,16 @@ def _version_out(
         previous_version_id=row.previous_version_id,
         snapshot=RecipeSnapshot.model_validate(row.snapshot),
         derived=RecipeDerived.model_validate(row.derived),
+        safety=(
+            RecipeSafetyResult.model_validate(row.safety_current).model_copy(
+                update={"stale": not food_safety.is_current(session, row, food_safety.rules())}
+            )
+            if row.safety_current
+            else None
+        ),
+        safety_at_save=(
+            RecipeSafetyResult.model_validate(row.safety_at_save) if row.safety_at_save else None
+        ),
         edit_operations=row.edit_operations or [],
         change_note=row.change_note,
         ai_assisted=row.ai_assisted,
@@ -679,12 +692,77 @@ def _drain_save_events(session: Session, redis: Redis, owner: User) -> int:
     return delivered
 
 
+def check_safety(
+    session: Session, owner: User, body: RecipeSafetyCheckRequest
+) -> RecipeSafetyResult:
+    snapshot = _validate_snapshot(session, body.snapshot)
+    return food_safety.check(
+        session,
+        snapshot,
+        body.dish_name,
+        descriptions=[*body.dish_aliases, body.description or "", body.change_note],
+    )
+
+
+def _safety_for_save(
+    session: Session, snapshot: RecipeSnapshot, title: str, descriptions: list[str]
+) -> RecipeSafetyResult:
+    policy = food_safety.rules()
+    food_safety.register_release(session, policy)
+    result = food_safety.check(session, snapshot, title, descriptions=descriptions, policy=policy)
+    if not result.can_save:
+        raise ApiError(
+            422,
+            "prohibited_health_claim",
+            "请改写疗效类措辞后再保存",
+            "、".join(result.prohibited_claims),
+        )
+    return result
+
+
+def recipe_safety_context(
+    session: Session,
+    owner: User,
+    recipe_id: uuid.UUID,
+    version_id: uuid.UUID | None = None,
+) -> tuple[RecipeSafetyResult, RecipeDerived]:
+    """Private composer context, checked with deployed policy even before backfill.
+
+    Ownership is resolved before reading the snapshot. This result must never be
+    put in the shared composition cache.
+    """
+    recipe, version = _owned_version(session, owner, recipe_id, version_id)
+    dish = session.get(Dish, recipe.dish_id)
+    if dish is None:
+        raise NotFound()
+    policy = food_safety.rules()
+    if food_safety.is_current(session, version, policy):
+        result = RecipeSafetyResult.model_validate(version.safety_current)
+    else:
+        safety_title, safety_descriptions = food_safety.version_safety_input(session, version, dish)
+        result = food_safety.check(
+            session,
+            RecipeSnapshot.model_validate(version.snapshot),
+            safety_title,
+            descriptions=safety_descriptions,
+            policy=policy,
+        )
+    return result, RecipeDerived.model_validate(version.derived)
+
+
 def create_recipe(
     session: Session, redis: Redis, settings: Settings, owner: User, body: RecipeCreate
 ) -> RecipeDetail:
     snapshot = _validate_snapshot(session, body.snapshot)
     staged = _staged_rows(session, owner, body.image_ids)
-    dish = _dish(session, body.dish_input())
+    dish_input = body.dish_input()
+    safety_descriptions = [*dish_input.aliases, body.change_note]
+    safety = _safety_for_save(session, snapshot, dish_input.name, safety_descriptions)
+    dish = _dish(session, dish_input)
+    # An alias can resolve to an existing canonical dish name; check that too.
+    if dish.name != dish_input.name:
+        safety_descriptions = [dish_input.name, *safety_descriptions]
+        safety = _safety_for_save(session, snapshot, dish.name, safety_descriptions)
     recipe = Recipe(dish_id=dish.id, owner_id=owner.id, visibility="private")
     session.add(recipe)
     session.flush()
@@ -693,6 +771,10 @@ def create_recipe(
         version_number=1,
         snapshot=_snapshot_json(snapshot),
         derived=_derived(session, snapshot).model_dump(mode="json"),
+        safety_at_save=safety.model_dump(mode="json"),
+        safety_current=safety.model_dump(mode="json"),
+        safety_rules_version=safety.rules_version,
+        safety_context={"title": dish.name, "descriptions": safety_descriptions},
         edit_operations=[],
         change_note=body.change_note,
         ai_assisted=body.ai_assisted,
@@ -858,6 +940,7 @@ def _operations(previous: RecipeSnapshot, current: RecipeSnapshot) -> list[dict[
         "active_time_seconds",
         "difficulty",
         "dish_type",
+        "description",
         "tags",
     ):
         before = _value_for_diff(getattr(previous, field))
@@ -912,12 +995,24 @@ def save_version(
     if baseline is None or baseline.recipe_id != recipe.id:
         raise NotFound("菜谱基准版本不存在")
     previous_snapshot = RecipeSnapshot.model_validate(baseline.snapshot)
+    dish = session.get(Dish, recipe.dish_id)
+    if dish is None:
+        raise NotFound("菜谱关联数据不存在")
+    safety_descriptions = [
+        *session.scalars(select(DishAlias.alias).where(DishAlias.dish_id == dish.id)).all(),
+        body.change_note,
+    ]
+    safety = _safety_for_save(session, snapshot, dish.name, safety_descriptions)
     version = RecipeVersion(
         recipe_id=recipe.id,
         version_number=previous.version_number + 1,
         previous_version_id=previous.id,
         snapshot=_snapshot_json(snapshot),
         derived=_derived(session, snapshot).model_dump(mode="json"),
+        safety_at_save=safety.model_dump(mode="json"),
+        safety_current=safety.model_dump(mode="json"),
+        safety_rules_version=safety.rules_version,
+        safety_context={"title": dish.name, "descriptions": safety_descriptions},
         edit_operations=_operations(previous_snapshot, snapshot),
         change_note=body.change_note,
         ai_assisted=body.ai_assisted,

@@ -25,6 +25,7 @@ from uuid import uuid4
 from sqlalchemy.orm import Session
 
 from gramtree.core.time import utcnow
+from gramtree.recipes.schemas import RecipeDerived, RecipeSafetyResult
 from gramtree.runtime_config import service as runtime_config_service
 from gramtree.ui_protocol import experiments
 from gramtree.ui_protocol.protocol import (
@@ -153,6 +154,126 @@ def dependency_versions(page_type: str, session: Session) -> dict[str, str]:
     return dict(resolver(session)) if resolver else {}
 
 
+def compose_recipe_safety(
+    page_type: str,
+    supported_components: set[str],
+    *,
+    session: Session,
+    safety_context: tuple[RecipeSafetyResult, RecipeDerived] | None,
+    **_: object,
+) -> PageDescription:
+    """Compose mandatory safety sections from one owner-authorized saved version."""
+    safety_result = safety_context[0] if safety_context is not None else None
+    derived = safety_context[1] if safety_context is not None else None
+
+    if safety_result is None:
+        food_data = {
+            "status": "unknown",
+            "conclusion": "暂时无法确认食品安全信息。",
+            "basis": "请确认食材处理和熟透程度；当前没有可用的保存版本检查结果。",
+            "result": None,
+        }
+        allergen_data = {
+            "status": "unknown",
+            "conclusion": "暂时无法确认过敏原信息。",
+            "basis": "请核对菜谱中的全部食材和替代品。",
+            "result": None,
+        }
+    else:
+        raw_result = safety_result.model_dump(mode="json")
+        findings = [
+            {
+                "rule_id": item["rule_id"],
+                "severity": item["severity"],
+                "message": item["message"],
+                "basis": item["basis"],
+                "step_ids": item.get("step_ids", []),
+                "ingredient_ids": item.get("ingredient_ids", []),
+                "threshold_celsius": item.get("threshold_celsius"),
+                "rest_minutes": item.get("rest_minutes"),
+            }
+            for item in raw_result.get("findings", [])
+        ]
+        rules_version = raw_result.get("rules_version", "unknown")
+        checked_at = raw_result.get("checked_at", utcnow().isoformat())
+        result = {
+            "rules_version": rules_version,
+            "checked_at": checked_at,
+            "high_risk": bool(raw_result.get("high_risk", False)),
+            "findings": findings,
+        }
+        food_conclusion = (
+            "存在高风险食品安全提示"
+            if result["high_risk"]
+            else findings[0]["message"]
+            if findings
+            else "未发现特定的食品安全提醒；仍需按步骤确认熟透"
+        )
+        rule_version = raw_result.get("rules_version")
+        food_data = {
+            "status": "available",
+            "conclusion": food_conclusion,
+            "basis": f"按食品安全规则 {rule_version} 检查。"
+            if rule_version
+            else "按当前食品安全规则检查。",
+            "result": result,
+        }
+        legacy_data = derived.model_dump(mode="json") if derived is not None else {}
+        allergen_result = {
+            "rules_version": rules_version,
+            "checked_at": checked_at,
+            "allergens": raw_result.get("allergens") or legacy_data.get("allergens") or [],
+            "allergens_incomplete": bool(
+                raw_result.get(
+                    "allergens_incomplete", legacy_data.get("allergens_incomplete", False)
+                )
+            ),
+            "replacement_allergens": raw_result.get("replacement_allergens") or [],
+        }
+        allergen_names = allergen_result["allergens"]
+        allergen_conclusion = (
+            "含有：" + "、".join(allergen_names)
+            if allergen_names
+            else "未从已收录信息中识别出过敏原"
+        )
+        if allergen_result["allergens_incomplete"]:
+            allergen_conclusion += "；过敏原信息可能不完整"
+        allergen_data = {
+            "status": "available",
+            "conclusion": allergen_conclusion,
+            "basis": "根据此版本食材及替代品对应的标准食材信息推导。",
+            "result": allergen_result,
+        }
+
+    candidates = [
+        ComponentDescriptor(
+            type="food_safety",
+            id="recipe-food-safety",
+            detail="standard",
+            data=food_data,
+            reason=ComponentReason(code="recipe_safety", text="依据所选保存版本的安全检查结果"),
+            required=True,
+        ),
+        ComponentDescriptor(
+            type="allergen_notice",
+            id="recipe-allergen-notice",
+            detail="standard",
+            data=allergen_data,
+            reason=ComponentReason(code="recipe_safety", text="依据所选保存版本的食材信息"),
+            required=True,
+        ),
+    ]
+    return PageDescription(
+        protocol=PROTOCOL_VERSION,
+        page_type=page_type,
+        composition_id=uuid4(),
+        generated_at=utcnow(),
+        cache=CacheInfo(depends_on={}, ttl_s=0),
+        experiment=None,
+        components=[item for item in candidates if item.type in supported_components],
+    )
+
+
 def compose_today(
     supported_components: set[str],
     *,
@@ -202,6 +323,12 @@ def compose_today(
 
 COMPOSERS: dict[str, Callable[..., PageDescription]] = {
     "today": compose_today,
+    "recipe_detail": lambda supported_components, **kwargs: compose_recipe_safety(
+        "recipe_detail", supported_components, **kwargs
+    ),
+    "recipe_editor": lambda supported_components, **kwargs: compose_recipe_safety(
+        "recipe_editor", supported_components, **kwargs
+    ),
 }
 
 
@@ -213,8 +340,15 @@ def compose(
     experiment: ExperimentInfo | None = None,
     detail_overrides: Mapping[str, DetailLevel] | None = None,
     exclude_components: Collection[str] | None = None,
+    safety_context: tuple[RecipeSafetyResult, RecipeDerived] | None = None,
 ) -> PageDescription:
     composer = COMPOSERS[page_type]
+    if page_type in {"recipe_detail", "recipe_editor"}:
+        return composer(
+            supported_components,
+            session=session,
+            safety_context=safety_context,
+        )
     return composer(
         supported_components,
         session=session,
@@ -224,12 +358,44 @@ def compose(
     )
 
 
+def _fallback_safety_components() -> list[ComponentDescriptor]:
+    """Fixed safety skeleton used even when dynamic composition is rejected."""
+    return [
+        ComponentDescriptor(
+            type="food_safety",
+            id="recipe-food-safety",
+            detail="standard",
+            data={
+                "status": "unknown",
+                "conclusion": "暂时无法确认食品安全信息。",
+                "basis": "请确认食材处理和熟透程度；安全提醒不能关闭。",
+                "result": None,
+            },
+            reason=ComponentReason(code="fallback", text="标准安全布局，安全提醒不能关闭"),
+            required=True,
+        ),
+        ComponentDescriptor(
+            type="allergen_notice",
+            id="recipe-allergen-notice",
+            detail="standard",
+            data={
+                "status": "unknown",
+                "conclusion": "暂时无法确认过敏原信息。",
+                "basis": "请核对菜谱中的全部食材和替代品；过敏原信息可能不完整。",
+                "result": None,
+            },
+            reason=ComponentReason(code="fallback", text="标准安全布局，过敏原提示不能关闭"),
+            required=True,
+        ),
+    ]
+
+
 def build_fallback_description(page_type: str, reason_code: FallbackReasonCode) -> PageDescription:
-    """出任何问题（协议大版本不认识、未登记组件、数据不合格、缺必显组件、服务端报错、
-    超时）时整页改用标准布局，服务端下发的就是这份占位描述：`components` 为空数组，
-    `fallback.reason_code` 说明原因（SPEC-009.1 #79）。App 收到 `fallback` 非空的描述
-    时不渲染 `components`（反正是空的），直接显示写在 App 里的标准布局，两边看起来
-    一样，不会因为服务端"没内容"和"出问题"两种情况显示不同的东西。"""
+    """Build the standard layout after protocol/composition failure.
+
+    Recipe pages retain both mandatory safety descriptors in the fallback body;
+    the App also has the same fixed cards in its page-level standard layout.
+    """
     return PageDescription(
         protocol=PROTOCOL_VERSION,
         page_type=page_type,
@@ -238,5 +404,7 @@ def build_fallback_description(page_type: str, reason_code: FallbackReasonCode) 
         cache=CacheInfo(depends_on={}, ttl_s=0),
         experiment=None,
         fallback=FallbackInfo(reason_code=reason_code),
-        components=[],
+        components=_fallback_safety_components()
+        if page_type in {"recipe_detail", "recipe_editor"}
+        else [],
     )
