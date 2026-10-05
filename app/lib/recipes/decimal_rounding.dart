@@ -74,6 +74,44 @@ double scaleByDecimalRatio(
   );
 }
 
+/// Divide two finite doubles as the decimals they print as, matching the
+/// server's `Decimal(str(value)) / Decimal(str(divisor))` before rounding.
+double divideByDecimalRatio(
+  double value,
+  double divisor, {
+  int fractionDigits = 12,
+}) {
+  if (!value.isFinite || !divisor.isFinite) {
+    throw ArgumentError('数值和除数都必须是有限数');
+  }
+  if (divisor == 0) {
+    throw ArgumentError.value(divisor, 'divisor', '除数不能为零');
+  }
+  if (fractionDigits < 0) {
+    throw ArgumentError.value(fractionDigits, 'fractionDigits', '必须是非负整数');
+  }
+  final (valueDigits, valueScale) = _decimalParts(value.abs());
+  final (divisorDigits, divisorScale) = _decimalParts(divisor.abs());
+  var numerator = valueDigits;
+  var denominator = divisorDigits;
+  if (divisorScale >= 0) {
+    numerator *= _tenPower(divisorScale);
+  } else {
+    denominator *= _tenPower(-divisorScale);
+  }
+  if (valueScale >= 0) {
+    denominator *= _tenPower(valueScale);
+  } else {
+    numerator *= _tenPower(-valueScale);
+  }
+  return _scaleRational(
+    numerator,
+    denominator,
+    fractionDigits: fractionDigits,
+    negative: value.isNegative != divisor.isNegative,
+  );
+}
+
 /// Round [value] to [fractionDigits] decimal places, half away from zero.
 ///
 /// This matches `Decimal(str(value)).quantize(..., ROUND_HALF_UP)` for finite
@@ -100,8 +138,7 @@ double roundHalfUp(double value, {int fractionDigits = 2}) {
   final scaled = shift >= 0
       ? digits * _tenPower(shift)
       : _roundQuotient(digits, _tenPower(-shift));
-  final scale = _tenPower(fractionDigits);
-  final rounded = scaled.toDouble() / scale.toDouble();
+  final rounded = _scaledIntegerToDouble(scaled, fractionDigits);
   return value.isNegative ? -rounded : rounded;
 }
 
@@ -126,8 +163,17 @@ double _scaleRational(
 }) {
   final scaledNumerator = numerator * _tenPower(fractionDigits);
   final rounded = _roundRational(scaledNumerator, denominator);
-  final result = rounded.toDouble() / _tenPower(fractionDigits).toDouble();
+  final result = _scaledIntegerToDouble(rounded, fractionDigits);
   return negative ? -result : result;
+}
+
+double _scaledIntegerToDouble(BigInt value, int fractionDigits) {
+  if (fractionDigits == 0) return value.toDouble();
+  final padded = value.toString().padLeft(fractionDigits + 1, '0');
+  final split = padded.length - fractionDigits;
+  return double.parse(
+    '${padded.substring(0, split)}.${padded.substring(split)}',
+  );
 }
 
 BigInt _roundRational(BigInt numerator, BigInt denominator) {

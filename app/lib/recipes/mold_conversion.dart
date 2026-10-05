@@ -151,10 +151,14 @@ MoldConversionResult convertMold({
 }) {
   final sourceArea = _area(originalMold);
   final targetArea = _area(targetMold);
-  // Keep the ratio at full available precision for multiplication. Identity
-  // is determined from the canonicalized decimal areas, not by rounding the
-  // ratio itself (a tiny but real non-identity must still match the server).
-  final ratio = targetArea / sourceArea;
+  // Derive same-shape ratios from dimensions before dividing binary area
+  // doubles; this keeps circular areas such as 4 cm -> 5 cm at 1.5625.
+  final ratio = _areaRatio(
+    originalMold,
+    targetMold,
+    sourceArea: sourceArea,
+    targetArea: targetArea,
+  );
   final isIdentity = targetArea == sourceArea;
   final converted = <ConvertedMoldIngredient>[];
   final warnings = <MoldConversionWarning>[];
@@ -266,68 +270,105 @@ MoldConversionResult convertMold({
 // returning to the double representation used by the public conversion result.
 const _geometryScaleDigits = 30;
 
-double _area(MoldSpec mold) {
+(double, double) _dimensions(MoldSpec mold) {
   final factor = _unitFactor(mold.unit?.value ?? 'cm');
+  double inCentimetres(num? value, String field) => scaleByDecimalRatio(
+    _positive(value, field),
+    factor,
+    fractionDigits: _geometryScaleDigits,
+  );
+
   switch (mold.shape) {
     case MoldSpecShapeEnum.round:
-      final diameter = scaleByDecimalRatio(
-        _positive(mold.diameter, 'diameter'),
-        factor,
-        fractionDigits: _geometryScaleDigits,
-      );
-      final radius = scaleByIntegerRatio(
-        diameter,
-        1,
-        2,
-        fractionDigits: _geometryScaleDigits,
-      );
-      return scaleByDecimalRatio(
-        math.pi,
-        scaleByDecimalRatio(
-          radius,
-          radius,
-          fractionDigits: _geometryScaleDigits,
-        ),
-        fractionDigits: _geometryScaleDigits,
-      );
+      final diameter = inCentimetres(mold.diameter, 'diameter');
+      return (diameter, diameter);
     case MoldSpecShapeEnum.square:
-      // Same rule as the server schema: side and width name one edge.
       if (mold.side != null && mold.width != null && mold.side != mold.width) {
         throw MoldConversionError('invalid_mold', '方模的 side 与 width 必须一致');
       }
-      final side = scaleByDecimalRatio(
-        _positive(mold.side ?? mold.width, 'side'),
-        factor,
-        fractionDigits: _geometryScaleDigits,
-      );
+      final side = mold.side ?? mold.width;
+      final sideInCm = inCentimetres(side, 'side');
       if (mold.length != null &&
           mold.length != mold.side &&
           mold.length != mold.width) {
         throw MoldConversionError('invalid_mold', '方模的边长必须相等');
       }
-      return scaleByDecimalRatio(
-        side,
-        side,
-        fractionDigits: _geometryScaleDigits,
-      );
+      return (sideInCm, sideInCm);
     case MoldSpecShapeEnum.rectangular:
     case MoldSpecShapeEnum.custom:
-      final width = scaleByDecimalRatio(
-        _positive(mold.width, 'width'),
-        factor,
-        fractionDigits: _geometryScaleDigits,
-      );
-      final length = scaleByDecimalRatio(
-        _positive(mold.length, 'length'),
-        factor,
-        fractionDigits: _geometryScaleDigits,
-      );
-      return scaleByDecimalRatio(
-        width,
-        length,
-        fractionDigits: _geometryScaleDigits,
+      return (
+        inCentimetres(mold.width, 'width'),
+        inCentimetres(mold.length, 'length'),
       );
   }
+}
+
+double _areaRatio(
+  MoldSpec original,
+  MoldSpec target, {
+  required double sourceArea,
+  required double targetArea,
+}) {
+  final (originalWidth, originalLength) = _dimensions(original);
+  final (targetWidth, targetLength) = _dimensions(target);
+  if (original.shape == MoldSpecShapeEnum.round &&
+      target.shape == MoldSpecShapeEnum.round) {
+    final diameterRatio = divideByDecimalRatio(
+      targetWidth,
+      originalWidth,
+      fractionDigits: _geometryScaleDigits,
+    );
+    return scaleByDecimalRatio(
+      diameterRatio,
+      diameterRatio,
+      fractionDigits: _geometryScaleDigits,
+    );
+  }
+  if (original.shape != MoldSpecShapeEnum.round &&
+      target.shape != MoldSpecShapeEnum.round) {
+    final widthRatio = divideByDecimalRatio(
+      targetWidth,
+      originalWidth,
+      fractionDigits: _geometryScaleDigits,
+    );
+    final lengthRatio = divideByDecimalRatio(
+      targetLength,
+      originalLength,
+      fractionDigits: _geometryScaleDigits,
+    );
+    return scaleByDecimalRatio(
+      widthRatio,
+      lengthRatio,
+      fractionDigits: _geometryScaleDigits,
+    );
+  }
+  return divideByDecimalRatio(
+    targetArea,
+    sourceArea,
+    fractionDigits: _geometryScaleDigits,
+  );
+}
+
+double _area(MoldSpec mold) {
+  final (width, length) = _dimensions(mold);
+  if (mold.shape == MoldSpecShapeEnum.round) {
+    final radius = scaleByIntegerRatio(
+      width,
+      1,
+      2,
+      fractionDigits: _geometryScaleDigits,
+    );
+    return scaleByDecimalRatio(
+      math.pi,
+      scaleByDecimalRatio(radius, radius, fractionDigits: _geometryScaleDigits),
+      fractionDigits: _geometryScaleDigits,
+    );
+  }
+  return scaleByDecimalRatio(
+    width,
+    length,
+    fractionDigits: _geometryScaleDigits,
+  );
 }
 
 double _unitFactor(String unit) => switch (unit) {

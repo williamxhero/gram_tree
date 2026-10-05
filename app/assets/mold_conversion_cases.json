@@ -116,5 +116,23 @@
       ],
       "step": null
     }
+  },
+  {
+    "name": "round_decimal_ratio_half_up",
+    "input": {
+      "original_mold": {"shape": "round", "unit": "cm", "diameter": 4},
+      "target_mold": {"shape": "round", "unit": "cm", "diameter": 5},
+      "ingredients": [
+        {"id": "batter", "display_name": "面糊", "quantity": 10, "unit": "g", "scaling_mode": "proportional"}
+      ],
+      "steps": []
+    },
+    "expected": {
+      "area_ratio": 1.56,
+      "ingredients": [
+        {"id": "batter", "original_quantity": 10, "display_quantity": 15.63, "unit": "g", "rule": "mold_ratio"}
+      ],
+      "step": null
+    }
   }
 ]

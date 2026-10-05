@@ -48,8 +48,10 @@
     .pill { display: inline-flex; align-items: center; border-radius: 999px; padding: 4px 9px; font-size: 12px; border: 1px solid var(--line); color: var(--muted); }
     .amount { font-family: "DM Mono", ui-monospace, monospace; white-space: nowrap; }
     .amount.changed { color: var(--sauce); font-weight: 500; }
-    .src-mark { display: inline-flex; align-items: center; gap: 4px; min-height: 26px; padding: 4px 9px 4px 7px; border: 0; border-radius: 999px; background: var(--soft-sauce); color: var(--sauce); font-size: 12px; line-height: 1; }
-    .src-mark svg { width: 11px; height: 11px; }
+    .src-mark, .display-mark { display: inline-flex; align-items: center; gap: 4px; min-height: 26px; padding: 4px 9px 4px 7px; border-radius: 999px; font-size: 12px; line-height: 1; }
+    .src-mark { border: 0; background: var(--soft-sauce); color: var(--sauce); }
+    .display-mark { border: 1px solid var(--line); background: var(--card); color: var(--muted); }
+    .src-mark svg, .display-mark svg { width: 11px; height: 11px; }
     .section { border-top: 1px solid var(--line); padding-top: 17px; margin-top: 18px; }
     .ingredient { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 4px 12px; padding: 13px 0; border-top: 1px solid var(--line); }
     .ingredient:first-child { border-top: 0; }
@@ -334,14 +336,13 @@
         const shown = displayText(row);
         const displayAdjusted = state.display !== 'base'
           && shown.text !== amountText(row.value, row.unit);
-        const marked = active || displayAdjusted;
-        const sourceLabel = active ? '按场景调整过' : '按量具显示';
-        const markText = active ? '场景' : '显示';
         const notes = [];
         if (row.scaling === 'unchanged') notes.push('固定用量，不随份数或模具变化');
         if (shown.note) notes.push(shown.note);
-        const mark = marked
-          ? `<button type="button" class="src-mark" data-why="${row.id}" aria-label="${row.name} ${shown.text}，${sourceLabel}，点开看原因">${SCENE_ICON}${markText}</button>`
+        const mark = active
+          ? `<button type="button" class="src-mark" data-why="${row.id}" aria-label="${row.name} ${shown.text}，按场景调整过，点开看原因">${SCENE_ICON}场景</button>`
+          : displayAdjusted
+          ? `<button type="button" class="display-mark" data-why="${row.id}" aria-label="${row.name} ${shown.text}，按量具显示，点开看原因">${SCENE_ICON}显示</button>`
           : '';
         const note = notes.length ? `<span class="note muted small">${notes.join(' · ')}</span>` : '';
         return `<div class="ingredient" role="listitem"><strong>${row.name}</strong><span class="value"><span class="amount${row.changed ? ' changed' : ''}">${shown.text}</span>${mark}</span>${note}</div>`;
@@ -430,7 +431,7 @@
       $('why-title').textContent = `${row.name}为什么是 ${shown.text}`;
       $('why-source').textContent = scenarioActive()
         ? `按场景调整（${state.mode === 'mold' ? '模具换算' : '份数换算'}）`
-        : '按量具显示';
+        : '显示方式：按量具表达';
       $('why-from').textContent = `${amountText(row.quantity, row.unit)}（${originalScopeText()}）`;
       $('why-to').textContent = `${shown.text}（${scopeText()}）`;
       $('why-to').classList.add('changed');

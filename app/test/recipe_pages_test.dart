@@ -2187,6 +2187,8 @@ void main() {
     expect(find.text('现在：约 100 克'), findsOneWidget);
     expect(find.text('服务端核对过这份用量'), findsOneWidget);
     expect(find.text('核对记录 2026-10-01'), findsOneWidget);
+    expect(find.text('这次不用'), findsOneWidget);
+    expect(find.text('以后别这样'), findsOneWidget);
     expect(find.text('另一台设备的新版本'), findsNothing);
   });
 
