@@ -26,6 +26,12 @@ class CreatePage extends StatelessWidget {
               icon: const Icon(Icons.menu_book_outlined),
               label: Text(l10n.newRecipe),
             ),
+            OutlinedButton.icon(
+              key: const ValueKey('one-line-recipe-entry'),
+              onPressed: () => context.push('/recipes/one-line'),
+              icon: const Icon(Icons.auto_awesome_outlined),
+              label: const Text('一句话生成菜谱'),
+            ),
             TextButton(
               key: const ValueKey('my-recipes-entry'),
               onPressed: () => context.push(RecipeListPage.path),

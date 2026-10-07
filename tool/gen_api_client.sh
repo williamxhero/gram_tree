@@ -4,6 +4,11 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+# uv/Python and Java on Windows require native paths even under Git Bash.
+native_path() {
+  if command -v cygpath >/dev/null 2>&1; then cygpath -m "$1"; else printf '%s' "$1"; fi
+}
+ROOT="$(native_path "$ROOT")"
 GENERATOR_VERSION="7.16.0"
 JAR="${OPENAPI_GENERATOR_JAR:-$HOME/.cache/gramtree/openapi-generator-cli-$GENERATOR_VERSION.jar}"
 SPEC="$ROOT/api/openapi.json"
@@ -18,7 +23,8 @@ fi
 
 (cd "$ROOT/server" && uv run --quiet gramtree openapi --out "$SPEC")
 
-CLIENT_SPEC="$(mktemp)"
+JAR="$(native_path "$JAR")"
+CLIENT_SPEC="$(native_path "$(mktemp)")"
 trap 'rm -f "$CLIENT_SPEC"' EXIT
 (cd "$ROOT/server" && uv run --quiet python "$ROOT/tool/prepare_api_client.py" "$SPEC" "$CLIENT_SPEC")
 

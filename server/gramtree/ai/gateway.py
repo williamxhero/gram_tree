@@ -37,6 +37,12 @@ class ModelRoute(BaseModel):
     input_price: float = Field(default=0, ge=0, allow_inf_nan=False)
     output_price: float = Field(default=0, ge=0, allow_inf_nan=False)
 
+    @property
+    def embedding_space(self) -> str:
+        return hashlib.sha256(
+            json.dumps([self.provider, self.base_url, self.model]).encode()
+        ).hexdigest()
+
 
 class Policy(BaseModel):
     timeout: float = Field(default=30, gt=0, le=120)
@@ -187,6 +193,12 @@ def call(
     content_id: uuid.UUID | None = None,
 ) -> Any:
     model, policy = route(session, capability)
+    # Disabled/unconfigured providers never made a billable attempt. In particular,
+    # background embedding retries must not exhaust quota or budget while disabled.
+    if settings.ai_mode == "disabled" or (
+        settings.ai_mode in ("live", "record") and (not model.base_url or not settings.ai_api_key)
+    ):
+        raise Unavailable("model_unavailable")
     result: Any = None
     for attempt in range(policy.retries + 1):
         # Short transaction reserves budget before I/O; simultaneous callers cannot
@@ -246,7 +258,8 @@ def call(
             row.cost = (
                 row.input_tokens * model.input_price + row.output_tokens * model.output_price
             ) / 1_000_000
-            row.reserved_cost = 0
+            if "prompt_tokens" in usage or "total_tokens" in usage:
+                row.reserved_cost = 0
             result = data["output"]
             log.output = result
             row.status = "succeeded"

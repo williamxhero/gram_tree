@@ -6,6 +6,7 @@
 import 'package:gramtree_api/src/model/recipe_ingredient.dart';
 import 'package:gramtree_api/src/model/recipe_step.dart';
 import 'package:gramtree_api/src/model/mold_spec.dart';
+import 'package:gramtree_api/src/model/value_source.dart';
 import 'package:copy_with_extension/copy_with_extension.dart';
 import 'package:json_annotation/json_annotation.dart';
 
@@ -25,7 +26,11 @@ class RecipeSnapshot {
 
     this.baseMold,
 
+    this.cuisine,
+
     this.description,
+
+    this.designRationale,
 
     this.difficulty,
 
@@ -37,9 +42,13 @@ class RecipeSnapshot {
 
     required this.servings,
 
+    this.servingsSource,
+
     this.steps,
 
     this.tags,
+
+    this.textSource,
 
     this.totalTimeSeconds = 0,
   });
@@ -58,8 +67,14 @@ class RecipeSnapshot {
   @JsonKey(name: r'base_mold', required: false, includeIfNull: false)
   final MoldSpec? baseMold;
 
+  @JsonKey(name: r'cuisine', required: false, includeIfNull: false)
+  final String? cuisine;
+
   @JsonKey(name: r'description', required: false, includeIfNull: false)
   final String? description;
+
+  @JsonKey(name: r'design_rationale', required: false, includeIfNull: false)
+  final String? designRationale;
 
   @JsonKey(name: r'difficulty', required: false, includeIfNull: false)
   final String? difficulty;
@@ -79,11 +94,17 @@ class RecipeSnapshot {
   @JsonKey(name: r'servings', required: true, includeIfNull: false)
   final int servings;
 
+  @JsonKey(name: r'servings_source', required: false, includeIfNull: false)
+  final ValueSource? servingsSource;
+
   @JsonKey(name: r'steps', required: false, includeIfNull: false)
   final List<RecipeStep>? steps;
 
   @JsonKey(name: r'tags', required: false, includeIfNull: false)
   final List<String>? tags;
+
+  @JsonKey(name: r'text_source', required: false, includeIfNull: false)
+  final ValueSource? textSource;
 
   // minimum: 0
   // maximum: 604800
@@ -101,28 +122,36 @@ class RecipeSnapshot {
       other is RecipeSnapshot &&
           other.activeTimeSeconds == activeTimeSeconds &&
           other.baseMold == baseMold &&
+          other.cuisine == cuisine &&
           other.description == description &&
+          other.designRationale == designRationale &&
           other.difficulty == difficulty &&
           other.dishType == dishType &&
           other.formatVersion == formatVersion &&
           other.ingredients == ingredients &&
           other.servings == servings &&
+          other.servingsSource == servingsSource &&
           other.steps == steps &&
           other.tags == tags &&
+          other.textSource == textSource &&
           other.totalTimeSeconds == totalTimeSeconds;
 
   @override
   int get hashCode =>
       activeTimeSeconds.hashCode +
       baseMold.hashCode +
+      (cuisine == null ? 0 : cuisine.hashCode) +
       (description == null ? 0 : description.hashCode) +
+      (designRationale == null ? 0 : designRationale.hashCode) +
       (difficulty == null ? 0 : difficulty.hashCode) +
       (dishType == null ? 0 : dishType.hashCode) +
       formatVersion.hashCode +
       ingredients.hashCode +
       servings.hashCode +
+      servingsSource.hashCode +
       steps.hashCode +
       tags.hashCode +
+      textSource.hashCode +
       totalTimeSeconds.hashCode;
 
   factory RecipeSnapshot.fromJson(Map<String, dynamic> json) =>

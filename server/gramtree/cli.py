@@ -228,7 +228,7 @@ def cmd_openapi(args: argparse.Namespace) -> int:
 
     text = export()
     if args.out:
-        with open(args.out, "w", encoding="utf-8") as f:
+        with open(args.out, "w", encoding="utf-8", newline="\n") as f:
             f.write(text)
     else:
         sys.stdout.write(text)

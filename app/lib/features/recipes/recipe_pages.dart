@@ -164,11 +164,17 @@ class _NewRecipeButton extends StatelessWidget {
 }
 
 class RecipeEditorPage extends ConsumerStatefulWidget {
-  const RecipeEditorPage({super.key, this.recipeId, this.versionId});
+  const RecipeEditorPage({
+    super.key,
+    this.recipeId,
+    this.versionId,
+    this.generation,
+  });
 
   static const path = '/recipes/new';
   final String? recipeId;
   final String? versionId;
+  final GenerationResult? generation;
 
   @override
   ConsumerState<RecipeEditorPage> createState() => _RecipeEditorPageState();
@@ -199,14 +205,29 @@ class _RecipeEditorPageState extends ConsumerState<RecipeEditorPage> {
   final Map<String, List<IngredientDetail>> _replacementResults = {};
   final Map<String, bool> _searching = {};
 
-  String get _recipeKey => widget.recipeId ?? 'new';
+  String get _recipeKey =>
+      widget.recipeId ??
+      (widget.generation == null
+          ? 'new'
+          : 'ai-${widget.generation!.requestId}');
   String get _accountId => ref.read(authProvider).value?.id ?? 'anonymous';
 
   @override
   void initState() {
     super.initState();
     _draftStore = RecipeDraftStore(ref.read(localStoreProvider));
+    final generated = widget.generation?.draft?.recipe;
     _form = RecipeForm(dishName: '');
+    if (generated != null) {
+      _form =
+          RecipeForm.fromSnapshot(
+              generated.snapshot,
+              generated.dishName ?? '',
+              aliases: generated.dishAliases,
+            )
+            ..aiAssisted = true
+            ..changeNote = generated.changeNote ?? '';
+    }
     unawaited(_load());
   }
 
@@ -221,7 +242,7 @@ class _RecipeEditorPageState extends ConsumerState<RecipeEditorPage> {
           _loaded!.version.snapshot,
           _loaded!.dish.name,
           aliases: _loaded!.dish.aliases,
-        );
+        )..aiAssisted = _loaded!.version.aiAssisted;
       }
       _draft = _draftStore.read(
         recipeKey: _recipeKey,
@@ -384,7 +405,9 @@ class _RecipeEditorPageState extends ConsumerState<RecipeEditorPage> {
         return;
       }
       final detail = _loaded == null
-          ? await repo.create(_form)
+          ? widget.generation == null
+                ? await repo.create(_form)
+                : await repo.saveGenerated(widget.generation!.requestId, _form)
           : await repo.saveVersion(
               widget.recipeId!,
               _form,
@@ -597,6 +620,18 @@ class _RecipeEditorPageState extends ConsumerState<RecipeEditorPage> {
         key: const ValueKey('recipe-editor-content'),
         padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
         children: [
+          if (_form.aiAssisted) ...[
+            const Text('AI 辅助 · 尚未做过验证'),
+            SourceMark(
+              sourceType: sourceTypeAiEstimated,
+              componentId: 'recipe-ai-editor',
+              value: '菜谱设计',
+              basisText: _form.designRationale ?? '一般经验；尚未做过验证',
+              required: false,
+              feedbackEnabled: false,
+              onAction: null,
+            ),
+          ],
           FilledButton(
             key: const ValueKey('save-recipe-button'),
             onPressed: _saving ? null : _save,
@@ -2065,6 +2100,18 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
         key: const ValueKey('recipe-detail-content'),
         padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
         children: [
+          if (detail.version.aiAssisted) ...[
+            const Text('AI 辅助 · 尚未做过验证'),
+            SourceMark(
+              sourceType: sourceTypeAiEstimated,
+              componentId: 'recipe-ai-design',
+              value: '菜谱设计',
+              basisText: snapshot.designRationale ?? '一般经验；尚未做过验证',
+              required: false,
+              feedbackEnabled: false,
+              onAction: null,
+            ),
+          ],
           RecipeSafetyProtocolSection(
             result: detail.version.safety ?? detail.version.safetyAtSave,
             legacyDerived: derived,

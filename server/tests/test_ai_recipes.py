@@ -117,6 +117,16 @@ def test_disabled_gateway_does_not_disable_recipe_apis(api: Api) -> None:
     saved = api.client.post("/v1/recipes", headers=headers, json=recipe_input())
     assert saved.status_code == 201, saved.text
     recipe_id = saved.json()["id"]
+    found = begin(api, headers)
+    assert generate(api, headers, found["request_id"])["error"] == "model_unavailable"
+    assert api.client.get("/v1/ai/recipes/status", headers=headers).json()["remaining"] == 50
+    user = api.client.get("/v1/me", headers=headers).json()
+    assert cli("ai", "audit", "--user", user["id"])["calls"] == []
+    zero = api.client.post(
+        "/v1/ai/recipes/requests", headers=headers, json={"text": "番茄炒蛋 0人份"}
+    )
+    assert zero.status_code == 200
+    assert zero.json()["intent"]["servings"] is None
     assert api.client.get(f"/v1/recipes/{recipe_id}", headers=headers).status_code == 200
     assert (
         api.client.get(
@@ -128,6 +138,32 @@ def test_disabled_gateway_does_not_disable_recipe_apis(api: Api) -> None:
 
 def test_ai_status_requires_auth(api: Api) -> None:
     assert api.client.get("/v1/ai/recipes/status").status_code == 401
+
+
+def test_unknown_usage_retains_budget_reservation(replay_api: Api, recordings: Path) -> None:
+    for path in recordings.glob("*.json"):
+        record = json.loads(path.read_text(encoding="utf-8"))
+        record["usage"] = {}
+        path.write_text(json.dumps(record), encoding="utf-8")
+    configure("ai.monthly_budget", 1.5)
+    headers = bearer(replay_api.login("unknown-usage@example.com"))
+    found = begin(replay_api, headers)
+    assert found["local_fallback"] is False
+    assert found["status"]["reason"] == "monthly_budget"
+    assert generate(replay_api, headers, found["request_id"])["error"] == "monthly_budget"
+
+
+def test_malformed_normalization_keeps_user_confirmation(replay_api: Api, recordings: Path) -> None:
+    recording(
+        recordings,
+        "normalize",
+        {"names": ["鸡腿肉", "盐"], "candidates": []},
+        {"matches": ["unexpected", {"name": "鸡腿肉", "confidence": "high"}]},
+    )
+    headers = bearer(replay_api.login("bad-normalization@example.com"))
+    result = generate(replay_api, headers, begin(replay_api, headers)["request_id"])
+    assert result["error"] is None
+    assert len(result["ingredient_confirmations"]) == 2
 
 
 def test_retrieval_first_generate_edit_save_index_and_events(
@@ -347,3 +383,68 @@ def test_generation_session_does_not_cross_accounts(replay_api: Api) -> None:
         f"/v1/ai/recipes/requests/{found['request_id']}/generate", headers=other, json={}
     )
     assert response.status_code == 404
+
+
+def test_vector_retrieval_filters_owners_spaces_dimensions_and_deleted_recipes(
+    replay_api: Api, recordings: Path
+) -> None:
+    headers = bearer(replay_api.login("vector-owner@example.com"))
+    other = bearer(replay_api.login("vector-other@example.com"))
+    own = replay_api.client.post("/v1/recipes", headers=headers, json=recipe_input()).json()
+    hidden = replay_api.client.post("/v1/recipes", headers=other, json=recipe_input()).json()
+    recording(recordings, "embedding", {"text": "宫保鸡丁 鸡腿肉 干辣椒 腌 炒"}, [1, 0, 0])
+    assert cli("ai", "index")["completed"] == 2
+    query = "我想做鸡肉丁"
+    intent = {**CORPUS["intent"], "dish_name": "鸡肉丁"}
+    recording(recordings, "intent", {"text": query}, intent)
+    recording(recordings, "embedding", {"text": "鸡肉丁"}, [1, 0, 0])
+
+    def search():
+        response = replay_api.client.post(
+            "/v1/ai/recipes/requests", headers=headers, json={"text": query}
+        )
+        assert response.status_code == 200, response.text
+        return response.json()["recipes"]
+
+    found = search()
+    assert [r["recipe_id"] for r in found] == [own["id"]]
+    assert found[0]["basis"] == "向量检索相似"
+    assert hidden["id"] not in json.dumps(found)
+    recording(recordings, "embedding", {"text": "鸡肉丁"}, [1, 0])
+    assert search() == []  # Changed dimension cannot crash or compare incompatible vectors.
+    recording(recordings, "embedding", {"text": "鸡肉丁"}, [1, 0, 0])
+    configure(
+        "ai.models",
+        {
+            "small": {"provider": "unconfigured", "model": "small"},
+            "large": {"provider": "unconfigured", "model": "large"},
+            "vector": {"provider": "different", "model": "vector"},
+        },
+    )
+    assert search() == []  # Same model name at another provider is a different vector space.
+    configure(
+        "ai.models",
+        {
+            "small": {"provider": "unconfigured", "model": "small"},
+            "large": {"provider": "unconfigured", "model": "large"},
+            "vector": {"provider": "unconfigured", "model": "vector"},
+        },
+    )
+    assert replay_api.client.delete(f"/v1/recipes/{own['id']}", headers=headers).status_code == 204
+    assert search() == []
+    assert cli(
+        "ai", "audit", "--user", replay_api.client.get("/v1/me", headers=headers).json()["id"]
+    )["embeddings"] == {"ready": 1}
+
+
+def test_edited_ai_draft_cannot_introduce_high_risk_ingredient(replay_api: Api) -> None:
+    headers = bearer(replay_api.login("edited-risk@example.com"))
+    found = begin(replay_api, headers)
+    body = generate(replay_api, headers, found["request_id"])["draft"]["recipe"]
+    body["snapshot"]["ingredients"][0]["display_name"] = "河豚"
+    response = replay_api.client.post(
+        f"/v1/ai/recipes/requests/{found['request_id']}/save", headers=headers, json=body
+    )
+    assert response.status_code == 422
+    assert response.json()["error"]["code"] == "unsafe_ai_output"
+    assert replay_api.client.get("/v1/recipes", headers=headers).json()["items"] == []

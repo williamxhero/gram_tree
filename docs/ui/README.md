@@ -12,6 +12,7 @@
 | [`recipe-authoring/`](recipe-authoring/) | 结构化菜谱作者工作台样稿：编辑、详情预览、版本历史、我的菜谱；支持浅色/深色和交互展开 | #20 SPEC-002.2 | 本地 HTML 样稿（浏览器可直接打开） |
 | [`recipe-scaling/`](recipe-scaling/) | 份数、模具、个人量具换算详情页样稿：统一高亮、原值/规则明细、模式互斥和浅色/深色交互 | #21 SPEC-002.3 | Artifact 服务暂不可用；本地 HTML 样稿（浏览器可直接打开） |
 | [`food-safety/`](food-safety/) | 食品安全与过敏原提示样稿：必显过敏原、菜谱/步骤提醒、高风险、估算营养与疗效措辞改写 | #22 SPEC-011.1 | Artifact 服务实际返回 503；本地 HTML 样稿（浏览器可直接打开） |
+| [`one-line-recipe/`](one-line-recipe/) | 一句话生成：先检索、选择已有或新设计、可跳过问题、依据与校验、编辑保存及降级 | #23 SPEC-003.1 | 本会话无 Artifact 发布工具；本地交互 HTML 样稿 |
 
 ## 说明
 

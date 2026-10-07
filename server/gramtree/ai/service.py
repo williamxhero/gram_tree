@@ -94,7 +94,7 @@ def local_intent(session: Session, owner: User, request: str) -> RecipeIntent:
     servings_match = re.search(r"(\d{1,3})\s*(?:人|份)", request)
     return RecipeIntent(
         dish_name=dish,
-        servings=int(servings_match[1]) if servings_match else None,
+        servings=int(servings_match[1]) if servings_match and int(servings_match[1]) >= 1 else None,
         taste=["不辣"] if "不辣" in request else [],
         restrictions=["儿童"] if "小朋友" in request or "儿童" in request else [],
     )
@@ -143,7 +143,7 @@ def _similar(
             ),
             {
                 "owner": owner.id,
-                "model": model.model,
+                "model": model.embedding_space,
                 "dims": len(vector),
                 "vector": json.dumps(vector),
             },
@@ -301,7 +301,11 @@ def _normalize(
                 operation_id,
             )
             value = json.loads(raw) if isinstance(raw, str) else raw
-            decisions = {d["name"]: d for d in value["matches"]}
+            decisions = {
+                d["name"]: d
+                for d in value["matches"]
+                if isinstance(d, dict) and isinstance(d.get("name"), str)
+            }
         except (gateway.Unavailable, ValueError, TypeError, KeyError):
             pass
     confirmations = []
@@ -333,6 +337,9 @@ def _normalize(
 
 
 def _validate_draft(session: Session, draft: GeneratedDraft, intent: RecipeIntent):
+    dish = draft.recipe.dish_input()
+    draft.recipe.dish_name = dish.name
+    draft.recipe.dish_aliases = dish.aliases
     snapshot = draft.recipe.snapshot
     if (
         not snapshot.ingredients

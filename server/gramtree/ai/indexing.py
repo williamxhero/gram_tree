@@ -68,7 +68,7 @@ def run(session: Session, settings: Settings, limit: int = 100) -> dict[str, int
                 content_id=row.version_id,
             )
             row.vector = gateway.embedding(raw)
-            row.model = model.model
+            row.model = model.embedding_space
             row.status = "ready"
             completed += 1
         except (gateway.Unavailable, ValueError, TypeError):
