@@ -62,6 +62,11 @@ class Settings(BaseSettings):
     # Set in staging/production; development and tests derive signing from auth_secret.
     image_signing_secret: str = ""
 
+    # Credentials are deployment secrets, never runtime-config values or replay data.
+    ai_api_key: str = ""
+    ai_mode: Literal["disabled", "live", "replay", "record"] = "disabled"
+    ai_replay_dir: str = "tests/fixtures/ai"
+
     @property
     def cors_origin_regex(self) -> str | None:
         """开发和测试环境放行本机任意端口，方便网页版连本机服务端。"""

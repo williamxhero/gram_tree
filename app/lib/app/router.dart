@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:gramtree_api/gramtree_api.dart' show GenerationResult;
 
 import '../auth/auth_controller.dart';
 import '../features/auth/code_page.dart';
 import '../features/auth/login_page.dart';
 import '../features/create/create_page.dart';
+import '../features/create/one_line_recipe_page.dart';
 import '../features/discover/discover_page.dart';
 import '../features/me/delete_account_page.dart';
 import '../features/me/document_page.dart';
@@ -104,8 +106,16 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (_, _) => const RecipeListPage(),
       ),
       GoRoute(
+        path: OneLineRecipePage.path,
+        builder: (_, _) => const OneLineRecipePage(),
+      ),
+      GoRoute(
         path: RecipeEditorPage.path,
-        builder: (_, _) => const RecipeEditorPage(),
+        builder: (_, state) => RecipeEditorPage(
+          generation: state.extra is GenerationResult
+              ? state.extra as GenerationResult
+              : null,
+        ),
       ),
       GoRoute(
         path: '/recipes/:recipeId',

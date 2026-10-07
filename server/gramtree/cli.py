@@ -228,7 +228,7 @@ def cmd_openapi(args: argparse.Namespace) -> int:
 
     text = export()
     if args.out:
-        with open(args.out, "w", encoding="utf-8") as f:
+        with open(args.out, "w", encoding="utf-8", newline="\n") as f:
             f.write(text)
     else:
         sys.stdout.write(text)
@@ -305,9 +305,97 @@ def cmd_ingredients(args: argparse.Namespace) -> int:
     return 2
 
 
+def cmd_ai(args: argparse.Namespace) -> int:
+    from sqlalchemy import func, select
+
+    from gramtree import models as _models  # noqa: F401 — register foreign-key targets
+    from gramtree.ai import indexing
+    from gramtree.ai.models import AICall, GenerationLog, RecipeEmbedding
+    from gramtree.events.models import Event
+
+    with _session() as session:
+        if args.action == "index":
+            result = indexing.run(session, get_settings(), args.limit)
+            print(_fmt(result))
+            return 1 if result["failed"] else 0
+        if args.action == "purge-logs":
+            print(_fmt(indexing.purge(session)))
+            return 0
+        user_id = uuid.UUID(args.user)
+        calls = list(
+            session.scalars(
+                select(AICall).where(AICall.user_id == user_id).order_by(AICall.created_at)
+            )
+        )
+        events = session.scalars(
+            select(Event)
+            .where(Event.user_id == user_id, Event.event_type == "ai.recipe_generation")
+            .order_by(Event.received_at)
+        )
+        print(
+            _fmt(
+                {
+                    "calls": [
+                        {
+                            "capability": c.capability,
+                            "model": c.model,
+                            "provider": c.provider,
+                            "request_id": str(c.request_id),
+                            "content_id": str(c.content_id) if c.content_id else None,
+                            "prompt_version": c.prompt_version,
+                            "input_tokens": c.input_tokens,
+                            "output_tokens": c.output_tokens,
+                            "cost": c.cost,
+                            "duration_ms": c.duration_ms,
+                            "status": c.status,
+                            "error_code": c.error_code,
+                        }
+                        for c in calls
+                    ],
+                    "totals": {
+                        cap: {
+                            "cost": sum(c.cost for c in calls if c.capability == cap),
+                            "input_tokens": sum(
+                                c.input_tokens for c in calls if c.capability == cap
+                            ),
+                            "output_tokens": sum(
+                                c.output_tokens for c in calls if c.capability == cap
+                            ),
+                        }
+                        for cap in {c.capability for c in calls}
+                    },
+                    "log_count": session.scalar(
+                        select(func.count())
+                        .select_from(GenerationLog)
+                        .join(AICall)
+                        .where(AICall.user_id == user_id)
+                    ),
+                    "embeddings": dict(
+                        session.execute(
+                            select(RecipeEmbedding.status, func.count()).group_by(
+                                RecipeEmbedding.status
+                            )
+                        ).all()
+                    ),
+                    "events": [e.content for e in events],
+                }
+            )
+        )
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="gramtree")
     sub = parser.add_subparsers(dest="command", required=True)
+
+    ai = sub.add_parser("ai", help="内部 AI 用量与索引维护（不通过 HTTP 暴露日志）")
+    ai_sub = ai.add_subparsers(dest="action", required=True)
+    audit = ai_sub.add_parser("audit")
+    audit.add_argument("--user", required=True)
+    index = ai_sub.add_parser("index")
+    index.add_argument("--limit", type=int, default=100)
+    ai_sub.add_parser("purge-logs")
+    ai.set_defaults(func=cmd_ai)
 
     config = sub.add_parser("config", help="查看和修改服务端配置项")
     config_sub = config.add_subparsers(dest="action", required=True)

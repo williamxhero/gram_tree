@@ -1,6 +1,35 @@
 {
   "components": {
     "schemas": {
+      "AIStatus": {
+        "properties": {
+          "available": {
+            "title": "Available",
+            "type": "boolean"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          },
+          "remaining": {
+            "title": "Remaining",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "remaining",
+          "available"
+        ],
+        "title": "AIStatus",
+        "type": "object"
+      },
       "ActionDescriptor": {
         "properties": {
           "intent": {
@@ -1229,6 +1258,20 @@
         "title": "EventUploadResultItem",
         "type": "object"
       },
+      "ExistingChoice": {
+        "properties": {
+          "recipe_id": {
+            "format": "uuid",
+            "title": "Recipe Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "recipe_id"
+        ],
+        "title": "ExistingChoice",
+        "type": "object"
+      },
       "ExperimentInfo": {
         "properties": {
           "experiment": {
@@ -1364,6 +1407,128 @@
           }
         },
         "title": "FlavorProfile",
+        "type": "object"
+      },
+      "GenerateInput": {
+        "additionalProperties": false,
+        "properties": {
+          "cookware": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cookware"
+          },
+          "servings": {
+            "anyOf": [
+              {
+                "maximum": 1000.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Servings"
+          }
+        },
+        "title": "GenerateInput",
+        "type": "object"
+      },
+      "GeneratedDraft": {
+        "additionalProperties": false,
+        "properties": {
+          "cuisine": {
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Cuisine",
+            "type": "string"
+          },
+          "rationale": {
+            "maxLength": 4000,
+            "minLength": 1,
+            "title": "Rationale",
+            "type": "string"
+          },
+          "recipe": {
+            "$ref": "#/components/schemas/RecipeCreate"
+          }
+        },
+        "required": [
+          "recipe",
+          "rationale",
+          "cuisine"
+        ],
+        "title": "GeneratedDraft",
+        "type": "object"
+      },
+      "GenerationResult": {
+        "properties": {
+          "draft": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/GeneratedDraft"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "ingredient_confirmations": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Ingredient Confirmations",
+            "type": "array"
+          },
+          "numeric_warnings": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Numeric Warnings",
+            "type": "array"
+          },
+          "request_id": {
+            "format": "uuid",
+            "title": "Request Id",
+            "type": "string"
+          },
+          "safety": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RecipeSafetyResult"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "status": {
+            "$ref": "#/components/schemas/AIStatus"
+          }
+        },
+        "required": [
+          "request_id",
+          "status"
+        ],
+        "title": "GenerationResult",
         "type": "object"
       },
       "HealthChecks": {
@@ -2430,6 +2595,22 @@
         "title": "NutritionEstimate",
         "type": "object"
       },
+      "OneLineInput": {
+        "properties": {
+          "text": {
+            "maxLength": 1000,
+            "minLength": 1,
+            "pattern": "\\S",
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "text"
+        ],
+        "title": "OneLineInput",
+        "type": "object"
+      },
       "PageDescription": {
         "properties": {
           "cache": {
@@ -2761,6 +2942,33 @@
           "estimate"
         ],
         "title": "PurchaseUnitsAttribute",
+        "type": "object"
+      },
+      "Question": {
+        "properties": {
+          "default": {
+            "title": "Default",
+            "type": "string"
+          },
+          "key": {
+            "enum": [
+              "servings",
+              "cookware"
+            ],
+            "title": "Key",
+            "type": "string"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "key",
+          "text",
+          "default"
+        ],
+        "title": "Question",
         "type": "object"
       },
       "RecipeAuthor": {
@@ -3431,6 +3639,59 @@
         "title": "RecipeIngredientDisplayOut",
         "type": "object"
       },
+      "RecipeIntent": {
+        "additionalProperties": false,
+        "properties": {
+          "cookware": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 20,
+            "title": "Cookware",
+            "type": "array"
+          },
+          "dish_name": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Dish Name",
+            "type": "string"
+          },
+          "restrictions": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 20,
+            "title": "Restrictions",
+            "type": "array"
+          },
+          "servings": {
+            "anyOf": [
+              {
+                "maximum": 1000.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Servings"
+          },
+          "taste": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 20,
+            "title": "Taste",
+            "type": "array"
+          }
+        },
+        "required": [
+          "dish_name"
+        ],
+        "title": "RecipeIntent",
+        "type": "object"
+      },
       "RecipeList": {
         "properties": {
           "items": {
@@ -3881,6 +4142,18 @@
             ],
             "description": "烘焙菜谱的基准模具"
           },
+          "cuisine": {
+            "anyOf": [
+              {
+                "maxLength": 100,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cuisine"
+          },
           "description": {
             "anyOf": [
               {
@@ -3892,6 +4165,18 @@
               }
             ],
             "title": "Description"
+          },
+          "design_rationale": {
+            "anyOf": [
+              {
+                "maxLength": 4000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Design Rationale"
           },
           "difficulty": {
             "anyOf": [
@@ -3936,6 +4221,16 @@
             "title": "Servings",
             "type": "integer"
           },
+          "servings_source": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ValueSource"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "steps": {
             "items": {
               "$ref": "#/components/schemas/RecipeStep"
@@ -3951,6 +4246,16 @@
             "maxItems": 50,
             "title": "Tags",
             "type": "array"
+          },
+          "text_source": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ValueSource"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "total_time_seconds": {
             "default": 0,
@@ -4386,6 +4691,54 @@
         "title": "ReleaseNote",
         "type": "object"
       },
+      "RetrievalResult": {
+        "properties": {
+          "intent": {
+            "$ref": "#/components/schemas/RecipeIntent"
+          },
+          "local_fallback": {
+            "default": false,
+            "title": "Local Fallback",
+            "type": "boolean"
+          },
+          "questions": {
+            "items": {
+              "$ref": "#/components/schemas/Question"
+            },
+            "title": "Questions",
+            "type": "array"
+          },
+          "recipes": {
+            "items": {
+              "$ref": "#/components/schemas/SimilarRecipe"
+            },
+            "title": "Recipes",
+            "type": "array"
+          },
+          "request_id": {
+            "format": "uuid",
+            "title": "Request Id",
+            "type": "string"
+          },
+          "status": {
+            "$ref": "#/components/schemas/AIStatus"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "request_id",
+          "text",
+          "intent",
+          "recipes",
+          "questions",
+          "status"
+        ],
+        "title": "RetrievalResult",
+        "type": "object"
+      },
       "SearchIngredientOut": {
         "properties": {
           "aliases": {
@@ -4698,6 +5051,46 @@
           "message"
         ],
         "title": "ServingConversionWarning",
+        "type": "object"
+      },
+      "SimilarRecipe": {
+        "properties": {
+          "ai_assisted": {
+            "title": "Ai Assisted",
+            "type": "boolean"
+          },
+          "basis": {
+            "title": "Basis",
+            "type": "string"
+          },
+          "dish_name": {
+            "title": "Dish Name",
+            "type": "string"
+          },
+          "recipe_id": {
+            "format": "uuid",
+            "title": "Recipe Id",
+            "type": "string"
+          },
+          "servings": {
+            "title": "Servings",
+            "type": "integer"
+          },
+          "version_id": {
+            "format": "uuid",
+            "title": "Version Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "recipe_id",
+          "version_id",
+          "dish_name",
+          "servings",
+          "ai_assisted",
+          "basis"
+        ],
+        "title": "SimilarRecipe",
         "type": "object"
       },
       "SkipAdjustmentRequest": {
@@ -5091,6 +5484,312 @@
   },
   "openapi": "3.1.0",
   "paths": {
+    "/v1/ai/recipes/requests": {
+      "post": {
+        "operationId": "find_recipe_for_request",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OneLineInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RetrievalResult"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "参数错误"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "服务端错误"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Find Recipe For Request",
+        "tags": [
+          "recipe-ai"
+        ]
+      }
+    },
+    "/v1/ai/recipes/requests/{request_id}/existing": {
+      "post": {
+        "operationId": "choose_existing_recipe",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "request_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Request Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ExistingChoice"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecipeDetail"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "参数错误"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "服务端错误"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Choose Existing Recipe",
+        "tags": [
+          "recipe-ai"
+        ]
+      }
+    },
+    "/v1/ai/recipes/requests/{request_id}/generate": {
+      "post": {
+        "operationId": "generate_recipe_draft",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "request_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Request Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GenerateInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GenerationResult"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "参数错误"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "服务端错误"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Generate Recipe Draft",
+        "tags": [
+          "recipe-ai"
+        ]
+      }
+    },
+    "/v1/ai/recipes/requests/{request_id}/save": {
+      "post": {
+        "operationId": "save_generated_recipe",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "request_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Request Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RecipeCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecipeDetail"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "参数错误"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "服务端错误"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Save Generated Recipe",
+        "tags": [
+          "recipe-ai"
+        ]
+      }
+    },
+    "/v1/ai/recipes/status": {
+      "get": {
+        "operationId": "recipe_ai_status",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AIStatus"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "参数错误"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "服务端错误"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Recipe Ai Status",
+        "tags": [
+          "recipe-ai"
+        ]
+      }
+    },
     "/v1/analytics/events": {
       "post": {
         "description": "同意隐私政策前、或关闭“产品改进统计”开关后，客户端不应调用这个接口。服务端只按登记好的字段接收，多余字段一律拒收；不接受第三方分析服务转发。",

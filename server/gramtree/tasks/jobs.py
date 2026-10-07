@@ -19,6 +19,22 @@ def _session_factory() -> sessionmaker[Session]:
     return make_session_factory(make_engine(get_settings().database_url))
 
 
+@celery_app.task(name="gramtree.tasks.jobs.index_recipes")
+def index_recipes() -> dict[str, int]:
+    from gramtree.ai import indexing
+
+    with _session_factory()() as session:
+        return indexing.run(session, get_settings())
+
+
+@celery_app.task(name="gramtree.tasks.jobs.purge_ai_logs")
+def purge_ai_logs() -> dict[str, object]:
+    from gramtree.ai import indexing
+
+    with _session_factory()() as session:
+        return indexing.purge(session)
+
+
 @celery_app.task(name="gramtree.tasks.jobs.record_heartbeat")
 def record_heartbeat(source: str) -> str:
     with _session_factory()() as session:

@@ -149,7 +149,25 @@ class SourceFeedbackContentV1(BaseModel):
     )
 
 
+class RecipeGenerationContentV1(BaseModel):
+    request_id: str
+    stage: Literal["request", "questions", "choice", "result"]
+    constraints: dict[str, object] | None = None
+    answers: dict[str, object] | None = None
+    choice: Literal["existing", "new"] | None = None
+    saved: bool | None = None
+    recipe_id: str | None = None
+    version_id: str | None = None
+
+
 ITEMS: tuple[EventTypeSpec, ...] = (
+    EventTypeSpec(
+        event_type="ai.recipe_generation",
+        version=1,
+        description="一句话生成请求、追问、选择和保存结果；约束不含原话全文",
+        exportable=True,
+        content_schema=RecipeGenerationContentV1,
+    ),
     EventTypeSpec(
         event_type="pipeline.self_check",
         version=1,

@@ -27,6 +27,12 @@ start() {
   export GRAMTREE_DATABASE_URL="$PG/$DATABASE_NAME"
   export GRAMTREE_REDIS_URL="${GRAMTREE_E2E_REDIS:-redis://localhost:6379/14}"
   export GRAMTREE_MAIL_BACKEND=memory
+  # Browser acceptance is deterministic and never calls an external model.
+  export GRAMTREE_AI_MODE="${GRAMTREE_AI_MODE:-replay}"
+  export GRAMTREE_AI_REPLAY_DIR="${GRAMTREE_AI_REPLAY_DIR:-.data/ai-e2e}"
+  if [[ "$GRAMTREE_AI_MODE" == replay ]]; then
+    uv run python ../tool/ai_replay_corpus.py --out "$GRAMTREE_AI_REPLAY_DIR"
+  fi
 
   uv run python - "$PG" "$DATABASE_NAME" <<'EOF'
 import sys

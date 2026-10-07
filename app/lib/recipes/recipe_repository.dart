@@ -13,6 +13,42 @@ class RecipeRepository {
   final GramtreeApi _api;
 
   RecipesApi get _recipes => _api.getRecipesApi();
+  RecipeAiApi get _ai => _api.getRecipeAiApi();
+
+  Future<AIStatus> aiStatus() async => (await _ai.recipeAiStatus()).data!;
+
+  Future<RetrievalResult> findForRequest(String text) async =>
+      (await _ai.findRecipeForRequest(oneLineInput: OneLineInput(text: text)))
+          .data!;
+
+  Future<RecipeDetail> chooseExisting(
+    String requestId,
+    String recipeId,
+  ) async => (await _ai.chooseExistingRecipe(
+    requestId: requestId,
+    existingChoice: ExistingChoice(recipeId: recipeId),
+  )).data!;
+
+  Future<GenerationResult> generate(
+    String requestId,
+    GenerateInput answers,
+  ) async => (await _ai.generateRecipeDraft(
+    requestId: requestId,
+    generateInput: answers,
+  )).data!;
+
+  Future<RecipeDetail> saveGenerated(String requestId, RecipeForm form) async =>
+      (await _ai.saveGeneratedRecipe(
+        requestId: requestId,
+        recipeCreate: RecipeCreate(
+          dishName: form.dishName,
+          dishAliases: form.aliases,
+          snapshot: form.snapshot,
+          changeNote: form.changeNote,
+          imageIds: form.imageIds,
+          aiAssisted: true,
+        ),
+      )).data!;
 
   Future<RecipeList> listPage({String? cursor}) async {
     final response = await _recipes.listRecipes(cursor: cursor);
@@ -158,6 +194,7 @@ class RecipeRepository {
       recipeId: recipeId,
       recipeVersionCreate: RecipeVersionCreate(
         baseVersionId: baseVersionId,
+        aiAssisted: form.aiAssisted,
         snapshot: form.snapshot,
         changeNote: form.changeNote,
         imageIds: form.imageIds,
@@ -499,6 +536,11 @@ class RecipeForm {
     this.changeNote = '',
     this.description = '',
     this.baseMold,
+    this.cuisine,
+    this.designRationale,
+    this.textSource,
+    this.servingsSource,
+    this.aiAssisted = false,
     List<RecipeIngredientDraft>? ingredients,
     List<RecipeStepDraft>? steps,
     List<String>? imageIds,
@@ -522,6 +564,10 @@ class RecipeForm {
     totalTimeSeconds: snapshot.totalTimeSeconds ?? 0,
     activeTimeSeconds: snapshot.activeTimeSeconds ?? 0,
     description: snapshot.description ?? '',
+    cuisine: snapshot.cuisine,
+    designRationale: snapshot.designRationale,
+    textSource: snapshot.textSource,
+    servingsSource: snapshot.servingsSource,
     ingredients: [
       for (final item in snapshot.ingredients ?? const [])
         RecipeIngredientDraft.fromModel(item),
@@ -555,6 +601,7 @@ class RecipeForm {
           )
           ..aliases = _strings(value['aliases'])
           ..changeNote = _string(value['change_note']) ?? ''
+          ..aiAssisted = value['ai_assisted'] == true
           ..imageIds = _strings(value['image_ids']);
       } catch (_) {
         // Fall through to the safe empty form below.
@@ -574,6 +621,11 @@ class RecipeForm {
   String changeNote;
   String description;
   MoldSpec? baseMold;
+  String? cuisine;
+  String? designRationale;
+  ValueSource? textSource;
+  ValueSource? servingsSource;
+  bool aiAssisted;
   List<RecipeIngredientDraft> ingredients;
   List<RecipeStepDraft> steps;
   List<String> imageIds;
@@ -582,6 +634,10 @@ class RecipeForm {
     activeTimeSeconds: activeTimeSeconds,
     baseMold: baseMold,
     description: _optionalText(description),
+    cuisine: cuisine,
+    designRationale: designRationale,
+    textSource: textSource,
+    servingsSource: servingsSource,
     difficulty: difficulty,
     dishType: dishType,
     formatVersion: RecipeSnapshotFormatVersionEnum.number1,
@@ -594,6 +650,7 @@ class RecipeForm {
 
   Map<String, dynamic> toDraft() => {
     'dish_name': dishName,
+    'ai_assisted': aiAssisted,
     'aliases': [...aliases],
     'change_note': changeNote,
     'image_ids': [...imageIds],
