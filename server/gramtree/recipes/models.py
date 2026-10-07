@@ -78,6 +78,7 @@ class RecipeVersion(Base):
     )
     snapshot: Mapped[dict[str, Any]] = mapped_column(JSONB)
     derived: Mapped[dict[str, Any]] = mapped_column(JSONB, default=dict)
+    reproducibility: Mapped[dict[str, Any] | None] = mapped_column(JSONB, default=None)
     # Only the current safety index changes on recheck; original evidence stays immutable.
     safety_at_save: Mapped[dict[str, Any] | None] = mapped_column(JSONB, default=None)
     safety_current: Mapped[dict[str, Any] | None] = mapped_column(JSONB, default=None)

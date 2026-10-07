@@ -94,6 +94,9 @@ import 'package:gramtree_api/src/model/recipe_mold_conversion_out.dart';
 import 'package:gramtree_api/src/model/recipe_mold_conversion_request.dart';
 import 'package:gramtree_api/src/model/recipe_replacement.dart';
 import 'package:gramtree_api/src/model/recipe_replacement_allergens.dart';
+import 'package:gramtree_api/src/model/recipe_reproducibility_check_out.dart';
+import 'package:gramtree_api/src/model/recipe_reproducibility_check_request.dart';
+import 'package:gramtree_api/src/model/recipe_reproducibility_result.dart';
 import 'package:gramtree_api/src/model/recipe_safety_check_out.dart';
 import 'package:gramtree_api/src/model/recipe_safety_check_request.dart';
 import 'package:gramtree_api/src/model/recipe_safety_finding.dart';
@@ -108,6 +111,8 @@ import 'package:gramtree_api/src/model/recipe_version_summary.dart';
 import 'package:gramtree_api/src/model/refresh_request.dart';
 import 'package:gramtree_api/src/model/rejection_reason.dart';
 import 'package:gramtree_api/src/model/release_note.dart';
+import 'package:gramtree_api/src/model/reproducibility_position.dart';
+import 'package:gramtree_api/src/model/reproducibility_problem.dart';
 import 'package:gramtree_api/src/model/retrieval_result.dart';
 import 'package:gramtree_api/src/model/search_ingredient_out.dart';
 import 'package:gramtree_api/src/model/search_query.dart';
@@ -420,6 +425,19 @@ ReturnType deserialize<ReturnType, BaseType>(
     case 'RecipeReplacementAllergens':
       return RecipeReplacementAllergens.fromJson(value as Map<String, dynamic>)
           as ReturnType;
+    case 'RecipeReproducibilityCheckOut':
+      return RecipeReproducibilityCheckOut.fromJson(
+            value as Map<String, dynamic>,
+          )
+          as ReturnType;
+    case 'RecipeReproducibilityCheckRequest':
+      return RecipeReproducibilityCheckRequest.fromJson(
+            value as Map<String, dynamic>,
+          )
+          as ReturnType;
+    case 'RecipeReproducibilityResult':
+      return RecipeReproducibilityResult.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
     case 'RecipeSafetyCheckOut':
       return RecipeSafetyCheckOut.fromJson(value as Map<String, dynamic>)
           as ReturnType;
@@ -460,6 +478,12 @@ ReturnType deserialize<ReturnType, BaseType>(
           as ReturnType;
     case 'ReleaseNote':
       return ReleaseNote.fromJson(value as Map<String, dynamic>) as ReturnType;
+    case 'ReproducibilityPosition':
+      return ReproducibilityPosition.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'ReproducibilityProblem':
+      return ReproducibilityProblem.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
     case 'RetrievalResult':
       return RetrievalResult.fromJson(value as Map<String, dynamic>)
           as ReturnType;

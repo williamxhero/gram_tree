@@ -170,6 +170,17 @@ class RecipeRepository {
     return response.data!.result;
   }
 
+  Future<RecipeReproducibilityResult> checkReproducibility(
+    RecipeForm form,
+  ) async {
+    final response = await _recipes.checkRecipeReproducibility(
+      recipeReproducibilityCheckRequest: RecipeReproducibilityCheckRequest(
+        snapshot: form.snapshot,
+      ),
+    );
+    return response.data!.result;
+  }
+
   Future<RecipeDetail> create(RecipeForm form) async {
     final response = await _recipes.createRecipe(
       recipeCreate: RecipeCreate(
@@ -358,7 +369,9 @@ class RecipeIngredientDraft {
     optional: optional,
     preparation: _optionalText(preparation),
     quantity: quantity,
-    quantitySource: quantitySource ?? _authorSource(quantity.toString()),
+    quantitySource: _writableSource(
+      quantitySource ?? _authorSource(quantity.toString()),
+    ),
     replacement: replacement?.toModel(),
     scalingMode: scalingMode,
     unit: unit.trim().isEmpty ? 'g' : unit.trim(),
@@ -636,8 +649,8 @@ class RecipeForm {
     description: _optionalText(description),
     cuisine: cuisine,
     designRationale: designRationale,
-    textSource: textSource,
-    servingsSource: servingsSource,
+    textSource: _writableSource(textSource),
+    servingsSource: _writableSource(servingsSource),
     difficulty: difficulty,
     dishType: dishType,
     formatVersion: RecipeSnapshotFormatVersionEnum.number1,
@@ -657,6 +670,11 @@ class RecipeForm {
     'snapshot': snapshot.toJson(),
   };
 }
+
+// Verification belongs to the server. An unchanged baseline restores its
+// source there; sending it back would be an unauthorized client write.
+ValueSource? _writableSource(ValueSource? source) =>
+    source?.source_ == ValueSourceSource_Enum.verified ? null : source;
 
 ValueSource _authorSource(String original) => ValueSource(
   basis: '',

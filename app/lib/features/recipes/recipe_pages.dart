@@ -21,6 +21,7 @@ import '../../recipes/mold_conversion.dart';
 import '../../recipes/serving_conversion.dart';
 import 'personal_measures_page.dart';
 import 'recipe_photo_panel.dart';
+import 'reproducibility_card.dart';
 import '../../storage/local_store.dart';
 import '../../ui_protocol/components/component_scaffold.dart';
 import '../../ui_protocol/recipe_safety.dart';
@@ -189,6 +190,14 @@ class _RecipeEditorPageState extends ConsumerState<RecipeEditorPage> {
   bool _loading = true;
   bool _loadFailed = false;
   bool _saving = false;
+  RecipeReproducibilityResult? _reproducibility;
+  String? _reproducibilityError;
+  bool _checkingReproducibility = false;
+  int _reproducibilityRevision = 0;
+  int _nextProblem = 0;
+  ReproducibilityProblem? _locatedProblem;
+  final _problemTargets = <String, GlobalKey>{};
+  final _editorScroll = ScrollController();
   RecipeSafetyResult? _safetyResult;
   String? _safetyError;
   bool _safetyLoading = false;
@@ -243,6 +252,7 @@ class _RecipeEditorPageState extends ConsumerState<RecipeEditorPage> {
           _loaded!.dish.name,
           aliases: _loaded!.dish.aliases,
         )..aiAssisted = _loaded!.version.aiAssisted;
+        _reproducibility = _loaded!.version.reproducibility;
       }
       _draft = _draftStore.read(
         recipeKey: _recipeKey,
@@ -286,6 +296,7 @@ class _RecipeEditorPageState extends ConsumerState<RecipeEditorPage> {
     if (!mounted) return;
     if (restore == true) {
       _form = RecipeForm.fromDraft(draft.payload);
+      _reproducibility = null;
       _editorRevision++;
       setState(() {});
     } else {
@@ -296,6 +307,11 @@ class _RecipeEditorPageState extends ConsumerState<RecipeEditorPage> {
   void _changed() {
     if (!mounted) return;
     setState(() {
+      _reproducibility = null;
+      _reproducibilityError = null;
+      _locatedProblem = null;
+      _checkingReproducibility = false;
+      _reproducibilityRevision++;
       _safetyResult = null;
       _safetyError = null;
       _safetyLoading = false;
@@ -344,6 +360,103 @@ class _RecipeEditorPageState extends ConsumerState<RecipeEditorPage> {
     await _draftStore.discard(_recipeKey, accountId: _accountId);
     _draftWrite = null;
     _draft = null;
+  }
+
+  Future<void> _checkReproducibility() async {
+    final revision = _reproducibilityRevision;
+    setState(() {
+      _checkingReproducibility = true;
+      _reproducibilityError = null;
+    });
+    try {
+      final result = await ref
+          .read(recipeRepositoryProvider)
+          .checkReproducibility(_form);
+      if (!mounted || revision != _reproducibilityRevision) return;
+      setState(() {
+        _reproducibility = result;
+        _nextProblem = 0;
+        _locatedProblem = null;
+      });
+    } catch (_) {
+      if (mounted && revision == _reproducibilityRevision) {
+        setState(() => _reproducibilityError = '检查失败，请重试。仍可保存私有版本。');
+      }
+    } finally {
+      if (mounted && revision == _reproducibilityRevision) {
+        setState(() => _checkingReproducibility = false);
+      }
+    }
+  }
+
+  Future<void> _locateProblem() async {
+    final problems =
+        _reproducibility?.problems
+            ?.where(
+              (problem) =>
+                  problem.status != ReproducibilityProblemStatusEnum.resolved,
+            )
+            .toList() ??
+        const <ReproducibilityProblem>[];
+    if (problems.isEmpty || !_editorScroll.hasClients) return;
+    final problem = problems[_nextProblem++ % problems.length];
+    final revision = _reproducibilityRevision;
+    setState(() => _locatedProblem = problem);
+    final target =
+        _problemTargets['${problem.position.collection.value}:${problem.position.itemId}'];
+    if (target == null) return;
+    // ListView builds rows lazily. Reveal the target before asking Flutter to
+    // align it; a far-away step must work just like an already mounted row.
+    await _editorScroll.animateTo(
+      0,
+      duration: const Duration(milliseconds: 100),
+      curve: Curves.easeOut,
+    );
+    while (mounted &&
+        revision == _reproducibilityRevision &&
+        target.currentContext == null &&
+        _editorScroll.offset < _editorScroll.position.maxScrollExtent) {
+      await _editorScroll.animateTo(
+        (_editorScroll.offset + 500).clamp(
+          0,
+          _editorScroll.position.maxScrollExtent,
+        ),
+        duration: const Duration(milliseconds: 100),
+        curve: Curves.easeOut,
+      );
+    }
+    if (!mounted || revision != _reproducibilityRevision) return;
+    final targetContext = target.currentContext;
+    if (targetContext != null && targetContext.mounted) {
+      await Scrollable.ensureVisible(
+        targetContext,
+        duration: const Duration(milliseconds: 150),
+        alignment: 0,
+      );
+    }
+  }
+
+  Widget _problemRow(String collection, String id, Widget child) {
+    final problem = _locatedProblem;
+    final selected =
+        problem?.position.collection.value == collection &&
+        problem?.position.itemId == id;
+    return Column(
+      key: _problemTargets.putIfAbsent('$collection:$id', GlobalKey.new),
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        if (selected)
+          Semantics(liveRegion: true, child: Text('当前定位：${problem!.message}')),
+        child,
+      ],
+    );
+  }
+
+  @override
+  void dispose() {
+    _draftTimer?.cancel();
+    _editorScroll.dispose();
+    super.dispose();
   }
 
   Future<void> _checkSafety() async {
@@ -618,8 +731,19 @@ class _RecipeEditorPageState extends ConsumerState<RecipeEditorPage> {
       ),
       body: ListView(
         key: const ValueKey('recipe-editor-content'),
+        controller: _editorScroll,
         padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
         children: [
+          OutlinedButton(
+            key: const ValueKey('recipe-reproducibility-check'),
+            onPressed: _checkingReproducibility ? null : _checkReproducibility,
+            child: Text(_checkingReproducibility ? '正在检查可复刻性…' : '检查可复刻性'),
+          ),
+          ReproducibilityCard(
+            result: _reproducibility,
+            onLocate: _locateProblem,
+          ),
+          if (_reproducibilityError != null) Text(_reproducibilityError!),
           if (_form.aiAssisted) ...[
             const Text('AI 辅助 · 尚未做过验证'),
             SourceMark(
@@ -715,30 +839,35 @@ class _RecipeEditorPageState extends ConsumerState<RecipeEditorPage> {
           ),
           const SizedBox(height: 8),
           for (final entry in _form.ingredients.indexed)
-            _IngredientEditorCard(
-              key: ValueKey(
-                'recipe-ingredient-${entry.$2.id}-$_editorRevision',
+            _problemRow(
+              'ingredients',
+              entry.$2.id,
+              _IngredientEditorCard(
+                key: ValueKey(
+                  'recipe-ingredient-${entry.$2.id}-$_editorRevision',
+                ),
+                item: entry.$2,
+                index: entry.$1,
+                count: _form.ingredients.length,
+                results: _ingredientResults[entry.$2.id] ?? const [],
+                replacementResults:
+                    _replacementResults[entry.$2.id] ?? const [],
+                searching: _searching['ingredient:${entry.$2.id}'] == true,
+                replacementSearching:
+                    _searching['replacement:${entry.$2.id}'] == true,
+                onChanged: _changed,
+                onSearch: () =>
+                    _searchIngredient(entry.$2.id, replacement: false),
+                onReplacementSearch: () =>
+                    _searchIngredient(entry.$2.id, replacement: true),
+                libraryScaling: _libraryScaling[entry.$2.id],
+                onSelect: (value) => _selectIngredient(entry.$2.id, value),
+                onSelectReplacement: (value) =>
+                    _selectReplacement(entry.$2.id, value),
+                onDelete: () => _deleteIngredient(entry.$1),
+                onMoveUp: () => _moveIngredient(entry.$1, -1),
+                onMoveDown: () => _moveIngredient(entry.$1, 1),
               ),
-              item: entry.$2,
-              index: entry.$1,
-              count: _form.ingredients.length,
-              results: _ingredientResults[entry.$2.id] ?? const [],
-              replacementResults: _replacementResults[entry.$2.id] ?? const [],
-              searching: _searching['ingredient:${entry.$2.id}'] == true,
-              replacementSearching:
-                  _searching['replacement:${entry.$2.id}'] == true,
-              onChanged: _changed,
-              onSearch: () =>
-                  _searchIngredient(entry.$2.id, replacement: false),
-              onReplacementSearch: () =>
-                  _searchIngredient(entry.$2.id, replacement: true),
-              libraryScaling: _libraryScaling[entry.$2.id],
-              onSelect: (value) => _selectIngredient(entry.$2.id, value),
-              onSelectReplacement: (value) =>
-                  _selectReplacement(entry.$2.id, value),
-              onDelete: () => _deleteIngredient(entry.$1),
-              onMoveUp: () => _moveIngredient(entry.$1, -1),
-              onMoveDown: () => _moveIngredient(entry.$1, 1),
             ),
           OutlinedButton.icon(
             key: const ValueKey('recipe-add-ingredient'),
@@ -748,19 +877,23 @@ class _RecipeEditorPageState extends ConsumerState<RecipeEditorPage> {
           ),
           const SizedBox(height: 20),
           for (final entry in _form.steps.indexed)
-            _StepEditorCard(
-              key: ValueKey(
-                'recipe-step-editor-${entry.$2.id}-$_editorRevision',
+            _problemRow(
+              'steps',
+              entry.$2.id,
+              _StepEditorCard(
+                key: ValueKey(
+                  'recipe-step-editor-${entry.$2.id}-$_editorRevision',
+                ),
+                item: entry.$2,
+                index: entry.$1,
+                count: _form.steps.length,
+                ingredients: _form.ingredients,
+                steps: _form.steps,
+                onChanged: _changed,
+                onDelete: () => _deleteStep(entry.$1),
+                onMoveUp: () => _moveStep(entry.$1, -1),
+                onMoveDown: () => _moveStep(entry.$1, 1),
               ),
-              item: entry.$2,
-              index: entry.$1,
-              count: _form.steps.length,
-              ingredients: _form.ingredients,
-              steps: _form.steps,
-              onChanged: _changed,
-              onDelete: () => _deleteStep(entry.$1),
-              onMoveUp: () => _moveStep(entry.$1, -1),
-              onMoveDown: () => _moveStep(entry.$1, 1),
             ),
           OutlinedButton.icon(
             key: const ValueKey('recipe-add-step'),
@@ -2112,6 +2245,7 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
               onAction: null,
             ),
           ],
+          ReproducibilityCard(result: detail.version.reproducibility),
           RecipeSafetyProtocolSection(
             result: detail.version.safety ?? detail.version.safetyAtSave,
             legacyDerived: derived,

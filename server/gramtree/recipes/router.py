@@ -14,7 +14,7 @@ from gramtree.core.errors import ERROR_RESPONSES, ApiError, ErrorResponse
 from gramtree.core.ids import IdV4
 from gramtree.core.pagination import PageParams, page_params
 from gramtree.deps import RedisDep, SessionDep, SettingsDep
-from gramtree.recipes import service
+from gramtree.recipes import reproducibility, service
 from gramtree.recipes.schemas import (
     MoldSpec,
     RecipeCreate,
@@ -26,6 +26,8 @@ from gramtree.recipes.schemas import (
     RecipeList,
     RecipeMoldConversionOut,
     RecipeMoldConversionRequest,
+    RecipeReproducibilityCheckOut,
+    RecipeReproducibilityCheckRequest,
     RecipeSafetyCheckOut,
     RecipeSafetyCheckRequest,
     RecipeServingConversionOut,
@@ -36,6 +38,18 @@ from gramtree.runtime_config import service as config
 
 router = APIRouter(prefix="/recipes", tags=["recipes"])
 PageDep = Annotated[PageParams, Depends(page_params)]
+
+
+@router.post(
+    "/reproducibility/check",
+    response_model=RecipeReproducibilityCheckOut,
+    responses={**ERROR_RESPONSES, 401: {"model": ErrorResponse}},
+)
+def check_recipe_reproducibility(
+    body: RecipeReproducibilityCheckRequest,
+    auth: CurrentAuth,
+) -> RecipeReproducibilityCheckOut:
+    return RecipeReproducibilityCheckOut(result=reproducibility.check(body.snapshot))
 
 
 @router.post(

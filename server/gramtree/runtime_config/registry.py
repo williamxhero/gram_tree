@@ -81,6 +81,25 @@ ITEMS: tuple[ConfigItem, ...] = (
         minimum=1,
         maximum=500,
     ),
+    # —— 已验证条件占位（SPEC-002.4；判定在 SPEC-007.3 实现） ——
+    ConfigItem(
+        "recipe.verification_min_distinct_cooks",
+        "int",
+        5,
+        "已验证至少需要的不同做菜用户数（占位，当前不执行判定）",
+        minimum=1,
+        maximum=10000,
+        public=True,
+    ),
+    ConfigItem(
+        "recipe.verification_max_one_sided_feedback_ratio",
+        "float",
+        0.3,
+        "偏咸、偏淡各类反馈比例上限（占位，当前不执行判定）",
+        minimum=0,
+        maximum=1,
+        public=True,
+    ),
     # —— 菜谱份数换算（SPEC-002.3） ——
     ConfigItem(
         "recipe.servings_min",

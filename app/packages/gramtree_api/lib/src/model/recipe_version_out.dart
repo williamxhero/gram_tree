@@ -6,6 +6,7 @@
 import 'package:gramtree_api/src/model/recipe_snapshot.dart';
 import 'package:gramtree_api/src/model/recipe_derived.dart';
 import 'package:gramtree_api/src/model/recipe_image_out.dart';
+import 'package:gramtree_api/src/model/recipe_reproducibility_result.dart';
 import 'package:gramtree_api/src/model/recipe_safety_result.dart';
 import 'package:copy_with_extension/copy_with_extension.dart';
 import 'package:json_annotation/json_annotation.dart';
@@ -37,6 +38,8 @@ class RecipeVersionOut {
     this.images,
 
     this.previousVersionId,
+
+    this.reproducibility,
 
     this.safety,
 
@@ -71,6 +74,9 @@ class RecipeVersionOut {
   @JsonKey(name: r'previous_version_id', required: false, includeIfNull: false)
   final String? previousVersionId;
 
+  @JsonKey(name: r'reproducibility', required: false, includeIfNull: false)
+  final RecipeReproducibilityResult? reproducibility;
+
   @JsonKey(name: r'safety', required: false, includeIfNull: false)
   final RecipeSafetyResult? safety;
 
@@ -95,6 +101,7 @@ class RecipeVersionOut {
           other.id == id &&
           other.images == images &&
           other.previousVersionId == previousVersionId &&
+          other.reproducibility == reproducibility &&
           other.safety == safety &&
           other.safetyAtSave == safetyAtSave &&
           other.snapshot == snapshot &&
@@ -110,6 +117,7 @@ class RecipeVersionOut {
       id.hashCode +
       images.hashCode +
       (previousVersionId == null ? 0 : previousVersionId.hashCode) +
+      reproducibility.hashCode +
       safety.hashCode +
       safetyAtSave.hashCode +
       snapshot.hashCode +

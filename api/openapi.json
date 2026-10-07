@@ -3513,6 +3513,16 @@
             "description": "处理方式",
             "title": "Preparation"
           },
+          "preparation_source": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ValueSource"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "quantity": {
             "maximum": 10000000.0,
             "minimum": 0.0,
@@ -3891,6 +3901,82 @@
           "display_name"
         ],
         "title": "RecipeReplacementAllergens",
+        "type": "object"
+      },
+      "RecipeReproducibilityCheckOut": {
+        "properties": {
+          "result": {
+            "$ref": "#/components/schemas/RecipeReproducibilityResult"
+          }
+        },
+        "required": [
+          "result"
+        ],
+        "title": "RecipeReproducibilityCheckOut",
+        "type": "object"
+      },
+      "RecipeReproducibilityCheckRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "snapshot": {
+            "$ref": "#/components/schemas/RecipeSnapshot"
+          }
+        },
+        "required": [
+          "snapshot"
+        ],
+        "title": "RecipeReproducibilityCheckRequest",
+        "type": "object"
+      },
+      "RecipeReproducibilityResult": {
+        "properties": {
+          "concrete_field_count": {
+            "title": "Concrete Field Count",
+            "type": "integer"
+          },
+          "field_completeness": {
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Field Completeness",
+            "type": "number"
+          },
+          "problems": {
+            "items": {
+              "$ref": "#/components/schemas/ReproducibilityProblem"
+            },
+            "title": "Problems",
+            "type": "array"
+          },
+          "remaining_count": {
+            "title": "Remaining Count",
+            "type": "integer"
+          },
+          "required_field_count": {
+            "title": "Required Field Count",
+            "type": "integer"
+          },
+          "rules_version": {
+            "title": "Rules Version",
+            "type": "string"
+          },
+          "state": {
+            "enum": [
+              "incomplete",
+              "reproducible"
+            ],
+            "title": "State",
+            "type": "string"
+          }
+        },
+        "required": [
+          "rules_version",
+          "state",
+          "remaining_count",
+          "required_field_count",
+          "concrete_field_count",
+          "field_completeness"
+        ],
+        "title": "RecipeReproducibilityResult",
         "type": "object"
       },
       "RecipeSafetyCheckOut": {
@@ -4315,6 +4401,16 @@
             ],
             "title": "Doneness"
           },
+          "doneness_source": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ValueSource"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "duration_seconds": {
             "default": 0,
             "maximum": 86400.0,
@@ -4373,6 +4469,16 @@
             "minLength": 1,
             "title": "Instruction",
             "type": "string"
+          },
+          "instruction_source": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ValueSource"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "notes": {
             "anyOf": [
@@ -4552,6 +4658,16 @@
             ],
             "title": "Previous Version Id"
           },
+          "reproducibility": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RecipeReproducibilityResult"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "safety": {
             "anyOf": [
               {
@@ -4689,6 +4805,114 @@
           "changelog"
         ],
         "title": "ReleaseNote",
+        "type": "object"
+      },
+      "ReproducibilityPosition": {
+        "properties": {
+          "collection": {
+            "enum": [
+              "ingredients",
+              "steps",
+              "snapshot"
+            ],
+            "title": "Collection",
+            "type": "string"
+          },
+          "end": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "End"
+          },
+          "field": {
+            "title": "Field",
+            "type": "string"
+          },
+          "item_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Item Id"
+          },
+          "start": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Start"
+          }
+        },
+        "required": [
+          "collection",
+          "field"
+        ],
+        "title": "ReproducibilityPosition",
+        "type": "object"
+      },
+      "ReproducibilityProblem": {
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "message": {
+            "title": "Message",
+            "type": "string"
+          },
+          "original": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Original"
+          },
+          "position": {
+            "$ref": "#/components/schemas/ReproducibilityPosition"
+          },
+          "status": {
+            "enum": [
+              "unresolved",
+              "ignored",
+              "resolved"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "type": {
+            "enum": [
+              "ambiguous",
+              "missing"
+            ],
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "type",
+          "status",
+          "message",
+          "position"
+        ],
+        "title": "ReproducibilityProblem",
         "type": "object"
       },
       "RetrievalResult": {
@@ -8393,6 +8617,72 @@
           }
         },
         "summary": "Read Staged Recipe Image",
+        "tags": [
+          "recipes"
+        ]
+      }
+    },
+    "/v1/recipes/reproducibility/check": {
+      "post": {
+        "operationId": "check_recipe_reproducibility",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RecipeReproducibilityCheckRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecipeReproducibilityCheckOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "参数错误"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "服务端错误"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Check Recipe Reproducibility",
         "tags": [
           "recipes"
         ]

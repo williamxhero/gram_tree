@@ -23,6 +23,10 @@ abstract class _$RecipeVersionOutCWProxy {
 
   RecipeVersionOut previousVersionId(String? previousVersionId);
 
+  RecipeVersionOut reproducibility(
+    RecipeReproducibilityResult? reproducibility,
+  );
+
   RecipeVersionOut safety(RecipeSafetyResult? safety);
 
   RecipeVersionOut safetyAtSave(RecipeSafetyResult? safetyAtSave);
@@ -46,6 +50,7 @@ abstract class _$RecipeVersionOutCWProxy {
     String id,
     List<RecipeImageOut>? images,
     String? previousVersionId,
+    RecipeReproducibilityResult? reproducibility,
     RecipeSafetyResult? safety,
     RecipeSafetyResult? safetyAtSave,
     RecipeSnapshot snapshot,
@@ -87,6 +92,11 @@ class _$RecipeVersionOutCWProxyImpl implements _$RecipeVersionOutCWProxy {
       this(previousVersionId: previousVersionId);
 
   @override
+  RecipeVersionOut reproducibility(
+    RecipeReproducibilityResult? reproducibility,
+  ) => this(reproducibility: reproducibility);
+
+  @override
   RecipeVersionOut safety(RecipeSafetyResult? safety) => this(safety: safety);
 
   @override
@@ -117,6 +127,7 @@ class _$RecipeVersionOutCWProxyImpl implements _$RecipeVersionOutCWProxy {
     Object? id = const $CopyWithPlaceholder(),
     Object? images = const $CopyWithPlaceholder(),
     Object? previousVersionId = const $CopyWithPlaceholder(),
+    Object? reproducibility = const $CopyWithPlaceholder(),
     Object? safety = const $CopyWithPlaceholder(),
     Object? safetyAtSave = const $CopyWithPlaceholder(),
     Object? snapshot = const $CopyWithPlaceholder(),
@@ -155,6 +166,10 @@ class _$RecipeVersionOutCWProxyImpl implements _$RecipeVersionOutCWProxy {
           ? _value.previousVersionId
           // ignore: cast_nullable_to_non_nullable
           : previousVersionId as String?,
+      reproducibility: reproducibility == const $CopyWithPlaceholder()
+          ? _value.reproducibility
+          // ignore: cast_nullable_to_non_nullable
+          : reproducibility as RecipeReproducibilityResult?,
       safety: safety == const $CopyWithPlaceholder()
           ? _value.safety
           // ignore: cast_nullable_to_non_nullable
@@ -226,6 +241,14 @@ RecipeVersionOut _$RecipeVersionOutFromJson(Map<String, dynamic> json) =>
             'previous_version_id',
             (v) => v as String?,
           ),
+          reproducibility: $checkedConvert(
+            'reproducibility',
+            (v) => v == null
+                ? null
+                : RecipeReproducibilityResult.fromJson(
+                    v as Map<String, dynamic>,
+                  ),
+          ),
           safety: $checkedConvert(
             'safety',
             (v) => v == null
@@ -270,6 +293,7 @@ Map<String, dynamic> _$RecipeVersionOutToJson(RecipeVersionOut instance) =>
       'id': instance.id,
       'images': ?instance.images?.map((e) => e.toJson()).toList(),
       'previous_version_id': ?instance.previousVersionId,
+      'reproducibility': ?instance.reproducibility?.toJson(),
       'safety': ?instance.safety?.toJson(),
       'safety_at_save': ?instance.safetyAtSave?.toJson(),
       'snapshot': instance.snapshot.toJson(),
