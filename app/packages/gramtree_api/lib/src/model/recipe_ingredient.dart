@@ -37,6 +37,8 @@ class RecipeIngredient {
 
     this.preparation,
 
+    this.preparationSource,
+
     required this.quantity,
 
     this.quantitySource,
@@ -91,6 +93,9 @@ class RecipeIngredient {
   @JsonKey(name: r'preparation', required: false, includeIfNull: false)
   final String? preparation;
 
+  @JsonKey(name: r'preparation_source', required: false, includeIfNull: false)
+  final ValueSource? preparationSource;
+
   // minimum: 0.0
   // maximum: 10000000
   @JsonKey(name: r'quantity', required: true, includeIfNull: false)
@@ -122,6 +127,7 @@ class RecipeIngredient {
           other.ingredientId == ingredientId &&
           other.optional == optional &&
           other.preparation == preparation &&
+          other.preparationSource == preparationSource &&
           other.quantity == quantity &&
           other.quantitySource == quantitySource &&
           other.replacement == replacement &&
@@ -139,6 +145,7 @@ class RecipeIngredient {
       ingredientId.hashCode +
       optional.hashCode +
       preparation.hashCode +
+      preparationSource.hashCode +
       quantity.hashCode +
       quantitySource.hashCode +
       replacement.hashCode +

@@ -119,6 +119,9 @@ lib/src/model/recipe_mold_conversion_out.dart
 lib/src/model/recipe_mold_conversion_request.dart
 lib/src/model/recipe_replacement.dart
 lib/src/model/recipe_replacement_allergens.dart
+lib/src/model/recipe_reproducibility_check_out.dart
+lib/src/model/recipe_reproducibility_check_request.dart
+lib/src/model/recipe_reproducibility_result.dart
 lib/src/model/recipe_safety_check_out.dart
 lib/src/model/recipe_safety_check_request.dart
 lib/src/model/recipe_safety_finding.dart
@@ -133,6 +136,8 @@ lib/src/model/recipe_version_summary.dart
 lib/src/model/refresh_request.dart
 lib/src/model/rejection_reason.dart
 lib/src/model/release_note.dart
+lib/src/model/reproducibility_position.dart
+lib/src/model/reproducibility_problem.dart
 lib/src/model/retrieval_result.dart
 lib/src/model/search_ingredient_out.dart
 lib/src/model/search_query.dart
