@@ -34,6 +34,44 @@ class ConfigItem:
 
 
 ITEMS: tuple[ConfigItem, ...] = (
+    ConfigItem(
+        "ai.routes",
+        "json",
+        {"intent": "small", "generate": "large", "normalize": "small", "embedding": "vector"},
+        "能力到模型档位的路由",
+    ),
+    ConfigItem(
+        "ai.models",
+        "json",
+        {
+            "small": {"provider": "unconfigured", "base_url": "", "model": "small"},
+            "large": {"provider": "unconfigured", "base_url": "", "model": "large"},
+            "vector": {"provider": "unconfigured", "base_url": "", "model": "vector"},
+        },
+        "模型地址、名称及每百万 token 的 input_price/output_price（不含密钥）",
+    ),
+    ConfigItem(
+        "ai.policies",
+        "json",
+        {
+            "intent": {"timeout": 15, "retries": 1, "daily_limit": 100},
+            "generate": {"timeout": 60, "retries": 1, "daily_limit": 50},
+            "normalize": {"timeout": 15, "retries": 0, "daily_limit": 100},
+            "embedding": {"timeout": 15, "retries": 1, "daily_limit": 500},
+        },
+        "每种能力的超时、重试及每日额度（可带 users 覆盖）",
+    ),
+    ConfigItem("ai.monthly_budget", "float", 1000.0, "平台每月 AI 预算（占位，人民币）", minimum=0),
+    ConfigItem("ai.budget_alert_ratio", "float", 0.8, "月预算告警比例", minimum=0, maximum=1),
+    ConfigItem("ai.call_reservation", "float", 1.0, "每次调用预算预留额", minimum=0.01),
+    ConfigItem(
+        "ai.log_retention_days",
+        "int",
+        90,
+        "内部生成日志与未保存请求保留天数",
+        minimum=1,
+        maximum=3650,
+    ),
     # —— 接口约定 ——
     ConfigItem(
         "api.page_size_max",

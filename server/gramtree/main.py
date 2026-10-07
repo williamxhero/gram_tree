@@ -6,6 +6,7 @@ from gramtree.accounts import dev as accounts_dev
 from gramtree.accounts import router as accounts
 from gramtree.accounts.apple import AppleClient, HttpAppleTransport
 from gramtree.accounts.mailer import make_mail_sender
+from gramtree.ai import router as recipe_ai
 from gramtree.analytics import router as analytics
 from gramtree.api import client_config, health
 from gramtree.core.errors import install_error_handlers
@@ -68,6 +69,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     v1.include_router(analytics.router)
     v1.include_router(ingredients.router)
     v1.include_router(recipes.router)
+    v1.include_router(recipe_ai.router)
     v1.include_router(personal_measures.router)
     v1.include_router(ui_protocol.router)
     if settings.dev_tools_enabled:
