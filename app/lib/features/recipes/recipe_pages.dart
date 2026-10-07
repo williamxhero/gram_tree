@@ -22,6 +22,8 @@ import '../../recipes/serving_conversion.dart';
 import 'personal_measures_page.dart';
 import 'recipe_photo_panel.dart';
 import 'reproducibility_card.dart';
+import 'quantification_panel.dart';
+import 'recipe_source_badge.dart';
 import '../../storage/local_store.dart';
 import '../../ui_protocol/components/component_scaffold.dart';
 import '../../ui_protocol/recipe_safety.dart';
@@ -190,6 +192,7 @@ class _RecipeEditorPageState extends ConsumerState<RecipeEditorPage> {
   bool _loading = true;
   bool _loadFailed = false;
   bool _saving = false;
+  RecipeQuantificationOut? _quantification;
   RecipeReproducibilityResult? _reproducibility;
   String? _reproducibilityError;
   bool _checkingReproducibility = false;
@@ -307,6 +310,7 @@ class _RecipeEditorPageState extends ConsumerState<RecipeEditorPage> {
   void _changed() {
     if (!mounted) return;
     setState(() {
+      _quantification = null;
       _reproducibility = null;
       _reproducibilityError = null;
       _locatedProblem = null;
@@ -447,6 +451,64 @@ class _RecipeEditorPageState extends ConsumerState<RecipeEditorPage> {
       children: [
         if (selected)
           Semantics(liveRegion: true, child: Text('当前定位：${problem!.message}')),
+        if (collection == 'ingredients') ...[
+          RecipeSourceBadge(
+            key: ValueKey('editor-source-$id-quantity'),
+            source: _form.ingredients
+                .firstWhere((i) => i.id == id)
+                .quantitySource,
+            value:
+                '${_form.ingredients.firstWhere((i) => i.id == id).quantity} ${_form.ingredients.firstWhere((i) => i.id == id).unit}',
+            fieldId: 'editor-$id-quantity',
+          ),
+          RecipeSourceBadge(
+            key: ValueKey('editor-source-$id-preparation'),
+            source: _form.ingredients
+                .firstWhere((i) => i.id == id)
+                .preparationSource,
+            value: _form.ingredients.firstWhere((i) => i.id == id).preparation,
+            fieldId: 'editor-$id-preparation',
+          ),
+        ],
+        if (collection == 'steps')
+          Wrap(
+            spacing: 8,
+            children: [
+              for (final pair in <(String, String, ValueSource?)>[
+                (
+                  'instruction',
+                  _form.steps.firstWhere((s) => s.id == id).instruction,
+                  _form.steps.firstWhere((s) => s.id == id).instructionSource,
+                ),
+                (
+                  'duration',
+                  '${_form.steps.firstWhere((s) => s.id == id).durationSeconds} 秒',
+                  _form.steps.firstWhere((s) => s.id == id).durationSource,
+                ),
+                (
+                  'heat',
+                  _form.steps.firstWhere((s) => s.id == id).heat,
+                  _form.steps.firstWhere((s) => s.id == id).heatSource,
+                ),
+                (
+                  'temperature',
+                  '${_form.steps.firstWhere((s) => s.id == id).temperatureCelsius} ℃',
+                  _form.steps.firstWhere((s) => s.id == id).temperatureSource,
+                ),
+                (
+                  'doneness',
+                  _form.steps.firstWhere((s) => s.id == id).doneness,
+                  _form.steps.firstWhere((s) => s.id == id).donenessSource,
+                ),
+              ])
+                RecipeSourceBadge(
+                  key: ValueKey('editor-source-$id-${pair.$1}'),
+                  source: pair.$3,
+                  value: pair.$2,
+                  fieldId: 'editor-$id-${pair.$1}',
+                ),
+            ],
+          ),
         child,
       ],
     );
@@ -488,6 +550,89 @@ class _RecipeEditorPageState extends ConsumerState<RecipeEditorPage> {
     }
   }
 
+  void _showSavedVersion(RecipeDetail detail) {
+    _loaded = detail;
+    _form = RecipeForm.fromSnapshot(
+      detail.version.snapshot,
+      detail.dish.name,
+      aliases: detail.dish.aliases,
+    )..aiAssisted = detail.version.aiAssisted;
+    _reproducibility = detail.version.reproducibility;
+    _editorRevision++;
+    _safetyResult = detail.version.safety;
+    _safetyAwaitingCheck = false;
+    _quantification = null;
+  }
+
+  void _showEditorError(String message) {
+    if (!mounted) return;
+    setState(() => _error = message);
+    // Errors are at the top of a lazy list; make them visible after an action
+    // taken farther down, including long proposal panels and large text.
+    if (_editorScroll.hasClients) _editorScroll.jumpTo(0);
+  }
+
+  Future<void> _quantify() async {
+    if (!_validate()) return;
+    setState(() {
+      _saving = true;
+      _error = null;
+    });
+    try {
+      await _flushDraft();
+      final repo = ref.read(recipeRepositoryProvider);
+      // Save the visible draft before asking for owned proposals. A later
+      // decision never applies to unsaved client edits or an historical base.
+      final detail = _loaded == null
+          ? widget.generation == null
+                ? await repo.create(_form)
+                : await repo.saveGenerated(widget.generation!.requestId, _form)
+          : await repo.saveVersion(
+              _loaded!.id,
+              _form,
+              baseVersionId: _loaded!.version.id,
+              expectedCurrentVersionId: _loaded!.version.id,
+            );
+      await _discardDraft();
+      if (!mounted) return;
+      setState(() => _showSavedVersion(detail));
+      final proposal = await repo.quantify(detail.id, detail.version.id);
+      if (mounted) setState(() => _quantification = proposal);
+    } catch (error) {
+      _showEditorError(ApiFailure.from(error).message);
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  Future<void> _decideQuantification(
+    List<QuantificationDecision> decisions,
+    bool acceptAll,
+  ) async {
+    final proposal = _quantification;
+    if (proposal == null || _loaded == null) return;
+    setState(() {
+      _saving = true;
+      _error = null;
+    });
+    try {
+      final detail = await ref
+          .read(recipeRepositoryProvider)
+          .decideQuantification(
+            _loaded!.id,
+            proposal.id,
+            decisions: decisions,
+            acceptAll: acceptAll,
+          );
+      await _discardDraft();
+      if (mounted) setState(() => _showSavedVersion(detail));
+    } catch (error) {
+      _showEditorError(ApiFailure.from(error).message);
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
   Future<void> _save() async {
     final l10n = AppLocalizations.of(context);
     if (!_validate()) return;
@@ -514,7 +659,7 @@ class _RecipeEditorPageState extends ConsumerState<RecipeEditorPage> {
             ? l10n.recipeSafetySaveBlocked
             : '${l10n.recipeSafetyClaims(claims.join('、'), safety.claimBasis ?? '')} '
                   '${l10n.recipeSafetyClaimRewrite}';
-        setState(() => _error = message);
+        _showEditorError(message);
         return;
       }
       final detail = _loaded == null
@@ -522,7 +667,7 @@ class _RecipeEditorPageState extends ConsumerState<RecipeEditorPage> {
                 ? await repo.create(_form)
                 : await repo.saveGenerated(widget.generation!.requestId, _form)
           : await repo.saveVersion(
-              widget.recipeId!,
+              _loaded!.id,
               _form,
               baseVersionId: _loaded!.version.id,
             );
@@ -539,7 +684,7 @@ class _RecipeEditorPageState extends ConsumerState<RecipeEditorPage> {
         final message = failure.code == 'prohibited_health_claim'
             ? '${failure.message} ${l10n.recipeSafetyClaimRewrite}'
             : l10n.recipeSaveFailed(failure.message);
-        setState(() => _error = message);
+        _showEditorError(message);
       }
     } finally {
       if (mounted) setState(() => _saving = false);
@@ -549,11 +694,11 @@ class _RecipeEditorPageState extends ConsumerState<RecipeEditorPage> {
   bool _validate() {
     final l10n = AppLocalizations.of(context);
     if (_form.dishName.trim().isEmpty) {
-      setState(() => _error = l10n.recipeDishRequired);
+      _showEditorError(l10n.recipeDishRequired);
       return false;
     }
     if (_form.ingredients.any((item) => item.displayName.trim().isEmpty)) {
-      setState(() => _error = l10n.recipeIngredientRequired);
+      _showEditorError(l10n.recipeIngredientRequired);
       return false;
     }
     if (_form.servings < 1 ||
@@ -561,7 +706,7 @@ class _RecipeEditorPageState extends ConsumerState<RecipeEditorPage> {
           (item) => item.quantity < 0 || item.baseQuantity < 0,
         ) ||
         _form.steps.any((item) => item.durationSeconds < 0)) {
-      setState(() => _error = l10n.recipeInvalidNumber);
+      _showEditorError(l10n.recipeInvalidNumber);
       return false;
     }
     final ingredientIds = _form.ingredients.map((item) => item.id).toSet();
@@ -571,7 +716,7 @@ class _RecipeEditorPageState extends ConsumerState<RecipeEditorPage> {
           item.ingredientIds.any((id) => !ingredientIds.contains(id)) ||
           item.dependsOn.any((id) => !stepIds.contains(id)),
     )) {
-      setState(() => _error = l10n.recipeInvalidStepReference);
+      _showEditorError(l10n.recipeInvalidStepReference);
       return false;
     }
     final visiting = <String>{};
@@ -589,17 +734,17 @@ class _RecipeEditorPageState extends ConsumerState<RecipeEditorPage> {
     }
 
     if (_form.steps.any((step) => hasCycle(step.id))) {
-      setState(() => _error = l10n.recipeInvalidStepReference);
+      _showEditorError(l10n.recipeInvalidStepReference);
       return false;
     }
     if (_form.steps.any(
       (item) => item.temperatureCelsius < -50 || item.temperatureCelsius > 1000,
     )) {
-      setState(() => _error = l10n.recipeInvalidNumber);
+      _showEditorError(l10n.recipeInvalidNumber);
       return false;
     }
     if (_form.baseMold != null && !_validMold(_form.baseMold!)) {
-      setState(() => _error = l10n.recipeInvalidNumber);
+      _showEditorError(l10n.recipeInvalidNumber);
       return false;
     }
     return true;
@@ -729,180 +874,199 @@ class _RecipeEditorPageState extends ConsumerState<RecipeEditorPage> {
       appBar: AppBar(
         title: Text(_loaded == null ? l10n.newRecipe : l10n.recipeContinueEdit),
       ),
-      body: ListView(
-        key: const ValueKey('recipe-editor-content'),
-        controller: _editorScroll,
-        padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
-        children: [
-          OutlinedButton(
-            key: const ValueKey('recipe-reproducibility-check'),
-            onPressed: _checkingReproducibility ? null : _checkReproducibility,
-            child: Text(_checkingReproducibility ? '正在检查可复刻性…' : '检查可复刻性'),
-          ),
-          ReproducibilityCard(
-            result: _reproducibility,
-            onLocate: _locateProblem,
-          ),
-          if (_reproducibilityError != null) Text(_reproducibilityError!),
-          if (_form.aiAssisted) ...[
-            const Text('AI 辅助 · 尚未做过验证'),
-            SourceMark(
-              sourceType: sourceTypeAiEstimated,
-              componentId: 'recipe-ai-editor',
-              value: '菜谱设计',
-              basisText: _form.designRationale ?? '一般经验；尚未做过验证',
-              required: false,
-              feedbackEnabled: false,
-              onAction: null,
-            ),
-          ],
-          FilledButton(
-            key: const ValueKey('save-recipe-button'),
-            onPressed: _saving ? null : _save,
-            child: Text(_saving ? l10n.recipeSaving : l10n.recipeSaveVersion),
-          ),
-          OutlinedButton(
-            key: const ValueKey('discard-recipe-draft'),
-            onPressed: () async {
-              await _discardDraft();
-              if (!context.mounted) return;
-              context.pop();
-            },
-            child: Text(l10n.recipeDiscardDraftAction),
-          ),
-          if (_error != null) ...[
-            const SizedBox(height: 8),
-            Text(
-              _error!,
-              key: const ValueKey('recipe-save-error'),
-              style: TextStyle(color: Theme.of(context).colorScheme.error),
-            ),
-          ],
-          const SizedBox(height: 12),
-          KeyedSubtree(
-            key: ValueKey('recipe-info-$_editorRevision'),
-            child: _RecipeInfoFields(form: _form, onChanged: _changed),
-          ),
-          const SizedBox(height: 8),
-          OutlinedButton.icon(
-            key: const ValueKey('recipe-safety-check'),
-            onPressed: _safetyLoading ? null : _checkSafety,
-            icon: _safetyLoading
-                ? const SizedBox(
-                    width: 18,
-                    height: 18,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : const Icon(Icons.health_and_safety_outlined),
-            label: Text(
-              _safetyLoading
-                  ? l10n.recipeSafetyChecking
-                  : l10n.recipeSafetyCheck,
-            ),
-          ),
-          FoodSafetyCard(
-            result: _safetyResult,
-            loading: _safetyLoading,
-            awaitingCheck: _safetyAwaitingCheck,
-            errorMessage: _safetyError,
-          ),
-          AllergenCard(
-            result: _safetyResult,
-            loading: _safetyLoading,
-            awaitingCheck: _safetyAwaitingCheck,
-            errorMessage: _safetyError,
-          ),
-          const SizedBox(height: 20),
-          RecipePhotoPanel(
-            // Editors stage a new image; the immutable version save attaches it
-            // together with the structured snapshot. Viewing a saved recipe may
-            // still upload directly in the detail page below.
-            recipeId: null,
-            onUploaded: (result) {
-              _form.imageIds.add(result.id);
-              _changed();
-            },
-          ),
-          const SizedBox(height: 20),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                l10n.recipeFood,
-                style: Theme.of(context).textTheme.titleLarge,
+      body: AbsorbPointer(
+        absorbing: _saving,
+        child: ListView(
+          key: const ValueKey('recipe-editor-content'),
+          controller: _editorScroll,
+          padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
+          children: [
+            if (_error != null)
+              Semantics(
+                liveRegion: true,
+                child: Text(
+                  _error!,
+                  key: const ValueKey('recipe-save-error'),
+                  style: TextStyle(color: Theme.of(context).colorScheme.error),
+                ),
               ),
-              Text(
-                l10n.recipeSteps,
-                style: Theme.of(context).textTheme.titleLarge,
+            OutlinedButton(
+              key: const ValueKey('recipe-reproducibility-check'),
+              onPressed: _checkingReproducibility
+                  ? null
+                  : _checkReproducibility,
+              child: Text(_checkingReproducibility ? '正在检查可复刻性…' : '检查可复刻性'),
+            ),
+            ReproducibilityCard(
+              result: _reproducibility,
+              onLocate: _locateProblem,
+            ),
+            if (_reproducibilityError != null) Text(_reproducibilityError!),
+            const Text('请求量化前会先保存当前私有版本，处理建议后再保存新版本。'),
+            OutlinedButton(
+              key: const ValueKey('recipe-quantify'),
+              onPressed: _saving ? null : _quantify,
+              child: Text(_saving ? '正在保存或量化…' : '保存并请求 AI 量化'),
+            ),
+            if (_quantification != null)
+              QuantificationPanel(
+                key: ValueKey(_quantification!.id),
+                proposal: _quantification!,
+                onDecide: _decideQuantification,
+                onCancel: () => setState(() => _quantification = null),
+              ),
+            if (_form.aiAssisted) ...[
+              const Text('AI 辅助 · 尚未做过验证'),
+              SourceMark(
+                sourceType: sourceTypeAiEstimated,
+                componentId: 'recipe-ai-editor',
+                value: '菜谱设计',
+                basisText: _form.designRationale ?? '一般经验；尚未做过验证',
+                required: false,
+                feedbackEnabled: false,
+                onAction: null,
               ),
             ],
-          ),
-          const SizedBox(height: 8),
-          for (final entry in _form.ingredients.indexed)
-            _problemRow(
-              'ingredients',
-              entry.$2.id,
-              _IngredientEditorCard(
-                key: ValueKey(
-                  'recipe-ingredient-${entry.$2.id}-$_editorRevision',
-                ),
-                item: entry.$2,
-                index: entry.$1,
-                count: _form.ingredients.length,
-                results: _ingredientResults[entry.$2.id] ?? const [],
-                replacementResults:
-                    _replacementResults[entry.$2.id] ?? const [],
-                searching: _searching['ingredient:${entry.$2.id}'] == true,
-                replacementSearching:
-                    _searching['replacement:${entry.$2.id}'] == true,
-                onChanged: _changed,
-                onSearch: () =>
-                    _searchIngredient(entry.$2.id, replacement: false),
-                onReplacementSearch: () =>
-                    _searchIngredient(entry.$2.id, replacement: true),
-                libraryScaling: _libraryScaling[entry.$2.id],
-                onSelect: (value) => _selectIngredient(entry.$2.id, value),
-                onSelectReplacement: (value) =>
-                    _selectReplacement(entry.$2.id, value),
-                onDelete: () => _deleteIngredient(entry.$1),
-                onMoveUp: () => _moveIngredient(entry.$1, -1),
-                onMoveDown: () => _moveIngredient(entry.$1, 1),
+            FilledButton(
+              key: const ValueKey('save-recipe-button'),
+              onPressed: _saving ? null : _save,
+              child: Text(_saving ? l10n.recipeSaving : l10n.recipeSaveVersion),
+            ),
+            OutlinedButton(
+              key: const ValueKey('discard-recipe-draft'),
+              onPressed: () async {
+                await _discardDraft();
+                if (!context.mounted) return;
+                context.pop();
+              },
+              child: Text(l10n.recipeDiscardDraftAction),
+            ),
+            const SizedBox(height: 12),
+            KeyedSubtree(
+              key: ValueKey('recipe-info-$_editorRevision'),
+              child: _RecipeInfoFields(form: _form, onChanged: _changed),
+            ),
+            const SizedBox(height: 8),
+            OutlinedButton.icon(
+              key: const ValueKey('recipe-safety-check'),
+              onPressed: _safetyLoading ? null : _checkSafety,
+              icon: _safetyLoading
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.health_and_safety_outlined),
+              label: Text(
+                _safetyLoading
+                    ? l10n.recipeSafetyChecking
+                    : l10n.recipeSafetyCheck,
               ),
             ),
-          OutlinedButton.icon(
-            key: const ValueKey('recipe-add-ingredient'),
-            onPressed: _addIngredient,
-            icon: const Icon(Icons.add),
-            label: Text(l10n.recipeIngredientAdd),
-          ),
-          const SizedBox(height: 20),
-          for (final entry in _form.steps.indexed)
-            _problemRow(
-              'steps',
-              entry.$2.id,
-              _StepEditorCard(
-                key: ValueKey(
-                  'recipe-step-editor-${entry.$2.id}-$_editorRevision',
-                ),
-                item: entry.$2,
-                index: entry.$1,
-                count: _form.steps.length,
-                ingredients: _form.ingredients,
-                steps: _form.steps,
-                onChanged: _changed,
-                onDelete: () => _deleteStep(entry.$1),
-                onMoveUp: () => _moveStep(entry.$1, -1),
-                onMoveDown: () => _moveStep(entry.$1, 1),
-              ),
+            FoodSafetyCard(
+              result: _safetyResult,
+              loading: _safetyLoading,
+              awaitingCheck: _safetyAwaitingCheck,
+              errorMessage: _safetyError,
             ),
-          OutlinedButton.icon(
-            key: const ValueKey('recipe-add-step'),
-            onPressed: _addStep,
-            icon: const Icon(Icons.add),
-            label: Text(l10n.recipeStepAdd),
-          ),
-          const SizedBox(height: 8),
-        ],
+            AllergenCard(
+              result: _safetyResult,
+              loading: _safetyLoading,
+              awaitingCheck: _safetyAwaitingCheck,
+              errorMessage: _safetyError,
+            ),
+            const SizedBox(height: 20),
+            RecipePhotoPanel(
+              // Editors stage a new image; the immutable version save attaches it
+              // together with the structured snapshot. Viewing a saved recipe may
+              // still upload directly in the detail page below.
+              recipeId: null,
+              onUploaded: (result) {
+                _form.imageIds.add(result.id);
+                _changed();
+              },
+            ),
+            const SizedBox(height: 20),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  l10n.recipeFood,
+                  style: Theme.of(context).textTheme.titleLarge,
+                ),
+                Text(
+                  l10n.recipeSteps,
+                  style: Theme.of(context).textTheme.titleLarge,
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            for (final entry in _form.ingredients.indexed)
+              _problemRow(
+                'ingredients',
+                entry.$2.id,
+                _IngredientEditorCard(
+                  key: ValueKey(
+                    'recipe-ingredient-${entry.$2.id}-$_editorRevision',
+                  ),
+                  item: entry.$2,
+                  index: entry.$1,
+                  count: _form.ingredients.length,
+                  results: _ingredientResults[entry.$2.id] ?? const [],
+                  replacementResults:
+                      _replacementResults[entry.$2.id] ?? const [],
+                  searching: _searching['ingredient:${entry.$2.id}'] == true,
+                  replacementSearching:
+                      _searching['replacement:${entry.$2.id}'] == true,
+                  onChanged: _changed,
+                  onSearch: () =>
+                      _searchIngredient(entry.$2.id, replacement: false),
+                  onReplacementSearch: () =>
+                      _searchIngredient(entry.$2.id, replacement: true),
+                  libraryScaling: _libraryScaling[entry.$2.id],
+                  onSelect: (value) => _selectIngredient(entry.$2.id, value),
+                  onSelectReplacement: (value) =>
+                      _selectReplacement(entry.$2.id, value),
+                  onDelete: () => _deleteIngredient(entry.$1),
+                  onMoveUp: () => _moveIngredient(entry.$1, -1),
+                  onMoveDown: () => _moveIngredient(entry.$1, 1),
+                ),
+              ),
+            OutlinedButton.icon(
+              key: const ValueKey('recipe-add-ingredient'),
+              onPressed: _addIngredient,
+              icon: const Icon(Icons.add),
+              label: Text(l10n.recipeIngredientAdd),
+            ),
+            const SizedBox(height: 20),
+            for (final entry in _form.steps.indexed)
+              _problemRow(
+                'steps',
+                entry.$2.id,
+                _StepEditorCard(
+                  key: ValueKey(
+                    'recipe-step-editor-${entry.$2.id}-$_editorRevision',
+                  ),
+                  item: entry.$2,
+                  index: entry.$1,
+                  count: _form.steps.length,
+                  ingredients: _form.ingredients,
+                  steps: _form.steps,
+                  onChanged: _changed,
+                  onDelete: () => _deleteStep(entry.$1),
+                  onMoveUp: () => _moveStep(entry.$1, -1),
+                  onMoveDown: () => _moveStep(entry.$1, 1),
+                ),
+              ),
+            OutlinedButton.icon(
+              key: const ValueKey('recipe-add-step'),
+              onPressed: _addStep,
+              icon: const Icon(Icons.add),
+              label: Text(l10n.recipeStepAdd),
+            ),
+            const SizedBox(height: 8),
+          ],
+        ),
       ),
     );
   }
@@ -1386,6 +1550,7 @@ class _IngredientEditorCardState extends State<_IngredientEditorCard> {
               value: item.preparation,
               onChanged: (value) {
                 item.preparation = value;
+                item.preparationSource = null;
                 onChanged();
               },
             ),
@@ -1675,6 +1840,7 @@ class _StepEditorCard extends StatelessWidget {
               maxLines: 3,
               onChanged: (value) {
                 item.instruction = value;
+                item.instructionSource = null;
                 onChanged();
               },
             ),
@@ -1711,6 +1877,7 @@ class _StepEditorCard extends StatelessWidget {
                     value: item.durationSeconds,
                     onChanged: (value) {
                       item.durationSeconds = int.tryParse(value) ?? 0;
+                      item.durationSource = null;
                       onChanged();
                     },
                   ),
@@ -1723,6 +1890,7 @@ class _StepEditorCard extends StatelessWidget {
                     value: item.temperatureCelsius,
                     onChanged: (value) {
                       item.temperatureCelsius = double.tryParse(value) ?? 0;
+                      item.temperatureSource = null;
                       onChanged();
                     },
                   ),
@@ -1736,6 +1904,7 @@ class _StepEditorCard extends StatelessWidget {
               value: item.heat,
               onChanged: (value) {
                 item.heat = value;
+                item.heatSource = null;
                 onChanged();
               },
             ),
@@ -1756,6 +1925,7 @@ class _StepEditorCard extends StatelessWidget {
               value: item.doneness,
               onChanged: (value) {
                 item.doneness = value;
+                item.donenessSource = null;
                 onChanged();
               },
             ),
@@ -3158,6 +3328,12 @@ class _IngredientDetailRow extends StatelessWidget {
                   : ingredient.displayName,
             ),
           ),
+          RecipeSourceBadge(
+            key: ValueKey('recipe-source-preparation-${ingredient.id}'),
+            source: ingredient.preparationSource,
+            value: ingredient.preparation ?? '',
+            fieldId: 'recipe-${ingredient.id}-preparation',
+          ),
           if (showSource)
             SourceMark(
               key: ValueKey('recipe-source-mark-${ingredient.id}'),
@@ -3173,7 +3349,11 @@ class _IngredientDetailRow extends StatelessWidget {
                   (displayed != null || conversionPresent
                       ? originalQuantity
                       : originalSourceValue),
-              basisText: sourceBasis,
+              basisText: {
+                sourceBasis,
+                if (source?.source_.value == sourceTypeAiEstimated)
+                  recipeSourceBasis(source),
+              }.join('\n'),
               citation: serverSource?.basis.citation,
               required: false,
               neutral:
@@ -3247,11 +3427,7 @@ class _StepDetailTile extends StatelessWidget {
       componentId: 'recipe-step-${step.id}-$field',
       value: value,
       originalValue: source.original,
-      basisText: source.basis?.isNotEmpty == true
-          ? source.basis!
-          : source.source_.value == sourceTypeAuthorFilled
-          ? l10n.recipeSourceAuthorFilled
-          : '',
+      basisText: recipeSourceBasis(source),
       required: false,
       feedbackEnabled: false,
       onAction: null,
@@ -3346,11 +3522,25 @@ class _StepDetailTile extends StatelessWidget {
                 ),
               ),
             if (step.durationSource != null ||
+                step.instructionSource != null ||
+                step.donenessSource != null ||
                 step.heatSource != null ||
                 step.temperatureSource != null)
               Wrap(
                 spacing: 8,
                 children: [
+                  _sourceMark(
+                    context,
+                    field: 'instruction',
+                    value: step.instruction,
+                    source: step.instructionSource,
+                  ),
+                  _sourceMark(
+                    context,
+                    field: 'doneness',
+                    value: step.doneness ?? '',
+                    source: step.donenessSource,
+                  ),
                   _sourceMark(
                     context,
                     field: 'duration',

@@ -35,6 +35,37 @@ def main() -> None:
         ("embedding", {"text": "宫保鸡丁"}, corpus["embedding"]),
         ("embedding", {"text": "宫保鸡丁 鸡腿肉 盐 鸡腿肉切丁 炒"}, corpus["embedding"]),
     ]
+    from gramtree.recipes.provenance import normalize_sources
+    from gramtree.recipes.reproducibility import check
+    from gramtree.recipes.schemas import RecipeSnapshot
+
+    quantification = json.loads(
+        (ROOT / "server/tests/fixtures/ai/quantification_corpus.json").read_text("utf-8")
+    )
+    snapshot = normalize_sources(
+        RecipeSnapshot.model_validate(quantification["recipe"]["snapshot"])
+    )
+    records.append(
+        (
+            "quantify",
+            {
+                "snapshot": snapshot.model_dump(mode="json"),
+                "problems": [p.model_dump(mode="json") for p in check(snapshot).problems],
+                "ingredient_context": [
+                    {
+                        "id": i.id,
+                        "role": i.group or "未指定",
+                        "functional": i.functional,
+                        "category": None,
+                        "density": None,
+                        "unit_weight": None,
+                    }
+                    for i in snapshot.ingredients
+                ],
+            },
+            quantification["output"],
+        )
+    )
     args.out.mkdir(parents=True, exist_ok=True)
     for capability, payload, output in records:
         canonical = json.dumps(

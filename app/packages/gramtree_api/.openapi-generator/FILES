@@ -100,6 +100,10 @@ lib/src/model/personal_measure_update.dart
 lib/src/model/profile_update.dart
 lib/src/model/purchase_unit.dart
 lib/src/model/purchase_units_attribute.dart
+lib/src/model/quantification_decision.dart
+lib/src/model/quantification_decisions_input.dart
+lib/src/model/quantification_input.dart
+lib/src/model/quantification_suggestion.dart
 lib/src/model/question.dart
 lib/src/model/recipe_author.dart
 lib/src/model/recipe_create.dart
@@ -117,6 +121,7 @@ lib/src/model/recipe_list.dart
 lib/src/model/recipe_list_item.dart
 lib/src/model/recipe_mold_conversion_out.dart
 lib/src/model/recipe_mold_conversion_request.dart
+lib/src/model/recipe_quantification_out.dart
 lib/src/model/recipe_replacement.dart
 lib/src/model/recipe_replacement_allergens.dart
 lib/src/model/recipe_reproducibility_check_out.dart

@@ -160,7 +160,27 @@ class RecipeGenerationContentV1(BaseModel):
     version_id: str | None = None
 
 
+class QuantificationDecisionContentV1(BaseModel):
+    recipe_version_id: str
+    problem_id: str
+    problem_type: Literal["ambiguous", "missing"]
+    ai_value: str
+    ai_unit: str | None = None
+    ai_confidence: Literal["high", "medium", "low"]
+    decision: Literal["accept", "modify", "ignore"]
+    final_value: str | None = None
+    final_unit: str | None = None
+
+
 ITEMS: tuple[EventTypeSpec, ...] = (
+    EventTypeSpec(
+        event_type="recipe.quantification_decision",
+        version=1,
+        description="量化建议处理：问题类型、AI 值与把握程度、作者处理和最终值。",
+        correlation_fields=("recipe_version_id",),
+        exportable=True,
+        content_schema=QuantificationDecisionContentV1,
+    ),
     EventTypeSpec(
         event_type="ai.recipe_generation",
         version=1,

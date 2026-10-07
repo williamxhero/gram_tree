@@ -91,6 +91,26 @@ class RecipeVersion(Base):
     created_at: Mapped[datetime] = mapped_column(default=utcnow)
 
 
+class RecipeQuantification(Base):
+    """Immutable model proposals bound to one saved version; one decision batch."""
+
+    __tablename__ = "recipe_quantifications"
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=new_id)
+    recipe_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("recipes.id", ondelete="CASCADE"), index=True
+    )
+    base_version_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("recipe_versions.id", ondelete="CASCADE")
+    )
+    proposals: Mapped[dict[str, Any]] = mapped_column(JSONB)
+    decisions: Mapped[dict[str, Any] | None] = mapped_column(JSONB, default=None)
+    saved_version_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("recipe_versions.id", ondelete="CASCADE"), default=None
+    )
+    created_at: Mapped[datetime] = mapped_column(default=utcnow)
+
+
 class FoodSafetyRuleRelease(Base):
     """Immutable policy fingerprint; reusing a version for changed policy is rejected."""
 

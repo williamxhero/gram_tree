@@ -24,6 +24,9 @@ class ValueSource(BaseModel):
     original: str | None = None
     confidence: float | None = Field(default=None, ge=0, le=1)
     basis: str | None = None
+    confidence_level: Literal["high", "medium", "low"] | None = None
+    baseline: str | None = None
+    adjustment: str | None = None
 
     @field_validator("confidence")
     @classmethod
@@ -391,6 +394,9 @@ class RecipeVersionCreate(RecipeSnapshotInput):
     change_note: str = Field(default="", max_length=2000)
     ai_assisted: bool = False
     base_version_id: IdV4 | None = None
+    expected_current_version_id: IdV4 | None = Field(
+        default=None, description="可选并发保护；不改变显式从历史版分支的行为"
+    )
     image_ids: list[IdV4] = Field(default_factory=list, max_length=10)
 
 

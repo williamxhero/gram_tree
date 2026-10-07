@@ -14,7 +14,12 @@ from gramtree.core.errors import ERROR_RESPONSES, ApiError, ErrorResponse
 from gramtree.core.ids import IdV4
 from gramtree.core.pagination import PageParams, page_params
 from gramtree.deps import RedisDep, SessionDep, SettingsDep
-from gramtree.recipes import reproducibility, service
+from gramtree.recipes import quantification, reproducibility, service
+from gramtree.recipes.quantification_schemas import (
+    QuantificationDecisionsInput,
+    QuantificationInput,
+    RecipeQuantificationOut,
+)
 from gramtree.recipes.schemas import (
     MoldSpec,
     RecipeCreate,
@@ -238,6 +243,39 @@ def display_recipe_version_ingredients(
         target_servings=target_servings,
         target_mold=_parse_target_mold(target_mold),
     )
+
+
+@router.post(
+    "/{recipe_id}/quantification",
+    response_model=RecipeQuantificationOut,
+    responses=_errors(401, 404, 409, 422, 503),
+)
+def quantify_recipe(
+    recipe_id: IdV4,
+    body: QuantificationInput,
+    auth: CurrentAuth,
+    session: SessionDep,
+    settings: SettingsDep,
+) -> RecipeQuantificationOut:
+    return quantification.propose(session, settings, auth.user, recipe_id, body.base_version_id)
+
+
+@router.post(
+    "/{recipe_id}/quantification/{proposal_id}/decisions",
+    response_model=RecipeDetail,
+    status_code=201,
+    responses=_errors(401, 404, 409, 422),
+)
+def decide_recipe_quantification(
+    recipe_id: IdV4,
+    proposal_id: IdV4,
+    body: QuantificationDecisionsInput,
+    auth: CurrentAuth,
+    session: SessionDep,
+    redis: RedisDep,
+    settings: SettingsDep,
+) -> RecipeDetail:
+    return quantification.decide(session, redis, settings, auth.user, recipe_id, proposal_id, body)
 
 
 @router.get("/{recipe_id}", response_model=RecipeDetail, responses=_errors(401, 404))

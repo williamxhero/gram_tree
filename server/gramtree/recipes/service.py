@@ -35,6 +35,7 @@ from gramtree.recipes.models import (
     Recipe,
     RecipeImage,
     RecipeImageStaging,
+    RecipeQuantification,
     RecipeSaveOutbox,
     RecipeVersion,
 )
@@ -1003,8 +1004,23 @@ def save_version(
     body: RecipeVersionCreate,
     *,
     trusted_sources: bool = False,
+    quantification_record: RecipeQuantification | None = None,
+    decision_events: list[event_service.EventInput] | None = None,
+    ignored_problem_ids: set[str] | None = None,
 ) -> RecipeDetail:
-    recipe = _owned_recipe(session, owner, recipe_id)
+    recipe = session.scalar(
+        select(Recipe)
+        .where(Recipe.id == recipe_id, Recipe.owner_id == owner.id)
+        .with_for_update()
+        .execution_options(populate_existing=True)
+    )
+    if recipe is None:
+        raise NotFound()
+    if (
+        body.expected_current_version_id is not None
+        and body.expected_current_version_id != recipe.current_version_id
+    ):
+        raise ApiError(409, "stale_recipe_version", "菜谱已有新版本，请重新载入后保存")
     snapshot = _validate_snapshot(session, body.snapshot)
     staged = _staged_rows(session, owner, body.image_ids)
     previous = session.get(RecipeVersion, recipe.current_version_id)
@@ -1040,6 +1056,29 @@ def save_version(
     )
     session.add(version)
     session.flush()
+    if quantification_record is not None:
+        # Proposals, decision receipt and experience events share the version
+        # transaction. An event failure cannot leave a saved version without evidence.
+        from gramtree.events.registry import QuantificationDecisionContentV1
+
+        quantification_record.saved_version_id = version.id
+        ignored = ignored_problem_ids or set()
+        result = RecipeReproducibilityResult.model_validate(version.reproducibility)
+        for problem in result.problems:
+            if problem.id in ignored:
+                problem.status = "ignored"
+        version.reproducibility = result.model_dump(mode="json")
+        for event in decision_events or []:
+            event.correlation["recipe_version_id"] = str(version.id)
+            event.content["recipe_version_id"] = str(version.id)
+            event.content.update(
+                QuantificationDecisionContentV1.model_validate(event.content).model_dump(
+                    mode="json"
+                )
+            )
+        event_service.upload(
+            session, redis, owner.id, decision_events or [], utcnow(), commit=False
+        )
     _copy_version_images(session, recipe, baseline, version)
     _attach_staged_images(session, owner, recipe, version, [row.id for row in staged])
     recipe.current_version_id = version.id

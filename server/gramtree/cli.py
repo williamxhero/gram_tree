@@ -196,6 +196,18 @@ def cmd_recipes(args: argparse.Namespace) -> int:
             session.commit()
         print(f"已将版本 {args.version_id} 的首个食材标记为旧版缩放方式")
         return 0
+    if args.action == "quantification-receipts":
+        from gramtree.events.queries import query_events
+
+        with _session() as session:
+            rows = query_events(
+                session,
+                user_id=uuid.UUID(args.user),
+                event_type="recipe.quantification_decision",
+                version=1,
+            )
+            print(_fmt({"items": [{"content": e.content} for e in rows]}))
+        return 0
     if args.action == "save-event-receipt":
         from sqlalchemy import select
 
@@ -454,6 +466,10 @@ def build_parser() -> argparse.ArgumentParser:
         help="输出一条菜谱版本经验事件的验收收据",
     )
     receipt.add_argument("version_id")
+    quantification_receipts = recipes_sub.add_parser(
+        "quantification-receipts", help="输出量化建议处理的经验事件验收收据"
+    )
+    quantification_receipts.add_argument("--user", required=True)
     recipes.set_defaults(func=cmd_recipes)
 
     ing = sub.add_parser("ingredients", help="食材库管理")

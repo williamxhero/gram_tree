@@ -152,6 +152,12 @@ def _invoke(
             prompt += "\nJSON schema: " + json.dumps(
                 GeneratedDraft.model_json_schema(), ensure_ascii=False
             )
+        if capability == "quantify":
+            from gramtree.recipes.quantification_schemas import QuantificationOutput
+
+            prompt += "\nJSON schema: " + json.dumps(
+                QuantificationOutput.model_json_schema(), ensure_ascii=False
+            )
         body = {
             "model": model.model,
             "temperature": 0,

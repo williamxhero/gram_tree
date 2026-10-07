@@ -75,6 +75,10 @@ import 'package:gramtree_api/src/model/personal_measure_update.dart';
 import 'package:gramtree_api/src/model/profile_update.dart';
 import 'package:gramtree_api/src/model/purchase_unit.dart';
 import 'package:gramtree_api/src/model/purchase_units_attribute.dart';
+import 'package:gramtree_api/src/model/quantification_decision.dart';
+import 'package:gramtree_api/src/model/quantification_decisions_input.dart';
+import 'package:gramtree_api/src/model/quantification_input.dart';
+import 'package:gramtree_api/src/model/quantification_suggestion.dart';
 import 'package:gramtree_api/src/model/question.dart';
 import 'package:gramtree_api/src/model/recipe_author.dart';
 import 'package:gramtree_api/src/model/recipe_create.dart';
@@ -92,6 +96,7 @@ import 'package:gramtree_api/src/model/recipe_list.dart';
 import 'package:gramtree_api/src/model/recipe_list_item.dart';
 import 'package:gramtree_api/src/model/recipe_mold_conversion_out.dart';
 import 'package:gramtree_api/src/model/recipe_mold_conversion_request.dart';
+import 'package:gramtree_api/src/model/recipe_quantification_out.dart';
 import 'package:gramtree_api/src/model/recipe_replacement.dart';
 import 'package:gramtree_api/src/model/recipe_replacement_allergens.dart';
 import 'package:gramtree_api/src/model/recipe_reproducibility_check_out.dart';
@@ -374,6 +379,20 @@ ReturnType deserialize<ReturnType, BaseType>(
     case 'PurchaseUnitsAttribute':
       return PurchaseUnitsAttribute.fromJson(value as Map<String, dynamic>)
           as ReturnType;
+    case 'QuantificationDecision':
+      return QuantificationDecision.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'QuantificationDecisionsInput':
+      return QuantificationDecisionsInput.fromJson(
+            value as Map<String, dynamic>,
+          )
+          as ReturnType;
+    case 'QuantificationInput':
+      return QuantificationInput.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'QuantificationSuggestion':
+      return QuantificationSuggestion.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
     case 'Question':
       return Question.fromJson(value as Map<String, dynamic>) as ReturnType;
     case 'RecipeAuthor':
@@ -418,6 +437,9 @@ ReturnType deserialize<ReturnType, BaseType>(
           as ReturnType;
     case 'RecipeMoldConversionRequest':
       return RecipeMoldConversionRequest.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'RecipeQuantificationOut':
+      return RecipeQuantificationOut.fromJson(value as Map<String, dynamic>)
           as ReturnType;
     case 'RecipeReplacement':
       return RecipeReplacement.fromJson(value as Map<String, dynamic>)

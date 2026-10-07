@@ -20,15 +20,15 @@ def normalize_sources(
             changed = old is not None and any(
                 getattr(node, field) != getattr(old, field) for field in values
             )
-            if changed and not trusted_sources:
+            if (changed or (baseline is not None and old is None)) and not trusted_sources:
                 source = (
                     incoming
                     if incoming is not None and incoming.source == "author_filled"
                     else ValueSource(source="author_filled")
                 )
-            elif previous is not None and previous.source == "verified" and not changed:
-                # Future cooking evidence stays backend-owned. The client omits
-                # the verified source, while the unchanged baseline supplies it.
+            elif previous is not None and not changed and not trusted_sources:
+                # Stored evidence is backend-owned, including AI basis and
+                # verification. An unchanged field cannot rewrite that evidence.
                 source = previous
             else:
                 source = (
