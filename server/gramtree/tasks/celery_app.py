@@ -44,6 +44,14 @@ def make_celery() -> Celery:
                 "task": "gramtree.tasks.jobs.purge_expired_analytics_events",
                 "schedule": crontab(hour=20, minute=30),
             },
+            "index-recipes": {
+                "task": "gramtree.tasks.jobs.index_recipes",
+                "schedule": 60.0,
+            },
+            "purge-ai-logs": {
+                "task": "gramtree.tasks.jobs.purge_ai_logs",
+                "schedule": crontab(hour=21, minute=15),
+            },
             "recheck-food-safety": {
                 "task": "gramtree.tasks.jobs.recheck_food_safety",
                 "schedule": 60.0,

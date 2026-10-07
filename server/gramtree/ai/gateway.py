@@ -140,6 +140,12 @@ def _invoke(
     else:
         endpoint = "chat/completions"
         prompt = (PROMPTS / f"{capability}-{PROMPT_VERSION}.txt").read_text(encoding="utf-8")
+        if capability == "generate":
+            from gramtree.ai.schemas import GeneratedDraft
+
+            prompt += "\nJSON schema: " + json.dumps(
+                GeneratedDraft.model_json_schema(), ensure_ascii=False
+            )
         body = {
             "model": model.model,
             "temperature": 0,
@@ -244,7 +250,16 @@ def call(
             result = data["output"]
             log.output = result
             row.status = "succeeded"
-        except (Unavailable, httpx.HTTPError, OSError, ValueError, KeyError, TypeError) as exc:
+        except (
+            Unavailable,
+            httpx.HTTPError,
+            OSError,
+            ValueError,
+            KeyError,
+            TypeError,
+            AttributeError,
+            IndexError,
+        ) as exc:
             failure = exc if isinstance(exc, Unavailable) else Unavailable("model_unavailable")
             row.status = "failed"
             row.error_code = failure.reason

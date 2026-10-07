@@ -1,0 +1,28 @@
+{
+  "note": "Synthetic, sanitized model recordings for one-line-v1; no real user input or credentials. Refresh through GRAMTREE_AI_MODE=record using these synthetic requests.",
+  "intent": {"dish_name": "宫保鸡丁", "servings": null, "taste": ["不辣"], "restrictions": ["儿童"], "cookware": []},
+  "valid": {
+    "recipe": {
+      "dish_name": "宫保鸡丁",
+      "ai_assisted": true,
+      "change_note": "AI 起草的第一版，待验证",
+      "snapshot": {
+        "servings": 2, "dish_type": "炒", "tags": ["儿童", "不辣", "快手"],
+        "description": "不用辣椒的家常做法",
+        "ingredients": [
+          {"id": "chicken", "display_name": "鸡腿肉", "quantity": 300, "unit": "g", "group": "主料"},
+          {"id": "salt", "display_name": "盐", "quantity": 3, "unit": "g", "group": "调味"}
+        ],
+        "steps": [
+          {"id": "cut", "instruction": "鸡腿肉切丁", "ingredient_ids": ["chicken"], "duration_seconds": 180, "cookware": "案板", "doneness": "大小一致", "why": "大小一致能均匀受热"},
+          {"id": "cook", "action": "炒", "instruction": "中火炒鸡腿肉并加入盐，用食品温度计检查鸡肉中心温度达到 74°C", "ingredient_ids": ["chicken", "salt"], "duration_seconds": 300, "heat": "中火", "cookware": "炒锅", "doneness": "中心温度达到 74°C", "depends_on": ["cut"], "why": "充分加热降低食品安全风险"}
+        ]
+      }
+    },
+    "rationale": "不用辣椒，保留家常口味；所有数值是一般经验估算，需要实际做过验证。",
+    "cuisine": "川菜"
+  },
+  "normalization": {"matches": [{"name": "鸡腿肉", "standard_name": null, "confidence": 0.2}, {"name": "盐", "standard_name": null, "confidence": 0.2}]},
+  "embedding": [1.0, 0.0, 0.0],
+  "usage": {"prompt_tokens": 120, "completion_tokens": 240}
+}

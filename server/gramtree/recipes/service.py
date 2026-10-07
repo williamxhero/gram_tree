@@ -648,6 +648,9 @@ def _storage_key(
 def _enqueue_save_event(
     session: Session, owner: User, recipe: Recipe, version: RecipeVersion
 ) -> None:
+    from gramtree.ai import indexing
+
+    indexing.enqueue(session, recipe, version)
     session.add(
         RecipeSaveOutbox(
             recipe_id=recipe.id,
@@ -751,7 +754,13 @@ def recipe_safety_context(
 
 
 def create_recipe(
-    session: Session, redis: Redis, settings: Settings, owner: User, body: RecipeCreate
+    session: Session,
+    redis: Redis,
+    settings: Settings,
+    owner: User,
+    body: RecipeCreate,
+    *,
+    generation_request_id: uuid.UUID | None = None,
 ) -> RecipeDetail:
     snapshot = _validate_snapshot(session, body.snapshot)
     staged = _staged_rows(session, owner, body.image_ids)
@@ -785,6 +794,13 @@ def create_recipe(
     recipe.current_version_id = version.id
     recipe.updated_at = version.created_at
     _enqueue_save_event(session, owner, recipe, version)
+    if generation_request_id is not None:
+        from gramtree.ai.models import GenerationRequest
+
+        generation = session.get(GenerationRequest, generation_request_id)
+        if generation is None or generation.user_id != owner.id:
+            raise NotFound()
+        generation.saved_recipe_id = recipe.id
     session.commit()
     _drain_save_events(session, redis, owner)
     return _detail(session, settings, recipe, version)

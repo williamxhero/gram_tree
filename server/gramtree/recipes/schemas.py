@@ -280,6 +280,10 @@ class RecipeSnapshot(BaseModel):
     dish_type: str | None = None
     description: str | None = Field(default=None, max_length=4000)
     tags: list[str] = Field(default_factory=list, max_length=50)
+    cuisine: str | None = Field(default=None, max_length=100)
+    design_rationale: str | None = Field(default=None, max_length=4000)
+    text_source: ValueSource | None = None
+    servings_source: ValueSource | None = None
     ingredients: list[RecipeIngredient] = Field(default_factory=list, max_length=500)
     steps: list[RecipeStep] = Field(default_factory=list, max_length=200)
 

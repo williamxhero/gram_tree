@@ -1,0 +1,9 @@
+{
+  "version": "numeric-v1",
+  "basis": "可审阅的常见配方比例护栏，仅提示异常，不是营养或安全结论；运营需按实际菜谱复核。",
+  "rules": [
+    {"id": "salt-heavy", "numerator_terms": ["盐"], "denominator_terms": [], "maximum_ratio": 0.03, "message": "盐超过其余食材重量的 3%，请核对用量。"},
+    {"id": "baking-powder-heavy", "numerator_terms": ["泡打粉"], "denominator_terms": ["面粉"], "maximum_ratio": 0.05, "message": "泡打粉超过面粉重量的 5%，请核对烘焙配方。"},
+    {"id": "yeast-heavy", "numerator_terms": ["酵母"], "denominator_terms": ["面粉"], "maximum_ratio": 0.03, "message": "酵母超过面粉重量的 3%，请核对烘焙配方。"}
+  ]
+}
