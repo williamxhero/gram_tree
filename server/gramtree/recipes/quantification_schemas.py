@@ -6,6 +6,7 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from gramtree.core.ids import IdV4
 from gramtree.recipes.schemas import ReproducibilityProblem
+from gramtree.ui_protocol.protocol import DetailLevel
 
 Confidence = Literal["high", "medium", "low"]
 
@@ -45,6 +46,7 @@ class QuantificationOutput(BaseModel):
 class RecipeQuantificationOut(BaseModel):
     id: IdV4
     base_version_id: IdV4
+    detail: DetailLevel = Field(default="standard", description="服务端选择的组件详略档位")
     problems: list[ReproducibilityProblem]
     suggestions: list[QuantificationSuggestion]
 

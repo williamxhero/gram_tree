@@ -52,6 +52,9 @@ void main() {
   }
 
   testWidgets('量化确认创建新版本并在统一为什么面板保留依据', (tester) async {
+    tester.view.physicalSize = const Size(320, 640);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
     tester.testTextInput.register();
     addTearDown(tester.testTextInput.unregister);
     final email =
@@ -83,12 +86,12 @@ void main() {
       await waitFor(tester, find.byKey(const ValueKey('recipe-dish-name')));
       await tester.enterText(
         find.byKey(const ValueKey('recipe-dish-name')),
-        '量化验收凉拌水',
+        '量化验收盐用量',
       );
       for (final (key, value) in [
-        ('recipe-ingredient-search', '水'),
-        ('recipe-ingredient-quantity', '1'),
-        ('recipe-ingredient-unit', '碗'),
+        ('recipe-ingredient-search', '盐'),
+        ('recipe-ingredient-quantity', '0'),
+        ('recipe-ingredient-unit', '少许'),
         ('recipe-step-instruction', '搅拌均匀'),
       ]) {
         await reveal(tester, key);
@@ -102,10 +105,21 @@ void main() {
       await waitFor(tester, find.byKey(const ValueKey('recipe-quantify')));
       step = 'request_quantification';
       await tap(tester, 'recipe-quantify');
+      // Wait on the request control, which stays mounted while loading. A
+      // successful proposal can be below the lazy viewport on a small phone;
+      // waiting for its offscreen button alone can never discover that row.
       await waitFor(
         tester,
-        find.byKey(const ValueKey('quantification-accept-all')),
+        find.byWidgetPredicate(
+          (widget) =>
+              widget is OutlinedButton &&
+              widget.key == const ValueKey('recipe-quantify') &&
+              widget.onPressed != null,
+        ),
       );
+      expect(find.byKey(const ValueKey('recipe-save-error')), findsNothing);
+      step = 'reveal_quantification';
+      await reveal(tester, 'quantification-accept-all');
       await reveal(
         tester,
         'quantification-why-ingredients:ingredient-1:quantity:ambiguous:field',
@@ -118,9 +132,9 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
-      expect(find.textContaining('1 碗'), findsOneWidget);
-      expect(find.textContaining('以常见中号碗容量为基准'), findsWidgets);
-      expect(find.textContaining('把握程度：低'), findsWidgets);
+      expect(find.textContaining('0 少许'), findsOneWidget);
+      expect(find.textContaining('按两人份主料量估算盐用量'), findsWidgets);
+      expect(find.textContaining('把握程度：中'), findsWidgets);
       await tester.tapAt(const Offset(10, 10));
       await tester.pumpAndSettle();
       await tap(tester, 'quantification-accept-all');
@@ -131,9 +145,12 @@ void main() {
         find.byKey(const ValueKey('recipe-detail-content')),
       );
       await tap(tester, 'recipe-source-mark-ingredient-1');
-      expect(find.textContaining('中号碗约 300 毫升'), findsOneWidget);
-      expect(find.textContaining('把握程度：低'), findsOneWidget);
-      expect(find.textContaining('按实际碗容量用量杯测量'), findsOneWidget);
+      step = 'accepted_quantity_original';
+      expect(find.textContaining('0 少许'), findsOneWidget);
+      expect(find.textContaining('按两人份主料量估算盐用量'), findsOneWidget);
+      expect(find.textContaining('两人份盐 3 克'), findsOneWidget);
+      expect(find.textContaining('把握程度：中'), findsOneWidget);
+      expect(find.textContaining('偏淡时每次补 1 克'), findsOneWidget);
       await tester.tapAt(const Offset(10, 10));
       await tester.pumpAndSettle();
       await tap(tester, 'recipe-history-button');
@@ -142,7 +159,7 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('还有 1 处需要确定'), findsOneWidget);
       await reveal(tester, 'recipe-ingredient-amount-ingredient-1');
-      expect(find.textContaining('碗'), findsWidgets);
+      expect(find.textContaining('少许'), findsWidgets);
       IntegrationTestWidgetsFlutterBinding.instance.reportData = {
         'e2e_step': 'after_quantification_evidence',
       };

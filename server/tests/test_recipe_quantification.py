@@ -14,7 +14,10 @@ from tests.test_ingredients_attributes import FULL_ATTRIBUTES, FULL_ID, _record,
 from tests.test_recipe_reproducibility import draft
 
 
-def test_browser_corpus_materializes_a_real_saved_recipe_proposal(quantification_api):
+@pytest.mark.parametrize("original", ["0", "0.0"], ids=["web", "native"])
+def test_native_and_web_corpus_materializes_a_real_saved_recipe_proposal(
+    quantification_api, original
+):
     api, directory = quantification_api
     root = Path(__file__).resolve().parents[2]
     subprocess.run(
@@ -24,15 +27,124 @@ def test_browser_corpus_materializes_a_real_saved_recipe_proposal(quantification
     corpus = json.loads(
         (root / "server/tests/fixtures/ai/quantification_corpus.json").read_text("utf-8")
     )
-    headers = bearer(api.login("quantification-browser-corpus@example.com"))
-    created = api.client.post("/v1/recipes", headers=headers, json=corpus["recipe"]).json()
+    # RecipeIngredientDraft's double.toString() is "0" on web and "0.0"
+    # natively. That author evidence survives the save-before-quantify round trip.
+    corpus["recipe"]["snapshot"]["ingredients"][0]["quantity_source"]["original"] = original
+    headers = bearer(api.login("quantification-platform-corpus@example.com"))
+    created_response = api.client.post("/v1/recipes", headers=headers, json=corpus["recipe"])
+    assert created_response.status_code == 201, created_response.text
+    created = created_response.json()
+    saved_response = api.client.post(
+        f"/v1/recipes/{created['id']}/versions",
+        headers=headers,
+        json={
+            "base_version_id": created["version"]["id"],
+            "snapshot": created["version"]["snapshot"],
+        },
+    )
+    assert saved_response.status_code == 201, saved_response.text
+    saved = saved_response.json()
+    assert saved["version"]["snapshot"]["ingredients"][0]["quantity_source"]["original"] == original
     response = api.client.post(
         f"/v1/recipes/{created['id']}/quantification",
         headers=headers,
-        json={"base_version_id": created["version"]["id"]},
+        json={"base_version_id": saved["version"]["id"]},
     )
     assert response.status_code == 200, response.text
-    assert response.json()["suggestions"][0]["value"] == "300"
+    proposal = response.json()
+    assert proposal["detail"] == "standard"
+    assert proposal["suggestions"][0]["value"] == "3"
+    assert proposal["problems"][0]["original"] == "0 少许"
+    decision = api.client.post(
+        f"/v1/recipes/{created['id']}/quantification/{proposal['id']}/decisions",
+        headers=headers,
+        json={"accept_all": True},
+    )
+    assert decision.status_code == 201, decision.text
+    ingredient = decision.json()["version"]["snapshot"]["ingredients"][0]
+    assert ingredient["quantity"] == 3 and ingredient["unit"] == "g"
+    assert ingredient["quantity_source"]["original"] == "0 少许"
+
+
+@pytest.mark.parametrize(
+    ("ingredient", "step", "field", "value", "source_field"),
+    [
+        (
+            "黄瓜",
+            {"action": "切块", "instruction": "处理黄瓜"},
+            "instruction",
+            "处理成 2 厘米块",
+            "instruction_source",
+        ),
+        (
+            "黄瓜",
+            {"instruction": "处理黄瓜", "heat": "中火", "duration_seconds": 120},
+            "heat",
+            "中火，油面出现细纹",
+            "heat_source",
+        ),
+        (
+            "鸡肉",
+            {
+                "instruction": "煮鸡肉",
+                "heat": "100℃",
+                "duration_seconds": 600,
+                "doneness": "煮到熟透",
+            },
+            "doneness",
+            "煮到中心温度达到 74℃",
+            "doneness_source",
+        ),
+    ],
+)
+def test_structured_problem_quantification_patches_editable_field_and_preserves_history(
+    quantification_api, ingredient, step, field, value, source_field
+):
+    api, directory = quantification_api
+    headers = bearer(api.login("structured-quantification@example.com"))
+    body = draft()
+    body["snapshot"]["ingredients"] = [
+        {"id": "food", "display_name": ingredient, "quantity": 300, "unit": "g"}
+    ]
+    body["snapshot"]["steps"] = [{"id": "process", **step}]
+    created = api.client.post("/v1/recipes", headers=headers, json=body).json()
+    problems = created["version"]["reproducibility"]["problems"]
+    assert len(problems) == 1 and problems[0]["position"]["field"] == field
+    proposal = suggest(
+        api,
+        directory,
+        headers,
+        created,
+        output={
+            "suggestions": [
+                {
+                    "problem_id": problems[0]["id"],
+                    "value": value,
+                    "basis": "按原有执行上下文具体化",
+                    "confidence": "medium",
+                    "baseline": "两人份基准",
+                    "adjustment": "按食材厚度调整并检查",
+                }
+            ]
+        },
+    )
+    response = api.client.post(
+        f"/v1/recipes/{created['id']}/quantification/{proposal['id']}/decisions",
+        headers=headers,
+        json={"accept_all": True},
+    )
+    assert response.status_code == 201, response.text
+    saved = response.json()["version"]
+    result = saved["snapshot"]["steps"][0]
+    assert result[field] == value
+    assert result[source_field]["source"] == "ai_estimated"
+    assert result[source_field]["original"] == step[field]
+    assert saved["reproducibility"]["state"] == "reproducible"
+    history = api.client.get(
+        f"/v1/recipes/{created['id']}/versions/{created['version']['id']}", headers=headers
+    ).json()["version"]
+    assert history["snapshot"]["steps"][0][field] == step[field]
+    assert history["reproducibility"]["state"] == "incomplete"
 
 
 def test_heating_suggestions_include_observable_heat_and_separate_doneness(quantification_api):

@@ -32,6 +32,9 @@ from gramtree.recipes.schemas import (
 )
 from gramtree.settings import Settings
 
+CONFIDENCE_ORDER = {"low": 0, "medium": 1, "high": 2}
+CONFIDENCE_VALUES = {"low": 0.4, "medium": 0.7, "high": 0.9}
+
 SOURCES = {
     "quantity": "quantity_source",
     "preparation": "preparation_source",
@@ -263,16 +266,14 @@ def _apply(
         manual = any(d.decision == "modify" for _, _, d in patches)
         sources = [s for _, s, _ in patches]
         originals = [p.original for p, _, _ in patches if p.original is not None]
-        confidence = min(
-            (s.confidence for s in sources), key=lambda c: {"low": 0, "medium": 1, "high": 2}[c]
-        )
+        confidence = min((s.confidence for s in sources), key=CONFIDENCE_ORDER.__getitem__)
         source = (
             ValueSource(source="author_filled")
             if manual
             else ValueSource(
                 source="ai_estimated",
                 original="；".join(originals) or None,
-                confidence={"low": 0.4, "medium": 0.7, "high": 0.9}[confidence],
+                confidence=CONFIDENCE_VALUES[confidence],
                 confidence_level=confidence,
                 basis="；".join(dict.fromkeys(s.basis for s in sources)),
                 baseline="；".join(dict.fromkeys(s.baseline for s in sources if s.baseline))
@@ -288,11 +289,9 @@ def _apply(
                 setattr(source, metadata, "；".join(dict.fromkeys(v for v in values if v)) or None)
             prior_level = previous_source.confidence_level
             if prior_level:
-                level = min(
-                    (prior_level, confidence), key=lambda c: {"low": 0, "medium": 1, "high": 2}[c]
-                )
+                level = min((prior_level, confidence), key=CONFIDENCE_ORDER.__getitem__)
                 source.confidence_level = level
-                source.confidence = {"low": 0.4, "medium": 0.7, "high": 0.9}[level]
+                source.confidence = CONFIDENCE_VALUES[level]
         setattr(node, SOURCES[field], source)
     return RecipeSnapshot.model_validate(result.model_dump(mode="json"))
 

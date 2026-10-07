@@ -10,6 +10,7 @@ import 'package:gramtree_api/gramtree_api.dart'
 import '../api/api_client.dart';
 import '../events/event_recorder.dart';
 import 'registered_pages.dart';
+import 'recipe_operations.dart';
 import 'source_overrides.dart';
 import 'source_types.dart';
 
@@ -245,10 +246,22 @@ Future<void> _handleDontDoAgain(
       );
 }
 
+Future<void> _handleRecipeOperation(
+  BuildContext context,
+  Ref ref,
+  Map<String, dynamic> params,
+) => RecipeOperationScope.handle(context, params);
+
 /// SPEC-009.1 #81 登记的意图表：#77/#80 用到的 `open_page`/`start_cooking`/
 /// `open_record_card` 沿用之前的默认文案，新增 `call_operation` 和四个先只登记
 /// 名字的意图。
 final defaultIntentRegistry = IntentRegistry(const [
+  IntentSpec(
+    name: 'recipe_operation',
+    defaultLabel: '菜谱操作',
+    validateParams: validateRecipeOperation,
+    handler: _handleRecipeOperation,
+  ),
   IntentSpec(
     name: 'open_page',
     defaultLabel: '去看看',

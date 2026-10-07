@@ -3997,6 +3997,17 @@
             "title": "Base Version Id",
             "type": "string"
           },
+          "detail": {
+            "default": "standard",
+            "description": "服务端选择的组件详略档位",
+            "enum": [
+              "brief",
+              "standard",
+              "detailed"
+            ],
+            "title": "Detail",
+            "type": "string"
+          },
           "id": {
             "format": "uuid",
             "title": "Id",

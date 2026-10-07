@@ -9,6 +9,8 @@ part of 'recipe_quantification_out.dart';
 abstract class _$RecipeQuantificationOutCWProxy {
   RecipeQuantificationOut baseVersionId(String baseVersionId);
 
+  RecipeQuantificationOut detail(RecipeQuantificationOutDetailEnum detail);
+
   RecipeQuantificationOut id(String id);
 
   RecipeQuantificationOut problems(List<ReproducibilityProblem> problems);
@@ -25,6 +27,7 @@ abstract class _$RecipeQuantificationOutCWProxy {
   /// ````
   RecipeQuantificationOut call({
     String baseVersionId,
+    RecipeQuantificationOutDetailEnum detail,
     String id,
     List<ReproducibilityProblem> problems,
     List<QuantificationSuggestion> suggestions,
@@ -41,6 +44,10 @@ class _$RecipeQuantificationOutCWProxyImpl
   @override
   RecipeQuantificationOut baseVersionId(String baseVersionId) =>
       this(baseVersionId: baseVersionId);
+
+  @override
+  RecipeQuantificationOut detail(RecipeQuantificationOutDetailEnum detail) =>
+      this(detail: detail);
 
   @override
   RecipeQuantificationOut id(String id) => this(id: id);
@@ -63,6 +70,7 @@ class _$RecipeQuantificationOutCWProxyImpl
   /// ````
   RecipeQuantificationOut call({
     Object? baseVersionId = const $CopyWithPlaceholder(),
+    Object? detail = const $CopyWithPlaceholder(),
     Object? id = const $CopyWithPlaceholder(),
     Object? problems = const $CopyWithPlaceholder(),
     Object? suggestions = const $CopyWithPlaceholder(),
@@ -72,6 +80,10 @@ class _$RecipeQuantificationOutCWProxyImpl
           ? _value.baseVersionId
           // ignore: cast_nullable_to_non_nullable
           : baseVersionId as String,
+      detail: detail == const $CopyWithPlaceholder()
+          ? _value.detail
+          // ignore: cast_nullable_to_non_nullable
+          : detail as RecipeQuantificationOutDetailEnum,
       id: id == const $CopyWithPlaceholder()
           ? _value.id
           // ignore: cast_nullable_to_non_nullable
@@ -104,10 +116,20 @@ RecipeQuantificationOut _$RecipeQuantificationOutFromJson(
 ) => $checkedCreate('RecipeQuantificationOut', json, ($checkedConvert) {
   $checkKeys(
     json,
-    requiredKeys: const ['base_version_id', 'id', 'problems', 'suggestions'],
+    requiredKeys: const [
+      'base_version_id',
+      'detail',
+      'id',
+      'problems',
+      'suggestions',
+    ],
   );
   final val = RecipeQuantificationOut(
     baseVersionId: $checkedConvert('base_version_id', (v) => v as String),
+    detail: $checkedConvert(
+      'detail',
+      (v) => $enumDecode(_$RecipeQuantificationOutDetailEnumEnumMap, v),
+    ),
     id: $checkedConvert('id', (v) => v as String),
     problems: $checkedConvert(
       'problems',
@@ -133,7 +155,14 @@ Map<String, dynamic> _$RecipeQuantificationOutToJson(
   RecipeQuantificationOut instance,
 ) => <String, dynamic>{
   'base_version_id': instance.baseVersionId,
+  'detail': _$RecipeQuantificationOutDetailEnumEnumMap[instance.detail]!,
   'id': instance.id,
   'problems': instance.problems.map((e) => e.toJson()).toList(),
   'suggestions': instance.suggestions.map((e) => e.toJson()).toList(),
+};
+
+const _$RecipeQuantificationOutDetailEnumEnumMap = {
+  RecipeQuantificationOutDetailEnum.brief: 'brief',
+  RecipeQuantificationOutDetailEnum.standard: 'standard',
+  RecipeQuantificationOutDetailEnum.detailed: 'detailed',
 };

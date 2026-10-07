@@ -22,6 +22,8 @@ class RecipeQuantificationOut {
   RecipeQuantificationOut({
     required this.baseVersionId,
 
+    required this.detail,
+
     required this.id,
 
     required this.problems,
@@ -31,6 +33,10 @@ class RecipeQuantificationOut {
 
   @JsonKey(name: r'base_version_id', required: true, includeIfNull: false)
   final String baseVersionId;
+
+  /// 服务端选择的组件详略档位
+  @JsonKey(name: r'detail', required: true, includeIfNull: false)
+  final RecipeQuantificationOutDetailEnum detail;
 
   @JsonKey(name: r'id', required: true, includeIfNull: false)
   final String id;
@@ -46,6 +52,7 @@ class RecipeQuantificationOut {
       identical(this, other) ||
       other is RecipeQuantificationOut &&
           other.baseVersionId == baseVersionId &&
+          other.detail == detail &&
           other.id == id &&
           other.problems == problems &&
           other.suggestions == suggestions;
@@ -53,6 +60,7 @@ class RecipeQuantificationOut {
   @override
   int get hashCode =>
       baseVersionId.hashCode +
+      detail.hashCode +
       id.hashCode +
       problems.hashCode +
       suggestions.hashCode;
@@ -66,4 +74,26 @@ class RecipeQuantificationOut {
   String toString() {
     return toJson().toString();
   }
+}
+
+/// 服务端选择的组件详略档位
+enum RecipeQuantificationOutDetailEnum {
+  /// 服务端选择的组件详略档位
+  @JsonValue(r'brief')
+  brief(r'brief'),
+
+  /// 服务端选择的组件详略档位
+  @JsonValue(r'standard')
+  standard(r'standard'),
+
+  /// 服务端选择的组件详略档位
+  @JsonValue(r'detailed')
+  detailed(r'detailed');
+
+  const RecipeQuantificationOutDetailEnum(this.value);
+
+  final String value;
+
+  @override
+  String toString() => value;
 }

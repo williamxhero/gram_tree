@@ -57,6 +57,99 @@ def test_incomplete_private_save_retains_check_on_immutable_version(api: Api) ->
 
 
 @pytest.mark.parametrize(
+    ("ingredient_name", "step", "expected"),
+    [
+        ("黄瓜", {"action": "切块", "instruction": "处理黄瓜"}, {"instruction"}),
+        ("黄瓜", {"action": "切块", "instruction": "处理成 2 厘米块"}, set()),
+        ("黄瓜", {"action": "切成 2 厘米块", "instruction": "处理黄瓜"}, set()),
+        ("黄瓜", {"instruction": "处理黄瓜", "heat": "中火", "duration_seconds": 120}, {"heat"}),
+        (
+            "黄瓜",
+            {"instruction": "处理黄瓜", "heat": "中火，油面出现细纹", "duration_seconds": 120},
+            set(),
+        ),
+        (
+            "鸡肉",
+            {"instruction": "煮鸡肉", "heat": "100℃", "duration_seconds": 600, "doneness": "   "},
+            {"doneness"},
+        ),
+        (
+            "鸡肉",
+            {
+                "instruction": "煮鸡肉",
+                "heat": "100℃",
+                "duration_seconds": 600,
+                "doneness": "煮到熟透",
+            },
+            {"doneness"},
+        ),
+        (
+            "鸡肉",
+            {
+                "instruction": "煮鸡肉",
+                "heat": "100℃",
+                "duration_seconds": 600,
+                "doneness": "煮到熟透，食品温度计测中心达到 74℃",
+            },
+            set(),
+        ),
+        (
+            "鸡肉",
+            {
+                "instruction": "煮鸡肉",
+                "heat": "100℃",
+                "duration_seconds": 600,
+                "doneness": "煮到熟透，肉内无粉红色且没有血水",
+            },
+            set(),
+        ),
+    ],
+)
+def test_structured_execution_and_doneness_in_preview_and_immutable_save(
+    api: Api, ingredient_name, step, expected
+):
+    headers = bearer(api.login("structured-execution@example.com"))
+    snapshot = {
+        "servings": 2,
+        "ingredients": [
+            {
+                "id": "food",
+                "display_name": ingredient_name,
+                "quantity": 300 if ingredient_name == "鸡肉" else 100,
+                "unit": "g",
+            }
+        ],
+        "steps": [{"id": "process", **step}],
+    }
+    preview = api.client.post(
+        "/v1/recipes/reproducibility/check", headers=headers, json={"snapshot": snapshot}
+    )
+    assert preview.status_code == 200, preview.text
+    created = api.client.post(
+        "/v1/recipes", headers=headers, json={"dish_name": "结构化执行验收", "snapshot": snapshot}
+    )
+    assert created.status_code == 201, created.text
+    detail = created.json()
+    result = preview.json()["result"]
+    assert {p["position"]["field"] for p in result["problems"]} == expected
+    assert result["state"] == ("incomplete" if expected else "reproducible")
+    assert result["field_completeness"] < 1 if expected else result["field_completeness"] == 1
+    assert detail["version"]["reproducibility"] == result
+    saved = api.client.post(
+        f"/v1/recipes/{detail['id']}/versions",
+        headers=headers,
+        json={"snapshot": snapshot, "base_version_id": detail["version"]["id"]},
+    )
+    assert saved.status_code == 201, saved.text
+    assert saved.json()["version"]["id"] != detail["version"]["id"]
+    assert saved.json()["version"]["reproducibility"] == result
+    history = api.client.get(
+        f"/v1/recipes/{detail['id']}/versions/{detail['version']['id']}", headers=headers
+    )
+    assert history.json()["version"]["reproducibility"] == result
+
+
+@pytest.mark.parametrize(
     ("ingredient", "step", "expected"),
     [
         ({"quantity": 0, "unit": "少许"}, {}, {("salt", "quantity")}),

@@ -66,7 +66,12 @@ def check(snapshot: RecipeSnapshot) -> RecipeReproducibilityResult:
         )
 
     def inspect_text(
-        collection: Literal["ingredients", "steps"], item_id: str, field: str, text: str
+        collection: Literal["ingredients", "steps"],
+        item_id: str,
+        field: str,
+        text: str,
+        *,
+        cutting_text: str | None = None,
     ) -> None:
         # Scan editable execution text only: ValueSource.original is historical evidence.
         terms = policy["quantity_terms"] + policy["time_terms"]
@@ -88,8 +93,11 @@ def check(snapshot: RecipeSnapshot) -> RecipeReproducibilityResult:
                 start=match.start(),
                 end=match.end(),
             )
-        if re.search(policy["cutting_action_pattern"], text) and not re.search(
-            policy["cut_size_pattern"], text, re.I
+        cutting = cutting_text if cutting_text is not None else text
+        if (
+            text.strip()
+            and re.search(policy["cutting_action_pattern"], cutting)
+            and not re.search(policy["cut_size_pattern"], cutting, re.I)
         ):
             problem(collection, item_id, field, "切配需要具体尺寸", text, kind="ambiguous")
 
@@ -115,9 +123,21 @@ def check(snapshot: RecipeSnapshot) -> RecipeReproducibilityResult:
             require("steps", step.id, field)
         if not step.instruction.strip():
             problem("steps", step.id, "instruction", "步骤需要执行说明")
-        inspect_text("steps", step.id, "instruction", step.instruction)
         execution = f"{step.action or ''} {step.instruction}"
-        heating = any(term in execution for term in policy["heating_actions"])
+        # Structured cutting actions/dimensions count, but a removal-only
+        # instruction still needs no size. Patches target instruction/source.
+        removal_only = re.search(r"切(?:去|除|掉)", step.instruction) and not re.search(
+            policy["cutting_action_pattern"], step.instruction
+        )
+        inspect_text(
+            "steps",
+            step.id,
+            "instruction",
+            step.instruction,
+            cutting_text=step.instruction if removal_only else execution,
+        )
+        heat = (step.heat or "").strip()
+        heating = bool(heat) or any(term in execution for term in policy["heating_actions"])
         if heating:
             for field in policy["required_fields"]["heating"]:
                 require("steps", step.id, field)
@@ -140,7 +160,12 @@ def check(snapshot: RecipeSnapshot) -> RecipeReproducibilityResult:
             )
             if needs_doneness:
                 require("steps", step.id, "doneness")
-                if not step.doneness or step.doneness.strip() in policy["vague_doneness"]:
+                doneness = (step.doneness or "").strip()
+                concrete = re.search(policy["temperature_pattern"], doneness, re.I) or any(
+                    term in doneness for term in policy["doneness_observations"]
+                )
+                vague = any(term in doneness for term in policy["vague_doneness"])
+                if not doneness or (vague and not concrete):
                     problem("steps", step.id, "doneness", "需要可观察的熟透判断", step.doneness)
     if not snapshot.ingredients:
         problem("snapshot", "", "ingredients", "需要食材用量")

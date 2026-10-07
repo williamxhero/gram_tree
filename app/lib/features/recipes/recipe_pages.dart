@@ -26,11 +26,14 @@ import 'quantification_panel.dart';
 import 'recipe_source_badge.dart';
 import '../../storage/local_store.dart';
 import '../../ui_protocol/components/component_scaffold.dart';
+import '../../ui_protocol/intent_dispatcher.dart';
+import '../../ui_protocol/recipe_operations.dart';
 import '../../ui_protocol/recipe_safety.dart';
 import '../../ui_protocol/recipe_safety_protocol.dart';
 import '../../ui_protocol/source_mark.dart';
 import '../../ui_protocol/source_types.dart';
 import '../../widgets/empty_state.dart';
+import '../../util/ids.dart';
 
 final myRecipesProvider = FutureProvider.autoDispose<RecipeList>((ref) async {
   return ref.watch(recipeRepositoryProvider).listPage();
@@ -201,6 +204,7 @@ class _RecipeEditorPageState extends ConsumerState<RecipeEditorPage> {
   ReproducibilityProblem? _locatedProblem;
   final _problemTargets = <String, GlobalKey>{};
   final _editorScroll = ScrollController();
+  final _operationCompositionId = newUuidV4();
   RecipeSafetyResult? _safetyResult;
   String? _safetyError;
   bool _safetyLoading = false;
@@ -890,31 +894,97 @@ class _RecipeEditorPageState extends ConsumerState<RecipeEditorPage> {
                   style: TextStyle(color: Theme.of(context).colorScheme.error),
                 ),
               ),
-            OutlinedButton(
-              key: const ValueKey('recipe-reproducibility-check'),
-              onPressed: _checkingReproducibility
-                  ? null
-                  : _checkReproducibility,
-              child: Text(_checkingReproducibility ? '正在检查可复刻性…' : '检查可复刻性'),
-            ),
-            ReproducibilityCard(
-              result: _reproducibility,
-              onLocate: _locateProblem,
-            ),
-            if (_reproducibilityError != null) Text(_reproducibilityError!),
-            const Text('请求量化前会先保存当前私有版本，处理建议后再保存新版本。'),
-            OutlinedButton(
-              key: const ValueKey('recipe-quantify'),
-              onPressed: _saving ? null : _quantify,
-              child: Text(_saving ? '正在保存或量化…' : '保存并请求 AI 量化'),
-            ),
-            if (_quantification != null)
-              QuantificationPanel(
-                key: ValueKey(_quantification!.id),
-                proposal: _quantification!,
-                onDecide: _decideQuantification,
-                onCancel: () => setState(() => _quantification = null),
+            RecipeOperationScope(
+              key: const ValueKey('recipe-reproducibility-operations'),
+              handlers: {
+                'check': (_) => _checkingReproducibility || _saving
+                    ? null
+                    : _checkReproducibility(),
+                'quantify': (_) => _saving ? null : _quantify(),
+                'locate': (_) => _locateProblem(),
+                'cancel': (_) => setState(() => _quantification = null),
+                'decide': (params) => _saving
+                    ? null
+                    : _decideQuantification(
+                        recipeDecisions(params),
+                        params['accept_all'] == true,
+                      ),
+              },
+              child: CompositionIdScope(
+                compositionId: _operationCompositionId,
+                child: Builder(
+                  builder: (context) {
+                    Future<void> dispatch(ActionDescriptor action) => ref
+                        .read(intentDispatcherProvider)
+                        .dispatch(
+                          context,
+                          compositionId: _operationCompositionId,
+                          componentId: 'recipe-reproducibility',
+                          action: action,
+                        );
+                    Future<void> operation(String name) => dispatch(
+                      ActionDescriptor(
+                        intent: 'recipe_operation',
+                        params: {'operation': name},
+                      ),
+                    );
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        OutlinedButton(
+                          key: const ValueKey('recipe-reproducibility-check'),
+                          onPressed: _checkingReproducibility
+                              ? null
+                              : () => operation('check'),
+                          child: Text(
+                            _checkingReproducibility ? '正在检查可复刻性…' : '检查可复刻性',
+                          ),
+                        ),
+                        ReproducibilityCard(
+                          result: _reproducibility,
+                          onLocate: () => operation('locate'),
+                        ),
+                        if (_reproducibilityError != null)
+                          Text(_reproducibilityError!),
+                        const Text('请求量化前会先保存当前私有版本，处理建议后再保存新版本。'),
+                        OutlinedButton(
+                          key: const ValueKey('recipe-quantify'),
+                          onPressed: _saving
+                              ? null
+                              : () => operation('quantify'),
+                          child: Text(_saving ? '正在保存或量化…' : '保存并请求 AI 量化'),
+                        ),
+                        TextField(
+                          key: const ValueKey('recipe-operation-command'),
+                          decoration: const InputDecoration(
+                            labelText: '一句话操作',
+                            hintText: '检查可复刻性 / 请求量化 / 定位下一处 / 全部接受 / 暂不处理',
+                          ),
+                          onSubmitted: (text) {
+                            final action = recipeCommand(text);
+                            if (action != null) {
+                              unawaited(dispatch(action));
+                            } else {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text('请输入提示中的菜谱操作')),
+                              );
+                            }
+                          },
+                        ),
+                        if (_quantification != null)
+                          QuantificationPanel(
+                            key: ValueKey(_quantification!.id),
+                            proposal: _quantification!,
+                            onDecide: _decideQuantification,
+                            onCancel: () =>
+                                setState(() => _quantification = null),
+                          ),
+                      ],
+                    );
+                  },
+                ),
               ),
+            ),
             if (_form.aiAssisted) ...[
               const Text('AI 辅助 · 尚未做过验证'),
               SourceMark(
@@ -3346,7 +3416,7 @@ class _IngredientDetailRow extends StatelessWidget {
               value: serverSource?.value ?? quantity,
               originalValue:
                   serverSource?.originalValue ??
-                  (displayed != null || conversionPresent
+                  (systemDisplayChanged || conversionPresent
                       ? originalQuantity
                       : originalSourceValue),
               basisText: {

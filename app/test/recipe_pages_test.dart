@@ -734,6 +734,7 @@ void main() {
             {
               'id': _secondVersionId,
               'base_version_id': _secondVersionId,
+              'detail': 'standard',
               'problems': [
                 for (final id in problemIds)
                   {
@@ -952,81 +953,187 @@ void main() {
   );
 
   testWidgets(
-    'editor previews quantification basis and accepts all into a version',
+    'AI quantity why preserves ambiguous original separately from conversion',
     (tester) async {
       final server = FakeServer();
       final state = _installRecipeApi(server);
-      server.on(
-        'POST',
-        '/v1/recipes/$_recipeId/quantification',
-        (_) => (
-          200,
-          {
-            'id': _secondVersionId,
-            'base_version_id': _firstVersionId,
-            'problems': [
-              {
-                'id': 'amount',
-                'type': 'ambiguous',
-                'status': 'unresolved',
-                'message': '水量待确定',
-                'original': '一碗',
-                'position': {
-                  'collection': 'ingredients',
-                  'item_id': 'ingredient-1',
-                  'field': 'quantity',
-                },
-              },
-            ],
-            'suggestions': [
-              {
-                'problem_id': 'amount',
-                'value': '300',
-                'unit': 'ml',
-                'basis': '按中号碗容量估算',
-                'confidence': 'medium',
-                'baseline': '中号碗约 300 毫升',
-                'adjustment': '按实际碗容量测量',
-              },
-            ],
-          },
-        ),
-      );
-      server.on(
-        'POST',
-        '/v1/recipes/$_recipeId/quantification/$_secondVersionId/decisions',
-        (_) {
-          final updated =
-              jsonDecode(jsonEncode(state.current)) as Map<String, dynamic>;
-          (updated['version'] as Map)['reproducibility'] = {
-            'rules_version': 'reproducibility-v1',
-            'state': 'reproducible',
-            'remaining_count': 0,
-            'required_field_count': 2,
-            'concrete_field_count': 2,
-            'field_completeness': 1,
-            'problems': [],
-          };
-          return (201, updated);
-        },
-      );
+      final ingredient =
+          (((state.current['version'] as Map)['snapshot'] as Map)['ingredients']
+                      as List)
+                  .first
+              as Map;
+      ingredient['quantity'] = 3;
+      ingredient['unit'] = 'g';
+      ingredient['quantity_source'] = {
+        'source': 'ai_estimated',
+        'original': '0 少许',
+        'basis': '按主料量估算',
+        'confidence': 0.7,
+        'confidence_level': 'medium',
+        'baseline': '两人份盐 3 克',
+        'adjustment': '偏淡每次补 1 克',
+      };
       await pumpApp(tester, env: TestEnv.signedIn(server: server));
       await _openMyRecipes(tester);
       await tester.tap(find.byKey(const ValueKey('recipe-card-$_recipeId')));
       await tester.pumpAndSettle();
-      await tester.tap(find.byKey(const ValueKey('edit-recipe-button')));
+      final badge = find.byKey(
+        const ValueKey('recipe-source-mark-ingredient-1'),
+      );
+      await _scrollUntilVisible(tester, badge);
+      await tester.tap(badge);
       await tester.pumpAndSettle();
-      await tester.tap(find.byKey(const ValueKey('recipe-quantify')));
+      expect(find.textContaining('0 少许'), findsOneWidget);
+      expect(find.textContaining('按主料量估算'), findsOneWidget);
+      expect(find.textContaining('把握程度：中'), findsOneWidget);
+      await tester.tapAt(const Offset(10, 10));
       await tester.pumpAndSettle();
-      expect(find.text('300 ml'), findsOneWidget);
-      expect(find.text('按中号碗容量估算'), findsOneWidget);
-      expect(find.text('把握程度：中'), findsOneWidget);
-      expect(find.text('基准：中号碗约 300 毫升'), findsOneWidget);
-      await tester.tap(find.byKey(const ValueKey('quantification-accept-all')));
+      await _scrollToTop(tester);
+      await _scrollUntilVisible(
+        tester,
+        find.byKey(const ValueKey('recipe-serving-increase')),
+      );
+      await tester.tap(find.byKey(const ValueKey('recipe-serving-increase')));
       await tester.pumpAndSettle();
-      expect(find.text('所有执行字段已具体化 · 可复刻'), findsOneWidget);
+      await _scrollUntilVisible(tester, badge);
+      await tester.tap(badge);
+      await tester.pumpAndSettle();
+      expect(find.textContaining('3 g'), findsOneWidget);
+      expect(find.textContaining('4.5'), findsWidgets);
+      expect(tester.takeException(), isNull);
     },
   );
+
+  for (final (entry, smallPhone) in [
+    ('button', false),
+    ('command', false),
+    ('button', true),
+    ('command', true),
+  ]) {
+    testWidgets(
+      'editor previews quantification basis and accepts all into a version via $entry${smallPhone ? ' at 320x640' : ''}',
+      (tester) async {
+        if (smallPhone) {
+          tester.view.physicalSize = const Size(320, 640);
+          tester.view.devicePixelRatio = 1;
+          addTearDown(tester.view.reset);
+        }
+        final server = FakeServer();
+        final state = _installRecipeApi(server);
+        server.on(
+          'POST',
+          '/v1/recipes/$_recipeId/quantification',
+          (_) => (
+            200,
+            {
+              'id': _secondVersionId,
+              'base_version_id': _firstVersionId,
+              'detail': 'standard',
+              'problems': [
+                {
+                  'id': 'amount',
+                  'type': 'ambiguous',
+                  'status': 'unresolved',
+                  'message': '水量待确定',
+                  'original': '一碗',
+                  'position': {
+                    'collection': 'ingredients',
+                    'item_id': 'ingredient-1',
+                    'field': 'quantity',
+                  },
+                },
+              ],
+              'suggestions': [
+                {
+                  'problem_id': 'amount',
+                  'value': '300',
+                  'unit': 'ml',
+                  'basis': '按中号碗容量估算',
+                  'confidence': 'medium',
+                  'baseline': '中号碗约 300 毫升',
+                  'adjustment': '按实际碗容量测量',
+                },
+              ],
+            },
+          ),
+        );
+        server.on(
+          'POST',
+          '/v1/recipes/$_recipeId/quantification/$_secondVersionId/decisions',
+          (_) {
+            final updated =
+                jsonDecode(jsonEncode(state.current)) as Map<String, dynamic>;
+            (updated['version'] as Map)['reproducibility'] = {
+              'rules_version': 'reproducibility-v1',
+              'state': 'reproducible',
+              'remaining_count': 0,
+              'required_field_count': 2,
+              'concrete_field_count': 2,
+              'field_completeness': 1,
+              'problems': [],
+            };
+            return (201, updated);
+          },
+        );
+        await pumpApp(tester, env: TestEnv.signedIn(server: server));
+        await _openMyRecipes(tester);
+        await tester.tap(find.byKey(const ValueKey('recipe-card-$_recipeId')));
+        await tester.pumpAndSettle();
+        await tester.tap(find.byKey(const ValueKey('edit-recipe-button')));
+        await tester.pumpAndSettle();
+        final command = find.byKey(const ValueKey('recipe-operation-command'));
+        if (entry == 'command') {
+          await _scrollUntilVisible(tester, command);
+          await tester.enterText(command, '请求量化');
+          await tester.testTextInput.receiveAction(TextInputAction.done);
+        } else {
+          final quantify = find.byKey(const ValueKey('recipe-quantify'));
+          await _scrollUntilVisible(tester, quantify);
+          expect(quantify.hitTestable(), findsOneWidget);
+          await tester.tap(quantify);
+        }
+        await tester.pumpAndSettle();
+        expect(find.text('300 ml'), findsOneWidget);
+        expect(find.text('按中号碗容量估算'), findsOneWidget);
+        expect(find.text('把握程度：中'), findsNothing);
+        final why = find.byKey(const ValueKey('quantification-why-amount'));
+        await _scrollUntilVisible(tester, why);
+        await tester.tap(why);
+        await tester.pumpAndSettle();
+        expect(find.textContaining('把握程度：中'), findsOneWidget);
+        expect(find.textContaining('基准：中号碗约 300 毫升'), findsOneWidget);
+        await tester.tapAt(const Offset(10, 10));
+        await tester.pumpAndSettle();
+        final acceptAll = find.byKey(
+          const ValueKey('quantification-accept-all'),
+        );
+        await _scrollUntilVisible(tester, acceptAll);
+        expect(acceptAll.hitTestable(), findsOneWidget);
+        if (entry == 'command') {
+          await _scrollUntilVisible(tester, command);
+          await tester.enterText(command, '全部接受');
+          await tester.testTextInput.receiveAction(TextInputAction.done);
+        } else {
+          await tester.tap(acceptAll);
+        }
+        await tester.pumpAndSettle();
+        expect(find.text('所有执行字段已具体化 · 可复刻'), findsOneWidget);
+        expect(
+          server.calls('POST', '/v1/recipes/$_recipeId/quantification').length,
+          1,
+        );
+        expect(
+          server
+              .calls(
+                'POST',
+                '/v1/recipes/$_recipeId/quantification/$_secondVersionId/decisions',
+              )
+              .length,
+          1,
+        );
+      },
+    );
+  }
   testWidgets('detail shows saved reproducibility and field completeness', (
     tester,
   ) async {
