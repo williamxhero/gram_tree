@@ -82,18 +82,22 @@ def _process(session: SessionDep, owner: uuid.UUID, write: WriteEnvelope) -> Wri
     lock = int.from_bytes(hashlib.sha256(write.write_id.bytes).digest()[:8], "big", signed=True)
     session.execute(text("SELECT pg_advisory_xact_lock(:key)"), {"key": lock})
     receipt = session.get(WriteReceipt, write.write_id)
+    fingerprint = _fingerprint(write)
     if authorization_code is not None:
-        if receipt is not None:
-            # Denied reauthorization must not reveal or demote an existing
-            # receipt, even when the ID belongs to another account.
+        if receipt is not None and (
+            receipt.owner_id != owner
+            or receipt.fingerprint != fingerprint
+            or receipt.status != "deferred"
+        ):
+            # Denied reauthorization must not reveal or demote a terminal
+            # receipt, or change one belonging to another owner or envelope.
             session.rollback()
             return WriteResult(
                 write_id=write.write_id, status="failed", reason_code=authorization_code
             )
-        # A genuinely new rejected prerequisite has arrived. Save its terminal
-        # failure under the same lock as accepted writes so children can stop.
+        # A new or matching deferred prerequisite is now terminally rejected.
+        # Retain the failure so children stop waiting for its confirmation.
         validation_code = authorization_code
-    fingerprint = _fingerprint(write)
     if receipt is not None:
         if receipt.owner_id != owner:
             session.rollback()

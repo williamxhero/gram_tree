@@ -288,12 +288,72 @@ def test_revoked_reauthorization_hides_and_preserves_confirmation(
     assert count(api, tokens) == 2
 
 
+def test_revoked_deferred_prerequisite_is_terminal_only_for_matching_owner_and_content(
+    api: Api, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    spec = REGISTERED_WRITES["experience.event"]
+    revoked = False
+
+    def authorize(session: Session, owner: uuid.UUID, payload: BaseModel) -> None:
+        spec.authorize(session, owner, payload)
+        if revoked:
+            raise WriteFailure("reference_forbidden")
+
+    write_type = "test.revocable_deferred_experience"
+    monkeypatch.setitem(
+        REGISTERED_WRITES, write_type, replace(spec, write_type=write_type, authorize=authorize)
+    )
+    tokens = api.login("revoked-deferred@example.com")
+    other = api.login("revoked-deferred-other@example.com")
+    prerequisite = envelope(tokens["user"]["id"])
+    parent = envelope(
+        tokens["user"]["id"], write_type=write_type, dependencies=[prerequisite["write_id"]]
+    )
+    waiting = submit(api, tokens, parent)[0]
+    assert waiting["status"] == "deferred"
+    assert waiting["reason_code"] == "dependency_not_arrived"
+    child = envelope(tokens["user"]["id"], dependencies=[parent["write_id"]])
+    child_waiting = submit(api, tokens, child)[0]
+    assert child_waiting["status"] == "deferred"
+    assert child_waiting["reason_code"] == "dependency_not_confirmed"
+    revoked = True
+    changed = {**parent, "payload": {**parent["payload"], "content": {"ping": "changed"}}}
+    disguised = {**parent, "owner_id": other["user"]["id"]}
+    for account, write in [(tokens, changed), (other, disguised)]:
+        rejected = submit(api, account, write)[0]
+        assert rejected["status"] == "failed"
+        assert rejected["reason_code"] == "reference_forbidden"
+        assert rejected["result"] is None
+        assert rejected["conflict"] is None
+        assert submit(api, tokens, child)[0] == child_waiting
+    rejected = submit(api, tokens, parent)[0]
+    assert rejected["status"] == "failed"
+    assert rejected["reason_code"] == "reference_forbidden"
+    assert rejected["result"] is None
+    failed = submit(api, tokens, child)[0]
+    assert failed["status"] == "failed"
+    assert failed["reason_code"] == "dependency_failed"
+    assert submit(api, tokens, parent)[0] == rejected
+    revoked = False
+    assert submit(api, tokens, prerequisite)[0]["status"] == "confirmed"
+    assert submit(api, tokens, parent)[0] == rejected
+    assert submit(api, tokens, child)[0] == failed
+    assert count(api, tokens) == 1
+    assert count(api, other) == 0
+
+
 @pytest.mark.parametrize("outcome", ["failed", "conflict"])
 def test_partial_application_rolls_back_and_retains_terminal_result(
     api: Api, monkeypatch: pytest.MonkeyPatch, outcome: str
 ) -> None:
     spec = REGISTERED_WRITES["experience.event"]
     copies = {"local": {"ping": "offline"}, "remote": {"ping": "other"}}
+    revoked = False
+
+    def authorize(session: Session, owner: uuid.UUID, payload: BaseModel) -> None:
+        spec.authorize(session, owner, payload)
+        if revoked:
+            raise WriteFailure("reference_forbidden")
 
     def apply(
         session: Session,
@@ -312,7 +372,9 @@ def test_partial_application_rolls_back_and_retains_terminal_result(
     # results and event counts are observed, never receipt or outbox table rows.
     write_type = "test.rejected_experience"
     monkeypatch.setitem(
-        REGISTERED_WRITES, write_type, replace(spec, write_type=write_type, apply=apply)
+        REGISTERED_WRITES,
+        write_type,
+        replace(spec, write_type=write_type, authorize=authorize, apply=apply),
     )
     tokens = api.login("partial-application@example.com")
     parent = envelope(tokens["user"]["id"], write_type=write_type)
@@ -329,6 +391,14 @@ def test_partial_application_rolls_back_and_retains_terminal_result(
     assert submit(api, tokens, parent)[0] == rejected
     changed = {**parent, "payload": {**parent["payload"], "content": {"ping": "changed"}}}
     assert submit(api, tokens, changed)[0]["reason_code"] == "write_id_reused"
+    revoked = True
+    denied = submit(api, tokens, parent)[0]
+    assert denied["status"] == "failed"
+    assert denied["reason_code"] == "reference_forbidden"
+    assert denied["result"] is None
+    assert denied["conflict"] is None
+    revoked = False
+    assert submit(api, tokens, parent)[0] == rejected
     child = envelope(tokens["user"]["id"], dependencies=[parent["write_id"]])
     dependent = submit(api, tokens, child)[0]
     assert dependent["status"] == ("deferred" if outcome == "conflict" else "failed")
