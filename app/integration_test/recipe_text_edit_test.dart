@@ -210,7 +210,7 @@ void main() {
         tester,
         find.byKey(const ValueKey('recipe-detail-content')),
       );
-      await tap(tester, 'recipe-step-0');
+      await tap(tester, 'recipe-step-1');
       expect(find.textContaining(_original), findsOneWidget);
       expect(find.textContaining(_manualWhy), findsOneWidget);
 
@@ -222,7 +222,7 @@ void main() {
         tester,
         find.byKey(const ValueKey('recipe-detail-content')),
       );
-      await tap(tester, 'recipe-step-0');
+      await tap(tester, 'recipe-step-1');
       expect(find.textContaining(_original), findsOneWidget);
       expect(find.textContaining(_manualWhy), findsNothing);
       await tester.pageBack();
@@ -232,7 +232,7 @@ void main() {
         tester,
         find.byKey(const ValueKey('recipe-detail-content')),
       );
-      await tap(tester, 'recipe-step-0');
+      await tap(tester, 'recipe-step-1');
       expect(find.textContaining(_manualWhy), findsOneWidget);
       await backToShell(tester);
 
@@ -256,7 +256,7 @@ void main() {
         tester,
         find.byKey(const ValueKey('recipe-detail-content')),
       );
-      await reveal(tester, 'recipe-step-0');
+      await reveal(tester, 'recipe-step-1');
       expect(find.textContaining(_clarified), findsOneWidget);
       await tap(tester, 'recipe-history-button');
       await waitFor(tester, find.byKey(const ValueKey('recipe-version-1')));
@@ -270,7 +270,7 @@ void main() {
         tester,
         find.byKey(const ValueKey('recipe-detail-content')),
       );
-      await reveal(tester, 'recipe-step-0');
+      await reveal(tester, 'recipe-step-1');
       expect(find.textContaining(_clarified), findsOneWidget);
       expect(tester.takeException(), isNull);
     } catch (error, stack) {
