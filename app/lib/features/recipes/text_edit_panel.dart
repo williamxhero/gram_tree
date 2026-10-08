@@ -51,6 +51,7 @@ class _TextEditPanelState extends ConsumerState<TextEditPanel> {
   int _selectionRevision = 0;
   int _targetRevision = 0;
   int _pendingChoices = 0;
+  Future<void> _choiceDispatch = Future<void>.value();
   Timer? _editTimer;
 
   RecipeRepository get _repo => ref.read(recipeRepositoryProvider);
@@ -263,12 +264,19 @@ class _TextEditPanelState extends ConsumerState<TextEditPanel> {
     Map<String, dynamic> params,
   ) async {
     final choosing = params['operation'] == 'text_choose';
+    final previous = _choiceDispatch;
+    final completion = choosing ? Completer<void>() : null;
     if (choosing) {
       // Visible edits invalidate confirmation before the dispatcher awaits local
       // event persistence. Slow storage must not leave the old check usable.
       setState(() => _pendingChoices++);
+      // EventQueue does not promise ordered completion. Keep edited-after
+      // handlers in input order even while the field permits more typing.
+      _choiceDispatch = completion!.future;
     }
     try {
+      if (choosing) await previous;
+      if (!context.mounted) return;
       await ref
           .read(intentDispatcherProvider)
           .dispatch(
@@ -281,6 +289,8 @@ class _TextEditPanelState extends ConsumerState<TextEditPanel> {
             ),
           );
     } finally {
+      // A failed dispatch must not strand the remaining input behind its tail.
+      completion?.complete();
       if (choosing && mounted) setState(() => _pendingChoices--);
     }
   }

@@ -372,10 +372,13 @@ Future<void> _open(WidgetTester tester, TestEnv env) async {
 /// Simulates slow device persistence at the storage boundary, not an intent stub.
 class _SlowLocalEvents extends FakeEventQueue {
   Completer<void>? write;
+  bool delayOnlyNext = false;
 
   @override
   Future<void> enqueue(QueuedEvent event) async {
-    await write?.future;
+    final pending = write;
+    if (delayOnlyNext) write = null;
+    await pending?.future;
     await super.enqueue(event);
   }
 }
@@ -560,6 +563,63 @@ void main() {
           .onPressed,
       isNull,
       reason: '新的安全检查不能允许宣称包治百病',
+    );
+  });
+
+  testWidgets('连续修改后值按输入顺序生效，不被较慢的旧事件覆盖', (tester) async {
+    final original = _env();
+    final queue = _SlowLocalEvents();
+    final env = TestEnv(
+      server: original.server,
+      local: original.local,
+      secure: original.secure,
+      eventQueue: queue,
+    );
+    await _open(tester, env);
+    await _tap(tester, 'ai-design-new');
+    await _tap(tester, 'ai-skip-questions');
+    await _preview(tester);
+    await _choose(tester, 'text-edit-modify-clarify-cook');
+    await _choose(tester, 'text-edit-reject-remind-cook');
+    await _choose(tester, 'text-edit-reject-explain-cook');
+    await _reveal(tester, 'text-edit-after-clarify-cook');
+    final firstWrite = Completer<void>();
+    queue
+      ..write = firstWrite
+      ..delayOnlyNext = true;
+    addTearDown(() {
+      if (!firstWrite.isCompleted) firstWrite.complete();
+    });
+    await tester.enterText(
+      find.byKey(const ValueKey('text-edit-after-clarify-cook')),
+      '先前输入的安全文字',
+    );
+    await tester.pump();
+    await tester.enterText(
+      find.byKey(const ValueKey('text-edit-after-clarify-cook')),
+      '包治百病',
+    );
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(
+      tester
+          .widget<FilledButton>(find.byKey(const ValueKey('text-edit-confirm')))
+          .onPressed,
+      isNull,
+      reason: '较早的本机事件仍未落盘，不能确认',
+    );
+    firstWrite.complete();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+    await tester.pumpAndSettle();
+    await _reveal(tester, 'text-edit-confirm');
+    expect(find.text('待确认步骤 cook：先前输入的安全文字'), findsNothing);
+    expect(find.text('待确认步骤 cook：包治百病'), findsOneWidget);
+    expect(
+      tester
+          .widget<FilledButton>(find.byKey(const ValueKey('text-edit-confirm')))
+          .onPressed,
+      isNull,
+      reason: '最终检查必须针对最新后值，而非较晚完成写入的旧值',
     );
   });
 
