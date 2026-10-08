@@ -566,7 +566,14 @@ def record_consents(
     for r in records:
         existing = session.get(Consent, r.id)
         if existing is not None:
-            continue  # 同一条重复上传，按 ID 去重
+            if (existing.user_id != user.id or any(
+                getattr(existing, field) != getattr(r, field)
+                for field in ("kind", "version", "action", "occurred_at", "device_id")
+            )):
+                from gramtree.core.errors import ApiError
+
+                raise ApiError(409, "consent_record_conflict", "同意记录冲突，请刷新后重试")
+            continue  # Only identical owner/payload retries are idempotent.
         session.add(
             Consent(
                 id=r.id,

@@ -4,7 +4,7 @@ import time
 from starlette.concurrency import run_in_threadpool
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
-from gramtree.core.errors import error_response
+from gramtree.core.errors import error_response, private_profile_boundary
 from gramtree.core.request_context import REQUEST_ID_HEADER, accept_or_new, set_request_id
 from gramtree.observability import metrics
 
@@ -50,10 +50,17 @@ class RequestContextMiddleware:
             await self.app(scope, receive, send_wrapper)
         except Exception as exc:
             # 未处理的异常在这里转成统一错误格式，保证带上请求编号
-            logger.exception("unhandled error", exc_info=exc)
+            private = private_profile_boundary(scope.get("path", ""))
+            if private:
+                # Traceback/exception repr can include decrypted input or SQL
+                # parameters. Request ID, status and route suffice for diagnosis.
+                logger.error("unhandled private request error")
+            else:
+                logger.exception("unhandled error", exc_info=exc)
             if not response_started:
                 response = error_response(
-                    500, "internal_error", "服务暂时出了问题，请稍后再试", type(exc).__name__
+                    500, "internal_error", "服务暂时出了问题，请稍后再试",
+                    None if private else type(exc).__name__
                 )
                 await response(scope, receive, send_wrapper)
         finally:
@@ -64,7 +71,11 @@ class RequestContextMiddleware:
                 extra={
                     "request_id": request_id,
                     "method": scope.get("method"),
-                    "path": scope.get("path"),
+                    "path": (
+                        getattr(route, "path", "/v1/me/private")
+                        if private_profile_boundary(scope.get("path", ""))
+                        else scope.get("path")
+                    ),
                     "route": getattr(route, "path", None),
                     "status": status_code,
                     "duration_ms": round(duration_ms, 1),
