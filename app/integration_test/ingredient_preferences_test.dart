@@ -96,6 +96,16 @@ void main() {
     try {
       // Browser acceptance also exercises the public invalid-reference seam;
       // credentials come only from the public login API, never App internals.
+      // tool/e2e_server.sh imports this established fixture, not 香菜.
+      final ingredients =
+          (await server.post(
+                '/v1/ingredients/search',
+                data: {'query': '测试酱油'},
+              )).data['items']
+              as List;
+      expect(ingredients, hasLength(1));
+      expect(ingredients.single['standard_name'], '测试酱油');
+      expect(ingredients.single['id'], '00000000-0000-4000-8000-000000000001');
       final owner = await loginApi('prefs-api-owner-$serial@example.com');
       final other = await loginApi('prefs-api-other-$serial@example.com');
       final baseline = (await server.get(profilePath, options: owner)).data;
@@ -156,20 +166,27 @@ void main() {
       await tapKey(tester, 'taste-preference-add');
       await tester.enterText(
         find.byKey(const ValueKey('taste-ingredient-search')),
-        '香菜',
+        '测试酱油',
       );
       await tester.tap(
         find.byKey(const ValueKey('taste-ingredient-search-submit')),
       );
-      await waitFor(tester, find.text('香菜'));
       final result = find.byWidgetPredicate(
         (w) =>
             w.key is ValueKey<String> &&
             (w.key as ValueKey<String>).value.startsWith('taste-search-'),
       );
+      // Query text is already visible before the HTTP search completes.
+      // Wait for the actual selectable result instead of the editable text.
+      await waitFor(tester, result);
       expect(result, findsOneWidget);
       final searchKey = (tester.widget(result).key as ValueKey<String>).value;
       final ingredientId = searchKey.substring('taste-search-'.length);
+      expect(ingredientId, '00000000-0000-4000-8000-000000000001');
+      expect(
+        find.descendant(of: result, matching: find.text('测试酱油')),
+        findsOneWidget,
+      );
       await tester.tap(result);
       await tester.pumpAndSettle();
       await tester.tap(find.byKey(const ValueKey('taste-preference-save')));
@@ -177,8 +194,8 @@ void main() {
         tester,
         find.byKey(const ValueKey('taste-profile-content')),
       );
-      await reveal(tester, find.text('香菜 · 喜欢'));
-      expect(find.text('香菜 · 喜欢'), findsOneWidget);
+      await reveal(tester, find.text('测试酱油 · 喜欢'));
+      expect(find.text('测试酱油 · 喜欢'), findsOneWidget);
 
       step = 'category select';
       await tapKey(tester, 'taste-preference-add');
@@ -205,7 +222,7 @@ void main() {
         tester,
         find.byKey(const ValueKey('taste-profile-content')),
       );
-      await reveal(tester, find.text('香菜 · 喜欢'));
+      await reveal(tester, find.text('测试酱油 · 喜欢'));
       expect(find.text('蔬菜 · 忌口'), findsOneWidget);
       await tapKey(tester, 'taste-preference-kind-ingredient:$ingredientId');
       await tester.tap(find.text('不喜欢').last);
@@ -214,7 +231,7 @@ void main() {
         tester,
         find.byKey(const ValueKey('taste-profile-content')),
       );
-      await reveal(tester, find.text('香菜 · 不喜欢'));
+      await reveal(tester, find.text('测试酱油 · 不喜欢'));
 
       step = 'delete and history';
       await tapKey(tester, 'taste-preference-delete-ingredient:$ingredientId');
@@ -226,8 +243,8 @@ void main() {
         find.byKey(const ValueKey('taste-profile-content')),
       );
       await reveal(tester, find.text('蔬菜 · 忌口'));
-      expect(find.text('香菜 · 不喜欢'), findsNothing);
-      await reveal(tester, find.text('食材偏好：未设置 → 香菜 · 喜欢'));
+      expect(find.text('测试酱油 · 不喜欢'), findsNothing);
+      await reveal(tester, find.text('食材偏好：未设置 → 测试酱油 · 喜欢'));
       expect(find.textContaining('你手动修改'), findsWidgets);
       expect(find.text(ingredientId), findsNothing);
 
@@ -245,7 +262,7 @@ void main() {
       await reveal(tester, find.text('还没有食材偏好'));
       expect(find.text('蔬菜 · 忌口'), findsNothing);
       await reveal(tester, find.text('还没有修改记录'));
-      expect(find.text('食材偏好：未设置 → 香菜 · 喜欢'), findsNothing);
+      expect(find.text('食材偏好：未设置 → 测试酱油 · 喜欢'), findsNothing);
       expect(tester.takeException(), isNull);
     } catch (error, stack) {
       IntegrationTestWidgetsFlutterBinding.instance.reportData = {
