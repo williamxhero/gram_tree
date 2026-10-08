@@ -38,6 +38,47 @@ const _ingredientId = 'restart-flour';
 void _marker(String state) =>
     debugPrintSynchronously('GRAMTREE_PROCESS_DEATH $_runId $state pid=$pid');
 
+String _sourceStack(String detail) {
+  // Assertion reports contain expected/actual business payloads. Keep only
+  // conventional stack frames with source locations, never their value dumps.
+  final frame = RegExp(
+    r'^#\d+\s+[A-Za-z0-9_.$<> ]+\s+\((?:package:|file:)[^()\s]+:\d+(?::\d+)?\)$',
+  );
+  return detail
+      .split('\n')
+      .map((line) => line.trim())
+      .where(frame.hasMatch)
+      .take(40)
+      .join('\n');
+}
+
+void _diagnostic(String detail) {
+  // Separate from protocol markers; keep each Android log entry and the whole
+  // report bounded. Never print sessions, tokens, or request headers.
+  final safe = detail
+      .replaceAll(
+        RegExp(r'''Bearer\s+[^\s,"']+''', caseSensitive: false),
+        'Bearer [redacted]',
+      )
+      .replaceAll(
+        RegExp(r'eyJ[A-Za-z0-9_-]*\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+'),
+        '[redacted JWT]',
+      )
+      .replaceAll(
+        RegExp(
+          r'''(?:access_token|refresh_token|authorization)\s*["']?\s*[:=]\s*[^\n]+''',
+          caseSensitive: false,
+        ),
+        '[redacted auth field]',
+      );
+  for (final line in safe.split('\n').take(60)) {
+    final bounded = line.length > 800 ? line.substring(0, 800) : line;
+    debugPrintSynchronously(
+      'GRAMTREE_PROCESS_DETAIL $_runId pid=$pid $bounded',
+    );
+  }
+}
+
 /// The existing simulated outage must affect health as well as business HTTP;
 /// otherwise a live health poll would spuriously reset durable retry state.
 /// Online checks still use the production HTTP probe against the real API.
@@ -67,11 +108,15 @@ Future<void> _until(
   WidgetTester tester,
   FutureOr<bool> Function() predicate, {
   String reason = 'condition',
+  FutureOr<void> Function()? onTimeout,
 }) async {
+  _diagnostic('Waiting for $reason');
   for (var i = 0; i < 300; i++) {
     if (await predicate()) return;
     await tester.pump(const Duration(milliseconds: 100));
   }
+  if (onTimeout != null) await onTimeout();
+  _diagnostic('Timed out waiting for $reason');
   fail('Timed out waiting for $reason');
 }
 
@@ -181,6 +226,7 @@ Future<void> _seed(
         .byKey(const ValueKey('recipe-detail-content'))
         .evaluate()
         .isNotEmpty,
+    reason: 'recipe detail mounted',
   );
   final increase = find.byKey(const ValueKey('recipe-serving-increase'));
   await _reveal(tester, increase);
@@ -224,6 +270,7 @@ Future<void> _seed(
     await _until(
       tester,
       () => find.byKey(const ValueKey('why-panel')).evaluate().isNotEmpty,
+      reason: 'seed WhyPanel ${i + 1} opened',
     );
     expect(find.text('原来：100 g'), findsOneWidget);
     expect(find.text('现在：150 克'), findsOneWidget);
@@ -234,21 +281,33 @@ Future<void> _seed(
   List<QueueEntry> entries = [];
   // Transport failures retain pending work with durable backoff. Deferred is
   // reserved for business/dependency responses, not the offline Dio exception.
-  await _until(tester, () async {
-    entries = await queue.entries(ownerId: owner);
-    final writes = entries.where((e) => e.write.eventType == _whyType).toList();
-    return writes.length == 2 &&
-        writes.every(
-          (e) =>
-              e.state == WriteState.pending &&
-              e.reasonCode == 'network_or_server_failure' &&
-              e.attempts > 0 &&
-              e.nextAttemptAt != null &&
-              e.nextAttemptAt!.isAfter(
-                DateTime.now().toUtc().add(const Duration(seconds: 3)),
-              ),
-        );
-  }, reason: 'two durable offline SourceMark writes and retry metadata');
+  await _until(
+    tester,
+    () async {
+      entries = await queue.entries(ownerId: owner);
+      final writes = entries
+          .where((e) => e.write.eventType == _whyType)
+          .toList();
+      return writes.length == 2 &&
+          writes.every(
+            (e) =>
+                e.state == WriteState.pending &&
+                e.reasonCode == 'network_or_server_failure' &&
+                e.attempts > 0 &&
+                e.nextAttemptAt != null &&
+                e.nextAttemptAt!.isAfter(
+                  DateTime.now().toUtc().add(const Duration(seconds: 3)),
+                ),
+          );
+    },
+    reason: 'two durable offline SourceMark writes and retry metadata',
+    onTimeout: () => _diagnostic(
+      'Queue retry states at ${DateTime.now().toUtc().toIso8601String()}: '
+      '${jsonEncode([
+        for (final entry in entries) {'id': entry.write.id, 'type': entry.write.eventType, 'state': entry.state.name, 'attempts': entry.attempts, 'reason': entry.reasonCode, 'next_attempt_at': entry.nextAttemptAt?.toUtc().toIso8601String()},
+      ])}',
+    ),
+  );
   expect(await _count(server, session.accessToken, device), baseline);
   // Drain the snapshot store's serialized persistence tail after the page has
   // entered offline mode; do not retain an earlier local-render capture while
@@ -332,6 +391,7 @@ Future<void> _restore(
         .byKey(const ValueKey('recipe-detail-content'))
         .evaluate()
         .isNotEmpty,
+    reason: 'recipe detail mounted',
   );
   await _reveal(tester, find.textContaining('离线快照 · 第 1 版'));
   await _reveal(tester, find.textContaining('已保存 3 份的用量与换算结果；离线只读'));
@@ -529,6 +589,14 @@ void main() {
           binding.reportData?['verified'] == true) {
         _marker('PASSED');
       } else {
+        _diagnostic(
+          'Binding completed: passed=$passed restored=$restoredSuccessfully '
+          'phase=${binding.reportData?['phase']}',
+        );
+        for (final failure in binding.failureMethodsDetails.take(2)) {
+          _diagnostic('Framework failure in ${failure.methodName}');
+          _diagnostic(_sourceStack(failure.details ?? ''));
+        }
         _marker('FAILED');
       }
     }),
@@ -591,13 +659,22 @@ void main() {
         binding.reportData = {...?binding.reportData, 'verified': true};
       }
     } catch (error, stack) {
+      // Do not serialize Dio request/response objects or auth headers. The host
+      // consumes FAILED immediately, so synchronous details must precede it.
+      final detail = error is DioException
+          ? 'DioException type=${error.type.name} '
+                'status=${error.response?.statusCode}'
+          : error.runtimeType.toString();
+      final sourceStack = _sourceStack(stack.toString());
       binding.reportData = {
         ...?binding.reportData,
-        'error': error.toString(),
-        'stack': stack.toString(),
+        'error': detail,
+        'stack': sourceStack,
       };
+      _diagnostic(
+        'phase=${binding.reportData?['phase']} $detail\n$sourceStack',
+      );
       _marker('FAILED');
-      debugPrintSynchronously(error.toString());
       rethrow;
     }
   }, timeout: const Timeout(Duration(minutes: 4)));

@@ -43,7 +43,9 @@ def command(args: list[str], *, timeout: float = 30) -> str:
         check=False,
     )
     if result.returncode:
-        raise RuntimeError(f"Command failed ({result.returncode}): {args[0]}\n{result.stdout}")
+        raise RuntimeError(
+            f"Command failed ({result.returncode}): {args[0]}\n{result.stdout}"
+        )
     return result.stdout.strip()
 
 
@@ -95,7 +97,7 @@ class LogWatch:
         self.android = android
         self.run_id = run_id
         self.lines: queue.Queue[str | None] = queue.Queue()
-        self.recent: collections.deque[str] = collections.deque(maxlen=100)
+        self.recent: collections.deque[str] = collections.deque(maxlen=200)
         self.process = subprocess.Popen(
             [
                 *android.prefix,
@@ -135,7 +137,9 @@ class LogWatch:
         while time.monotonic() < deadline:
             if time.monotonic() >= next_pid_check:
                 if self.android.pid() != process:
-                    raise RuntimeError(f"Unexpected app exit/PID change before {target}")
+                    raise RuntimeError(
+                        f"Unexpected app exit/PID change before {target}"
+                    )
                 next_pid_check = time.monotonic() + 1
             try:
                 line = self.lines.get(timeout=0.25)
@@ -148,8 +152,8 @@ class LogWatch:
             if marker and marker[1] == self.run_id:
                 state, marker_pid = marker[2], marker[3]
                 if marker_pid != process:
-                    raise RuntimeError(f"Marker came from unexpected PID: {line}")
-                print(line, flush=True)
+                    raise RuntimeError(f"Marker came from unexpected PID: {marker_pid}")
+                print(marker.group(0), flush=True)
                 if state == "FAILED":
                     raise RuntimeError("Standalone Flutter binding reported failure")
                 if len(seen) >= len(stages) or state != stages[len(seen)]:
@@ -160,8 +164,50 @@ class LogWatch:
             log_pid = LOG_PID.match(line)
             is_ours = (log_pid is not None and log_pid[1] == process) or PACKAGE in line
             if is_ours and FAILURE.search(line):
-                raise RuntimeError(f"Unexpected crash/test failure: {line}")
+                raise RuntimeError(
+                    f"Unexpected crash/test failure before {target}, PID {process}"
+                )
         raise TimeoutError(f"Missing {target} after {timeout:g}s; observed {seen}")
+
+    def capture_failure_details(
+        self, *, timeout: float = 2, max_lines: int = 200
+    ) -> None:
+        # FAILED is terminal, not permission to lose the following framework
+        # exception/stack. Drain briefly before closing logcat or stopping the app;
+        # never interpret a later success marker as recovery from this failure.
+        deadline = time.monotonic() + timeout
+        for _ in range(max_lines):
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                break
+            try:
+                line = self.lines.get(timeout=min(0.25, remaining))
+            except queue.Empty:
+                continue
+            if line is None:
+                break
+            self.recent.append(line)
+
+    def safe_failure_log(self) -> str:
+        # Flutter's automatic assertion report can dump whole envelopes even
+        # though our Dart diagnostics do not. Never relay those raw values.
+        safe: list[str] = []
+        detail_prefix = f"GRAMTREE_PROCESS_DETAIL {self.run_id} "
+        frame = re.compile(
+            r"#\d+\s+[A-Za-z0-9_.$<> ]+\s+"
+            r"\((?:package:|file:)[^()\s]+:\d+(?::\d+)?\)$"
+        )
+        for line in self.recent:
+            marker = MARKER.search(line)
+            if marker and marker[1] == self.run_id:
+                safe.append(marker.group(0))
+            elif detail_prefix in line:
+                safe.append(line[line.index(detail_prefix) :])
+            elif match := frame.search(line):
+                safe.append(match.group(0))
+            elif FAILURE.search(line):
+                safe.append("Native/framework failure detected (raw message omitted)")
+        return "\n".join(safe)
 
     def close(self) -> None:
         self.process.terminate()
@@ -233,13 +279,21 @@ def main() -> int:
             raise RuntimeError("Restore reused the seed PID instead of restarting")
         print(f"OS relaunch verified: {seed_pid} -> {restore_pid}", flush=True)
         watch.wait("PASSED", restore_pid, args.phase_timeout)
-        print("Android process-death acceptance PASSED (binding test future passed)", flush=True)
+        print(
+            "Android process-death acceptance PASSED (binding test future passed)",
+            flush=True,
+        )
         return 0
     except (RuntimeError, TimeoutError, OSError, subprocess.SubprocessError) as error:
-        print(f"Android process-death acceptance FAILED: {error}", file=sys.stderr, flush=True)
+        print(
+            f"Android process-death acceptance FAILED: {error}",
+            file=sys.stderr,
+            flush=True,
+        )
         if watch is not None:
-            print("Recent filtered logcat:", file=sys.stderr)
-            print("\n".join(watch.recent), file=sys.stderr)
+            watch.capture_failure_details()
+            print("Recent safe harness diagnostics:", file=sys.stderr)
+            print(watch.safe_failure_log(), file=sys.stderr)
         return 1
     finally:
         if watch is not None:
