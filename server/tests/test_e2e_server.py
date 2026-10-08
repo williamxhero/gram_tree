@@ -50,10 +50,12 @@ def test_e2e_bootstrap_supports_more_than_ten_logins(tmp_path: Path) -> None:
             assert response.status_code == 429
             assert response.json()["error"]["code"] == "resend_too_soon"
     finally:
-        subprocess.run([*command, "stop"], cwd=root, env=env, check=True, timeout=30)
-        admin = create_engine(target.set(database="postgres"), isolation_level="AUTOCOMMIT")
         try:
-            with admin.connect() as connection:
-                connection.execute(text(f'DROP DATABASE IF EXISTS "{database}" WITH (FORCE)'))
+            subprocess.run([*command, "stop"], cwd=root, env=env, check=True, timeout=30)
         finally:
-            admin.dispose()
+            admin = create_engine(target.set(database="postgres"), isolation_level="AUTOCOMMIT")
+            try:
+                with admin.connect() as connection:
+                    connection.execute(text(f'DROP DATABASE IF EXISTS "{database}" WITH (FORCE)'))
+            finally:
+                admin.dispose()
