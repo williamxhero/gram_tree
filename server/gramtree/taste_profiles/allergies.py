@@ -67,8 +67,12 @@ def erase_sensitive(session: Session, owner_id: uuid.UUID) -> None:
                 continue
             if change_id in change_ids:
                 event_ids.add(event_id)
-    if event_ids:
-        session.execute(delete(Event).where(Event.user_id == owner_id, Event.id.in_(event_ids)))
+    # Bound SQL bind counts; every batch stays in the caller's atomic transaction.
+    ids = list(event_ids)
+    for offset in range(0, len(ids), 500):
+        session.execute(
+            delete(Event).where(Event.user_id == owner_id, Event.id.in_(ids[offset : offset + 500]))
+        )
     session.execute(
         delete(TasteProfileChange).where(
             TasteProfileChange.owner_id == owner_id, TasteProfileChange.field == "allergies"

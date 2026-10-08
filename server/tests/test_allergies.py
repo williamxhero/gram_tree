@@ -506,6 +506,65 @@ def test_withdrawal_erases_alternative_uuid_links(
         )
 
 
+def test_keyless_withdrawal_erases_more_legacy_links_than_postgres_bind_limit(
+    sensitive_api: Api, engine: Engine
+):
+    api = sensitive_api
+    owner = bearer(api.login("capacity-sensitive@example.com"))
+    consent(api, owner)
+    state = api.client.get(PATH, headers=owner).json()
+    assert save(api, owner, state, ["花生"]).status_code == 200
+    change_id = api.client.get(PATH + "/changes", headers=owner).json()["items"][0]["id"]
+    event = {
+        "id": str(uuid.uuid4()),
+        "event_type": "pipeline.self_check",
+        "type_version": 1,
+        "device_id": "erasure-capacity",
+        "device_time": api.clock.now.isoformat(),
+        "app_version": "1.0.0",
+        "content": {"ping": "pong"},
+        "correlation": {"taste_profile_change_id": change_id},
+    }
+    response = api.client.post("/v1/events/upload", headers=owner, json={"events": [event]})
+    assert response.status_code == 200, response.text
+    assert response.json()["results"][0]["status"] == "accepted"
+    # Authorized bulk legacy-storage fixture models many valid upload batches,
+    # without making the test spend minutes sending identical 500-event requests.
+    with engine.begin() as conn:
+        conn.execute(
+            text(
+                "INSERT INTO events (id,user_id,event_type,type_version,device_id,device_time,"
+                "app_version,correlation,content,content_fingerprint,received_at,"
+                "device_time_suspicious) "
+                "SELECT gen_random_uuid(),user_id,event_type,type_version,device_id,device_time,"
+                "app_version,CAST(:correlation AS jsonb),content,content_fingerprint,received_at,"
+                "device_time_suspicious FROM events CROSS JOIN generate_series(1,65536) "
+                "WHERE id=:id"
+            ),
+            {
+                "id": event["id"],
+                "correlation": json.dumps({"taste_profile_change_id": change_id.upper()}),
+            },
+        )
+        assert (
+            conn.scalar(text("SELECT count(*) FROM events WHERE device_id='erasure-capacity'"))
+            == 65537
+        )
+    api.client.app.state.settings = api.client.app.state.settings.model_copy(
+        update={"sensitive_data_key": None}
+    )
+    api.clock.advance(seconds=1)
+    consent(api, owner, "withdraw")
+    assert api.client.get(PATH, headers=owner).json()["consent_id"] is None
+    with engine.connect() as conn:
+        assert conn.scalar(text("SELECT count(*) FROM events")) == 0
+        assert conn.scalar(text("SELECT count(*) FROM owner_allergies")) == 0
+        assert (
+            conn.scalar(text("SELECT count(*) FROM taste_profile_changes WHERE field='allergies'"))
+            == 0
+        )
+
+
 def test_uuid_erasure_preserves_malformed_legacy_and_unrelated_owner_events(
     sensitive_api: Api, engine: Engine
 ):
