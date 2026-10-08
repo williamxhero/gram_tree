@@ -601,6 +601,15 @@ def request_deletion(
     session: Session, apple: AppleClient, user: User, ds: DeviceSession, now: datetime
 ) -> User:
     require_recent_reauth(session, ds, now)
+    from gramtree.taste_profiles import allergies
+    from gramtree.taste_profiles import service as taste_service
+
+    profile = taste_service.locked_profile(session, user.id, taste_service.scale_for(session))
+    allergies.erase_sensitive(session, user.id)
+    profile.sensitive_consent_id = None
+    profile.sensitive_authorization_version += 1
+    profile.version += 1
+    profile.updated_at = now
     days = int(config.get(session, "account.deletion_business_days"))
     user.status = UserStatus.deleting
     user.deletion_requested_at = now
@@ -624,7 +633,7 @@ def purge_due_accounts(session: Session, apple: AppleClient, now: datetime) -> i
     """删除到期的注销中账号的个人数据。账号行保留为“已注销”，ID 不复用。"""
     due = list(
         session.scalars(
-            select(User).where(User.status == UserStatus.deleting, User.deletion_due_at <= now)
+            select(User).where(User.status == UserStatus.deleting, User.deletion_due_at <= now).with_for_update()
         )
     )
     for user in due:
@@ -637,6 +646,9 @@ def purge_due_accounts(session: Session, apple: AppleClient, now: datetime) -> i
         if emails:
             session.execute(delete(EmailCode).where(EmailCode.email.in_(emails)))
         session.execute(delete(Identity).where(Identity.user_id == user.id))
+        from gramtree.taste_profiles.allergies import erase_sensitive
+
+        erase_sensitive(session, user.id)
         session.execute(delete(Consent).where(Consent.user_id == user.id))
         session.execute(delete(PersonalMeasure).where(PersonalMeasure.owner_id == user.id))
         session.execute(
