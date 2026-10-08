@@ -135,7 +135,9 @@ void main() {
               .isEmpty;
       i++
     ) {
-      await tester.pageBack();
+      // Exercise platform Back: pageBack() requires the English "Back" tooltip,
+      // while recipe detail has a custom localized list-navigation action.
+      await tester.binding.handlePopRoute();
       await tester.pumpAndSettle();
     }
     expect(find.byKey(const ValueKey('primary-create-button')), findsOneWidget);
@@ -225,7 +227,7 @@ void main() {
       await tap(tester, 'recipe-step-1');
       expect(find.textContaining(_original), findsOneWidget);
       expect(find.textContaining(_manualWhy), findsNothing);
-      await tester.pageBack();
+      await tester.binding.handlePopRoute();
       await tester.pumpAndSettle();
       await tap(tester, 'recipe-version-2');
       await waitFor(
