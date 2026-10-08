@@ -1,5 +1,20 @@
 """Account-scoped durable writes, observed only through HTTP on PostgreSQL."""
 
+import uuid
+from dataclasses import replace
+from datetime import datetime
+
+import pytest
+from pydantic import BaseModel
+from sqlalchemy.orm import Session
+
+from gramtree.events.sync_contract import (
+    WriteApplication,
+    WriteConflict,
+    WriteEnvelope,
+    WriteFailure,
+)
+from gramtree.events.sync_registry import REGISTERED_WRITES
 from tests.accounts_support import Api, bearer, new_uuid
 
 
@@ -175,6 +190,153 @@ def test_invalid_parent_is_terminal_and_child_reports_failed_dependency(api: Api
     repaired = {**parent, "payload": {**parent["payload"], "content": {"ping": "fixed"}}}
     assert submit(api, tokens, repaired)[0]["reason_code"] == "write_id_reused"
     assert count(api, tokens) == 0
+
+
+def test_permission_rejected_parent_is_terminal_and_child_cannot_resume(api: Api) -> None:
+    from tests.test_recipes import recipe_input
+
+    author = api.login("private-recipe@example.com")
+    saved = api.client.post("/v1/recipes", headers=bearer(author), json=recipe_input())
+    assert saved.status_code == 201, saved.text
+    tokens = api.login("forbidden-parent@example.com")
+    parent = envelope(tokens["user"]["id"])
+    parent["payload"]["correlation"] = {"recipe_version_id": saved.json()["version"]["id"]}
+    child = envelope(tokens["user"]["id"], dependencies=[parent["write_id"]])
+    waiting = submit(api, tokens, child)[0]
+    assert waiting["status"] == "deferred"
+    assert waiting["reason_code"] == "dependency_not_arrived"
+    rejected = submit(api, tokens, parent)[0]
+    assert rejected["status"] == "failed"
+    assert rejected["reason_code"] == "reference_forbidden"
+    assert rejected["result"] is None
+    failed = submit(api, tokens, child)[0]
+    assert failed["status"] == "failed"
+    assert failed["reason_code"] == "dependency_failed"
+    assert submit(api, tokens, parent)[0] == rejected
+    assert submit(api, tokens, child)[0] == failed
+    repaired = {**parent, "payload": {**parent["payload"], "correlation": {}}}
+    assert submit(api, tokens, repaired)[0]["reason_code"] == "write_id_reused"
+    assert count(api, tokens) == 0
+    assert count(api, author) == 0
+
+
+def test_permission_rejection_cannot_disclose_or_demote_another_owners_receipt(api: Api) -> None:
+    from tests.test_recipes import recipe_input
+
+    alice = api.login("receipt-author@example.com")
+    saved = api.client.post("/v1/recipes", headers=bearer(alice), json=recipe_input())
+    assert saved.status_code == 201, saved.text
+    original = envelope(alice["user"]["id"])
+    original["payload"]["correlation"] = {"recipe_version_id": saved.json()["version"]["id"]}
+    confirmation = submit(api, alice, original)[0]
+    assert confirmation["status"] == "confirmed"
+    bob = api.login("receipt-intruder@example.com")
+    disguised = {**original, "owner_id": bob["user"]["id"]}
+    rejected = submit(api, bob, disguised)[0]
+    assert rejected["status"] == "failed"
+    assert rejected["reason_code"] == "reference_forbidden"
+    assert rejected["result"] is None
+    assert rejected["conflict"] is None
+    unknown = {**disguised, "write_id": new_uuid()}
+    assert submit(api, bob, unknown)[0] == {**rejected, "write_id": unknown["write_id"]}
+    intruder_child = envelope(bob["user"]["id"], dependencies=[original["write_id"]])
+    assert submit(api, bob, intruder_child)[0]["reason_code"] == "dependency_unavailable"
+    replay = submit(api, alice, original)[0]
+    assert replay["status"] == "already_processed"
+    assert replay["result"] == confirmation["result"]
+    child = envelope(alice["user"]["id"], dependencies=[original["write_id"]])
+    assert submit(api, alice, child)[0]["status"] == "confirmed"
+    assert count(api, alice) == 2
+    assert count(api, bob) == 0
+
+
+def test_revoked_reauthorization_hides_and_preserves_confirmation(
+    api: Api, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    spec = REGISTERED_WRITES["experience.event"]
+    revoked = False
+
+    def authorize(session: Session, owner: uuid.UUID, payload: BaseModel) -> None:
+        spec.authorize(session, owner, payload)
+        if revoked:
+            raise WriteFailure("reference_forbidden")
+
+    # No public operation transfers a private recipe's ownership. A test-only
+    # append-only registration exercises the contract's revoked-access boundary.
+    write_type = "test.revocable_experience"
+    monkeypatch.setitem(
+        REGISTERED_WRITES, write_type, replace(spec, write_type=write_type, authorize=authorize)
+    )
+    tokens = api.login("revoked-replay@example.com")
+    parent = envelope(tokens["user"]["id"], write_type=write_type)
+    confirmation = submit(api, tokens, parent)[0]
+    assert confirmation["status"] == "confirmed"
+    revoked = True
+    rejected = submit(api, tokens, parent)[0]
+    assert rejected["status"] == "failed"
+    assert rejected["reason_code"] == "reference_forbidden"
+    assert rejected["result"] is None
+    assert rejected["conflict"] is None
+    assert submit(api, tokens, parent)[0] == rejected
+    # The rejection cannot turn the already committed prerequisite into failure.
+    child = envelope(tokens["user"]["id"], dependencies=[parent["write_id"]])
+    assert submit(api, tokens, child)[0]["status"] == "confirmed"
+    revoked = False
+    replay = submit(api, tokens, parent)[0]
+    assert replay["status"] == "already_processed"
+    assert replay["result"] == confirmation["result"]
+    assert count(api, tokens) == 2
+
+
+@pytest.mark.parametrize("outcome", ["failed", "conflict"])
+def test_partial_application_rolls_back_and_retains_terminal_result(
+    api: Api, monkeypatch: pytest.MonkeyPatch, outcome: str
+) -> None:
+    spec = REGISTERED_WRITES["experience.event"]
+    copies = {"local": {"ping": "offline"}, "remote": {"ping": "other"}}
+
+    def apply(
+        session: Session,
+        owner: uuid.UUID,
+        write: WriteEnvelope,
+        payload: BaseModel,
+        now: datetime,
+    ) -> WriteApplication:
+        spec.apply(session, owner, write, payload, now)
+        session.flush()
+        if outcome == "conflict":
+            raise WriteConflict(copies)
+        raise WriteFailure("test_application_failed")
+
+    # Inject a rejection after a real append has reached PostgreSQL. Only HTTP
+    # results and event counts are observed, never receipt or outbox table rows.
+    write_type = "test.rejected_experience"
+    monkeypatch.setitem(
+        REGISTERED_WRITES, write_type, replace(spec, write_type=write_type, apply=apply)
+    )
+    tokens = api.login("partial-application@example.com")
+    parent = envelope(tokens["user"]["id"], write_type=write_type)
+    independent = envelope(tokens["user"]["id"])
+    rejected, confirmed = submit(api, tokens, parent, independent)
+    assert rejected["status"] == outcome
+    assert rejected["reason_code"] == (
+        "conflict_choice_required" if outcome == "conflict" else "test_application_failed"
+    )
+    assert rejected["result"] is None
+    assert rejected["conflict"] == (copies if outcome == "conflict" else None)
+    assert confirmed["status"] == "confirmed"
+    assert count(api, tokens) == 1
+    assert submit(api, tokens, parent)[0] == rejected
+    changed = {**parent, "payload": {**parent["payload"], "content": {"ping": "changed"}}}
+    assert submit(api, tokens, changed)[0]["reason_code"] == "write_id_reused"
+    child = envelope(tokens["user"]["id"], dependencies=[parent["write_id"]])
+    dependent = submit(api, tokens, child)[0]
+    assert dependent["status"] == ("deferred" if outcome == "conflict" else "failed")
+    assert dependent["reason_code"] == (
+        "dependency_conflict" if outcome == "conflict" else "dependency_failed"
+    )
+    assert dependent["result"] is None
+    assert count(api, tokens) == 1
 
 
 def test_due_deletion_purges_only_owners_delivery_receipts_and_outbox(api: Api) -> None:

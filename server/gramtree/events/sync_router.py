@@ -64,6 +64,7 @@ def _process(session: SessionDep, owner: uuid.UUID, write: WriteEnvelope) -> Wri
     spec = REGISTERED_WRITES.get(write.write_type)
     parsed = None
     validation_code = "unknown_write_type" if spec is None else None
+    authorization_code = None
     if spec is not None:
         try:
             parsed = spec.validate(write.payload)
@@ -73,9 +74,7 @@ def _process(session: SessionDep, owner: uuid.UUID, write: WriteEnvelope) -> Wri
             try:
                 spec.authorize(session, owner, parsed)
             except WriteFailure as error:
-                # Reauthorization precedes replay disclosure. Do not mutate a
-                # prior confirmation if access to its resource has been revoked.
-                return WriteResult(write_id=write.write_id, status="failed", reason_code=error.code)
+                authorization_code = error.code
 
     # The transaction lock covers first receipt creation too (SELECT FOR UPDATE
     # cannot lock a row that doesn't exist). A collision only serializes unrelated
@@ -83,6 +82,17 @@ def _process(session: SessionDep, owner: uuid.UUID, write: WriteEnvelope) -> Wri
     lock = int.from_bytes(hashlib.sha256(write.write_id.bytes).digest()[:8], "big", signed=True)
     session.execute(text("SELECT pg_advisory_xact_lock(:key)"), {"key": lock})
     receipt = session.get(WriteReceipt, write.write_id)
+    if authorization_code is not None:
+        if receipt is not None:
+            # Denied reauthorization must not reveal or demote an existing
+            # receipt, even when the ID belongs to another account.
+            session.rollback()
+            return WriteResult(
+                write_id=write.write_id, status="failed", reason_code=authorization_code
+            )
+        # A genuinely new rejected prerequisite has arrived. Save its terminal
+        # failure under the same lock as accepted writes so children can stop.
+        validation_code = authorization_code
     fingerprint = _fingerprint(write)
     if receipt is not None:
         if receipt.owner_id != owner:
