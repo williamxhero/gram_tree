@@ -43,6 +43,7 @@ class _TextEditPanelState extends ConsumerState<TextEditPanel> {
   final _choices = <String, ModificationDecision>{};
   AIStatus? _status;
   ModificationPreview? _preview;
+  ModificationPreview? _confirmingPreview;
   String? _error;
   String? _requestId;
   bool _busy = false;
@@ -224,13 +225,12 @@ class _TextEditPanelState extends ConsumerState<TextEditPanel> {
   }
 
   Future<void> _confirm() async {
-    if (!_canConfirm) return;
-    final preview = _preview!;
-    widget.onSavingChanged?.call(true);
-    setState(() {
-      _busy = true;
-      _error = null;
-    });
+    final preview = _confirmingPreview;
+    if (preview == null ||
+        !identical(preview, _preview) ||
+        widget.manualEdits) {
+      return;
+    }
     try {
       final detail = await _repo.confirmModification(
         preview.id,
@@ -240,11 +240,6 @@ class _TextEditPanelState extends ConsumerState<TextEditPanel> {
       await widget.onSaved(detail);
     } catch (error) {
       if (mounted) setState(() => _error = ApiFailure.from(error).message);
-    } finally {
-      if (mounted) {
-        widget.onSavingChanged?.call(false);
-        setState(() => _busy = false);
-      }
     }
   }
 
@@ -264,6 +259,18 @@ class _TextEditPanelState extends ConsumerState<TextEditPanel> {
     Map<String, dynamic> params,
   ) async {
     final choosing = params['operation'] == 'text_choose';
+    final confirming = params['operation'] == 'text_confirm';
+    if (confirming) {
+      if (!_canConfirm) return;
+      // Bind this click and lock edits before asynchronous event persistence.
+      // A delayed confirm intent must never capture a later checked result.
+      _confirmingPreview = _preview;
+      setState(() {
+        _busy = true;
+        _error = null;
+      });
+      widget.onSavingChanged?.call(true);
+    }
     final previous = _choiceDispatch;
     final completion = choosing ? Completer<void>() : null;
     if (choosing) {
@@ -292,6 +299,13 @@ class _TextEditPanelState extends ConsumerState<TextEditPanel> {
       // A failed dispatch must not strand the remaining input behind its tail.
       completion?.complete();
       if (choosing && mounted) setState(() => _pendingChoices--);
+      if (confirming) {
+        _confirmingPreview = null;
+        if (mounted) {
+          widget.onSavingChanged?.call(false);
+          setState(() => _busy = false);
+        }
+      }
     }
   }
 

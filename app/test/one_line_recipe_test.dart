@@ -623,6 +623,74 @@ void main() {
     );
   });
 
+  testWidgets('确认点击立即锁定所选结果，不等待本机事件写入才禁止修改', (tester) async {
+    final original = _env();
+    final queue = _SlowLocalEvents();
+    final env = TestEnv(
+      server: original.server,
+      local: original.local,
+      secure: original.secure,
+      eventQueue: queue,
+    );
+    await _open(tester, env);
+    await _tap(tester, 'ai-design-new');
+    await _tap(tester, 'ai-skip-questions');
+    await _preview(tester);
+    await _choose(tester, 'text-edit-modify-clarify-cook');
+    await _choose(tester, 'text-edit-reject-remind-cook');
+    await _choose(tester, 'text-edit-reject-explain-cook');
+    await _reveal(tester, 'text-edit-confirm');
+    final write = Completer<void>();
+    queue
+      ..write = write
+      ..delayOnlyNext = true;
+    addTearDown(() {
+      if (!write.isCompleted) write.complete();
+    });
+    await tester.tap(find.byKey(const ValueKey('text-edit-confirm')));
+    await tester.pump();
+    expect(
+      env.server.calls(
+        'POST',
+        '/v1/ai/recipes/modifications/$_modificationId/confirm',
+      ),
+      isEmpty,
+    );
+    expect(
+      tester
+          .widget<TextFormField>(
+            find.byKey(const ValueKey('text-edit-after-clarify-cook')),
+          )
+          .enabled,
+      isFalse,
+      reason: '事件尚未写入时也不能把本次确认替换为另一个后值',
+    );
+    expect(
+      tester
+          .widget<FilledButton>(find.byKey(const ValueKey('text-edit-confirm')))
+          .onPressed,
+      isNull,
+    );
+    expect(
+      tester
+          .widget<TextButton>(find.byKey(const ValueKey('text-edit-cancel')))
+          .onPressed,
+      isNull,
+    );
+    write.complete();
+    await tester.pumpAndSettle();
+    final confirmations = env.server.calls(
+      'POST',
+      '/v1/ai/recipes/modifications/$_modificationId/confirm',
+    );
+    expect(confirmations, hasLength(1));
+    expect((confirmations.single.body as Map)['revision'], 3);
+    expect(find.byKey(const ValueKey('recipe-detail-content')), findsOneWidget);
+    await _reveal(tester, 'recipe-step-0');
+    expect(find.textContaining(_clarified), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('生成结果逐条处理才确认，编辑后更新安全检查，保存后能查看', (tester) async {
     final env = _env();
     await _open(tester, env);
