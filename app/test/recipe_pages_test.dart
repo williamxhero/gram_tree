@@ -2060,6 +2060,44 @@ void main() {
           )
           .single;
       expect(request.body, {'target_servings': 4});
+      await _scrollUntilVisible(tester, find.text('AI 估算'));
+      await tester.tap(find.text('AI 估算'));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const ValueKey('why-panel')), findsOneWidget);
+      expect(find.text('原来：0 秒'), findsOneWidget);
+      expect(find.text('现在：900 秒，分 2 批'), findsOneWidget);
+      expect(find.text('液体增加后需要更长升温时间'), findsOneWidget);
+      expect(find.text('这次不用'), findsNothing);
+      expect(find.text('以后别这样'), findsNothing);
+      final events = server
+          .calls('POST', '/v1/events/upload')
+          .expand((r) => ((r.body as Map)['events'] as List).cast<Map>());
+      final opened = events
+          .where((event) => event['event_type'] == 'ui.why_panel_opened')
+          .single;
+      final action = events
+          .where(
+            (event) =>
+                event['event_type'] == 'ui.component_action' &&
+                (event['content'] as Map)['component_id'] ==
+                    'recipe-batch-advice',
+          )
+          .single;
+      const compositionId = 'batch-advice-$_firstVersionId-4';
+      expect(
+        (opened['correlation'] as Map)['ui_composition_id'],
+        compositionId,
+      );
+      expect(
+        (action['correlation'] as Map)['ui_composition_id'],
+        compositionId,
+      );
+      expect(opened['content'], {
+        'component_id': 'batch-advice-step-1',
+        'source_type': 'ai_estimated',
+      });
+      await tester.tapAt(const Offset(10, 10));
+      await tester.pumpAndSettle();
       expect(jsonEncode(state.current), original);
       expect(state.versions, hasLength(1));
       await _scrollUntilVisible(
@@ -2073,6 +2111,151 @@ void main() {
       expect(find.textContaining('分两批煮'), findsNothing);
     },
   );
+
+  for (final reason in ['invalid_model_output', 'model_unavailable']) {
+    testWidgets('batch advice retries $reason for the same target', (
+      tester,
+    ) async {
+      final server = FakeServer();
+      final state = _installRecipeApi(server);
+      final original = jsonEncode(state.current);
+      const path =
+          '/v1/recipes/$_recipeId/versions/$_firstVersionId/batch-advice';
+      var calls = 0;
+      server.on('POST', path, (_) {
+        calls++;
+        return (
+          200,
+          {
+            'recipe_id': _recipeId,
+            'version_id': _firstVersionId,
+            'original_servings': 2,
+            'target_servings': 4,
+            'eligible': true,
+            'status': {
+              'available': calls > 1,
+              'remaining': 49,
+              'reason': calls == 1 ? reason : null,
+            },
+            'error': calls == 1 ? reason : null,
+            'advice': calls == 1
+                ? null
+                : {
+                    'basis': '重试后按当前版本估算',
+                    'risk': 'AI 建议尚未验证',
+                    'steps': [
+                      {
+                        'step_id': 'step-1',
+                        'suggested_duration_seconds': 900,
+                        'batch_count': 2,
+                        'batch_guidance': '重试成功，分两批煮',
+                        'doneness': '以水沸腾为准',
+                        'basis': '依据液体用量估算',
+                        'risk': '锅大小未知',
+                        'confidence': 0.7,
+                        'source': 'ai_estimated',
+                      },
+                    ],
+                  },
+          },
+        );
+      });
+      await pumpApp(tester, env: TestEnv.signedIn(server: server));
+      await _openMyRecipes(tester);
+      await tester.tap(find.byKey(const ValueKey('recipe-card-$_recipeId')));
+      await tester.pumpAndSettle();
+      await _scrollUntilVisible(
+        tester,
+        find.byKey(const ValueKey('recipe-serving-increase')),
+      );
+      for (var i = 0; i < 2; i++) {
+        await tester.tap(find.byKey(const ValueKey('recipe-serving-increase')));
+        await tester.pumpAndSettle();
+      }
+      await _scrollUntilVisible(tester, find.text('AI 建议时间'));
+      await tester.tap(find.text('AI 建议时间'));
+      await tester.pumpAndSettle();
+      expect(calls, 1);
+      expect(
+        find.textContaining(
+          reason == 'invalid_model_output' ? 'AI 未能给出可靠建议' : 'AI 模型暂不可用',
+        ),
+        findsOneWidget,
+      );
+      expect(find.text('当前版本 · 4 人份'), findsOneWidget);
+      await _scrollUntilVisible(tester, find.text('AI 建议时间'));
+      await tester.tap(find.text('AI 建议时间'));
+      await tester.pumpAndSettle();
+      expect(find.text('AI 建议 · 只读，不修改菜谱'), findsOneWidget);
+      expect(find.textContaining('重试成功，分两批煮'), findsOneWidget);
+      expect(calls, 2);
+      expect(server.calls('POST', path).map((call) => call.body), [
+        {'target_servings': 4},
+        {'target_servings': 4},
+      ]);
+      expect(jsonEncode(state.current), original);
+      expect(state.versions, hasLength(1));
+    });
+  }
+
+  for (final (reason, remaining) in [
+    ('daily_quota', 0),
+    ('monthly_budget', 49),
+    ('configuration', 49),
+    ('no_related_steps', 49),
+    ('below_batch_threshold', 49),
+    ('model_unavailable', 0),
+    ('invalid_model_output', 0),
+  ]) {
+    testWidgets('batch advice blocks retry for $reason with $remaining left', (
+      tester,
+    ) async {
+      final server = FakeServer();
+      _installRecipeApi(server);
+      const path =
+          '/v1/recipes/$_recipeId/versions/$_firstVersionId/batch-advice';
+      server.on(
+        'POST',
+        path,
+        (_) => (
+          200,
+          RecipeBatchAdviceOut(
+            recipeId: _recipeId,
+            versionId: _firstVersionId,
+            originalServings: 2,
+            targetServings: 4,
+            eligible: reason != 'below_batch_threshold',
+            status: AIStatus(
+              available: false,
+              remaining: remaining,
+              reason: reason,
+            ),
+            error: reason,
+          ).toJson(),
+        ),
+      );
+      await pumpApp(tester, env: TestEnv.signedIn(server: server));
+      await _openMyRecipes(tester);
+      await tester.tap(find.byKey(const ValueKey('recipe-card-$_recipeId')));
+      await tester.pumpAndSettle();
+      await _scrollUntilVisible(
+        tester,
+        find.byKey(const ValueKey('recipe-serving-increase')),
+      );
+      for (var i = 0; i < 2; i++) {
+        await tester.tap(find.byKey(const ValueKey('recipe-serving-increase')));
+        await tester.pumpAndSettle();
+      }
+      await _scrollUntilVisible(tester, find.text('AI 建议时间'));
+      await tester.tap(find.text('AI 建议时间'));
+      await tester.pumpAndSettle();
+      expect(find.text('AI 今日剩余 $remaining 次'), findsOneWidget);
+      await _scrollUntilVisible(tester, find.text('AI 建议时间'));
+      await tester.tap(find.text('AI 建议时间'));
+      await tester.pumpAndSettle();
+      expect(server.calls('POST', path), hasLength(1));
+    });
+  }
 
   testWidgets(
     'batch advice follows configured threshold and ignores late quota response',

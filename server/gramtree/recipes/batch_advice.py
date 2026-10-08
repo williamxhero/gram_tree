@@ -22,8 +22,8 @@ def _validated(output: Any, related_ids: set[str]) -> BatchAdvice:
         output = json.loads(output)
     advice = BatchAdvice.model_validate(output)
     ids = [step.step_id for step in advice.steps]
-    if len(set(ids)) != len(ids) or not set(ids) <= related_ids:
-        raise ValueError("Advice must reference unique related snapshot steps")
+    if len(set(ids)) != len(ids) or set(ids) != related_ids:
+        raise ValueError("Advice must cover every related snapshot step exactly once")
     return advice
 
 

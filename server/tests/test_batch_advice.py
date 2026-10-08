@@ -276,6 +276,8 @@ def bad_output(kind: str) -> object:
     step = bad["steps"][0]
     if kind == "unknown_step":
         step["step_id"] = "not-in-selected-version"
+    elif kind == "missing_cook":
+        bad["steps"] = [step]
     elif kind == "duplicate":
         bad["steps"].append(copy.deepcopy(step))
     elif kind == "whole_rewrite":
@@ -311,6 +313,7 @@ def bad_output(kind: str) -> object:
     "kind",
     [
         "unknown_step",
+        "missing_cook",
         "duplicate",
         "whole_rewrite",
         "temperature_write",
@@ -350,13 +353,14 @@ def test_invalid_output_is_repaired_at_most_once_without_recipe_writes(
     unchanged(batch_api, saved, headers, history)
 
 
+@pytest.mark.parametrize("kind", ["unknown_step", "missing_cook"])
 def test_one_successful_repair_uses_one_daily_request_and_original_snapshot(
-    batch_api: Api, replay_dir: Path
+    batch_api: Api, replay_dir: Path, kind: str
 ) -> None:
     configure("ai.policies", {"batch_advice": {"daily_limit": 1}})
     saved, headers = synthetic(batch_api)
     payload = replay_payload(saved)
-    recording(replay_dir, "batch_advice", payload, bad_output("unknown_step"))
+    recording(replay_dir, "batch_advice", payload, bad_output(kind))
     recording(replay_dir, "batch_advice", {**payload, "repair": True}, json.dumps(CORPUS["valid"]))
     result = request(batch_api, saved, headers)
     assert result["advice"] == CORPUS["valid"]
