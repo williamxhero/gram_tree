@@ -24,6 +24,9 @@ class ValueSource(BaseModel):
     original: str | None = None
     confidence: float | None = Field(default=None, ge=0, le=1)
     basis: str | None = None
+    confidence_level: Literal["high", "medium", "low"] | None = None
+    baseline: str | None = None
+    adjustment: str | None = None
 
     @field_validator("confidence")
     @classmethod
@@ -89,6 +92,7 @@ class RecipeIngredient(BaseModel):
         default=None, description="缩放方式；不填时用标准食材库的默认值，未收录的食材按比例"
     )
     quantity_source: ValueSource | None = None
+    preparation_source: ValueSource | None = None
 
     @field_validator("display_name", "unit")
     @classmethod
@@ -115,6 +119,8 @@ class RecipeStep(BaseModel):
     depends_on: list[str] = Field(default_factory=list, max_length=100)
     notes: str | None = None
     why: str | None = None
+    instruction_source: ValueSource | None = None
+    doneness_source: ValueSource | None = None
     duration_source: ValueSource | None = None
     heat_source: ValueSource | None = None
     temperature_source: ValueSource | None = None
@@ -288,7 +294,65 @@ class RecipeSnapshot(BaseModel):
     steps: list[RecipeStep] = Field(default_factory=list, max_length=200)
 
 
-class RecipeCreate(BaseModel):
+class RecipeSnapshotInput(BaseModel):
+    """Input-only trust boundary; backend and response snapshots may be verified."""
+
+    snapshot: RecipeSnapshot
+
+    @field_validator("snapshot")
+    @classmethod
+    def refuse_client_verified(cls, value: RecipeSnapshot) -> RecipeSnapshot:
+        def visit(node: Any) -> None:
+            if isinstance(node, ValueSource) and node.source == "verified":
+                raise ValueError("已验证只能由后台根据做菜数据设置")
+            if isinstance(node, BaseModel):
+                for name in type(node).model_fields:
+                    visit(getattr(node, name))
+            elif isinstance(node, list):
+                for item in node:
+                    visit(item)
+
+        visit(value)
+        return value
+
+
+class ReproducibilityPosition(BaseModel):
+    collection: Literal["ingredients", "steps", "snapshot"]
+    item_id: str | None = None
+    field: str
+    start: int | None = None
+    end: int | None = None
+
+
+class ReproducibilityProblem(BaseModel):
+    id: str
+    type: Literal["ambiguous", "missing"]
+    status: Literal["unresolved", "ignored", "resolved"]
+    message: str
+    original: str | None = None
+    position: ReproducibilityPosition
+
+
+class RecipeReproducibilityResult(BaseModel):
+    rules_version: str
+    state: Literal["incomplete", "reproducible"]
+    remaining_count: int
+    required_field_count: int
+    concrete_field_count: int
+    field_completeness: float = Field(ge=0, le=1)
+    problems: list[ReproducibilityProblem] = Field(default_factory=list)
+
+
+class RecipeReproducibilityCheckRequest(RecipeSnapshotInput):
+    model_config = ConfigDict(extra="forbid")
+    snapshot: RecipeSnapshot
+
+
+class RecipeReproducibilityCheckOut(BaseModel):
+    result: RecipeReproducibilityResult
+
+
+class RecipeCreate(RecipeSnapshotInput):
     """创建菜谱并保存第 1 版。"""
 
     dish_name: str | None = None
@@ -325,15 +389,18 @@ class RecipeCreate(BaseModel):
         return DishInput(name=self.dish_name, aliases=self.dish_aliases)
 
 
-class RecipeVersionCreate(BaseModel):
+class RecipeVersionCreate(RecipeSnapshotInput):
     snapshot: RecipeSnapshot
     change_note: str = Field(default="", max_length=2000)
     ai_assisted: bool = False
     base_version_id: IdV4 | None = None
+    expected_current_version_id: IdV4 | None = Field(
+        default=None, description="可选并发保护；不改变显式从历史版分支的行为"
+    )
     image_ids: list[IdV4] = Field(default_factory=list, max_length=10)
 
 
-class RecipeSafetyCheckRequest(BaseModel):
+class RecipeSafetyCheckRequest(RecipeSnapshotInput):
     model_config = ConfigDict(extra="forbid")
 
     dish_name: str = Field(default="", max_length=200)
@@ -401,6 +468,7 @@ class RecipeVersionOut(BaseModel):
     derived: RecipeDerived
     safety: RecipeSafetyResult | None = None
     safety_at_save: RecipeSafetyResult | None = None
+    reproducibility: RecipeReproducibilityResult | None = None
     edit_operations: list[dict[str, Any]]
     change_note: str
     ai_assisted: bool

@@ -7,9 +7,15 @@ part of 'value_source.dart';
 // **************************************************************************
 
 abstract class _$ValueSourceCWProxy {
+  ValueSource adjustment(String? adjustment);
+
+  ValueSource baseline(String? baseline);
+
   ValueSource basis(String? basis);
 
   ValueSource confidence(num? confidence);
+
+  ValueSource confidenceLevel(ValueSourceConfidenceLevelEnum? confidenceLevel);
 
   ValueSource original(String? original);
 
@@ -22,8 +28,11 @@ abstract class _$ValueSourceCWProxy {
   /// ValueSource(...).copyWith(id: 12, name: "My name")
   /// ````
   ValueSource call({
+    String? adjustment,
+    String? baseline,
     String? basis,
     num? confidence,
+    ValueSourceConfidenceLevelEnum? confidenceLevel,
     String? original,
     ValueSourceSource_Enum source_,
   });
@@ -36,10 +45,21 @@ class _$ValueSourceCWProxyImpl implements _$ValueSourceCWProxy {
   final ValueSource _value;
 
   @override
+  ValueSource adjustment(String? adjustment) => this(adjustment: adjustment);
+
+  @override
+  ValueSource baseline(String? baseline) => this(baseline: baseline);
+
+  @override
   ValueSource basis(String? basis) => this(basis: basis);
 
   @override
   ValueSource confidence(num? confidence) => this(confidence: confidence);
+
+  @override
+  ValueSource confidenceLevel(
+    ValueSourceConfidenceLevelEnum? confidenceLevel,
+  ) => this(confidenceLevel: confidenceLevel);
 
   @override
   ValueSource original(String? original) => this(original: original);
@@ -55,12 +75,23 @@ class _$ValueSourceCWProxyImpl implements _$ValueSourceCWProxy {
   /// ValueSource(...).copyWith(id: 12, name: "My name")
   /// ````
   ValueSource call({
+    Object? adjustment = const $CopyWithPlaceholder(),
+    Object? baseline = const $CopyWithPlaceholder(),
     Object? basis = const $CopyWithPlaceholder(),
     Object? confidence = const $CopyWithPlaceholder(),
+    Object? confidenceLevel = const $CopyWithPlaceholder(),
     Object? original = const $CopyWithPlaceholder(),
     Object? source_ = const $CopyWithPlaceholder(),
   }) {
     return ValueSource(
+      adjustment: adjustment == const $CopyWithPlaceholder()
+          ? _value.adjustment
+          // ignore: cast_nullable_to_non_nullable
+          : adjustment as String?,
+      baseline: baseline == const $CopyWithPlaceholder()
+          ? _value.baseline
+          // ignore: cast_nullable_to_non_nullable
+          : baseline as String?,
       basis: basis == const $CopyWithPlaceholder()
           ? _value.basis
           // ignore: cast_nullable_to_non_nullable
@@ -69,6 +100,10 @@ class _$ValueSourceCWProxyImpl implements _$ValueSourceCWProxy {
           ? _value.confidence
           // ignore: cast_nullable_to_non_nullable
           : confidence as num?,
+      confidenceLevel: confidenceLevel == const $CopyWithPlaceholder()
+          ? _value.confidenceLevel
+          // ignore: cast_nullable_to_non_nullable
+          : confidenceLevel as ValueSourceConfidenceLevelEnum?,
       original: original == const $CopyWithPlaceholder()
           ? _value.original
           // ignore: cast_nullable_to_non_nullable
@@ -91,28 +126,51 @@ extension $ValueSourceCopyWith on ValueSource {
 // JsonSerializableGenerator
 // **************************************************************************
 
-ValueSource _$ValueSourceFromJson(Map<String, dynamic> json) =>
-    $checkedCreate('ValueSource', json, ($checkedConvert) {
-      $checkKeys(json, requiredKeys: const ['source']);
-      final val = ValueSource(
-        basis: $checkedConvert('basis', (v) => v as String?),
-        confidence: $checkedConvert('confidence', (v) => v as num?),
-        original: $checkedConvert('original', (v) => v as String?),
-        source_: $checkedConvert(
-          'source',
-          (v) => $enumDecode(_$ValueSourceSource_EnumEnumMap, v),
-        ),
-      );
-      return val;
-    }, fieldKeyMap: const {'source_': 'source'});
+ValueSource _$ValueSourceFromJson(Map<String, dynamic> json) => $checkedCreate(
+  'ValueSource',
+  json,
+  ($checkedConvert) {
+    $checkKeys(json, requiredKeys: const ['source']);
+    final val = ValueSource(
+      adjustment: $checkedConvert('adjustment', (v) => v as String?),
+      baseline: $checkedConvert('baseline', (v) => v as String?),
+      basis: $checkedConvert('basis', (v) => v as String?),
+      confidence: $checkedConvert('confidence', (v) => v as num?),
+      confidenceLevel: $checkedConvert(
+        'confidence_level',
+        (v) => $enumDecodeNullable(_$ValueSourceConfidenceLevelEnumEnumMap, v),
+      ),
+      original: $checkedConvert('original', (v) => v as String?),
+      source_: $checkedConvert(
+        'source',
+        (v) => $enumDecode(_$ValueSourceSource_EnumEnumMap, v),
+      ),
+    );
+    return val;
+  },
+  fieldKeyMap: const {
+    'confidenceLevel': 'confidence_level',
+    'source_': 'source',
+  },
+);
 
 Map<String, dynamic> _$ValueSourceToJson(ValueSource instance) =>
     <String, dynamic>{
+      'adjustment': ?instance.adjustment,
+      'baseline': ?instance.baseline,
       'basis': ?instance.basis,
       'confidence': ?instance.confidence,
+      'confidence_level':
+          ?_$ValueSourceConfidenceLevelEnumEnumMap[instance.confidenceLevel],
       'original': ?instance.original,
       'source': _$ValueSourceSource_EnumEnumMap[instance.source_]!,
     };
+
+const _$ValueSourceConfidenceLevelEnumEnumMap = {
+  ValueSourceConfidenceLevelEnum.high: 'high',
+  ValueSourceConfidenceLevelEnum.medium: 'medium',
+  ValueSourceConfidenceLevelEnum.low: 'low',
+};
 
 const _$ValueSourceSource_EnumEnumMap = {
   ValueSourceSource_Enum.authorFilled: 'author_filled',

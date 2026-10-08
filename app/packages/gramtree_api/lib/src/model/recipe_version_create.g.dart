@@ -13,6 +13,10 @@ abstract class _$RecipeVersionCreateCWProxy {
 
   RecipeVersionCreate changeNote(String? changeNote);
 
+  RecipeVersionCreate expectedCurrentVersionId(
+    String? expectedCurrentVersionId,
+  );
+
   RecipeVersionCreate imageIds(List<String>? imageIds);
 
   RecipeVersionCreate snapshot(RecipeSnapshot snapshot);
@@ -27,6 +31,7 @@ abstract class _$RecipeVersionCreateCWProxy {
     bool? aiAssisted,
     String? baseVersionId,
     String? changeNote,
+    String? expectedCurrentVersionId,
     List<String>? imageIds,
     RecipeSnapshot snapshot,
   });
@@ -51,6 +56,11 @@ class _$RecipeVersionCreateCWProxyImpl implements _$RecipeVersionCreateCWProxy {
       this(changeNote: changeNote);
 
   @override
+  RecipeVersionCreate expectedCurrentVersionId(
+    String? expectedCurrentVersionId,
+  ) => this(expectedCurrentVersionId: expectedCurrentVersionId);
+
+  @override
   RecipeVersionCreate imageIds(List<String>? imageIds) =>
       this(imageIds: imageIds);
 
@@ -69,6 +79,7 @@ class _$RecipeVersionCreateCWProxyImpl implements _$RecipeVersionCreateCWProxy {
     Object? aiAssisted = const $CopyWithPlaceholder(),
     Object? baseVersionId = const $CopyWithPlaceholder(),
     Object? changeNote = const $CopyWithPlaceholder(),
+    Object? expectedCurrentVersionId = const $CopyWithPlaceholder(),
     Object? imageIds = const $CopyWithPlaceholder(),
     Object? snapshot = const $CopyWithPlaceholder(),
   }) {
@@ -85,6 +96,11 @@ class _$RecipeVersionCreateCWProxyImpl implements _$RecipeVersionCreateCWProxy {
           ? _value.changeNote
           // ignore: cast_nullable_to_non_nullable
           : changeNote as String?,
+      expectedCurrentVersionId:
+          expectedCurrentVersionId == const $CopyWithPlaceholder()
+          ? _value.expectedCurrentVersionId
+          // ignore: cast_nullable_to_non_nullable
+          : expectedCurrentVersionId as String?,
       imageIds: imageIds == const $CopyWithPlaceholder()
           ? _value.imageIds
           // ignore: cast_nullable_to_non_nullable
@@ -119,6 +135,10 @@ RecipeVersionCreate _$RecipeVersionCreateFromJson(
       aiAssisted: $checkedConvert('ai_assisted', (v) => v as bool? ?? false),
       baseVersionId: $checkedConvert('base_version_id', (v) => v as String?),
       changeNote: $checkedConvert('change_note', (v) => v as String? ?? ''),
+      expectedCurrentVersionId: $checkedConvert(
+        'expected_current_version_id',
+        (v) => v as String?,
+      ),
       imageIds: $checkedConvert(
         'image_ids',
         (v) => (v as List<dynamic>?)?.map((e) => e as String).toList(),
@@ -134,6 +154,7 @@ RecipeVersionCreate _$RecipeVersionCreateFromJson(
     'aiAssisted': 'ai_assisted',
     'baseVersionId': 'base_version_id',
     'changeNote': 'change_note',
+    'expectedCurrentVersionId': 'expected_current_version_id',
     'imageIds': 'image_ids',
   },
 );
@@ -144,6 +165,7 @@ Map<String, dynamic> _$RecipeVersionCreateToJson(
   'ai_assisted': ?instance.aiAssisted,
   'base_version_id': ?instance.baseVersionId,
   'change_note': ?instance.changeNote,
+  'expected_current_version_id': ?instance.expectedCurrentVersionId,
   'image_ids': ?instance.imageIds,
   'snapshot': instance.snapshot.toJson(),
 };

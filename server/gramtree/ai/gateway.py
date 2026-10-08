@@ -148,11 +148,21 @@ def _invoke(
     else:
         endpoint = "chat/completions"
         prompt = (PROMPTS / f"{capability}-{PROMPT_VERSION}.txt").read_text(encoding="utf-8")
-        if capability in ("generate", "explain"):
-            from gramtree.ai.schemas import GeneratedDraft, ModelAnswer
+        if capability in ("generate", "explain", "batch_advice"):
+            from gramtree.ai.schemas import BatchAdvice, GeneratedDraft, ModelAnswer
 
-            schema = GeneratedDraft if capability == "generate" else ModelAnswer
+            schema = {
+                "generate": GeneratedDraft,
+                "explain": ModelAnswer,
+                "batch_advice": BatchAdvice,
+            }[capability]
             prompt += "\nJSON schema: " + json.dumps(schema.model_json_schema(), ensure_ascii=False)
+        if capability == "quantify":
+            from gramtree.recipes.quantification_schemas import QuantificationOutput
+
+            prompt += "\nJSON schema: " + json.dumps(
+                QuantificationOutput.model_json_schema(), ensure_ascii=False
+            )
         body = {
             "model": model.model,
             "temperature": 0,
@@ -262,7 +272,12 @@ def call(
             if "prompt_tokens" in usage or "total_tokens" in usage:
                 row.reserved_cost = 0
             result = data["output"]
-            log.output = result
+            # Batch advice is untrusted until its schema/step references are checked.
+            # Preserve raw output as text: JSONB rejects NaN in structured replay
+            # objects before the caller can reject it and request one repair.
+            log.output = (
+                json.dumps(result, ensure_ascii=False) if capability == "batch_advice" else result
+            )
             row.status = "succeeded"
         except (
             Unavailable,

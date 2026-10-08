@@ -1,0 +1,45 @@
+{
+  "note": "Synthetic sanitized large-batch advice replay; no real user data. Durations are per batch, not a mechanical servings multiplier.",
+  "recipe": {
+    "dish_name": "大份量回放鸡丁",
+    "snapshot": {
+      "servings": 2,
+      "ingredients": [{"id": "chicken", "display_name": "鸡腿肉", "quantity": 300, "unit": "g"}],
+      "steps": [
+        {"id": "marinate", "action": "腌", "instruction": "鸡肉冷藏腌制", "ingredient_ids": ["chicken"], "duration_seconds": 900, "unattended": true, "cookware": "碗", "doneness": "入味"},
+        {"id": "cook", "action": "炒", "instruction": "中火炒熟鸡肉，用食品温度计确认中心温度达到 74°C", "ingredient_ids": ["chicken"], "duration_seconds": 300, "heat": "中火", "cookware": "炒锅", "doneness": "中心温度达到 74°C", "depends_on": ["marinate"]}
+      ]
+    },
+    "change_note": "合成测试菜谱"
+  },
+  "snapshot": {
+    "format_version": 1, "servings": 2, "base_mold": null,
+    "total_time_seconds": 0, "active_time_seconds": 0, "difficulty": null,
+    "dish_type": null, "description": null, "tags": [], "cuisine": null,
+    "design_rationale": null,
+    "text_source": {"source": "author_filled", "original": null, "confidence": null, "basis": null, "confidence_level": null, "baseline": null, "adjustment": null},
+    "servings_source": {"source": "author_filled", "original": null, "confidence": null, "basis": null, "confidence_level": null, "baseline": null, "adjustment": null},
+    "ingredients": [{
+      "id": "chicken", "ingredient_id": null, "display_name": "鸡腿肉",
+      "quantity": 300.0, "unit": "g", "base_quantity": 300.0, "base_unit": "g",
+      "preparation": null, "group": null, "optional": false, "replacement": null,
+      "functional": false, "scaling_mode": "proportional",
+      "quantity_source": {"source": "author_filled", "original": null, "confidence": null, "basis": null, "confidence_level": null, "baseline": null, "adjustment": null},
+      "preparation_source": {"source": "author_filled", "original": null, "confidence": null, "basis": null, "confidence_level": null, "baseline": null, "adjustment": null}
+    }],
+    "steps": [
+      {"id": "marinate", "action": "腌", "instruction": "鸡肉冷藏腌制", "ingredient_ids": ["chicken"], "duration_seconds": 900, "unattended": true, "heat": null, "temperature_celsius": null, "cookware": "碗", "doneness": "入味", "depends_on": [], "notes": null, "why": null, "instruction_source": {"source": "author_filled", "original": null, "confidence": null, "basis": null, "confidence_level": null, "baseline": null, "adjustment": null}, "doneness_source": {"source": "author_filled", "original": null, "confidence": null, "basis": null, "confidence_level": null, "baseline": null, "adjustment": null}, "duration_source": {"source": "author_filled", "original": null, "confidence": null, "basis": null, "confidence_level": null, "baseline": null, "adjustment": null}, "heat_source": {"source": "author_filled", "original": null, "confidence": null, "basis": null, "confidence_level": null, "baseline": null, "adjustment": null}, "temperature_source": {"source": "author_filled", "original": null, "confidence": null, "basis": null, "confidence_level": null, "baseline": null, "adjustment": null}},
+      {"id": "cook", "action": "炒", "instruction": "中火炒熟鸡肉，用食品温度计确认中心温度达到 74°C", "ingredient_ids": ["chicken"], "duration_seconds": 300, "unattended": false, "heat": "中火", "temperature_celsius": null, "cookware": "炒锅", "doneness": "中心温度达到 74°C", "depends_on": ["marinate"], "notes": null, "why": null, "instruction_source": {"source": "author_filled", "original": null, "confidence": null, "basis": null, "confidence_level": null, "baseline": null, "adjustment": null}, "doneness_source": {"source": "author_filled", "original": null, "confidence": null, "basis": null, "confidence_level": null, "baseline": null, "adjustment": null}, "duration_source": {"source": "author_filled", "original": null, "confidence": null, "basis": null, "confidence_level": null, "baseline": null, "adjustment": null}, "heat_source": {"source": "author_filled", "original": null, "confidence": null, "basis": null, "confidence_level": null, "baseline": null, "adjustment": null}, "temperature_source": {"source": "author_filled", "original": null, "confidence": null, "basis": null, "confidence_level": null, "baseline": null, "adjustment": null}}
+    ]
+  },
+  "target_servings": 4,
+  "valid": {
+    "steps": [
+      {"step_id": "marinate", "suggested_duration_seconds": 900, "batch_count": 1, "batch_guidance": "腌制不按份数加倍，拌匀并冷藏。", "doneness": "以入味程度为准，腌制不能代替充分加热。", "basis": "腌制时间主要取决于肉块大小，不是总重量。", "risk": "冷藏腌制；室温放置有食品安全风险。", "confidence": 0.8, "source": "ai_estimated"},
+      {"step_id": "cook", "suggested_duration_seconds": 360, "batch_count": 2, "batch_guidance": "分两批下锅，每批约 360 秒，避免堆叠。", "doneness": "每批用食品温度计确认鸡肉中心温度达到 74°C，以成熟判断为准。", "basis": "目标为原份数两倍，分批可减少锅温下降。", "risk": "锅大小与火力未知，时长只是估算，不保证熟透。", "confidence": 0.65, "source": "ai_estimated"}
+    ],
+    "basis": "依据选中版本的份数、用量、厨具和步骤估算，不改原菜谱。",
+    "risk": "AI 建议尚未验证；不要把原时间或温度机械乘以份数倍数，以成熟判断为准。"
+  },
+  "usage": {"prompt_tokens": 350, "completion_tokens": 180}
+}

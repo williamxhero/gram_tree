@@ -59,6 +59,58 @@ def main() -> None:
                 case["output"],
             )
         )
+    from gramtree.recipes.provenance import normalize_sources
+    from gramtree.recipes.reproducibility import check
+
+    quantification = json.loads(
+        (ROOT / "server/tests/fixtures/ai/quantification_corpus.json").read_text("utf-8")
+    )
+    snapshot = normalize_sources(
+        RecipeSnapshot.model_validate(quantification["recipe"]["snapshot"])
+    )
+    # Manual double.toString() author evidence differs across Dart targets:
+    # web emits "0", native emits "0.0". Preserve both exact synthetic inputs;
+    # replay must never fall back to a different payload or a live provider.
+    snapshots = [snapshot]
+    native_snapshot = snapshot.model_copy(deep=True)
+    for ingredient in native_snapshot.ingredients:
+        source = ingredient.quantity_source
+        if source is not None and source.source == "author_filled":
+            source.original = str(ingredient.quantity)
+    if native_snapshot != snapshot:
+        snapshots.append(native_snapshot)
+    for snapshot in snapshots:
+        records.append(
+            (
+                "quantify",
+                {
+                    "snapshot": snapshot.model_dump(mode="json"),
+                    "problems": [p.model_dump(mode="json") for p in check(snapshot).problems],
+                    "ingredient_context": [
+                        {
+                            "id": i.id,
+                            "role": i.group or "未指定",
+                            "functional": i.functional,
+                            "category": None,
+                            "density": None,
+                            "unit_weight": None,
+                        }
+                        for i in snapshot.ingredients
+                    ],
+                },
+                quantification["output"],
+            )
+        )
+    batch = json.loads(
+        (ROOT / "server/tests/fixtures/ai/batch_advice_corpus.json").read_text("utf-8")
+    )
+    records.append(
+        (
+            "batch_advice",
+            {"snapshot": batch["snapshot"], "target_servings": batch["target_servings"]},
+            batch["valid"],
+        )
+    )
     args.out.mkdir(parents=True, exist_ok=True)
     for capability, payload, output in records:
         canonical = json.dumps(

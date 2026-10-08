@@ -195,6 +195,10 @@ def test_retrieval_first_generate_edit_save_index_and_events(
         i["quantity_source"]["source"] == "ai_estimated"
         for i in draft["recipe"]["snapshot"]["ingredients"]
     )
+    assert all(
+        step["instruction_source"]["source"] == "ai_estimated"
+        for step in draft["recipe"]["snapshot"]["steps"]
+    )
     assert result["safety"]["can_save"] is True
     edited = copy.deepcopy(draft["recipe"])
     edited["snapshot"]["ingredients"][0]["quantity"] = 320
@@ -207,6 +211,16 @@ def test_retrieval_first_generate_edit_save_index_and_events(
     assert detail["visibility"] == "private"
     assert detail["version"]["version_number"] == 1
     assert detail["version"]["ai_assisted"] is True
+    preview = api.client.post(
+        "/v1/recipes/reproducibility/check",
+        json={"snapshot": detail["version"]["snapshot"]},
+        headers=headers,
+    )
+    assert preview.status_code == 200, preview.text
+    assert detail["version"]["reproducibility"] == preview.json()["result"]
+    assert (
+        detail["version"]["snapshot"]["steps"][0]["instruction_source"]["source"] == "ai_estimated"
+    )
     assert (
         detail["version"]["snapshot"]["ingredients"][0]["quantity_source"]["source"]
         == "author_filled"
