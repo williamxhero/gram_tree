@@ -21,7 +21,12 @@ class RecipeAnswerSection extends ConsumerStatefulWidget {
       _RecipeAnswerSectionState();
 }
 
-class _RecipeAnswerSectionState extends ConsumerState<RecipeAnswerSection> {
+class _RecipeAnswerSectionState extends ConsumerState<RecipeAnswerSection>
+    with AutomaticKeepAliveClientMixin {
+  // Scrolling to rules or steps must not discard the version's question/answer.
+  @override
+  bool get wantKeepAlive => true;
+
   final _question = TextEditingController();
   RecipeAnswer? _answer;
   bool _busy = false;
@@ -232,6 +237,7 @@ class _RecipeAnswerSectionState extends ConsumerState<RecipeAnswerSection> {
 
   @override
   Widget build(BuildContext context) {
+    super.build(context);
     ref.watch(
       recipeAnswerOperationProvider((
         widget.detail.id,
