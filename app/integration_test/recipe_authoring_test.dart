@@ -105,7 +105,12 @@ void main() {
     // A cached lazy child can be built yet outside the phone viewport. Check
     // actual hit testing, not only existence, before performing an action.
     for (var i = 0; i < 8 && finder.hitTestable().evaluate().isEmpty; i++) {
-      await tester.drag(body, const Offset(0, -100));
+      position.jumpTo(
+        (position.pixels + 100).clamp(
+          position.minScrollExtent,
+          position.maxScrollExtent,
+        ),
+      );
       await settle(tester);
     }
     expect(finder.hitTestable(), findsOneWidget);
@@ -147,6 +152,7 @@ void main() {
       tester.testTextInput.register();
       addTearDown(tester.testTextInput.unregister);
 
+      // iOS Keychain survives app uninstall; start this fixture signed out.
       await resetLocalAppState();
       await app.main();
       await settle(tester);

@@ -124,6 +124,43 @@ def main() -> None:
         for version in payload["versions"].values():
             version["dish_name"] = scenario["dish_name"]
         records.append(("comparison", payload, assistance["outputs"][scenario["output"]]))
+    from gramtree.ai.schemas import GeneratedDraft
+    from gramtree.ai.service import _mark_sources
+
+    modification = json.loads(
+        (ROOT / "server/tests/fixtures/ai/modification_corpus.json").read_text("utf-8")
+    )
+    draft = GeneratedDraft.model_validate(corpus["valid"])
+    _mark_sources(draft)
+    for ingredient in draft.recipe.snapshot.ingredients:
+        ingredient.base_quantity = ingredient.quantity
+        ingredient.base_unit = "g"
+        ingredient.scaling_mode = "proportional"
+        ingredient.ingredient_id = None
+    # Generation previews retain model provenance; first saves also normalize
+    # missing author sources. The editor serializes unset difficulty as "",
+    # so register that exact saved input without weakening semantic replay keys.
+    saved_modification_snapshot = normalize_sources(draft.recipe.snapshot)
+    editor_modification_snapshot = saved_modification_snapshot.model_copy(deep=True)
+    editor_modification_snapshot.difficulty = ""
+    modification_snapshots = [
+        draft.recipe.snapshot,
+        saved_modification_snapshot,
+        editor_modification_snapshot,
+    ]
+    records.append(("modify_intent", {"text": modification["text"]}, modification["intent"]))
+    for modification_snapshot in modification_snapshots:
+        records.append(
+            (
+                "modify",
+                {
+                    "text": modification["text"],
+                    "snapshot": modification_snapshot.model_dump(mode="json"),
+                    "intent": modification["intent"],
+                },
+                modification["output"],
+            )
+        )
     args.out.mkdir(parents=True, exist_ok=True)
     for capability, payload, output in records:
         canonical = json.dumps(

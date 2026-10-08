@@ -64,6 +64,14 @@ import 'package:gramtree_api/src/model/measure_display_request.dart';
 import 'package:gramtree_api/src/model/measure_input_out.dart';
 import 'package:gramtree_api/src/model/measure_input_request.dart';
 import 'package:gramtree_api/src/model/merge_relation.dart';
+import 'package:gramtree_api/src/model/modification_confirm_input.dart';
+import 'package:gramtree_api/src/model/modification_decision.dart';
+import 'package:gramtree_api/src/model/modification_decision_out.dart';
+import 'package:gramtree_api/src/model/modification_decisions_input.dart';
+import 'package:gramtree_api/src/model/modification_input.dart';
+import 'package:gramtree_api/src/model/modification_intent.dart';
+import 'package:gramtree_api/src/model/modification_operation.dart';
+import 'package:gramtree_api/src/model/modification_preview.dart';
 import 'package:gramtree_api/src/model/mold_conversion.dart';
 import 'package:gramtree_api/src/model/mold_conversion_ingredient.dart';
 import 'package:gramtree_api/src/model/mold_conversion_step.dart';
@@ -378,6 +386,30 @@ ReturnType deserialize<ReturnType, BaseType>(
           as ReturnType;
     case 'MergeRelation':
       return MergeRelation.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'ModificationConfirmInput':
+      return ModificationConfirmInput.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'ModificationDecision':
+      return ModificationDecision.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'ModificationDecisionOut':
+      return ModificationDecisionOut.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'ModificationDecisionsInput':
+      return ModificationDecisionsInput.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'ModificationInput':
+      return ModificationInput.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'ModificationIntent':
+      return ModificationIntent.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'ModificationOperation':
+      return ModificationOperation.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'ModificationPreview':
+      return ModificationPreview.fromJson(value as Map<String, dynamic>)
           as ReturnType;
     case 'MoldConversion':
       return MoldConversion.fromJson(value as Map<String, dynamic>)

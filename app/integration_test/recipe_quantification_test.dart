@@ -75,11 +75,12 @@ void main() {
         'quantification-e2e-${DateTime.now().microsecondsSinceEpoch}@example.com';
     var step = 'login';
     try {
+      // iOS Keychain sessions survive app uninstall between test targets.
       await resetLocalAppState();
       await app.main();
       await waitFor(tester, find.byKey(const ValueKey('consent-agree')));
-      await tester.ensureVisible(find.byKey(const ValueKey('consent-agree')));
-      await tester.pumpAndSettle();
+      // iOS safe-area insets can place this action below the small viewport.
+      await reveal(tester, 'consent-agree');
       await tester.tap(find.byKey(const ValueKey('consent-agree')));
       await waitFor(tester, find.byKey(const ValueKey('login-email')));
       await tester.enterText(find.byKey(const ValueKey('login-email')), email);
@@ -100,6 +101,8 @@ void main() {
       await tester.tap(find.byKey(const ValueKey('primary-create-button')));
       await tester.pumpAndSettle();
       await tap(tester, 'create-recipe-entry');
+      // Build the lazy form row before waiting for it on a small iOS viewport.
+      await reveal(tester, 'recipe-dish-name');
       await waitFor(tester, find.byKey(const ValueKey('recipe-dish-name')));
       await tester.enterText(
         find.byKey(const ValueKey('recipe-dish-name')),

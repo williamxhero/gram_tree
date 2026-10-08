@@ -1,0 +1,13 @@
+{
+  "note": "Synthetic finite text edits, no personal inputs or paid calls. Apply to normalized recipe_corpus valid draft and its unchanged first-save snapshot.",
+  "text": "把步骤说明写清楚，不改食材和用量",
+  "intent": {"category": "text", "parameters": {"target": "步骤说明"}, "confidence": 0.95},
+  "output": {
+    "operations": [
+      {"operation_id": "clarify-cook", "type": "change_step_field", "id": "cook", "field": "instruction", "before": "中火炒鸡腿肉并加入盐，用食品温度计检查鸡肉中心温度达到 74°C", "after": "中火翻炒鸡肉，直到中心达到 74°C，盛出。", "scope": ["steps:cook:instruction"], "intent": "改写步骤说明", "reason": "写清楚炒制和盛出的动作", "risk": "需确认中心温度", "confidence": 0.9, "depends_on": []},
+      {"operation_id": "explain-cook", "type": "change_step_field", "id": "cook", "field": "why", "before": "充分加热降低食品安全风险", "after": "充分加热降低食品安全风险。", "scope": ["steps:cook:why"], "intent": "说明充分加热的原因", "reason": "补充说明标点，不修改配方", "risk": "未做过验证", "confidence": 0.9, "depends_on": []},
+      {"operation_id": "remind-cook", "type": "change_step_field", "id": "cook", "field": "notes", "before": null, "after": "用温度计确认中心温度。", "scope": ["steps:cook:notes"], "intent": "保留改写后的温度计提醒", "reason": "关联步骤改写，避免遗漏检查", "risk": "温度计需正确测量", "confidence": 0.9, "depends_on": ["clarify-cook"]}
+    ]
+  },
+  "usage": {"prompt_tokens": 120, "completion_tokens": 240}
+}

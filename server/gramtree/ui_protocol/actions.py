@@ -125,6 +125,23 @@ def _validate_call_operation(params: Mapping[str, Any]) -> bool:
 
 def _validate_recipe_operation(params: Mapping[str, Any]) -> bool:
     operation = params.get("operation")
+    if operation == "text_preview":
+        return (
+            set(params) == {"operation", "text"}
+            and isinstance(params.get("text"), str)
+            and bool(params["text"].strip())
+            and len(params["text"]) <= 1000
+        )
+    if operation in ("text_confirm", "text_cancel", "text_retry_status", "text_retry_checks"):
+        return set(params) == {"operation"}
+    if operation == "text_choose":
+        if not set(params) <= {"operation", "operation_id", "decision", "after"}:
+            return False
+        if not _require_non_empty_string(params, "operation_id"):
+            return False
+        if params.get("decision") == "modify":
+            return isinstance(params.get("after"), str) and len(params["after"]) <= 4000
+        return params.get("decision") in ("accept", "reject") and "after" not in params
     if operation not in ("check", "quantify", "locate", "cancel", "choose", "decide"):
         return False
     if operation == "choose":

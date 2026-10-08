@@ -19,6 +19,7 @@
 | [`recipe-quantification/`](recipe-quantification/) | 可复刻量化：剩余问题定位、逐条接受/修改/忽略、全部接受、来源追溯和基准调整；浅色/深色交互样稿 | #24 SPEC-002.4 | 本会话无 Artifact 发布工具；本地交互 HTML 样稿 |
 | [`version-comparison/`](version-comparison/) | 完整版本比较：确定性幅度、步骤原文、历史结论、筛选布局与 AI 辅助/失败降级；#140 证据等级明确未实现 | #2 SPEC-002，#142、#143 | 本会话无 Artifact 发布工具；实现前发布到开发分支的交互 HTML 样稿 |
 | [`large-batch-advice/`](large-batch-advice/) | 大份量只读时间建议：主动请求、原时长对照、分批与成熟提醒、切换清除及失败降级 | #25 SPEC-003.2 / #175 | 本会话无 Artifact 发布工具；本地交互 HTML 样稿 |
+| [`recipe-text-edit/`](recipe-text-edit/) | 改文字：本人编辑与生成结果共用入口、逐条接受/拒绝/修改、依赖拒绝、检查与确认保存；浅色/深色交互样稿 | #25 SPEC-003.2 / #167 | 本会话无 Artifact 发布工具；本地交互 HTML 样稿 |
 
 ## 说明
 
