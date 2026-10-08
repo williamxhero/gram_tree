@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>味谱｜菜谱贡献、量具录入与食材比较样稿</title>
+<style>
+:root { --paper:#f7f4ee; --card:#fffdf9; --ink:#1b1813; --muted:#5e574c; --line:#ded8cd; --sauce:#b0441e; color-scheme:light; font-family:"Noto Sans SC",system-ui,sans-serif; }
+* { box-sizing:border-box; } body { margin:0; padding:24px; background:var(--paper); color:var(--ink); } main { max-width:1100px; margin:auto; } h1,h2,h3 { font-family:"Noto Serif SC",serif; } h1 { font-size:clamp(24px,4vw,36px); } .grid { display:grid; grid-template-columns:1fr 1fr; gap:20px; } section { background:var(--card); border:1px solid var(--line); border-radius:18px; padding:22px; margin:18px 0; } .wide { grid-column:1/-1; } .muted { color:var(--muted); line-height:1.7; } .amount { font-family:"DM Mono",monospace; } button,input,select { font:inherit; padding:10px; border-radius:9px; border:1px solid var(--line); background:var(--card); color:var(--ink); max-width:100%; } button { cursor:pointer; } button.primary { background:var(--ink); color:var(--card); } button:focus-visible,input:focus-visible,select:focus-visible { outline:2px solid var(--ink); outline-offset:3px; } label { display:block; margin:12px 0; } .fields { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; } .fields input { width:100%; } details { border-top:1px solid var(--line); padding:14px 0; } summary { cursor:pointer; } .pair { display:grid; grid-template-columns:1fr 1fr; gap:12px; } dialog { max-width:540px; background:var(--card); color:var(--ink); border:1px solid var(--line); border-radius:18px; padding:24px; } dialog::backdrop { background:rgb(0 0 0 / 40%); } .estimated { color:var(--sauce); } [hidden] { display:none !important; }
+@media (max-width:700px) { .grid,.pair { grid-template-columns:1fr; } .wide { grid-column:auto; } body { padding:12px; } }
+@media (prefers-color-scheme:dark) { :root { --paper:#171511; --card:#221f1a; --ink:#f1ece3; --muted:#b9b1a4; --line:#484238; --sauce:#e07a52; color-scheme:dark; } }
+</style>
+</head>
+<body><main>
+<p class="muted">SPEC-002 · #137 / #139 / #141 · 交互样稿，不连接真实数据</p>
+<h1>把这一版的做法说明白</h1>
+<div class="grid">
+<section><h2>生抽 · 15 ml</h2><p>选择标准食材后，默认值仅供参考；这一版由你决定。</p>
+<div class="fields">
+<label>咸<input aria-label="咸味贡献" type="number" value="3" min="0" max="5"></label>
+<label>甜<input aria-label="甜味贡献" type="number" placeholder="未填写" min="0" max="5"></label>
+<label>酸<input aria-label="酸味贡献" type="number" placeholder="未填写" min="0" max="5"></label>
+<label>辣<input aria-label="辣味贡献" type="number" placeholder="未填写" min="0" max="5"></label>
+<label>鲜<input aria-label="鲜味贡献" type="number" value="2" min="0" max="5"></label>
+<label>麻<input aria-label="麻味贡献" type="number" placeholder="未填写" min="0" max="5"></label>
+<label>油<input aria-label="油味贡献" type="number" placeholder="未填写" min="0" max="5"></label>
+</div>
+<label><input type="checkbox"> 功能性用料</label>
+<button class="estimated" data-why="食材库默认味型由资料起草，未人工校对时按 AI 估算展示，不代表这道菜已做过验证。手动修改后标为作者填写；空值表示未填写，不是已知零。">AI 估算 · 为什么</button>
+<details><summary>依据与明细</summary><p class="muted">保留标准食材、作者显示名、分组、基础量、可选性及替代关系。保存采用的贡献与来源，旧版不随食材库更新改变。</p></details>
+<button class="primary" id="flavor-save">采用这一版的贡献</button><p id="flavor-status" aria-live="polite"></p>
+</section>
+<section><h2>用自家的量具录入</h2>
+<label>已登记量具 <select><option>白瓷勺 · 15 ml</option></select></label>
+<label>数量 <input id="count" type="number" min="0" step="0.1" value="1"></label>
+<label>基础单位 <select id="unit"><option value="ml">毫升</option><option value="g">克（没有可靠密度）</option></select></label>
+<p id="measure-result" class="amount" aria-live="polite">白瓷勺 1 勺 → 15 ml</p>
+<button data-why="按本次采用的白瓷勺容量 15 ml × 数量计算。转成克必须有此食材的可靠密度，不能默认为水；确认后冻结容量、原文、依据及基础量。">为什么这样换算</button>
+<p class="muted">确认前不改变食材用量。量具离线或缺少可靠转换数据时，可取消并继续填基础单位。</p>
+<button class="primary" id="measure-confirm">确认采用基础量</button><p id="measure-status" aria-live="polite"></p>
+<details><summary>保存后再校准会怎样？</summary><p>这版的基础量和原始输入依据不变。个人显示可按新容量重新换算，并标明显示依据。</p></details>
+</section>
+<section class="wide"><h2>版本历史 · 选择两版</h2>
+<label>从 A <select><option>第 1 版 · 2 人份</option></select> 到 B <select><option>第 2 版 · 4 人份</option></select></label>
+<p>食材比较 · 按 <span class="amount">2</span> 人份比较</p><p class="muted">此处仅比较食材，尚未比较步骤，不给出完整版本变化结论。</p>
+<button data-why="先复用稳定的菜谱内食材 ID，再按标准食材与分组配对；B 按现有缩放规则归一到 A 的份数。显示名修改单独列出，不当成食材替换。">比较依据 · 为什么</button>
+<h3>用量变化</h3><div class="pair"><p>A · 生抽 <span class="amount">15 ml</span></p><p>B · 生抽 <span class="amount">13 ml</span>（归一后）</p></div><p class="muted">相对变化 −13.33%；原始 B 版本为 26 ml / 4 人份。版本快照不修改。</p>
+<details><summary>字段明细</summary><p>主料、腌料、酱汁等分组；处理方式、可选性、缩放方式、替代品、功能性与贡献逐项比较。不能可靠换算时说明单位不同，不给假精确百分比。</p></details>
+<label><input id="show-all" type="checkbox"> 展开全部食材</label><p id="unchanged" hidden>未变化 · 鸡腿肉 300 g → 300 g（按 2 人份）</p>
+<button data-why="新增、删除、替换、用量与执行字段变化按类型分组。显示名等文字修改单列；重复键不丢项，不能确定的配对分别显示新增与删除。">查看新增、删除与替换规则</button>
+<p><a href="../recipe-authoring/index.html">查看版本详情样稿</a></p>
+</section>
+</div>
+<dialog id="why"><h2>为什么</h2><p id="why-text" class="muted"></p><button id="close">知道了</button></dialog>
+</main>
+<script>
+const why=document.querySelector('#why');
+document.querySelectorAll('[data-why]').forEach(button=>button.addEventListener('click',()=>{document.querySelector('#why-text').textContent=button.dataset.why;why.showModal();}));
+document.querySelector('#close').addEventListener('click',()=>why.close());
+document.querySelector('#flavor-save').addEventListener('click',()=>{document.querySelector('#flavor-status').textContent='样稿：采用作者填写值，保存新版后可重新打开。';});
+function preview(){const count=Number(document.querySelector('#count').value);const valid=Number.isFinite(count)&&count>=0&&count<=1000;const ml=document.querySelector('#unit').value==='ml';document.querySelector('#measure-result').textContent=!valid?'请输入合法数量':ml?`白瓷勺 ${count} 勺 → ${count*15} ml`:'无法可靠换算成克，请填写基础量';document.querySelector('#measure-confirm').disabled=!valid||!ml;}
+document.querySelector('#count').addEventListener('input',preview);document.querySelector('#unit').addEventListener('change',preview);
+document.querySelector('#measure-confirm').addEventListener('click',()=>{document.querySelector('#measure-status').textContent='样稿：已确认；容量与原始输入依据随这一版保存。';});
+document.querySelector('#show-all').addEventListener('change',event=>{document.querySelector('#unchanged').hidden=!event.target.checked;});
+</script></body></html>
