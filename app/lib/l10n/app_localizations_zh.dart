@@ -1301,6 +1301,51 @@ class AppLocalizationsZh extends AppLocalizations {
   String get recipeAiAssisted => 'AI 协助';
 
   @override
+  String get tasteCategory => '或选择食材分类';
+
+  @override
+  String get tastePreference => '偏好';
+
+  @override
+  String get tastePreferenceDelete => '删除偏好';
+
+  @override
+  String get tastePreferenceDeleteBody => '只删除这项明确选择，不改动其他口味和过敏设置；修改历史保留。';
+
+  @override
+  String get tasteIngredients => '食材偏好';
+
+  @override
+  String get tasteIngredientsIntro => '喜欢、不喜欢和忌口由你明确选择，不等于过敏。';
+
+  @override
+  String get tasteIngredientsEmpty => '还没有食材偏好';
+
+  @override
+  String get tastePreferenceAdd => '添加食材偏好';
+
+  @override
+  String get tasteIngredientSearch => '搜索标准食材';
+
+  @override
+  String get tasteSearch => '搜索';
+
+  @override
+  String get tasteSearchEmpty => '没有找到标准食材，请换一个名称搜索；不能保存自由文字。';
+
+  @override
+  String get tasteLiked => '喜欢';
+
+  @override
+  String get tasteDisliked => '不喜欢';
+
+  @override
+  String get tasteAvoided => '忌口';
+
+  @override
+  String get tasteUnset => '未设置';
+
+  @override
   String get tasteTitle => '我的口味';
 
   @override
@@ -1474,4 +1519,261 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get recipeMeasureApproximate => '约';
+
+  @override
+  String get cookingConstraintsTitle => '做菜约束';
+
+  @override
+  String get cookingConstraintsUnset => '未设置';
+
+  @override
+  String get cookingConstraintsLoadError => '做菜约束暂时无法读取';
+
+  @override
+  String get cookingConstraintsIntro => '做菜约束 · 仅作为家庭默认，不修改作者菜谱';
+
+  @override
+  String get cookingConstraintsSourceValue => '家庭做菜约束';
+
+  @override
+  String get cookingConstraintsBasis =>
+      '来自你手动填写；未设置的项目为空。人数只用于新一次查看的默认份数，本次手动选择优先，作者配方和原始版本不变。厨具、时间与餐型仅保存，不在这里推荐或改写菜谱。';
+
+  @override
+  String get cookingConstraintsManual => '你手动设置';
+
+  @override
+  String get cookingConstraintsEdit => '设置做菜约束';
+
+  @override
+  String get cookingConstraintsClear => '清除做菜约束';
+
+  @override
+  String get cookingConstraintsClearTitle => '清除做菜约束？';
+
+  @override
+  String get cookingConstraintsClearBody => '人数、厨具、时间和餐型恢复为空。菜谱原始版本不会改变。';
+
+  @override
+  String get cookingConstraintsClearConfirm => '清除';
+
+  @override
+  String get cookingHouseholdEmpty => '人数未设置，菜谱沿用作者份数';
+
+  @override
+  String cookingHouseholdDefault(String count) {
+    return '家庭默认：$count 人';
+  }
+
+  @override
+  String cookingHouseholdHistory(String count) {
+    return '$count 人';
+  }
+
+  @override
+  String get cookingHouseholdInput => '家庭人数（留空沿用作者份数）';
+
+  @override
+  String get cookingEquipmentInput => '家里有哪些厨具';
+
+  @override
+  String get cookingEquipmentEmpty => '厨具未设置';
+
+  @override
+  String cookingEquipmentSummary(String names) {
+    return '厨具：$names';
+  }
+
+  @override
+  String get cookingMealTimesEmpty => '各餐可用时间未设置';
+
+  @override
+  String get cookingMealTemplatesEmpty => '餐型未设置';
+
+  @override
+  String get cookingMealInput => '每餐时间与餐型（留空清除）';
+
+  @override
+  String cookingMealTemplateHint(String types) {
+    return '菜型用逗号分隔：$types。每项代表一道，可重复。';
+  }
+
+  @override
+  String get cookingMealMinutesInput => '可用分钟';
+
+  @override
+  String cookingMealTemplateInput(String example) {
+    return '菜型组合，例如 $example';
+  }
+
+  @override
+  String cookingIntegerValidation(int minimum, int maximum) {
+    return '请输入 $minimum～$maximum 的整数；留空清除';
+  }
+
+  @override
+  String cookingTemplateValidation(int maximum) {
+    return '请用上述菜型组合，最多 $maximum 道';
+  }
+
+  @override
+  String get cookingWeekday => '工作日';
+
+  @override
+  String get cookingWeekend => '周末';
+
+  @override
+  String get cookingBreakfast => '早餐';
+
+  @override
+  String get cookingLunch => '午餐';
+
+  @override
+  String get cookingDinner => '晚餐';
+
+  @override
+  String get cookingDishMeat => '荤菜';
+
+  @override
+  String get cookingDishVegetable => '素菜';
+
+  @override
+  String get cookingDishSoup => '汤';
+
+  @override
+  String get cookingDishStaple => '主食';
+
+  @override
+  String get cookingDishOther => '其他';
+
+  @override
+  String get cookingListSeparator => '、';
+
+  @override
+  String cookingMealSlot(String day, String meal) {
+    return '$day$meal';
+  }
+
+  @override
+  String cookingMealTimeSummary(String slot, String minutes) {
+    return '$slot：$minutes 分钟';
+  }
+
+  @override
+  String cookingMealTemplateSummary(
+    String slot,
+    String count,
+    String composition,
+  ) {
+    return '$slot：$count 道（$composition）';
+  }
+
+  @override
+  String get personalMeasuresSummaryIntro => '你登记的量具，仅用于显示，不改变配方。';
+
+  @override
+  String get personalMeasuresManage => '管理个人量具';
+
+  @override
+  String personalMeasuresSummaryValue(String name, String capacity) {
+    return '$name · $capacity 毫升';
+  }
+
+  @override
+  String get allergyTitle => '本人过敏';
+
+  @override
+  String get allergyIntro => '仅本人手动填写 · 单独同意 · 加密保存。拒绝不影响普通口味。';
+
+  @override
+  String get allergyNotFilled => '未填写';
+
+  @override
+  String get allergyEmpty => '尚未填写本人过敏';
+
+  @override
+  String get allergyEdit => '设置本人过敏';
+
+  @override
+  String get allergyConsentTitle => '过敏信息单独同意';
+
+  @override
+  String get allergyConsentBody =>
+      '只收集你手动选择的八类过敏原和标准食材，用于保存本人过敏设置及修改历史。当前值和历史加密保存，仅本人可见，不从行为或模型推断。可在设置的隐私入口撤回，删除当前值、私密历史及关联副本；重新同意从空状态开始。拒绝不影响普通口味，不代表同意外部 AI 共享。';
+
+  @override
+  String get allergyRefuse => '暂不同意';
+
+  @override
+  String get allergyAgree => '单独同意';
+
+  @override
+  String get allergyUnavailable => '过敏设置暂不可用，授权或保存未确认，请重试';
+
+  @override
+  String get allergyPrivateUnavailable => '私密信息暂不可用；仍可在设置撤回同意';
+
+  @override
+  String get allergyHidden => '本机私密信息已隐藏，撤回尚未确认时请在设置重试';
+
+  @override
+  String get allergyHistory => '私密修改历史';
+
+  @override
+  String get allergyHistoryEmpty => '没有私密修改历史';
+
+  @override
+  String get allergyHistoryUnavailable => '私密历史暂不可用';
+
+  @override
+  String get allergyWhy => '为什么';
+
+  @override
+  String get allergyManual => '本人手动填写';
+
+  @override
+  String get allergyEditorTitle => '手动设置本人过敏';
+
+  @override
+  String get allergyDeleteIngredient => '删除食材';
+
+  @override
+  String get allergySearchLabel => '搜索标准食材（不保存自由文字）';
+
+  @override
+  String get allergySearch => '搜索食材';
+
+  @override
+  String get allergySearchUnavailable => '食材搜索暂不可用，请重试';
+
+  @override
+  String get allergySave => '保存过敏设置';
+
+  @override
+  String get allergySaveUnconfirmed => '保存未确认，请重新打开过敏设置后重试';
+
+  @override
+  String get allergyWithdrawEntry => '撤回敏感信息同意';
+
+  @override
+  String get allergyWithdrawDetail => '仅删除本人过敏和私密历史，不退出普通口味';
+
+  @override
+  String get allergyWithdrawTitle => '撤回敏感信息同意？';
+
+  @override
+  String get allergyWithdrawBody =>
+      '删除本人过敏、私密修改历史及关联副本。普通口味、食材偏好和做菜约束保留；重新同意后从空状态开始。';
+
+  @override
+  String get allergyWithdrawConfirm => '撤回并删除';
+
+  @override
+  String get allergyWithdrawing => '撤回处理中，本机私密信息已隐藏';
+
+  @override
+  String get allergyWithdrawn => '敏感同意已撤回，过敏及私密历史已删除';
+
+  @override
+  String get allergyWithdrawUnconfirmed => '撤回尚未确认，请联网后重试；普通口味不受影响';
 }

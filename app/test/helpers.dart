@@ -197,6 +197,36 @@ class FakeServer extends Interceptor {
       return (200, [for (final i in identities) i.toJson()]);
     });
     on('POST', '/v1/me/consents', (_) => (204, null));
+    on(
+      'GET',
+      '/v1/me/taste-profile/allergies',
+      (_) => (
+        200,
+        AllergiesOut(
+          consentId: null,
+          consentVersion: 'allergies-v1',
+          authorizationVersion: 0,
+          profileVersion: 1,
+          availableCategories: const [
+            '含麸质的谷物',
+            '甲壳纲类动物',
+            '鱼类',
+            '蛋类',
+            '花生',
+            '大豆',
+            '乳及乳制品',
+            '坚果及其果仁',
+          ],
+          categories: const [],
+          ingredients: const [],
+        ).toJson(),
+      ),
+    );
+    on(
+      'GET',
+      '/v1/me/taste-profile/allergies/changes',
+      (_) => (200, PageTasteProfileChangeOut(items: const []).toJson()),
+    );
     final personalMeasures = <Map<String, dynamic>>[];
     on(
       'GET',

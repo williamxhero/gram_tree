@@ -62,14 +62,15 @@ class SessionStore extends ChangeNotifier {
   int _identityEpoch = 0;
   Future<void> _persistence = Future<void>.value();
 
-  // Preserve invocation order in secure storage too: an old refresh write must
-  // never finish after a newer login or logout deletion and survive restart.
   Future<void> _persist(Future<void> Function() operation) {
-    _persistence = _persistence.then(
-      (_) => operation(),
-      onError: (Object error, StackTrace stack) => operation(),
+    // Keep writes/deletes in invocation order. A slow old refresh write must
+    // never finish after logout deletion or a subsequent account's write.
+    final pending = _persistence.then((_) => operation());
+    _persistence = pending.then<void>(
+      (_) {},
+      onError: (Object _, StackTrace _) {},
     );
-    return _persistence;
+    return pending;
   }
 
   /// Changes on account switch/logout, not same-account token refresh.
@@ -118,10 +119,10 @@ class SessionStore extends ChangeNotifier {
     _current = session;
     _loaded = true;
     lastExpiryReason = null;
+    final value = jsonEncode(session.toJson());
+    // Fence old account work immediately; ordered persistence may still be slow.
     notifyListeners();
-    await _persist(
-      () => _secure.write(sessionStorageKey, jsonEncode(session.toJson())),
-    );
+    await _persist(() => _secure.write(sessionStorageKey, value));
   }
 
   /// 清掉本机的登录状态。
@@ -129,6 +130,7 @@ class SessionStore extends ChangeNotifier {
     _identityEpoch++;
     _current = null;
     _loaded = true;
+    // Hide account-private UI immediately, even while older storage IO drains.
     notifyListeners();
     await _persist(() => _secure.delete(sessionStorageKey));
   }

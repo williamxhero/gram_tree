@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gram_tree/app/app.dart';
@@ -12,6 +14,7 @@ class FakeBackend implements CrashReporterBackend {
   int initCalls = 0;
   int closeCalls = 0;
   String? environment;
+  BeforeSendCallback? beforeSend;
 
   @override
   Future<void> close() async => closeCalls++;
@@ -24,6 +27,7 @@ class FakeBackend implements CrashReporterBackend {
   }) async {
     initCalls++;
     this.environment = environment;
+    this.beforeSend = beforeSend;
   }
 }
 
@@ -108,6 +112,40 @@ void main() {
     await tester.pumpAndSettle();
     expect(backend.initCalls, 0);
   });
+
+  testWidgets(
+    'SDK beforeSend never sends private exception or unknown nested payload',
+    (tester) async {
+      final backend = FakeBackend();
+      await pumpWith(tester, backend, consented: true);
+      final marker = 'private-${DateTime.now().microsecondsSinceEpoch}';
+      final event = SentryEvent(
+        message: SentryMessage(marker),
+        throwable: StateError(marker),
+        exceptions: [SentryException(type: 'StateError', value: marker)],
+        // ignore: deprecated_member_use
+        extra: {
+          'unexpected': {'nested': marker},
+          'screen': marker,
+        },
+        tags: {'unexpected': marker, 'build': marker},
+        transaction: marker,
+        culprit: marker,
+        breadcrumbs: [
+          Breadcrumb(
+            category: marker,
+            message: marker,
+            data: {'unknown': marker},
+          ),
+        ],
+      )..contexts['unknown_context'] = {'nested': marker};
+      final sent = await backend.beforeSend!(event, Hint());
+      expect(sent, isNotNull);
+      expect(jsonEncode(sent!.toJson()), isNot(contains(marker)));
+      expect(sent.exceptions!.single.type, 'StateError');
+      expect(sent.exceptions!.single.value, isNull);
+    },
+  );
 
   test('上报内容去掉菜谱、口味、健康信息和请求内容', () {
     final event = SentryEvent(

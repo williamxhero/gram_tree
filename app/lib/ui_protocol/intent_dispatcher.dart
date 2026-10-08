@@ -24,7 +24,7 @@ class SourceCompositionId extends Notifier<String?> {
   @override
   String? build() => null;
 
-  void set(String compositionId) => state = compositionId;
+  void set(String? compositionId) => state = compositionId;
 }
 
 final sourceCompositionIdProvider =
@@ -46,7 +46,7 @@ class IntentDispatcher {
 
   Future<void> dispatch(
     BuildContext context, {
-    required String? compositionId,
+    String? compositionId,
     required String componentId,
     required ActionDescriptor action,
   }) async {
@@ -80,16 +80,22 @@ class IntentDispatcher {
       _ref.read(sourceCompositionIdProvider.notifier).set(compositionId);
     }
 
-    await _ref
-        .read(eventRecorderProvider)
-        .record(
-          eventType: 'ui.component_action',
-          typeVersion: 1,
-          correlation: compositionId == null
-              ? null
-              : EventCorrelationIds(uiCompositionId: compositionId),
-          content: {'component_id': componentId, 'intent': action.intent},
-        );
+    try {
+      await _ref
+          .read(eventRecorderProvider)
+          .record(
+            eventType: 'ui.component_action',
+            typeVersion: 1,
+            correlation: compositionId == null
+                ? null
+                : EventCorrelationIds(uiCompositionId: compositionId),
+            content: {'component_id': componentId, 'intent': action.intent},
+          );
+    } catch (_) {
+      // Optional telemetry must never block privacy controls. Keep ordinary
+      // intent behavior unchanged and never log queue errors/private payloads.
+      if (!action.intent.startsWith('allergies_')) rethrow;
+    }
 
     final handler = spec.handler;
     if (handler != null && context.mounted) {

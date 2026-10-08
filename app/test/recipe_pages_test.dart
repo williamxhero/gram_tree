@@ -2848,6 +2848,84 @@ void main() {
   );
 
   testWidgets(
+    'household servings apply on a new view and manual choices survive refresh',
+    (tester) async {
+      final server = FakeServer();
+      final state = _installRecipeApi(server);
+      state.current['default_servings'] = 4;
+      state.current['taste_profile_version'] = 2;
+      final snapshotBefore = jsonEncode(
+        (state.current['version'] as Map)['snapshot'],
+      );
+      await pumpApp(tester, env: TestEnv.signedIn(server: server));
+      await _openMyRecipes(tester);
+      await tester.tap(find.byKey(const ValueKey('recipe-card-$_recipeId')));
+      await tester.pumpAndSettle();
+      await _scrollUntilVisible(
+        tester,
+        find.byKey(const ValueKey('recipe-serving-control')),
+      );
+      expect(
+        tester
+            .widget<Text>(find.byKey(const ValueKey('recipe-serving-value')))
+            .data,
+        '4',
+      );
+      await tester.tap(find.byKey(const ValueKey('recipe-serving-increase')));
+      await tester.pumpAndSettle();
+      expect(
+        tester
+            .widget<Text>(find.byKey(const ValueKey('recipe-serving-value')))
+            .data,
+        '5',
+      );
+      state.current['default_servings'] = 6;
+      await _scrollUntilVisible(
+        tester,
+        find.byKey(const ValueKey('recipe-measure-refresh')),
+      );
+      await tester.tap(find.byKey(const ValueKey('recipe-measure-refresh')));
+      await tester.pumpAndSettle();
+      await _scrollUntilVisible(
+        tester,
+        find.byKey(const ValueKey('recipe-serving-control')),
+        delta: const Offset(0, 500),
+      );
+      expect(
+        tester
+            .widget<Text>(find.byKey(const ValueKey('recipe-serving-value')))
+            .data,
+        '5',
+      );
+      await _scrollToBottom(tester);
+      expect(find.text('250 克'), findsWidgets);
+      expect(
+        jsonEncode((state.current['version'] as Map)['snapshot']),
+        snapshotBefore,
+      );
+      await _scrollToTop(tester);
+      await tester.tap(find.byKey(const ValueKey('recipe-list-button')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('recipe-card-$_recipeId')));
+      await tester.pumpAndSettle();
+      await _scrollUntilVisible(
+        tester,
+        find.byKey(const ValueKey('recipe-serving-control')),
+      );
+      expect(
+        tester
+            .widget<Text>(find.byKey(const ValueKey('recipe-serving-value')))
+            .data,
+        '6',
+      );
+      await _scrollToBottom(tester);
+      expect(find.text('300 克'), findsWidgets);
+      expect(server.calls('POST', '/v1/recipes'), isEmpty);
+      expect(server.calls('POST', '/v1/recipes/$_recipeId/versions'), isEmpty);
+    },
+  );
+
+  testWidgets(
     'recipe detail converts servings locally and resets with provenance',
     (tester) async {
       final server = FakeServer();
