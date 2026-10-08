@@ -23,6 +23,7 @@ class ComparisonIngredientDetails extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        _field(context, '条目 ID', item.id),
         _field(context, l10n.recipeComparisonDisplayName, item.displayName),
         _field(context, l10n.recipeStandardIngredient, item.ingredientId),
         _field(context, l10n.recipeQuantity, '${item.quantity} ${item.unit}'),
@@ -36,6 +37,8 @@ class ComparisonIngredientDetails extends StatelessWidget {
         _field(context, l10n.recipeComparisonOptional, item.optional),
         _field(context, l10n.recipeScalingMode, item.scalingMode?.value),
         _field(context, l10n.recipeReplacement, item.replacement),
+        _field(context, l10n.recipeFunctionalToggle, item.functional),
+        _field(context, '味型原值', item.flavorContribution?.toJson()),
         RecipeFlavorSummary(
           id: item.id,
           contribution: item.flavorContribution,
@@ -51,6 +54,7 @@ class ComparisonIngredientDetails extends StatelessWidget {
             originalValue: item.quantitySource!.original,
             basisText: recipeSourceBasis(item.quantitySource),
             neutral: true,
+            valueChanged: false,
             showWhenAuthorFilled: true,
             required: false,
             feedbackEnabled: false,
@@ -58,15 +62,33 @@ class ComparisonIngredientDetails extends StatelessWidget {
             onAction: null,
           )
         else
-          RecipeSourceBadge(
-            source: item.quantitySource,
-            value: '${item.quantity} ${item.unit}',
-            fieldId: 'comparison-ingredient-${item.id}-quantity',
+          _source(
+            context,
+            item.quantitySource,
+            '${item.quantity} ${item.unit}',
+            'comparison-ingredient-${item.id}-quantity',
+            '用量来源',
           ),
-        RecipeSourceBadge(
-          source: item.preparationSource,
-          value: item.preparation ?? '',
-          fieldId: 'comparison-ingredient-${item.id}-preparation',
+        _source(
+          context,
+          item.preparationSource,
+          item.preparation,
+          'comparison-ingredient-${item.id}-preparation',
+          '处理方式来源',
+        ),
+        _source(
+          context,
+          item.flavorSource,
+          item.flavorContribution?.toJson(),
+          'comparison-ingredient-${item.id}-flavor',
+          '味型来源',
+        ),
+        _source(
+          context,
+          item.functionalSource,
+          item.functional,
+          'comparison-ingredient-${item.id}-functional',
+          '功能性来源',
         ),
       ],
     );
@@ -94,6 +116,7 @@ class ComparisonStepDetails extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        _field(context, '步骤 ID', step.id),
         _field(context, '动作', step.action),
         _field(context, '说明', step.instruction),
         _field(
@@ -104,6 +127,7 @@ class ComparisonStepDetails extends StatelessWidget {
               ingredientNames[id] ?? id,
           ].join('、'),
         ),
+        _field(context, '引用食材 ID', step.ingredientIds),
         _field(context, '时长（秒）', step.durationSeconds),
         _field(context, '是否需要守着', step.unattended == true ? '可以走开' : '需要守着'),
         _field(context, l10n.recipeStepHeat, step.heat),
@@ -118,6 +142,7 @@ class ComparisonStepDetails extends StatelessWidget {
               stepNumbers[id] == null ? id : '第 ${stepNumbers[id]} 步',
           ].join('、'),
         ),
+        _field(context, '前置依赖 ID', step.dependsOn),
         _field(context, l10n.recipeStepNotes, step.notes),
         _field(context, l10n.recipeStepWhy, step.why),
         Wrap(
@@ -130,16 +155,43 @@ class ComparisonStepDetails extends StatelessWidget {
               ('temperature', step.temperatureCelsius, step.temperatureSource),
               ('doneness', step.doneness, step.donenessSource),
             ])
-              RecipeSourceBadge(
-                source: field.$3,
-                value: comparisonValue(l10n, field.$2),
-                fieldId: 'comparison-step-${step.id}-${field.$1}',
+              _source(
+                context,
+                field.$3,
+                field.$2,
+                'comparison-step-${step.id}-${field.$1}',
+                '${field.$1} 来源',
               ),
           ],
         ),
       ],
     );
   }
+}
+
+Widget _source(
+  BuildContext context,
+  ValueSource? source,
+  Object? value,
+  String id,
+  String label,
+) {
+  if (source == null) return const SizedBox.shrink();
+  return SourceMark(
+    key: ValueKey(id),
+    sourceType: source.source_.value,
+    componentId: id,
+    value: comparisonValue(AppLocalizations.of(context), value),
+    originalValue: source.original,
+    basisText: recipeSourceBasis(source),
+    required: false,
+    neutral: true,
+    valueChanged: false,
+    showWhenAuthorFilled: true,
+    feedbackEnabled: false,
+    labelOverride: label,
+    onAction: null,
+  );
 }
 
 Widget _field(BuildContext context, String label, Object? value) => Padding(

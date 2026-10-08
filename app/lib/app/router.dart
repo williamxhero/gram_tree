@@ -20,6 +20,7 @@ import '../features/onboarding/consent_page.dart';
 import '../features/recipes/personal_measures_page.dart';
 import '../features/recipes/recipe_pages.dart';
 import '../features/recipes/ingredient_comparison_page.dart';
+import '../features/recipes/full_comparison_page.dart';
 import '../features/records/records_page.dart';
 import '../features/tab_paths.dart';
 import '../features/today/today_page.dart';
@@ -143,6 +144,14 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: 'compare',
             builder: (_, state) => IngredientComparisonPage(
+              recipeId: state.pathParameters['recipeId']!,
+              fromVersionId: state.uri.queryParameters['from'] ?? '',
+              toVersionId: state.uri.queryParameters['to'] ?? '',
+            ),
+          ),
+          GoRoute(
+            path: 'full-compare',
+            builder: (_, state) => FullComparisonPage(
               recipeId: state.pathParameters['recipeId']!,
               fromVersionId: state.uri.queryParameters['from'] ?? '',
               toVersionId: state.uri.queryParameters['to'] ?? '',

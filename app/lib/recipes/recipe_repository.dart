@@ -89,6 +89,16 @@ class RecipeRepository {
     toVersionId: toVersionId,
   )).data!;
 
+  Future<RecipeFullComparison> compareFull(
+    String recipeId,
+    String fromVersionId,
+    String toVersionId,
+  ) async => (await _recipes.compareRecipeFull(
+    recipeId: recipeId,
+    fromVersionId: fromVersionId,
+    toVersionId: toVersionId,
+  )).data!;
+
   Future<RecipeComparisonCandidates> comparisonCandidatesPage(
     String recipeId, {
     String? cursor,

@@ -40,5 +40,10 @@ String? registeredPagePath(Map<String, dynamic> params) {
       isRecipeId(params['to_version_id'])) {
     return '/recipes/${params['recipe_id']}/compare?from=${params['from_version_id']}&to=${params['to_version_id']}';
   }
+  if (page == 'full_comparison' &&
+      isRecipeId(params['from_version_id']) &&
+      isRecipeId(params['to_version_id'])) {
+    return '/recipes/${params['recipe_id']}/full-compare?from=${params['from_version_id']}&to=${params['to_version_id']}';
+  }
   return null;
 }

@@ -23,6 +23,7 @@ import 'batch_advice_section.dart';
 import 'personal_measures_page.dart';
 import 'recipe_photo_panel.dart';
 import 'recipe_flavor_panel.dart';
+import 'comparison_cards.dart';
 import 'measure_input_dialog.dart';
 import 'reproducibility_card.dart';
 import 'quantification_panel.dart';
@@ -2613,6 +2614,16 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
                   ),
                 ),
               ),
+              if (detail.version.conclusion != null)
+                ActionChip(
+                  key: const ValueKey('recipe-version-conclusion'),
+                  label: Text(
+                    '${comparisonConclusionLabel(detail.version.conclusion!.value)} · 确定规则',
+                  ),
+                  tooltip: '相对上一当前版本；规则版本 ${detail.version.rulesVersion ?? ""}',
+                  onPressed: () =>
+                      context.push('/recipes/${widget.recipeId}/history'),
+                ),
               Chip(
                 key: const ValueKey('recipe-duration'),
                 label: Text(
@@ -3901,6 +3912,27 @@ class _RecipeHistoryPageState extends ConsumerState<RecipeHistoryPage> {
     );
   }
 
+  void _compareFull(String from, String to) {
+    unawaited(
+      ref
+          .read(intentDispatcherProvider)
+          .dispatch(
+            context,
+            compositionId: CompositionIdScope.of(context),
+            componentId: 'recipe-history-full-comparison',
+            action: ActionDescriptor(
+              intent: 'open_page',
+              params: {
+                'page': 'full_comparison',
+                'recipe_id': widget.recipeId,
+                'from_version_id': from,
+                'to_version_id': to,
+              },
+            ),
+          ),
+    );
+  }
+
   Future<void> _toggleSelection() async {
     setState(() {
       _selecting = !_selecting;
@@ -4030,6 +4062,13 @@ class _RecipeHistoryPageState extends ConsumerState<RecipeHistoryPage> {
                         : null,
                     child: Text(l10n.recipeComparisonAction),
                   ),
+                  OutlinedButton(
+                    key: const ValueKey('recipe-full-compare-selected'),
+                    onPressed: _selected.length == 2
+                        ? () => _compareFull(_selected[0], _selected[1])
+                        : null,
+                    child: const Text('完整版本对比'),
+                  ),
                 ],
               ],
             ),
@@ -4070,11 +4109,37 @@ class _RecipeHistoryPageState extends ConsumerState<RecipeHistoryPage> {
                     item.aiAssisted ? l10n.recipeAiAssisted : '',
                   ),
                 ),
-                subtitle: Text(
-                  '${item.changeNote.isEmpty ? l10n.recipeNoChangeNote : item.changeNote}\n${l10n.recipeVersionDate(_formatDate(context, item.createdAt))}',
-                  style: GramTreeColors.of(context).numberStyle(
-                    Theme.of(context).textTheme.bodyMedium ?? const TextStyle(),
-                  ),
+                subtitle: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '${item.changeNote.isEmpty ? l10n.recipeNoChangeNote : item.changeNote}\n${l10n.recipeVersionDate(_formatDate(context, item.createdAt))}',
+                      style: GramTreeColors.of(context).numberStyle(
+                        Theme.of(context).textTheme.bodyMedium ??
+                            const TextStyle(),
+                      ),
+                    ),
+                    if (item.previousVersionId != null)
+                      TextButton(
+                        key: ValueKey(
+                          'recipe-full-compare-previous-${item.versionNumber}',
+                        ),
+                        onPressed: () =>
+                            _compareFull(item.previousVersionId!, item.id),
+                        child: Text(
+                          item.conclusion == null
+                              ? '完整对比上一版本'
+                              : '${comparisonConclusionLabel(item.conclusion!.value)} · 对比上一版本',
+                        ),
+                      ),
+                    if (item.previousVersionId != null &&
+                        item.rulesVersion != null)
+                      Text('确定规则 · ${item.rulesVersion}'),
+                    if (item.previousVersionId != null &&
+                        item.baseVersionId != null &&
+                        item.baseVersionId != item.previousVersionId)
+                      const Text('编辑基线不同于上一当前版本；变化结论相对上一当前版本。'),
+                  ],
                 ),
                 isThreeLine: true,
                 trailing: item.previousVersionId != null
