@@ -1,6 +1,14 @@
 """Owner-scoped taste profile behavior through HTTP, using real PostgreSQL."""
 
+import json
+import uuid
+from concurrent.futures import ThreadPoolExecutor
+
+from sqlalchemy import Engine, text
+
+from gramtree.cli import main as cli
 from tests.accounts_support import Api, bearer
+from tests.test_account_deletion import _purge, _reauth_email
 
 PATH = "/v1/me/taste-profile"
 KEYS = {"salty", "sweet", "sour", "spicy", "numbing", "umami", "oily"}
@@ -87,3 +95,225 @@ def test_invalid_patch_is_atomic_and_history_is_private(api: Api) -> None:
     assert api.client.get(PATH + "/changes/" + changes[0]["id"], headers=owner).json() == changes[0]
     assert api.client.get(PATH, headers=other).json()["id"] != before["id"]
     assert api.client.get(PATH).status_code == 401
+
+
+def test_change_events_are_atomic_metadata_only_and_cannot_be_forged(api: Api) -> None:
+    owner = bearer(api.login("taste-events@example.com"))
+    other = bearer(api.login("taste-forger@example.com", device="forger"))
+    api.client.patch(PATH, json={"flavors": {"salty": 0.75}}, headers=owner)
+    change = api.client.get(PATH + "/changes", headers=owner).json()["items"][0]
+    params = {"event_type": "taste_profile.changed"}
+    assert api.client.get("/v1/dev/events/count", params=params, headers=owner).json() == {
+        "count": 1
+    }
+    event = {
+        "id": change["id"],
+        "event_type": "taste_profile.changed",
+        "type_version": 1,
+        "device_id": "server",
+        "app_version": "server",
+        "device_time": change["created_at"],
+        "correlation": {"taste_profile_change_id": change["id"]},
+        "content": {},
+    }
+
+    def upload(item: dict, headers: dict) -> dict:
+        response = api.client.post("/v1/events/upload", json={"events": [item]}, headers=headers)
+        assert response.status_code == 200, response.text
+        return response.json()["results"][0]
+
+    assert upload(event, owner)["status"] == "duplicate"
+    assert upload(event, other)["status"] == "rejected"
+    assert upload({**event, "id": str(uuid.uuid4())}, owner)["status"] == "rejected"
+    assert (
+        upload({**event, "correlation": {"taste_profile_change_id": str(uuid.uuid4())}}, owner)[
+            "status"
+        ]
+        == "rejected"
+    )
+    assert upload({**event, "correlation": {}}, owner)["status"] == "rejected"
+    assert (
+        upload({**event, "content": {"flavors": {"salty": 0.75}}}, owner)["reason"]["code"]
+        == "invalid_content"
+    )
+    assert (
+        upload(
+            {
+                **event,
+                "correlation": {**event["correlation"], "recipe_version_id": str(uuid.uuid4())},
+            },
+            owner,
+        )["status"]
+        == "rejected"
+    )
+    # Other registered event types must not be a bypass for a forged profile link.
+    assert (
+        upload(
+            {
+                **event,
+                "id": str(uuid.uuid4()),
+                "event_type": "pipeline.self_check",
+                "content": {"ping": "test"},
+            },
+            other,
+        )["status"]
+        == "rejected"
+    )
+    assert api.client.get("/v1/dev/events/count", params=params, headers=owner).json() == {
+        "count": 1
+    }
+    assert api.client.get("/v1/dev/events/count", params=params, headers=other).json() == {
+        "count": 0
+    }
+    api.client.patch(PATH, json={"flavors": {"salty": 0.75}}, headers=owner)
+    assert api.client.get("/v1/dev/events/count", params=params, headers=owner).json() == {
+        "count": 1
+    }
+    api.client.patch(PATH, json={"flavors": {"salty": 2}}, headers=owner)
+    assert api.client.get("/v1/dev/events/count", params=params, headers=owner).json() == {
+        "count": 1
+    }
+
+
+def test_concurrent_first_reads_and_distinct_mutations_keep_one_profile(api: Api) -> None:
+    owner = bearer(api.login("taste-concurrent@example.com"))
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        reads = list(pool.map(lambda _: api.client.get(PATH, headers=owner), range(2)))
+        assert all(response.status_code == 200 for response in reads)
+        assert reads[0].json() == reads[1].json()
+        responses = list(
+            pool.map(
+                lambda patch: api.client.patch(PATH, json={"flavors": patch}, headers=owner),
+                [{"salty": 0.5}, {"sweet": 1.5}],
+            )
+        )
+    assert {response.json()["version"] for response in responses} == {2, 3}
+    current = api.client.get(PATH, headers=owner).json()
+    assert current["version"] == 3
+    assert current["flavors"]["salty"]["coefficient"] == 0.5
+    assert current["flavors"]["sweet"]["coefficient"] == 1.5
+    assert len(api.client.get(PATH + "/changes", headers=owner).json()["items"]) == 2
+
+
+def test_configurable_mapping_and_invalid_configuration_fail_closed(api: Api) -> None:
+    owner = bearer(api.login("taste-config@example.com"))
+    scale = {
+        "minimum": 0.25,
+        "maximum": 2.0,
+        "default": 1.2,
+        "levels": [
+            {"coefficient": value, "label": label}
+            for value, label in [
+                (0.25, "很淡"),
+                (0.6, "偏淡"),
+                (1.2, "标准"),
+                (1.6, "偏重"),
+                (2.0, "很重"),
+            ]
+        ],
+    }
+    assert (
+        cli(
+            [
+                "config",
+                "set",
+                "taste.scale",
+                json.dumps(scale),
+                "--by",
+                "test",
+                "--reason",
+                "synthetic scale",
+            ]
+        )
+        == 0
+    )
+    current = api.client.get(PATH, headers=owner).json()
+    assert current["scale"] == scale
+    assert all(
+        flavor["coefficient"] == 1.2 and flavor["label"] == "标准"
+        for flavor in current["flavors"].values()
+    )
+    changed = api.client.patch(PATH, json={"flavors": {"salty": 2.0}}, headers=owner)
+    assert changed.status_code == 200
+    assert changed.json()["flavors"]["salty"]["label"] == "很重"
+    assert (
+        api.client.patch(PATH, json={"flavors": {"salty": 2.01}}, headers=owner).status_code == 422
+    )
+    before = changed.json()
+    invalid = {**scale, "default": 1.0}
+    assert (
+        cli(
+            [
+                "config",
+                "set",
+                "taste.scale",
+                json.dumps(invalid),
+                "--by",
+                "test",
+                "--reason",
+                "invalid synthetic scale",
+            ]
+        )
+        == 0
+    )
+    for method, path, body in [
+        ("GET", PATH, None),
+        ("PATCH", PATH, {"flavors": {"salty": 0.6}}),
+        ("POST", PATH + "/reset", None),
+    ]:
+        assert api.client.request(method, path, json=body, headers=owner).status_code == 503
+    assert (
+        cli(
+            [
+                "config",
+                "set",
+                "taste.scale",
+                json.dumps(scale),
+                "--by",
+                "test",
+                "--reason",
+                "restore scale",
+            ]
+        )
+        == 0
+    )
+    assert api.client.get(PATH, headers=owner).json() == before
+
+
+def test_profile_event_storage_is_metadata_only_and_purge_removes_private_data(
+    api: Api, engine: Engine
+) -> None:
+    email = "taste-delete@example.com"
+    tokens = api.login(email)
+    owner = bearer(tokens)
+    api.client.patch(PATH, json={"flavors": {"salty": 0.75}}, headers=owner)
+    change = api.client.get(PATH + "/changes", headers=owner).json()["items"][0]
+    # Privacy acceptance inspects storage, not internal business implementations.
+    with engine.connect() as connection:
+        event = connection.execute(
+            text("SELECT correlation, content FROM events WHERE id = :id"),
+            {"id": uuid.UUID(change["id"])},
+        ).one()
+        assert event.content == {}
+        assert event.correlation == {"taste_profile_change_id": change["id"]}
+    assert _reauth_email(api, tokens, email) == 204
+    due = api.client.post("/v1/me/deletion", headers=owner).json()["deletion_due_at"]
+    assert api.client.get(PATH, headers=owner).status_code == 401
+    assert "已删除 1 个" in _purge(due)
+    with engine.connect() as connection:
+        for table, column in [
+            ("taste_profiles", "owner_id"),
+            ("taste_profile_changes", "owner_id"),
+            ("events", "user_id"),
+        ]:
+            assert (
+                connection.scalar(
+                    text(f"SELECT count(*) FROM {table} WHERE {column} = :owner"),
+                    {"owner": uuid.UUID(tokens["user"]["id"])},
+                )
+                == 0
+            )
+    api.clock.advance(seconds=61)
+    fresh = bearer(api.login(email))
+    assert api.client.get(PATH, headers=fresh).json()["version"] == 1
+    assert api.client.get(PATH + "/changes", headers=fresh).json()["items"] == []

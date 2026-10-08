@@ -13,9 +13,11 @@ from pydantic import ValidationError
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from gramtree.accounts.models import User
+from gramtree.accounts.errors import AccountUnavailable
+from gramtree.accounts.models import User, UserStatus
 from gramtree.core.errors import ApiError
 from gramtree.core.time import utcnow
+from gramtree.events.service import record_taste_profile_changed
 from gramtree.runtime_config import service as config
 from gramtree.taste_profiles.models import TasteProfile, TasteProfileChange
 from gramtree.taste_profiles.schemas import (
@@ -42,7 +44,10 @@ def defaults(scale: TasteScale) -> dict[str, Any]:
 def locked_profile(session: Session, owner_id: uuid.UUID, scale: TasteScale) -> TasteProfile:
     # Lock the stable owner row as well: SELECT FOR UPDATE on an absent profile
     # cannot serialize two first reads. Unique owner_id remains a DB backstop.
-    session.execute(select(User.id).where(User.id == owner_id).with_for_update())
+    owner_status = session.scalar(select(User.status).where(User.id == owner_id).with_for_update())
+    # Auth was checked before acquiring this lock; deletion may have won the race.
+    if owner_status != UserStatus.active:
+        raise AccountUnavailable()
     profile = session.scalar(
         select(TasteProfile)
         .where(TasteProfile.owner_id == owner_id)
@@ -93,6 +98,8 @@ def record_changes(
     ]
     session.add_all(rows)
     session.flush()
+    for row in rows:
+        record_taste_profile_changed(session, profile.owner_id, row.id, now=row.created_at)
     return rows
 
 
