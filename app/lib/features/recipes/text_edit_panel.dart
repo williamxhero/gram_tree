@@ -37,7 +37,13 @@ class TextEditPanel extends ConsumerStatefulWidget {
   ConsumerState<TextEditPanel> createState() => _TextEditPanelState();
 }
 
-class _TextEditPanelState extends ConsumerState<TextEditPanel> {
+class _TextEditPanelState extends ConsumerState<TextEditPanel>
+    with AutomaticKeepAliveClientMixin<TextEditPanel> {
+  // The generation result is a lazy list. Scrolling must not discard unsaved
+  // text, pending choices or the exact preview bound to a confirmation click.
+  @override
+  bool get wantKeepAlive => true;
+
   final _text = TextEditingController();
   final _compositionId = newUuidV4();
   final _choices = <String, ModificationDecision>{};
@@ -427,126 +433,131 @@ class _TextEditPanelState extends ConsumerState<TextEditPanel> {
   }
 
   @override
-  Widget build(BuildContext context) => RecipeOperationScope(
-    handlers: {
-      'text_preview': (params) => _propose(params['text'] as String),
-      'text_choose': _choose,
-      'text_confirm': (_) => _confirm(),
-      'text_cancel': (_) => _cancel(),
-      'text_retry_status': (_) => _loadStatus(),
-      'text_retry_checks': (_) => _checkSelection(),
-    },
-    child: Builder(
-      builder: (context) => Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Text('一句话改文字', style: Theme.of(context).textTheme.titleMedium),
-          const Text('只支持改文字；其他修改暂未支持。确认前不会保存。'),
-          const Text('请勿输入个人敏感信息。手动编辑和保存始终可用。'),
-          if (widget.manualEdits) const Text('当前有未保存的表单修改，请先手动保存，再请求文字修改。'),
-          Text(
-            _status == null ? '正在读取今日修改额度…' : '今日修改剩余 ${_status!.remaining} 次',
-            key: const ValueKey('text-edit-quota'),
-          ),
-          if (_status?.available == false) Text(_reason(_status?.reason)),
-          TextField(
-            key: const ValueKey('text-edit-input'),
-            controller: _text,
-            enabled:
-                !_busy &&
-                !_checking &&
-                _pendingChoices == 0 &&
-                !widget.manualEdits,
-            maxLength: 1000,
-            minLines: 1,
-            maxLines: 4,
-            decoration: const InputDecoration(labelText: '想改哪段文字？'),
-            onChanged: (_) {
-              _requestId = null;
-              _cancel();
-            },
-            onSubmitted: (text) {
-              if (_status?.available == true) {
-                unawaited(
-                  _dispatch(context, {
-                    'operation': 'text_preview',
-                    'text': text,
-                  }),
-                );
-              }
-            },
-          ),
-          OutlinedButton(
-            key: const ValueKey('text-edit-preview'),
-            onPressed:
-                _busy ||
-                    _checking ||
-                    _pendingChoices > 0 ||
-                    widget.manualEdits ||
-                    _status?.available != true ||
-                    _text.text.trim().isEmpty
-                ? null
-                : () => _dispatch(context, {
-                    'operation': 'text_preview',
-                    'text': _text.text,
-                  }),
-            child: const Text('预览文字修改'),
-          ),
-          if (_busy || _checking) const LinearProgressIndicator(),
-          if (_error != null) ...[
-            Text(_error!, key: const ValueKey('text-edit-error')),
-            if (_status == null)
-              TextButton(
-                key: const ValueKey('text-edit-retry-status'),
-                onPressed: () =>
-                    _dispatch(context, {'operation': 'text_retry_status'}),
-                child: const Text('重试读取修改额度'),
-              ),
-          ],
-          if (_preview != null && _preview!.error == null) ...[
-            for (final operation
-                in _preview!.operations ?? const <ModificationOperation>[])
-              _operation(context, operation),
-            const Text('实际待确认结果 · 仅包含已接受或修改的操作；待处理不会应用。'),
-            if (_checksDirty || _checking || _pendingChoices > 0)
-              const Text('选择或后值已改变，正在更新检查。旧检查不可用于确认。')
-            else ...[
-              for (final step
-                  in _preview!.snapshot.steps ?? const <RecipeStep>[])
-                Text('待确认步骤 ${step.id}：${step.instruction}'),
-              FoodSafetyCard(result: _preview!.safety),
-              AllergenCard(result: _preview!.safety),
-              ReproducibilityCard(result: _preview!.reproducibility),
-              for (final warning in _preview!.warnings ?? const <String>[])
-                Text(warning),
-            ],
-            if (_checksDirty && !_checking && _pendingChoices == 0)
-              TextButton(
-                key: const ValueKey('text-edit-retry-checks'),
-                onPressed: () =>
-                    _dispatch(context, {'operation': 'text_retry_checks'}),
-                child: const Text('重试检查所选修改'),
-              ),
-            const Text('请逐条处理后确认。只保存私有版本，不公开，也不修改口味档案。'),
-            FilledButton(
-              key: const ValueKey('text-edit-confirm'),
-              onPressed: _canConfirm
-                  ? () => _dispatch(context, {'operation': 'text_confirm'})
-                  : null,
-              child: const Text('确认并保存所选修改'),
+  Widget build(BuildContext context) {
+    super.build(context);
+    return RecipeOperationScope(
+      handlers: {
+        'text_preview': (params) => _propose(params['text'] as String),
+        'text_choose': _choose,
+        'text_confirm': (_) => _confirm(),
+        'text_cancel': (_) => _cancel(),
+        'text_retry_status': (_) => _loadStatus(),
+        'text_retry_checks': (_) => _checkSelection(),
+      },
+      child: Builder(
+        builder: (context) => Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text('一句话改文字', style: Theme.of(context).textTheme.titleMedium),
+            const Text('只支持改文字；其他修改暂未支持。确认前不会保存。'),
+            const Text('请勿输入个人敏感信息。手动编辑和保存始终可用。'),
+            if (widget.manualEdits) const Text('当前有未保存的表单修改，请先手动保存，再请求文字修改。'),
+            Text(
+              _status == null
+                  ? '正在读取今日修改额度…'
+                  : '今日修改剩余 ${_status!.remaining} 次',
+              key: const ValueKey('text-edit-quota'),
             ),
-            TextButton(
-              key: const ValueKey('text-edit-cancel'),
-              onPressed: _busy || _pendingChoices > 0
+            if (_status?.available == false) Text(_reason(_status?.reason)),
+            TextField(
+              key: const ValueKey('text-edit-input'),
+              controller: _text,
+              enabled:
+                  !_busy &&
+                  !_checking &&
+                  _pendingChoices == 0 &&
+                  !widget.manualEdits,
+              maxLength: 1000,
+              minLines: 1,
+              maxLines: 4,
+              decoration: const InputDecoration(labelText: '想改哪段文字？'),
+              onChanged: (_) {
+                _requestId = null;
+                _cancel();
+              },
+              onSubmitted: (text) {
+                if (_status?.available == true) {
+                  unawaited(
+                    _dispatch(context, {
+                      'operation': 'text_preview',
+                      'text': text,
+                    }),
+                  );
+                }
+              },
+            ),
+            OutlinedButton(
+              key: const ValueKey('text-edit-preview'),
+              onPressed:
+                  _busy ||
+                      _checking ||
+                      _pendingChoices > 0 ||
+                      widget.manualEdits ||
+                      _status?.available != true ||
+                      _text.text.trim().isEmpty
                   ? null
-                  : () => _dispatch(context, {'operation': 'text_cancel'}),
-              child: const Text('取消预览，继续手动编辑'),
+                  : () => _dispatch(context, {
+                      'operation': 'text_preview',
+                      'text': _text.text,
+                    }),
+              child: const Text('预览文字修改'),
             ),
+            if (_busy || _checking) const LinearProgressIndicator(),
+            if (_error != null) ...[
+              Text(_error!, key: const ValueKey('text-edit-error')),
+              if (_status == null)
+                TextButton(
+                  key: const ValueKey('text-edit-retry-status'),
+                  onPressed: () =>
+                      _dispatch(context, {'operation': 'text_retry_status'}),
+                  child: const Text('重试读取修改额度'),
+                ),
+            ],
+            if (_preview != null && _preview!.error == null) ...[
+              for (final operation
+                  in _preview!.operations ?? const <ModificationOperation>[])
+                _operation(context, operation),
+              const Text('实际待确认结果 · 仅包含已接受或修改的操作；待处理不会应用。'),
+              if (_checksDirty || _checking || _pendingChoices > 0)
+                const Text('选择或后值已改变，正在更新检查。旧检查不可用于确认。')
+              else ...[
+                for (final step
+                    in _preview!.snapshot.steps ?? const <RecipeStep>[])
+                  Text('待确认步骤 ${step.id}：${step.instruction}'),
+                FoodSafetyCard(result: _preview!.safety),
+                AllergenCard(result: _preview!.safety),
+                ReproducibilityCard(result: _preview!.reproducibility),
+                for (final warning in _preview!.warnings ?? const <String>[])
+                  Text(warning),
+              ],
+              if (_checksDirty && !_checking && _pendingChoices == 0)
+                TextButton(
+                  key: const ValueKey('text-edit-retry-checks'),
+                  onPressed: () =>
+                      _dispatch(context, {'operation': 'text_retry_checks'}),
+                  child: const Text('重试检查所选修改'),
+                ),
+              const Text('请逐条处理后确认。只保存私有版本，不公开，也不修改口味档案。'),
+              FilledButton(
+                key: const ValueKey('text-edit-confirm'),
+                onPressed: _canConfirm
+                    ? () => _dispatch(context, {'operation': 'text_confirm'})
+                    : null,
+                child: const Text('确认并保存所选修改'),
+              ),
+              TextButton(
+                key: const ValueKey('text-edit-cancel'),
+                onPressed: _busy || _pendingChoices > 0
+                    ? null
+                    : () => _dispatch(context, {'operation': 'text_cancel'}),
+                child: const Text('取消预览，继续手动编辑'),
+              ),
+            ],
           ],
-        ],
+        ),
       ),
-    ),
-  );
+    );
+  }
 }
 
 String _reason(String? reason) => switch (reason) {

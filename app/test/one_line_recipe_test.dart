@@ -81,7 +81,7 @@ RecipeDetail _detail(RecipeSnapshot snapshot) => RecipeDetail(
   ),
 );
 
-TestEnv _env({String? failure}) {
+TestEnv _env({String? failure, int similarCount = 0}) {
   final env = TestEnv.signedIn();
   final status = AIStatus(
     available: failure == null,
@@ -108,7 +108,17 @@ TestEnv _env({String? failure}) {
             default_: '常用锅具',
           ),
         ],
-        recipes: [],
+        recipes: [
+          for (var i = 0; i < similarCount; i++)
+            SimilarRecipe(
+              aiAssisted: true,
+              basis: '已有的私有菜谱，仅供选择',
+              dishName: '宫保鸡丁 $i',
+              recipeId: 'similar-$i',
+              servings: 2,
+              versionId: 'version-$i',
+            ),
+        ],
         requestId: _requestId,
         status: status,
         text: _text,
@@ -688,6 +698,56 @@ void main() {
     expect(find.byKey(const ValueKey('recipe-detail-content')), findsOneWidget);
     await _reveal(tester, 'recipe-step-0');
     expect(find.textContaining(_clarified), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('小屏生成结果滚出可见区再返回，原话和逐条处理不丢失', (tester) async {
+    tester.view.physicalSize = const Size(320, 640);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    final env = _env(similarCount: 8);
+    await _open(tester, env);
+    await _tap(tester, 'ai-design-new');
+    await _tap(tester, 'ai-skip-questions');
+    await _reveal(tester, 'text-edit-input');
+    await tester.enterText(
+      find.byKey(const ValueKey('text-edit-input')),
+      _modifyText,
+    );
+    await tester.testTextInput.receiveAction(TextInputAction.done);
+    await tester.pumpAndSettle();
+    await _reveal(tester, 'one-line-search');
+    await _reveal(tester, 'text-edit-input');
+    expect(find.text(_modifyText), findsOneWidget);
+    await _choose(tester, 'text-edit-modify-clarify-cook');
+    await _reveal(tester, 'text-edit-after-clarify-cook');
+    const edited = '中火翻炒并确认中心达到 74°C，随后盛出。';
+    await tester.enterText(
+      find.byKey(const ValueKey('text-edit-after-clarify-cook')),
+      edited,
+    );
+    await tester.testTextInput.receiveAction(TextInputAction.done);
+    await tester.pump(const Duration(milliseconds: 300));
+    await tester.pumpAndSettle();
+    await _reveal(tester, 'one-line-search');
+    await _reveal(tester, 'text-edit-confirm');
+    expect(find.text('本条处理：修改后值'), findsOneWidget);
+    expect(find.text('待确认步骤 cook：$edited'), findsOneWidget);
+    expect(
+      env.server.calls('POST', '/v1/ai/recipes/modifications'),
+      hasLength(1),
+    );
+    expect(
+      env.server.calls('GET', '/v1/ai/recipes/modifications/status'),
+      hasLength(1),
+      reason: '离屏滚动不能重新创建修改入口并丢掉当前预览',
+    );
+    await _choose(tester, 'text-edit-reject-remind-cook');
+    await _choose(tester, 'text-edit-reject-explain-cook');
+    await _choose(tester, 'text-edit-confirm');
+    expect(find.byKey(const ValueKey('recipe-detail-content')), findsOneWidget);
+    await _reveal(tester, 'recipe-step-0');
+    expect(find.textContaining(edited), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 
