@@ -151,12 +151,28 @@ class EventUploader {
     final epoch = _session.identityEpoch;
     final queue = _queue;
     var progressed = false;
+    var transportUnavailable = false;
     DateTime? earliestRetry;
     do {
       progressed = false;
       final entries = await queue.entries(ownerId: owner);
       if (!_sameAccount(owner, epoch)) return;
       final byId = {for (final entry in entries) entry.write.id: entry};
+      Future<void> save(QueueEntry next) async {
+        final previous = byId[next.write.id]!;
+        await queue.update(next);
+        byId[next.write.id] = next;
+        // Settled prerequisites wake earlier children too. Updating only the
+        // durable queue leaves this pass's dependency lookup stale.
+        if ((next.state == WriteState.failed ||
+                next.state == WriteState.conflict ||
+                next.reasonCode == 'dependency_conflict') &&
+            (next.state != previous.state ||
+                next.reasonCode != previous.reasonCode)) {
+          progressed = true;
+        }
+      }
+
       for (var entry in entries) {
         if (!_sameAccount(owner, epoch)) return;
         if (entry.state == WriteState.confirmed ||
@@ -165,19 +181,20 @@ class EventUploader {
             entry.state == WriteState.quarantined) {
           continue;
         }
-        if (entry.nextAttemptAt != null &&
-            entry.nextAttemptAt!.isAfter(DateTime.now().toUtc())) {
-          if (earliestRetry == null ||
-              entry.nextAttemptAt!.isBefore(earliestRetry)) {
-            earliestRetry = entry.nextAttemptAt;
-          }
+        if (_hasDependencyCycle(entry.write.id, byId)) {
+          await save(
+            entry.change(
+              state: WriteState.failed,
+              reasonCode: 'dependency_cycle',
+            ),
+          );
           continue;
         }
         final blocked = entry.write.dependencies
             .map((id) => byId[id])
             .whereType<QueueEntry>();
         if (blocked.any((parent) => parent.state == WriteState.failed)) {
-          await queue.update(
+          await save(
             entry.change(
               state: WriteState.failed,
               reasonCode: 'dependency_failed',
@@ -185,8 +202,12 @@ class EventUploader {
           );
           continue;
         }
-        if (blocked.any((parent) => parent.state == WriteState.conflict)) {
-          await queue.update(
+        if (blocked.any(
+          (parent) =>
+              parent.state == WriteState.conflict ||
+              parent.reasonCode == 'dependency_conflict',
+        )) {
+          await save(
             entry.change(
               state: WriteState.deferred,
               reasonCode: 'dependency_conflict',
@@ -197,16 +218,9 @@ class EventUploader {
         if (blocked.any((parent) => parent.state != WriteState.confirmed)) {
           // Known local prerequisites can be visited later in this pass. Waiting
           // for them is not an HTTP attempt and must not exhaust the retry cap.
-          if (_hasDependencyCycle(entry.write.id, byId)) {
-            await queue.update(
-              entry.change(
-                state: WriteState.failed,
-                reasonCode: 'dependency_cycle',
-              ),
-            );
-          } else if (entry.state != WriteState.deferred ||
+          if (entry.state != WriteState.deferred ||
               entry.reasonCode != 'dependency_not_confirmed') {
-            await queue.update(
+            await save(
               entry.change(
                 state: WriteState.deferred,
                 reasonCode: 'dependency_not_confirmed',
@@ -215,8 +229,18 @@ class EventUploader {
           }
           continue;
         }
+        // Dependency failure/conflict is actionable even during backoff. It
+        // must not wait for, or consume, the child's next HTTP attempt.
+        if (entry.nextAttemptAt != null &&
+            entry.nextAttemptAt!.isAfter(DateTime.now().toUtc())) {
+          if (earliestRetry == null ||
+              entry.nextAttemptAt!.isBefore(earliestRetry)) {
+            earliestRetry = entry.nextAttemptAt;
+          }
+          continue;
+        }
         if (entry.attempts >= maxAttempts) {
-          await queue.update(
+          await save(
             entry.change(
               state: WriteState.failed,
               reasonCode: 'retry_limit_exceeded',
@@ -224,11 +248,12 @@ class EventUploader {
           );
           continue;
         }
+        if (transportUnavailable) continue;
         entry = entry.change(
           state: WriteState.uploading,
           attempts: entry.attempts + 1,
         );
-        await queue.update(entry);
+        await save(entry);
         if (!_sameAccount(owner, epoch)) return;
         try {
           final response = await _ref
@@ -262,10 +287,11 @@ class EventUploader {
                 owner,
                 result.result!.toJson(),
               );
+              byId[entry.write.id] = entry.change(state: WriteState.confirmed);
               progressed = true;
             case WriteResultStatusEnum.deferred_:
               final wait = _retryAt(entry.attempts);
-              await queue.update(
+              await save(
                 entry.change(
                   state: entry.attempts >= maxAttempts
                       ? WriteState.failed
@@ -280,7 +306,7 @@ class EventUploader {
                 earliestRetry = wait;
               }
             case WriteResultStatusEnum.conflict:
-              await queue.update(
+              await save(
                 entry.change(
                   state: WriteState.conflict,
                   reasonCode: result.reasonCode,
@@ -290,7 +316,7 @@ class EventUploader {
                 ),
               );
             case WriteResultStatusEnum.failed:
-              await queue.update(
+              await save(
                 entry.change(
                   state: WriteState.failed,
                   reasonCode: result.reasonCode ?? 'write_rejected',
@@ -322,7 +348,7 @@ class EventUploader {
           if (error.response != null &&
               error.response!.statusCode! >= 400 &&
               error.response!.statusCode! < 500) {
-            await queue.update(
+            await save(
               entry.change(
                 state: WriteState.failed,
                 reasonCode: ApiFailure.from(error).code,
@@ -330,9 +356,9 @@ class EventUploader {
             );
           } else {
             final wait = await _retainForRetry(
-              queue,
               entry,
               'network_or_server_failure',
+              save,
             );
             if (wait != null &&
                 (earliestRetry == null || wait.isBefore(earliestRetry))) {
@@ -341,15 +367,20 @@ class EventUploader {
             // Transport outage affects all entries; don't consume all their
             // attempts while offline. Deferred business results, by contrast,
             // continue to later entries in the same pass.
-            _scheduleRetry(earliestRetry);
-            return;
+            if (wait != null) {
+              _scheduleRetry(earliestRetry);
+              return;
+            }
+            // Exhaustion is terminal: settle dependent children in this drain
+            // before returning, without trying other entries during the outage.
+            transportUnavailable = true;
           }
         } catch (_) {
           if (!_sameAccount(owner, epoch)) return;
           final wait = await _retainForRetry(
-            queue,
             entry,
             'invalid_or_lost_response',
+            save,
           );
           if (wait != null &&
               (earliestRetry == null || wait.isBefore(earliestRetry))) {
@@ -437,13 +468,13 @@ class EventUploader {
   }
 
   Future<DateTime?> _retainForRetry(
-    EventQueue queue,
     QueueEntry entry,
     String reason,
+    Future<void> Function(QueueEntry) save,
   ) async {
     final failed = entry.attempts >= maxAttempts;
     final next = failed ? null : _retryAt(entry.attempts);
-    await queue.update(
+    await save(
       entry.change(
         state: failed ? WriteState.failed : WriteState.pending,
         reasonCode: failed ? 'retry_limit_exceeded:$reason' : reason,

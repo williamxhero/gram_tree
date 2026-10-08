@@ -155,6 +155,125 @@ void main() {
     expect(attempts, 3);
   });
 
+  for (final outcome in ['failed', 'conflict']) {
+    for (final parentFirst in [true, false]) {
+      test('前置 $outcome（父先入队 $parentFirst）同轮阻止子上传且不消耗额度', () async {
+        final server = FakeServer()
+          ..on(
+            'POST',
+            '/v1/sync/writes',
+            (request) => (
+              200,
+              {
+                'results': [
+                  {
+                    'write_id': writes(request).single['write_id'],
+                    'status': outcome,
+                    'reason_code': 'parent_$outcome',
+                  },
+                ],
+              },
+            ),
+          );
+        final env = TestEnv.signedIn(server: server);
+        final container = await setup(env);
+        final parent = sample(index: 1);
+        final child = QueuedEvent.write(
+          id: eventId(2),
+          ownerId: parent.ownerId,
+          deviceTime: parent.deviceTime,
+          writeType: parent.writeType,
+          payload: parent.payload,
+          dependencies: [parent.id],
+        );
+        for (final event in parentFirst ? [parent, child] : [child, parent]) {
+          await env.eventQueue.enqueue(event);
+        }
+        // A previous deferred attempt must not delay learning that its parent
+        // has now failed/conflicted, nor count as a new child HTTP attempt.
+        final childEntry = (await env.eventQueue.entries()).singleWhere(
+          (entry) => entry.write.id == child.id,
+        );
+        await env.eventQueue.update(
+          childEntry.change(
+            state: WriteState.deferred,
+            attempts: 3,
+            reasonCode: 'dependency_not_arrived',
+            nextAttemptAt: DateTime.now().toUtc().add(const Duration(hours: 1)),
+          ),
+        );
+        await container.read(eventUploaderProvider).triggerUpload();
+        expect(
+          server
+              .calls('POST', '/v1/sync/writes')
+              .expand(writes)
+              .map((write) => write['write_id']),
+          [parent.id],
+        );
+        final settled = (await env.eventQueue.entries()).singleWhere(
+          (entry) => entry.write.id == child.id,
+        );
+        expect(
+          settled.state,
+          outcome == 'failed' ? WriteState.failed : WriteState.deferred,
+        );
+        expect(settled.reasonCode, 'dependency_$outcome');
+        expect(settled.attempts, 3);
+        expect(settled.write.content, {'ping': 'retained'});
+        await container.read(eventUploaderProvider).triggerUpload();
+        expect(server.calls('POST', '/v1/sync/writes'), hasLength(1));
+      });
+    }
+  }
+
+  test('断网超限同轮结算前置失败，但不消耗子写入或无关写入的尝试', () async {
+    final server = FakeServer()
+      ..on(
+        'POST',
+        '/v1/sync/writes',
+        (_) => FakeServer.error(503, 'unavailable', '暂不可用'),
+      );
+    final env = TestEnv.signedIn(server: server);
+    final container = await setup(env);
+    final parent = sample(index: 1);
+    await env.eventQueue.enqueue(
+      QueuedEvent.write(
+        id: eventId(2),
+        ownerId: parent.ownerId,
+        deviceTime: parent.deviceTime,
+        writeType: parent.writeType,
+        payload: parent.payload,
+        dependencies: [parent.id],
+      ),
+    );
+    await env.eventQueue.enqueue(parent);
+    await env.eventQueue.enqueue(sample(index: 3));
+    final parentEntry = (await env.eventQueue.entries()).singleWhere(
+      (entry) => entry.write.id == parent.id,
+    );
+    await env.eventQueue.update(
+      parentEntry.change(state: WriteState.pending, attempts: 19),
+    );
+    await container.read(eventUploaderProvider).triggerUpload();
+    final entries = await env.eventQueue.entries();
+    expect(entries[0].reasonCode, 'dependency_failed');
+    expect(entries[0].attempts, 0);
+    expect(
+      entries[1].reasonCode,
+      'retry_limit_exceeded:network_or_server_failure',
+    );
+    expect(entries[1].attempts, 20);
+    expect(entries[2].state, WriteState.pending);
+    expect(entries[2].attempts, 0);
+    expect(
+      server
+          .calls('POST', '/v1/sync/writes')
+          .expand(writes)
+          .map((write) => write['write_id']),
+      [parent.id],
+    );
+  });
+
   test('队列为空时不发请求', () async {
     final env = TestEnv.signedIn();
     final container = await setup(env);

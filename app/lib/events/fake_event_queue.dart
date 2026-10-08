@@ -5,8 +5,10 @@ import 'write_registry.dart';
 
 /// In-memory web/test adapter with the same ownership and immutability rules.
 class FakeEventQueue implements EventQueue {
-  FakeEventQueue({WriteRegistry? registry})
+  FakeEventQueue({WriteRegistry? registry, this._legacyRejectedCount = 0})
     : registry = registry ?? WriteRegistry();
+
+  int _legacyRejectedCount;
 
   @override
   final WriteRegistry registry;
@@ -154,10 +156,24 @@ class FakeEventQueue implements EventQueue {
   }
 
   @override
-  Future<int> rejectedCount() async => rejectedItems.length;
+  Future<int> rejectedCount() async =>
+      rejectedItems.length + _legacyRejectedCount;
+  @override
+  Future<LegacyQueueDiagnostics> legacyDiagnostics() async =>
+      LegacyQueueDiagnostics(
+        ownerUnknownCount: _entries.values
+            .where(
+              (entry) =>
+                  entry.write.ownerId == null &&
+                  entry.state == WriteState.quarantined,
+            )
+            .length,
+        rejectedCount: _legacyRejectedCount,
+      );
   @override
   Future<void> clear() async {
     _entries.clear();
+    _legacyRejectedCount = 0;
     _changes.add(null);
   }
 

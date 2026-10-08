@@ -202,6 +202,18 @@ class QueueEntry {
   );
 }
 
+/// Device-level migration evidence, intentionally counts only. There is no
+/// reliable owner for these records, so never expose their IDs or content to a
+/// signed-in account or include another owner's delivery failures here.
+class LegacyQueueDiagnostics {
+  const LegacyQueueDiagnostics({
+    this.ownerUnknownCount = 0,
+    this.rejectedCount = 0,
+  });
+  final int ownerUnknownCount;
+  final int rejectedCount;
+}
+
 /// Same queue as SPEC-010.1, now account scoped and registered. Sequence is
 /// independent of device time. Confirmation keeps businessRecord and receipt.
 abstract class EventQueue {
@@ -221,6 +233,7 @@ abstract class EventQueue {
   Future<void> removeAll(Iterable<String> ids);
   Future<void> reject(String id, {required String reasonCode});
   Future<int> rejectedCount();
+  Future<LegacyQueueDiagnostics> legacyDiagnostics();
 
   /// Explicit privacy withdrawal/deletion only, NEVER ordinary logout.
   Future<void> clear();

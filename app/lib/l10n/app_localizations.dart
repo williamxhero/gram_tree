@@ -118,6 +118,48 @@ abstract class AppLocalizations {
   /// **'待同步 {count} 条'**
   String syncPendingCount(int count);
 
+  /// No description provided for @syncRetryExhaustedCount.
+  ///
+  /// In zh, this message translates to:
+  /// **'重试次数已达上限，已保留 {count} 条内容'**
+  String syncRetryExhaustedCount(int count);
+
+  /// No description provided for @syncDependencyFailedCount.
+  ///
+  /// In zh, this message translates to:
+  /// **'前置写入失败，已保留 {count} 条内容'**
+  String syncDependencyFailedCount(int count);
+
+  /// No description provided for @syncDependencyConflictCount.
+  ///
+  /// In zh, this message translates to:
+  /// **'前置写入存在冲突，{count} 条暂缓同步'**
+  String syncDependencyConflictCount(int count);
+
+  /// No description provided for @syncDependencyMissingCount.
+  ///
+  /// In zh, this message translates to:
+  /// **'依赖写入尚未到达，{count} 条暂缓同步'**
+  String syncDependencyMissingCount(int count);
+
+  /// No description provided for @syncDependencyCycleCount.
+  ///
+  /// In zh, this message translates to:
+  /// **'依赖写入存在循环，已保留 {count} 条内容'**
+  String syncDependencyCycleCount(int count);
+
+  /// No description provided for @syncLegacyOwnerUnknownCount.
+  ///
+  /// In zh, this message translates to:
+  /// **'本机有 {count} 条旧写入无法确定原账号，已隔离保留，不会上传'**
+  String syncLegacyOwnerUnknownCount(int count);
+
+  /// No description provided for @syncLegacyRejectedCount.
+  ///
+  /// In zh, this message translates to:
+  /// **'本机保留 {count} 条旧拒收记录，仅有拒收凭据，无法恢复原内容'**
+  String syncLegacyRejectedCount(int count);
+
   /// No description provided for @networkUnavailable.
   ///
   /// In zh, this message translates to:

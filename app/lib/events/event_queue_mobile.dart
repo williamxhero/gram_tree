@@ -313,6 +313,27 @@ class DriftEventQueue implements EventQueue {
       (await _db.select(_db.rejectedEvents).get()).length +
       (await entries()).where((e) => e.state == WriteState.failed).length;
   @override
+  Future<LegacyQueueDiagnostics> legacyDiagnostics() async {
+    final unknownCount = _db.queuedEvents.id.count();
+    final unknown =
+        await (_db.selectOnly(_db.queuedEvents)
+              ..addColumns([unknownCount])
+              ..where(
+                _db.queuedEvents.ownerId.isNull() &
+                    _db.queuedEvents.deliveryState.equals('quarantined'),
+              ))
+            .getSingle();
+    final rejectedCount = _db.rejectedEvents.id.count();
+    final rejected = await (_db.selectOnly(
+      _db.rejectedEvents,
+    )..addColumns([rejectedCount])).getSingle();
+    return LegacyQueueDiagnostics(
+      ownerUnknownCount: unknown.read(unknownCount) ?? 0,
+      rejectedCount: rejected.read(rejectedCount) ?? 0,
+    );
+  }
+
+  @override
   Future<void> clear() async {
     await _db.transaction(() async {
       await _db.delete(_db.queuedEvents).go();

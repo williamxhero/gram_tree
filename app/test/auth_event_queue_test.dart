@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gram_tree/auth/session.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gram_tree/events/event_queue.dart';
+import 'package:gram_tree/events/fake_event_queue.dart';
 import 'package:gramtree_api/gramtree_api.dart';
 
 import 'helpers.dart';
@@ -191,6 +192,118 @@ void main() {
       }
     });
   }
+
+  testWidgets('旧无归属写入和旧拒收只显示本机数量，退出切换账号不泄露内容或他人失败数', (tester) async {
+    final base = await _fixture();
+    final queue = FakeEventQueue(legacyRejectedCount: 2);
+    for (final entry in await base.eventQueue.entries()) {
+      await queue.enqueue(entry.write);
+      await queue.update(entry);
+    }
+    await queue.enqueue(
+      QueuedEvent(
+        id: '66666666-6666-4666-8666-000000000001',
+        eventType: 'pipeline.self_check',
+        typeVersion: 1,
+        deviceId: 'old-device',
+        deviceTime: DateTime.utc(2026, 9, 1),
+        appVersion: 'old',
+        content: {'ping': 'private-legacy-content'},
+      ),
+    );
+    final env = TestEnv(
+      server: base.server,
+      local: base.local,
+      secure: base.secure,
+      eventQueue: queue,
+    );
+    final alice = env.server.user;
+    final ownersAtUpload = <Recorded, String>{};
+    env.server.on('POST', '/v1/sync/writes', (request) {
+      ownersAtUpload[request] = env.server.user.id;
+      final writes = ((request.body as Map)['writes'] as List).cast<Map>();
+      return (
+        200,
+        {
+          'results': [
+            for (final write in writes)
+              {
+                'write_id': write['write_id'],
+                'status': 'confirmed',
+                'result': {
+                  'resource_type': 'experience.event',
+                  'resource_id': write['write_id'],
+                },
+              },
+          ],
+        },
+      );
+    });
+    void expectNoLegacyUpload() {
+      for (final request in env.server.calls('POST', '/v1/sync/writes')) {
+        final write = ((request.body as Map)['writes'] as List).single as Map;
+        expect(write['owner_id'], ownersAtUpload[request]);
+        expect(
+          write['write_id'],
+          isNot(
+            isIn([
+              _aliceWrite,
+              _bobWrite,
+              '66666666-6666-4666-8666-000000000001',
+            ]),
+          ),
+        );
+        expect(write['write_type'], 'experience.event');
+        final payload = write['payload'] as Map;
+        expect(payload['event_type'], 'ui.composition_shown');
+        expect(payload['device_id'], 'device-test');
+        expect(payload.toString(), isNot(contains('private-legacy-content')));
+      }
+    }
+
+    void expectDeviceOnly() {
+      expect(find.text('本机有 1 条旧写入无法确定原账号，已隔离保留，不会上传'), findsOneWidget);
+      expect(find.text('本机保留 2 条旧拒收记录，仅有拒收凭据，无法恢复原内容'), findsOneWidget);
+      expect(find.textContaining('private-legacy-content'), findsNothing);
+      expect(find.textContaining('old-device'), findsNothing);
+      expect(find.textContaining(_aliceWrite), findsNothing);
+      expect(find.textContaining(_bobWrite), findsNothing);
+      expect(find.textContaining('invalid_content'), findsNothing);
+    }
+
+    await pumpApp(tester, env: env);
+    expect(find.text('待同步 1 条'), findsOneWidget);
+    expectDeviceOnly();
+    expectNoLegacyUpload();
+    await _logout(tester);
+    expect(find.byKey(const ValueKey('sync-pending')), findsNothing);
+    // The login page has no shared badge; observe the next account's real page.
+    env.server.user = UserOut.fromJson({
+      ...alice.toJson(),
+      'id': _bobId,
+      'nickname': 'Bob 的账号',
+    });
+    await _login(tester);
+    expect(find.text('待同步 1 条'), findsOneWidget);
+    expectDeviceOnly();
+    await restartApp(tester, env);
+    expect(find.text('待同步 1 条'), findsOneWidget);
+    expectDeviceOnly();
+    expectNoLegacyUpload();
+    final retained = await queue.entries();
+    final legacy = retained.singleWhere(
+      (entry) => entry.write.id == '66666666-6666-4666-8666-000000000001',
+    );
+    expect(legacy.write.ownerId, isNull);
+    expect(legacy.state, WriteState.quarantined);
+    expect(legacy.reasonCode, 'legacy_owner_unknown');
+    expect(legacy.write.content, {'ping': 'private-legacy-content'});
+    for (final id in [_aliceWrite, _bobWrite]) {
+      final rejected = retained.singleWhere((entry) => entry.write.id == id);
+      expect(rejected.state, WriteState.failed);
+      expect(rejected.write.content, {'ping': 'retained'});
+    }
+  });
 
   testWidgets('普通退出保留拒收内容，新账号只显示自己的数量，原账号回来仍可见', (tester) async {
     final env = await _fixture();
