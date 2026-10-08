@@ -559,6 +559,10 @@ class ConsentInput:
 def record_consents(
     session: Session, user: User, records: list[ConsentInput], now: datetime
 ) -> None:
+    from gramtree.taste_profiles import allergies
+    from gramtree.taste_profiles import service as taste_service
+
+    profile = taste_service.locked_profile(session, user.id, taste_service.scale_for(session))
     for r in records:
         existing = session.get(Consent, r.id)
         if existing is not None:
@@ -575,6 +579,8 @@ def record_consents(
                 received_at=now,
             )
         )
+    session.flush()
+    allergies.refresh_authorization(session, profile, now)
     session.commit()
 
 

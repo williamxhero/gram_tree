@@ -79,7 +79,9 @@ def list_taste_profile_changes(
     auth: CurrentAuth, session: SessionDep, page: PageDep
 ) -> Page[TasteProfileChangeOut]:
     check_limit(page.limit, config.get(session, "api.page_size_max"))
-    query = select(TasteProfileChange).where(TasteProfileChange.owner_id == auth.user.id)
+    query = select(TasteProfileChange).where(
+        TasteProfileChange.owner_id == auth.user.id, TasteProfileChange.field != "allergies"
+    )
     if page.cursor:
         timestamp, row_id = decode_cursor(page.cursor)
         query = query.where(
@@ -107,7 +109,8 @@ def get_taste_profile_change(
 ) -> TasteProfileChangeOut:
     row = session.scalar(
         select(TasteProfileChange).where(
-            TasteProfileChange.id == change_id, TasteProfileChange.owner_id == auth.user.id
+            TasteProfileChange.id == change_id, TasteProfileChange.owner_id == auth.user.id,
+            TasteProfileChange.field != "allergies",
         )
     )
     if row is None:
