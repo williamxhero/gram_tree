@@ -14,7 +14,7 @@ from typing import Any
 
 from cryptography.exceptions import InvalidTag
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
-from sqlalchemy import delete, select
+from sqlalchemy import delete, or_, select
 from sqlalchemy.orm import Session
 
 from gramtree.accounts.models import Consent
@@ -26,7 +26,12 @@ from gramtree.events.service import record_taste_profile_changed
 from gramtree.ingredients.attributes import GB_ALLERGENS
 from gramtree.ingredients.router import _resolve as resolve_ingredient
 from gramtree.settings import Settings
-from gramtree.taste_profiles.models import OwnerAllergies, TasteProfile, TasteProfileChange
+from gramtree.taste_profiles.models import (
+    FamilyMember,
+    OwnerAllergies,
+    TasteProfile,
+    TasteProfileChange,
+)
 
 CONSENT_VERSION = "allergies-v1"
 EMPTY: dict[str, Any] = {"categories": [], "ingredients": []}
@@ -37,17 +42,33 @@ def require_grant(profile: TasteProfile) -> None:
         raise ApiError(403, "sensitive_consent_required", "请先单独同意收集过敏信息")
 
 
-def erase_sensitive(session: Session, owner_id: uuid.UUID) -> None:
-    """Erase current, all identifiable history and metadata, without a decrypt key.
+def erase_sensitive(session: Session, owner_id: uuid.UUID, *, include_family: bool = True) -> None:
+    """Erase sensitive current/history/events keylessly in the owner's transaction.
 
-    Single transactional extension point for future sensitive dependent copies.
-    Authorization invalidation/versioning belongs to the locked calling transaction.
+    Withdrawal, account deletion/purge and restore all use this extension point.
+    include_family=False is only for sanitizing pre-0023 backup schemas.
     """
+    erase_sensitive_history(session, owner_id)
+    session.execute(delete(OwnerAllergies).where(OwnerAllergies.owner_id == owner_id))
+    if include_family:
+        session.execute(delete(FamilyMember).where(FamilyMember.owner_id == owner_id))
+
+
+def erase_sensitive_history(
+    session: Session, owner_id: uuid.UUID, *, field: str | None = None
+) -> None:
+    """Shared legacy-safe event/history erasure for one member or all sensitive data."""
+    predicate = (
+        TasteProfileChange.field == field
+        if field is not None
+        else or_(
+            TasteProfileChange.field == "allergies",
+            TasteProfileChange.field.startswith("family_members"),
+        )
+    )
     change_ids = set(
         session.scalars(
-            select(TasteProfileChange.id).where(
-                TasteProfileChange.owner_id == owner_id, TasteProfileChange.field == "allergies"
-            )
+            select(TasteProfileChange.id).where(TasteProfileChange.owner_id == owner_id, predicate)
         )
     )
     event_ids = set(change_ids)
@@ -74,11 +95,8 @@ def erase_sensitive(session: Session, owner_id: uuid.UUID) -> None:
             delete(Event).where(Event.user_id == owner_id, Event.id.in_(ids[offset : offset + 500]))
         )
     session.execute(
-        delete(TasteProfileChange).where(
-            TasteProfileChange.owner_id == owner_id, TasteProfileChange.field == "allergies"
-        )
+        delete(TasteProfileChange).where(TasteProfileChange.owner_id == owner_id, predicate)
     )
-    session.execute(delete(OwnerAllergies).where(OwnerAllergies.owner_id == owner_id))
 
 
 def refresh_authorization(session: Session, profile: TasteProfile, now: datetime) -> None:

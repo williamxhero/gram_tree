@@ -1,7 +1,8 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Response
 from sqlalchemy import select
 
 from gramtree.accounts.deps import CurrentAuth
+from gramtree.core.errors import NotFound
 from gramtree.core.ids import IdV4
 from gramtree.core.pagination import Page, check_limit, decode_cursor, encode_cursor
 from gramtree.deps import SessionDep, SettingsDep
@@ -100,11 +101,48 @@ def list_family_member_changes(
     more = len(rows) > page.limit
     rows = rows[: page.limit]
     result = Page[TasteProfileChangeOut](
-        items=[_change_out(row, settings) for row in rows],
+        items=[_family_change_out(row, settings) for row in rows],
         next_cursor=encode_cursor(rows[-1].created_at, rows[-1].id) if more else None,
     )
     session.commit()
     return result
+
+
+def _family_change_out(row: TasteProfileChange, settings: SettingsDep) -> TasteProfileChangeOut:
+    if row.field == family.FAMILY_FIELD:
+        # Deletion receipts contain no target or personal values and remain
+        # readable without a decrypt key; identifiable old/new values never do.
+        return TasteProfileChangeOut.model_validate(row)
+    return _change_out(row, settings)
+
+
+@router.get("/changes/{change_id}", response_model=TasteProfileChangeOut, responses=_ERRORS)
+def get_family_member_change(
+    change_id: IdV4, auth: CurrentAuth, session: SessionDep, settings: SettingsDep
+) -> TasteProfileChangeOut:
+    profile = service.locked_profile(session, auth.user.id, service.scale_for(session))
+    allergies.require_grant(profile)
+    row = session.scalar(
+        select(TasteProfileChange).where(
+            TasteProfileChange.id == change_id,
+            TasteProfileChange.owner_id == auth.user.id,
+            TasteProfileChange.field.startswith(family.FAMILY_FIELD),
+        )
+    )
+    if row is None:
+        raise NotFound()
+    result = _family_change_out(row, settings)
+    session.commit()
+    return result
+
+
+@router.delete("/{member_id}", status_code=204, responses=_ERRORS)
+def delete_family_member(member_id: IdV4, auth: CurrentAuth, session: SessionDep) -> Response:
+    profile = service.locked_profile(session, auth.user.id, service.scale_for(session))
+    row = family.owned_member(session, auth.user.id, member_id)
+    family.erase_member(session, profile, row)
+    session.commit()
+    return Response(status_code=204)
 
 
 @router.get("/{member_id}", response_model=FamilyMemberOut, responses=_ERRORS)

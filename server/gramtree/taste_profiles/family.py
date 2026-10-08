@@ -4,7 +4,7 @@ import base64
 import uuid
 from typing import Any
 
-from sqlalchemy import select
+from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
 
 from gramtree.core.errors import ApiError, NotFound
@@ -31,6 +31,27 @@ def owned_member(session: Session, owner_id: uuid.UUID, member_id: uuid.UUID) ->
     if row is None:
         raise NotFound()
     return row
+
+
+def erase_member(session: Session, profile: TasteProfile, row: FamilyMember) -> None:
+    """Delete current and every identifiable dependent copy without decrypting.
+
+    Future member-dependent projections must be erased here, under the owner lock.
+    The retained receipt describes only the manual deletion action, never its target.
+    """
+    allergies.erase_sensitive_history(session, profile.owner_id, field=member_field(row.id))
+    profile.sensitive_authorization_version += 1
+    session.execute(
+        delete(FamilyMember).where(
+            FamilyMember.id == row.id, FamilyMember.owner_id == profile.owner_id
+        )
+    )
+    service.record_changes(
+        session,
+        profile,
+        [service.FieldChange(FAMILY_FIELD, {"present": True}, {"present": False})],
+        reason="你手动删除家庭成员",
+    )
 
 
 def read_member(profile: TasteProfile, row: FamilyMember, settings: Settings) -> dict[str, Any]:
