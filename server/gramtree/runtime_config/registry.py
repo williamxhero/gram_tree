@@ -37,17 +37,19 @@ ITEMS: tuple[ConfigItem, ...] = (
     ConfigItem(
         "taste.equipment",
         "json",
-        {"items": [
-            {"id": "wok", "label": "炒锅", "aliases": ["炒菜锅"]},
-            {"id": "oven", "label": "烤箱", "aliases": []},
-            {"id": "air_fryer", "label": "空气炸锅", "aliases": []},
-            {"id": "rice_cooker", "label": "电饭煲", "aliases": ["电饭锅"]},
-            {"id": "steamer", "label": "蒸锅", "aliases": []},
-            {"id": "saucepan", "label": "汤锅", "aliases": []},
-            {"id": "frying_pan", "label": "平底锅", "aliases": ["煎锅"]},
-            {"id": "pressure_cooker", "label": "压力锅", "aliases": ["高压锅"]},
-            {"id": "microwave", "label": "微波炉", "aliases": []},
-        ]},
+        {
+            "items": [
+                {"id": "wok", "label": "炒锅", "aliases": ["炒菜锅"]},
+                {"id": "oven", "label": "烤箱", "aliases": []},
+                {"id": "air_fryer", "label": "空气炸锅", "aliases": []},
+                {"id": "rice_cooker", "label": "电饭煲", "aliases": ["电饭锅"]},
+                {"id": "steamer", "label": "蒸锅", "aliases": []},
+                {"id": "saucepan", "label": "汤锅", "aliases": []},
+                {"id": "frying_pan", "label": "平底锅", "aliases": ["煎锅"]},
+                {"id": "pressure_cooker", "label": "压力锅", "aliases": ["高压锅"]},
+                {"id": "microwave", "label": "微波炉", "aliases": []},
+            ]
+        },
         "做菜约束规范厨具词表及既有自由文本别名；不改写菜谱原文",
     ),
     ConfigItem(
