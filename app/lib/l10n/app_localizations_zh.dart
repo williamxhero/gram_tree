@@ -19,6 +19,11 @@ class AppLocalizationsZh extends AppLocalizations {
   String get networkConnected => '服务已连接';
 
   @override
+  String syncPendingCount(int count) {
+    return '待同步 $count 条';
+  }
+
+  @override
   String get networkUnavailable => '需要联网：暂时连接不到服务，请检查网络；本机内容仍可使用。';
 
   @override

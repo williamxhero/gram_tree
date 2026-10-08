@@ -244,15 +244,25 @@ class FakeServer extends Interceptor {
           : (200, item);
     });
     on('POST', '/v1/analytics/events', (_) => (204, null));
-    on('POST', '/v1/events/upload', (r) {
-      final events = ((r.body as Map)['events'] as List).cast<Map>();
+    on('POST', '/v1/sync/writes', (r) {
+      final batch = WriteBatch.fromJson(
+        Map<String, dynamic>.from(r.body as Map),
+      );
       return (
         200,
-        {
-          'results': [
-            for (final e in events) {'id': e['id'], 'status': 'accepted'},
+        WriteBatchResponse(
+          results: [
+            for (final write in batch.writes)
+              WriteResult(
+                writeId: write.writeId,
+                status: WriteResultStatusEnum.confirmed,
+                result: WriteResourceResult(
+                  resourceType: 'experience.event',
+                  resourceId: write.writeId,
+                ),
+              ),
           ],
-        },
+        ).toJson(),
       );
     });
     on('POST', '/v1/ui/compositions', (r) {

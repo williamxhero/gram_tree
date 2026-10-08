@@ -4,7 +4,7 @@ import 'package:integration_test/integration_test.dart';
 import 'event_queue_persistence_check_stub.dart'
     if (dart.library.io) 'event_queue_persistence_check_mobile.dart';
 
-/// SPEC-010.1 票 4：drift 落盘的事件队列，杀进程重开后未上传的事件还在。
+/// drift 落盘队列的数据库连接重建回归；不代表真实 OS 杀进程验收。
 ///
 /// 手机专有能力（本地数据库），按 CLAUDE.md 的约定放在接口后面：这里用条件导入选
 /// 手机端真实实现或网页端空实现，跟 lib/events/event_queue.dart 是同一套模式。
@@ -18,7 +18,7 @@ import 'event_queue_persistence_check_stub.dart'
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
-  testWidgets('杀进程重开后，drift 队列里未上传的事件还在，按设备时间排序', (tester) async {
+  testWidgets('关闭重开数据库连接后，账号归属待同步内容仍在并按入队顺序排列', (tester) async {
     await checkEventQueueSurvivesRestart();
   });
 }

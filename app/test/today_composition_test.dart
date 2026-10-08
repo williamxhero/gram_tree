@@ -1,3 +1,4 @@
+import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'helpers.dart';
@@ -37,18 +38,33 @@ void main() {
 
   testWidgets('今天页显示后记录一条带组合 ID 的组合展示事件', (tester) async {
     // 已登录联网时记事件后会立刻在后台传上去（event_recorder_test.dart），
-    // 到 pumpAndSettle 结束时这条事件多半已经从本机队列（FakeEventQueue）挪走、
-    // 传给了 /v1/events/upload，所以断言看服务端收到了什么，而不是本机队列里
-    // 还剩什么。
-    final env = await pumpApp(tester);
+    // 到 pumpAndSettle 结束时这条事件已经通过 /v1/sync/writes 确认，
+    // 所以断言看服务端收到的账号绑定信封，而不是本机待同步队列里还剩什么。
+    final env = await pumpApp(tester, env: TestEnv.signedIn());
 
     final uploaded = env.server
-        .calls('POST', '/v1/events/upload')
-        .expand((r) => ((r.body as Map)['events'] as List).cast<Map>())
-        .where((e) => e['event_type'] == 'ui.composition_shown')
+        .calls('POST', '/v1/sync/writes')
+        .expand((r) => ((r.body as Map)['writes'] as List).cast<Map>())
+        .where(
+          (write) =>
+              (write['payload'] as Map)['event_type'] == 'ui.composition_shown',
+        )
         .toList();
     expect(uploaded, hasLength(1));
-    final event = uploaded.single;
+    final write = uploaded.single;
+    expect(write['format_version'], 1);
+    expect(write['write_type'], 'experience.event');
+    expect(write['owner_id'], env.server.user.id);
+    expect(
+      write['write_id'],
+      matches(
+        r'^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$',
+      ),
+    );
+    expect(DateTime.parse(write['device_time'] as String).isUtc, isTrue);
+    expect(write['dependencies'], isEmpty);
+    expect(find.byKey(const ValueKey('sync-pending')), findsNothing);
+    final event = write['payload'] as Map;
     expect(event['type_version'], 1);
     expect(
       (event['correlation'] as Map)['ui_composition_id'],

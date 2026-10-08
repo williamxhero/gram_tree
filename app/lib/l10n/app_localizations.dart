@@ -112,6 +112,12 @@ abstract class AppLocalizations {
   /// **'服务已连接'**
   String get networkConnected;
 
+  /// Current account's writes awaiting synchronization.
+  ///
+  /// In zh, this message translates to:
+  /// **'待同步 {count} 条'**
+  String syncPendingCount(int count);
+
   /// No description provided for @networkUnavailable.
   ///
   /// In zh, this message translates to:

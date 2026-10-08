@@ -204,8 +204,30 @@ class AuthInterceptor extends QueuedInterceptor {
 
   static const _retried = 'auth_retried';
 
+  bool _matchesIdentity(RequestOptions options) {
+    final owner =
+        options.extra['sync_owner_id'] ?? options.extra['auth_owner_id'];
+    final epoch =
+        options.extra['sync_identity_epoch'] ??
+        options.extra['auth_identity_epoch'];
+    return (owner == null || owner == session.current?.user.id) &&
+        (epoch == null || epoch == session.identityEpoch);
+  }
+
   @override
   void onRequest(RequestOptions options, RequestInterceptorHandler handler) {
+    if (!_matchesIdentity(options)) {
+      handler.reject(
+        DioException(
+          requestOptions: options,
+          type: DioExceptionType.cancel,
+          error: 'account_changed',
+        ),
+      );
+      return;
+    }
+    options.extra['auth_owner_id'] = session.current?.user.id;
+    options.extra['auth_identity_epoch'] = session.identityEpoch;
     final token = session.current?.accessToken;
     if (token != null && !options.headers.containsKey('Authorization')) {
       options.headers['Authorization'] = 'Bearer $token';
@@ -220,7 +242,9 @@ class AuthInterceptor extends QueuedInterceptor {
   ) async {
     final code = ApiFailure.from(err).code;
     final current = session.current;
-    if (code != 'token_expired' ||
+    final epoch = session.identityEpoch;
+    if (!_matchesIdentity(err.requestOptions) ||
+        code != 'token_expired' ||
         current == null ||
         err.requestOptions.extra[_retried] == true) {
       handler.next(err);
@@ -230,10 +254,27 @@ class AuthInterceptor extends QueuedInterceptor {
       // 排队期间可能已经有别的请求续期成功了，直接用新的
       final sentWith = err.requestOptions.headers['Authorization'];
       if (sentWith == 'Bearer ${current.accessToken}') {
-        await session.save(await refresh(current.refreshToken));
+        final tokens = await refresh(current.refreshToken);
+        if (!_matchesIdentity(err.requestOptions) ||
+            session.identityEpoch != epoch ||
+            tokens.user.id != current.user.id) {
+          handler.next(err);
+          return;
+        }
+        await session.save(tokens);
       }
     } catch (_) {
-      await onSessionExpired();
+      // A failed old refresh must not sign out a newly selected account.
+      if (_matchesIdentity(err.requestOptions) &&
+          session.identityEpoch == epoch) {
+        await onSessionExpired();
+      }
+      handler.next(err);
+      return;
+    }
+    if (!_matchesIdentity(err.requestOptions) ||
+        session.identityEpoch != epoch ||
+        session.current == null) {
       handler.next(err);
       return;
     }
