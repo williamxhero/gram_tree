@@ -240,6 +240,11 @@ void main() {
       await settle(tester);
       await tester.tap(find.text('咸 3').last);
       await settle(tester);
+      final ingredientQuantity = find.byKey(
+        const ValueKey('recipe-ingredient-quantity'),
+      );
+      await reveal(tester, ingredientQuantity);
+      await tester.enterText(ingredientQuantity, '300');
       final step = find.byKey(const ValueKey('recipe-step-instruction'));
       await reveal(tester, step);
       await tester.enterText(step, '将鸡肉炒 2 分钟');
@@ -323,6 +328,8 @@ void main() {
       );
       await reveal(tester, doneness);
       await tester.enterText(doneness, '中心无粉红、汁液清澈');
+      await reveal(tester, ingredientQuantity);
+      await tester.enterText(ingredientQuantity, '200');
       await reveal(tester, find.byKey(const ValueKey('save-recipe-button')));
       await tester.tap(find.byKey(const ValueKey('save-recipe-button')));
       await waitFor(
@@ -339,6 +346,59 @@ void main() {
       await waitFor(tester, find.byKey(const ValueKey('recipe-version-2')));
       expect(find.byKey(const ValueKey('recipe-version-1')), findsOneWidget);
       expect(find.textContaining('从第一版继续修改'), findsOneWidget);
+      await tester.tap(find.byKey(const ValueKey('recipe-compare-previous-2')));
+      await waitFor(
+        tester,
+        find.byKey(const ValueKey('ingredient-comparison-content')),
+      );
+      expect(find.text('仅比较食材，尚未比较步骤'), findsOneWidget);
+      expect(find.text('已按 2 人份对比'), findsOneWidget);
+      expect(find.text('用量变化'), findsOneWidget);
+      expect(find.textContaining('−33.3%'), findsOneWidget);
+      await tester.tap(find.byKey(const ValueKey('compare-show-all')));
+      await settle(tester);
+      await tester.tap(find.byTooltip('返回').last);
+      await waitFor(
+        tester,
+        find.byKey(const ValueKey('recipe-select-comparison')),
+      );
+      await tester.tap(find.byKey(const ValueKey('recipe-select-comparison')));
+      await settle(tester);
+      await tester.tap(find.byKey(const ValueKey('recipe-compare-select-1')));
+      await settle(tester);
+      await tester.tap(find.byKey(const ValueKey('recipe-compare-select-2')));
+      await settle(tester);
+      await tester.tap(find.byKey(const ValueKey('recipe-compare-selected')));
+      await waitFor(
+        tester,
+        find.byKey(const ValueKey('ingredient-comparison-content')),
+      );
+      await tester.tap(find.byKey(const ValueKey('compare-detail-a')));
+      await waitFor(
+        tester,
+        find.byKey(const ValueKey('edit-old-recipe-button')),
+      );
+      await reveal(tester, find.textContaining('300', findRichText: true));
+      expect(find.textContaining('300', findRichText: true), findsWidgets);
+      // Return through the real page controls; details deliberately use the
+      // recipe list as their back destination, rather than test router calls.
+      await tester.tap(find.byKey(const ValueKey('recipe-history-button')));
+      await waitFor(
+        tester,
+        find.byKey(const ValueKey('recipe-compare-previous-2')),
+      );
+      await tester.tap(find.byKey(const ValueKey('recipe-compare-previous-2')));
+      await waitFor(tester, find.byKey(const ValueKey('compare-detail-b')));
+      await tester.tap(find.byKey(const ValueKey('compare-detail-b')));
+      await waitFor(
+        tester,
+        find.byKey(const ValueKey('edit-old-recipe-button')),
+      );
+      await reveal(tester, find.textContaining('200', findRichText: true));
+      expect(find.textContaining('200', findRichText: true), findsWidgets);
+      await tester.tap(find.byKey(const ValueKey('recipe-history-button')));
+      await waitFor(tester, find.byKey(const ValueKey('recipe-version-2')));
+      _markE2eStep('ingredient_comparison_completed');
       await tester.tap(find.byTooltip('返回').last);
       await waitFor(tester, find.byKey(const ValueKey('recipe-list-button')));
       await tester.tap(find.byKey(const ValueKey('recipe-list-button')));

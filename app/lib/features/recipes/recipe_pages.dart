@@ -3455,6 +3455,12 @@ class RecipeHistoryPage extends ConsumerStatefulWidget {
 }
 
 class _RecipeHistoryPageState extends ConsumerState<RecipeHistoryPage> {
+  final List<String> _selected = [];
+  bool _selecting = false;
+
+  void _compare(String from, String to) =>
+      context.push('/recipes/${widget.recipeId}/compare?from=$from&to=$to');
+
   List<RecipeVersionSummary> _items = const [];
   String? _nextCursor;
   Object? _error;
@@ -3526,6 +3532,32 @@ class _RecipeHistoryPageState extends ConsumerState<RecipeHistoryPage> {
     } else {
       body = ListView(
         children: [
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                OutlinedButton(
+                  key: const ValueKey('recipe-select-comparison'),
+                  onPressed: () => setState(() {
+                    _selecting = !_selecting;
+                    _selected.clear();
+                  }),
+                  child: Text(_selecting ? '取消选择' : '选两版对比'),
+                ),
+                if (_selecting) ...[
+                  const Text('先选 A，再选 B；方向为 A 到 B，仅比较食材'),
+                  FilledButton(
+                    key: const ValueKey('recipe-compare-selected'),
+                    onPressed: _selected.length == 2
+                        ? () => _compare(_selected[0], _selected[1])
+                        : null,
+                    child: const Text('比较食材'),
+                  ),
+                ],
+              ],
+            ),
+          ),
           for (final item in _items)
             ListTile(
               key: ValueKey('recipe-version-${item.versionNumber}'),
@@ -3542,7 +3574,35 @@ class _RecipeHistoryPageState extends ConsumerState<RecipeHistoryPage> {
                 ),
               ),
               isThreeLine: true,
-              trailing: const Icon(Icons.chevron_right),
+              leading: _selecting
+                  ? Checkbox(
+                      key: ValueKey(
+                        'recipe-compare-select-${item.versionNumber}',
+                      ),
+                      value: _selected.contains(item.id),
+                      onChanged:
+                          _selected.length < 2 || _selected.contains(item.id)
+                          ? (selected) => setState(() {
+                              if (selected == true) {
+                                _selected.add(item.id);
+                              } else {
+                                _selected.remove(item.id);
+                              }
+                            })
+                          : null,
+                    )
+                  : null,
+              trailing: !_selecting && item.previousVersionId != null
+                  ? IconButton(
+                      key: ValueKey(
+                        'recipe-compare-previous-${item.versionNumber}',
+                      ),
+                      tooltip: '和上一版比食材',
+                      icon: const Icon(Icons.compare_arrows),
+                      onPressed: () =>
+                          _compare(item.previousVersionId!, item.id),
+                    )
+                  : const Icon(Icons.chevron_right),
               onTap: () => context.push(
                 '/recipes/${widget.recipeId}/versions/${item.id}',
               ),

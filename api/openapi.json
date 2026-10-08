@@ -466,6 +466,106 @@
         "title": "ClientConfig",
         "type": "object"
       },
+      "ComparisonChange": {
+        "properties": {
+          "after": {
+            "title": "After"
+          },
+          "basis": {
+            "title": "Basis",
+            "type": "string"
+          },
+          "before": {
+            "title": "Before"
+          },
+          "field": {
+            "title": "Field",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "added",
+              "removed",
+              "replacement",
+              "quantity",
+              "unit",
+              "field",
+              "text"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "relative_change": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Relative Change"
+          },
+          "unit": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unit"
+          }
+        },
+        "required": [
+          "kind",
+          "field",
+          "basis"
+        ],
+        "title": "ComparisonChange",
+        "type": "object"
+      },
+      "ComparisonVersion": {
+        "properties": {
+          "author": {
+            "title": "Author",
+            "type": "string"
+          },
+          "dish_name": {
+            "title": "Dish Name",
+            "type": "string"
+          },
+          "recipe_id": {
+            "format": "uuid",
+            "title": "Recipe Id",
+            "type": "string"
+          },
+          "servings": {
+            "title": "Servings",
+            "type": "integer"
+          },
+          "version_id": {
+            "format": "uuid",
+            "title": "Version Id",
+            "type": "string"
+          },
+          "version_number": {
+            "title": "Version Number",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "recipe_id",
+          "version_id",
+          "version_number",
+          "author",
+          "dish_name",
+          "servings"
+        ],
+        "title": "ComparisonVersion",
+        "type": "object"
+      },
       "ComponentDescriptor": {
         "properties": {
           "actions": {
@@ -1761,6 +1861,52 @@
           }
         },
         "title": "IngredientAttributes",
+        "type": "object"
+      },
+      "IngredientComparisonRow": {
+        "properties": {
+          "after": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RecipeIngredient"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "before": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RecipeIngredient"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "changes": {
+            "items": {
+              "$ref": "#/components/schemas/ComparisonChange"
+            },
+            "title": "Changes",
+            "type": "array"
+          },
+          "pairing": {
+            "enum": [
+              "stable_id",
+              "identity_group",
+              "group_replacement",
+              "unpaired"
+            ],
+            "title": "Pairing",
+            "type": "string"
+          }
+        },
+        "required": [
+          "pairing"
+        ],
+        "title": "IngredientComparisonRow",
         "type": "object"
       },
       "IngredientDetail": {
@@ -3841,6 +3987,48 @@
           "unit"
         ],
         "title": "RecipeIngredient",
+        "type": "object"
+      },
+      "RecipeIngredientComparison": {
+        "properties": {
+          "from_version": {
+            "$ref": "#/components/schemas/ComparisonVersion"
+          },
+          "ingredients": {
+            "items": {
+              "$ref": "#/components/schemas/IngredientComparisonRow"
+            },
+            "title": "Ingredients",
+            "type": "array"
+          },
+          "normalized_servings": {
+            "title": "Normalized Servings",
+            "type": "integer"
+          },
+          "scope": {
+            "const": "ingredients",
+            "default": "ingredients",
+            "title": "Scope",
+            "type": "string"
+          },
+          "snapshot_fields": {
+            "items": {
+              "$ref": "#/components/schemas/ComparisonChange"
+            },
+            "title": "Snapshot Fields",
+            "type": "array"
+          },
+          "to_version": {
+            "$ref": "#/components/schemas/ComparisonVersion"
+          }
+        },
+        "required": [
+          "from_version",
+          "to_version",
+          "normalized_servings",
+          "ingredients"
+        ],
+        "title": "RecipeIngredientComparison",
         "type": "object"
       },
       "RecipeIngredientDisplay": {
@@ -8983,6 +9171,104 @@
           }
         ],
         "summary": "Get Recipe",
+        "tags": [
+          "recipes"
+        ]
+      }
+    },
+    "/v1/recipes/{recipe_id}/compare": {
+      "get": {
+        "operationId": "compare_recipe_ingredients",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "recipe_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Recipe Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "from_version_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "From Version Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "to_version_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "To Version Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecipeIngredientComparison"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "服务端错误"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Compare Recipe Ingredients",
         "tags": [
           "recipes"
         ]

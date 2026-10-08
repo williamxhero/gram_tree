@@ -15,6 +15,7 @@ from gramtree.core.ids import IdV4
 from gramtree.core.pagination import PageParams, page_params
 from gramtree.deps import RedisDep, SessionDep, SettingsDep
 from gramtree.recipes import service
+from gramtree.recipes.comparison import RecipeIngredientComparison, compare_ingredients
 from gramtree.recipes.schemas import (
     MoldSpec,
     RecipeCreate,
@@ -225,6 +226,21 @@ def display_recipe_version_ingredients(
         target_servings=target_servings,
         target_mold=_parse_target_mold(target_mold),
     )
+
+
+@router.get(
+    "/{recipe_id}/compare",
+    response_model=RecipeIngredientComparison,
+    responses=_errors(401, 404, 422),
+)
+def compare_recipe_ingredients(
+    recipe_id: IdV4,
+    auth: CurrentAuth,
+    session: SessionDep,
+    from_version_id: Annotated[IdV4, Query()],
+    to_version_id: Annotated[IdV4, Query()],
+) -> RecipeIngredientComparison:
+    return compare_ingredients(session, auth.user, recipe_id, from_version_id, to_version_id)
 
 
 @router.get("/{recipe_id}", response_model=RecipeDetail, responses=_errors(401, 404))

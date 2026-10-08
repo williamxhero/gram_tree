@@ -79,6 +79,16 @@ class RecipeRepository {
     return response.data!;
   }
 
+  Future<RecipeIngredientComparison> compareIngredients(
+    String recipeId,
+    String fromVersionId,
+    String toVersionId,
+  ) async => (await _recipes.compareRecipeIngredients(
+    recipeId: recipeId,
+    fromVersionId: fromVersionId,
+    toVersionId: toVersionId,
+  )).data!;
+
   /// Fetch a server conversion when the caller needs a shareable/public result.
   /// Recipe details use the same pure kernel locally so this is not required for
   /// the offline serving control.

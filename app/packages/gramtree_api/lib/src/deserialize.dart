@@ -13,6 +13,8 @@ import 'package:gramtree_api/src/model/bool_attribute.dart';
 import 'package:gramtree_api/src/model/cache_info.dart';
 import 'package:gramtree_api/src/model/changes_response.dart';
 import 'package:gramtree_api/src/model/client_config.dart';
+import 'package:gramtree_api/src/model/comparison_change.dart';
+import 'package:gramtree_api/src/model/comparison_version.dart';
 import 'package:gramtree_api/src/model/component_descriptor.dart';
 import 'package:gramtree_api/src/model/component_reason.dart';
 import 'package:gramtree_api/src/model/compose_request.dart';
@@ -48,6 +50,7 @@ import 'package:gramtree_api/src/model/health_checks.dart';
 import 'package:gramtree_api/src/model/health_response.dart';
 import 'package:gramtree_api/src/model/identity_out.dart';
 import 'package:gramtree_api/src/model/ingredient_attributes.dart';
+import 'package:gramtree_api/src/model/ingredient_comparison_row.dart';
 import 'package:gramtree_api/src/model/ingredient_detail.dart';
 import 'package:gramtree_api/src/model/measure_display_out.dart';
 import 'package:gramtree_api/src/model/measure_display_request.dart';
@@ -88,6 +91,7 @@ import 'package:gramtree_api/src/model/recipe_image_out.dart';
 import 'package:gramtree_api/src/model/recipe_image_staged_out.dart';
 import 'package:gramtree_api/src/model/recipe_image_upload.dart';
 import 'package:gramtree_api/src/model/recipe_ingredient.dart';
+import 'package:gramtree_api/src/model/recipe_ingredient_comparison.dart';
 import 'package:gramtree_api/src/model/recipe_ingredient_display.dart';
 import 'package:gramtree_api/src/model/recipe_ingredient_display_out.dart';
 import 'package:gramtree_api/src/model/recipe_intent.dart';
@@ -196,6 +200,12 @@ ReturnType deserialize<ReturnType, BaseType>(
           as ReturnType;
     case 'ClientConfig':
       return ClientConfig.fromJson(value as Map<String, dynamic>) as ReturnType;
+    case 'ComparisonChange':
+      return ComparisonChange.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'ComparisonVersion':
+      return ComparisonVersion.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
     case 'ComponentDescriptor':
       return ComponentDescriptor.fromJson(value as Map<String, dynamic>)
           as ReturnType;
@@ -292,6 +302,9 @@ ReturnType deserialize<ReturnType, BaseType>(
       return IdentityOut.fromJson(value as Map<String, dynamic>) as ReturnType;
     case 'IngredientAttributes':
       return IngredientAttributes.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'IngredientComparisonRow':
+      return IngredientComparisonRow.fromJson(value as Map<String, dynamic>)
           as ReturnType;
     case 'IngredientDetail':
       return IngredientDetail.fromJson(value as Map<String, dynamic>)
@@ -406,6 +419,9 @@ ReturnType deserialize<ReturnType, BaseType>(
           as ReturnType;
     case 'RecipeIngredient':
       return RecipeIngredient.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'RecipeIngredientComparison':
+      return RecipeIngredientComparison.fromJson(value as Map<String, dynamic>)
           as ReturnType;
     case 'RecipeIngredientDisplay':
       return RecipeIngredientDisplay.fromJson(value as Map<String, dynamic>)
