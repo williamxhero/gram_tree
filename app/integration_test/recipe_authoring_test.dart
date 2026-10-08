@@ -59,7 +59,10 @@ void main() {
     }
     // The page body the user scrolls, found by its public key.
     final detail = find.byKey(const ValueKey('recipe-detail-content'));
-    final body = detail.evaluate().isNotEmpty
+    final comparison = find.byKey(const ValueKey('full-comparison-content'));
+    final body = comparison.evaluate().isNotEmpty
+        ? comparison
+        : detail.evaluate().isNotEmpty
         ? detail
         : find.byKey(const ValueKey('recipe-editor-content'));
     // Sliver children outside the viewport may not exist yet. Start from the
@@ -257,6 +260,14 @@ void main() {
       );
       await reveal(tester, ingredientQuantity);
       await tester.enterText(ingredientQuantity, '300');
+      // Deterministic comparison needs authored execution structure; it must
+      // not infer an action from the instruction text or the stable step ID.
+      final stepAction = find.byKey(
+        const ValueKey('recipe-step-action-step-1'),
+      );
+      await reveal(tester, stepAction);
+      await tester.enterText(stepAction, '炒');
+      await settle(tester);
       final step = find.byKey(const ValueKey('recipe-step-instruction'));
       await reveal(tester, step);
       await tester.enterText(step, '将鸡肉炒 2 分钟');
@@ -346,6 +357,11 @@ void main() {
       expect(find.textContaining('鲜 2'), findsWidgets);
       await reveal(tester, find.bySemanticsLabel('这次改了什么'));
       await tester.enterText(find.bySemanticsLabel('这次改了什么'), '从第一版继续修改');
+      await reveal(tester, stepAction);
+      expect(
+        find.descendant(of: stepAction, matching: find.text('炒')),
+        findsOneWidget,
+      );
       final doneness = find.byKey(
         const ValueKey('recipe-step-doneness-step-1'),
       );
@@ -422,6 +438,59 @@ void main() {
       await tester.tap(find.byKey(const ValueKey('recipe-history-button')));
       await waitFor(tester, find.byKey(const ValueKey('recipe-version-2')));
       _markE2eStep('ingredient_comparison_completed');
+      // The full comparison is additive: all ingredient-only assertions above
+      // remain, then the same authored history opens the new deterministic view.
+      final fullPrevious = find.byKey(
+        const ValueKey('recipe-full-compare-previous-2'),
+      );
+      await tester.ensureVisible(fullPrevious);
+      expect(
+        find.descendant(
+          of: fullPrevious,
+          matching: find.textContaining(' · 对比上一版本'),
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(of: fullPrevious, matching: find.text('完整对比上一版本')),
+        findsNothing,
+      );
+      await tester.tap(fullPrevious);
+      await waitFor(
+        tester,
+        find.byKey(const ValueKey('full-comparison-content')),
+      );
+      expect(find.text('完整版本对比'), findsOneWidget);
+      expect(find.text('已按 2 人份对比'), findsOneWidget);
+      expect(find.textContaining('确定规则 · 规则版本'), findsOneWidget);
+      await reveal(tester, find.byKey(const ValueKey('full-comparison-why')));
+      await tester.tap(find.byKey(const ValueKey('full-comparison-why')));
+      await settle(tester);
+      expect(find.byKey(const ValueKey('why-panel')), findsOneWidget);
+      expect(find.text('版本变化依据'), findsOneWidget);
+      expect(find.textContaining('规则版本'), findsWidgets);
+      expect(find.text('这次不用'), findsNothing);
+      expect(find.text('以后别这样'), findsNothing);
+      await tester.tapAt(const Offset(10, 10));
+      await settle(tester);
+      await reveal(tester, find.byKey(const ValueKey('full-compare-show-all')));
+      await tester.tap(find.byKey(const ValueKey('full-compare-show-all')));
+      await settle(tester);
+      await reveal(
+        tester,
+        find.byKey(const ValueKey('full-compare-expand-all')),
+      );
+      await tester.tap(find.byKey(const ValueKey('full-compare-expand-all')));
+      await settle(tester);
+      // The section heading can mount before its lazy step cards. Reveal the
+      // asserted alignment on the changed doneness card, not the heading.
+      await reveal(tester, find.text('字段变化 · 成熟判断 · 确定性对齐'));
+      expect(find.textContaining('确定性对齐'), findsWidgets);
+      await reveal(tester, find.text('成熟判断：中心无粉红、汁液清澈'));
+      expect(find.textContaining('中心无粉红、汁液清澈'), findsWidgets);
+      await tester.tap(find.byTooltip('返回').last);
+      await waitFor(tester, find.byKey(const ValueKey('recipe-version-2')));
+      _markE2eStep('full_comparison_completed');
       await tester.tap(find.byTooltip('返回').last);
       await waitFor(tester, find.byKey(const ValueKey('recipe-list-button')));
       await tester.tap(find.byKey(const ValueKey('recipe-list-button')));
