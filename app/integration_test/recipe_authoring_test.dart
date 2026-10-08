@@ -30,11 +30,10 @@ void main() {
     return response.data!['code'] as String;
   }
 
-  Future<void> settle(WidgetTester tester) async {
-    for (var i = 0; i < 10; i++) {
-      await tester.pump(const Duration(milliseconds: 200));
-    }
-  }
+  Future<void> settle(WidgetTester tester) =>
+      // Fixed two-second waits at every reveal exhaust the full-flow deadline.
+      // Settle scheduled frames; network readiness remains guarded by waitFor.
+      tester.pumpAndSettle(const Duration(milliseconds: 100));
 
   Future<void> waitFor(WidgetTester tester, Finder finder) async {
     for (var i = 0; i < 300 && finder.evaluate().isEmpty; i++) {

@@ -56,7 +56,17 @@ void main() {
 
   Future<void> tap(WidgetTester tester, String key) async {
     await reveal(tester, key);
-    await tester.tap(find.byKey(ValueKey(key)));
+    final finder = find.byKey(ValueKey(key));
+    final widget = tester.widget(finder);
+    // History rows contain separate comparison actions in their subtitle. The
+    // row center can hit one of those instead of opening the requested version.
+    final target = widget is ListTile && widget.title != null
+        ? find.descendant(of: finder, matching: find.byWidget(widget.title!))
+        : finder;
+    await Scrollable.ensureVisible(tester.element(target), alignment: 0.5);
+    await tester.pumpAndSettle();
+    expect(target.hitTestable(), findsOneWidget);
+    await tester.tap(target);
     await tester.pumpAndSettle();
   }
 
