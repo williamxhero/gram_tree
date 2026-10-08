@@ -9,7 +9,7 @@ import pytest
 from tests.accounts_support import bearer
 from tests.test_ai_recipes import cli
 from tests.test_cookware_modifications import recorded_proposal
-from tests.test_recipe_modifications import choice
+from tests.test_recipe_modifications import choice, operation
 from tests.test_recipes import recipe_input
 
 CORPUS = json.loads(
@@ -99,6 +99,61 @@ def confirm(api, headers, preview):
     )
     assert response.status_code == 201, response.text
     return response.json()
+
+
+def test_accepted_rename_keeps_ai_source_when_quantity_is_modified_back_to_baseline(method_api):
+    api, directory = method_api
+    created, headers = setup(api, "method-shared-source@example.com")
+    snapshot = created["version"]["snapshot"]
+    item = snapshot["ingredients"][0]
+    rename = operation(
+        snapshot,
+        operation_id="rename",
+        type="change_display_name",
+        id=item["id"],
+        field="display_name",
+        before=item["display_name"],
+        after="Poultry",
+        scope=["ingredients"],
+        intent="调整食材标签",
+    )
+    quantity = operation(
+        snapshot,
+        operation_id="quantity",
+        type="change_quantity",
+        id=item["id"],
+        field="quantity",
+        before=item["quantity"],
+        after=item["quantity"] + 20,
+        scope=["ingredients"],
+        intent="调整食材用量",
+    )
+    proposal = propose_method(
+        api, directory, headers, created, "difficulty", operations=[rename, quantity]
+    )
+    assert proposal["error"] is None, proposal
+    selected = choice(
+        api,
+        headers,
+        proposal,
+        [
+            {"operation_id": "rename", "decision": "accept"},
+            {"operation_id": "quantity", "decision": "modify", "after": item["quantity"]},
+        ],
+    )
+    selected_item = selected["snapshot"]["ingredients"][0]
+    assert selected_item["display_name"] == "Poultry"
+    assert selected_item["quantity"] == item["quantity"]
+    assert selected_item["quantity_source"]["source"] == "ai_estimated"
+    assert selected_item["quantity_source"]["basis"] == rename["reason"]
+    saved = confirm(api, headers, selected)["version"]
+    assert saved["snapshot"]["ingredients"][0] == selected_item
+    assert [op["operation_id"] for op in saved["edit_operations"]] == ["rename"]
+    old = api.client.get(
+        f"/v1/recipes/{created['id']}/versions/{created['version']['id']}", headers=headers
+    )
+    assert old.status_code == 200, old.text
+    assert old.json()["version"] == created["version"]
 
 
 def test_faster_steps_rederive_time_warn_and_save_only_author_selected_values(method_api):

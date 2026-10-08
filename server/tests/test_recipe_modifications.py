@@ -541,6 +541,59 @@ def test_generated_modification_uses_first_save_and_preserves_text_sources(
     assert regular_retry.status_code == 201 and regular_retry.json()["id"] == saved.json()["id"]
 
 
+def test_generated_accepted_servings_preserves_ai_source_on_first_save(modification_api):
+    api, directory = modification_api
+    headers = bearer(api.login("method-generation-servings@example.com"))
+    request_id, draft = unsaved_generation(api, directory, headers)
+    snapshot = draft["snapshot"]
+    text = "调整做法为四人份"
+    intent = {"category": "method", "parameters": {}, "confidence": 0.95}
+    op = operation(
+        snapshot,
+        operation_id="servings",
+        type="change_recipe_info",
+        id=None,
+        field="servings",
+        before=snapshot["servings"],
+        after=4,
+        scope=["recipe"],
+        intent="调整份数",
+        reason="按本次选定的份数调整",
+    )
+    recording(directory, "modify_intent", {"text": text}, intent)
+    recording(
+        directory,
+        "modify",
+        {"text": text, "snapshot": snapshot, "intent": intent},
+        {"operations": [op]},
+    )
+    response = api.client.post(
+        "/v1/ai/recipes/modifications",
+        headers=headers,
+        json={"text": text, "generation_request_id": request_id},
+    )
+    assert response.status_code == 200, response.text
+    proposal = response.json()
+    assert proposal["error"] is None, proposal
+    selected = choice(api, headers, proposal, [{"operation_id": "servings", "decision": "accept"}])
+    assert selected["snapshot"]["servings"] == 4
+    selected_source = selected["snapshot"]["servings_source"]
+    assert selected_source["source"] == "ai_estimated"
+    assert selected_source["basis"] == op["reason"]
+    saved = api.client.post(
+        f"/v1/ai/recipes/modifications/{proposal['id']}/confirm",
+        headers=headers,
+        json={"revision": selected["revision"]},
+    )
+    assert saved.status_code == 201, saved.text
+    version = saved.json()["version"]
+    assert version["version_number"] == 1
+    assert version["ai_assisted"] is True
+    assert version["snapshot"]["servings"] == 4
+    assert version["snapshot"]["servings_source"] == selected_source
+    assert [edit["operation_id"] for edit in version["edit_operations"]] == ["servings"]
+
+
 @pytest.mark.parametrize("decision", ["reject", "modify"])
 def test_no_actual_existing_edit_does_not_create_version(modification_api, decision):
     api, directory = modification_api

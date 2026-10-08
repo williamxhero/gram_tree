@@ -191,7 +191,15 @@ def test_rejecting_appliance_rejects_conditions_and_author_values_are_checked(mo
 
 
 @pytest.mark.parametrize(
-    "kind", ["name_only", "missing_dependency", "missing_container", "wrong_target"]
+    "kind",
+    [
+        "name_only",
+        "missing_dependency",
+        "missing_container",
+        "wrong_target",
+        "null_container",
+        "null_doneness",
+    ],
 )
 def test_incomplete_conversion_fails_one_repair_without_writing_recipe(modification_api, kind):
     api, directory = modification_api
@@ -203,12 +211,18 @@ def test_incomplete_conversion_fails_one_repair_without_writing_recipe(modificat
         operations[2]["depends_on"] = []
     elif kind == "missing_container":
         operations = [op for op in operations if op["field"] != "notes"]
+    elif kind in ("null_container", "null_doneness"):
+        field = "notes" if kind == "null_container" else "doneness"
+        next(op for op in operations if op["field"] == field)["after"] = None
     else:
         operations[0]["after"] = "烤箱"
     proposal = propose_cookware(api, directory, headers, created, operations)
     assert proposal["error"] == "invalid_output", proposal
     assert proposal["operations"] == []
     assert proposal["snapshot"] == created["version"]["snapshot"]
+    current = api.client.get(f"/v1/recipes/{created['id']}", headers=headers)
+    assert current.status_code == 200, current.text
+    assert current.json()["version"] == created["version"]
 
 
 def test_unconvertible_recipe_has_honest_explanation_and_no_operations(modification_api):

@@ -563,11 +563,11 @@ def save(
             if body.snapshot.description == original.recipe.snapshot.description
             else ValueSource(source="author_filled")
         )
-    body.snapshot.servings_source = (
-        original.recipe.snapshot.servings_source
-        if body.snapshot.servings == original.recipe.snapshot.servings
-        else ValueSource(source="author_filled")
-    )
+        body.snapshot.servings_source = (
+            original.recipe.snapshot.servings_source
+            if body.snapshot.servings == original.recipe.snapshot.servings
+            else ValueSource(source="author_filled")
+        )
     confirmed_snapshot = (
         body.snapshot.model_copy(deep=True) if confirmed_operations is not None else None
     )

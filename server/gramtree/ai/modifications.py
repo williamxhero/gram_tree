@@ -392,6 +392,10 @@ def _validate_intent_operations(
         changes = {op.field: op for op in ops if op.id == step_id}
         if not {"instruction", "notes", "doneness"}.issubset(changes):
             raise ValueError("转换需要步骤、容器要求和成熟判断")
+        for field in ("instruction", "notes", "doneness"):
+            value = changes[field].after
+            if not isinstance(value, str) or not value.strip():
+                raise ValueError("转换需要明确的步骤、容器要求和成熟判断")
         step = next(step for step in snapshot.steps if step.id == step_id)
         for field in ("duration_seconds", "temperature_celsius"):
             value = changes[field].after if field in changes else getattr(step, field)
@@ -492,10 +496,19 @@ def _apply(
         if op.field in ("total_time_seconds", "active_time_seconds") and value != 0:
             raise ValueError("AI 只能恢复服务端派生时长")
         setattr(node, op.field, value)
-        source_field = SOURCE_FIELDS.get(op.field)
-        if source_field:
-            setattr(node, source_field, _source(op, decision))
     result = RecipeSnapshot.model_validate(result.model_dump(mode="json"))
+    # Attribute only canonical, effective changes. Multiple ingredient fields
+    # share one source marker; a no-op must not erase another field's evidence.
+    for op in ordered:
+        decision = resolved[op.operation_id]
+        source_field = SOURCE_FIELDS.get(op.field)
+        if (
+            decision.decision not in ("reject", "pending")
+            and source_field
+            and op.type not in STRUCTURAL_FIELDS
+            and _operation_value(result, op) != op.before
+        ):
+            setattr(_node(result, op), source_field, _source(op, decision))
     # Field validators can canonicalize text (for example ingredient labels).
     # Visible selections, immutable operations and experience receipts must all
     # use the exact value that passed snapshot validation, not raw model text.
@@ -505,9 +518,6 @@ def _apply(
             continue
         decision.after = _operation_value(result, op)
         if decision.after == op.before:
-            source_field = SOURCE_FIELDS.get(op.field)
-            if source_field and op.type not in STRUCTURAL_FIELDS:
-                setattr(_node(result, op), source_field, getattr(_node(snapshot, op), source_field))
             continue
         accepted.append(
             {
