@@ -9,6 +9,7 @@ import 'package:gramtree_api/gramtree_api.dart'
 
 import '../api/api_client.dart';
 import '../events/event_recorder.dart';
+import '../recipes/batch_advice.dart';
 import 'registered_pages.dart';
 import 'source_overrides.dart';
 import 'source_types.dart';
@@ -249,6 +250,12 @@ Future<void> _handleDontDoAgain(
 /// `open_record_card` 沿用之前的默认文案，新增 `call_operation` 和四个先只登记
 /// 名字的意图。
 final defaultIntentRegistry = IntentRegistry(const [
+  IntentSpec(
+    name: 'request_batch_advice',
+    defaultLabel: 'AI 建议时间',
+    validateParams: validateBatchAdviceParams,
+    handler: handleBatchAdvice,
+  ),
   IntentSpec(
     name: 'open_page',
     defaultLabel: '去看看',

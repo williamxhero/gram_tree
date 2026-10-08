@@ -95,9 +95,11 @@ def monthly_spend(session: Session) -> float:
     )
 
 
-def availability(session: Session, settings: Settings, user_id: uuid.UUID) -> dict[str, Any]:
+def availability(
+    session: Session, settings: Settings, user_id: uuid.UUID, capability: str = "generate"
+) -> dict[str, Any]:
     try:
-        count = remaining(session, user_id, "generate")
+        count = remaining(session, user_id, capability)
         reason = None
         if count == 0:
             reason = "daily_quota"
@@ -108,7 +110,7 @@ def availability(session: Session, settings: Settings, user_id: uuid.UUID) -> di
         elif settings.ai_mode == "disabled":
             reason = "model_unavailable"
         else:
-            model, _ = route(session, "generate")
+            model, _ = route(session, capability)
             if settings.ai_mode in ("live", "record") and (
                 not settings.ai_api_key or not model.base_url
             ):
@@ -146,12 +148,11 @@ def _invoke(
     else:
         endpoint = "chat/completions"
         prompt = (PROMPTS / f"{capability}-{PROMPT_VERSION}.txt").read_text(encoding="utf-8")
-        if capability == "generate":
-            from gramtree.ai.schemas import GeneratedDraft
+        if capability in ("generate", "batch_advice"):
+            from gramtree.ai.schemas import BatchAdvice, GeneratedDraft
 
-            prompt += "\nJSON schema: " + json.dumps(
-                GeneratedDraft.model_json_schema(), ensure_ascii=False
-            )
+            schema = BatchAdvice if capability == "batch_advice" else GeneratedDraft
+            prompt += "\nJSON schema: " + json.dumps(schema.model_json_schema(), ensure_ascii=False)
         body = {
             "model": model.model,
             "temperature": 0,
@@ -261,7 +262,12 @@ def call(
             if "prompt_tokens" in usage or "total_tokens" in usage:
                 row.reserved_cost = 0
             result = data["output"]
-            log.output = result
+            # Batch advice is untrusted until its schema/step references are checked.
+            # Preserve raw output as text: JSONB rejects NaN in structured replay
+            # objects before the caller can reject it and request one repair.
+            log.output = (
+                json.dumps(result, ensure_ascii=False) if capability == "batch_advice" else result
+            )
             row.status = "succeeded"
         except (
             Unavailable,

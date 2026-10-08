@@ -100,6 +100,16 @@ class RecipeRepository {
     return response.data!;
   }
 
+  Future<RecipeBatchAdviceOut> batchAdvice(
+    String recipeId,
+    String versionId,
+    int targetServings,
+  ) async => (await _recipes.requestRecipeBatchAdvice(
+    recipeId: recipeId,
+    versionId: versionId,
+    batchAdviceInput: BatchAdviceInput(targetServings: targetServings),
+  )).data!;
+
   Future<RecipeMoldConversionOut> convertMold(
     String recipeId,
     MoldSpec targetMold, {

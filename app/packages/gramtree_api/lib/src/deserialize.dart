@@ -5,8 +5,11 @@ import 'package:gramtree_api/src/model/analytics_event_in.dart';
 import 'package:gramtree_api/src/model/analytics_upload_request.dart';
 import 'package:gramtree_api/src/model/apple_login_request.dart';
 import 'package:gramtree_api/src/model/apple_reauth_request.dart';
+import 'package:gramtree_api/src/model/batch_advice.dart';
+import 'package:gramtree_api/src/model/batch_advice_input.dart';
 import 'package:gramtree_api/src/model/batch_request.dart';
 import 'package:gramtree_api/src/model/batch_response.dart';
+import 'package:gramtree_api/src/model/batch_step_advice.dart';
 import 'package:gramtree_api/src/model/bind_apple_request.dart';
 import 'package:gramtree_api/src/model/bind_email_request.dart';
 import 'package:gramtree_api/src/model/bool_attribute.dart';
@@ -77,6 +80,7 @@ import 'package:gramtree_api/src/model/purchase_unit.dart';
 import 'package:gramtree_api/src/model/purchase_units_attribute.dart';
 import 'package:gramtree_api/src/model/question.dart';
 import 'package:gramtree_api/src/model/recipe_author.dart';
+import 'package:gramtree_api/src/model/recipe_batch_advice_out.dart';
 import 'package:gramtree_api/src/model/recipe_create.dart';
 import 'package:gramtree_api/src/model/recipe_derived.dart';
 import 'package:gramtree_api/src/model/recipe_detail.dart';
@@ -172,10 +176,18 @@ ReturnType deserialize<ReturnType, BaseType>(
       return AppleReauthRequest.fromJson(value as Map<String, dynamic>)
           as ReturnType;
     case 'AttributeStatus':
+    case 'BatchAdvice':
+      return BatchAdvice.fromJson(value as Map<String, dynamic>) as ReturnType;
+    case 'BatchAdviceInput':
+      return BatchAdviceInput.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
     case 'BatchRequest':
       return BatchRequest.fromJson(value as Map<String, dynamic>) as ReturnType;
     case 'BatchResponse':
       return BatchResponse.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'BatchStepAdvice':
+      return BatchStepAdvice.fromJson(value as Map<String, dynamic>)
           as ReturnType;
     case 'BindAppleRequest':
       return BindAppleRequest.fromJson(value as Map<String, dynamic>)
@@ -373,6 +385,9 @@ ReturnType deserialize<ReturnType, BaseType>(
       return Question.fromJson(value as Map<String, dynamic>) as ReturnType;
     case 'RecipeAuthor':
       return RecipeAuthor.fromJson(value as Map<String, dynamic>) as ReturnType;
+    case 'RecipeBatchAdviceOut':
+      return RecipeBatchAdviceOut.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
     case 'RecipeCreate':
       return RecipeCreate.fromJson(value as Map<String, dynamic>) as ReturnType;
     case 'RecipeDerived':

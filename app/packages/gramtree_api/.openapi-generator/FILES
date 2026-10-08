@@ -30,8 +30,11 @@ lib/src/model/analytics_upload_request.dart
 lib/src/model/apple_login_request.dart
 lib/src/model/apple_reauth_request.dart
 lib/src/model/attribute_status.dart
+lib/src/model/batch_advice.dart
+lib/src/model/batch_advice_input.dart
 lib/src/model/batch_request.dart
 lib/src/model/batch_response.dart
+lib/src/model/batch_step_advice.dart
 lib/src/model/bind_apple_request.dart
 lib/src/model/bind_email_request.dart
 lib/src/model/bool_attribute.dart
@@ -102,6 +105,7 @@ lib/src/model/purchase_unit.dart
 lib/src/model/purchase_units_attribute.dart
 lib/src/model/question.dart
 lib/src/model/recipe_author.dart
+lib/src/model/recipe_batch_advice_out.dart
 lib/src/model/recipe_create.dart
 lib/src/model/recipe_derived.dart
 lib/src/model/recipe_detail.dart
