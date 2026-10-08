@@ -33,7 +33,11 @@ void main() {
   Future<void> settle(WidgetTester tester) =>
       // Fixed two-second waits at every reveal exhaust the full-flow deadline.
       // Settle scheduled frames; network readiness remains guarded by waitFor.
-      tester.pumpAndSettle(const Duration(milliseconds: 100));
+      tester.pumpAndSettle(
+        const Duration(milliseconds: 100),
+        EnginePhase.sendSemanticsUpdate,
+        const Duration(seconds: 10),
+      );
 
   Future<void> waitFor(WidgetTester tester, Finder finder) async {
     for (var i = 0; i < 300 && finder.evaluate().isEmpty; i++) {
