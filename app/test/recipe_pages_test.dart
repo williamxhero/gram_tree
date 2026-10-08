@@ -2426,6 +2426,72 @@ void main() {
   });
 
   testWidgets(
+    'small phone edits a historical version with saved reproducibility',
+    (tester) async {
+      final server = FakeServer();
+      final state = _installRecipeApi(server);
+      (state.current['version'] as Map)['reproducibility'] = {
+        'rules_version': 'reproducibility-v1',
+        'state': 'incomplete',
+        'remaining_count': 1,
+        'required_field_count': 2,
+        'concrete_field_count': 1,
+        'field_completeness': 0.5,
+        'problems': [
+          {
+            'id': 'steps:step-1:duration_seconds:missing',
+            'type': 'missing',
+            'status': 'unresolved',
+            'message': '加热步骤需要具体时长',
+            'position': {
+              'collection': 'steps',
+              'item_id': 'step-1',
+              'field': 'duration_seconds',
+            },
+          },
+        ],
+      };
+      await pumpApp(
+        tester,
+        env: TestEnv.signedIn(server: server),
+        size: const Size(320, 640),
+      );
+      await _openMyRecipes(tester);
+      await tester.tap(find.byKey(const ValueKey('recipe-card-$_recipeId')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('recipe-history-button')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('recipe-version-1')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('edit-old-recipe-button')));
+      await tester.pumpAndSettle();
+      expect(
+        find.byKey(const ValueKey('recipe-editor-content')),
+        findsOneWidget,
+      );
+      expect(find.text('还有 1 处需要确定'), findsOneWidget);
+      final dishName = find.byKey(const ValueKey('recipe-dish-name'));
+      // Saved checks can push this lazy child below a small phone's build range.
+      await _scrollUntilVisible(tester, dishName);
+      expect(dishName.hitTestable(), findsOneWidget);
+      await tester.enterText(dishName, '基础菜');
+      final changeNote = _fieldsWithLabel('这次改了什么');
+      await _scrollUntilVisible(tester, changeNote);
+      await tester.enterText(changeNote, '从历史版本继续修改');
+      await _scrollToTop(tester);
+      await tester.tap(find.byKey(const ValueKey('save-recipe-button')));
+      await tester.pumpAndSettle();
+      expect(state.versions, hasLength(2));
+      expect((state.current['version'] as Map)['change_note'], '从历史版本继续修改');
+      expect(
+        (state.current['version'] as Map)['previous_version_id'],
+        _firstVersionId,
+      );
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
     'save, history, old-version edit, list, and delete remain connected',
     (tester) async {
       final server = FakeServer();

@@ -156,7 +156,11 @@ void main() {
       await waitFor(tester, find.byKey(const ValueKey('create-recipe-entry')));
       await tester.tap(find.byKey(const ValueKey('create-recipe-entry')));
       await settle(tester);
-      await waitFor(tester, find.byKey(const ValueKey('recipe-dish-name')));
+      await waitFor(
+        tester,
+        find.byKey(const ValueKey('recipe-editor-content')),
+      );
+      await reveal(tester, find.byKey(const ValueKey('recipe-dish-name')));
       await tester.enterText(
         find.byKey(const ValueKey('recipe-dish-name')),
         '网页版验收菜谱',
@@ -206,7 +210,11 @@ void main() {
         find.byKey(const ValueKey('edit-old-recipe-button')),
       );
       await tester.tap(find.byKey(const ValueKey('edit-old-recipe-button')));
-      await waitFor(tester, find.byKey(const ValueKey('recipe-dish-name')));
+      await waitFor(
+        tester,
+        find.byKey(const ValueKey('recipe-editor-content')),
+      );
+      await reveal(tester, find.byKey(const ValueKey('recipe-dish-name')));
       expect(find.text('网页版验收菜谱'), findsWidgets);
       await reveal(tester, find.bySemanticsLabel('这次改了什么'));
       await tester.enterText(find.bySemanticsLabel('这次改了什么'), '从第一版继续修改');
