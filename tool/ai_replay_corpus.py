@@ -36,9 +36,32 @@ def main() -> None:
         ("embedding", {"text": "宫保鸡丁"}, corpus["embedding"]),
         ("embedding", {"text": "宫保鸡丁 鸡腿肉 盐 鸡腿肉切丁 炒"}, corpus["embedding"]),
     ]
+    # The browser journey saves the synthetic draft after confirming 320 g.
+    # Use the public snapshot contract's defaults, never a production recording.
+    from gramtree.ai.answers import cooking_context
+    from gramtree.recipes.schemas import RecipeSnapshot
+
+    snapshot = RecipeSnapshot.model_validate(corpus["valid"]["recipe"]["snapshot"])
+    snapshot.ingredients[0].quantity = 320
+    context = cooking_context(snapshot, "宫保鸡丁")
+    answers = json.loads((ROOT / "server/tests/fixtures/ai/answer_corpus.json").read_text("utf-8"))
+    for case in answers["cases"]:
+        records.append(
+            (
+                "explain",
+                {
+                    "stage": "recipe_question",
+                    "question": case["question"],
+                    "context": context,
+                    "basis": "general_experience",
+                    "evidence": None,
+                    "policy_version": "recipe-answer-v1",
+                },
+                case["output"],
+            )
+        )
     from gramtree.recipes.provenance import normalize_sources
     from gramtree.recipes.reproducibility import check
-    from gramtree.recipes.schemas import RecipeSnapshot
 
     quantification = json.loads(
         (ROOT / "server/tests/fixtures/ai/quantification_corpus.json").read_text("utf-8")

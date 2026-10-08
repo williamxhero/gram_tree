@@ -93,6 +93,7 @@ import 'package:gramtree_api/src/model/quantification_decisions_input.dart';
 import 'package:gramtree_api/src/model/quantification_input.dart';
 import 'package:gramtree_api/src/model/quantification_suggestion.dart';
 import 'package:gramtree_api/src/model/question.dart';
+import 'package:gramtree_api/src/model/recipe_answer.dart';
 import 'package:gramtree_api/src/model/recipe_author.dart';
 import 'package:gramtree_api/src/model/recipe_batch_advice_out.dart';
 import 'package:gramtree_api/src/model/recipe_comparison_assistance.dart';
@@ -117,6 +118,7 @@ import 'package:gramtree_api/src/model/recipe_list_item.dart';
 import 'package:gramtree_api/src/model/recipe_mold_conversion_out.dart';
 import 'package:gramtree_api/src/model/recipe_mold_conversion_request.dart';
 import 'package:gramtree_api/src/model/recipe_quantification_out.dart';
+import 'package:gramtree_api/src/model/recipe_question.dart';
 import 'package:gramtree_api/src/model/recipe_replacement.dart';
 import 'package:gramtree_api/src/model/recipe_replacement_allergens.dart';
 import 'package:gramtree_api/src/model/recipe_reproducibility_check_out.dart';
@@ -463,6 +465,8 @@ ReturnType deserialize<ReturnType, BaseType>(
           as ReturnType;
     case 'Question':
       return Question.fromJson(value as Map<String, dynamic>) as ReturnType;
+    case 'RecipeAnswer':
+      return RecipeAnswer.fromJson(value as Map<String, dynamic>) as ReturnType;
     case 'RecipeAuthor':
       return RecipeAuthor.fromJson(value as Map<String, dynamic>) as ReturnType;
     case 'RecipeBatchAdviceOut':
@@ -529,6 +533,9 @@ ReturnType deserialize<ReturnType, BaseType>(
           as ReturnType;
     case 'RecipeQuantificationOut':
       return RecipeQuantificationOut.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'RecipeQuestion':
+      return RecipeQuestion.fromJson(value as Map<String, dynamic>)
           as ReturnType;
     case 'RecipeReplacement':
       return RecipeReplacement.fromJson(value as Map<String, dynamic>)

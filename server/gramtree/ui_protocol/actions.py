@@ -82,10 +82,21 @@ def _validate_request_batch_advice(params: Mapping[str, Any]) -> bool:
 
 
 def _validate_call_operation(params: Mapping[str, Any]) -> bool:
-    operation = params.get("operation")
+    if not _require_non_empty_string(params, "operation"):
+        return False
+    operation = params["operation"]
+    if operation == "answer_recipe_question":
+        question = params.get("question")
+        return (
+            _require_non_empty_string(params, "recipe_id")
+            and _require_non_empty_string(params, "recipe_version_id")
+            and isinstance(question, str)
+            and bool(question.strip())
+            and len(question) <= 1000
+        )
     if operation not in ("preview_measure_input", "confirm_measure_input"):
         # Keep legacy placeholder actions inert, like the App registry.
-        return _require_non_empty_string(params, "operation")
+        return True
     value = params.get("input")
     if not isinstance(value, dict):
         return False

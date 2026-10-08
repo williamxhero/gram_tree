@@ -15,6 +15,7 @@ import '../recipes/personal_measure_repository.dart';
 
 import '../api/api_client.dart';
 import '../events/event_recorder.dart';
+import '../recipes/recipe_repository.dart';
 import '../recipes/batch_advice.dart';
 import 'registered_pages.dart';
 import 'recipe_operations.dart';
@@ -146,13 +147,22 @@ Object? _handleOpenRecordCard(
 
 /// Only named, validated operations are callable; never dispatch arbitrary URLs.
 bool _validateCallOperation(Map<String, dynamic> params) {
+  if (!_requireNonEmptyString(params, 'operation')) return false;
+  if (params['operation'] == 'answer_recipe_question') {
+    final question = params['question'];
+    return _requireNonEmptyString(params, 'recipe_id') &&
+        _requireNonEmptyString(params, 'recipe_version_id') &&
+        question is String &&
+        question.trim().isNotEmpty &&
+        question.length <= 1000;
+  }
   // Preserve previously registered placeholder operations as inert actions.
   // Only these concrete operations have a handler and require payloads.
   if (!const [
     'preview_measure_input',
     'confirm_measure_input',
   ].contains(params['operation'])) {
-    return _requireNonEmptyString(params, 'operation');
+    return true;
   }
   final input = params['input'];
   if (input is! Map) return false;
@@ -189,6 +199,17 @@ Future<Object?> _handleCallOperation(
   Ref ref,
   Map<String, dynamic> params,
 ) async {
+  if (params['operation'] == 'answer_recipe_question') {
+    await ref
+        .read(
+          recipeAnswerOperationProvider((
+            params['recipe_id'] as String,
+            params['recipe_version_id'] as String,
+          )),
+        )
+        .submit((params['question'] as String).trim());
+    return null;
+  }
   if (!const [
     'preview_measure_input',
     'confirm_measure_input',

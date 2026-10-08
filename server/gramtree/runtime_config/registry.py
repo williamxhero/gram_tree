@@ -59,6 +59,7 @@ ITEMS: tuple[ConfigItem, ...] = (
             "generate": "large",
             "normalize": "small",
             "embedding": "vector",
+            "explain": "large",
             "quantify": "large",
             "batch_advice": "small",
             "comparison": "small",
@@ -81,6 +82,7 @@ ITEMS: tuple[ConfigItem, ...] = (
         {
             "intent": {"timeout": 15, "retries": 1, "daily_limit": 100},
             "generate": {"timeout": 60, "retries": 1, "daily_limit": 50},
+            "explain": {"timeout": 30, "retries": 1, "daily_limit": 50},
             "normalize": {"timeout": 15, "retries": 0, "daily_limit": 100},
             "embedding": {"timeout": 15, "retries": 1, "daily_limit": 500},
             "quantify": {"timeout": 60, "retries": 1, "daily_limit": 50},

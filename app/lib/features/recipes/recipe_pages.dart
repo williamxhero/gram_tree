@@ -25,6 +25,7 @@ import 'recipe_photo_panel.dart';
 import 'recipe_flavor_panel.dart';
 import 'comparison_cards.dart';
 import 'measure_input_dialog.dart';
+import 'recipe_answer_section.dart';
 import 'reproducibility_card.dart';
 import 'quantification_panel.dart';
 import 'recipe_source_badge.dart';
@@ -2736,6 +2737,14 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
                 contract: contractById[ingredient.id],
               ),
           ],
+          const SizedBox(height: 16),
+          // Preserve ordinary serving/ingredient visibility and trailing steps.
+          RecipeAnswerSection(
+            key: ValueKey(
+              'answer-${ref.watch(authProvider).value?.id}-${detail.version.id}',
+            ),
+            detail: detail,
+          ),
           const SizedBox(height: 20),
           Text(
             l10n.recipeStepsTitle,
