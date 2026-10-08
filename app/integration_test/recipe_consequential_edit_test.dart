@@ -303,10 +303,10 @@ void main() {
       await journey.choose(
         'modify',
         'instructions',
-        after: '空气炸锅180°C加热鸡肉10分钟，用食品温度计确认鸡肉中心达到74°C后盛出',
+        after: '空气炸锅180°C加热鸡肉10分钟，用食品温度计确认鸡肉中心温度达到74°C后盛出',
       );
       await journey.choose('modify', 'duration', after: '600');
-      await journey.choose('modify', 'doneness', after: '用食品温度计确认鸡肉中心达到74°C');
+      await journey.choose('modify', 'doneness', after: '用食品温度计确认鸡肉中心温度达到74°C');
       await journey.reveal('recipe-food-safety-card');
       expect(
         journey.key('recipe-safety-finding-poultry-cook-through'),

@@ -167,6 +167,59 @@ def test_soymilk_explicit_duration_suffix(
     ) is safe
 
 
+def test_explicit_cook_evidence_with_unchanged_cut_keeps_other_required_reminders(api: Api) -> None:
+    body = dish("鸡腿肉", "空气炸锅180°C加热鸡肉2分钟")
+    snapshot = body["snapshot"]
+    snapshot["tags"] = ["儿童"]
+    cut = {
+        "id": "cut",
+        "instruction": "将鸡肉切成两厘米块",
+        "ingredient_ids": ["main"],
+        "duration_seconds": 60,
+    }
+    snapshot["steps"].insert(0, cut)
+    snapshot["ingredients"].extend(
+        [
+            {"id": "other", "display_name": "鸡胸肉", "quantity": 100, "unit": "g"},
+            {"id": "salt", "display_name": "盐", "quantity": 1, "unit": "g"},
+        ]
+    )
+    snapshot["steps"].extend(
+        [
+            {"id": "other-cook", "instruction": "快炒鸡胸肉", "ingredient_ids": ["other"]},
+            {"id": "season", "instruction": "加入盐调味", "ingredient_ids": ["salt"]},
+        ]
+    )
+    unsafe = checked(api, body)
+    poultry = [
+        finding for finding in unsafe["findings"] if finding["rule_id"] == "poultry-cook-through"
+    ]
+    assert len(poultry) == 2
+    main = next(finding for finding in poultry if finding["ingredient_ids"] == ["main"])
+    assert main["step_ids"] == ["cut", "cook"]
+    assert "infant-salt" in hits(unsafe)
+
+    snapshot["steps"][1]["instruction"] = (
+        "空气炸锅180°C加热鸡肉10分钟，用食品温度计确认鸡肉中心温度达到74°C后盛出"
+    )
+    snapshot["steps"][1]["doneness"] = "用食品温度计确认鸡肉中心温度达到74°C"
+    snapshot["steps"][1]["duration_seconds"] = 600
+    corrected = checked(api, body)
+    poultry = [
+        finding for finding in corrected["findings"] if finding["rule_id"] == "poultry-cook-through"
+    ]
+    assert len(poultry) == 1
+    assert poultry[0]["ingredient_ids"] == ["other"]
+    assert poultry[0]["step_ids"] == ["other-cook"]
+    assert snapshot["steps"][0] == cut
+    assert "infant-salt" in hits(corrected)
+
+    snapshot["steps"][2]["instruction"] = "用食品温度计确认鸡胸肉中心温度达到74°C"
+    all_poultry_checked = checked(api, body)
+    assert "poultry-cook-through" not in hits(all_poultry_checked)
+    assert "infant-salt" in hits(all_poultry_checked)
+
+
 def test_evidence_for_other_ingredient_cannot_clear_warning(api: Api) -> None:
     body = dish("鸡腿肉", "炒 2 分钟")
     body["snapshot"]["ingredients"].append(

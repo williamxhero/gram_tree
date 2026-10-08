@@ -155,9 +155,9 @@ def main() -> None:
     )
     records.append(("modify_intent", {"text": cookware["text"]}, cookware["intent"]))
     safe_cookware_values = {
-        "instruction": "空气炸锅180°C加热鸡肉10分钟，用食品温度计确认鸡肉中心达到74°C后盛出",
+        "instruction": "空气炸锅180°C加热鸡肉10分钟，用食品温度计确认鸡肉中心温度达到74°C后盛出",
         "duration_seconds": 600,
-        "doneness": "用食品温度计确认鸡肉中心达到74°C",
+        "doneness": "用食品温度计确认鸡肉中心温度达到74°C",
     }
     from gramtree.ai.explanations import facts
     from gramtree.recipes.service import _operations
