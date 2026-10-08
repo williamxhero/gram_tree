@@ -5,6 +5,8 @@ import 'package:gram_tree/config/app_config.dart';
 import 'package:gram_tree/main.dart' as app;
 import 'package:integration_test/integration_test.dart';
 
+import 'event_pipeline_support.dart' as support;
+
 /// 端到端：连真的服务端（tool/e2e_server.sh 起的 test 环境），走一遍首次启动。
 /// 同意隐私政策 → 邮箱验证码登录 → 五个入口逐个打开 → 重新打开 App 仍是登录状态 → 退出登录。
 ///
@@ -54,6 +56,8 @@ void main() {
     tester.testTextInput.register();
     addTearDown(tester.testTextInput.unregister);
 
+    // iOS Keychain survives app uninstall; reset only before the first launch.
+    await support.resetLocalAppState();
     await app.main();
     await waitFor(tester, find.text('开始之前，先说清楚我们会用到什么'));
     await tester.tap(find.byKey(const ValueKey('consent-agree')));

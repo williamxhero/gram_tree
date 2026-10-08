@@ -17,6 +17,7 @@
 | [`taste-profile.html`](taste-profile.html) | 我的口味样稿：七味型五档、修改原因、食材偏好、做菜约束、单独敏感同意、家庭成员、撤回及离线只读；浅色/深色交互 | #30 SPEC-005.1 | 本会话无 Artifact 发布工具；本地交互 HTML 样稿 |
 | [`recipe-quantification/`](recipe-quantification/) | 可复刻量化：剩余问题定位、逐条接受/修改/忽略、全部接受、来源追溯和基准调整；浅色/深色交互样稿 | #24 SPEC-002.4 | 本会话无 Artifact 发布工具；本地交互 HTML 样稿 |
 | [`large-batch-advice/`](large-batch-advice/) | 大份量只读时间建议：主动请求、原时长对照、分批与成熟提醒、切换清除及失败降级 | #25 SPEC-003.2 / #175 | 本会话无 Artifact 发布工具；本地交互 HTML 样稿 |
+| [`recipe-text-edit/`](recipe-text-edit/) | 改文字：本人编辑与生成结果共用入口、逐条接受/拒绝/修改、依赖拒绝、检查与确认保存；浅色/深色交互样稿 | #25 SPEC-003.2 / #167 | 本会话无 Artifact 发布工具；本地交互 HTML 样稿 |
 
 ## 说明
 

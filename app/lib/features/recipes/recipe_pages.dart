@@ -26,6 +26,7 @@ import 'recipe_answer_section.dart';
 import 'reproducibility_card.dart';
 import 'quantification_panel.dart';
 import 'recipe_source_badge.dart';
+import 'text_edit_panel.dart';
 import '../../storage/local_store.dart';
 import '../../ui_protocol/components/component_scaffold.dart';
 import '../../ui_protocol/intent_dispatcher.dart';
@@ -197,6 +198,7 @@ class _RecipeEditorPageState extends ConsumerState<RecipeEditorPage> {
   bool _loading = true;
   bool _loadFailed = false;
   bool _saving = false;
+  bool _hasManualEdits = false;
   RecipeQuantificationOut? _quantification;
   RecipeReproducibilityResult? _reproducibility;
   String? _reproducibilityError;
@@ -305,6 +307,7 @@ class _RecipeEditorPageState extends ConsumerState<RecipeEditorPage> {
     if (!mounted) return;
     if (restore == true) {
       _form = RecipeForm.fromDraft(draft.payload);
+      _hasManualEdits = true;
       _reproducibility = null;
       _editorRevision++;
       setState(() {});
@@ -316,6 +319,7 @@ class _RecipeEditorPageState extends ConsumerState<RecipeEditorPage> {
   void _changed() {
     if (!mounted) return;
     setState(() {
+      _hasManualEdits = true;
       _quantification = null;
       _reproducibility = null;
       _reproducibilityError = null;
@@ -557,6 +561,7 @@ class _RecipeEditorPageState extends ConsumerState<RecipeEditorPage> {
   }
 
   void _showSavedVersion(RecipeDetail detail) {
+    _hasManualEdits = false;
     _loaded = detail;
     _form = RecipeForm.fromSnapshot(
       detail.version.snapshot,
@@ -887,6 +892,23 @@ class _RecipeEditorPageState extends ConsumerState<RecipeEditorPage> {
           controller: _editorScroll,
           padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
           children: [
+            if (_loaded != null &&
+                _loaded!.author.id == ref.watch(authProvider).value?.id)
+              TextEditPanel(
+                key: ValueKey('text-edit-recipe-${_loaded!.version.id}'),
+                recipeId: _loaded!.id,
+                baseVersionId: _loaded!.version.id,
+                manualEdits: _hasManualEdits,
+                onSavingChanged: (saving) {
+                  if (mounted) setState(() => _saving = saving);
+                },
+                onSaved: (detail) async {
+                  await _discardDraft();
+                  if (context.mounted) {
+                    context.pushReplacement('/recipes/${detail.id}');
+                  }
+                },
+              ),
             if (_error != null)
               Semantics(
                 liveRegion: true,

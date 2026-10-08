@@ -62,6 +62,37 @@ class GenerationRequest(Base):
     created_at: Mapped[datetime] = mapped_column(default=utcnow)
 
 
+class RecipeModification(Base):
+    """Owned proposal and decision receipt, before any recipe/version is created."""
+
+    __tablename__ = "ai_recipe_modifications"
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=new_id)
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), index=True
+    )
+    recipe_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("recipes.id", ondelete="CASCADE"), default=None
+    )
+    base_version_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("recipe_versions.id", ondelete="CASCADE"), default=None
+    )
+    generation_request_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("ai_recipe_requests.id", ondelete="CASCADE"), default=None
+    )
+    request: Mapped[dict[str, Any]] = mapped_column(JSONB)
+    baseline: Mapped[dict[str, Any]] = mapped_column(JSONB)
+    proposal: Mapped[dict[str, Any]] = mapped_column(JSONB, default=dict)
+    decisions: Mapped[list[dict[str, Any]]] = mapped_column(JSONB, default=list)
+    revision: Mapped[int] = mapped_column(default=0)
+    error: Mapped[str | None] = mapped_column(String(64), default="pending")
+    saved_version_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("recipe_versions.id", ondelete="SET NULL"), default=None
+    )
+    confirmation: Mapped[dict[str, Any] | None] = mapped_column(JSONB, default=None)
+    created_at: Mapped[datetime] = mapped_column(default=utcnow)
+
+
 class RecipeEmbedding(Base):
     __tablename__ = "recipe_embeddings"
 
