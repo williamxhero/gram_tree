@@ -15,6 +15,8 @@ abstract class _$RecipeStepCWProxy {
 
   RecipeStep doneness(String? doneness);
 
+  RecipeStep donenessSource(ValueSource? donenessSource);
+
   RecipeStep durationSeconds(int? durationSeconds);
 
   RecipeStep durationSource(ValueSource? durationSource);
@@ -28,6 +30,8 @@ abstract class _$RecipeStepCWProxy {
   RecipeStep ingredientIds(List<String>? ingredientIds);
 
   RecipeStep instruction(String instruction);
+
+  RecipeStep instructionSource(ValueSource? instructionSource);
 
   RecipeStep notes(String? notes);
 
@@ -50,6 +54,7 @@ abstract class _$RecipeStepCWProxy {
     String? cookware,
     List<String>? dependsOn,
     String? doneness,
+    ValueSource? donenessSource,
     int? durationSeconds,
     ValueSource? durationSource,
     String? heat,
@@ -57,6 +62,7 @@ abstract class _$RecipeStepCWProxy {
     String id,
     List<String>? ingredientIds,
     String instruction,
+    ValueSource? instructionSource,
     String? notes,
     num? temperatureCelsius,
     ValueSource? temperatureSource,
@@ -84,6 +90,10 @@ class _$RecipeStepCWProxyImpl implements _$RecipeStepCWProxy {
   RecipeStep doneness(String? doneness) => this(doneness: doneness);
 
   @override
+  RecipeStep donenessSource(ValueSource? donenessSource) =>
+      this(donenessSource: donenessSource);
+
+  @override
   RecipeStep durationSeconds(int? durationSeconds) =>
       this(durationSeconds: durationSeconds);
 
@@ -107,6 +117,10 @@ class _$RecipeStepCWProxyImpl implements _$RecipeStepCWProxy {
 
   @override
   RecipeStep instruction(String instruction) => this(instruction: instruction);
+
+  @override
+  RecipeStep instructionSource(ValueSource? instructionSource) =>
+      this(instructionSource: instructionSource);
 
   @override
   RecipeStep notes(String? notes) => this(notes: notes);
@@ -137,6 +151,7 @@ class _$RecipeStepCWProxyImpl implements _$RecipeStepCWProxy {
     Object? cookware = const $CopyWithPlaceholder(),
     Object? dependsOn = const $CopyWithPlaceholder(),
     Object? doneness = const $CopyWithPlaceholder(),
+    Object? donenessSource = const $CopyWithPlaceholder(),
     Object? durationSeconds = const $CopyWithPlaceholder(),
     Object? durationSource = const $CopyWithPlaceholder(),
     Object? heat = const $CopyWithPlaceholder(),
@@ -144,6 +159,7 @@ class _$RecipeStepCWProxyImpl implements _$RecipeStepCWProxy {
     Object? id = const $CopyWithPlaceholder(),
     Object? ingredientIds = const $CopyWithPlaceholder(),
     Object? instruction = const $CopyWithPlaceholder(),
+    Object? instructionSource = const $CopyWithPlaceholder(),
     Object? notes = const $CopyWithPlaceholder(),
     Object? temperatureCelsius = const $CopyWithPlaceholder(),
     Object? temperatureSource = const $CopyWithPlaceholder(),
@@ -167,6 +183,10 @@ class _$RecipeStepCWProxyImpl implements _$RecipeStepCWProxy {
           ? _value.doneness
           // ignore: cast_nullable_to_non_nullable
           : doneness as String?,
+      donenessSource: donenessSource == const $CopyWithPlaceholder()
+          ? _value.donenessSource
+          // ignore: cast_nullable_to_non_nullable
+          : donenessSource as ValueSource?,
       durationSeconds: durationSeconds == const $CopyWithPlaceholder()
           ? _value.durationSeconds
           // ignore: cast_nullable_to_non_nullable
@@ -195,6 +215,10 @@ class _$RecipeStepCWProxyImpl implements _$RecipeStepCWProxy {
           ? _value.instruction
           // ignore: cast_nullable_to_non_nullable
           : instruction as String,
+      instructionSource: instructionSource == const $CopyWithPlaceholder()
+          ? _value.instructionSource
+          // ignore: cast_nullable_to_non_nullable
+          : instructionSource as ValueSource?,
       notes: notes == const $CopyWithPlaceholder()
           ? _value.notes
           // ignore: cast_nullable_to_non_nullable
@@ -242,6 +266,11 @@ RecipeStep _$RecipeStepFromJson(Map<String, dynamic> json) => $checkedCreate(
         (v) => (v as List<dynamic>?)?.map((e) => e as String).toList(),
       ),
       doneness: $checkedConvert('doneness', (v) => v as String?),
+      donenessSource: $checkedConvert(
+        'doneness_source',
+        (v) =>
+            v == null ? null : ValueSource.fromJson(v as Map<String, dynamic>),
+      ),
       durationSeconds: $checkedConvert(
         'duration_seconds',
         (v) => (v as num?)?.toInt() ?? 0,
@@ -263,6 +292,11 @@ RecipeStep _$RecipeStepFromJson(Map<String, dynamic> json) => $checkedCreate(
         (v) => (v as List<dynamic>?)?.map((e) => e as String).toList(),
       ),
       instruction: $checkedConvert('instruction', (v) => v as String),
+      instructionSource: $checkedConvert(
+        'instruction_source',
+        (v) =>
+            v == null ? null : ValueSource.fromJson(v as Map<String, dynamic>),
+      ),
       notes: $checkedConvert('notes', (v) => v as String?),
       temperatureCelsius: $checkedConvert(
         'temperature_celsius',
@@ -280,10 +314,12 @@ RecipeStep _$RecipeStepFromJson(Map<String, dynamic> json) => $checkedCreate(
   },
   fieldKeyMap: const {
     'dependsOn': 'depends_on',
+    'donenessSource': 'doneness_source',
     'durationSeconds': 'duration_seconds',
     'durationSource': 'duration_source',
     'heatSource': 'heat_source',
     'ingredientIds': 'ingredient_ids',
+    'instructionSource': 'instruction_source',
     'temperatureCelsius': 'temperature_celsius',
     'temperatureSource': 'temperature_source',
   },
@@ -295,6 +331,7 @@ Map<String, dynamic> _$RecipeStepToJson(RecipeStep instance) =>
       'cookware': ?instance.cookware,
       'depends_on': ?instance.dependsOn,
       'doneness': ?instance.doneness,
+      'doneness_source': ?instance.donenessSource?.toJson(),
       'duration_seconds': ?instance.durationSeconds,
       'duration_source': ?instance.durationSource?.toJson(),
       'heat': ?instance.heat,
@@ -302,6 +339,7 @@ Map<String, dynamic> _$RecipeStepToJson(RecipeStep instance) =>
       'id': instance.id,
       'ingredient_ids': ?instance.ingredientIds,
       'instruction': instance.instruction,
+      'instruction_source': ?instance.instructionSource?.toJson(),
       'notes': ?instance.notes,
       'temperature_celsius': ?instance.temperatureCelsius,
       'temperature_source': ?instance.temperatureSource?.toJson(),

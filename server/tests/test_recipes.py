@@ -138,6 +138,9 @@ def test_recipe_version_preserves_quantity_source_through_http(api: Api) -> None
         "original": "320",
         "confidence": None,
         "basis": None,
+        "confidence_level": None,
+        "baseline": None,
+        "adjustment": None,
     }
 
 

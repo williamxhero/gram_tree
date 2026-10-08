@@ -5,8 +5,11 @@ import 'package:gramtree_api/src/model/analytics_event_in.dart';
 import 'package:gramtree_api/src/model/analytics_upload_request.dart';
 import 'package:gramtree_api/src/model/apple_login_request.dart';
 import 'package:gramtree_api/src/model/apple_reauth_request.dart';
+import 'package:gramtree_api/src/model/batch_advice.dart';
+import 'package:gramtree_api/src/model/batch_advice_input.dart';
 import 'package:gramtree_api/src/model/batch_request.dart';
 import 'package:gramtree_api/src/model/batch_response.dart';
+import 'package:gramtree_api/src/model/batch_step_advice.dart';
 import 'package:gramtree_api/src/model/bind_apple_request.dart';
 import 'package:gramtree_api/src/model/bind_email_request.dart';
 import 'package:gramtree_api/src/model/bool_attribute.dart';
@@ -77,8 +80,13 @@ import 'package:gramtree_api/src/model/personal_measure_update.dart';
 import 'package:gramtree_api/src/model/profile_update.dart';
 import 'package:gramtree_api/src/model/purchase_unit.dart';
 import 'package:gramtree_api/src/model/purchase_units_attribute.dart';
+import 'package:gramtree_api/src/model/quantification_decision.dart';
+import 'package:gramtree_api/src/model/quantification_decisions_input.dart';
+import 'package:gramtree_api/src/model/quantification_input.dart';
+import 'package:gramtree_api/src/model/quantification_suggestion.dart';
 import 'package:gramtree_api/src/model/question.dart';
 import 'package:gramtree_api/src/model/recipe_author.dart';
+import 'package:gramtree_api/src/model/recipe_batch_advice_out.dart';
 import 'package:gramtree_api/src/model/recipe_create.dart';
 import 'package:gramtree_api/src/model/recipe_derived.dart';
 import 'package:gramtree_api/src/model/recipe_detail.dart';
@@ -94,8 +102,12 @@ import 'package:gramtree_api/src/model/recipe_list.dart';
 import 'package:gramtree_api/src/model/recipe_list_item.dart';
 import 'package:gramtree_api/src/model/recipe_mold_conversion_out.dart';
 import 'package:gramtree_api/src/model/recipe_mold_conversion_request.dart';
+import 'package:gramtree_api/src/model/recipe_quantification_out.dart';
 import 'package:gramtree_api/src/model/recipe_replacement.dart';
 import 'package:gramtree_api/src/model/recipe_replacement_allergens.dart';
+import 'package:gramtree_api/src/model/recipe_reproducibility_check_out.dart';
+import 'package:gramtree_api/src/model/recipe_reproducibility_check_request.dart';
+import 'package:gramtree_api/src/model/recipe_reproducibility_result.dart';
 import 'package:gramtree_api/src/model/recipe_safety_check_out.dart';
 import 'package:gramtree_api/src/model/recipe_safety_check_request.dart';
 import 'package:gramtree_api/src/model/recipe_safety_finding.dart';
@@ -110,6 +122,8 @@ import 'package:gramtree_api/src/model/recipe_version_summary.dart';
 import 'package:gramtree_api/src/model/refresh_request.dart';
 import 'package:gramtree_api/src/model/rejection_reason.dart';
 import 'package:gramtree_api/src/model/release_note.dart';
+import 'package:gramtree_api/src/model/reproducibility_position.dart';
+import 'package:gramtree_api/src/model/reproducibility_problem.dart';
 import 'package:gramtree_api/src/model/retrieval_result.dart';
 import 'package:gramtree_api/src/model/search_ingredient_out.dart';
 import 'package:gramtree_api/src/model/search_query.dart';
@@ -180,10 +194,18 @@ ReturnType deserialize<ReturnType, BaseType>(
       return AppleReauthRequest.fromJson(value as Map<String, dynamic>)
           as ReturnType;
     case 'AttributeStatus':
+    case 'BatchAdvice':
+      return BatchAdvice.fromJson(value as Map<String, dynamic>) as ReturnType;
+    case 'BatchAdviceInput':
+      return BatchAdviceInput.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
     case 'BatchRequest':
       return BatchRequest.fromJson(value as Map<String, dynamic>) as ReturnType;
     case 'BatchResponse':
       return BatchResponse.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'BatchStepAdvice':
+      return BatchStepAdvice.fromJson(value as Map<String, dynamic>)
           as ReturnType;
     case 'BindAppleRequest':
       return BindAppleRequest.fromJson(value as Map<String, dynamic>)
@@ -383,10 +405,27 @@ ReturnType deserialize<ReturnType, BaseType>(
     case 'PurchaseUnitsAttribute':
       return PurchaseUnitsAttribute.fromJson(value as Map<String, dynamic>)
           as ReturnType;
+    case 'QuantificationDecision':
+      return QuantificationDecision.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'QuantificationDecisionsInput':
+      return QuantificationDecisionsInput.fromJson(
+            value as Map<String, dynamic>,
+          )
+          as ReturnType;
+    case 'QuantificationInput':
+      return QuantificationInput.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'QuantificationSuggestion':
+      return QuantificationSuggestion.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
     case 'Question':
       return Question.fromJson(value as Map<String, dynamic>) as ReturnType;
     case 'RecipeAuthor':
       return RecipeAuthor.fromJson(value as Map<String, dynamic>) as ReturnType;
+    case 'RecipeBatchAdviceOut':
+      return RecipeBatchAdviceOut.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
     case 'RecipeCreate':
       return RecipeCreate.fromJson(value as Map<String, dynamic>) as ReturnType;
     case 'RecipeDerived':
@@ -428,11 +467,27 @@ ReturnType deserialize<ReturnType, BaseType>(
     case 'RecipeMoldConversionRequest':
       return RecipeMoldConversionRequest.fromJson(value as Map<String, dynamic>)
           as ReturnType;
+    case 'RecipeQuantificationOut':
+      return RecipeQuantificationOut.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
     case 'RecipeReplacement':
       return RecipeReplacement.fromJson(value as Map<String, dynamic>)
           as ReturnType;
     case 'RecipeReplacementAllergens':
       return RecipeReplacementAllergens.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'RecipeReproducibilityCheckOut':
+      return RecipeReproducibilityCheckOut.fromJson(
+            value as Map<String, dynamic>,
+          )
+          as ReturnType;
+    case 'RecipeReproducibilityCheckRequest':
+      return RecipeReproducibilityCheckRequest.fromJson(
+            value as Map<String, dynamic>,
+          )
+          as ReturnType;
+    case 'RecipeReproducibilityResult':
+      return RecipeReproducibilityResult.fromJson(value as Map<String, dynamic>)
           as ReturnType;
     case 'RecipeSafetyCheckOut':
       return RecipeSafetyCheckOut.fromJson(value as Map<String, dynamic>)
@@ -474,6 +529,12 @@ ReturnType deserialize<ReturnType, BaseType>(
           as ReturnType;
     case 'ReleaseNote':
       return ReleaseNote.fromJson(value as Map<String, dynamic>) as ReturnType;
+    case 'ReproducibilityPosition':
+      return ReproducibilityPosition.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'ReproducibilityProblem':
+      return ReproducibilityProblem.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
     case 'RetrievalResult':
       return RetrievalResult.fromJson(value as Map<String, dynamic>)
           as ReturnType;

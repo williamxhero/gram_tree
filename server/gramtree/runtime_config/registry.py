@@ -54,7 +54,14 @@ ITEMS: tuple[ConfigItem, ...] = (
     ConfigItem(
         "ai.routes",
         "json",
-        {"intent": "small", "generate": "large", "normalize": "small", "embedding": "vector"},
+        {
+            "intent": "small",
+            "generate": "large",
+            "normalize": "small",
+            "embedding": "vector",
+            "quantify": "large",
+            "batch_advice": "small",
+        },
         "能力到模型档位的路由",
     ),
     ConfigItem(
@@ -75,6 +82,8 @@ ITEMS: tuple[ConfigItem, ...] = (
             "generate": {"timeout": 60, "retries": 1, "daily_limit": 50},
             "normalize": {"timeout": 15, "retries": 0, "daily_limit": 100},
             "embedding": {"timeout": 15, "retries": 1, "daily_limit": 500},
+            "quantify": {"timeout": 60, "retries": 1, "daily_limit": 50},
+            "batch_advice": {"timeout": 30, "retries": 0, "daily_limit": 50},
         },
         "每种能力的超时、重试及每日额度（可带 users 覆盖）",
     ),
@@ -97,6 +106,25 @@ ITEMS: tuple[ConfigItem, ...] = (
         "列表接口每页条数上限",
         minimum=1,
         maximum=500,
+    ),
+    # —— 已验证条件占位（SPEC-002.4；判定在 SPEC-007.3 实现） ——
+    ConfigItem(
+        "recipe.verification_min_distinct_cooks",
+        "int",
+        5,
+        "已验证至少需要的不同做菜用户数（占位，当前不执行判定）",
+        minimum=1,
+        maximum=10000,
+        public=True,
+    ),
+    ConfigItem(
+        "recipe.verification_max_one_sided_feedback_ratio",
+        "float",
+        0.3,
+        "偏咸、偏淡各类反馈比例上限（占位，当前不执行判定）",
+        minimum=0,
+        maximum=1,
+        public=True,
     ),
     # —— 菜谱份数换算（SPEC-002.3） ——
     ConfigItem(
