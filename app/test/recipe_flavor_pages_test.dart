@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:gram_tree/app/router.dart';
 import 'package:gramtree_api/gramtree_api.dart';
 
 import 'helpers.dart';
@@ -60,6 +62,103 @@ Map<String, dynamic> detail(RecipeSnapshot snapshot) => RecipeDetail(
 ).toJson();
 
 void main() {
+  for (final brightness in Brightness.values) {
+    for (final scale in [1.3, 1.6]) {
+      testWidgets('旧版未知贡献重开和原样另存不显示作者贡献或已知零 $brightness $scale', (
+        tester,
+      ) async {
+        final server = FakeServer();
+        final snapshot = RecipeSnapshot(
+          servings: 2,
+          formatVersion: RecipeSnapshotFormatVersionEnum.number1,
+          ingredients: [
+            RecipeIngredient(
+              id: 'ingredient-1',
+              displayName: '旧版食材',
+              quantity: 3,
+              unit: 'g',
+              flavorContribution: RecipeFlavorContribution(),
+              flavorSource: ValueSource(
+                source_: ValueSourceSource_Enum.authorFilled,
+              ),
+            ),
+          ],
+          steps: [RecipeStep(id: 'step-1', instruction: '拌匀')],
+        );
+        var current = detail(snapshot);
+        server.on('GET', '/v1/recipes/$recipeId', (_) => (200, current));
+        server.on(
+          'POST',
+          '/v1/recipes/safety/check',
+          (_) => (
+            200,
+            RecipeSafetyCheckOut(
+              result: RecipeSafetyResult(
+                rulesVersion: 'test-v1',
+                checkedAt: '2026-10-01T00:00:00Z',
+                canSave: true,
+                findings: [],
+              ),
+            ).toJson(),
+          ),
+        );
+        server.on('POST', '/v1/recipes/$recipeId/versions', (request) {
+          final saved = Map<String, dynamic>.from(
+            (request.body as Map)['snapshot'] as Map,
+          );
+          final ingredient = (saved['ingredients'] as List).first as Map;
+          // The public backend canonicalizes the explicit unknown profile, even if
+          // the generated client omits null provenance on an unchanged legacy save.
+          ingredient['flavor_contribution'] = null;
+          ingredient['flavor_source'] = null;
+          current = detail(RecipeSnapshot.fromJson(saved));
+          return (201, current);
+        });
+        await pumpApp(
+          tester,
+          env: TestEnv.signedIn(server: server),
+          brightness: brightness,
+          textScale: scale,
+        );
+        ProviderScope.containerOf(tester.element(find.byType(Scaffold).first))
+            .read(routerProvider)
+            .push('/recipes/$recipeId');
+        await settle(tester);
+        final summary = find.byKey(
+          const ValueKey('recipe-flavor-detail-ingredient-1'),
+        );
+        await reveal(tester, summary);
+        expect(find.text('味型贡献未填写'), findsWidgets);
+        expect(
+          find.byKey(const ValueKey('recipe-flavor-source-ingredient-1')),
+          findsNothing,
+        );
+        expect(find.textContaining('咸 0'), findsNothing);
+        await tester.tap(find.byKey(const ValueKey('edit-recipe-button')));
+        await settle(tester);
+        await reveal(
+          tester,
+          find.byKey(const ValueKey('recipe-flavor-editor-ingredient-1')),
+        );
+        expect(find.text('味型贡献未填写'), findsWidgets);
+        expect(
+          find.byKey(const ValueKey('recipe-flavor-source-ingredient-1')),
+          findsNothing,
+        );
+        final save = find.byKey(const ValueKey('save-recipe-button'));
+        await reveal(tester, save);
+        await tester.tap(save);
+        await settle(tester);
+        await reveal(tester, summary);
+        expect(find.text('味型贡献未填写'), findsWidgets);
+        expect(
+          find.byKey(const ValueKey('recipe-flavor-source-ingredient-1')),
+          findsNothing,
+        );
+        expect(find.textContaining('咸 0'), findsNothing);
+      });
+    }
+  }
   testWidgets('选择标准食材后能修改这道菜的贡献并查看真实来源', (tester) async {
     final server = FakeServer();
     Map<String, dynamic>? current;

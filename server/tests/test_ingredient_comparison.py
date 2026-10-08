@@ -58,6 +58,43 @@ def compare(api: Api, headers: dict, first: dict, second: dict):
     )
 
 
+def test_same_dish_candidates_include_owned_roots_and_paginate_without_private_leaks(
+    api: Api,
+) -> None:
+    headers = bearer(api.login("candidates@example.com"))
+    first = create(api, headers, [ingredient()], name="候选菜")
+    second = create(api, headers, [ingredient(quantity=2)], name="候选菜")
+    unrelated = create(api, headers, [ingredient()], name="另一道菜")
+    other = bearer(api.login("private-candidate@example.com"))
+    foreign = create(api, other, [ingredient()], name="候选菜")
+    assert first["dish"]["id"] == second["dish"]["id"] == foreign["dish"]["id"]
+    path = f"/v1/recipes/{first['id']}/comparison-candidates"
+    page = api.client.get(path, params={"limit": 1}, headers=headers)
+    assert page.status_code == 200, page.text
+    data = page.json()
+    assert len(data["items"]) == 1
+    assert data["next_cursor"] is not None
+    next_page = api.client.get(
+        path, params={"limit": 1, "cursor": data["next_cursor"]}, headers=headers
+    )
+    assert next_page.status_code == 200, next_page.text
+    items = data["items"] + next_page.json()["items"]
+    assert {item["id"] for item in items} == {first["version"]["id"], second["version"]["id"]}
+    assert {item["recipe_id"] for item in items} == {first["id"], second["id"]}
+    assert next_page.json()["next_cursor"] is None
+    assert all(
+        item["id"] not in {foreign["version"]["id"], unrelated["version"]["id"]} for item in items
+    )
+    assert compare(api, headers, first, second).status_code == 200
+    missing = api.client.get(f"/v1/recipes/{uuid4()}/comparison-candidates", headers=headers)
+    denied = api.client.get(f"/v1/recipes/{foreign['id']}/comparison-candidates", headers=headers)
+    assert missing.status_code == denied.status_code == 404
+    assert missing.json()["error"]["code"] == denied.json()["error"]["code"]
+    assert missing.json()["error"]["message"] == denied.json()["error"]["message"]
+    assert api.client.get(path, params={"cursor": "invalid"}, headers=headers).status_code == 422
+    assert api.client.get(path, params={"limit": 100000}, headers=headers).status_code == 422
+
+
 @pytest.mark.parametrize(
     "unit_a,qty_a,unit_b,qty_b,attrs,expected",
     [

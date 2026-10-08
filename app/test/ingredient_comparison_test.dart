@@ -92,6 +92,85 @@ RecipeDetail detailFixture(String version, int number) => RecipeDetail(
 );
 
 void main() {
+  testWidgets('历史可分页选择同菜的两个独立菜谱版本，保留 A 到 B 方向', (tester) async {
+    const otherRecipe = '44444444-4444-4444-8444-444444444444';
+    final server = FakeServer();
+    server.on(
+      'GET',
+      '/v1/recipes/$recipeId/versions',
+      (_) => (
+        200,
+        RecipeVersionHistory(
+          items: [
+            RecipeVersionSummary(
+              id: versionA,
+              versionNumber: 1,
+              aiAssisted: false,
+              changeNote: '本菜谱原版',
+              createdAt: '2026-10-01T00:00:00Z',
+            ),
+          ],
+        ).toJson(),
+      ),
+    );
+    server.on(
+      'GET',
+      '/v1/recipes/$recipeId/comparison-candidates',
+      (request) => (
+        200,
+        {
+          'items': [
+            {
+              'id': request.query['cursor'] == null ? versionA : versionB,
+              'recipe_id': request.query['cursor'] == null
+                  ? recipeId
+                  : otherRecipe,
+              'author': '作者',
+              'version_number': 1,
+              'ai_assisted': false,
+              'change_note': request.query['cursor'] == null
+                  ? '本菜谱原版'
+                  : '独立菜谱少盐版',
+              'created_at': '2026-10-01T00:00:00Z',
+            },
+          ],
+          'next_cursor': request.query['cursor'] == null ? 'next-page' : null,
+        },
+      ),
+    );
+    server.on(
+      'GET',
+      '/v1/recipes/$recipeId/compare',
+      (request) =>
+          request.query['from_version_id'] == versionA &&
+              request.query['to_version_id'] == versionB
+          ? (200, comparisonFixture().toJson())
+          : FakeServer.error(422, 'invalid_request', '比较方向错误'),
+    );
+    await pumpApp(tester, env: TestEnv.signedIn(server: server));
+    ProviderScope.containerOf(tester.element(find.byType(Scaffold).first))
+        .read(routerProvider)
+        .push('/recipes/$recipeId/history');
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('recipe-select-comparison')));
+    await tester.pumpAndSettle();
+    await tester.tap(
+      find.byKey(const ValueKey('recipe-candidate-select-$versionA')),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('recipe-history-load-more')));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('独立菜谱少盐版'), findsOneWidget);
+    await tester.tap(
+      find.byKey(const ValueKey('recipe-candidate-select-$versionB')),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('recipe-compare-selected')));
+    await tester.pumpAndSettle();
+    expect(find.text('已按 2 人份对比'), findsOneWidget);
+    expect(find.text('用量变化'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
   testWidgets('历史可选两版、和上一版比较、打开为什么及两版详情', (tester) async {
     final server = FakeServer();
     server.on(
@@ -122,6 +201,27 @@ void main() {
     );
     server.on(
       'GET',
+      '/v1/recipes/$recipeId/comparison-candidates',
+      (_) => (
+        200,
+        RecipeComparisonCandidates(
+          items: [
+            for (final entry in [(versionB, 2), (versionA, 1)])
+              RecipeComparisonCandidate(
+                id: entry.$1,
+                recipeId: recipeId,
+                author: '作者',
+                versionNumber: entry.$2,
+                aiAssisted: false,
+                changeNote: entry.$2 == 1 ? '原版' : '少盐',
+                createdAt: '2026-10-01T00:00:00Z',
+              ),
+          ],
+        ).toJson(),
+      ),
+    );
+    server.on(
+      'GET',
       '/v1/recipes/$recipeId/compare',
       (_) => (200, comparisonFixture().toJson()),
     );
@@ -140,9 +240,13 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const ValueKey('recipe-select-comparison')));
     await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const ValueKey('recipe-compare-select-1')));
+    await tester.tap(
+      find.byKey(const ValueKey('recipe-candidate-select-$versionA')),
+    );
     await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const ValueKey('recipe-compare-select-2')));
+    await tester.tap(
+      find.byKey(const ValueKey('recipe-candidate-select-$versionB')),
+    );
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const ValueKey('recipe-compare-selected')));
     await tester.pumpAndSettle();
@@ -198,48 +302,56 @@ void main() {
     expect(find.text('已按 2 人份对比'), findsOneWidget);
   });
   for (final size in [const Size(360, 780), const Size(1000, 700)]) {
-    testWidgets('食材比较只看变化、展开全部、依据和响应布局 $size', (tester) async {
-      final server = FakeServer();
-      server.on(
-        'GET',
-        '/v1/recipes/$recipeId/compare',
-        (_) => (200, comparisonFixture().toJson()),
-      );
-      await pumpApp(
-        tester,
-        env: TestEnv.signedIn(server: server),
-        size: size,
-      );
-      final container = ProviderScope.containerOf(
-        tester.element(find.byType(Scaffold).first),
-      );
-      container
-          .read(routerProvider)
-          .push('/recipes/$recipeId/compare?from=$versionA&to=$versionB');
-      await tester.pumpAndSettle();
-      expect(find.text('仅比较食材，尚未比较步骤'), findsOneWidget);
-      expect(find.text('已按 2 人份对比'), findsOneWidget);
-      expect(find.text('用量变化'), findsOneWidget);
-      expect(find.text('水'), findsNothing);
-      expect(find.textContaining('−33.3%'), findsOneWidget);
-      final from = tester.getTopLeft(
-        find.byKey(const ValueKey('compare-version-a')),
-      );
-      final to = tester.getTopLeft(
-        find.byKey(const ValueKey('compare-version-b')),
-      );
-      if (size.width > size.height) {
-        expect(to.dx, greaterThan(from.dx));
-        expect(to.dy, from.dy);
-      } else {
-        expect(to.dy, greaterThan(from.dy));
+    for (final brightness in Brightness.values) {
+      for (final scale in [1.3, 1.6]) {
+        testWidgets('食材比较只看变化、展开全部、依据和响应布局 $size $brightness $scale', (
+          tester,
+        ) async {
+          final server = FakeServer();
+          server.on(
+            'GET',
+            '/v1/recipes/$recipeId/compare',
+            (_) => (200, comparisonFixture().toJson()),
+          );
+          await pumpApp(
+            tester,
+            env: TestEnv.signedIn(server: server),
+            size: size,
+            brightness: brightness,
+            textScale: scale,
+          );
+          final container = ProviderScope.containerOf(
+            tester.element(find.byType(Scaffold).first),
+          );
+          container
+              .read(routerProvider)
+              .push('/recipes/$recipeId/compare?from=$versionA&to=$versionB');
+          await tester.pumpAndSettle();
+          expect(find.text('仅比较食材，尚未比较步骤'), findsOneWidget);
+          expect(find.text('已按 2 人份对比'), findsOneWidget);
+          expect(find.text('用量变化'), findsOneWidget);
+          expect(find.text('水'), findsNothing);
+          expect(find.textContaining('−33.3%'), findsOneWidget);
+          final from = tester.getTopLeft(
+            find.byKey(const ValueKey('compare-version-a')),
+          );
+          final to = tester.getTopLeft(
+            find.byKey(const ValueKey('compare-version-b')),
+          );
+          if (size.width > size.height) {
+            expect(to.dx, greaterThan(from.dx));
+            expect(to.dy, from.dy);
+          } else {
+            expect(to.dy, greaterThan(from.dy));
+          }
+          await tester.tap(find.byKey(const ValueKey('compare-show-all')));
+          await tester.pumpAndSettle();
+          await tester.scrollUntilVisible(find.text('水'), 200);
+          expect(find.text('水'), findsOneWidget);
+          expect(find.text('无食材变化'), findsOneWidget);
+          expect(tester.takeException(), isNull);
+        });
       }
-      await tester.tap(find.byKey(const ValueKey('compare-show-all')));
-      await tester.pumpAndSettle();
-      await tester.scrollUntilVisible(find.text('水'), 200);
-      expect(find.text('水'), findsOneWidget);
-      expect(find.text('无食材变化'), findsOneWidget);
-      expect(tester.takeException(), isNull);
-    });
+    }
   }
 }

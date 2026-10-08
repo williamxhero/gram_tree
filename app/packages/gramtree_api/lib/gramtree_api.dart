@@ -105,6 +105,8 @@ export 'package:gramtree_api/src/model/purchase_unit.dart';
 export 'package:gramtree_api/src/model/purchase_units_attribute.dart';
 export 'package:gramtree_api/src/model/question.dart';
 export 'package:gramtree_api/src/model/recipe_author.dart';
+export 'package:gramtree_api/src/model/recipe_comparison_candidate.dart';
+export 'package:gramtree_api/src/model/recipe_comparison_candidates.dart';
 export 'package:gramtree_api/src/model/recipe_create.dart';
 export 'package:gramtree_api/src/model/recipe_derived.dart';
 export 'package:gramtree_api/src/model/recipe_detail.dart';

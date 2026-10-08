@@ -28,6 +28,7 @@ import '../../ui_protocol/components/component_scaffold.dart';
 import '../../ui_protocol/recipe_safety.dart';
 import '../../ui_protocol/recipe_safety_protocol.dart';
 import '../../ui_protocol/source_mark.dart';
+import '../../ui_protocol/intent_dispatcher.dart';
 import '../../ui_protocol/source_types.dart';
 import '../../widgets/empty_state.dart';
 
@@ -3458,9 +3459,37 @@ class _RecipeHistoryPageState extends ConsumerState<RecipeHistoryPage> {
   final List<String> _selected = [];
   bool _selecting = false;
 
-  void _compare(String from, String to) =>
-      context.push('/recipes/${widget.recipeId}/compare?from=$from&to=$to');
+  void _compare(String from, String to) {
+    unawaited(
+      ref
+          .read(intentDispatcherProvider)
+          .dispatch(
+            context,
+            compositionId: CompositionIdScope.of(context),
+            componentId: 'recipe-history-comparison',
+            action: ActionDescriptor(
+              intent: 'open_page',
+              params: {
+                'page': 'ingredient_comparison',
+                'recipe_id': widget.recipeId,
+                'from_version_id': from,
+                'to_version_id': to,
+              },
+            ),
+          ),
+    );
+  }
 
+  Future<void> _toggleSelection() async {
+    setState(() {
+      _selecting = !_selecting;
+      _selected.clear();
+      _candidates = const [];
+    });
+    await _loadFirst();
+  }
+
+  List<RecipeComparisonCandidate> _candidates = const [];
   List<RecipeVersionSummary> _items = const [];
   String? _nextCursor;
   Object? _error;
@@ -3479,15 +3508,24 @@ class _RecipeHistoryPageState extends ConsumerState<RecipeHistoryPage> {
       _error = null;
     });
     try {
-      final page = await ref
-          .read(recipeRepositoryProvider)
-          .historyPage(widget.recipeId);
-      if (!mounted) return;
-      setState(() {
-        _items = page.items;
-        _nextCursor = page.nextCursor;
-        _loading = false;
-      });
+      final repository = ref.read(recipeRepositoryProvider);
+      if (_selecting) {
+        final page = await repository.comparisonCandidatesPage(widget.recipeId);
+        if (!mounted) return;
+        setState(() {
+          _candidates = page.items;
+          _nextCursor = page.nextCursor;
+          _loading = false;
+        });
+      } else {
+        final page = await repository.historyPage(widget.recipeId);
+        if (!mounted) return;
+        setState(() {
+          _items = page.items;
+          _nextCursor = page.nextCursor;
+          _loading = false;
+        });
+      }
     } catch (error) {
       if (mounted) {
         setState(() {
@@ -3503,15 +3541,30 @@ class _RecipeHistoryPageState extends ConsumerState<RecipeHistoryPage> {
     if (_loadingMore || cursor == null) return;
     setState(() => _loadingMore = true);
     try {
-      final page = await ref
-          .read(recipeRepositoryProvider)
-          .historyPage(widget.recipeId, cursor: cursor);
-      if (!mounted) return;
-      setState(() {
-        _items = [..._items, ...page.items];
-        _nextCursor = page.nextCursor;
-        _error = null;
-      });
+      final repository = ref.read(recipeRepositoryProvider);
+      if (_selecting) {
+        final page = await repository.comparisonCandidatesPage(
+          widget.recipeId,
+          cursor: cursor,
+        );
+        if (!mounted) return;
+        setState(() {
+          _candidates = [..._candidates, ...page.items];
+          _nextCursor = page.nextCursor;
+          _error = null;
+        });
+      } else {
+        final page = await repository.historyPage(
+          widget.recipeId,
+          cursor: cursor,
+        );
+        if (!mounted) return;
+        setState(() {
+          _items = [..._items, ...page.items];
+          _nextCursor = page.nextCursor;
+          _error = null;
+        });
+      }
     } catch (error) {
       if (mounted) setState(() => _error = error);
     } finally {
@@ -3525,9 +3578,10 @@ class _RecipeHistoryPageState extends ConsumerState<RecipeHistoryPage> {
     Widget body;
     if (_loading) {
       body = const Center(child: CircularProgressIndicator());
-    } else if (_error != null && _items.isEmpty) {
+    } else if (_error != null &&
+        (_selecting ? _candidates.isEmpty : _items.isEmpty)) {
       body = _RecipeError(message: l10n.recipeLoadError, onRetry: _loadFirst);
-    } else if (_items.isEmpty) {
+    } else if ((_selecting ? _candidates.isEmpty : _items.isEmpty)) {
       body = Center(child: Text(l10n.recipeNoHistory));
     } else {
       body = ListView(
@@ -3539,74 +3593,84 @@ class _RecipeHistoryPageState extends ConsumerState<RecipeHistoryPage> {
               children: [
                 OutlinedButton(
                   key: const ValueKey('recipe-select-comparison'),
-                  onPressed: () => setState(() {
-                    _selecting = !_selecting;
-                    _selected.clear();
-                  }),
-                  child: Text(_selecting ? '取消选择' : '选两版对比'),
+                  onPressed: _loadingMore ? null : _toggleSelection,
+                  child: Text(
+                    _selecting
+                        ? l10n.recipeComparisonCancelSelection
+                        : l10n.recipeComparisonSelect,
+                  ),
                 ),
                 if (_selecting) ...[
-                  const Text('先选 A，再选 B；方向为 A 到 B，仅比较食材'),
+                  Text(l10n.recipeComparisonSelectionHint),
                   FilledButton(
                     key: const ValueKey('recipe-compare-selected'),
                     onPressed: _selected.length == 2
                         ? () => _compare(_selected[0], _selected[1])
                         : null,
-                    child: const Text('比较食材'),
+                    child: Text(l10n.recipeComparisonAction),
                   ),
                 ],
               ],
             ),
           ),
-          for (final item in _items)
-            ListTile(
-              key: ValueKey('recipe-version-${item.versionNumber}'),
-              title: Text(
-                l10n.recipeVersionTitle(
-                  item.versionNumber,
-                  item.aiAssisted ? l10n.recipeAiAssisted : '',
+          if (_selecting)
+            for (final item in _candidates)
+              CheckboxListTile(
+                key: ValueKey('recipe-candidate-select-${item.id}'),
+                title: Text(
+                  l10n.recipeComparisonCandidate(
+                    item.author,
+                    item.recipeId.substring(0, 8),
+                    item.versionNumber,
+                  ),
+                ),
+                subtitle: Text(
+                  '${item.changeNote.isEmpty ? l10n.recipeNoChangeNote : item.changeNote}\n${l10n.recipeVersionDate(_formatDate(context, item.createdAt))}',
+                ),
+                value: _selected.contains(item.id),
+                onChanged: _selected.length < 2 || _selected.contains(item.id)
+                    ? (selected) => setState(() {
+                        if (selected == true) {
+                          _selected.add(item.id);
+                        } else {
+                          _selected.remove(item.id);
+                        }
+                      })
+                    : null,
+                controlAffinity: ListTileControlAffinity.leading,
+              ),
+          if (!_selecting)
+            for (final item in _items)
+              ListTile(
+                key: ValueKey('recipe-version-${item.versionNumber}'),
+                title: Text(
+                  l10n.recipeVersionTitle(
+                    item.versionNumber,
+                    item.aiAssisted ? l10n.recipeAiAssisted : '',
+                  ),
+                ),
+                subtitle: Text(
+                  '${item.changeNote.isEmpty ? l10n.recipeNoChangeNote : item.changeNote}\n${l10n.recipeVersionDate(_formatDate(context, item.createdAt))}',
+                  style: GramTreeColors.of(context).numberStyle(
+                    Theme.of(context).textTheme.bodyMedium ?? const TextStyle(),
+                  ),
+                ),
+                isThreeLine: true,
+                trailing: item.previousVersionId != null
+                    ? IconButton(
+                        key: ValueKey(
+                          'recipe-compare-previous-${item.versionNumber}',
+                        ),
+                        tooltip: l10n.recipeComparisonPrevious,
+                        icon: const Icon(Icons.compare_arrows),
+                        onPressed: () =>
+                            _compare(item.previousVersionId!, item.id),
+                      )
+                    : const Icon(Icons.chevron_right),
+                onTap: () => context.push(
+                  '/recipes/${widget.recipeId}/versions/${item.id}',
                 ),
               ),
-              subtitle: Text(
-                '${item.changeNote.isEmpty ? l10n.recipeNoChangeNote : item.changeNote}\n${l10n.recipeVersionDate(_formatDate(context, item.createdAt))}',
-                style: GramTreeColors.of(context).numberStyle(
-                  Theme.of(context).textTheme.bodyMedium ?? const TextStyle(),
-                ),
-              ),
-              isThreeLine: true,
-              leading: _selecting
-                  ? Checkbox(
-                      key: ValueKey(
-                        'recipe-compare-select-${item.versionNumber}',
-                      ),
-                      value: _selected.contains(item.id),
-                      onChanged:
-                          _selected.length < 2 || _selected.contains(item.id)
-                          ? (selected) => setState(() {
-                              if (selected == true) {
-                                _selected.add(item.id);
-                              } else {
-                                _selected.remove(item.id);
-                              }
-                            })
-                          : null,
-                    )
-                  : null,
-              trailing: !_selecting && item.previousVersionId != null
-                  ? IconButton(
-                      key: ValueKey(
-                        'recipe-compare-previous-${item.versionNumber}',
-                      ),
-                      tooltip: '和上一版比食材',
-                      icon: const Icon(Icons.compare_arrows),
-                      onPressed: () =>
-                          _compare(item.previousVersionId!, item.id),
-                    )
-                  : const Icon(Icons.chevron_right),
-              onTap: () => context.push(
-                '/recipes/${widget.recipeId}/versions/${item.id}',
-              ),
-            ),
           if (_nextCursor != null)
             Padding(
               padding: const EdgeInsets.all(16),

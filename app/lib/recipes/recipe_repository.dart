@@ -89,6 +89,14 @@ class RecipeRepository {
     toVersionId: toVersionId,
   )).data!;
 
+  Future<RecipeComparisonCandidates> comparisonCandidatesPage(
+    String recipeId, {
+    String? cursor,
+  }) async => (await _recipes.listRecipeComparisonCandidates(
+    recipeId: recipeId,
+    cursor: cursor,
+  )).data!;
+
   /// Fetch a server conversion when the caller needs a shareable/public result.
   /// Recipe details use the same pure kernel locally so this is not required for
   /// the offline serving control.

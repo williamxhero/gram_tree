@@ -14,4 +14,29 @@ import '../features/tab_paths.dart';
 const Map<String, String> registeredPages = {
   'create': TabPaths.create,
   'my_recipes': RecipeListPage.path,
+  'personal_measures': '/me/measures',
 };
+
+bool isRecipeId(Object? value) =>
+    value is String &&
+    RegExp(
+      r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-4[0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$',
+    ).hasMatch(value);
+
+/// Parameterized pages are registered alongside the fixed route allowlist.
+/// IDs are validated before interpolation; arbitrary paths/URLs are never used.
+String? registeredPagePath(Map<String, dynamic> params) {
+  final page = params['page'];
+  if (page is! String) return null;
+  if (registeredPages.containsKey(page)) return registeredPages[page];
+  if (!isRecipeId(params['recipe_id'])) return null;
+  if (page == 'recipe_version' && isRecipeId(params['version_id'])) {
+    return '/recipes/${params['recipe_id']}/versions/${params['version_id']}';
+  }
+  if (page == 'ingredient_comparison' &&
+      isRecipeId(params['from_version_id']) &&
+      isRecipeId(params['to_version_id'])) {
+    return '/recipes/${params['recipe_id']}/compare?from=${params['from_version_id']}&to=${params['to_version_id']}';
+  }
+  return null;
+}

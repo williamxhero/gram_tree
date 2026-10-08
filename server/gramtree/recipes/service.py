@@ -55,6 +55,8 @@ from gramtree.recipes.schemas import (
     MoldSpec,
     NutritionEstimate,
     RecipeAuthor,
+    RecipeComparisonCandidate,
+    RecipeComparisonCandidates,
     RecipeCreate,
     RecipeDerived,
     RecipeDetail,
@@ -1761,6 +1763,60 @@ def list_versions(
         items=[
             RecipeVersionSummary(
                 id=row.id,
+                version_number=row.version_number,
+                previous_version_id=row.previous_version_id,
+                change_note=row.change_note,
+                ai_assisted=row.ai_assisted,
+                created_at=row.created_at,
+            )
+            for row in rows
+        ],
+        next_cursor=encode_cursor(rows[-1].created_at, rows[-1].id) if has_more and rows else None,
+    )
+
+
+def list_comparison_candidates(
+    session: Session,
+    owner: User,
+    recipe_id: uuid.UUID,
+    *,
+    cursor: str | None,
+    limit: int,
+    maximum: int,
+) -> RecipeComparisonCandidates:
+    anchor = _owned_recipe(session, owner, recipe_id)
+    if limit > maximum:
+        raise ApiError(422, "invalid_request", "请求参数有误", f"limit 不能超过 {maximum}")
+    query = (
+        select(RecipeVersion)
+        .join(Recipe, RecipeVersion.recipe_id == Recipe.id)
+        .where(Recipe.dish_id == anchor.dish_id, Recipe.owner_id == owner.id)
+    )
+    # Current visibility is owned-only, exactly like compare_ingredients; public
+    # versions are a later capability and must not leak through this picker.
+    if cursor:
+        timestamp, row_id = decode_cursor(cursor)
+        query = query.where(
+            or_(
+                RecipeVersion.created_at < timestamp,
+                (RecipeVersion.created_at == timestamp) & (RecipeVersion.id < row_id),
+            )
+        )
+    rows = list(
+        session.scalars(
+            query.order_by(RecipeVersion.created_at.desc(), RecipeVersion.id.desc()).limit(
+                limit + 1
+            )
+        )
+    )
+    has_more = len(rows) > limit
+    rows = rows[:limit]
+    return RecipeComparisonCandidates(
+        items=[
+            RecipeComparisonCandidate(
+                id=row.id,
+                recipe_id=row.recipe_id,
+                author=owner.nickname,
                 version_number=row.version_number,
                 previous_version_id=row.previous_version_id,
                 change_note=row.change_note,

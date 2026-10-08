@@ -40,9 +40,9 @@ class IntentDispatcher {
 
   final Ref _ref;
 
-  Future<void> dispatch(
+  Future<Object?> dispatch(
     BuildContext context, {
-    required String compositionId,
+    String? compositionId,
     required String componentId,
     required ActionDescriptor action,
   }) async {
@@ -54,23 +54,29 @@ class IntentDispatcher {
     // 给"测试直接构造 ComponentDescriptor、绕开协议 Schema 校验"这种情况兜底
     // （component_scaffold.dart 顶部注释提到过这个口子）——不合法就安静地什么都
     // 不做，不抛异常、不影响界面。
-    if (spec == null || !spec.validateParams(params)) return;
+    if (spec == null || !spec.validateParams(params)) return null;
 
-    _ref.read(sourceCompositionIdProvider.notifier).set(compositionId);
+    // Fixed editor surfaces have no server composition; do not invent one.
+    if (compositionId != null) {
+      _ref.read(sourceCompositionIdProvider.notifier).set(compositionId);
+    }
 
     await _ref
         .read(eventRecorderProvider)
         .record(
           eventType: 'ui.component_action',
           typeVersion: 1,
-          correlation: EventCorrelationIds(uiCompositionId: compositionId),
+          correlation: compositionId == null
+              ? null
+              : EventCorrelationIds(uiCompositionId: compositionId),
           content: {'component_id': componentId, 'intent': action.intent},
         );
 
     final handler = spec.handler;
     if (handler != null && context.mounted) {
-      await handler(context, _ref, params);
+      return await handler(context, _ref, params);
     }
+    return null;
   }
 }
 

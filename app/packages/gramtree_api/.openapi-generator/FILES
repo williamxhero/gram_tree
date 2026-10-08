@@ -107,6 +107,8 @@ lib/src/model/purchase_unit.dart
 lib/src/model/purchase_units_attribute.dart
 lib/src/model/question.dart
 lib/src/model/recipe_author.dart
+lib/src/model/recipe_comparison_candidate.dart
+lib/src/model/recipe_comparison_candidates.dart
 lib/src/model/recipe_create.dart
 lib/src/model/recipe_derived.dart
 lib/src/model/recipe_detail.dart

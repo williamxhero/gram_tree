@@ -11,7 +11,10 @@ from tests.test_recipes import recipe_input
 STANDARD_ID = "00000000-0000-4000-8000-000000000137"
 
 
-def test_library_flavor_is_adopted_and_saved_as_recipe_data(api: Api, tmp_path: Path) -> None:
+@pytest.mark.parametrize("cleared_profile", [None, {}, {"salty": None, "umami": None}])
+def test_library_flavor_is_adopted_and_saved_as_recipe_data(
+    api: Api, tmp_path: Path, cleared_profile: dict | None
+) -> None:
     _write(
         tmp_path,
         "137.1.0",
@@ -113,10 +116,29 @@ def test_library_flavor_is_adopted_and_saved_as_recipe_data(api: Api, tmp_path: 
     assert chosen["flavor_contribution"]["umami"] == 3
     assert chosen["flavor_source"]["source"] == "author_filled"
     assert chosen["functional"] is False
-    override["snapshot"]["ingredients"][0]["flavor_contribution"] = None
+    override["snapshot"]["ingredients"][0]["flavor_contribution"] = cleared_profile
     cleared = api.client.post(f"/v1/recipes/{saved['id']}/versions", json=override, headers=headers)
     assert cleared.status_code == 201, cleared.text
-    assert cleared.json()["version"]["snapshot"]["ingredients"][0]["flavor_contribution"] is None
+    cleared_item = cleared.json()["version"]["snapshot"]["ingredients"][0]
+    assert cleared_item["flavor_contribution"] is None
+    assert cleared_item["flavor_source"] is None
+    comparison = api.client.get(
+        f"/v1/recipes/{saved['id']}/compare",
+        params={
+            "from_version_id": overridden.json()["version"]["id"],
+            "to_version_id": cleared.json()["version"]["id"],
+        },
+        headers=headers,
+    )
+    assert comparison.status_code == 200, comparison.text
+    flavor_changes = [
+        change
+        for change in comparison.json()["ingredients"][0]["changes"]
+        if change["field"] == "flavor_contribution"
+    ]
+    assert len(flavor_changes) == 1
+    assert flavor_changes[0]["before"]["salty"] == 0
+    assert flavor_changes[0]["after"] is None
     # Editing an older version uses that baseline, not the current version.
     old_client["base_version_id"] = saved["version"]["id"]
     from_old = api.client.post(
@@ -158,7 +180,7 @@ def test_author_contribution_unknown_zero_and_false_survive_versions(
     assert created.status_code == 201, created.text
     saved = created.json()
     item = saved["version"]["snapshot"]["ingredients"][0]
-    if contribution is None:
+    if contribution is None or not contribution:
         assert item["flavor_contribution"] is None
         assert item["flavor_source"] is None
     else:
@@ -182,6 +204,39 @@ def test_author_contribution_unknown_zero_and_false_survive_versions(
         api.client.post(f"/v1/recipes/{saved['id']}/versions", json=body, headers=other).status_code
         == 404
     )
+
+
+@pytest.mark.parametrize("unknown", [{}, {"salty": None, "umami": None}])
+def test_unchanged_unknown_profile_has_no_author_source_or_comparison_change(
+    api: Api, unknown: dict
+) -> None:
+    headers = bearer(api.login("unknown-profile@example.com"))
+    body = recipe_input("未知贡献")
+    body["snapshot"]["ingredients"][0]["flavor_contribution"] = None
+    created = api.client.post("/v1/recipes", json=body, headers=headers).json()
+    snapshot = created["version"]["snapshot"]
+    item = snapshot["ingredients"][0]
+    item["flavor_contribution"] = unknown
+    item.pop("flavor_source")  # Generated clients omit null properties.
+    saved_response = api.client.post(
+        f"/v1/recipes/{created['id']}/versions",
+        json={"base_version_id": created["version"]["id"], "snapshot": snapshot},
+        headers=headers,
+    )
+    assert saved_response.status_code == 201, saved_response.text
+    saved = saved_response.json()
+    assert saved["version"]["snapshot"]["ingredients"][0]["flavor_contribution"] is None
+    assert saved["version"]["snapshot"]["ingredients"][0]["flavor_source"] is None
+    comparison = api.client.get(
+        f"/v1/recipes/{created['id']}/compare",
+        params={
+            "from_version_id": created["version"]["id"],
+            "to_version_id": saved["version"]["id"],
+        },
+        headers=headers,
+    )
+    assert comparison.status_code == 200, comparison.text
+    assert comparison.json()["ingredients"][0]["changes"] == []
 
 
 @pytest.mark.parametrize("axis", ["salty", "sweet", "sour", "spicy", "umami", "numbing", "oily"])

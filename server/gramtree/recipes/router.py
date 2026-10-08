@@ -18,6 +18,7 @@ from gramtree.recipes import service
 from gramtree.recipes.comparison import RecipeIngredientComparison, compare_ingredients
 from gramtree.recipes.schemas import (
     MoldSpec,
+    RecipeComparisonCandidates,
     RecipeCreate,
     RecipeDetail,
     RecipeImageOut,
@@ -225,6 +226,24 @@ def display_recipe_version_ingredients(
         version_id=version_id,
         target_servings=target_servings,
         target_mold=_parse_target_mold(target_mold),
+    )
+
+
+@router.get(
+    "/{recipe_id}/comparison-candidates",
+    response_model=RecipeComparisonCandidates,
+    responses=_errors(401, 404, 422),
+)
+def list_recipe_comparison_candidates(
+    recipe_id: IdV4, auth: CurrentAuth, session: SessionDep, page: PageDep
+) -> RecipeComparisonCandidates:
+    return service.list_comparison_candidates(
+        session,
+        auth.user,
+        recipe_id,
+        cursor=page.cursor,
+        limit=page.limit,
+        maximum=int(config.get(session, "api.page_size_max")),
     )
 
 

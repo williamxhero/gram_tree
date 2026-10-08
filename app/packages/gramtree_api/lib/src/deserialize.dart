@@ -82,6 +82,8 @@ import 'package:gramtree_api/src/model/purchase_unit.dart';
 import 'package:gramtree_api/src/model/purchase_units_attribute.dart';
 import 'package:gramtree_api/src/model/question.dart';
 import 'package:gramtree_api/src/model/recipe_author.dart';
+import 'package:gramtree_api/src/model/recipe_comparison_candidate.dart';
+import 'package:gramtree_api/src/model/recipe_comparison_candidates.dart';
 import 'package:gramtree_api/src/model/recipe_create.dart';
 import 'package:gramtree_api/src/model/recipe_derived.dart';
 import 'package:gramtree_api/src/model/recipe_detail.dart';
@@ -395,6 +397,12 @@ ReturnType deserialize<ReturnType, BaseType>(
       return Question.fromJson(value as Map<String, dynamic>) as ReturnType;
     case 'RecipeAuthor':
       return RecipeAuthor.fromJson(value as Map<String, dynamic>) as ReturnType;
+    case 'RecipeComparisonCandidate':
+      return RecipeComparisonCandidate.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'RecipeComparisonCandidates':
+      return RecipeComparisonCandidates.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
     case 'RecipeCreate':
       return RecipeCreate.fromJson(value as Map<String, dynamic>) as ReturnType;
     case 'RecipeDerived':

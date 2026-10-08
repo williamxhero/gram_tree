@@ -6,7 +6,7 @@
 
 from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+from pydantic import BaseModel, ConfigDict, Field, ValidationInfo, field_validator, model_validator
 
 from gramtree.core.ids import IdV4
 from gramtree.core.time import Timestamp
@@ -114,11 +114,26 @@ class RecipeIngredient(BaseModel):
         description="本人确认的量具换算凭据；基础量与来源不随量具校准改变",
     )
 
+    @field_validator("flavor_contribution")
+    @classmethod
+    def canonical_unknown_flavor(
+        cls, value: RecipeFlavorContribution | None
+    ) -> RecipeFlavorContribution | None:
+        # Empty/all-null profiles are explicit unknowns (including generated
+        # clients' clear action), never known zero or a request for defaults.
+        if value is not None and all(axis is None for axis in value.model_dump().values()):
+            return None
+        return value
+
     @field_validator("flavor_source", "functional_source")
     @classmethod
-    def contribution_not_verified(cls, value: ValueSource | None) -> ValueSource | None:
+    def contribution_not_verified(
+        cls, value: ValueSource | None, info: ValidationInfo
+    ) -> ValueSource | None:
         if value is not None and value.source == "verified":
             raise ValueError("食材库校对和作者填写不是做菜验证，不能标为已验证")
+        if info.field_name == "flavor_source" and info.data.get("flavor_contribution") is None:
+            return None
         return value
 
     @field_validator("display_name", "unit")
@@ -461,6 +476,16 @@ class RecipeVersionSummary(BaseModel):
     change_note: str
     ai_assisted: bool
     created_at: Timestamp
+
+
+class RecipeComparisonCandidate(RecipeVersionSummary):
+    recipe_id: IdV4
+    author: str
+
+
+class RecipeComparisonCandidates(BaseModel):
+    items: list[RecipeComparisonCandidate]
+    next_cursor: str | None = None
 
 
 class RecipeVersionHistory(BaseModel):

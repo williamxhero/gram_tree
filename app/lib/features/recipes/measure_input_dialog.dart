@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gramtree_api/gramtree_api.dart';
-import 'package:go_router/go_router.dart';
+
+import '../../app/theme.dart';
+import '../../ui_protocol/intent_dispatcher.dart';
 
 import '../../api/api_client.dart';
 import '../../l10n/app_localizations.dart';
@@ -72,18 +74,32 @@ class _MeasureInputDialogState extends ConsumerState<_MeasureInputDialog> {
       _error = null;
     });
     try {
-      final result = await repository.previewInput(
-        MeasureInputRequest(
-          measureId: _measureId!,
-          ingredientId: widget.ingredientId,
-          quantity: quantity,
-          baseUnit: _unit == 'g'
-              ? MeasureInputRequestBaseUnitEnum.g
-              : MeasureInputRequestBaseUnitEnum.ml,
-          acceptEstimate: acceptEstimate,
-        ),
+      final request = MeasureInputRequest(
+        measureId: _measureId!,
+        ingredientId: widget.ingredientId,
+        quantity: quantity,
+        baseUnit: _unit == 'g'
+            ? MeasureInputRequestBaseUnitEnum.g
+            : MeasureInputRequestBaseUnitEnum.ml,
+        acceptEstimate: acceptEstimate,
       );
-      if (mounted && revision == _revision) setState(() => _preview = result);
+      final result = await ref
+          .read(intentDispatcherProvider)
+          .dispatch(
+            context,
+            compositionId: CompositionIdScope.of(context),
+            componentId: 'measure-input-preview',
+            action: ActionDescriptor(
+              intent: 'call_operation',
+              params: {
+                'operation': 'preview_measure_input',
+                'input': request.toJson(),
+              },
+            ),
+          );
+      if (mounted && revision == _revision && result is MeasureInputOut) {
+        setState(() => _preview = result);
+      }
     } catch (error) {
       if (mounted && revision == _revision) {
         final failure = ApiFailure.from(error);
@@ -101,6 +117,8 @@ class _MeasureInputDialogState extends ConsumerState<_MeasureInputDialog> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
+    final numbers = GramTreeColors.of(context)
+        .numberStyle(Theme.of(context).textTheme.bodyMedium!);
     final measures = ref.watch(personalMeasuresProvider);
     final tools = measures.asData?.value ?? const <PersonalMeasureOut>[];
     if (_measureId == null && tools.isNotEmpty) _measureId = tools.first.id;
@@ -117,13 +135,20 @@ class _MeasureInputDialogState extends ConsumerState<_MeasureInputDialog> {
               Text(l10n.measureInputUnchanged),
               TextButton(
                 key: const ValueKey('measure-input-manage'),
-                onPressed: () async {
-                  // Close the modal before visiting the existing management page;
-                  // the author can reopen input without losing the editor draft.
-                  final router = GoRouter.of(context);
-                  Navigator.pop(context);
-                  await router.push('/me/measures');
-                },
+                onPressed: () => ref
+                    .read(intentDispatcherProvider)
+                    .dispatch(
+                      context,
+                      compositionId: CompositionIdScope.of(context),
+                      componentId: 'measure-input-manage',
+                      action: ActionDescriptor(
+                        intent: 'open_page',
+                        params: {
+                          'page': 'personal_measures',
+                          'close_dialog': true,
+                        },
+                      ),
+                    ),
                 child: Text(l10n.recipeMeasureManage),
               ),
               if (measures.isLoading) const LinearProgressIndicator(),
@@ -135,13 +160,18 @@ class _MeasureInputDialogState extends ConsumerState<_MeasureInputDialog> {
               if (tools.isNotEmpty) ...[
                 DropdownButtonFormField<String>(
                   key: const ValueKey('measure-input-tool'),
+                  isExpanded: true,
+                  itemHeight: null,
                   initialValue: _measureId,
                   decoration: InputDecoration(labelText: l10n.measureInputTool),
                   items: [
                     for (final tool in tools)
                       DropdownMenuItem(
                         value: tool.id,
-                        child: Text('${tool.name} · ${tool.capacityMl} ml'),
+                        child: Text(
+                          '${tool.name} · ${tool.capacityMl} ml',
+                          style: numbers,
+                        ),
                       ),
                   ],
                   onChanged: (value) {
@@ -194,6 +224,7 @@ class _MeasureInputDialogState extends ConsumerState<_MeasureInputDialog> {
                 if (preview.baseQuantity != null)
                   Text(
                     '${preview.baseQuantity!.toDouble().toString().replaceFirst(RegExp(r'\.0$'), '')} ${preview.baseUnit.value}',
+                    style: numbers,
                   ),
                 Text(preview.basis),
                 SourceMark(
@@ -206,7 +237,9 @@ class _MeasureInputDialogState extends ConsumerState<_MeasureInputDialog> {
                   basisText: preview.basis,
                   required: false,
                   feedbackEnabled: false,
-                  neutral: true,
+                  neutral:
+                      preview.quantitySource?.source_ !=
+                      ValueSourceSource_Enum.aiEstimated,
                   showWhenAuthorFilled: true,
                   labelOverride: l10n.measureInputEvidence,
                   onAction: null,
@@ -235,7 +268,20 @@ class _MeasureInputDialogState extends ConsumerState<_MeasureInputDialog> {
           key: const ValueKey('measure-input-confirm'),
           onPressed:
               preview?.status == MeasureInputOutStatusEnum.ready && !_loading
-              ? () => Navigator.pop(context, preview)
+              ? () => ref
+                    .read(intentDispatcherProvider)
+                    .dispatch(
+                      context,
+                      compositionId: CompositionIdScope.of(context),
+                      componentId: 'measure-input-confirm',
+                      action: ActionDescriptor(
+                        intent: 'call_operation',
+                        params: {
+                          'operation': 'confirm_measure_input',
+                          'input': preview!.toJson(),
+                        },
+                      ),
+                    )
               : null,
           child: Text(l10n.measureInputConfirm),
         ),

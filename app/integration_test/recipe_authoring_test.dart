@@ -364,9 +364,9 @@ void main() {
       );
       await tester.tap(find.byKey(const ValueKey('recipe-select-comparison')));
       await settle(tester);
-      await tester.tap(find.byKey(const ValueKey('recipe-compare-select-1')));
+      await tester.tap(find.textContaining('· 第 1 版'));
       await settle(tester);
-      await tester.tap(find.byKey(const ValueKey('recipe-compare-select-2')));
+      await tester.tap(find.textContaining('· 第 2 版'));
       await settle(tester);
       await tester.tap(find.byKey(const ValueKey('recipe-compare-selected')));
       await waitFor(

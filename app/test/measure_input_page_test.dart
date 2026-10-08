@@ -6,8 +6,18 @@ import 'helpers.dart';
 
 const _measureId = '44444444-4444-4444-8444-444444444444';
 
-Future<void> _open(WidgetTester tester, FakeServer server) async {
-  await pumpApp(tester, env: TestEnv.signedIn(server: server));
+Future<void> _open(
+  WidgetTester tester,
+  FakeServer server, {
+  Brightness brightness = Brightness.light,
+  double textScale = 1,
+}) async {
+  await pumpApp(
+    tester,
+    env: TestEnv.signedIn(server: server),
+    brightness: brightness,
+    textScale: textScale,
+  );
   await tester.tap(find.byKey(const ValueKey('primary-create-button')));
   await tester.pumpAndSettle();
   await tester.tap(find.byKey(const ValueKey('create-recipe-entry')));
@@ -75,6 +85,37 @@ FakeServer _server({String status = 'ready'}) {
 }
 
 void main() {
+  for (final brightness in Brightness.values) {
+    for (final scale in [1.3, 1.6]) {
+      testWidgets('量具换算可读且可采用 $brightness $scale', (tester) async {
+        await _open(
+          tester,
+          _server(),
+          brightness: brightness,
+          textScale: scale,
+        );
+        expect(find.text('白瓷勺 · 12 ml'), findsOneWidget);
+        await tester.enterText(
+          find.byKey(const ValueKey('measure-input-count')),
+          '2',
+        );
+        await tester.ensureVisible(
+          find.byKey(const ValueKey('measure-input-preview')),
+        );
+        await tester.tap(find.byKey(const ValueKey('measure-input-preview')));
+        await tester.pumpAndSettle();
+        expect(find.text('24 ml'), findsOneWidget);
+        await tester.ensureVisible(
+          find.byKey(const ValueKey('measure-input-confirm')),
+        );
+        await tester.tap(find.byKey(const ValueKey('measure-input-confirm')));
+        await tester.pumpAndSettle();
+        expect(find.textContaining(RegExp(r'^24(?:\.0)?$')), findsOneWidget);
+        expect(find.text('2 白瓷勺'), findsOneWidget);
+        expect(tester.takeException(), isNull);
+      });
+    }
+  }
   testWidgets('量具预览取消不改用量，确认后显示基础量和原始依据', (tester) async {
     final server = _server();
     await _open(tester, server);
@@ -102,7 +143,7 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('measure-input-confirm')));
     await tester.pumpAndSettle();
     expect(find.text('2 白瓷勺'), findsOneWidget);
-    expect(find.widgetWithText(TextFormField, '24.0'), findsOneWidget);
+    expect(find.textContaining(RegExp(r'^24(?:\.0)?$')), findsOneWidget);
     expect(find.widgetWithText(TextFormField, 'ml'), findsOneWidget);
     await tester.tap(find.text('量具输入依据'));
     await tester.pumpAndSettle();
@@ -132,7 +173,13 @@ void main() {
     expect(find.text('量具用量换算'), findsOneWidget);
     await tester.tap(find.byKey(const ValueKey('measure-input-cancel')));
     await tester.pumpAndSettle();
-    expect(find.widgetWithText(TextFormField, '0.0'), findsWidgets);
+    expect(
+      find.descendant(
+        of: find.byKey(const ValueKey('recipe-ingredient-quantity')),
+        matching: find.textContaining(RegExp(r'^0(?:\.0)?$')),
+      ),
+      findsOneWidget,
+    );
   });
 
   testWidgets('估算需要额外知情确认，修改数量会使已预览结果失效', (tester) async {
@@ -172,19 +219,23 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('measure-input-preview')));
     await tester.pumpAndSettle();
     final confirm = find.byKey(const ValueKey('measure-input-confirm'));
-    expect(tester.widget<FilledButton>(confirm).onPressed, isNull);
+    await tester.tap(confirm);
+    await tester.pumpAndSettle();
+    expect(find.text('量具用量换算'), findsOneWidget);
     expect(find.textContaining('未经校对'), findsWidgets);
     await tester.tap(
       find.byKey(const ValueKey('measure-input-accept-estimate')),
     );
     await tester.pumpAndSettle();
-    expect(tester.widget<FilledButton>(confirm).onPressed, isNotNull);
+    expect(find.text('18 g'), findsOneWidget);
     await tester.enterText(
       find.byKey(const ValueKey('measure-input-count')),
       '3',
     );
     await tester.pumpAndSettle();
-    expect(tester.widget<FilledButton>(confirm).onPressed, isNull);
+    await tester.tap(confirm);
+    await tester.pumpAndSettle();
+    expect(find.text('量具用量换算'), findsOneWidget);
     expect(find.text('18 g'), findsNothing);
     await tester.enterText(
       find.byKey(const ValueKey('measure-input-count')),
@@ -198,7 +249,7 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(confirm);
     await tester.pumpAndSettle();
-    expect(find.widgetWithText(TextFormField, '18.0'), findsOneWidget);
+    expect(find.textContaining(RegExp(r'^18(?:\.0)?$')), findsOneWidget);
     expect(find.widgetWithText(TextFormField, 'g'), findsOneWidget);
     expect(find.text('2 白瓷勺'), findsOneWidget);
   });
