@@ -4,6 +4,7 @@ No ordinary profile, export or AI projection includes this data. Callers hold th
 stable owner lock (locked_profile); no plaintext is persisted, cached or logged.
 Future consumers must use read_sensitive and erase_sensitive, not direct tables.
 """
+
 import base64
 import json
 import os
@@ -46,16 +47,22 @@ def erase_sensitive(session: Session, owner_id: uuid.UUID) -> None:
         TasteProfileChange.owner_id == owner_id, TasteProfileChange.field == "allergies"
     )
     session.execute(delete(Event).where(Event.user_id == owner_id, Event.id.in_(changes)))
-    session.execute(delete(TasteProfileChange).where(
-        TasteProfileChange.owner_id == owner_id, TasteProfileChange.field == "allergies"
-    ))
+    session.execute(
+        delete(TasteProfileChange).where(
+            TasteProfileChange.owner_id == owner_id, TasteProfileChange.field == "allergies"
+        )
+    )
     session.execute(delete(OwnerAllergies).where(OwnerAllergies.owner_id == owner_id))
 
 
 def refresh_authorization(session: Session, profile: TasteProfile, now: datetime) -> None:
-    records = list(session.scalars(select(Consent).where(
-        Consent.user_id == profile.owner_id, Consent.kind == "sensitive_personal_info"
-    )))
+    records = list(
+        session.scalars(
+            select(Consent).where(
+                Consent.user_id == profile.owner_id, Consent.kind == "sensitive_personal_info"
+            )
+        )
+    )
     withdrawals = [r for r in records if r.action == "withdraw"]
     # Server receipt is a revocation barrier: late offline grants dated before it
     # cannot revive consent. Same-time withdrawal always wins. Future grants are
@@ -63,11 +70,17 @@ def refresh_authorization(session: Session, profile: TasteProfile, now: datetime
     # Receipt is authoritative for withdrawal, even if a device clock is in the
     # future. Never let an uploaded timestamp poison all later genuine grants.
     barrier = max((r.received_at for r in withdrawals), default=None)
-    grants = [r for r in records if (
-        r.action == "agree" and r.version == CONSENT_VERSION
-        and r.occurred_at <= r.received_at and r.occurred_at <= now
-        and (barrier is None or r.occurred_at > barrier)
-    )]
+    grants = [
+        r
+        for r in records
+        if (
+            r.action == "agree"
+            and r.version == CONSENT_VERSION
+            and r.occurred_at <= r.received_at
+            and r.occurred_at <= now
+            and (barrier is None or r.occurred_at > barrier)
+        )
+    ]
     latest = max(grants, key=lambda r: (r.occurred_at, r.received_at, str(r.id)), default=None)
     grant_id = latest.id if latest else None
     if grant_id != profile.sensitive_consent_id:
@@ -103,7 +116,9 @@ def encrypt(settings: Settings, owner_id: uuid.UUID, slot: str, value: dict) -> 
     )
 
 
-def decrypt(settings: Settings, owner_id: uuid.UUID, slot: str, ciphertext: bytes) -> dict[str, Any]:
+def decrypt(
+    settings: Settings, owner_id: uuid.UUID, slot: str, ciphertext: bytes
+) -> dict[str, Any]:
     try:
         raw = _cipher(settings).decrypt(ciphertext[:12], ciphertext[12:], _aad(owner_id, slot))
         return json.loads(raw)
@@ -118,12 +133,21 @@ def read_sensitive(session: Session, profile: TasteProfile, settings: Settings) 
     return decrypt(settings, profile.owner_id, "current", row.ciphertext) if row else EMPTY
 
 
-def mutate_sensitive(session: Session, profile: TasteProfile, settings: Settings, *,
-                     consent_id: uuid.UUID, authorization_version: int,
-                     categories: list[str], ingredient_ids: list[uuid.UUID]) -> None:
+def mutate_sensitive(
+    session: Session,
+    profile: TasteProfile,
+    settings: Settings,
+    *,
+    consent_id: uuid.UUID,
+    authorization_version: int,
+    categories: list[str],
+    ingredient_ids: list[uuid.UUID],
+) -> None:
     require_grant(profile)
-    if (consent_id != profile.sensitive_consent_id
-            or authorization_version != profile.sensitive_authorization_version):
+    if (
+        consent_id != profile.sensitive_consent_id
+        or authorization_version != profile.sensitive_authorization_version
+    ):
         raise ApiError(409, "sensitive_authorization_changed", "授权已变化，请重新打开过敏设置")
     old = read_sensitive(session, profile, settings)
     if any(category not in GB_ALLERGENS for category in categories):
@@ -134,8 +158,14 @@ def mutate_sensitive(session: Session, profile: TasteProfile, settings: Settings
         # Unlike ordinary preference alias resolution, require the actual canonical ID.
         if ingredient is None or ingredient.id != ingredient_id:
             raise ApiError(422, "invalid_request", "请重新搜索选择标准食材")
-        ingredients[str(ingredient.id)] = {"ingredient_id": str(ingredient.id), "name": ingredient.standard_name}
-    new = {"categories": sorted(set(categories)), "ingredients": [ingredients[k] for k in sorted(ingredients)]}
+        ingredients[str(ingredient.id)] = {
+            "ingredient_id": str(ingredient.id),
+            "name": ingredient.standard_name,
+        }
+    new = {
+        "categories": sorted(set(categories)),
+        "ingredients": [ingredients[k] for k in sorted(ingredients)],
+    }
     if old == new:
         return
     change_id = new_id()
@@ -149,18 +179,32 @@ def mutate_sensitive(session: Session, profile: TasteProfile, settings: Settings
         session.add(OwnerAllergies(owner_id=profile.owner_id, ciphertext=current_ciphertext))
     else:
         row.ciphertext = current_ciphertext
-    session.add(TasteProfileChange(
-        id=change_id, profile_id=profile.id, owner_id=profile.owner_id,
-        version=profile.version, field="allergies",
-        old_value={"encrypted": base64.b64encode(old_ciphertext).decode()},
-        new_value={"encrypted": base64.b64encode(new_ciphertext).decode()},
-        source="manual", reason="你手动修改", status="active", created_at=profile.updated_at,
-    ))
+    session.add(
+        TasteProfileChange(
+            id=change_id,
+            profile_id=profile.id,
+            owner_id=profile.owner_id,
+            version=profile.version,
+            field="allergies",
+            old_value={"encrypted": base64.b64encode(old_ciphertext).decode()},
+            new_value={"encrypted": base64.b64encode(new_ciphertext).decode()},
+            source="manual",
+            reason="你手动修改",
+            status="active",
+            created_at=profile.updated_at,
+        )
+    )
     record_taste_profile_changed(session, profile.owner_id, change_id, now=profile.updated_at)
 
 
-def change_values(settings: Settings, owner_id: uuid.UUID, row: TasteProfileChange) -> dict[str, Any]:
+def change_values(
+    settings: Settings, owner_id: uuid.UUID, row: TasteProfileChange
+) -> dict[str, Any]:
     return {
-        "old_value": decrypt(settings, owner_id, f"change:{row.id}:old", base64.b64decode(row.old_value["encrypted"])),
-        "new_value": decrypt(settings, owner_id, f"change:{row.id}:new", base64.b64decode(row.new_value["encrypted"])),
+        "old_value": decrypt(
+            settings, owner_id, f"change:{row.id}:old", base64.b64decode(row.old_value["encrypted"])
+        ),
+        "new_value": decrypt(
+            settings, owner_id, f"change:{row.id}:new", base64.b64decode(row.new_value["encrypted"])
+        ),
     }

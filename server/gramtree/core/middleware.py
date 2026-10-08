@@ -59,8 +59,10 @@ class RequestContextMiddleware:
                 logger.exception("unhandled error", exc_info=exc)
             if not response_started:
                 response = error_response(
-                    500, "internal_error", "服务暂时出了问题，请稍后再试",
-                    None if private else type(exc).__name__
+                    500,
+                    "internal_error",
+                    "服务暂时出了问题，请稍后再试",
+                    None if private else type(exc).__name__,
                 )
                 await response(scope, receive, send_wrapper)
         finally:

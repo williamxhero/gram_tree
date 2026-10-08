@@ -113,8 +113,9 @@ def install_error_handlers(app: FastAPI) -> None:
     async def _http(request: Request, exc: StarletteHTTPException) -> JSONResponse:
         code, message = _HTTP_CODES.get(exc.status_code, ("http_error", "请求失败"))
         detail = (
-            exc.detail if isinstance(exc.detail, str)
-            and not private_profile_boundary(request.url.path) else None
+            exc.detail
+            if isinstance(exc.detail, str) and not private_profile_boundary(request.url.path)
+            else None
         )
         return error_response(exc.status_code, code, message, detail)
 

@@ -45,13 +45,16 @@ def defaults(scale: TasteScale) -> dict[str, Any]:
     return {key: {"coefficient": scale.default, "confidence": "low"} for key in FLAVOR_KEYS}
 
 
-def locked_profile(session: Session, owner_id: uuid.UUID, scale: TasteScale) -> TasteProfile:
-    # Lock the stable owner row as well: SELECT FOR UPDATE on an absent profile
-    # cannot serialize two first reads. Unique owner_id remains a DB backstop.
+def lock_owner(session: Session, owner_id: uuid.UUID) -> None:
     owner_status = session.scalar(select(User.status).where(User.id == owner_id).with_for_update())
     # Auth was checked before acquiring this lock; deletion may have won the race.
     if owner_status != UserStatus.active:
         raise AccountUnavailable()
+
+
+def locked_profile(session: Session, owner_id: uuid.UUID, scale: TasteScale) -> TasteProfile:
+    # SELECT FOR UPDATE on an absent profile cannot serialize first reads.
+    lock_owner(session, owner_id)
     profile = session.scalar(
         select(TasteProfile)
         .where(TasteProfile.owner_id == owner_id)

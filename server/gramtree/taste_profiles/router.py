@@ -109,7 +109,8 @@ def get_taste_profile_change(
 ) -> TasteProfileChangeOut:
     row = session.scalar(
         select(TasteProfileChange).where(
-            TasteProfileChange.id == change_id, TasteProfileChange.owner_id == auth.user.id,
+            TasteProfileChange.id == change_id,
+            TasteProfileChange.owner_id == auth.user.id,
             TasteProfileChange.field != "allergies",
         )
     )
