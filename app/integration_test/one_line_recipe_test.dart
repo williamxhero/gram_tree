@@ -23,6 +23,17 @@ void main() {
     final finder = find.byKey(ValueKey(key));
     tester.testTextInput.hide();
     await tester.pump();
+    if (finder.evaluate().isEmpty) {
+      await tester.drag(
+        find
+            .byWidgetPredicate(
+              (w) => w is Scrollable && w.axisDirection == AxisDirection.down,
+            )
+            .first,
+        const Offset(0, 10000),
+      );
+      await tester.pumpAndSettle();
+    }
     await tester.scrollUntilVisible(
       finder,
       300,
@@ -132,6 +143,53 @@ void main() {
       );
       expect(find.text('宫保鸡丁'), findsWidgets);
       expect(find.text('AI 辅助 · 尚未做过验证'), findsOneWidget);
+      // #135: no cooking records, same confirmed immutable version, no chat.
+      for (final (question, label) in [
+        ('鸡肉为什么要炒熟？', '已回答 · 一般经验'),
+        ('这版用我没说明的锅会怎样？', '不确定 · 一般经验'),
+        ('预测明天的股票价格', '无法回答 · 一般经验'),
+        ('模拟解释超时，没有录好的回答', '能力不可用 · 一般经验'),
+        ('鸡肉为什么要炒熟？', '已回答 · 一般经验'),
+      ]) {
+        await tap(tester, 'recipe-answer-input');
+        await tester.enterText(
+          find.byKey(const ValueKey('recipe-answer-input')),
+          question,
+        );
+        await tap(tester, 'recipe-answer-submit');
+        await waitFor(tester, find.byKey(const ValueKey('recipe-answer-why')));
+        expect(find.text(label), findsOneWidget);
+        expect(find.textContaining('这是一般经验，还没有足够记录验证'), findsWidgets);
+        if (label.startsWith('能力不可用')) {
+          expect(find.textContaining('查看、表单编辑和规则换算仍可使用'), findsOneWidget);
+        }
+        await tester.tap(find.byKey(const ValueKey('recipe-answer-close')));
+        await tester.pumpAndSettle();
+        expect(find.text(question), findsOneWidget);
+      }
+      await tap(tester, 'recipe-serving-increase');
+      expect(find.text('3'), findsWidgets);
+      await tester.tap(find.byKey(const ValueKey('edit-recipe-button')));
+      await waitFor(
+        tester,
+        find.byKey(const ValueKey('recipe-editor-content')),
+      );
+      final confirmedQuantity = find.byKey(
+        const ValueKey('recipe-ingredient-quantity-chicken'),
+      );
+      await tester.scrollUntilVisible(
+        confirmedQuantity,
+        300,
+        scrollable: find
+            .byWidgetPredicate(
+              (w) => w is Scrollable && w.axisDirection == AxisDirection.down,
+            )
+            .first,
+      );
+      expect(
+        find.descendant(of: confirmedQuantity, matching: find.text('320')),
+        findsOneWidget,
+      );
       expect(tester.takeException(), isNull);
     }),
   );

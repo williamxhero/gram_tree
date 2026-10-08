@@ -43,7 +43,7 @@ for target in "${targets[@]}"; do
   "$FLUTTER" drive --timeout=300 --profile --no-web-resources-cdn \
     --driver=test_driver/integration_test.dart \
     --target="$target" \
-    -d web-server --browser-name=chrome --headless \
+    -d web-server --browser-name=chrome --headless --driver-port="$PORT" \
     ${CHROME_EXECUTABLE:+--chrome-binary="$CHROME_EXECUTABLE"} \
     --dart-define=APP_ENV=dev \
     --dart-define=API_BASE_URL="$API_BASE_URL" || status=1

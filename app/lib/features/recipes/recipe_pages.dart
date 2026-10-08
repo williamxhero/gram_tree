@@ -2123,12 +2123,6 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
             authoring: false,
             loading: false,
           ),
-          RecipeAnswerSection(
-            key: ValueKey(
-              'answer-${ref.watch(authProvider).value?.id}-${detail.version.id}',
-            ),
-            detail: detail,
-          ),
           _RecipePhotoDisplay(images: detail.version.images),
           if (widget.versionId == null)
             RecipePhotoPanel(
@@ -2259,6 +2253,14 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
                 contract: contractById[ingredient.id],
               ),
           ],
+          const SizedBox(height: 16),
+          // Preserve ordinary serving/ingredient visibility and trailing steps.
+          RecipeAnswerSection(
+            key: ValueKey(
+              'answer-${ref.watch(authProvider).value?.id}-${detail.version.id}',
+            ),
+            detail: detail,
+          ),
           const SizedBox(height: 20),
           Text(
             l10n.recipeStepsTitle,

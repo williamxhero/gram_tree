@@ -2576,7 +2576,10 @@ void main() {
     expect(find.byKey(const ValueKey('recipe-measure-picker')), findsNothing);
     expect(find.byKey(const ValueKey('recipe-measure-manage')), findsOneWidget);
 
-    await tester.tap(find.byKey(const ValueKey('recipe-measure-manage')));
+    final manage = find.byKey(const ValueKey('recipe-measure-manage'));
+    await _scrollUntilVisible(tester, manage);
+    expect(manage.hitTestable(), findsOneWidget);
+    await tester.tap(manage);
     await tester.pumpAndSettle();
     expect(find.byKey(const ValueKey('measure-add')), findsOneWidget);
   });

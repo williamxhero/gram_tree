@@ -35,6 +35,62 @@ def main() -> None:
         ("embedding", {"text": "宫保鸡丁"}, corpus["embedding"]),
         ("embedding", {"text": "宫保鸡丁 鸡腿肉 盐 鸡腿肉切丁 炒"}, corpus["embedding"]),
     ]
+    # The browser journey saves the synthetic draft after confirming 320 g.
+    # Use the public snapshot contract's defaults, never a production recording.
+    from gramtree.recipes.schemas import RecipeSnapshot
+
+    snapshot = RecipeSnapshot.model_validate(corpus["valid"]["recipe"]["snapshot"])
+    snapshot.ingredients[0].quantity = 320
+    context = {
+        "dish_name": "宫保鸡丁",
+        "servings": snapshot.servings,
+        "ingredients": [
+            item.model_dump(
+                mode="json",
+                include={
+                    "id",
+                    "display_name",
+                    "quantity",
+                    "unit",
+                    "preparation",
+                },
+            )
+            for item in snapshot.ingredients
+        ],
+        "steps": [
+            step.model_dump(
+                mode="json",
+                include={
+                    "id",
+                    "action",
+                    "instruction",
+                    "ingredient_ids",
+                    "duration_seconds",
+                    "heat",
+                    "temperature_celsius",
+                    "cookware",
+                    "doneness",
+                },
+            )
+            for step in snapshot.steps
+        ],
+    }
+    answers = json.loads((ROOT / "server/tests/fixtures/ai/answer_corpus.json").read_text("utf-8"))
+    for case in answers["cases"]:
+        records.append(
+            (
+                "explain",
+                {
+                    "stage": "recipe_question",
+                    "question": case["question"],
+                    "context": context,
+                    "basis": "general_experience",
+                    "evidence": None,
+                    "policy_version": "recipe-answer-v1",
+                },
+                case["output"],
+            )
+        )
     args.out.mkdir(parents=True, exist_ok=True)
     for capability, payload, output in records:
         canonical = json.dumps(

@@ -115,6 +115,15 @@ TestEnv env() {
 
 Future<void> tap(WidgetTester tester, String key, {double delta = 300}) async {
   final finder = find.byKey(ValueKey(key));
+  if (finder.evaluate().isEmpty) {
+    final scrollable = find
+        .byWidgetPredicate(
+          (w) => w is Scrollable && w.axisDirection == AxisDirection.down,
+        )
+        .first;
+    await tester.drag(scrollable, const Offset(0, 10000));
+    await tester.pumpAndSettle();
+  }
   await tester.scrollUntilVisible(
     finder,
     delta,
@@ -162,6 +171,44 @@ Future<void> open(WidgetTester tester, TestEnv environment) async {
 }
 
 void main() {
+  testWidgets('长版本滚回规则换算再返回时仍保留问题', (tester) async {
+    final environment = env();
+    final base = detail();
+    final longVersion = base.copyWith(
+      version: base.version.copyWith(
+        snapshot: base.version.snapshot.copyWith(
+          steps: [
+            for (var i = 0; i < 30; i++)
+              RecipeStep(
+                id: 'cook-$i',
+                instruction: '第 $i 步：鸡肉炒熟并检查中心温度。',
+                durationSeconds: 120,
+              ),
+          ],
+        ),
+      ),
+    );
+    environment.server.on(
+      'GET',
+      '/v1/recipes/$recipeId',
+      (_) => (200, longVersion.toJson()),
+    );
+    await open(tester, environment);
+    await tap(tester, 'recipe-answer-input');
+    await tester.enterText(
+      find.byKey(const ValueKey('recipe-answer-input')),
+      question,
+    );
+    await tap(tester, 'recipe-answer-submit');
+    await tester.tap(find.byKey(const ValueKey('recipe-answer-close')));
+    await tester.pumpAndSettle();
+    await tap(tester, 'recipe-serving-increase');
+    expect(find.text('3'), findsWidgets);
+    await tap(tester, 'recipe-answer-input');
+    expect(find.text(question), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('网络失败保留问题、安全和 AI 来源，不泄露内部错误', (tester) async {
     final environment = env();
     environment.server.on(
@@ -238,6 +285,8 @@ void main() {
     expect(find.text(question), findsOneWidget);
     await tap(tester, 'recipe-serving-increase');
     expect(find.text('3'), findsWidgets);
+    await tap(tester, 'recipe-answer-input');
+    expect(find.text(question), findsOneWidget);
     expect(environment.server.calls('POST', answerPath).length, 1);
     final request = environment.server.calls('POST', answerPath).single;
     expect(request.body, {'question': question});
