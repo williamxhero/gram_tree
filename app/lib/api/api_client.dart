@@ -161,12 +161,33 @@ class AuthInterceptor extends QueuedInterceptor {
   final Future<void> Function() onSessionExpired;
 
   static const _retried = 'auth_retried';
+  static const _originOwner = 'auth_origin_owner';
+
+  bool _sensitiveOriginMatches(RequestOptions options) {
+    final owner = options.extra['sensitive_account_id'];
+    if (owner == null) return true;
+    return session.current?.user.id == owner &&
+        identical(options.extra['sensitive_session'], session.current);
+  }
 
   @override
   void onRequest(RequestOptions options, RequestInterceptorHandler handler) {
+    if (!_sensitiveOriginMatches(options)) {
+      handler.reject(
+        DioException(
+          requestOptions: options,
+          type: DioExceptionType.cancel,
+          error: 'account_unavailable',
+        ),
+      );
+      return;
+    }
     final token = session.current?.accessToken;
     if (token != null && !options.headers.containsKey('Authorization')) {
       options.headers['Authorization'] = 'Bearer $token';
+    }
+    if (token != null) {
+      options.extra[_originOwner] = session.current!.user.id;
     }
     handler.next(options);
   }
@@ -180,24 +201,41 @@ class AuthInterceptor extends QueuedInterceptor {
     final current = session.current;
     if (code != 'token_expired' ||
         current == null ||
-        err.requestOptions.extra[_retried] == true) {
+        err.requestOptions.extra[_retried] == true ||
+        err.requestOptions.extra[_originOwner] != current.user.id ||
+        !_sensitiveOriginMatches(err.requestOptions)) {
       handler.next(err);
       return;
     }
+    var expected = current;
     try {
-      // 排队期间可能已经有别的请求续期成功了，直接用新的
+      // 排队期间可能已经有别的请求续期成功了，直接用新的。
       final sentWith = err.requestOptions.headers['Authorization'];
       if (sentWith == 'Bearer ${current.accessToken}') {
-        await session.save(await refresh(current.refreshToken));
+        final tokens = await refresh(current.refreshToken);
+        // A stale refresh must neither replace a new login nor replay an old
+        // owner-private mutation under that login (sensitive or ordinary).
+        if (!identical(session.current, current) ||
+            tokens.user.id != current.user.id) {
+          handler.next(err);
+          return;
+        }
+        final saving = session.save(tokens);
+        expected = session.current!;
+        await saving;
       }
     } catch (_) {
-      await onSessionExpired();
+      if (identical(session.current, expected)) await onSessionExpired();
+      handler.next(err);
+      return;
+    }
+    if (!identical(session.current, expected)) {
       handler.next(err);
       return;
     }
     final retry = err.requestOptions
       ..extra[_retried] = true
-      ..headers['Authorization'] = 'Bearer ${session.current!.accessToken}';
+      ..headers['Authorization'] = 'Bearer ${expected.accessToken}';
     try {
       handler.resolve(await retryDio.fetch<dynamic>(retry));
     } on DioException catch (e) {

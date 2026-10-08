@@ -7,6 +7,7 @@ import '../../app/theme.dart';
 import '../../auth/auth_controller.dart';
 import '../../auth/session.dart';
 import '../../l10n/app_localizations.dart';
+import '../../events/event_recorder.dart';
 import '../../ui_protocol/allergy_actions.dart';
 import '../../ui_protocol/components/component_scaffold.dart';
 import '../../ui_protocol/source_mark.dart';
@@ -116,6 +117,35 @@ class _AllergiesSectionState extends ConsumerState<AllergiesSection> {
     }
   }
 
+  Future<void> _openWhy(String changeId) async {
+    final account = ref.read(authProvider).value?.id;
+    final epoch = ref.read(sensitiveMemoryProvider).epoch;
+    if (account == null || ref.read(sensitiveMemoryProvider).suppressed) return;
+    try {
+      await ref
+          .read(eventRecorderProvider)
+          .record(
+            eventType: 'ui.why_panel_opened',
+            typeVersion: 1,
+            content: const {
+              'component_id': 'allergies_history',
+              'source_type': 'author_filled',
+            },
+          );
+    } catch (_) {
+      // Optional metadata telemetry cannot block access to privacy controls.
+    }
+    if (!mounted ||
+        ref.read(authProvider).value?.id != account ||
+        ref.read(sensitiveMemoryProvider).epoch != epoch)
+      return;
+    await showModalBottomSheet<void>(
+      context: context,
+      builder: (_) =>
+          _AllergyWhy(changeId: changeId, account: account, epoch: epoch),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
@@ -187,14 +217,7 @@ class _AllergiesSectionState extends ConsumerState<AllergiesSection> {
                     trailing: allergyAction(
                       ref,
                       'why',
-                      () => showModalBottomSheet<void>(
-                        context: context,
-                        builder: (_) => _AllergyWhy(
-                          changeId: change.id,
-                          account: ref.read(authProvider).value?.id,
-                          epoch: ref.read(sensitiveMemoryProvider).epoch,
-                        ),
-                      ),
+                      () => _openWhy(change.id),
                       (run) => TextButton(
                         key: ValueKey('allergy-why-${change.id}'),
                         onPressed: run,
@@ -307,6 +330,9 @@ class _AllergyEditorState extends ConsumerState<_AllergyEditor> {
                     headers: sensitiveAccountHeaders(
                       ref.read(sessionStoreProvider),
                     ),
+                    extra: sensitiveAccountExtra(
+                      ref.read(sessionStoreProvider),
+                    ),
                   ))
               .data!;
       if (_current && generation == _searchGeneration) {
@@ -329,6 +355,7 @@ class _AllergyEditorState extends ConsumerState<_AllergyEditor> {
           .getAllergiesApi()
           .setAllergies(
             headers: sensitiveAccountHeaders(ref.read(sessionStoreProvider)),
+            extra: sensitiveAccountExtra(ref.read(sessionStoreProvider)),
             allergiesWrite: AllergiesWrite(
               consentId: widget.consentId,
               authorizationVersion: widget.authorizationVersion,
@@ -535,6 +562,9 @@ class _SensitiveWithdrawalTileState
                   .getAllergiesApi()
                   .getAllergies(
                     headers: sensitiveAccountHeaders(
+                      ref.read(sessionStoreProvider),
+                    ),
+                    extra: sensitiveAccountExtra(
                       ref.read(sessionStoreProvider),
                     ),
                   ))

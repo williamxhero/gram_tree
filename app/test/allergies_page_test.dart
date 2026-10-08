@@ -1,14 +1,18 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gramtree_api/gramtree_api.dart';
 
+import 'package:gram_tree/util/ids.dart';
+import 'package:gram_tree/events/event_queue.dart';
+import 'package:gram_tree/events/fake_event_queue.dart';
 
 import 'helpers.dart';
 import 'settings_test.dart' show openSettings;
 import 'taste_profile_page_test.dart'
-    show installProfile, profileFixture, openTaste;
+    show installProfile, profileFixture, openTaste, signOut, pumpFrames;
 
 const allergyPath = '/v1/me/taste-profile/allergies';
 const categories = [
@@ -42,7 +46,283 @@ Future<void> _withdraw(WidgetTester tester) async {
   );
 }
 
+Future<void> _loginOther(WidgetTester tester, FakeServer server) async {
+  server.user = server.user.copyWith(id: newUuidV4(), nickname: '另一位味友');
+  await tester.enterText(
+    find.byKey(const ValueKey('login-email')),
+    'other@example.com',
+  );
+  await tester.tap(find.text('发送验证码'));
+  await tester.pumpAndSettle();
+  await tester.enterText(find.byKey(const ValueKey('code-input')), goodCode);
+  await tester.pumpAndSettle();
+}
+
+class _UnavailableTelemetry extends FakeEventQueue {
+  @override
+  Future<void> enqueue(QueuedEvent event) async {
+    if ((event.content?['intent'] as String?)?.startsWith('allergies_') ==
+            true ||
+        event.eventType == 'ui.why_panel_opened') {
+      throw StateError('private-telemetry-failure');
+    }
+    return super.enqueue(event);
+  }
+}
+
 void main() {
+  testWidgets(
+    'optional telemetry failure cannot block confirmed sensitive withdrawal',
+    (tester) async {
+      final server = FakeServer();
+      var withdrawn = false;
+      server.on(
+        'GET',
+        allergyPath,
+        (_) => (
+          200,
+          allergyFixture(
+            consentId: withdrawn ? null : newUuidV4(),
+            selected: withdrawn ? [] : ['花生'],
+          ).toJson(),
+        ),
+      );
+      server.on('POST', '/v1/me/consents', (r) {
+        if (jsonEncode(r.body).contains('sensitive_personal_info'))
+          withdrawn = true;
+        return (204, null);
+      });
+      final base = TestEnv.signedIn(server: server);
+      await pumpApp(
+        tester,
+        env: TestEnv(
+          server: server,
+          local: base.local,
+          secure: base.secure,
+          eventQueue: _UnavailableTelemetry(),
+        ),
+      );
+      await openSettings(tester);
+      await _withdraw(tester);
+      expect(withdrawn, isTrue);
+      expect(find.text('敏感同意已撤回，过敏及私密历史已删除'), findsOneWidget);
+      expect(find.textContaining('private-telemetry-failure'), findsNothing);
+      expect(tester.takeException(), isNull);
+    },
+  );
+  testWidgets(
+    'canonical ingredient add/remove and guarded private history use the shared Why panel',
+    (tester) async {
+      final server = FakeServer();
+      installProfile(server, () => profileFixture());
+      final grant = newUuidV4();
+      final ingredientId = newUuidV4();
+      final changeId = newUuidV4();
+      var current = allergyFixture(consentId: grant);
+      final history = <TasteProfileChangeOut>[];
+      server.on('GET', allergyPath, (_) => (200, current.toJson()));
+      server.on(
+        'GET',
+        '$allergyPath/changes',
+        (_) => (200, PageTasteProfileChangeOut(items: history).toJson()),
+      );
+      server.on(
+        'POST',
+        '/v1/ingredients/search',
+        (_) => (
+          200,
+          SearchResult(
+            items: [
+              SearchIngredientOut(
+                id: ingredientId,
+                standardName: '标准酱油',
+                matchedName: '别名',
+                aliases: const ['别名'],
+                category: '调味品',
+                pinyin: 'jiangyou',
+                pinyinInitials: 'jy',
+                version: '1',
+              ),
+            ],
+          ).toJson(),
+        ),
+      );
+      server.on('PUT', allergyPath, (r) {
+        final body = r.body as Map;
+        expect(
+          body.keys,
+          unorderedEquals([
+            'consent_id',
+            'authorization_version',
+            'categories',
+            'ingredient_ids',
+          ]),
+        );
+        final before = {
+          'categories': current.categories,
+          'ingredients': current.ingredients.map((i) => i.toJson()).toList(),
+        };
+        current = current.copyWith(
+          categories: (body['categories'] as List).cast<String>(),
+          ingredients: [
+            for (final id in body['ingredient_ids'] as List)
+              AllergyIngredientOut(ingredientId: id as String, name: '标准酱油'),
+          ],
+        );
+        history.add(
+          TasteProfileChangeOut(
+            id: history.isEmpty ? changeId : newUuidV4(),
+            field: 'allergies',
+            version: history.length + 2,
+            oldValue: before,
+            newValue: {
+              'categories': current.categories,
+              'ingredients': current.ingredients
+                  .map((i) => i.toJson())
+                  .toList(),
+            },
+            reason: '你手动修改',
+            source_: TasteProfileChangeOutSource_Enum.manual,
+            status: TasteProfileChangeOutStatusEnum.active,
+            createdAt: '2026-10-08T10:00:00Z',
+          ),
+        );
+        return (200, current.toJson());
+      });
+      final env = TestEnv.signedIn(server: server);
+      await pumpApp(tester, env: env);
+      await openTaste(tester);
+      await tester.scrollUntilVisible(
+        find.byKey(const ValueKey('allergies-edit')),
+        300,
+      );
+      await tapVisible(tester, find.byKey(const ValueKey('allergies-edit')));
+      expect(find.text('过敏信息单独同意'), findsNothing);
+      await tester.ensureVisible(find.byKey(const ValueKey('allergy-search')));
+      await tester.enterText(
+        find.byKey(const ValueKey('allergy-search')),
+        '自由文字不保存',
+      );
+      await tester.tap(find.byKey(const ValueKey('allergies-save')));
+      await tester.pumpAndSettle();
+      expect(
+        (server.calls('PUT', allergyPath).last.body as Map)['ingredient_ids'],
+        isEmpty,
+      );
+      await tapVisible(tester, find.byKey(const ValueKey('allergies-edit')));
+      await tester.ensureVisible(find.byKey(const ValueKey('allergy-search')));
+      await tester.enterText(
+        find.byKey(const ValueKey('allergy-search')),
+        '别名',
+      );
+      await tapVisible(
+        tester,
+        find.byKey(const ValueKey('allergy-search-submit')),
+      );
+      await tapVisible(
+        tester,
+        find.byKey(ValueKey('allergy-result-$ingredientId')),
+      );
+      await tester.tap(find.byKey(const ValueKey('allergies-save')));
+      await tester.pumpAndSettle();
+      expect(
+        (server.calls('PUT', allergyPath).last.body as Map)['ingredient_ids'],
+        [ingredientId],
+      );
+      expect(find.text('标准酱油'), findsOneWidget);
+      final why = find.byKey(ValueKey('allergy-why-${history.last.id}'));
+      await tester.scrollUntilVisible(why, 200);
+      await tapVisible(tester, why);
+      expect(find.byKey(const ValueKey('why-panel')), findsOneWidget);
+      expect(find.text('本人手动填写'), findsOneWidget);
+      expect(find.textContaining('标准酱油'), findsWidgets);
+      expect(find.text('这次不用'), findsNothing);
+      await tester.tapAt(const Offset(5, 5));
+      await tester.pumpAndSettle();
+      await tapVisible(tester, find.byKey(const ValueKey('allergies-edit')));
+      await tapVisible(
+        tester,
+        find.byKey(ValueKey('allergy-delete-$ingredientId')),
+      );
+      await tester.tap(find.byKey(const ValueKey('allergies-save')));
+      await tester.pumpAndSettle();
+      expect(find.text('尚未填写本人过敏'), findsOneWidget);
+      expect(find.text('标准酱油 → 未填写'), findsOneWidget);
+      expect(jsonEncode(env.local.values), isNot(contains('标准酱油')));
+      final uploads = jsonEncode(
+        server.calls('POST', '/v1/events/upload').map((r) => r.body).toList(),
+      );
+      expect(uploads, isNot(contains('标准酱油')));
+      expect(uploads, isNot(contains('自由文字不保存')));
+      final events = server
+          .calls('POST', '/v1/events/upload')
+          .expand((r) => ((r.body as Map)['events'] as List).cast<Map>())
+          .toList();
+      final whyEvents = events.where(
+        (e) => e['event_type'] == 'ui.why_panel_opened',
+      );
+      expect(whyEvents, hasLength(1));
+      expect(whyEvents.single['content'], {
+        'component_id': 'allergies_history',
+        'source_type': 'author_filled',
+      });
+      for (final event in events.where(
+        (e) =>
+            e['event_type'] == 'ui.component_action' ||
+            e['event_type'] == 'ui.why_panel_opened',
+      )) {
+        expect(event['correlation'], anyOf(isNull, isEmpty));
+      }
+    },
+  );
+  testWidgets(
+    'an expired sensitive receipt never retries under a switched account',
+    (tester) async {
+      final server = FakeServer();
+      installProfile(server, () => profileFixture());
+      final pending = Completer<(int, Object?)>();
+      var seen = false;
+      server.on('POST', '/v1/me/consents', (r) {
+        if (jsonEncode(r.body).contains('sensitive_personal_info') && !seen) {
+          seen = true;
+          return pending.future;
+        }
+        return (204, null);
+      });
+      final env = TestEnv.signedIn(server: server);
+      await pumpApp(tester, env: env);
+      await openTaste(tester);
+      await tester.scrollUntilVisible(
+        find.byKey(const ValueKey('allergies-edit')),
+        300,
+      );
+      await tapVisible(tester, find.byKey(const ValueKey('allergies-edit')));
+      await tapVisible(tester, find.byKey(const ValueKey('allergies-agree')));
+      expect(seen, isTrue);
+      await signOut(tester);
+      await _loginOther(tester, server);
+      pending.complete(FakeServer.error(401, 'token_expired', 'expired'));
+      await tester.pumpAndSettle();
+      final receipts = server
+          .calls('POST', '/v1/me/consents')
+          .where((r) => jsonEncode(r.body).contains('sensitive_personal_info'))
+          .toList();
+      expect(receipts, hasLength(1));
+      expect(receipts.single.headers['Authorization'], 'Bearer access-0');
+      await openTaste(tester);
+      await tester.scrollUntilVisible(
+        find.byKey(const ValueKey('allergies-edit')),
+        300,
+      );
+      await tapVisible(tester, find.byKey(const ValueKey('allergies-edit')));
+      expect(find.text('过敏信息单独同意'), findsOneWidget);
+      expect(
+        env.local.getString('consent_records'),
+        isNot(contains('sensitive_personal_info')),
+      );
+      expect(tester.takeException(), isNull);
+    },
+  );
   testWidgets(
     'key-failed reads never block withdrawal; failure is honest and retry verifies empty',
     (tester) async {

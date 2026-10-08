@@ -9,7 +9,8 @@ import 'intent_registry.dart';
 
 /// Mounted controllers retain form values; only a named, empty-argument action
 /// crosses the shared intent boundary. No household, measure or meal data enters
-/// action descriptors or telemetry.
+/// action descriptors or telemetry. Native settings have no server composition,
+/// so dispatch without inventing a composition correlation ID.
 class CookingConstraintActionScope extends InheritedWidget {
   const CookingConstraintActionScope({
     super.key,
@@ -63,7 +64,6 @@ Widget cookingConstraintAction(
           .read(intentDispatcherProvider)
           .dispatch(
             context,
-            compositionId: 'taste-profile-private',
             componentId: intent == 'personal_measures_manage'
                 ? 'personal-measures'
                 : 'cooking-constraints',

@@ -257,9 +257,9 @@ void main() {
         'intent': 'personal_measures_manage',
       },
     ]);
-    expect(actions.single['correlation'], {
-      'ui_composition_id': 'taste-profile-private',
-    });
+    // Native settings are not rendered from a server composition. Do not invent
+    // a non-UUID correlation ID or carry private account/measure identifiers.
+    expect(actions.single['correlation'], isNull);
   });
 
   testWidgets(
@@ -353,9 +353,7 @@ void main() {
         },
       ]);
       for (final action in actions) {
-        expect(action['correlation'], {
-          'ui_composition_id': 'taste-profile-private',
-        });
+        expect(action['correlation'], isNull);
       }
     },
   );

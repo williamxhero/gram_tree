@@ -3,11 +3,60 @@
 import json
 
 from gramtree.cli import main as cli
-from tests.accounts_support import Api, bearer
+from tests.accounts_support import Api, bearer, new_uuid
 from tests.test_recipes import recipe_input
 
 PATH = "/v1/me/taste-profile/cooking-constraints"
 PROFILE = "/v1/me/taste-profile"
+
+
+def test_native_profile_action_events_need_no_composition_correlation(api: Api) -> None:
+    owner = bearer(api.login("native-constraints-events@example.com"))
+    contents = [
+        {"component_id": "cooking-constraints", "intent": f"cooking_constraints_{operation}"}
+        for operation in ("edit", "save", "clear", "confirm_clear", "cancel", "retry")
+    ] + [
+        {"component_id": "personal-measures", "intent": "personal_measures_manage"},
+        {"component_id": "allergies_save", "intent": "allergies_save"},
+    ]
+    events = [
+        {
+            "id": new_uuid(),
+            "event_type": "ui.component_action",
+            "type_version": 1,
+            "device_id": "native-profile-test",
+            "device_time": "2026-10-08T10:00:00Z",
+            "app_version": "1.0.0",
+            "content": content,
+        }
+        for content in contents
+    ]
+    events.append(
+        {
+            **events[0],
+            "id": new_uuid(),
+            "event_type": "ui.why_panel_opened",
+            "content": {"component_id": "allergies", "source_type": "author_filled"},
+        }
+    )
+    # Native pages have no server composition. The former fixed string was not
+    # privacy-safe "generic correlation": the public API requires UUID v4 IDs.
+    invalid = {
+        **events[0],
+        "id": new_uuid(),
+        "correlation": {"ui_composition_id": "taste-profile-private"},
+    }
+    response = api.client.post(
+        "/v1/events/upload", headers=owner, json={"events": [*events, invalid]}
+    )
+    assert response.status_code == 200, response.text
+    results = {item["id"]: item for item in response.json()["results"]}
+    assert len(results) == len(events) + 1
+    for event in events:
+        assert results[event["id"]]["status"] == "accepted"
+        assert results[event["id"]]["reason"] is None
+    assert results[invalid["id"]]["status"] == "rejected"
+    assert results[invalid["id"]]["reason"]["code"] == "invalid_correlation_id"
 
 
 def test_constraints_persist_clear_and_share_profile_history(api: Api) -> None:

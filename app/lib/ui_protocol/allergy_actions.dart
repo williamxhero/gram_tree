@@ -66,7 +66,6 @@ Widget allergyAction(
             .read(intentDispatcherProvider)
             .dispatch(
               context,
-              compositionId: 'taste-profile-private',
               componentId: intent,
               action: ActionDescriptor(intent: intent, params: const {}),
             );
