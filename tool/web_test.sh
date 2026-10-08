@@ -41,7 +41,7 @@ status=0
 for target in "${targets[@]}"; do
   echo "== $target"
   "$FLUTTER" drive --timeout=300 --profile --no-web-resources-cdn \
-    --driver=test_driver/integration_test.dart \
+    --driver=test_driver/integration_test.dart --driver-port="$PORT" \
     --target="$target" \
     -d web-server --browser-name=chrome --headless --driver-port="$PORT" \
     ${CHROME_EXECUTABLE:+--chrome-binary="$CHROME_EXECUTABLE"} \

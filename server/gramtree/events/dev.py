@@ -9,11 +9,18 @@ OpenAPI 描述，写法照抄 `gramtree.accounts.dev`。
 查询路径。
 """
 
+import uuid
+
 from fastapi import APIRouter, Query
+from sqlalchemy import func, select
 
 from gramtree.accounts.deps import CurrentAuth
-from gramtree.deps import SessionDep
+from gramtree.accounts.models import User, UserStatus
+from gramtree.core.errors import NotFound
+from gramtree.deps import SessionDep, SettingsDep
+from gramtree.events.models import Event
 from gramtree.events.queries import query_events
+from gramtree.taste_profiles.models import TasteProfile, TasteProfileChange
 
 router = APIRouter(prefix="/dev/events", include_in_schema=False)
 
@@ -35,3 +42,46 @@ def count_events(
     if device_id is not None:
         events = [e for e in events if e.device_id == device_id]
     return {"count": len(events)}
+
+
+@router.get("/taste-profile-storage")
+def taste_profile_storage(
+    auth: CurrentAuth,
+    session: SessionDep,
+    settings: SettingsDep,
+    owner_id: uuid.UUID | None = None,
+) -> dict[str, int | bool]:
+    """Test-only aggregates: prove metadata minimization and actual account purge.
+
+    Never expose values, history, event payloads, or identifiers. Active accounts
+    can only inspect their own storage. A logged-in test observer may inspect a
+    deleted tombstone's counts so purge verification does not require SQL tests
+    or accepting revoked credentials. This route is absent from OpenAPI/prod.
+    """
+    if settings.env != "test":
+        raise NotFound()
+    owner = owner_id or auth.user.id
+    if owner != auth.user.id:
+        status = session.scalar(select(User.status).where(User.id == owner))
+        if status != UserStatus.deleted:
+            raise NotFound()
+    changes = set(
+        session.scalars(select(TasteProfileChange.id).where(TasteProfileChange.owner_id == owner))
+    )
+    events = list(session.scalars(select(Event).where(Event.user_id == owner)))
+    taste_events = [event for event in events if event.event_type == "taste_profile.changed"]
+    return {
+        "profiles": session.scalar(
+            select(func.count()).select_from(TasteProfile).where(TasteProfile.owner_id == owner)
+        )
+        or 0,
+        "changes": len(changes),
+        "events": len(events),
+        "taste_events": len(taste_events),
+        "metadata_only": all(
+            event.content == {}
+            and event.correlation == {"taste_profile_change_id": str(event.id)}
+            and event.id in changes
+            for event in taste_events
+        ),
+    }

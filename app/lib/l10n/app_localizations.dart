@@ -2643,6 +2643,138 @@ abstract class AppLocalizations {
   /// **'AI 协助'**
   String get recipeAiAssisted;
 
+  /// No description provided for @tasteTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'我的口味'**
+  String get tasteTitle;
+
+  /// No description provided for @tasteIntro.
+  ///
+  /// In zh, this message translates to:
+  /// **'只代表你明确设置的七项口味，不会从行为猜测你的偏好。'**
+  String get tasteIntro;
+
+  /// No description provided for @tasteReset.
+  ///
+  /// In zh, this message translates to:
+  /// **'恢复标准默认'**
+  String get tasteReset;
+
+  /// No description provided for @tasteResetBody.
+  ///
+  /// In zh, this message translates to:
+  /// **'七项口味恢复为标准，重新标记为把握低；修改记录保留。'**
+  String get tasteResetBody;
+
+  /// No description provided for @tasteManual.
+  ///
+  /// In zh, this message translates to:
+  /// **'你手动填写'**
+  String get tasteManual;
+
+  /// No description provided for @tasteDefault.
+  ///
+  /// In zh, this message translates to:
+  /// **'标准默认'**
+  String get tasteDefault;
+
+  /// No description provided for @tasteWhy.
+  ///
+  /// In zh, this message translates to:
+  /// **'为什么'**
+  String get tasteWhy;
+
+  /// No description provided for @tasteHistory.
+  ///
+  /// In zh, this message translates to:
+  /// **'修改历史'**
+  String get tasteHistory;
+
+  /// No description provided for @tasteHistoryEmpty.
+  ///
+  /// In zh, this message translates to:
+  /// **'还没有修改记录'**
+  String get tasteHistoryEmpty;
+
+  /// No description provided for @tasteHistoryReadonly.
+  ///
+  /// In zh, this message translates to:
+  /// **'只读查看原因和历史，暂不提供撤销或锁定。'**
+  String get tasteHistoryReadonly;
+
+  /// No description provided for @tasteLocal.
+  ///
+  /// In zh, this message translates to:
+  /// **'菜系局部偏好'**
+  String get tasteLocal;
+
+  /// No description provided for @tasteLocalEmpty.
+  ///
+  /// In zh, this message translates to:
+  /// **'还没有菜系局部偏好'**
+  String get tasteLocalEmpty;
+
+  /// No description provided for @tasteLocalReadonly.
+  ///
+  /// In zh, this message translates to:
+  /// **'菜系对应的味型调整只读显示，暂不提供学习或编辑。'**
+  String get tasteLocalReadonly;
+
+  /// No description provided for @tasteActive.
+  ///
+  /// In zh, this message translates to:
+  /// **'生效'**
+  String get tasteActive;
+
+  /// No description provided for @tasteReverted.
+  ///
+  /// In zh, this message translates to:
+  /// **'已撤销'**
+  String get tasteReverted;
+
+  /// No description provided for @tasteSalty.
+  ///
+  /// In zh, this message translates to:
+  /// **'咸'**
+  String get tasteSalty;
+
+  /// No description provided for @tasteSweet.
+  ///
+  /// In zh, this message translates to:
+  /// **'甜'**
+  String get tasteSweet;
+
+  /// No description provided for @tasteSour.
+  ///
+  /// In zh, this message translates to:
+  /// **'酸'**
+  String get tasteSour;
+
+  /// No description provided for @tasteSpicy.
+  ///
+  /// In zh, this message translates to:
+  /// **'辣'**
+  String get tasteSpicy;
+
+  /// No description provided for @tasteNumbing.
+  ///
+  /// In zh, this message translates to:
+  /// **'麻'**
+  String get tasteNumbing;
+
+  /// No description provided for @tasteUmami.
+  ///
+  /// In zh, this message translates to:
+  /// **'鲜'**
+  String get tasteUmami;
+
+  /// No description provided for @tasteOily.
+  ///
+  /// In zh, this message translates to:
+  /// **'油'**
+  String get tasteOily;
+
   /// No description provided for @personalMeasuresTitle.
   ///
   /// In zh, this message translates to:

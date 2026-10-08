@@ -53,3 +53,4 @@ def test_prod_has_no_dev_events_count_endpoint(database_url: str) -> None:
     with TestClient(app) as c:
         params = {"event_type": "pipeline.self_check"}
         assert c.get("/v1/dev/events/count", params=params).status_code == 404
+        assert c.get("/v1/dev/events/taste-profile-storage").status_code == 404
