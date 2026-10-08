@@ -115,6 +115,8 @@ TestEnv env() {
 
 Future<void> tap(WidgetTester tester, String key, {double delta = 300}) async {
   final finder = find.byKey(ValueKey(key));
+  tester.testTextInput.hide();
+  await tester.pump();
   if (finder.evaluate().isEmpty) {
     final scrollable = find
         .byWidgetPredicate(
@@ -133,14 +135,43 @@ Future<void> tap(WidgetTester tester, String key, {double delta = 300}) async {
         )
         .first,
   );
-  await tester.ensureVisible(finder);
+  await Scrollable.ensureVisible(tester.element(finder), alignment: 0.5);
   await tester.pumpAndSettle();
+  expect(
+    finder.hitTestable(),
+    findsOneWidget,
+    reason: '$key must be reachable before tapping',
+  );
   await tester.tap(finder);
   await tester.pumpAndSettle();
+  if (key == 'recipe-answer-submit') {
+    final panel = find.byKey(const ValueKey('recipe-answer-why'));
+    for (var i = 0; i < 50 && panel.evaluate().isEmpty; i++) {
+      await tester.pump(const Duration(milliseconds: 100));
+    }
+    await tester.pumpAndSettle();
+    expect(
+      panel,
+      findsOneWidget,
+      reason: 'Submission must finish opening its panel',
+    );
+  }
 }
 
-Future<void> open(WidgetTester tester, TestEnv environment) async {
-  await pumpApp(tester, env: environment);
+Future<void> open(
+  WidgetTester tester,
+  TestEnv environment, {
+  Brightness brightness = Brightness.light,
+  double textScale = 1,
+  Size size = const Size(360, 780),
+}) async {
+  await pumpApp(
+    tester,
+    env: environment,
+    brightness: brightness,
+    textScale: textScale,
+    size: size,
+  );
   await tester.tap(find.byKey(const ValueKey('primary-create-button')));
   await tester.pumpAndSettle();
   await tester.tap(find.byKey(const ValueKey('my-recipes-entry')));
@@ -171,6 +202,182 @@ Future<void> open(WidgetTester tester, TestEnv environment) async {
 }
 
 void main() {
+  for (final brightness in Brightness.values) {
+    for (final scale in [1.3, 1.6]) {
+      testWidgets('320x640 $brightness $scale 长解释可滚动关闭且保留问题与原始用量', (
+        tester,
+      ) async {
+        final environment = env();
+        final longAnswer = answer().copyWith(
+          details:
+              '${List.filled(45, '逐步核对这版的食材和火候，不把推测作为结论。').join('\n')}\nLONG_ANSWER_END',
+        );
+        environment.server.on(
+          'POST',
+          answerPath,
+          (_) => (200, longAnswer.toJson()),
+        );
+        await open(
+          tester,
+          environment,
+          brightness: brightness,
+          textScale: scale,
+          size: const Size(320, 640),
+        );
+        await tap(tester, 'recipe-answer-input');
+        await tester.enterText(
+          find.byKey(const ValueKey('recipe-answer-input')),
+          question,
+        );
+        await tap(tester, 'recipe-answer-submit');
+        final close = find.byKey(const ValueKey('recipe-answer-close'));
+        expect(close.hitTestable(), findsOneWidget);
+        expect(find.text('已回答 · 一般经验'), findsOneWidget);
+        final panel = find.byKey(const ValueKey('recipe-answer-why'));
+        final scrollable = find
+            .ancestor(of: panel, matching: find.byType(Scrollable))
+            .first;
+        await tester.drag(scrollable, const Offset(0, -10000));
+        await tester.pumpAndSettle();
+        final body = find.descendant(
+          of: panel,
+          matching: find.textContaining('LONG_ANSWER_END'),
+        );
+        expect(body, findsOneWidget);
+        expect(
+          tester.getBottomLeft(body).dy,
+          lessThanOrEqualTo(tester.getRect(scrollable).bottom + 1),
+        );
+        expect(close.hitTestable(), findsOneWidget);
+        await tester.tap(close);
+        await tester.pumpAndSettle();
+        await tap(tester, 'recipe-serving-increase');
+        expect(find.text('3'), findsWidgets);
+        await tap(tester, 'recipe-answer-input');
+        expect(find.text(question), findsOneWidget);
+        await tap(tester, 'edit-recipe-button');
+        final quantity = find.byKey(
+          const ValueKey('recipe-ingredient-quantity-chicken'),
+        );
+        await tester.scrollUntilVisible(
+          quantity,
+          200,
+          scrollable: find
+              .byWidgetPredicate(
+                (w) => w is Scrollable && w.axisDirection == AxisDirection.down,
+              )
+              .first,
+        );
+        await tester.ensureVisible(quantity);
+        await tester.pumpAndSettle();
+        expect(
+          find.descendant(
+            of: quantity,
+            matching: find.textContaining(RegExp(r'^320(?:\.0)?$')),
+          ),
+          findsOneWidget,
+        );
+        expect(tester.takeException(), isNull);
+      });
+    }
+  }
+
+  testWidgets('按钮和键盘提交同一意图，打开及重开面板只记录来源元数据', (tester) async {
+    final environment = env();
+    await open(tester, environment);
+    for (final keyboard in [false, true]) {
+      await tap(tester, 'recipe-answer-input');
+      await tester.enterText(
+        find.byKey(const ValueKey('recipe-answer-input')),
+        question,
+      );
+      if (keyboard) {
+        await tester.testTextInput.receiveAction(TextInputAction.done);
+        await tester.pumpAndSettle();
+      } else {
+        await tap(tester, 'recipe-answer-submit');
+      }
+      expect(find.byKey(const ValueKey('recipe-answer-why')), findsOneWidget);
+      await tester.tap(find.byKey(const ValueKey('recipe-answer-close')));
+      await tester.pumpAndSettle();
+    }
+    await tester.ensureVisible(find.text('为什么 · 明细'));
+    await tester.tap(find.text('为什么 · 明细'));
+    await tester.pumpAndSettle();
+    final events = environment.server
+        .calls('POST', '/v1/events/upload')
+        .expand((r) => ((r.body as Map)['events'] as List).cast<Map>())
+        .toList();
+    final actions = events
+        .where(
+          (e) =>
+              e['event_type'] == 'ui.component_action' &&
+              (e['content'] as Map)['component_id'] == 'recipe-answer',
+        )
+        .toList();
+    expect(actions, hasLength(2));
+    for (final event in actions) {
+      expect(event['content'], {
+        'component_id': 'recipe-answer',
+        'intent': 'call_operation',
+      });
+    }
+    final opened = events
+        .where(
+          (e) =>
+              e['event_type'] == 'ui.why_panel_opened' &&
+              (e['content'] as Map)['component_id'] == 'recipe-answer',
+        )
+        .toList();
+    expect(opened, hasLength(3));
+    for (final event in opened) {
+      expect(event['content'], {
+        'component_id': 'recipe-answer',
+        'source_type': 'ai_estimated',
+      });
+    }
+    expect(events.toString(), isNot(contains(question)));
+    expect(events.toString(), isNot(contains(answer().conclusion)));
+    expect(environment.server.calls('POST', answerPath), hasLength(2));
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('回答安全信息不完整时仍显示版本必显警告', (tester) async {
+    final environment = env();
+    environment.server.on(
+      'POST',
+      answerPath,
+      (_) => (
+        200,
+        answer()
+            .copyWith(
+              safety: safety().copyWith(
+                findings: [],
+                allergensIncomplete: false,
+              ),
+            )
+            .toJson(),
+      ),
+    );
+    await open(tester, environment);
+    await tap(tester, 'recipe-answer-input');
+    await tester.enterText(
+      find.byKey(const ValueKey('recipe-answer-input')),
+      question,
+    );
+    await tap(tester, 'recipe-answer-submit');
+    final panel = find.byKey(const ValueKey('recipe-answer-why'));
+    expect(
+      find.descendant(of: panel, matching: find.textContaining('中心温度需达到 74°C')),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(of: panel, matching: find.textContaining('过敏信息可能不完整')),
+      findsOneWidget,
+    );
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('长版本滚回规则换算再返回时仍保留问题', (tester) async {
     final environment = env();
     final base = detail();
@@ -201,6 +408,16 @@ void main() {
     );
     await tap(tester, 'recipe-answer-submit');
     await tester.tap(find.byKey(const ValueKey('recipe-answer-close')));
+    await tester.pumpAndSettle();
+    // Browse the trailing steps well beyond the lazy viewport/cache, then return.
+    await tester.drag(
+      find
+          .byWidgetPredicate(
+            (w) => w is Scrollable && w.axisDirection == AxisDirection.down,
+          )
+          .first,
+      const Offset(0, -10000),
+    );
     await tester.pumpAndSettle();
     await tap(tester, 'recipe-serving-increase');
     expect(find.text('3'), findsWidgets);

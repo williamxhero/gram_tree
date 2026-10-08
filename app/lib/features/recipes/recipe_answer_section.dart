@@ -3,15 +3,17 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gramtree_api/gramtree_api.dart';
 
 import '../../auth/auth_controller.dart';
+import '../../events/event_recorder.dart';
+import '../../l10n/app_localizations.dart';
 import '../../recipes/recipe_repository.dart';
 import '../../ui_protocol/components/component_scaffold.dart';
+import '../../ui_protocol/intent_dispatcher.dart';
 import '../../ui_protocol/source_mark.dart';
 import '../../ui_protocol/source_types.dart';
 
 /// A single question about a confirmed immutable version, not a chat or edit.
 class RecipeAnswerSection extends ConsumerStatefulWidget {
   const RecipeAnswerSection({super.key, required this.detail});
-
   final RecipeDetail detail;
 
   @override
@@ -20,11 +22,11 @@ class RecipeAnswerSection extends ConsumerStatefulWidget {
 }
 
 class _RecipeAnswerSectionState extends ConsumerState<RecipeAnswerSection> {
-  static const _basis = '这是一般经验，还没有足够记录验证';
   final _question = TextEditingController();
   RecipeAnswer? _answer;
   bool _busy = false;
   bool _failed = false;
+  AppLocalizations get _l10n => AppLocalizations.of(context);
 
   @override
   void dispose() {
@@ -45,10 +47,28 @@ class _RecipeAnswerSectionState extends ConsumerState<RecipeAnswerSection> {
     });
     RecipeAnswer? answer;
     try {
-      answer = await ref
-          .read(recipeRepositoryProvider)
-          .answerQuestion(detail.id, detail.version.id, question);
-      if (answer.recipeId != detail.id ||
+      final operation = ref.read(
+        recipeAnswerOperationProvider((detail.id, detail.version.id)),
+      );
+      await ref
+          .read(intentDispatcherProvider)
+          .dispatch(
+            context,
+            compositionId: CompositionIdScope.of(context),
+            componentId: 'recipe-answer',
+            action: ActionDescriptor(
+              intent: 'call_operation',
+              params: {
+                'operation': 'answer_recipe_question',
+                'recipe_id': detail.id,
+                'recipe_version_id': detail.version.id,
+                'question': question,
+              },
+            ),
+          );
+      answer = operation.result;
+      if (answer == null ||
+          answer.recipeId != detail.id ||
           answer.versionId != detail.version.id ||
           answer.question != question) {
         throw StateError('Answer does not belong to this question/version');
@@ -71,34 +91,72 @@ class _RecipeAnswerSectionState extends ConsumerState<RecipeAnswerSection> {
   }
 
   String get _stateLabel => switch (_answer?.state) {
-    RecipeAnswerStateEnum.answered => '已回答 · 一般经验',
-    RecipeAnswerStateEnum.uncertain => '不确定 · 一般经验',
-    RecipeAnswerStateEnum.cannotAnswer => '无法回答 · 一般经验',
-    _ => '能力不可用 · 一般经验',
+    RecipeAnswerStateEnum.answered => _l10n.recipeAnswerAnswered,
+    RecipeAnswerStateEnum.uncertain => _l10n.recipeAnswerUncertain,
+    RecipeAnswerStateEnum.cannotAnswer => _l10n.recipeAnswerCannotAnswer,
+    _ => _l10n.recipeAnswerUnavailable,
   };
 
   String get _unavailableReason =>
       switch (_answer?.error ?? _answer?.status.reason) {
-        'monthly_budget' => '月预算已用完',
-        'quota_exhausted' || 'daily_limit' || 'daily_quota' => '今日解释配额已用完',
-        'timeout' => '模型响应超时',
-        'disabled' || 'ai_disabled' => '模型已停用',
-        'not_configured' || 'not_enabled' => '模型暂未配置',
-        _ => '模型或网络暂时不可用',
+        'monthly_budget' => _l10n.recipeAnswerBudget,
+        'quota_exhausted' ||
+        'daily_limit' ||
+        'daily_quota' => _l10n.recipeAnswerQuota,
+        'timeout' => _l10n.recipeAnswerTimeout,
+        'disabled' || 'ai_disabled' => _l10n.recipeAnswerDisabled,
+        'not_configured' || 'not_enabled' => _l10n.recipeAnswerNotConfigured,
+        _ => _l10n.recipeAnswerNetwork,
       };
 
   bool get _unavailable =>
       _failed || _answer?.state == RecipeAnswerStateEnum.unavailable;
-
-  String get _conclusion =>
-      _unavailable ? '菜谱解释（explain）：$_unavailableReason。' : _answer!.conclusion;
+  String get _conclusion => _unavailable
+      ? _l10n.recipeAnswerUnavailableConclusion(_unavailableReason)
+      : _answer!.conclusion;
 
   Future<void> _showWhy() async {
     final answer = _answer;
-    final safety =
-        answer?.safety ??
-        widget.detail.version.safety ??
-        widget.detail.version.safetyAtSave;
+    // An incomplete response must never erase immutable-version warnings.
+    final safetySources = [
+      if (answer != null) answer.safety,
+      if (widget.detail.version.safety != null) widget.detail.version.safety!,
+      if (widget.detail.version.safetyAtSave != null)
+        widget.detail.version.safetyAtSave!,
+    ];
+    final findings = {
+      for (final safety in safetySources)
+        for (final finding in safety.findings ?? <RecipeSafetyFinding>[])
+          finding.message,
+    };
+    final claims = {
+      for (final safety in safetySources) ...?safety.prohibitedClaims,
+    };
+    final allergens = {
+      for (final safety in safetySources) ...?safety.allergens,
+    };
+    final replacements = {
+      for (final safety in safetySources)
+        for (final item
+            in safety.replacementAllergens ?? <RecipeReplacementAllergens>[])
+          '${item.displayName}：${(item.allergens ?? <String>[]).join('、')}',
+    };
+    final compositionId = CompositionIdScope.of(context);
+    await ref
+        .read(eventRecorderProvider)
+        .record(
+          eventType: 'ui.why_panel_opened',
+          typeVersion: 1,
+          correlation: compositionId == null
+              ? null
+              : EventCorrelationIds(uiCompositionId: compositionId),
+          content: {
+            'component_id': 'recipe-answer',
+            'source_type': sourceTypeAiEstimated,
+          },
+        );
+    if (!mounted) return;
+    final l10n = _l10n;
     await showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
@@ -112,11 +170,11 @@ class _RecipeAnswerSectionState extends ConsumerState<RecipeAnswerSection> {
                 padding: const EdgeInsets.symmetric(horizontal: 20),
                 child: Row(
                   children: [
-                    const Expanded(child: Text('AI 估算 · 菜谱解释')),
+                    Expanded(child: Text(l10n.recipeAnswerSource)),
                     TextButton(
                       key: const ValueKey('recipe-answer-close'),
                       onPressed: () => Navigator.of(sheetContext).pop(),
-                      child: const Text('关闭解释'),
+                      child: Text(l10n.recipeAnswerClose),
                     ),
                   ],
                 ),
@@ -129,27 +187,35 @@ class _RecipeAnswerSectionState extends ConsumerState<RecipeAnswerSection> {
                     titleOverride: _stateLabel,
                     value: _conclusion,
                     basisText: [
-                      _basis,
-                      '问题：${answer?.question ?? _question.text.trim()}',
-                      if (_unavailable) '查看、表单编辑和规则换算仍可使用；问题已保留，可以重试。',
+                      l10n.recipeAnswerBasis,
+                      l10n.recipeAnswerQuestion(
+                        answer?.question ?? _question.text.trim(),
+                      ),
+                      if (_unavailable) l10n.recipeAnswerContinue,
                       if (!_unavailable &&
                           answer?.explanation?.isNotEmpty == true)
                         answer!.explanation!,
                       if (!_unavailable && answer?.details?.isNotEmpty == true)
                         answer!.details!,
-                      '明细 · 第 ${widget.detail.version.versionNumber} 版；解释不会自动修改菜谱。',
-                      for (final finding
-                          in safety?.findings ?? <RecipeSafetyFinding>[])
-                        finding.message,
-                      for (final claim
-                          in safety?.prohibitedClaims ?? <String>[])
-                        claim,
-                      if (safety?.allergens?.isNotEmpty == true)
-                        '过敏原：${safety!.allergens!.join('、')}',
-                      if (safety?.replacementAllergens?.isNotEmpty == true)
-                        '替换食材过敏原：${safety!.replacementAllergens!.join('、')}',
-                      if (safety?.allergensIncomplete == true)
-                        '过敏信息可能不完整，请核对实际食材。',
+                      l10n.recipeAnswerVersion(
+                        widget.detail.version.versionNumber,
+                      ),
+                      ...findings,
+                      ...claims,
+                      if (allergens.isNotEmpty)
+                        l10n.recipeAnswerAllergens(allergens.join('、')),
+                      if (replacements.isNotEmpty)
+                        l10n.recipeAnswerReplacementAllergens(
+                          replacements.join('、'),
+                        ),
+                      if (safetySources.any(
+                        (safety) =>
+                            safety.allergensIncomplete == true ||
+                            (safety.replacementAllergens ??
+                                    <RecipeReplacementAllergens>[])
+                                .any((item) => item.incomplete == true),
+                      ))
+                        l10n.recipeAnswerIncompleteAllergens,
                       ...?answer?.numericWarnings,
                     ].join('\n\n'),
                     required: true,
@@ -165,54 +231,73 @@ class _RecipeAnswerSectionState extends ConsumerState<RecipeAnswerSection> {
   }
 
   @override
-  Widget build(BuildContext context) => ComponentCard(
-    detail: ComponentDescriptorDetailEnum.standard,
-    conclusion: Text('问这版的做法', style: Theme.of(context).textTheme.titleMedium),
-    conclusionSemanticsText: '问这版的做法；只提供一般经验，不改动菜谱',
-    basisText: _basis,
-    standardExtra: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        TextField(
-          key: const ValueKey('recipe-answer-input'),
-          controller: _question,
-          enabled: !_busy,
-          maxLength: 1000,
-          minLines: 1,
-          maxLines: 3,
-          decoration: const InputDecoration(
-            labelText: '厨房问题',
-            hintText: '例如：这一步为什么要炒熟？',
+  Widget build(BuildContext context) {
+    ref.watch(
+      recipeAnswerOperationProvider((
+        widget.detail.id,
+        widget.detail.version.id,
+      )),
+    );
+    final l10n = _l10n;
+    return ComponentCard(
+      detail: ComponentDescriptorDetailEnum.standard,
+      conclusion: Text(
+        l10n.recipeAnswerTitle,
+        style: Theme.of(context).textTheme.titleMedium,
+      ),
+      conclusionSemanticsText: l10n.recipeAnswerSemantics,
+      basisText: l10n.recipeAnswerBasis,
+      standardExtra: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          TextField(
+            key: const ValueKey('recipe-answer-input'),
+            controller: _question,
+            enabled: !_busy,
+            maxLength: 1000,
+            minLines: 1,
+            maxLines: 3,
+            decoration: InputDecoration(
+              labelText: l10n.recipeAnswerInput,
+              hintText: l10n.recipeAnswerHint,
+            ),
+            onSubmitted: (_) => _submit(),
+            onChanged: (_) => setState(() {}),
           ),
-          onSubmitted: (_) => _submit(),
-          onChanged: (_) => setState(() {}),
-        ),
-        FilledButton(
-          key: const ValueKey('recipe-answer-submit'),
-          onPressed: _busy || _question.text.trim().isEmpty ? null : _submit,
-          child: Text(
-            _busy ? '正在解释…' : (_answer != null || _failed ? '重试解释' : '查看解释'),
+          FilledButton(
+            key: const ValueKey('recipe-answer-submit'),
+            onPressed: _busy || _question.text.trim().isEmpty ? null : _submit,
+            child: Text(
+              _busy
+                  ? l10n.recipeAnswerBusy
+                  : (_answer != null || _failed
+                        ? l10n.recipeAnswerRetry
+                        : l10n.recipeAnswerSubmit),
+            ),
           ),
-        ),
-        if (_answer != null || _failed) ...[
-          Text(_conclusion, maxLines: 3, overflow: TextOverflow.ellipsis),
-          Wrap(
-            crossAxisAlignment: WrapCrossAlignment.center,
-            children: [
-              SourceMark(
-                sourceType: sourceTypeAiEstimated,
-                componentId: 'recipe-answer',
-                value: '一般经验',
-                basisText: _basis,
-                required: false,
-                feedbackEnabled: false,
-                onAction: null,
-              ),
-              TextButton(onPressed: _showWhy, child: const Text('为什么 · 明细')),
-            ],
-          ),
+          if (_answer != null || _failed) ...[
+            Text(_conclusion, maxLines: 3, overflow: TextOverflow.ellipsis),
+            Wrap(
+              crossAxisAlignment: WrapCrossAlignment.center,
+              children: [
+                SourceMark(
+                  sourceType: sourceTypeAiEstimated,
+                  componentId: 'recipe-answer',
+                  value: l10n.recipeAnswerExperience,
+                  basisText: l10n.recipeAnswerBasis,
+                  required: false,
+                  feedbackEnabled: false,
+                  onAction: null,
+                ),
+                TextButton(
+                  onPressed: _showWhy,
+                  child: Text(l10n.recipeAnswerWhy),
+                ),
+              ],
+            ),
+          ],
         ],
-      ],
-    ),
-  );
+      ),
+    );
+  }
 }

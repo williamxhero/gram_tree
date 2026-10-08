@@ -963,7 +963,11 @@ void main() {
       addTearDown(() => tester.binding.setSurfaceSize(null));
       final server = FakeServer();
       _installRecipeApi(server);
-      await pumpApp(tester, env: TestEnv.signedIn(server: server));
+      await pumpApp(
+        tester,
+        env: TestEnv.signedIn(server: server),
+        size: const Size(320, 640),
+      );
       await _openMyRecipes(tester);
       await tester.tap(find.byKey(const ValueKey('recipe-card-$_recipeId')));
       await tester.pumpAndSettle();
@@ -998,6 +1002,11 @@ void main() {
       await _scrollUntilVisible(
         tester,
         find.byKey(const ValueKey('delete-recipe-button')),
+      );
+      await tester.pumpAndSettle();
+      expect(
+        find.byKey(const ValueKey('delete-recipe-button')).hitTestable(),
+        findsOneWidget,
       );
       await tester.tap(find.byKey(const ValueKey('delete-recipe-button')));
       await tester.pumpAndSettle();

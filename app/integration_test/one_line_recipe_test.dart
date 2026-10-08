@@ -186,8 +186,15 @@ void main() {
             )
             .first,
       );
+      await tester.ensureVisible(confirmedQuantity);
+      await tester.pumpAndSettle();
+      // _number displays double.toString(): VM 320.0, JavaScript 320.
+      // Observe the authored quantity on screen, never a nullable controller.
       expect(
-        find.descendant(of: confirmedQuantity, matching: find.text('320')),
+        find.descendant(
+          of: confirmedQuantity,
+          matching: find.textContaining(RegExp(r'^320(?:\.0)?$')),
+        ),
         findsOneWidget,
       );
       expect(tester.takeException(), isNull);

@@ -239,8 +239,12 @@ void main() {
         find.byKey(const ValueKey('recipe-detail-content')),
       );
       _markE2eStep('after_detail_loaded');
-      await reveal(tester, find.byKey(const ValueKey('delete-recipe-button')));
-      await tester.tap(find.byKey(const ValueKey('delete-recipe-button')));
+      final delete = find.byKey(const ValueKey('delete-recipe-button'));
+      await reveal(tester, delete);
+      // ensureVisible jumps the scroll position; pump its new layout before tap.
+      await settle(tester);
+      expect(delete.hitTestable(), findsOneWidget);
+      await tester.tap(delete);
       await settle(tester);
       await waitFor(tester, find.text('确认删除'));
       await tester.tap(find.text('确认删除'));
