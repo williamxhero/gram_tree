@@ -55,6 +55,10 @@ with psycopg.connect(url, autocommit=True) as conn:
 redis.Redis.from_url(Settings().redis_url).flushdb()
 EOF
   uv run alembic upgrade head >/dev/null
+  # All acceptance files share one server/IP. Keep production limits unchanged,
+  # but allow the isolated test database enough codes for the complete suite.
+  uv run gramtree config set auth.email_code_daily_limit 1000 \
+    --by e2e --reason 'Shared-IP acceptance suite' >/dev/null
   uv run gramtree ingredients import tests/data/ingredients >/dev/null
 
   # 单进程运行：验证码存在进程内存里，多进程时读不到
