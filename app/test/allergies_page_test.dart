@@ -45,6 +45,22 @@ AllergiesOut allergyFixture({
   ingredients: const [],
 );
 
+TasteProfileChangeOut _privateHistory(AllergiesOut value) =>
+    TasteProfileChangeOut(
+      id: newUuidV4(),
+      field: 'allergies',
+      version: 2,
+      oldValue: const {'categories': [], 'ingredients': []},
+      newValue: {
+        'categories': value.categories,
+        'ingredients': value.ingredients.map((item) => item.toJson()).toList(),
+      },
+      reason: '你手动修改',
+      source_: TasteProfileChangeOutSource_Enum.manual,
+      status: TasteProfileChangeOutStatusEnum.active,
+      createdAt: '2026-10-08T10:00:00Z',
+    );
+
 Future<void> _withdraw(WidgetTester tester) async {
   await tapVisible(tester, find.byKey(const ValueKey('sensitive-withdraw')));
   await tapVisible(
@@ -289,6 +305,169 @@ void main() {
             .headers['Authorization'],
         'Bearer access-1',
       );
+      expect(tester.takeException(), isNull);
+    },
+  );
+  for (final operation in ['current', 'history', 'save']) {
+    testWidgets(
+      'late sensitive $operation response cannot repopulate the next account',
+      (tester) async {
+        final server = FakeServer();
+        installProfile(server, () => profileFixture());
+        final pending = Completer<(int, Object?)>();
+        final old = allergyFixture(consentId: newUuidV4()).copyWith(
+          ingredients: [
+            AllergyIngredientOut(ingredientId: newUuidV4(), name: '旧账户私密食材'),
+          ],
+        );
+        var freshAccount = false;
+        var started = false;
+        server.on('GET', allergyPath, (_) {
+          if (operation == 'current' && !started) {
+            started = true;
+            return pending.future;
+          }
+          return (200, (freshAccount ? allergyFixture() : old).toJson());
+        });
+        server.on('GET', '$allergyPath/changes', (_) {
+          if (operation == 'history' && !started) {
+            started = true;
+            return pending.future;
+          }
+          return (200, PageTasteProfileChangeOut(items: const []).toJson());
+        });
+        server.on('PUT', allergyPath, (_) {
+          started = true;
+          return pending.future;
+        });
+        await pumpApp(tester, env: TestEnv.signedIn(server: server));
+        await openTaste(tester);
+        await tester.scrollUntilVisible(
+          find.byKey(const ValueKey('allergies-edit')),
+          300,
+        );
+        await pumpFrames(tester);
+        if (operation == 'save') {
+          await tapVisible(
+            tester,
+            find.byKey(const ValueKey('allergies-edit')),
+          );
+          await tapVisible(
+            tester,
+            find.byKey(const ValueKey('allergies-save')),
+          );
+          await tester.tapAt(const Offset(5, 5));
+          await tester.pumpAndSettle();
+        }
+        expect(started, isTrue);
+        freshAccount = true;
+        await signOut(tester);
+        await _loginOther(tester, server);
+        await openTaste(tester);
+        expect(find.text('咸 · 标准'), findsOneWidget);
+        await tester.scrollUntilVisible(
+          find.byKey(const ValueKey('allergies-edit')),
+          300,
+        );
+        await tester.pumpAndSettle();
+        pending.complete((
+          200,
+          operation == 'history'
+              ? PageTasteProfileChangeOut(items: [_privateHistory(old)])
+                    .toJson()
+              : old.toJson(),
+        ));
+        await tester.pumpAndSettle();
+        expect(find.textContaining('旧账户私密食材'), findsNothing);
+        expect(find.text('尚未填写本人过敏'), findsOneWidget);
+        expect(find.text('没有私密修改历史'), findsOneWidget);
+        expect(find.byKey(const ValueKey('why-panel')), findsNothing);
+        await tapVisible(tester, find.byKey(const ValueKey('allergies-edit')));
+        expect(find.text('过敏信息单独同意'), findsOneWidget);
+        expect(tester.takeException(), isNull);
+      },
+    );
+  }
+  testWidgets(
+    'A to B to A ignores old sensitive current history and save responses',
+    (tester) async {
+      final server = FakeServer();
+      final original = server.user;
+      installProfile(server, () => profileFixture());
+      final pendingCurrent = Completer<(int, Object?)>();
+      final pendingHistory = Completer<(int, Object?)>();
+      final pendingSave = Completer<(int, Object?)>();
+      final old = allergyFixture(consentId: newUuidV4()).copyWith(
+        ingredients: [
+          AllergyIngredientOut(ingredientId: newUuidV4(), name: '旧会话私密食材'),
+        ],
+      );
+      var deferCurrent = false;
+      var currentStarted = false;
+      var freshAccount = false;
+      server.on('GET', allergyPath, (_) {
+        if (deferCurrent && !currentStarted) {
+          currentStarted = true;
+          return pendingCurrent.future;
+        }
+        return (200, (freshAccount ? allergyFixture() : old).toJson());
+      });
+      server.on('GET', '$allergyPath/changes', (_) => pendingHistory.future);
+      server.on('PUT', allergyPath, (_) => pendingSave.future);
+      await pumpApp(tester, env: TestEnv.signedIn(server: server));
+      await openTaste(tester);
+      await tester.scrollUntilVisible(
+        find.byKey(const ValueKey('allergies-edit')),
+        300,
+      );
+      await pumpFrames(tester);
+      expect(server.calls('GET', '$allergyPath/changes'), isNotEmpty);
+      await tester.tap(find.byKey(const ValueKey('allergies-edit')));
+      await pumpFrames(tester);
+      expect(find.byKey(const ValueKey('allergies-save')), findsOneWidget);
+      await tester.tap(find.byKey(const ValueKey('allergies-save')));
+      await pumpFrames(tester);
+      expect(server.calls('PUT', allergyPath), hasLength(1));
+      await tester.tapAt(const Offset(5, 5));
+      await pumpFrames(tester);
+      await goBack(tester);
+      deferCurrent = true;
+      await openTaste(tester);
+      await tester.scrollUntilVisible(
+        find.byKey(const ValueKey('allergies-edit')),
+        300,
+      );
+      await pumpFrames(tester);
+      expect(currentStarted, isTrue);
+      freshAccount = true;
+      await signOut(tester);
+      await _loginOther(tester, server);
+      await openTaste(tester);
+      await signOut(tester);
+      await _loginOther(tester, server, user: original);
+      await openTaste(tester);
+      await tester.scrollUntilVisible(
+        find.byKey(const ValueKey('allergies-edit')),
+        300,
+      );
+      await tester.pumpAndSettle();
+      pendingCurrent.complete((200, old.toJson()));
+      pendingHistory.complete((
+        200,
+        PageTasteProfileChangeOut(items: [_privateHistory(old)]).toJson(),
+      ));
+      pendingSave.complete((200, old.toJson()));
+      await tester.pumpAndSettle();
+      expect(
+        server.calls('GET', allergyPath).last.headers['Authorization'],
+        'Bearer access-2',
+      );
+      expect(server.calls('PUT', allergyPath), hasLength(1));
+      expect(find.textContaining('旧会话私密食材'), findsNothing);
+      expect(find.text('尚未填写本人过敏'), findsOneWidget);
+      expect(find.text('没有私密修改历史'), findsOneWidget);
+      await tapVisible(tester, find.byKey(const ValueKey('allergies-edit')));
+      expect(find.text('过敏信息单独同意'), findsOneWidget);
       expect(tester.takeException(), isNull);
     },
   );
