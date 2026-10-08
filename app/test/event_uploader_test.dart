@@ -155,6 +155,140 @@ void main() {
     expect(attempts, 3);
   });
 
+  test('过期已尝试写入按入队顺序唤醒，不消耗新写入、阻塞子写入或其他账号', () async {
+    final server = FakeServer()
+      ..on(
+        'POST',
+        '/v1/sync/writes',
+        (_) => FakeServer.error(503, 'unavailable', '暂不可用'),
+      );
+    final env = TestEnv.signedIn(server: server);
+    final container = ProviderContainer(
+      overrides: [
+        ...env.overrides,
+        eventUploaderProvider.overrideWith((ref) {
+          final uploader = EventUploader(
+            ref,
+            initialBackoff: const Duration(seconds: 2),
+            maxBackoff: const Duration(seconds: 8),
+          );
+          ref.onDispose(uploader.dispose);
+          return uploader;
+        }),
+      ],
+    );
+    addTearDown(container.dispose);
+    await container.read(sessionStoreProvider).load();
+    final parent = sample(index: 1);
+    final secondRetry = sample(index: 3);
+    final thirdRetry = sample(index: 4);
+    // New unrelated work deliberately precedes the existing due retries.
+    for (final event in [parent, sample(index: 2), secondRetry, thirdRetry]) {
+      await env.eventQueue.enqueue(event);
+    }
+    await env.eventQueue.enqueue(
+      QueuedEvent.write(
+        id: eventId(5),
+        ownerId: parent.ownerId,
+        deviceTime: parent.deviceTime,
+        writeType: parent.writeType,
+        payload: parent.payload,
+        dependencies: [parent.id],
+      ),
+    );
+    await env.eventQueue.enqueue(sample(index: 6));
+    await env.eventQueue.enqueue(sample(index: 7));
+    await env.eventQueue.enqueue(
+      QueuedEvent.write(
+        id: eventId(8),
+        ownerId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+        deviceTime: parent.deviceTime,
+        writeType: parent.writeType,
+        payload: parent.payload,
+      ),
+    );
+    final overdue = DateTime.now().toUtc().subtract(const Duration(seconds: 1));
+    for (final entry in await env.eventQueue.entries()) {
+      if (entry.write.id == eventId(2)) continue;
+      await env.eventQueue.update(
+        entry.change(
+          state: entry.write.id == eventId(5)
+              ? WriteState.deferred
+              : entry.write.id == eventId(6)
+              ? WriteState.failed
+              : entry.write.id == eventId(7)
+              ? WriteState.loginPaused
+              : WriteState.pending,
+          attempts: 1,
+          reasonCode: entry.write.id == eventId(5)
+              ? 'dependency_not_confirmed'
+              : 'network_or_server_failure',
+          // The later write is older by deadline, but both are already due.
+          // FIFO must still win, as with deadlines truncated by native storage.
+          nextAttemptAt: entry.write.id == eventId(4)
+              ? overdue.subtract(const Duration(seconds: 1))
+              : overdue,
+        ),
+      );
+    }
+    await container.read(eventUploaderProvider).triggerUpload();
+    expect(server.calls('POST', '/v1/sync/writes'), hasLength(1));
+    await _waitUntil(() async {
+      final entries = await env.eventQueue.entries();
+      return entries[2].attempts == 2 && entries[3].attempts == 2;
+    }, timeout: const Duration(seconds: 1));
+    // Allow any accidental zero-delay wake to run before checking the boundary.
+    await Future<void>.delayed(const Duration(milliseconds: 60));
+    expect(server.calls('POST', '/v1/sync/writes').expand(writes).toList(), [
+      parent.toJson(),
+      secondRetry.toJson(),
+      thirdRetry.toJson(),
+    ]);
+    final retained = await env.eventQueue.entries();
+    expect(retained[1].attempts, 0);
+    expect(retained[1].nextAttemptAt, isNull);
+    expect(retained[4].attempts, 1);
+    expect(retained[4].state, WriteState.deferred);
+    expect(retained[4].nextAttemptAt, overdue);
+    expect(retained[5].state, WriteState.failed);
+    expect(retained[5].attempts, 1);
+    expect(retained[6].state, WriteState.loginPaused);
+    expect(retained[6].attempts, 1);
+    expect(retained[7].attempts, 1);
+    expect(
+      retained.every((entry) => entry.write.content?['ping'] == 'retained'),
+      isTrue,
+    );
+  });
+
+  test('定时重试确认传输恢复后，新写入仍自动同步，不永久暂停', () async {
+    var requests = 0;
+    final server = FakeServer()
+      ..on('POST', '/v1/sync/writes', (request) {
+        requests++;
+        return requests == 1
+            ? FakeServer.error(503, 'unavailable', '暂不可用')
+            : confirmed(request);
+      });
+    final env = TestEnv.signedIn(server: server);
+    final container = await setup(env, fast: true);
+    final retained = sample(index: 1);
+    final fresh = sample(index: 2);
+    await env.eventQueue.enqueue(retained);
+    await env.eventQueue.enqueue(fresh);
+    await container.read(eventUploaderProvider).triggerUpload();
+    expect(server.calls('POST', '/v1/sync/writes'), hasLength(1));
+    expect(await env.eventQueue.pending(), hasLength(2));
+    // Recovery is discovered by the existing retry, without a manual network
+    // reset or a new action. Its confirmation must release outage suspension.
+    await _waitUntil(() async => (await env.eventQueue.pending()).isEmpty);
+    expect(server.calls('POST', '/v1/sync/writes').expand(writes).toList(), [
+      retained.toJson(),
+      retained.toJson(),
+      fresh.toJson(),
+    ]);
+  });
+
   for (final outcome in ['failed', 'conflict']) {
     for (final parentFirst in [true, false]) {
       test('前置 $outcome（父先入队 $parentFirst）同轮阻止子上传且不消耗额度', () async {

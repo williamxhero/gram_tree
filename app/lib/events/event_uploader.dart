@@ -51,6 +51,7 @@ class EventUploader {
   Timer? _retryTimer;
   bool _uploading = false;
   bool _rerunRequested = false;
+  bool _rerunAttemptedOnly = true;
   bool _disposed = false;
 
   // Compatibility diagnostic thresholds; no content is discarded on backlog.
@@ -124,10 +125,15 @@ class EventUploader {
       _session.identityEpoch == epoch &&
       _ref.read(privacyConsentProvider);
 
-  Future<void> triggerUpload() async {
+  Future<void> triggerUpload() => _triggerUpload();
+
+  Future<void> _triggerUpload({bool attemptedOnly = false}) async {
     if (_disposed || !_ref.mounted) return;
     if (_uploading) {
       _rerunRequested = true;
+      // An explicit enqueue/network trigger may start fresh work even when it
+      // coincides with a timer restricted to previously attempted writes.
+      _rerunAttemptedOnly = _rerunAttemptedOnly && attemptedOnly;
       return;
     }
     _uploading = true;
@@ -136,15 +142,21 @@ class EventUploader {
     try {
       do {
         _rerunRequested = false;
-        await _drain();
+        _rerunAttemptedOnly = true;
+        await _drain(attemptedOnly: attemptedOnly);
+        attemptedOnly = _rerunAttemptedOnly;
       } while (_rerunRequested && !_disposed && _ref.mounted);
       if (!_disposed && _ref.mounted) await _checkBacklog();
     } finally {
       _uploading = false;
     }
+    // An overdue retry can fire during the asynchronous backlog read too.
+    if (_rerunRequested) {
+      unawaited(_triggerUpload(attemptedOnly: _rerunAttemptedOnly));
+    }
   }
 
-  Future<void> _drain() async {
+  Future<void> _drain({required bool attemptedOnly}) async {
     final session = _session.current;
     if (session == null || !_ref.read(privacyConsentProvider)) return;
     final owner = session.user.id;
@@ -178,7 +190,9 @@ class EventUploader {
         if (entry.state == WriteState.confirmed ||
             entry.state == WriteState.failed ||
             entry.state == WriteState.conflict ||
-            entry.state == WriteState.quarantined) {
+            entry.state == WriteState.quarantined ||
+            ((attemptedOnly || transportUnavailable) &&
+                entry.state == WriteState.loginPaused)) {
           continue;
         }
         if (_hasDependencyCycle(entry.write.id, byId)) {
@@ -229,6 +243,11 @@ class EventUploader {
           }
           continue;
         }
+        // Dependency transitions still settle fresh children, but a timer in a
+        // transport outage must not spend unrelated writes' first attempts.
+        if ((attemptedOnly || transportUnavailable) && entry.attempts == 0) {
+          continue;
+        }
         // Dependency failure/conflict is actionable even during backoff. It
         // must not wait for, or consume, the child's next HTTP attempt.
         if (entry.nextAttemptAt != null &&
@@ -275,6 +294,9 @@ class EventUploader {
               results.single.writeId != entry.write.id) {
             throw StateError('Incomplete write confirmation');
           }
+          // A valid server result proves the transport outage has ended.
+          // Ordinary new work can resume, including earlier skipped entries.
+          attemptedOnly = false;
           final result = results.single;
           switch (result.status) {
             case WriteResultStatusEnum.confirmed:
@@ -348,6 +370,7 @@ class EventUploader {
           if (error.response != null &&
               error.response!.statusCode! >= 400 &&
               error.response!.statusCode! < 500) {
+            attemptedOnly = false;
             await save(
               entry.change(
                 state: WriteState.failed,
@@ -360,15 +383,21 @@ class EventUploader {
               'network_or_server_failure',
               save,
             );
-            if (wait != null &&
-                (earliestRetry == null || wait.isBefore(earliestRetry))) {
-              earliestRetry = wait;
-            }
+            if (!_sameAccount(owner, epoch)) return;
+            // The outage ends this pass, not the deadlines of writes already
+            // attempted in earlier passes. Include unvisited retained retries
+            // from the synchronized snapshot, but never start fresh work here.
+            earliestRetry = _nextAttemptedRetry(byId);
             // Transport outage affects all entries; don't consume all their
             // attempts while offline. Deferred business results, by contrast,
             // continue to later entries in the same pass.
             if (wait != null) {
-              _scheduleRetry(earliestRetry);
+              _scheduleRetry(
+                earliestRetry,
+                owner: owner,
+                epoch: epoch,
+                attemptedOnly: true,
+              );
               return;
             }
             // Exhaustion is terminal: settle dependent children in this drain
@@ -412,7 +441,37 @@ class EventUploader {
         }
       }
     } while (progressed && _sameAccount(owner, epoch));
-    _scheduleRetry(earliestRetry);
+    _scheduleRetry(
+      earliestRetry,
+      owner: owner,
+      epoch: epoch,
+      attemptedOnly: attemptedOnly || transportUnavailable,
+    );
+  }
+
+  DateTime? _nextAttemptedRetry(Map<String, QueueEntry> entries) {
+    DateTime? earliest;
+    for (final entry in entries.values) {
+      final at = entry.nextAttemptAt;
+      if (entry.attempts == 0 ||
+          at == null ||
+          (entry.state != WriteState.pending &&
+              entry.state != WriteState.deferred &&
+              entry.state != WriteState.uploading) ||
+          entry.reasonCode == 'dependency_conflict') {
+        continue;
+      }
+      if (entry.write.dependencies.any((id) {
+        final parent = entries[id];
+        return parent != null &&
+            (parent.state != WriteState.confirmed ||
+                parent.reasonCode == 'dependency_conflict');
+      })) {
+        continue;
+      }
+      if (earliest == null || at.isBefore(earliest)) earliest = at;
+    }
+    return earliest;
   }
 
   bool _hasDependencyCycle(String start, Map<String, QueueEntry> entries) {
@@ -485,14 +544,20 @@ class EventUploader {
     return next;
   }
 
-  void _scheduleRetry(DateTime? at) {
-    if (at == null || _disposed) return;
+  void _scheduleRetry(
+    DateTime? at, {
+    required String owner,
+    required int epoch,
+    bool attemptedOnly = false,
+  }) {
+    if (at == null || !_sameAccount(owner, epoch)) return;
     _retryTimer?.cancel();
     final wait = at.difference(DateTime.now().toUtc());
-    _retryTimer = Timer(
-      wait.isNegative ? Duration.zero : wait,
-      () => unawaited(triggerUpload()),
-    );
+    _retryTimer = Timer(wait.isNegative ? Duration.zero : wait, () {
+      if (_sameAccount(owner, epoch)) {
+        unawaited(_triggerUpload(attemptedOnly: attemptedOnly));
+      }
+    });
   }
 
   void dispose() {

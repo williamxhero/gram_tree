@@ -443,6 +443,156 @@ void main() {
     expect(writes.map((write) => write['write_id']).toSet(), hasLength(2));
   });
 
+  testWidgets('页面两次为什么遇到503，后写入按已有期限重试且原封包保留', (tester) async {
+    var available = false;
+    final server = FakeServer()
+      ..on('POST', '/v1/sync/writes', (request) {
+        if (!available) {
+          return FakeServer.error(503, 'unavailable', '暂不可用');
+        }
+        final write = ((request.body as Map)['writes'] as List).single as Map;
+        return (
+          200,
+          {
+            'results': [
+              {
+                'write_id': write['write_id'],
+                'status': 'confirmed',
+                'result': {
+                  'resource_type': 'experience.event',
+                  'resource_id': write['write_id'],
+                },
+              },
+            ],
+          },
+        );
+      });
+    final env = TestEnv.signedIn(server: server);
+    final container = ProviderContainer(
+      overrides: [
+        ...env.overrides,
+        eventUploaderProvider.overrideWith((ref) {
+          final uploader = EventUploader(
+            ref,
+            initialBackoff: const Duration(seconds: 3),
+            maxBackoff: const Duration(seconds: 12),
+          );
+          ref.onDispose(uploader.dispose);
+          return uploader;
+        }),
+      ],
+    );
+    List<Map> sent() => server
+        .calls('POST', '/v1/sync/writes')
+        .map(
+          (request) => ((request.body as Map)['writes'] as List).single as Map,
+        )
+        .toList();
+    Future<void> waitForWrites(
+      int count, {
+      Duration timeout = const Duration(seconds: 8),
+    }) async {
+      final until = DateTime.now().add(timeout);
+      // DateTime uses wall time while widget timers use fake time. Advance both,
+      // polling observable HTTP instead of assuming a particular timer instant.
+      while (sent().length < count && DateTime.now().isBefore(until)) {
+        await tester.runAsync(
+          () => Future<void>.delayed(const Duration(milliseconds: 25)),
+        );
+        await tester.pump(const Duration(milliseconds: 25));
+      }
+      expect(sent(), hasLength(count), reason: '已有重试期限必须在前写入更长退避前唤醒');
+      await tester.pumpAndSettle();
+    }
+
+    try {
+      await container.read(sessionStoreProvider).load();
+      await _pumpSyncBadge(
+        tester,
+        container,
+        children: const [
+          SourceMark(
+            sourceType: 'verified',
+            componentId: 'salt',
+            value: '3 g',
+            basisText: '作者用量',
+            required: true,
+            onAction: null,
+          ),
+          SourceMark(
+            sourceType: 'ai_estimated',
+            componentId: 'water',
+            value: '200 ml',
+            basisText: '水量估算依据',
+            required: true,
+            onAction: null,
+          ),
+        ],
+      );
+      await tester.tap(find.text('已验证'));
+      await tester.pumpAndSettle();
+      expect(find.text('作者用量'), findsOneWidget);
+      expect(find.text('待同步 1 条'), findsOneWidget);
+      await waitForWrites(1);
+      Navigator.of(tester.element(find.byKey(const ValueKey('why-panel'))))
+          .pop();
+      await tester.pumpAndSettle();
+      // Separate the two existing deadlines generously, still before the first
+      // initial backoff expires. No manual uploader trigger creates the retries.
+      await tester.runAsync(
+        () => Future<void>.delayed(const Duration(seconds: 1)),
+      );
+      await tester.tap(find.text('AI 估算'));
+      await tester.pumpAndSettle();
+      expect(find.text('水量估算依据'), findsOneWidget);
+      expect(find.text('待同步 2 条'), findsOneWidget);
+      await waitForWrites(2);
+      final originals = sent();
+      expect(
+        originals.map(
+          (write) =>
+              ((write['payload'] as Map)['content'] as Map)['component_id'],
+        ),
+        ['salt', 'water'],
+      );
+      expect(originals.map((write) => write['owner_id']), [
+        server.user.id,
+        server.user.id,
+      ]);
+      expect(originals.map((write) => write['write_id']).toSet(), hasLength(2));
+
+      await waitForWrites(3);
+      expect(sent()[2], originals[0]);
+      final retained = await env.eventQueue.entries();
+      expect(retained[1].nextAttemptAt, isNotNull);
+      expect(
+        retained[0].nextAttemptAt!.isAfter(retained[1].nextAttemptAt!),
+        isTrue,
+      );
+      expect(
+        retained[0].nextAttemptAt!.isAfter(
+          DateTime.now().toUtc().add(const Duration(seconds: 3)),
+        ),
+        isTrue,
+      );
+      await waitForWrites(4, timeout: const Duration(seconds: 3));
+      expect(sent()[3], originals[1]);
+      expect(find.text('待同步 2 条'), findsOneWidget);
+
+      available = true;
+      container.read(offlineSimulationProvider.notifier).set(true);
+      await tester.pumpAndSettle();
+      container.read(offlineSimulationProvider.notifier).set(false);
+      await tester.pumpAndSettle();
+      expect(find.byKey(const ValueKey('sync-pending')), findsNothing);
+      expect(sent(), [...originals, ...originals, ...originals]);
+      expect(tester.takeException(), isNull);
+    } finally {
+      container.dispose();
+      await tester.pumpWidget(const SizedBox.shrink());
+    }
+  });
+
   testWidgets('真实页面事件重试超限后显示原因，内容保留且不再自动上传', (tester) async {
     final server = FakeServer()
       ..on(
