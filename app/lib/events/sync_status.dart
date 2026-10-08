@@ -62,14 +62,21 @@ final _syncStatusStreamProvider = StreamProvider<SyncStatus>((ref) async* {
 
   // Subscribe before initial read so a write during loading cannot be missed.
   final events = StreamController<void>();
-  final subscription = queue.changes.listen((_) => events.add(null));
+  final subscription = queue.changes.listen((_) {
+    if (ref.mounted) events.add(null);
+  });
   ref.onDispose(() {
     subscription.cancel();
     events.close();
   });
-  yield await snapshot();
+  final initial = await snapshot();
+  if (!ref.mounted) return;
+  yield initial;
   await for (final _ in events.stream) {
-    yield await snapshot();
+    if (!ref.mounted) return;
+    final next = await snapshot();
+    if (!ref.mounted) return;
+    yield next;
   }
 });
 

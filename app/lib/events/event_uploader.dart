@@ -388,6 +388,7 @@ class EventUploader {
           }
         }
       }
+      if (!_sameAccount(owner, epoch)) return;
       if (progressed) {
         // A newly confirmed prerequisite wakes deferred dependents immediately,
         // in original sequence, rather than waiting behind a retry deadline.

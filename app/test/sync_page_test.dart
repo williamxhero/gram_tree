@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:drift/drift.dart' as drift;
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:gramtree_api/gramtree_api.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -16,9 +17,158 @@ import 'package:gram_tree/events/sync_status.dart';
 import 'package:gram_tree/l10n/app_localizations.dart';
 import 'package:gram_tree/ui_protocol/source_mark.dart';
 
+import 'event_queue_test_executor.dart';
 import 'helpers.dart';
 
 void main() {
+  for (final confirmation in [false, true]) {
+    testWidgets('页面重启等待已接纳事务（确认 $confirmation），保留原内容并恢复同步', (tester) async {
+      final fixture = await tester.runAsync(createQueueTestDatabase);
+      final database = fixture!;
+      final gate = _TransactionGate(confirmation: confirmation);
+      final roots = <ProviderContainer>[];
+      final queues = <mobile.DriftEventQueue>[];
+      Future<void> cleanup() async {
+        await tester.runAsync(() async {
+          if (!gate.release.isCompleted) gate.release.complete();
+          for (final root in roots.reversed) {
+            root.dispose();
+          }
+          final closed = Future.wait([
+            for (final queue in queues) queue.close(),
+          ]);
+          // Failure can leave an admitted transaction and mounted page behind.
+          // Pump its fake-zone completion before awaiting close; never await the
+          // cached expectLater future inside runAsync or delete an open database.
+          await tester.pumpWidget(const SizedBox.shrink());
+          await tester.pumpAndSettle();
+          await closed;
+          await database.dispose();
+        });
+      }
+
+      // A pending async expectation delays addTearDown after assertion failure.
+      // Release and drain here before that failure reaches the test invoker.
+      try {
+        final executor = _GatedExecutor(database.open(), gate);
+        final queue = mobile.DriftEventQueue(
+          mobile.EventQueueDatabase.withExecutor(executor),
+        );
+        queues.add(queue);
+        final env = TestEnv.signedIn(offline: true);
+        final write = _dependencyWrite(
+          '77777777-7777-4777-8777-000000000001',
+          env.server.user.id,
+          [],
+        );
+        await tester.runAsync(() => queue.enqueue(write));
+        ProviderContainer root(mobile.DriftEventQueue queue) =>
+            ProviderContainer(
+              overrides: [
+                for (final override in env.overrides)
+                  if (override.origin != eventQueueProvider) override,
+                eventQueueProvider.overrideWith((ref) {
+                  ref.onDispose(queue.close);
+                  return queue;
+                }),
+              ],
+            );
+        Future<void> page(ProviderContainer container) async {
+          await tester.pumpWidget(
+            UncontrolledProviderScope(
+              container: container,
+              child: MaterialApp(
+                theme: buildTheme(Brightness.light),
+                localizationsDelegates: AppLocalizations.localizationsDelegates,
+                supportedLocales: AppLocalizations.supportedLocales,
+                locale: const Locale('zh'),
+                home: const Scaffold(body: SyncPendingBadge()),
+              ),
+            ),
+          );
+          await tester.pumpAndSettle();
+        }
+
+        final oldRoot = root(queue);
+        roots.add(oldRoot);
+        await oldRoot.read(sessionStoreProvider).load();
+        await page(oldRoot);
+        expect(find.text('待同步 1 条'), findsOneWidget);
+        gate.armed = true;
+        oldRoot.read(offlineSimulationProvider.notifier).set(false);
+        final drain = oldRoot.read(eventUploaderProvider).networkRestored();
+        // Attach the error consumer before disposal: transaction errors are never
+        // suppressed by the production barrier or hidden in an unawaited task.
+        final drained = expectLater(drain, completes);
+        await tester.pumpAndSettle();
+        expect(gate.started.isCompleted, isTrue);
+        expect(find.text('待同步 1 条'), findsOneWidget);
+        expect(
+          env.server.calls('POST', '/v1/sync/writes'),
+          hasLength(confirmation ? 1 : 0),
+        );
+        await tester.pumpWidget(const SizedBox.shrink());
+        oldRoot.dispose();
+        final firstClose = queue.close();
+        final repeatedClose = queue.close();
+        await tester.pump();
+        expect(gate.closeCalls, 0, reason: '关闭必须等待已接纳事务提交或回滚');
+        await expectLater(queue.entries(), throwsStateError);
+        gate.release.complete();
+        await tester.pumpAndSettle();
+        await Future.wait([drained, firstClose, repeatedClose]);
+        expect(gate.closeCalls, 1);
+        expect(gate.commits, greaterThan(0));
+        expect(gate.rollbacks, 0);
+
+        final recovered = mobile.DriftEventQueue(
+          mobile.EventQueueDatabase.withExecutor(database.open()),
+        );
+        queues.add(recovered);
+        // Open the same file, not a replacement fake queue or reconstructed count.
+        await tester.runAsync(() => recovered.entries());
+        final newRoot = root(recovered);
+        roots.add(newRoot);
+        newRoot.read(offlineSimulationProvider.notifier).set(true);
+        await newRoot.read(sessionStoreProvider).load();
+        await page(newRoot);
+        if (confirmation) {
+          expect(find.byKey(const ValueKey('sync-pending')), findsNothing);
+        } else {
+          expect(find.text('待同步 1 条'), findsOneWidget);
+        }
+        newRoot.read(offlineSimulationProvider.notifier).set(false);
+        var replaySettled = false;
+        final replay = newRoot
+            .read(eventUploaderProvider)
+            .networkRestored()
+            .whenComplete(() => replaySettled = true);
+        final replayed = expectLater(replay, completes);
+        for (var frame = 0; frame < 50 && !replaySettled; frame++) {
+          await tester.pump(const Duration(milliseconds: 100));
+        }
+        expect(replaySettled, isTrue);
+        await replayed;
+        await tester.pumpAndSettle();
+        expect(find.byKey(const ValueKey('sync-pending')), findsNothing);
+        final calls = env.server.calls('POST', '/v1/sync/writes');
+        expect(calls, hasLength(1));
+        expect(
+          ((calls.single.body as Map)['writes'] as List).single,
+          write.toJson(),
+        );
+        expect(tester.takeException(), isNull);
+        await tester.pumpWidget(const SizedBox.shrink());
+        newRoot.dispose();
+        final recoveredClose = recovered.close();
+        await tester.pump();
+        await recoveredClose;
+      } finally {
+        await cleanup();
+      }
+    }, skip: kIsWeb);
+  }
+
   testWidgets('页面重启等待旧本机诊断查询结算，重复关闭不打断查询或污染新计数', (tester) async {
     final env = TestEnv.signedIn();
     final oldExecutor = _DiagnosticExecutor(ownerUnknownCount: 1);
@@ -688,6 +838,101 @@ class _RefreshableDiagnosticQueue extends mobile.DriftEventQueue {
   Future<void> close() async {
     await super.close();
     await _notifications.close();
+  }
+}
+
+class _TransactionGate {
+  _TransactionGate({required this.confirmation});
+  final bool confirmation;
+  bool armed = false;
+  final started = Completer<void>();
+  final release = Completer<void>();
+  int closeCalls = 0;
+  int commits = 0;
+  int rollbacks = 0;
+
+  Future<void> hold() async {
+    armed = false;
+    started.complete();
+    await release.future;
+  }
+}
+
+// Delegates every SQL statement to real SQLite. The gate holds an admitted
+// transaction, not a fabricated queue state or count, across public root disposal.
+class _GatedExecutor extends drift.QueryExecutor {
+  _GatedExecutor(this.delegate, this.gate);
+  final drift.QueryExecutor delegate;
+  final _TransactionGate gate;
+  @override
+  drift.SqlDialect get dialect => delegate.dialect;
+  @override
+  Future<bool> ensureOpen(drift.QueryExecutorUser user) =>
+      delegate.ensureOpen(user);
+  @override
+  Future<List<Map<String, Object?>>> runSelect(
+    String statement,
+    List<Object?> args,
+  ) async {
+    if (gate.armed &&
+        gate.confirmation &&
+        statement.contains('queued_events') &&
+        args.length == 2) {
+      await gate.hold();
+    }
+    return delegate.runSelect(statement, args);
+  }
+
+  @override
+  Future<int> runUpdate(String statement, List<Object?> args) async {
+    if (gate.armed && !gate.confirmation && args.contains('uploading')) {
+      await gate.hold();
+    }
+    return delegate.runUpdate(statement, args);
+  }
+
+  @override
+  Future<int> runInsert(String statement, List<Object?> args) =>
+      delegate.runInsert(statement, args);
+  @override
+  Future<int> runDelete(String statement, List<Object?> args) =>
+      delegate.runDelete(statement, args);
+  @override
+  Future<void> runCustom(String statement, [List<Object?>? args]) =>
+      delegate.runCustom(statement, args);
+  @override
+  Future<void> runBatched(drift.BatchedStatements statements) =>
+      delegate.runBatched(statements);
+  @override
+  drift.QueryExecutor beginExclusive() =>
+      _GatedExecutor(delegate.beginExclusive(), gate);
+  @override
+  drift.TransactionExecutor beginTransaction() =>
+      _GatedTransaction(delegate.beginTransaction(), gate);
+  @override
+  Future<void> close() {
+    gate.closeCalls++;
+    return delegate.close();
+  }
+}
+
+class _GatedTransaction extends _GatedExecutor
+    implements drift.TransactionExecutor {
+  _GatedTransaction(drift.TransactionExecutor super.delegate, super.gate);
+  drift.TransactionExecutor get transaction =>
+      delegate as drift.TransactionExecutor;
+  @override
+  bool get supportsNestedTransactions => transaction.supportsNestedTransactions;
+  @override
+  Future<void> send() async {
+    await transaction.send();
+    gate.commits++;
+  }
+
+  @override
+  Future<void> rollback() async {
+    await transaction.rollback();
+    gate.rollbacks++;
   }
 }
 

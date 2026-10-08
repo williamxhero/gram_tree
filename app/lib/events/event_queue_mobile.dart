@@ -115,16 +115,30 @@ class DriftEventQueue implements EventQueue {
   @override
   final WriteRegistry registry;
   final StreamController<void> _changes = StreamController<void>.broadcast();
-  final Set<Future<void>> _diagnosticReads = {};
+  final Set<Future<void>> _operations = {};
   Future<void>? _closeFuture;
   @override
   Stream<void> get changes => _changes.stream;
+
+  Future<T> _operation<T>(Future<T> Function() action) async {
+    if (_closeFuture != null) throw StateError('Event queue is closing');
+    final settled = Completer<void>();
+    _operations.add(settled.future);
+    try {
+      return await action();
+    } finally {
+      // The caller still receives operation errors. Shutdown waits for actual
+      // completion, including transaction commit/rollback and change emission.
+      _operations.remove(settled.future);
+      settled.complete();
+    }
+  }
 
   @override
   Future<void> enqueue(
     QueuedEvent event, {
     Map<String, dynamic>? businessRecord,
-  }) async {
+  }) => _operation(() async {
     event.validateForEnqueue();
     registry.require(event.writeType).validate(event.payload);
     await _db.transaction(() async {
@@ -175,10 +189,15 @@ class DriftEventQueue implements EventQueue {
           );
     });
     _changes.add(null);
-  }
+  });
 
   @override
-  Future<List<QueueEntry>> entries({String? ownerId}) async {
+  Future<List<QueueEntry>> entries({String? ownerId}) =>
+      _operation(() => _entries(ownerId: ownerId));
+
+  // Nested transaction work belongs to the outer admitted operation. It must
+  // finish even if shutdown starts between its statements.
+  Future<List<QueueEntry>> _entries({String? ownerId}) async {
     final query = _db.select(_db.queuedEvents)
       ..orderBy([(t) => OrderingTerm(expression: t.enqueueSequence)]);
     if (ownerId != null) query.where((t) => t.ownerId.equals(ownerId));
@@ -186,7 +205,9 @@ class DriftEventQueue implements EventQueue {
   }
 
   @override
-  Future<void> update(QueueEntry entry) async {
+  Future<void> update(QueueEntry entry) => _operation(() => _update(entry));
+
+  Future<void> _update(QueueEntry entry) async {
     await _db.transaction(() async {
       final row = await (_db.select(
         _db.queuedEvents,
@@ -226,7 +247,7 @@ class DriftEventQueue implements EventQueue {
     String id,
     String ownerId,
     Map<String, dynamic> result,
-  ) async {
+  ) => _operation(() async {
     await _db.transaction(() async {
       final row =
           await (_db.select(_db.queuedEvents)
@@ -237,7 +258,7 @@ class DriftEventQueue implements EventQueue {
       final business = registry
           .require(entry.write.writeType)
           .applyResult(entry.businessRecord, result);
-      await update(
+      await _update(
         entry.change(
           state: WriteState.confirmed,
           result: result,
@@ -246,52 +267,55 @@ class DriftEventQueue implements EventQueue {
         ),
       );
     });
-  }
+  });
 
   @override
-  Future<void> retryAccount(String ownerId) async {
+  Future<void> retryAccount(String ownerId) => _operation(() async {
     await _db.transaction(() async {
-      for (final entry in await entries(ownerId: ownerId)) {
+      for (final entry in await _entries(ownerId: ownerId)) {
         if (entry.state != WriteState.confirmed &&
             entry.state != WriteState.conflict) {
-          await update(entry.change(state: WriteState.pending, attempts: 0));
+          await _update(entry.change(state: WriteState.pending, attempts: 0));
         }
       }
     });
-  }
+  });
 
   @override
-  Future<void> clearAccount(
-    String ownerId, {
-    bool experienceOnly = false,
-  }) async {
-    await _db.transaction(() async {
-      final ids = (await entries(ownerId: ownerId))
-          .where(
-            (e) => !experienceOnly || e.write.writeType == 'experience.event',
-          )
-          .map((e) => e.write.id);
-      await removeAll(ids);
-    });
-  }
+  Future<void> clearAccount(String ownerId, {bool experienceOnly = false}) =>
+      _operation(() async {
+        await _db.transaction(() async {
+          final ids = (await _entries(ownerId: ownerId))
+              .where(
+                (e) =>
+                    !experienceOnly || e.write.writeType == 'experience.event',
+              )
+              .map((e) => e.write.id);
+          await _removeAll(ids);
+        });
+      });
 
   @override
-  Future<List<QueuedEvent>> pending({int? limit, String? ownerId}) async {
-    final values = (await entries(ownerId: ownerId))
-        .where(
-          (e) =>
-              e.state != WriteState.confirmed &&
-              e.state != WriteState.failed &&
-              e.state != WriteState.conflict,
-        )
-        .map((e) => e.write);
-    return (limit == null ? values : values.take(limit)).toList();
-  }
+  Future<List<QueuedEvent>> pending({int? limit, String? ownerId}) =>
+      _operation(() async {
+        final values = (await _entries(ownerId: ownerId))
+            .where(
+              (e) =>
+                  e.state != WriteState.confirmed &&
+                  e.state != WriteState.failed &&
+                  e.state != WriteState.conflict,
+            )
+            .map((e) => e.write);
+        return (limit == null ? values : values.take(limit)).toList();
+      });
 
   @override
-  Future<void> remove(String id) => removeAll([id]);
+  Future<void> remove(String id) => _operation(() => _removeAll([id]));
   @override
-  Future<void> removeAll(Iterable<String> ids) async {
+  Future<void> removeAll(Iterable<String> ids) =>
+      _operation(() => _removeAll(ids));
+
+  Future<void> _removeAll(Iterable<String> ids) async {
     await (_db.delete(
       _db.queuedEvents,
     )..where((t) => t.id.isIn(ids.toList()))).go();
@@ -299,69 +323,63 @@ class DriftEventQueue implements EventQueue {
   }
 
   @override
-  Future<void> reject(String id, {required String reasonCode}) async {
-    final row = await (_db.select(
-      _db.queuedEvents,
-    )..where((t) => t.id.equals(id))).getSingleOrNull();
-    if (row != null) {
-      await update(
-        _fromRow(row).change(state: WriteState.failed, reasonCode: reasonCode),
-      );
-    }
-  }
+  Future<void> reject(String id, {required String reasonCode}) =>
+      _operation(() async {
+        final row = await (_db.select(
+          _db.queuedEvents,
+        )..where((t) => t.id.equals(id))).getSingleOrNull();
+        if (row != null) {
+          await _update(
+            _fromRow(row)
+                .change(state: WriteState.failed, reasonCode: reasonCode),
+          );
+        }
+      });
 
   @override
-  Future<int> rejectedCount() async =>
-      (await _db.select(_db.rejectedEvents).get()).length +
-      (await entries()).where((e) => e.state == WriteState.failed).length;
+  Future<int> rejectedCount() => _operation(
+    () async =>
+        (await _db.select(_db.rejectedEvents).get()).length +
+        (await _entries()).where((e) => e.state == WriteState.failed).length,
+  );
   @override
-  Future<LegacyQueueDiagnostics> legacyDiagnostics() async {
-    if (_closeFuture != null) throw StateError('Event queue is closing');
-    final settled = Completer<void>();
-    _diagnosticReads.add(settled.future);
-    try {
-      // One snapshot: there must be no second query that can start after a
-      // root restart has closed the Drift isolate between the two counts.
-      final row = await _db
-          .customSelect(
-            '''
+  Future<LegacyQueueDiagnostics> legacyDiagnostics() => _operation(() async {
+    // One snapshot: there must be no second query that can start after a
+    // root restart has closed the Drift isolate between the two counts.
+    final row = await _db
+        .customSelect(
+          '''
         SELECT
           (SELECT COUNT(*) FROM queued_events
             WHERE owner_id IS NULL AND delivery_state = 'quarantined')
             AS owner_unknown_count,
           (SELECT COUNT(*) FROM rejected_events) AS rejected_count
       ''',
-            readsFrom: {_db.queuedEvents, _db.rejectedEvents},
-          )
-          .getSingle();
-      return LegacyQueueDiagnostics(
-        ownerUnknownCount: row.read<int>('owner_unknown_count'),
-        rejectedCount: row.read<int>('rejected_count'),
-      );
-    } finally {
-      // The query's own future still delivers errors to its live consumer.
-      // This completion only lets close wait for transport work to finish.
-      _diagnosticReads.remove(settled.future);
-      settled.complete();
-    }
-  }
+          readsFrom: {_db.queuedEvents, _db.rejectedEvents},
+        )
+        .getSingle();
+    return LegacyQueueDiagnostics(
+      ownerUnknownCount: row.read<int>('owner_unknown_count'),
+      rejectedCount: row.read<int>('rejected_count'),
+    );
+  });
 
   @override
-  Future<void> clear() async {
+  Future<void> clear() => _operation(() async {
     await _db.transaction(() async {
       await _db.delete(_db.queuedEvents).go();
       await _db.delete(_db.rejectedEvents).go();
     });
     _changes.add(null);
-  }
+  });
 
   @override
-  Future<void> close() => _closeFuture ??= _closeAfterDiagnostics();
+  Future<void> close() => _closeFuture ??= _closeAfterOperations();
 
-  Future<void> _closeAfterDiagnostics() async {
-    // Disposing a provider cannot cancel an already issued isolate request.
-    // Drain those reads before shutting its channel; repeated close shares it.
-    await Future.wait(_diagnosticReads.toList());
+  Future<void> _closeAfterOperations() async {
+    // Provider disposal is synchronous, but admitted Drift requests cannot be
+    // cancelled by closing their channel, especially during rollback.
+    await Future.wait(_operations.toList());
     await _db.close();
     await _changes.close();
   }
