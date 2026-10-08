@@ -177,7 +177,10 @@ void main() {
       expect(find.text('AI 估算').first.hitTestable(), findsOneWidget);
       await tester.tap(find.text('AI 估算').first);
       await tester.pumpAndSettle();
-      expect(find.text('为什么'), findsWidgets);
+      expect(find.byKey(const ValueKey('why-panel')), findsOneWidget);
+      expect(find.text('原来：900 秒'), findsOneWidget);
+      expect(find.text('现在：900 秒，分 1 批'), findsOneWidget);
+      expect(find.text('腌制时间主要取决于肉块大小，不是总重量。'), findsOneWidget);
       expect(find.text('这次不用'), findsNothing);
       await tester.tapAt(const Offset(10, 10));
       await tester.pumpAndSettle();
