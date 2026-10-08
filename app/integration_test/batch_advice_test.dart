@@ -64,6 +64,7 @@ void main() {
     (tester) => runWithDiagnostics(tester, () async {
       tester.testTextInput.register();
       addTearDown(tester.testTextInput.unregister);
+      await support.resetLocalAppState();
       await app.main();
       await waitFor(tester, find.byKey(const ValueKey('consent-agree')));
       await tester.tap(find.byKey(const ValueKey('consent-agree')));

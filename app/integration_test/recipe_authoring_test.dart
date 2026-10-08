@@ -7,6 +7,8 @@ import 'package:gram_tree/config/app_config.dart';
 import 'package:gram_tree/main.dart' as app;
 import 'package:integration_test/integration_test.dart';
 
+import 'event_pipeline_support.dart' show resetLocalAppState;
+
 void _markE2eStep(String step) {
   final binding = IntegrationTestWidgetsFlutterBinding.instance;
   binding.reportData = {...?binding.reportData, 'e2e_step': step};
@@ -121,6 +123,7 @@ void main() {
       tester.testTextInput.register();
       addTearDown(tester.testTextInput.unregister);
 
+      await resetLocalAppState();
       await app.main();
       await settle(tester);
       final consent = find.text('开始之前，先说清楚我们会用到什么');

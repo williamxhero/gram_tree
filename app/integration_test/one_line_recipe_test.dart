@@ -5,6 +5,8 @@ import 'package:gram_tree/config/app_config.dart';
 import 'package:gram_tree/main.dart' as app;
 import 'package:integration_test/integration_test.dart';
 
+import 'event_pipeline_support.dart' show resetLocalAppState;
+
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
   final server = Dio(
@@ -65,6 +67,7 @@ void main() {
     (tester) => runWithDiagnostics(tester, () async {
       tester.testTextInput.register();
       addTearDown(tester.testTextInput.unregister);
+      await resetLocalAppState();
       await app.main();
       await waitFor(tester, find.byKey(const ValueKey('consent-agree')));
       await tester.tap(find.byKey(const ValueKey('consent-agree')));

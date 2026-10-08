@@ -5,6 +5,8 @@ import 'package:gram_tree/config/app_config.dart';
 import 'package:gram_tree/main.dart' as app;
 import 'package:integration_test/integration_test.dart';
 
+import 'event_pipeline_support.dart' show resetLocalAppState;
+
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
   final server = Dio(
@@ -61,9 +63,11 @@ void main() {
         'quantification-e2e-${DateTime.now().microsecondsSinceEpoch}@example.com';
     var step = 'login';
     try {
+      await resetLocalAppState();
       await app.main();
       await waitFor(tester, find.byKey(const ValueKey('consent-agree')));
-      await tester.tap(find.byKey(const ValueKey('consent-agree')));
+      // Consent actions are below the fold in the intended 320x640 viewport.
+      await tap(tester, 'consent-agree');
       await waitFor(tester, find.byKey(const ValueKey('login-email')));
       await tester.enterText(find.byKey(const ValueKey('login-email')), email);
       await tester.tap(find.text('发送验证码'));
