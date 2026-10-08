@@ -3,6 +3,10 @@ import base64
 import os
 import uuid
 from datetime import timedelta
+from pathlib import Path
+from concurrent.futures import ThreadPoolExecutor
+
+from gramtree.cli import main as cli
 
 from sqlalchemy import text
 from sqlalchemy.engine import Engine
@@ -133,3 +137,130 @@ def test_future_withdrawal_is_immediate_but_does_not_poison_fresh_regrant(sensit
     assert api.client.get(PATH + "/changes", headers=owner).json()["items"] == []
     assert save(api, owner, stale, ["花生"]).status_code == 409
     assert save(api, owner, state, ["蛋类"]).status_code == 200
+
+
+def test_sensitive_validation_never_echoes_values_or_unknown_keys(sensitive_api: Api, caplog):
+    api = sensitive_api
+    owner = bearer(api.login("private-errors@example.com"))
+    secret = "private-health-marker-DO-NOT-LOG"
+    for path, method, payload in (
+        (PATH, "put", {secret: secret}),
+        ("/v1/me/taste-profile", "patch", {secret: secret}),
+        (CONSENTS, "post", {"records": [{"kind": secret}]}),
+        (PATH + "/changes/" + secret, "get", None),
+    ):
+        response = getattr(api.client, method)(path, headers=owner, **({"json": payload} if payload else {}))
+        assert response.status_code == 422
+        assert secret not in response.text
+        assert secret not in str([record.__dict__ for record in caplog.records if record.name.startswith("gramtree")])
+
+
+def test_consent_idempotence_rejects_mutation_and_cross_account_id_collision(sensitive_api: Api):
+    api = sensitive_api
+    owner = bearer(api.login("idempotent-allergy@example.com"))
+    record = consent(api, owner)
+    state = api.client.get(PATH, headers=owner).json()
+    consent(api, owner, **record)
+    assert api.client.get(PATH, headers=owner).json() == state
+    for headers, altered in (
+        (owner, {**record, "action": "withdraw"}),
+        (bearer(api.login("collision-allergy@example.com", device="other")), record),
+    ):
+        result = api.client.post(CONSENTS, headers=headers, json={"records": [altered]})
+        assert result.status_code == 409, result.text
+    assert api.client.get(PATH, headers=owner).json()["consent_id"] == record["id"]
+
+
+def test_encrypted_current_history_and_metadata_fail_closed_then_keyless_withdraw(sensitive_api: Api, engine: Engine, caplog):
+    api = sensitive_api
+    assert cli(["ingredients", "import", str(Path(__file__).parent / "data" / "ingredients")]) == 0
+    owner = bearer(api.login("encrypted-allergies@example.com"))
+    ordinary = api.client.patch("/v1/me/taste-profile", headers=owner, json={"flavors": {"salty": 0.75}}).json()
+    consent(api, owner)
+    state = api.client.get(PATH, headers=owner).json()
+    ingredient = api.client.post("/v1/ingredients/search", json={"query": "测试酱油"}).json()["items"][0]
+    saved = save(api, owner, state, ["花生"], [ingredient["id"]])
+    assert saved.status_code == 200, saved.text
+    assert saved.json()["ingredients"] == [{"ingredient_id": ingredient["id"], "name": ingredient["standard_name"]}]
+    history = api.client.get(PATH + "/changes", headers=owner).json()["items"]
+    assert api.client.get(PATH + "/changes/" + history[0]["id"], headers=owner).json() == history[0]
+    assert save(api, owner, state, ["花生"], [ingredient["id"]]).json() == saved.json()
+    assert save(api, owner, state, ["自造过敏原"]).status_code == 422
+    assert save(api, owner, state, [], [str(uuid.uuid4())]).status_code == 422
+    with engine.connect() as conn:
+        ciphertext = conn.scalar(text("SELECT ciphertext FROM owner_allergies"))
+        raw_history = conn.execute(text("SELECT old_value,new_value FROM taste_profile_changes WHERE field='allergies'")).one()
+        events = conn.execute(text("SELECT content,correlation FROM events WHERE id=:id"), {"id": history[0]["id"]}).one()
+    for secret in ("花生", ingredient["id"], ingredient["standard_name"]):
+        assert secret.encode() not in ciphertext
+        assert secret not in str(raw_history)
+        assert secret not in str(events)
+        assert secret not in str([r.__dict__ for r in caplog.records if r.name.startswith("gramtree")])
+    assert events.content == {}
+    original_settings = api.client.app.state.settings
+    for key in (None, SecretStr(base64.urlsafe_b64encode(os.urandom(32)).decode())):
+        api.client.app.state.settings = original_settings.model_copy(update={"sensitive_data_key": key})
+        assert api.client.get(PATH, headers=owner).status_code == 503
+        assert api.client.get(PATH + "/changes", headers=owner).status_code == 503
+        assert save(api, owner, state, []).status_code == 503
+        with engine.connect() as conn:
+            assert conn.scalar(text("SELECT ciphertext FROM owner_allergies")) == ciphertext
+    api.client.app.state.settings = original_settings
+    # Authenticated data binds storage role and change identity: current ciphertext
+    # copied into encrypted history must not be readable as a change.
+    with engine.begin() as conn:
+        conn.execute(text("UPDATE taste_profile_changes SET old_value=:blob WHERE field='allergies'"), {"blob": __import__('json').dumps({"encrypted": base64.b64encode(ciphertext).decode()})})
+    assert api.client.get(PATH + "/changes", headers=owner).status_code == 503
+    api.client.app.state.settings = original_settings.model_copy(update={"sensitive_data_key": None})
+    api.clock.advance(seconds=1)
+    consent(api, owner, "withdraw")
+    assert api.client.get(PATH, headers=owner).json()["categories"] == []
+    with engine.connect() as conn:
+        assert conn.scalar(text("SELECT count(*) FROM owner_allergies")) == 0
+        assert conn.scalar(text("SELECT count(*) FROM taste_profile_changes WHERE field='allergies'")) == 0
+        assert conn.scalar(text("SELECT count(*) FROM events WHERE id=:id"), {"id": history[0]["id"]}) == 0
+    assert api.client.get("/v1/me/taste-profile", headers=owner).json()["flavors"] == ordinary["flavors"]
+    assert len(api.client.get("/v1/me/taste-profile/changes", headers=owner).json()["items"]) == 1
+
+
+@pytest.mark.parametrize("reverse", [False, True])
+def test_batch_ties_and_out_of_order_uploads_do_not_revive_sensitive_values(sensitive_api: Api, reverse: bool):
+    api = sensitive_api
+    owner = bearer(api.login("batch-sensitive@example.com"))
+    grant = consent(api, owner)
+    state = api.client.get(PATH, headers=owner).json()
+    assert save(api, owner, state, ["花生"]).status_code == 200
+    api.clock.advance(seconds=2)
+    withdraw = {**grant, "id": str(uuid.uuid4()), "action": "withdraw", "occurred_at": api.clock.now.isoformat()}
+    fresh = {**withdraw, "id": str(uuid.uuid4()), "action": "agree"}
+    records = [grant, withdraw, fresh]
+    result = api.client.post(CONSENTS, headers=owner, json={"records": records[::-1] if reverse else records})
+    assert result.status_code == 204
+    assert api.client.get(PATH, headers=owner).json()["consent_id"] is None
+    assert api.client.get(PATH, headers=owner).json()["categories"] == []
+    api.clock.advance(seconds=1)
+    new = consent(api, owner)
+    current = api.client.get(PATH, headers=owner).json()
+    assert current["consent_id"] == new["id"]
+    assert current["categories"] == []
+    assert api.client.get(PATH + "/changes", headers=owner).json()["items"] == []
+    assert save(api, owner, state, ["花生"]).status_code == 409
+
+
+def test_concurrent_write_and_withdraw_serialize_with_no_sensitive_residue(sensitive_api: Api, engine: Engine):
+    api = sensitive_api
+    owner = bearer(api.login("concurrent-sensitive@example.com"))
+    consent(api, owner)
+    state = api.client.get(PATH, headers=owner).json()
+    api.clock.advance(seconds=1)
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        write = pool.submit(save, api, owner, state, ["花生"])
+        withdrawal = pool.submit(consent, api, owner, "withdraw")
+        assert write.result().status_code in (200, 403)
+        withdrawal.result()
+    assert api.client.get(PATH, headers=owner).json()["consent_id"] is None
+    assert api.client.get(PATH, headers=owner).json()["categories"] == []
+    with engine.connect() as conn:
+        assert conn.scalar(text("SELECT count(*) FROM owner_allergies")) == 0
+        assert conn.scalar(text("SELECT count(*) FROM taste_profile_changes WHERE field='allergies'")) == 0
+        assert conn.scalar(text("SELECT count(*) FROM events WHERE correlation ? 'taste_profile_change_id'")) == 0
