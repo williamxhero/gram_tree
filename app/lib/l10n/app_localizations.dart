@@ -94,6 +94,282 @@ abstract class AppLocalizations {
   /// A list of this localizations delegate's supported locales.
   static const List<Locale> supportedLocales = <Locale>[Locale('zh')];
 
+  /// No description provided for @familyTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'家庭成员'**
+  String get familyTitle;
+
+  /// No description provided for @familyIntro.
+  ///
+  /// In zh, this message translates to:
+  /// **'只记必要的称呼、年龄段和简单偏好；不创建家庭账号，不推断过敏。'**
+  String get familyIntro;
+
+  /// No description provided for @familyEmpty.
+  ///
+  /// In zh, this message translates to:
+  /// **'还没有家庭成员'**
+  String get familyEmpty;
+
+  /// No description provided for @familyHidden.
+  ///
+  /// In zh, this message translates to:
+  /// **'家庭成员信息已从内存清除'**
+  String get familyHidden;
+
+  /// No description provided for @familyUnavailable.
+  ///
+  /// In zh, this message translates to:
+  /// **'家庭信息暂不可用；仍可在设置撤回同意'**
+  String get familyUnavailable;
+
+  /// No description provided for @familySaveUnconfirmed.
+  ///
+  /// In zh, this message translates to:
+  /// **'保存尚未确认，请联网后重试'**
+  String get familySaveUnconfirmed;
+
+  /// No description provided for @familyDeleteUnconfirmed.
+  ///
+  /// In zh, this message translates to:
+  /// **'删除尚未确认，信息已从本机内存清除；请重试'**
+  String get familyDeleteUnconfirmed;
+
+  /// No description provided for @familyDeleteRetry.
+  ///
+  /// In zh, this message translates to:
+  /// **'重试删除'**
+  String get familyDeleteRetry;
+
+  /// No description provided for @familyAdd.
+  ///
+  /// In zh, this message translates to:
+  /// **'添加家庭成员'**
+  String get familyAdd;
+
+  /// No description provided for @familyConsentTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'家庭成员信息单独同意'**
+  String get familyConsentTitle;
+
+  /// No description provided for @familyConsentBody.
+  ///
+  /// In zh, this message translates to:
+  /// **'只收集家人的称呼、年龄段、与标准不同的简单口味、忌口和你手动选择的过敏，用于保存和查看本账号内的必要做菜信息。不收集真实姓名、生日或照片，不建立可登录或共享的家庭账号。涉及不满十四周岁儿童时，请由监护人确认同意并仅填写必要信息。当前资料和可识别修改历史加密保存、仅本人可见，不进入公开内容、持久缓存或模型日志。删除成员会删除其资料、可识别历史和关联；在设置的隐私入口撤回敏感同意，会删除所有家庭成员及本人过敏，账号注销也会删除。拒绝不影响普通口味。本同意不代表同意外部 AI 或第三方共享。'**
+  String get familyConsentBody;
+
+  /// No description provided for @familyRefuse.
+  ///
+  /// In zh, this message translates to:
+  /// **'暂不填写'**
+  String get familyRefuse;
+
+  /// No description provided for @familyAgree.
+  ///
+  /// In zh, this message translates to:
+  /// **'单独同意并继续'**
+  String get familyAgree;
+
+  /// No description provided for @familyEditorTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'家庭成员简化档案'**
+  String get familyEditorTitle;
+
+  /// No description provided for @familyDetailTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'家庭成员档案'**
+  String get familyDetailTitle;
+
+  /// No description provided for @familyNickname.
+  ///
+  /// In zh, this message translates to:
+  /// **'称呼（不是真实姓名）'**
+  String get familyNickname;
+
+  /// No description provided for @familyNicknameRequired.
+  ///
+  /// In zh, this message translates to:
+  /// **'请填写称呼和年龄段'**
+  String get familyNicknameRequired;
+
+  /// No description provided for @familyAgeBand.
+  ///
+  /// In zh, this message translates to:
+  /// **'年龄段'**
+  String get familyAgeBand;
+
+  /// No description provided for @familyAgeUnder1.
+  ///
+  /// In zh, this message translates to:
+  /// **'1 岁以下'**
+  String get familyAgeUnder1;
+
+  /// No description provided for @familyAge1To3.
+  ///
+  /// In zh, this message translates to:
+  /// **'1～3 岁'**
+  String get familyAge1To3;
+
+  /// No description provided for @familyAge3To6.
+  ///
+  /// In zh, this message translates to:
+  /// **'3～6 岁'**
+  String get familyAge3To6;
+
+  /// No description provided for @familyAge6To12.
+  ///
+  /// In zh, this message translates to:
+  /// **'6～12 岁'**
+  String get familyAge6To12;
+
+  /// No description provided for @familyAge12To18.
+  ///
+  /// In zh, this message translates to:
+  /// **'12～18 岁'**
+  String get familyAge12To18;
+
+  /// No description provided for @familyAgeAdult.
+  ///
+  /// In zh, this message translates to:
+  /// **'成人'**
+  String get familyAgeAdult;
+
+  /// No description provided for @familyAgeElder.
+  ///
+  /// In zh, this message translates to:
+  /// **'老人'**
+  String get familyAgeElder;
+
+  /// No description provided for @familyFlavors.
+  ///
+  /// In zh, this message translates to:
+  /// **'只填写与标准不同的口味'**
+  String get familyFlavors;
+
+  /// No description provided for @familyNoChili.
+  ///
+  /// In zh, this message translates to:
+  /// **'不吃辣'**
+  String get familyNoChili;
+
+  /// No description provided for @familyStandard.
+  ///
+  /// In zh, this message translates to:
+  /// **'标准（不单独记录）'**
+  String get familyStandard;
+
+  /// No description provided for @familyAvoidances.
+  ///
+  /// In zh, this message translates to:
+  /// **'忌口'**
+  String get familyAvoidances;
+
+  /// No description provided for @familyAvoidanceAdd.
+  ///
+  /// In zh, this message translates to:
+  /// **'添加忌口食材或分类'**
+  String get familyAvoidanceAdd;
+
+  /// No description provided for @familyAllergies.
+  ///
+  /// In zh, this message translates to:
+  /// **'手动过敏（不会自动推断）'**
+  String get familyAllergies;
+
+  /// No description provided for @familyAllergyAdd.
+  ///
+  /// In zh, this message translates to:
+  /// **'添加具体过敏食材'**
+  String get familyAllergyAdd;
+
+  /// No description provided for @familyUnset.
+  ///
+  /// In zh, this message translates to:
+  /// **'未填写'**
+  String get familyUnset;
+
+  /// No description provided for @familyView.
+  ///
+  /// In zh, this message translates to:
+  /// **'查看'**
+  String get familyView;
+
+  /// No description provided for @familyEdit.
+  ///
+  /// In zh, this message translates to:
+  /// **'修改'**
+  String get familyEdit;
+
+  /// No description provided for @familyDelete.
+  ///
+  /// In zh, this message translates to:
+  /// **'删除成员'**
+  String get familyDelete;
+
+  /// No description provided for @familyDeleteTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'删除这位家庭成员？'**
+  String get familyDeleteTitle;
+
+  /// No description provided for @familyDeleteBody.
+  ///
+  /// In zh, this message translates to:
+  /// **'删除其全部资料、可识别修改历史和关联引用。其他成员和普通口味不受影响。'**
+  String get familyDeleteBody;
+
+  /// No description provided for @familyHistory.
+  ///
+  /// In zh, this message translates to:
+  /// **'家庭成员私密修改历史'**
+  String get familyHistory;
+
+  /// No description provided for @familyHistoryEmpty.
+  ///
+  /// In zh, this message translates to:
+  /// **'没有家庭成员私密修改历史'**
+  String get familyHistoryEmpty;
+
+  /// No description provided for @familyHistoryUnavailable.
+  ///
+  /// In zh, this message translates to:
+  /// **'私密历史暂不可用'**
+  String get familyHistoryUnavailable;
+
+  /// No description provided for @familyManual.
+  ///
+  /// In zh, this message translates to:
+  /// **'家庭成员手动填写'**
+  String get familyManual;
+
+  /// No description provided for @familyDeletedReceipt.
+  ///
+  /// In zh, this message translates to:
+  /// **'家庭成员已删除（不保留身份）'**
+  String get familyDeletedReceipt;
+
+  /// No description provided for @familyWhy.
+  ///
+  /// In zh, this message translates to:
+  /// **'为什么'**
+  String get familyWhy;
+
+  /// No description provided for @familyClose.
+  ///
+  /// In zh, this message translates to:
+  /// **'关闭'**
+  String get familyClose;
+
+  /// No description provided for @familyRemove.
+  ///
+  /// In zh, this message translates to:
+  /// **'移除'**
+  String get familyRemove;
+
   /// No description provided for @recipeAnswerBasis.
   ///
   /// In zh, this message translates to:
@@ -3082,7 +3358,7 @@ abstract class AppLocalizations {
   /// No description provided for @allergyConsentBody.
   ///
   /// In zh, this message translates to:
-  /// **'只收集你手动选择的八类过敏原和标准食材，用于保存本人过敏设置及修改历史。当前值和历史加密保存，仅本人可见，不从行为或模型推断。可在设置的隐私入口撤回，删除当前值、私密历史及关联副本；重新同意从空状态开始。拒绝不影响普通口味，不代表同意外部 AI 共享。'**
+  /// **'只收集你手动选择的八类过敏原和标准食材，用于保存本人过敏设置及修改历史。当前值和历史加密保存，仅本人可见，不从行为或模型推断。可在设置的隐私入口撤回这项敏感同意，删除本人过敏、所有家庭成员、可识别私密历史及关联副本；重新同意从空状态开始。家庭成员首次添加时另行说明必要收集和儿童保护。拒绝不影响普通口味，不代表同意外部 AI 共享。'**
   String get allergyConsentBody;
 
   /// No description provided for @allergyRefuse.
@@ -3196,7 +3472,7 @@ abstract class AppLocalizations {
   /// No description provided for @allergyWithdrawDetail.
   ///
   /// In zh, this message translates to:
-  /// **'仅删除本人过敏和私密历史，不退出普通口味'**
+  /// **'删除本人过敏、所有家庭成员和私密历史，保留普通口味'**
   String get allergyWithdrawDetail;
 
   /// No description provided for @allergyWithdrawTitle.
@@ -3208,7 +3484,7 @@ abstract class AppLocalizations {
   /// No description provided for @allergyWithdrawBody.
   ///
   /// In zh, this message translates to:
-  /// **'删除本人过敏、私密修改历史及关联副本。普通口味、食材偏好和做菜约束保留；重新同意后从空状态开始。'**
+  /// **'删除本人过敏、所有家庭成员、可识别私密修改历史及关联副本。普通口味、食材偏好和做菜约束保留；重新同意后从空状态开始。'**
   String get allergyWithdrawBody;
 
   /// No description provided for @allergyWithdrawConfirm.
@@ -3226,7 +3502,7 @@ abstract class AppLocalizations {
   /// No description provided for @allergyWithdrawn.
   ///
   /// In zh, this message translates to:
-  /// **'敏感同意已撤回，过敏及私密历史已删除'**
+  /// **'敏感同意已撤回，过敏、家庭成员及私密历史已删除'**
   String get allergyWithdrawn;
 
   /// No description provided for @allergyWithdrawUnconfirmed.

@@ -226,6 +226,45 @@ class FakeServer extends Interceptor {
       '/v1/me/taste-profile/allergies/changes',
       (_) => (200, PageTasteProfileChangeOut(items: const []).toJson()),
     );
+    on(
+      'GET',
+      '/v1/me/taste-profile/family-members',
+      (_) => (
+        200,
+        FamilyMembersOut.fromJson({
+          'consent_id': null,
+          'consent_version': 'allergies-v1',
+          'authorization_version': 0,
+          'profile_version': 1,
+          'available_age_bands': [
+            'under_1',
+            '1_to_3',
+            '3_to_6',
+            '6_to_12',
+            '12_to_18',
+            'adult',
+            'elder',
+          ],
+          'available_allergen_categories': [
+            '含麸质的谷物',
+            '甲壳纲类动物',
+            '鱼类',
+            '蛋类',
+            '花生',
+            '大豆',
+            '乳及乳制品',
+            '坚果及其果仁',
+          ],
+          'members': [],
+          'next_cursor': null,
+        }).toJson(),
+      ),
+    );
+    on(
+      'GET',
+      '/v1/me/taste-profile/family-members/changes',
+      (_) => (200, PageTasteProfileChangeOut(items: const []).toJson()),
+    );
     final personalMeasures = <Map<String, dynamic>>[];
     on(
       'GET',

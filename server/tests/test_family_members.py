@@ -564,11 +564,11 @@ def test_member_delete_erases_large_legacy_links_but_preserves_unrelated_storage
             text(
                 "INSERT INTO events (id,user_id,event_type,type_version,device_id,device_time,"
                 "app_version,correlation,content,content_fingerprint,received_at,"
-            "device_time_suspicious) "
+                "device_time_suspicious) "
                 "SELECT gen_random_uuid(),user_id,event_type,type_version,device_id,device_time,"
                 "app_version,CAST(:correlation AS jsonb),content,content_fingerprint,received_at,"
                 "device_time_suspicious FROM events CROSS JOIN generate_series(1,65536) "
-            "WHERE id=:id"
+                "WHERE id=:id"
             ),
             {
                 "id": linked["id"],

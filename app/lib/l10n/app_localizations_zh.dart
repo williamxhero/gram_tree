@@ -10,6 +10,145 @@ class AppLocalizationsZh extends AppLocalizations {
   AppLocalizationsZh([String locale = 'zh']) : super(locale);
 
   @override
+  String get familyTitle => '家庭成员';
+
+  @override
+  String get familyIntro => '只记必要的称呼、年龄段和简单偏好；不创建家庭账号，不推断过敏。';
+
+  @override
+  String get familyEmpty => '还没有家庭成员';
+
+  @override
+  String get familyHidden => '家庭成员信息已从内存清除';
+
+  @override
+  String get familyUnavailable => '家庭信息暂不可用；仍可在设置撤回同意';
+
+  @override
+  String get familySaveUnconfirmed => '保存尚未确认，请联网后重试';
+
+  @override
+  String get familyDeleteUnconfirmed => '删除尚未确认，信息已从本机内存清除；请重试';
+
+  @override
+  String get familyDeleteRetry => '重试删除';
+
+  @override
+  String get familyAdd => '添加家庭成员';
+
+  @override
+  String get familyConsentTitle => '家庭成员信息单独同意';
+
+  @override
+  String get familyConsentBody =>
+      '只收集家人的称呼、年龄段、与标准不同的简单口味、忌口和你手动选择的过敏，用于保存和查看本账号内的必要做菜信息。不收集真实姓名、生日或照片，不建立可登录或共享的家庭账号。涉及不满十四周岁儿童时，请由监护人确认同意并仅填写必要信息。当前资料和可识别修改历史加密保存、仅本人可见，不进入公开内容、持久缓存或模型日志。删除成员会删除其资料、可识别历史和关联；在设置的隐私入口撤回敏感同意，会删除所有家庭成员及本人过敏，账号注销也会删除。拒绝不影响普通口味。本同意不代表同意外部 AI 或第三方共享。';
+
+  @override
+  String get familyRefuse => '暂不填写';
+
+  @override
+  String get familyAgree => '单独同意并继续';
+
+  @override
+  String get familyEditorTitle => '家庭成员简化档案';
+
+  @override
+  String get familyDetailTitle => '家庭成员档案';
+
+  @override
+  String get familyNickname => '称呼（不是真实姓名）';
+
+  @override
+  String get familyNicknameRequired => '请填写称呼和年龄段';
+
+  @override
+  String get familyAgeBand => '年龄段';
+
+  @override
+  String get familyAgeUnder1 => '1 岁以下';
+
+  @override
+  String get familyAge1To3 => '1～3 岁';
+
+  @override
+  String get familyAge3To6 => '3～6 岁';
+
+  @override
+  String get familyAge6To12 => '6～12 岁';
+
+  @override
+  String get familyAge12To18 => '12～18 岁';
+
+  @override
+  String get familyAgeAdult => '成人';
+
+  @override
+  String get familyAgeElder => '老人';
+
+  @override
+  String get familyFlavors => '只填写与标准不同的口味';
+
+  @override
+  String get familyNoChili => '不吃辣';
+
+  @override
+  String get familyStandard => '标准（不单独记录）';
+
+  @override
+  String get familyAvoidances => '忌口';
+
+  @override
+  String get familyAvoidanceAdd => '添加忌口食材或分类';
+
+  @override
+  String get familyAllergies => '手动过敏（不会自动推断）';
+
+  @override
+  String get familyAllergyAdd => '添加具体过敏食材';
+
+  @override
+  String get familyUnset => '未填写';
+
+  @override
+  String get familyView => '查看';
+
+  @override
+  String get familyEdit => '修改';
+
+  @override
+  String get familyDelete => '删除成员';
+
+  @override
+  String get familyDeleteTitle => '删除这位家庭成员？';
+
+  @override
+  String get familyDeleteBody => '删除其全部资料、可识别修改历史和关联引用。其他成员和普通口味不受影响。';
+
+  @override
+  String get familyHistory => '家庭成员私密修改历史';
+
+  @override
+  String get familyHistoryEmpty => '没有家庭成员私密修改历史';
+
+  @override
+  String get familyHistoryUnavailable => '私密历史暂不可用';
+
+  @override
+  String get familyManual => '家庭成员手动填写';
+
+  @override
+  String get familyDeletedReceipt => '家庭成员已删除（不保留身份）';
+
+  @override
+  String get familyWhy => '为什么';
+
+  @override
+  String get familyClose => '关闭';
+
+  @override
+  String get familyRemove => '移除';
+
+  @override
   String get recipeAnswerBasis => '这是一般经验，还没有足够记录验证';
 
   @override
@@ -1641,7 +1780,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get allergyConsentBody =>
-      '只收集你手动选择的八类过敏原和标准食材，用于保存本人过敏设置及修改历史。当前值和历史加密保存，仅本人可见，不从行为或模型推断。可在设置的隐私入口撤回，删除当前值、私密历史及关联副本；重新同意从空状态开始。拒绝不影响普通口味，不代表同意外部 AI 共享。';
+      '只收集你手动选择的八类过敏原和标准食材，用于保存本人过敏设置及修改历史。当前值和历史加密保存，仅本人可见，不从行为或模型推断。可在设置的隐私入口撤回这项敏感同意，删除本人过敏、所有家庭成员、可识别私密历史及关联副本；重新同意从空状态开始。家庭成员首次添加时另行说明必要收集和儿童保护。拒绝不影响普通口味，不代表同意外部 AI 共享。';
 
   @override
   String get allergyRefuse => '暂不同意';
@@ -1698,14 +1837,14 @@ class AppLocalizationsZh extends AppLocalizations {
   String get allergyWithdrawEntry => '撤回敏感信息同意';
 
   @override
-  String get allergyWithdrawDetail => '仅删除本人过敏和私密历史，不退出普通口味';
+  String get allergyWithdrawDetail => '删除本人过敏、所有家庭成员和私密历史，保留普通口味';
 
   @override
   String get allergyWithdrawTitle => '撤回敏感信息同意？';
 
   @override
   String get allergyWithdrawBody =>
-      '删除本人过敏、私密修改历史及关联副本。普通口味、食材偏好和做菜约束保留；重新同意后从空状态开始。';
+      '删除本人过敏、所有家庭成员、可识别私密修改历史及关联副本。普通口味、食材偏好和做菜约束保留；重新同意后从空状态开始。';
 
   @override
   String get allergyWithdrawConfirm => '撤回并删除';
@@ -1714,7 +1853,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get allergyWithdrawing => '撤回处理中，本机私密信息已隐藏';
 
   @override
-  String get allergyWithdrawn => '敏感同意已撤回，过敏及私密历史已删除';
+  String get allergyWithdrawn => '敏感同意已撤回，过敏、家庭成员及私密历史已删除';
 
   @override
   String get allergyWithdrawUnconfirmed => '撤回尚未确认，请联网后重试；普通口味不受影响';
