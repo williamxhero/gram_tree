@@ -48,6 +48,20 @@ class ModificationOperation(BaseModel):
         "change_preparation",
         "change_display_name",
         "change_recipe_info",
+        "change_step_ingredients",
+        "change_step_dependencies",
+        "replace_ingredient",
+        "change_quantity",
+        "change_group_or_optional",
+        "change_functional",
+        "change_scaling",
+        "change_replacement",
+        "add_ingredient",
+        "remove_ingredient",
+        "add_step",
+        "remove_step",
+        "reorder_ingredients",
+        "reorder_steps",
     ]
     id: str | None = Field(default=None, max_length=100)
     field: str = Field(min_length=1, max_length=100)

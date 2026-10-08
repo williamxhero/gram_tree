@@ -34,7 +34,13 @@ from gramtree.events.registry import RecipeModificationContentV1
 from gramtree.recipes import food_safety, reproducibility
 from gramtree.recipes import service as recipes
 from gramtree.recipes.models import RecipeVersion
-from gramtree.recipes.schemas import RecipeSnapshot, RecipeVersionCreate, ValueSource
+from gramtree.recipes.schemas import (
+    RecipeIngredient,
+    RecipeSnapshot,
+    RecipeStep,
+    RecipeVersionCreate,
+    ValueSource,
+)
 from gramtree.settings import Settings
 
 logger = logging.getLogger("gramtree.ai.modifications")
@@ -46,9 +52,41 @@ TEXT_FIELDS = {
 }
 REGISTERED_FIELDS = {
     **TEXT_FIELDS,
-    "change_step_field": ("steps", {*TEXT_FIELDS["change_step_field"][1], "cookware"}),
+    "change_step_field": (
+        "steps",
+        {*TEXT_FIELDS["change_step_field"][1], "cookware", "unattended"},
+    ),
     "change_step_duration": ("steps", {"duration_seconds"}),
     "change_step_heat": ("steps", {"heat", "temperature_celsius"}),
+    "change_step_ingredients": ("steps", {"ingredient_ids"}),
+    "change_step_dependencies": ("steps", {"depends_on"}),
+    "replace_ingredient": ("ingredients", {"ingredient_id"}),
+    "change_quantity": ("ingredients", {"quantity", "unit"}),
+    "change_group_or_optional": ("ingredients", {"group", "optional"}),
+    "change_functional": ("ingredients", {"functional"}),
+    "change_scaling": ("ingredients", {"scaling_mode"}),
+    "change_replacement": ("ingredients", {"replacement"}),
+    "change_recipe_info": (
+        "snapshot",
+        {
+            "servings",
+            "base_mold",
+            "difficulty",
+            "dish_type",
+            "description",
+            "tags",
+            "total_time_seconds",
+            "active_time_seconds",
+        },
+    ),
+}
+STRUCTURAL_FIELDS = {
+    "add_ingredient": "ingredients",
+    "remove_ingredient": "ingredients",
+    "add_step": "steps",
+    "remove_step": "steps",
+    "reorder_ingredients": "ingredients",
+    "reorder_steps": "steps",
 }
 SOURCE_FIELDS = {
     "instruction": "instruction_source",
@@ -59,6 +97,10 @@ SOURCE_FIELDS = {
     "duration_seconds": "duration_source",
     "heat": "heat_source",
     "temperature_celsius": "temperature_source",
+    "ingredient_id": "quantity_source",
+    "quantity": "quantity_source",
+    "unit": "quantity_source",
+    "servings": "servings_source",
 }
 
 
@@ -135,19 +177,74 @@ def _node(snapshot: RecipeSnapshot, op: ModificationOperation):
     return node
 
 
+def _operation_value(snapshot: RecipeSnapshot, op: ModificationOperation):
+    collection = STRUCTURAL_FIELDS.get(op.type)
+    if collection is None:
+        return _node(snapshot, op).model_dump(mode="json")[op.field]
+    if op.field != collection:
+        raise ValueError("结构操作字段未登记")
+    items = getattr(snapshot, collection)
+    if op.type.startswith("reorder_"):
+        if op.id is not None:
+            raise ValueError("排序不得指定单个目标")
+        return [item.id for item in items]
+    if not op.id:
+        raise ValueError("加删需要稳定的目标 ID")
+    node = next((item for item in items if item.id == op.id), None)
+    return node.model_dump(mode="json") if node is not None else None
+
+
+def _source(op: ModificationOperation, decision: ModificationDecisionOut) -> ValueSource:
+    if decision.decision == "modify":
+        return ValueSource(source="author_filled")
+    return ValueSource(
+        source="ai_estimated",
+        original=op.before
+        if isinstance(op.before, str) or op.before is None
+        else json.dumps(op.before, ensure_ascii=False),
+        basis=op.reason,
+        confidence=op.confidence,
+    )
+
+
+def _new_node(op: ModificationOperation, decision: ModificationDecisionOut):
+    model = RecipeStep if op.type == "add_step" else RecipeIngredient
+    node = model.model_validate_json(json.dumps(decision.after, ensure_ascii=False), strict=True)
+    if node.id != op.id:
+        raise ValueError("新增目标 ID 不得改变")
+    for field in type(node).model_fields:
+        if field.endswith("_source"):
+            existing = getattr(node, field)
+            if existing is not None and existing.source == "verified":
+                raise ValueError("模型或作者不能创建已验证证据")
+            setattr(node, field, _source(op, decision))
+    return node
+
+
 def _validate_operations(snapshot: RecipeSnapshot, ops: list[ModificationOperation]) -> None:
     by_id = {op.operation_id: op for op in ops}
     if len(by_id) != len(ops):
         raise ValueError("操作标识重复")
     targets = set()
     for op in ops:
-        node = _node(snapshot, op)
-        target = (REGISTERED_FIELDS[op.type][0], op.id, op.field)
+        collection = STRUCTURAL_FIELDS.get(op.type) or REGISTERED_FIELDS[op.type][0]
+        target = (collection, op.id, op.field)
         if target in targets:
             raise ValueError("同一字段只能提出一条操作")
         targets.add(target)
-        if getattr(node, op.field) != op.before:
+        before = _operation_value(snapshot, op)
+        if before != op.before:
             raise ValueError("操作前值与基准不一致")
+        if op.type.startswith("add_") and (before is not None or op.before is not None):
+            raise ValueError("新增目标已存在")
+        if op.type.startswith("remove_") and (before is None or op.after is not None):
+            raise ValueError("删除目标不存在或后值不是空值")
+        if (
+            op.type == "change_recipe_info"
+            and op.field in ("total_time_seconds", "active_time_seconds")
+            and (type(op.after) is not int or op.after != 0)
+        ):
+            raise ValueError("AI 不能编造总时长，只能恢复服务端派生")
         if op.after == op.before:
             raise ValueError("操作没有改动")
         if len(op.depends_on) != len(set(op.depends_on)) or any(
@@ -169,6 +266,83 @@ def _validate_operations(snapshot: RecipeSnapshot, ops: list[ModificationOperati
 
     for key in by_id:
         visit(key)
+    _validate_reference_dependencies(snapshot, ops)
+
+
+def _validate_reference_dependencies(snapshot, ops):
+    by_id = {op.operation_id: op for op in ops}
+
+    def depends(op, prerequisite):
+        return prerequisite.operation_id in op.depends_on or any(
+            depends(by_id[key], prerequisite) for key in op.depends_on
+        )
+
+    additions = {
+        (STRUCTURAL_FIELDS[op.type], op.id): op for op in ops if op.type.startswith("add_")
+    }
+    removals = {
+        (STRUCTURAL_FIELDS[op.type], op.id): op for op in ops if op.type.startswith("remove_")
+    }
+    for op in ops:
+        if op.type.startswith("remove_"):
+            collection = STRUCTURAL_FIELDS[op.type]
+            if any(
+                other.id == op.id
+                and other is not op
+                and other.type in REGISTERED_FIELDS
+                and REGISTERED_FIELDS[other.type][0] == collection
+                for other in ops
+            ):
+                raise ValueError("删除目标不能同时修改其字段")
+            field = "ingredient_ids" if collection == "ingredients" else "depends_on"
+            kind = (
+                "change_step_ingredients"
+                if collection == "ingredients"
+                else "change_step_dependencies"
+            )
+            for step in snapshot.steps:
+                if op.id not in getattr(step, field):
+                    continue
+                cleanup = next(
+                    (
+                        other
+                        for other in ops
+                        if other.id == step.id
+                        and (
+                            other.type == "remove_step"
+                            or (
+                                other.type == kind
+                                and isinstance(other.after, list)
+                                and op.id not in other.after
+                            )
+                        )
+                    ),
+                    None,
+                )
+                if cleanup is None or not depends(op, cleanup):
+                    raise ValueError("删除必须依赖引用清理")
+        if op.type.startswith("reorder_"):
+            collection = STRUCTURAL_FIELDS[op.type]
+            for (changed_collection, _), dependency in {**additions, **removals}.items():
+                if collection == changed_collection and not depends(op, dependency):
+                    raise ValueError("排序必须依赖加删操作")
+        references = {}
+        if op.type == "add_step" and isinstance(op.after, dict):
+            references = {
+                "ingredients": op.after.get("ingredient_ids", []),
+                "steps": op.after.get("depends_on", []),
+            }
+        elif op.type in ("change_step_ingredients", "change_step_dependencies"):
+            references = {"ingredients" if op.field == "ingredient_ids" else "steps": op.after}
+        for collection, ids in references.items():
+            if not isinstance(ids, list):
+                raise ValueError("引用必须为 ID 列表")
+            for item_id in ids:
+                if not isinstance(item_id, str):
+                    raise ValueError("引用需要字符串 ID")
+                prerequisite = additions.get((collection, item_id))
+                if prerequisite is not None and not depends(op, prerequisite):
+                    raise ValueError("引用必须依赖新增目标")
 
 
 def _validate_intent_operations(
@@ -178,8 +352,29 @@ def _validate_intent_operations(
         if any(op.type not in TEXT_FIELDS or op.field not in TEXT_FIELDS[op.type][1] for op in ops):
             raise ValueError("改文字不得改变烹饪条件")
         return
+    by_id = {op.operation_id: op for op in ops}
+
+    def ancestors(op):
+        return set(op.depends_on).union(*(ancestors(by_id[key]) for key in op.depends_on))
+
+    if intent.category in ("time_difficulty", "method"):
+        if any(op.field == "cookware" for op in ops):
+            raise ValueError("已有步骤换厨具必须走换厨具意图")
+        for op in ops:
+            if op.type != "change_step_duration":
+                continue
+            for cause in ops:
+                if (
+                    cause.id == op.id
+                    and cause.type == "change_step_field"
+                    and cause.field == "instruction"
+                    and cause.operation_id not in ancestors(op)
+                ):
+                    raise ValueError("时长必须依赖同时改变的步骤说明")
     if intent.category != "cookware" or not ops:
         return
+    if any(op.type in STRUCTURAL_FIELDS for op in ops):
+        raise ValueError("换厨具不得改动步骤结构")
     target = intent.parameters.get("target_cookware")
     if not isinstance(target, str) or not target.strip():
         raise ValueError("缺少目标厨具")
@@ -191,11 +386,6 @@ def _validate_intent_operations(
         not isinstance(affected, str) or set(affected.split(",")) != set(roots)
     ):
         raise ValueError("受影响步骤不一致")
-    by_id = {op.operation_id: op for op in ops}
-
-    def ancestors(op):
-        return set(op.depends_on).union(*(ancestors(by_id[key]) for key in op.depends_on))
-
     for step_id, root in roots.items():
         if root.after != target:
             raise ValueError("厨具与请求目标不一致")
@@ -257,7 +447,20 @@ def _apply(
 
     result = snapshot.model_copy(deep=True)
     accepted = []
+    ordered: list[ModificationOperation] = []
+    visited = set()
+
+    def order(op):
+        if op.operation_id in visited:
+            return
+        for key in op.depends_on:
+            order(by_id[key])
+        visited.add(op.operation_id)
+        ordered.append(op)
+
     for op in ops:
+        order(op)
+    for op in ordered:
         decision = resolve(op)
         if decision.decision in ("reject", "pending"):
             continue
@@ -265,26 +468,33 @@ def _apply(
             raise ValueError("修改后文字不能为空白")
         if decision.after == op.before:
             continue
+        collection = STRUCTURAL_FIELDS.get(op.type)
+        if collection is not None:
+            items = getattr(result, collection)
+            if op.type.startswith("add_"):
+                items.append(_new_node(op, decision))
+            elif op.type.startswith("remove_"):
+                if decision.after is not None:
+                    raise ValueError("删除操作后值必须为空")
+                setattr(result, collection, [item for item in items if item.id != op.id])
+            else:
+                ids = decision.after
+                if not isinstance(ids, list) or any(not isinstance(key, str) for key in ids):
+                    raise ValueError("排序需要 ID 列表")
+                by_item = {item.id: item for item in items}
+                if len(ids) != len(set(ids)) or set(ids) != set(by_item):
+                    raise ValueError("排序不得遗漏、重复或引入目标")
+                setattr(result, collection, [by_item[key] for key in ids])
+            continue
         node = _node(result, op)
         adapter = TypeAdapter(type(node).model_fields[op.field].rebuild_annotation())
-        value = adapter.validate_python(decision.after, strict=True)
+        value = adapter.validate_json(json.dumps(decision.after, ensure_ascii=False), strict=True)
+        if op.field in ("total_time_seconds", "active_time_seconds") and value != 0:
+            raise ValueError("AI 只能恢复服务端派生时长")
         setattr(node, op.field, value)
         source_field = SOURCE_FIELDS.get(op.field)
         if source_field:
-            setattr(
-                node,
-                source_field,
-                ValueSource(source="author_filled")
-                if decision.decision == "modify"
-                else ValueSource(
-                    source="ai_estimated",
-                    original=op.before
-                    if isinstance(op.before, str) or op.before is None
-                    else json.dumps(op.before, ensure_ascii=False),
-                    basis=op.reason,
-                    confidence=op.confidence,
-                ),
-            )
+            setattr(node, source_field, _source(op, decision))
     result = RecipeSnapshot.model_validate(result.model_dump(mode="json"))
     # Field validators can canonicalize text (for example ingredient labels).
     # Visible selections, immutable operations and experience receipts must all
@@ -293,12 +503,11 @@ def _apply(
         decision = resolved[op.operation_id]
         if decision.decision in ("reject", "pending"):
             continue
-        node = _node(result, op)
-        decision.after = getattr(node, op.field)
+        decision.after = _operation_value(result, op)
         if decision.after == op.before:
             source_field = SOURCE_FIELDS.get(op.field)
-            if source_field:
-                setattr(node, source_field, getattr(_node(snapshot, op), source_field))
+            if source_field and op.type not in STRUCTURAL_FIELDS:
+                setattr(_node(result, op), source_field, getattr(_node(snapshot, op), source_field))
             continue
         accepted.append(
             {
@@ -317,7 +526,14 @@ def _state(session, row):
     # Saved decisions are canonical request data, not derived rejection state.
     choices = [ModificationDecision.model_validate(d) for d in row.decisions]
     changed, decisions, accepted = _apply(snapshot, ops, choices)
-    return recipes._validate_snapshot(session, changed), ops, decisions, accepted
+    changed = recipes._validate_snapshot(session, changed)
+    by_id = {op.operation_id: op for op in ops}
+    for decision in decisions:
+        if decision.decision in ("accept", "modify"):
+            decision.after = _operation_value(changed, by_id[decision.operation_id])
+    for operation in accepted:
+        operation["after"] = _operation_value(changed, by_id[operation["operation_id"]])
+    return changed, ops, decisions, accepted
 
 
 def preview(
@@ -451,7 +667,7 @@ def propose(
         proposal["intent"] = intent.model_dump(mode="json")
         if intent.category == "unknown" or intent.confidence < 0.7:
             row.error = "uncertain_intent"
-        elif intent.category not in ("text", "cookware"):
+        elif intent.category not in ("text", "cookware", "time_difficulty", "method"):
             row.error = "unsupported_intent"
         else:
             payload = {
@@ -505,9 +721,9 @@ def propose(
                             for op in output.operations
                         ],
                     )
-                    recipes._validate_snapshot(session, changed)
+                    changed = recipes._validate_snapshot(session, changed)
                     for op in output.operations:
-                        op.after = getattr(_node(changed, op), op.field)
+                        op.after = _operation_value(changed, op)
                         if op.after == op.before:
                             raise ValueError("操作没有实际改动")
                     proposal.update(output.model_dump(mode="json"))

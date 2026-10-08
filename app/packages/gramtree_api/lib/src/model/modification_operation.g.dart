@@ -258,4 +258,21 @@ const _$ModificationOperationTypeEnumEnumMap = {
   ModificationOperationTypeEnum.changePreparation: 'change_preparation',
   ModificationOperationTypeEnum.changeDisplayName: 'change_display_name',
   ModificationOperationTypeEnum.changeRecipeInfo: 'change_recipe_info',
+  ModificationOperationTypeEnum.changeStepIngredients:
+      'change_step_ingredients',
+  ModificationOperationTypeEnum.changeStepDependencies:
+      'change_step_dependencies',
+  ModificationOperationTypeEnum.replaceIngredient: 'replace_ingredient',
+  ModificationOperationTypeEnum.changeQuantity: 'change_quantity',
+  ModificationOperationTypeEnum.changeGroupOrOptional:
+      'change_group_or_optional',
+  ModificationOperationTypeEnum.changeFunctional: 'change_functional',
+  ModificationOperationTypeEnum.changeScaling: 'change_scaling',
+  ModificationOperationTypeEnum.changeReplacement: 'change_replacement',
+  ModificationOperationTypeEnum.addIngredient: 'add_ingredient',
+  ModificationOperationTypeEnum.removeIngredient: 'remove_ingredient',
+  ModificationOperationTypeEnum.addStep: 'add_step',
+  ModificationOperationTypeEnum.removeStep: 'remove_step',
+  ModificationOperationTypeEnum.reorderIngredients: 'reorder_ingredients',
+  ModificationOperationTypeEnum.reorderSteps: 'reorder_steps',
 };
