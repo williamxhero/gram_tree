@@ -201,9 +201,12 @@ void main() {
           (tester.widget(secondSearch).key as ValueKey<String>).value;
       final secondId = searchKey.substring('recipe-ingredient-search-'.length);
       await tester.enterText(secondSearch, '测试酱油');
-      await tester.tap(
-        find.byKey(ValueKey('recipe-search-ingredient-$secondId')),
+      final secondSearchButton = find.byKey(
+        ValueKey('recipe-search-ingredient-$secondId'),
       );
+      await reveal(tester, secondSearchButton);
+      await tester.tap(secondSearchButton);
+      await settle(tester);
       final standardChoice = find.byWidgetPredicate(
         (widget) =>
             widget is ListTile &&
