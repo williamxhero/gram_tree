@@ -37,44 +37,12 @@ def main() -> None:
     ]
     # The browser journey saves the synthetic draft after confirming 320 g.
     # Use the public snapshot contract's defaults, never a production recording.
+    from gramtree.ai.answers import cooking_context
     from gramtree.recipes.schemas import RecipeSnapshot
 
     snapshot = RecipeSnapshot.model_validate(corpus["valid"]["recipe"]["snapshot"])
     snapshot.ingredients[0].quantity = 320
-    context = {
-        "dish_name": "宫保鸡丁",
-        "servings": snapshot.servings,
-        "ingredients": [
-            item.model_dump(
-                mode="json",
-                include={
-                    "id",
-                    "display_name",
-                    "quantity",
-                    "unit",
-                    "preparation",
-                },
-            )
-            for item in snapshot.ingredients
-        ],
-        "steps": [
-            step.model_dump(
-                mode="json",
-                include={
-                    "id",
-                    "action",
-                    "instruction",
-                    "ingredient_ids",
-                    "duration_seconds",
-                    "heat",
-                    "temperature_celsius",
-                    "cookware",
-                    "doneness",
-                },
-            )
-            for step in snapshot.steps
-        ],
-    }
+    context = cooking_context(snapshot, "宫保鸡丁")
     answers = json.loads((ROOT / "server/tests/fixtures/ai/answer_corpus.json").read_text("utf-8"))
     for case in answers["cases"]:
         records.append(

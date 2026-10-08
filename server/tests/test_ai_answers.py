@@ -103,6 +103,51 @@ def test_general_experience_answer_preserves_version_and_shows_required_risks(
     assert all(QUESTION not in str(event) for event in audit["events"])
 
 
+def test_safe_answer_can_explicitly_negate_an_unsafe_core_temperature(
+    replay_answers: Path, api: Api
+):
+    headers, detail = create(api)
+    model = {
+        **ANSWER,
+        "explanation": "不要在中心温度达到50°C时停火。应继续加热直到中心温度达到74°C。",
+    }
+    recording(replay_answers, "explain", payload(detail), model)
+    result = ask(api, headers, detail).json()
+    assert result["state"] == "answered"
+    assert result["explanation"] == model["explanation"]
+    assert any(f["rule_id"] == "poultry-cook-through" for f in result["safety"]["findings"])
+
+
+@pytest.mark.parametrize("context_field", ["dish_aliases", "change_note"])
+def test_answer_preserves_saved_version_safety_context(
+    replay_answers: Path, api: Api, context_field: str
+):
+    headers = bearer(api.login("answer-context@example.com"))
+    body = recipe_input()
+    body[context_field] = ["河豚汤"] if context_field == "dish_aliases" else "河豚汤"
+    saved = api.client.post("/v1/recipes", headers=headers, json=body)
+    assert saved.status_code == 201, saved.text
+    detail = saved.json()
+    assert detail["version"]["safety"]["high_risk"] is True
+    recording(replay_answers, "explain", payload(detail), ANSWER)
+    for question in [QUESTION, "如何做野生菌"]:
+        result = ask(api, headers, detail, question).json()
+        assert result["safety"]["high_risk"] is True
+        assert "high-risk-pufferfish" in {f["rule_id"] for f in result["safety"]["findings"]}
+
+
+def test_answer_carries_warning_from_model_suggested_raw_seafood(replay_answers: Path, api: Api):
+    headers, detail = create(api)
+    model = {**ANSWER, "details": "可以搭配生腌虾食用。"}
+    recording(replay_answers, "explain", payload(detail), model)
+    result = ask(api, headers, detail).json()
+    assert result["state"] == "answered"
+    assert {f["rule_id"] for f in result["safety"]["findings"]} >= {
+        "poultry-cook-through",
+        "raw-seafood",
+    }
+
+
 @pytest.mark.parametrize(
     "model, state, error",
     [

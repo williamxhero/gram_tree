@@ -15,7 +15,7 @@ from gramtree.ai import gateway, service
 from gramtree.ai.schemas import AIStatus, ModelAnswer, RecipeAnswer
 from gramtree.recipes import food_safety
 from gramtree.recipes import service as recipes
-from gramtree.recipes.schemas import RecipeDetail, RecipeSnapshot
+from gramtree.recipes.schemas import RecipeDetail, RecipeSafetyResult, RecipeSnapshot
 from gramtree.settings import Settings
 
 POLICY_VERSION = "recipe-answer-v1"
@@ -36,15 +36,14 @@ UNSAFE_ADVICE = re.compile(
 )
 
 
-def answer_context(detail: RecipeDetail) -> tuple[dict[str, Any], dict[str, str]]:
-    """Only permitted cooking fields; no IDs, notes, profiles, images or logs to model.
+def cooking_context(snapshot: RecipeSnapshot, dish_name: str) -> dict[str, Any]:
+    """Shared allowlist for live/replay input, never an oracle for HTTP tests.
 
-    Dependency identifiers stay server-side for #136/#138. Static design rationale
-    is deliberately excluded: it is not experience evidence.
+    Only local step/ingredient IDs; no global IDs, notes, profiles, images or logs.
+    Static design rationale is not experience evidence and is deliberately excluded.
     """
-    snapshot = detail.version.snapshot
-    context = {
-        "dish_name": detail.dish.name,
+    return {
+        "dish_name": dish_name,
         "servings": snapshot.servings,
         "ingredients": [
             item.model_dump(
@@ -77,6 +76,11 @@ def answer_context(detail: RecipeDetail) -> tuple[dict[str, Any], dict[str, str]
             for step in snapshot.steps
         ],
     }
+
+
+def answer_context(detail: RecipeDetail) -> tuple[dict[str, Any], dict[str, str]]:
+    """Dependency identifiers stay server-side for #136/#138."""
+    context = cooking_context(detail.version.snapshot, detail.dish.name)
     dependencies = {
         "recipe_version": str(detail.version.id),
         "answer_policy": POLICY_VERSION,
@@ -85,6 +89,22 @@ def answer_context(detail: RecipeDetail) -> tuple[dict[str, Any], dict[str, str]
         "personal_context": "none",
     }
     return context, dependencies
+
+
+def _merge_safety(base: RecipeSafetyResult, extra: RecipeSafetyResult) -> None:
+    """Add question/output risks without erasing version-bound findings or scope."""
+    for finding in extra.findings:
+        if finding not in base.findings:
+            base.findings.append(finding)
+    base.allergens = sorted(set(base.allergens) | set(extra.allergens))
+    base.prohibited_claims = sorted(set(base.prohibited_claims) | set(extra.prohibited_claims))
+    for replacement in extra.replacement_allergens:
+        if replacement not in base.replacement_allergens:
+            base.replacement_allergens.append(replacement)
+    base.high_risk |= extra.high_risk
+    base.allergens_incomplete |= extra.allergens_incomplete
+    base.can_save &= extra.can_save
+    base.claim_basis = base.claim_basis or extra.claim_basis
 
 
 def answer(
@@ -100,7 +120,7 @@ def answer(
     snapshot = detail.version.snapshot
     context, dependencies = answer_context(detail)
     status = AIStatus.model_validate(gateway.availability(session, settings, owner.id, "explain"))
-    safety = food_safety.check(session, snapshot, detail.dish.name)
+    safety, _ = recipes.recipe_safety_context(session, owner, recipe_id, version_id)
     result = RecipeAnswer(
         recipe_id=recipe_id,
         version_id=version_id,
@@ -112,11 +132,9 @@ def answer(
         numeric_warnings=service.numeric_warnings(snapshot),
     )
     request_safety = food_safety.check(session, RecipeSnapshot(servings=1), question)
+    _merge_safety(result.safety, request_safety)
     if request_safety.high_risk or request_safety.prohibited_claims:
         result.error = "unsafe_question"
-        result.safety = food_safety.check(
-            session, snapshot, detail.dish.name, descriptions=[question]
-        )
         return result
     if not status.available:
         result.state = "unavailable"
@@ -142,6 +160,7 @@ def answer(
         )
         text = " ".join([model.conclusion, model.explanation, model.details])
         output_safety = food_safety.check(session, RecipeSnapshot(servings=1), text)
+        _merge_safety(result.safety, output_safety)
         # Use the deployed rules' core-temperature parser and applicable thresholds,
         # not model confidence or an independently maintained temperature table.
         uncooked = snapshot.model_copy(deep=True)
@@ -151,9 +170,9 @@ def answer(
             for finding in food_safety.check(session, uncooked, detail.dish.name).findings
             if finding.threshold_celsius is not None
         ]
-        temperatures = re.finditer(food_safety.rules().core_temperature_pattern, text)
+        temperatures = food_safety.core_temperatures(text, food_safety.rules())
         unsafe_temperature = bool(thresholds) and any(
-            float(match.group("temperature")) < max(thresholds) for match in temperatures
+            value < max(thresholds) for value in temperatures
         )
         if (
             output_safety.high_risk
