@@ -272,6 +272,46 @@ void main() {
       await tester.scrollUntilVisible(find.text('还没有食材偏好'), 350);
       expect(find.text('蔬菜 · 不喜欢'), findsNothing);
       await tester.pumpAndSettle();
+      await tapVisible(
+        tester,
+        find.byKey(const ValueKey('taste-preference-add')),
+      );
+      await tester.tap(find.widgetWithText(TextButton, '取消').last);
+      await tester.pumpAndSettle();
+      final actions = server
+          .calls('POST', '/v1/events/upload')
+          .expand(
+            (request) => ((request.body as Map)['events'] as List).cast<Map>(),
+          )
+          .where(
+            (event) =>
+                event['event_type'] == 'ui.component_action' &&
+                ((event['content'] as Map)['intent'] as String).startsWith(
+                  'ingredient_preferences_',
+                ),
+          )
+          .toList();
+      expect(actions.map((event) => (event['content'] as Map)['intent']), [
+        'ingredient_preferences_add',
+        'ingredient_preferences_category',
+        'ingredient_preferences_choice',
+        'ingredient_preferences_save',
+        'ingredient_preferences_change',
+        'ingredient_preferences_change',
+        'ingredient_preferences_delete',
+        'ingredient_preferences_confirm_delete',
+        'ingredient_preferences_add',
+        'ingredient_preferences_cancel',
+      ]);
+      for (final event in actions) {
+        expect(event['correlation'], isNull);
+        expect(event['content'], {
+          'component_id': 'ingredient-preferences',
+          'intent': (event['content'] as Map)['intent'],
+        });
+      }
+      expect(jsonEncode(actions), isNot(contains('蔬菜')));
+      expect(jsonEncode(actions), isNot(contains(current.id)));
       expect(tester.takeException(), isNull);
     },
   );
@@ -355,6 +395,16 @@ void main() {
         find.byKey(const ValueKey('taste-ingredient-search-submit')),
       );
       await tester.pumpAndSettle();
+      expect(
+        find.byKey(ValueKey('taste-search-${ingredient.id}')),
+        findsOneWidget,
+      );
+      await tester.showKeyboard(
+        find.byKey(const ValueKey('taste-ingredient-search')),
+      );
+      await tester.testTextInput.receiveAction(TextInputAction.done);
+      await tester.pumpAndSettle();
+      expect(server.calls('POST', '/v1/ingredients/search'), hasLength(2));
       await tester.tap(find.byKey(ValueKey('taste-search-${ingredient.id}')));
       await tester.pumpAndSettle();
       await tester.tap(find.byKey(const ValueKey('taste-preference-save')));
@@ -370,6 +420,41 @@ void main() {
       expect(find.text('食材偏好：未设置 → 香菜 · 喜欢'), findsOneWidget);
       expect(find.text(ingredient.id), findsNothing);
       await tester.pumpAndSettle();
+      final actions = server
+          .calls('POST', '/v1/events/upload')
+          .expand(
+            (request) => ((request.body as Map)['events'] as List).cast<Map>(),
+          )
+          .where(
+            (event) =>
+                event['event_type'] == 'ui.component_action' &&
+                ((event['content'] as Map)['intent'] as String).startsWith(
+                  'ingredient_preferences_',
+                ),
+          )
+          .toList();
+      expect(actions.map((event) => (event['content'] as Map)['intent']), [
+        'ingredient_preferences_add',
+        'ingredient_preferences_search',
+        'ingredient_preferences_search',
+        'ingredient_preferences_pick',
+        'ingredient_preferences_save',
+      ]);
+      for (final event in actions) {
+        expect(event['correlation'], isNull);
+        expect(event['content'], {
+          'component_id': 'ingredient-preferences',
+          'intent': (event['content'] as Map)['intent'],
+        });
+      }
+      final telemetry = jsonEncode(actions);
+      for (final privateValue in [
+        ingredient.id,
+        ingredient.standardName,
+        current.id,
+      ]) {
+        expect(telemetry, isNot(contains(privateValue)));
+      }
       expect(tester.takeException(), isNull);
     },
   );

@@ -6,8 +6,9 @@ import '../../api/api_client.dart';
 import '../../auth/auth_controller.dart';
 import '../../l10n/app_localizations.dart';
 import '../../ui_protocol/components/component_scaffold.dart';
+import '../../ui_protocol/ingredient_preference_actions.dart';
 
-class IngredientPreferencesSection extends StatelessWidget {
+class IngredientPreferencesSection extends ConsumerWidget {
   const IngredientPreferencesSection({
     super.key,
     required this.profile,
@@ -21,7 +22,13 @@ class IngredientPreferencesSection extends StatelessWidget {
   final bool busy;
   final Future<void> Function(List<IngredientPreference>) onSave;
 
-  Future<void> _add(BuildContext context) async {
+  bool _current(BuildContext context, WidgetRef ref) =>
+      context.mounted && ref.read(authProvider).value?.id == accountId;
+
+  Future<void> _add(BuildContext context, WidgetRef ref) async {
+    if (!_current(context, ref)) {
+      return;
+    }
     final selected = await showDialog<IngredientPreference>(
       context: context,
       builder: (_) => _PreferenceDialog(
@@ -29,7 +36,11 @@ class IngredientPreferencesSection extends StatelessWidget {
         categories: profile.ingredientCategories,
       ),
     );
-    if (selected == null || !context.mounted) return;
+    if (selected == null ||
+        !context.mounted ||
+        ref.read(authProvider).value?.id != accountId) {
+      return;
+    }
     await onSave([
       for (final item in profile.ingredientPreferences)
         if (item.ingredientId != selected.ingredientId ||
@@ -45,8 +56,12 @@ class IngredientPreferencesSection extends StatelessWidget {
 
   Future<void> _delete(
     BuildContext context,
+    WidgetRef ref,
     IngredientPreferenceOut target,
   ) async {
+    if (!_current(context, ref)) {
+      return;
+    }
     final l10n = AppLocalizations.of(context);
     final confirmed = await showDialog<bool>(
       context: context,
@@ -54,19 +69,27 @@ class IngredientPreferencesSection extends StatelessWidget {
         title: Text('${l10n.tastePreferenceDelete} · ${target.name}'),
         content: Text(l10n.tastePreferenceDeleteBody),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: Text(l10n.cancel),
+          IngredientPreferenceAction(
+            name: 'cancel',
+            builder: (dispatch) => TextButton(
+              onPressed: () => dispatch(() => Navigator.pop(context, false)),
+              child: Text(l10n.cancel),
+            ),
           ),
-          FilledButton(
-            key: const ValueKey('taste-preference-delete-confirm'),
-            onPressed: () => Navigator.pop(context, true),
-            child: Text(l10n.tastePreferenceDelete),
+          IngredientPreferenceAction(
+            name: 'confirm_delete',
+            builder: (dispatch) => FilledButton(
+              key: const ValueKey('taste-preference-delete-confirm'),
+              onPressed: () => dispatch(() => Navigator.pop(context, true)),
+              child: Text(l10n.tastePreferenceDelete),
+            ),
           ),
         ],
       ),
     );
-    if (confirmed == true && context.mounted) {
+    if (confirmed == true &&
+        context.mounted &&
+        ref.read(authProvider).value?.id == accountId) {
       await onSave([
         for (final item in profile.ingredientPreferences)
           if (_targetKey(item) != _targetKey(target)) _input(item),
@@ -75,7 +98,7 @@ class IngredientPreferencesSection extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context);
     return ComponentCard(
       key: const ValueKey('taste-ingredient-preferences'),
@@ -95,45 +118,64 @@ class IngredientPreferencesSection extends StatelessWidget {
                 Text(
                   '${item.name} · ${preferenceLabel(item.preference.value, l10n)}',
                 ),
-                DropdownButton<String>(
-                  key: ValueKey('taste-preference-kind-${_targetKey(item)}'),
-                  value: item.preference.value,
-                  isExpanded: true,
-                  items: [
-                    for (final kind
-                        in IngredientPreferencePreferenceEnum.values)
-                      DropdownMenuItem(
-                        value: kind.value,
-                        child: Text(preferenceLabel(kind.value, l10n)),
-                      ),
-                  ],
-                  onChanged: busy
-                      ? null
-                      : (kind) {
-                          if (kind == null) return;
-                          onSave([
-                            for (final entry in profile.ingredientPreferences)
-                              _input(
-                                entry,
-                                preference:
-                                    _targetKey(entry) == _targetKey(item)
-                                    ? kind
-                                    : null,
-                              ),
-                          ]);
-                        },
+                IngredientPreferenceAction(
+                  name: 'change',
+                  builder: (dispatch) => DropdownButton<String>(
+                    key: ValueKey('taste-preference-kind-${_targetKey(item)}'),
+                    value: item.preference.value,
+                    isExpanded: true,
+                    items: [
+                      for (final kind
+                          in IngredientPreferencePreferenceEnum.values)
+                        DropdownMenuItem(
+                          value: kind.value,
+                          child: Text(preferenceLabel(kind.value, l10n)),
+                        ),
+                    ],
+                    onChanged: busy
+                        ? null
+                        : (kind) {
+                            if (kind == null) return;
+                            dispatch(() async {
+                              if (!_current(context, ref)) {
+                                return;
+                              }
+                              await onSave([
+                                for (final entry
+                                    in profile.ingredientPreferences)
+                                  _input(
+                                    entry,
+                                    preference:
+                                        _targetKey(entry) == _targetKey(item)
+                                        ? kind
+                                        : null,
+                                  ),
+                              ]);
+                            });
+                          },
+                  ),
                 ),
-                TextButton(
-                  key: ValueKey('taste-preference-delete-${_targetKey(item)}'),
-                  onPressed: busy ? null : () => _delete(context, item),
-                  child: Text('${l10n.tastePreferenceDelete} · ${item.name}'),
+                IngredientPreferenceAction(
+                  name: 'delete',
+                  builder: (dispatch) => TextButton(
+                    key: ValueKey(
+                      'taste-preference-delete-${_targetKey(item)}',
+                    ),
+                    onPressed: busy
+                        ? null
+                        : () => dispatch(() => _delete(context, ref, item)),
+                    child: Text('${l10n.tastePreferenceDelete} · ${item.name}'),
+                  ),
                 ),
               ],
             ),
-          OutlinedButton(
-            key: const ValueKey('taste-preference-add'),
-            onPressed: busy ? null : () => _add(context),
-            child: Text(l10n.tastePreferenceAdd),
+          IngredientPreferenceAction(
+            name: 'add',
+            builder: (dispatch) => OutlinedButton(
+              key: const ValueKey('taste-preference-add'),
+              onPressed: busy ? null : () => dispatch(() => _add(context, ref)),
+              child: Text(l10n.tastePreferenceAdd),
+            ),
           ),
         ],
       ),
@@ -214,99 +256,140 @@ class _PreferenceDialogState extends ConsumerState<_PreferenceDialog> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(l10n.tasteIngredientsIntro),
-              TextField(
-                key: const ValueKey('taste-ingredient-search'),
-                controller: _query,
-                decoration: InputDecoration(
-                  labelText: l10n.tasteIngredientSearch,
+              IngredientPreferenceAction(
+                name: 'search',
+                builder: (dispatch) => TextField(
+                  key: const ValueKey('taste-ingredient-search'),
+                  controller: _query,
+                  decoration: InputDecoration(
+                    labelText: l10n.tasteIngredientSearch,
+                  ),
+                  onSubmitted: (_) => dispatch(_search),
+                  onChanged: (_) => setState(() {
+                    _request++;
+                    _loading = false;
+                    _selected = null;
+                    _results = [];
+                    _searched = false;
+                    _error = null;
+                  }),
                 ),
-                onSubmitted: (_) => _search(),
-                onChanged: (_) => setState(() {
-                  _request++;
-                  _loading = false;
-                  _selected = null;
-                  _results = [];
-                  _searched = false;
-                  _error = null;
-                }),
               ),
-              TextButton(
-                key: const ValueKey('taste-ingredient-search-submit'),
-                onPressed: _loading ? null : _search,
-                child: Text(l10n.tasteSearch),
+              IngredientPreferenceAction(
+                name: 'search',
+                builder: (dispatch) => TextButton(
+                  key: const ValueKey('taste-ingredient-search-submit'),
+                  onPressed: _loading ? null : () => dispatch(_search),
+                  child: Text(l10n.tasteSearch),
+                ),
               ),
               if (_loading) const LinearProgressIndicator(),
               if (_error != null) Text(ApiFailure.from(_error!).message),
               if (_searched && _results.isEmpty) Text(l10n.tasteSearchEmpty),
               for (final item in _results)
-                ListTile(
-                  key: ValueKey('taste-search-${item.id}'),
-                  title: Text(item.standardName),
-                  subtitle: Text(item.category),
-                  selected: _selected?.id == item.id,
-                  trailing: _selected?.id == item.id
-                      ? const Icon(Icons.check)
-                      : null,
-                  onTap: () => setState(() {
-                    _selected = item;
-                    _category = null;
+                IngredientPreferenceAction(
+                  key: ValueKey('preference-pick-${item.id}'),
+                  name: 'pick',
+                  builder: (dispatch) => ListTile(
+                    key: ValueKey('taste-search-${item.id}'),
+                    title: Text(item.standardName),
+                    subtitle: Text(item.category),
+                    selected: _selected?.id == item.id,
+                    trailing: _selected?.id == item.id
+                        ? const Icon(Icons.check)
+                        : null,
+                    onTap: () => dispatch(() {
+                      if (!_current) {
+                        return;
+                      }
+                      setState(() {
+                        _selected = item;
+                        _category = null;
+                      });
+                    }),
+                  ),
+                ),
+              IngredientPreferenceAction(
+                name: 'category',
+                builder: (dispatch) => DropdownButton<String>(
+                  key: const ValueKey('taste-preference-category'),
+                  hint: Text(l10n.tasteCategory),
+                  value: _category,
+                  isExpanded: true,
+                  items: [
+                    for (final category in widget.categories)
+                      DropdownMenuItem(value: category, child: Text(category)),
+                  ],
+                  onChanged: (category) => dispatch(() {
+                    if (!_current) {
+                      return;
+                    }
+                    setState(() {
+                      _category = category;
+                      _selected = null;
+                      _request++;
+                      _loading = false;
+                      _results = [];
+                      _searched = false;
+                    });
                   }),
                 ),
-              DropdownButton<String>(
-                key: const ValueKey('taste-preference-category'),
-                hint: Text(l10n.tasteCategory),
-                value: _category,
-                isExpanded: true,
-                items: [
-                  for (final category in widget.categories)
-                    DropdownMenuItem(value: category, child: Text(category)),
-                ],
-                onChanged: (category) => setState(() {
-                  _category = category;
-                  _selected = null;
-                  _request++;
-                  _loading = false;
-                  _results = [];
-                  _searched = false;
-                }),
               ),
-              DropdownButton<String>(
-                key: const ValueKey('taste-preference-choice'),
-                value: _preference,
-                isExpanded: true,
-                items: [
-                  for (final kind in IngredientPreferencePreferenceEnum.values)
-                    DropdownMenuItem(
-                      value: kind.value,
-                      child: Text(preferenceLabel(kind.value, l10n)),
-                    ),
-                ],
-                onChanged: (kind) {
-                  if (kind != null) setState(() => _preference = kind);
-                },
+              IngredientPreferenceAction(
+                name: 'choice',
+                builder: (dispatch) => DropdownButton<String>(
+                  key: const ValueKey('taste-preference-choice'),
+                  value: _preference,
+                  isExpanded: true,
+                  items: [
+                    for (final kind
+                        in IngredientPreferencePreferenceEnum.values)
+                      DropdownMenuItem(
+                        value: kind.value,
+                        child: Text(preferenceLabel(kind.value, l10n)),
+                      ),
+                  ],
+                  onChanged: (kind) {
+                    if (kind == null) return;
+                    dispatch(() {
+                      if (_current) setState(() => _preference = kind);
+                    });
+                  },
+                ),
               ),
             ],
           ),
         ),
       ),
       actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: Text(l10n.cancel),
+        IngredientPreferenceAction(
+          name: 'cancel',
+          builder: (dispatch) => TextButton(
+            onPressed: () => dispatch(() => Navigator.pop(context)),
+            child: Text(l10n.cancel),
+          ),
         ),
-        FilledButton(
-          key: const ValueKey('taste-preference-save'),
-          onPressed: _selected == null && _category == null
-              ? null
-              : () => Navigator.pop(
-                  context,
-                  IngredientPreference.fromJson({
-                    if (_selected != null) 'ingredient_id': _selected!.id,
-                    if (_category != null) 'category': _category,
-                    'preference': _preference,
+        IngredientPreferenceAction(
+          name: 'save',
+          builder: (dispatch) => FilledButton(
+            key: const ValueKey('taste-preference-save'),
+            onPressed: _selected == null && _category == null
+                ? null
+                : () => dispatch(() {
+                    if (!_current) {
+                      return;
+                    }
+                    Navigator.pop(
+                      context,
+                      IngredientPreference.fromJson({
+                        if (_selected != null) 'ingredient_id': _selected!.id,
+                        if (_category != null) 'category': _category,
+                        'preference': _preference,
+                      }),
+                    );
                   }),
-                ),
-          child: Text(l10n.save),
+            child: Text(l10n.save),
+          ),
         ),
       ],
     );
