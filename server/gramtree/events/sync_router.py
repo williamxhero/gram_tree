@@ -62,16 +62,20 @@ def _process(session: SessionDep, owner: uuid.UUID, write: WriteEnvelope) -> Wri
     if write.owner_id != owner:
         return WriteResult(write_id=write.write_id, status="failed", reason_code="owner_mismatch")
     spec = REGISTERED_WRITES.get(write.write_type)
-    if spec is None:
-        return WriteResult(
-            write_id=write.write_id, status="failed", reason_code="unknown_write_type"
-        )
-    try:
-        parsed = spec.validate(write.payload)
-        spec.authorize(session, owner, parsed)
-    except (WriteFailure, ValidationError) as error:
-        code = error.code if isinstance(error, WriteFailure) else "invalid_content"
-        return WriteResult(write_id=write.write_id, status="failed", reason_code=code)
+    parsed = None
+    validation_code = "unknown_write_type" if spec is None else None
+    if spec is not None:
+        try:
+            parsed = spec.validate(write.payload)
+        except (WriteFailure, ValidationError) as error:
+            validation_code = error.code if isinstance(error, WriteFailure) else "invalid_content"
+        if parsed is not None:
+            try:
+                spec.authorize(session, owner, parsed)
+            except WriteFailure as error:
+                # Reauthorization precedes replay disclosure. Do not mutate a
+                # prior confirmation if access to its resource has been revoked.
+                return WriteResult(write_id=write.write_id, status="failed", reason_code=error.code)
 
     # The transaction lock covers first receipt creation too (SELECT FOR UPDATE
     # cannot lock a row that doesn't exist). A collision only serializes unrelated
@@ -109,6 +113,13 @@ def _process(session: SessionDep, owner: uuid.UUID, write: WriteEnvelope) -> Wri
         )
         session.add(receipt)
         session.flush()
+    if validation_code is not None:
+        # A rejected prerequisite has arrived: retain its immutable terminal
+        # receipt so dependents see failure, not an endless 'not arrived' wait.
+        receipt.status, receipt.reason_code = "failed", validation_code
+        session.commit()
+        return _result(receipt)
+    assert spec is not None and parsed is not None
     try:
         dependencies = _dependencies(session, owner, write)
         resolved = spec.resolve_references(session, owner, parsed, dependencies)
