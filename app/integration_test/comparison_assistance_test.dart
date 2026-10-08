@@ -210,7 +210,15 @@ void main() {
           );
           expect(find.text('AI 辅助对齐依据'), findsOneWidget);
           expect(find.textContaining('把握程度：95%'), findsWidgets);
-          expect(find.textContaining('服务端把握程度原值：0.95'), findsOneWidget);
+          expect(find.textContaining('把握程度：达到辅助展示门槛，非验证结论。'), findsOneWidget);
+          expect(
+            find.descendant(
+              of: find.byKey(const ValueKey('why-panel')),
+              matching: find.textContaining('95%'),
+            ),
+            findsNothing,
+          );
+          expect(find.textContaining('服务端把握程度原值'), findsNothing);
           expect(find.text('这次不用'), findsNothing);
           expect(find.text('以后别这样'), findsNothing);
           await tester.tapAt(const Offset(10, 10));
