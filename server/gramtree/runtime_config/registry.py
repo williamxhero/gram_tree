@@ -35,6 +35,23 @@ class ConfigItem:
 
 ITEMS: tuple[ConfigItem, ...] = (
     ConfigItem(
+        "taste.scale",
+        "json",
+        {
+            "minimum": 0.5,
+            "maximum": 1.5,
+            "default": 1.0,
+            "levels": [
+                {"coefficient": 0.5, "label": "淡很多"},
+                {"coefficient": 0.75, "label": "淡一点"},
+                {"coefficient": 1.0, "label": "标准"},
+                {"coefficient": 1.25, "label": "重一点"},
+                {"coefficient": 1.5, "label": "重很多"},
+            ],
+        },
+        "口味系数范围、默认值及五档映射（占位；取用时校验完整形状）",
+    ),
+    ConfigItem(
         "ai.routes",
         "json",
         {
@@ -42,6 +59,7 @@ ITEMS: tuple[ConfigItem, ...] = (
             "generate": "large",
             "normalize": "small",
             "embedding": "vector",
+            "explain": "large",
             "quantify": "large",
             "batch_advice": "small",
             "modify_intent": "small",
@@ -65,6 +83,7 @@ ITEMS: tuple[ConfigItem, ...] = (
         {
             "intent": {"timeout": 15, "retries": 1, "daily_limit": 100},
             "generate": {"timeout": 60, "retries": 1, "daily_limit": 50},
+            "explain": {"timeout": 30, "retries": 1, "daily_limit": 50},
             "normalize": {"timeout": 15, "retries": 0, "daily_limit": 100},
             "embedding": {"timeout": 15, "retries": 1, "daily_limit": 500},
             "quantify": {"timeout": 60, "retries": 1, "daily_limit": 50},

@@ -94,6 +94,180 @@ abstract class AppLocalizations {
   /// A list of this localizations delegate's supported locales.
   static const List<Locale> supportedLocales = <Locale>[Locale('zh')];
 
+  /// No description provided for @recipeAnswerBasis.
+  ///
+  /// In zh, this message translates to:
+  /// **'这是一般经验，还没有足够记录验证'**
+  String get recipeAnswerBasis;
+
+  /// No description provided for @recipeAnswerAnswered.
+  ///
+  /// In zh, this message translates to:
+  /// **'已回答 · 一般经验'**
+  String get recipeAnswerAnswered;
+
+  /// No description provided for @recipeAnswerUncertain.
+  ///
+  /// In zh, this message translates to:
+  /// **'不确定 · 一般经验'**
+  String get recipeAnswerUncertain;
+
+  /// No description provided for @recipeAnswerCannotAnswer.
+  ///
+  /// In zh, this message translates to:
+  /// **'无法回答 · 一般经验'**
+  String get recipeAnswerCannotAnswer;
+
+  /// No description provided for @recipeAnswerUnavailable.
+  ///
+  /// In zh, this message translates to:
+  /// **'能力不可用 · 一般经验'**
+  String get recipeAnswerUnavailable;
+
+  /// No description provided for @recipeAnswerBudget.
+  ///
+  /// In zh, this message translates to:
+  /// **'月预算已用完'**
+  String get recipeAnswerBudget;
+
+  /// No description provided for @recipeAnswerQuota.
+  ///
+  /// In zh, this message translates to:
+  /// **'今日解释配额已用完'**
+  String get recipeAnswerQuota;
+
+  /// No description provided for @recipeAnswerTimeout.
+  ///
+  /// In zh, this message translates to:
+  /// **'模型响应超时'**
+  String get recipeAnswerTimeout;
+
+  /// No description provided for @recipeAnswerDisabled.
+  ///
+  /// In zh, this message translates to:
+  /// **'模型已停用'**
+  String get recipeAnswerDisabled;
+
+  /// No description provided for @recipeAnswerNotConfigured.
+  ///
+  /// In zh, this message translates to:
+  /// **'模型暂未配置'**
+  String get recipeAnswerNotConfigured;
+
+  /// No description provided for @recipeAnswerNetwork.
+  ///
+  /// In zh, this message translates to:
+  /// **'模型或网络暂时不可用'**
+  String get recipeAnswerNetwork;
+
+  /// No description provided for @recipeAnswerUnavailableConclusion.
+  ///
+  /// In zh, this message translates to:
+  /// **'菜谱解释（explain）：{reason}。'**
+  String recipeAnswerUnavailableConclusion(String reason);
+
+  /// No description provided for @recipeAnswerSource.
+  ///
+  /// In zh, this message translates to:
+  /// **'AI 估算 · 菜谱解释'**
+  String get recipeAnswerSource;
+
+  /// No description provided for @recipeAnswerClose.
+  ///
+  /// In zh, this message translates to:
+  /// **'关闭解释'**
+  String get recipeAnswerClose;
+
+  /// No description provided for @recipeAnswerQuestion.
+  ///
+  /// In zh, this message translates to:
+  /// **'问题：{question}'**
+  String recipeAnswerQuestion(String question);
+
+  /// No description provided for @recipeAnswerContinue.
+  ///
+  /// In zh, this message translates to:
+  /// **'查看、表单编辑和规则换算仍可使用；问题已保留，可以重试。'**
+  String get recipeAnswerContinue;
+
+  /// No description provided for @recipeAnswerVersion.
+  ///
+  /// In zh, this message translates to:
+  /// **'明细 · 第 {version} 版；解释不会自动修改菜谱。'**
+  String recipeAnswerVersion(int version);
+
+  /// No description provided for @recipeAnswerAllergens.
+  ///
+  /// In zh, this message translates to:
+  /// **'过敏原：{allergens}'**
+  String recipeAnswerAllergens(String allergens);
+
+  /// No description provided for @recipeAnswerReplacementAllergens.
+  ///
+  /// In zh, this message translates to:
+  /// **'替换食材过敏原：{allergens}'**
+  String recipeAnswerReplacementAllergens(String allergens);
+
+  /// No description provided for @recipeAnswerIncompleteAllergens.
+  ///
+  /// In zh, this message translates to:
+  /// **'过敏信息可能不完整，请核对实际食材。'**
+  String get recipeAnswerIncompleteAllergens;
+
+  /// No description provided for @recipeAnswerTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'问这版的做法'**
+  String get recipeAnswerTitle;
+
+  /// No description provided for @recipeAnswerSemantics.
+  ///
+  /// In zh, this message translates to:
+  /// **'问这版的做法；只提供一般经验，不改动菜谱'**
+  String get recipeAnswerSemantics;
+
+  /// No description provided for @recipeAnswerInput.
+  ///
+  /// In zh, this message translates to:
+  /// **'厨房问题'**
+  String get recipeAnswerInput;
+
+  /// No description provided for @recipeAnswerHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'例如：这一步为什么要炒熟？'**
+  String get recipeAnswerHint;
+
+  /// No description provided for @recipeAnswerBusy.
+  ///
+  /// In zh, this message translates to:
+  /// **'正在解释…'**
+  String get recipeAnswerBusy;
+
+  /// No description provided for @recipeAnswerRetry.
+  ///
+  /// In zh, this message translates to:
+  /// **'重试解释'**
+  String get recipeAnswerRetry;
+
+  /// No description provided for @recipeAnswerSubmit.
+  ///
+  /// In zh, this message translates to:
+  /// **'查看解释'**
+  String get recipeAnswerSubmit;
+
+  /// No description provided for @recipeAnswerExperience.
+  ///
+  /// In zh, this message translates to:
+  /// **'一般经验'**
+  String get recipeAnswerExperience;
+
+  /// No description provided for @recipeAnswerWhy.
+  ///
+  /// In zh, this message translates to:
+  /// **'为什么 · 明细'**
+  String get recipeAnswerWhy;
+
   /// App name shown in the task switcher and web tab.
   ///
   /// In zh, this message translates to:
@@ -2174,6 +2348,138 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'AI 协助'**
   String get recipeAiAssisted;
+
+  /// No description provided for @tasteTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'我的口味'**
+  String get tasteTitle;
+
+  /// No description provided for @tasteIntro.
+  ///
+  /// In zh, this message translates to:
+  /// **'只代表你明确设置的七项口味，不会从行为猜测你的偏好。'**
+  String get tasteIntro;
+
+  /// No description provided for @tasteReset.
+  ///
+  /// In zh, this message translates to:
+  /// **'恢复标准默认'**
+  String get tasteReset;
+
+  /// No description provided for @tasteResetBody.
+  ///
+  /// In zh, this message translates to:
+  /// **'七项口味恢复为标准，重新标记为把握低；修改记录保留。'**
+  String get tasteResetBody;
+
+  /// No description provided for @tasteManual.
+  ///
+  /// In zh, this message translates to:
+  /// **'你手动填写'**
+  String get tasteManual;
+
+  /// No description provided for @tasteDefault.
+  ///
+  /// In zh, this message translates to:
+  /// **'标准默认'**
+  String get tasteDefault;
+
+  /// No description provided for @tasteWhy.
+  ///
+  /// In zh, this message translates to:
+  /// **'为什么'**
+  String get tasteWhy;
+
+  /// No description provided for @tasteHistory.
+  ///
+  /// In zh, this message translates to:
+  /// **'修改历史'**
+  String get tasteHistory;
+
+  /// No description provided for @tasteHistoryEmpty.
+  ///
+  /// In zh, this message translates to:
+  /// **'还没有修改记录'**
+  String get tasteHistoryEmpty;
+
+  /// No description provided for @tasteHistoryReadonly.
+  ///
+  /// In zh, this message translates to:
+  /// **'只读查看原因和历史，暂不提供撤销或锁定。'**
+  String get tasteHistoryReadonly;
+
+  /// No description provided for @tasteLocal.
+  ///
+  /// In zh, this message translates to:
+  /// **'菜系局部偏好'**
+  String get tasteLocal;
+
+  /// No description provided for @tasteLocalEmpty.
+  ///
+  /// In zh, this message translates to:
+  /// **'还没有菜系局部偏好'**
+  String get tasteLocalEmpty;
+
+  /// No description provided for @tasteLocalReadonly.
+  ///
+  /// In zh, this message translates to:
+  /// **'菜系对应的味型调整只读显示，暂不提供学习或编辑。'**
+  String get tasteLocalReadonly;
+
+  /// No description provided for @tasteActive.
+  ///
+  /// In zh, this message translates to:
+  /// **'生效'**
+  String get tasteActive;
+
+  /// No description provided for @tasteReverted.
+  ///
+  /// In zh, this message translates to:
+  /// **'已撤销'**
+  String get tasteReverted;
+
+  /// No description provided for @tasteSalty.
+  ///
+  /// In zh, this message translates to:
+  /// **'咸'**
+  String get tasteSalty;
+
+  /// No description provided for @tasteSweet.
+  ///
+  /// In zh, this message translates to:
+  /// **'甜'**
+  String get tasteSweet;
+
+  /// No description provided for @tasteSour.
+  ///
+  /// In zh, this message translates to:
+  /// **'酸'**
+  String get tasteSour;
+
+  /// No description provided for @tasteSpicy.
+  ///
+  /// In zh, this message translates to:
+  /// **'辣'**
+  String get tasteSpicy;
+
+  /// No description provided for @tasteNumbing.
+  ///
+  /// In zh, this message translates to:
+  /// **'麻'**
+  String get tasteNumbing;
+
+  /// No description provided for @tasteUmami.
+  ///
+  /// In zh, this message translates to:
+  /// **'鲜'**
+  String get tasteUmami;
+
+  /// No description provided for @tasteOily.
+  ///
+  /// In zh, this message translates to:
+  /// **'油'**
+  String get tasteOily;
 
   /// No description provided for @personalMeasuresTitle.
   ///

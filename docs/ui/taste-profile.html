@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="zh-CN">
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>味谱 · 我的口味样稿（SPEC-005.1）</title>
+<style>
+:root{color-scheme:light;--paper:#F7F4EE;--card:#FFFDF9;--ink:#1B1813;--muted:#5E574C;--line:#d8d2c7;--verified:#4E6B48}
+[data-dark]{color-scheme:dark;--paper:#171511;--card:#221F1A;--ink:#F1ECE3;--muted:#B9B1A4;--line:#514a40;--verified:#8DAE84}
+*{box-sizing:border-box}body{margin:0;background:var(--paper);color:var(--ink);font-family:'Noto Sans SC',sans-serif;line-height:1.7}main{max-width:740px;margin:auto;padding:24px 20px 110px}h1,h2,h3{font-family:'Noto Serif SC',serif;line-height:1.4}h2{font-size:22px}section{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:20px;margin:18px 0}p{margin:8px 0}.muted,small{color:var(--muted)}button,select,input{font:inherit;padding:10px;border:1px solid var(--line);border-radius:8px;background:var(--card);color:var(--ink)}button{cursor:pointer}.primary{background:var(--ink);color:var(--card)}.row{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin:12px 0}.flavor{padding:12px 0;border-top:1px solid var(--line)}.flavor label{font-weight:bold}.flavor select{max-width:100%}nav{position:fixed;bottom:0;left:0;right:0;background:var(--card);border-top:1px solid var(--line);padding:15px;display:flex;justify-content:center;gap:24px;flex-wrap:wrap}dialog{max-width:520px;width:calc(100% - 32px);border:1px solid var(--line);border-radius:16px;background:var(--card);color:var(--ink);padding:24px}dialog::backdrop{background:#0006}.warning{border:2px solid var(--ink)}[hidden]{display:none!important}summary{cursor:pointer}output{color:var(--verified)}
+</style>
+<main>
+<div class="row"><span>我的 / 我的口味</span><button id="theme">切换深色</button></div>
+<h1>我的口味</h1><p class="muted">只代表你明确设置的偏好。过敏不会从你的行为猜测。</p>
+<p id="offline" hidden>离线副本 · 最后更新：今天 10:30。需联网修改；重新联网后校验授权。</p>
+<section><h2>七种味道</h2><p>现在先按标准口味理解你，把握不大。你手动设置后，以你的选择为准。</p><div id="flavors"></div><div class="row"><button id="reset">恢复标准默认</button><button id="why">为什么</button></div><output id="saved" aria-live="polite"></output></section>
+<section><h2>食材偏好</h2><p>喜欢、不喜欢和忌口都由你选择，不等于过敏。</p><div class="row"><label>标准食材 <input placeholder="搜索食材，如香菜" aria-label="搜索标准食材"></label><select aria-label="偏好"><option>喜欢</option><option>不喜欢</option><option>忌口</option></select></div><p class="muted">还没有食材偏好。选择标准食材或食材分类后保存。</p></section>
+<section><h2>做菜约束</h2><div class="row"><label>家庭人数 <input type="number" min="1" value="3" style="width:90px"></label><span>新一次查看菜谱的默认份数；本次手动选择优先。</span></div><p>厨具：炒锅、电饭煲</p><p>工作日晚餐：30 分钟 · 一荤一素一汤</p><details><summary>个人量具</summary><p>还没有登记量具。沿用个人量具管理入口。</p></details></section>
+<section><h2>过敏与家庭成员</h2><p>单独同意后才收集并加密保存；称呼、年龄段，不收集真实姓名、生日或照片。</p><button class="primary" id="sensitive">填写敏感信息</button><div id="family" hidden><p>本人过敏：花生（手动填写）</p><p>孩子 · 3～6 岁 · 不吃辣</p><button id="delete">删除成员及其敏感历史</button><button id="withdraw">撤回敏感同意并删除敏感信息</button></div><p class="muted">收集同意不代表向外部 AI 共享。撤回不会删除普通口味。</p></section>
+<section class="warning"><h2>菜谱顶部提醒样例</h2><p><strong>含你的过敏原：花生</strong></p><p>替代品也需检查。含忌口时仅提醒，不阻止查看。</p><p class="muted">通用安全提示仍必显；未知食材不能当作确定安全。</p></section>
+<section><h2>修改历史</h2><p id="history">还没有修改记录。</p><p class="muted">只读查看原因；学习、撤销和锁定不在本次范围。</p></section>
+<button id="network">查看离线只读状态</button>
+</main>
+<nav aria-label="五入口"><span>今天</span><span>发现</span><span>新建</span><span>记录</span><strong>我的</strong></nav>
+<dialog id="reason"><h2>为什么</h2><p>原来：标准 · 现在：你选择的档位</p><p>依据：你手动修改。来源：作者填写，不代表系统替你改过。</p><button onclick="this.closest('dialog').close()">关闭</button></dialog>
+<dialog id="consent"><h2>单独同意：敏感个人信息</h2><p>仅收集你手动填写的过敏，以及家人的称呼、年龄段和简单偏好（可能包含儿童）。用于本人安全提醒及必要家庭约束，加密保存且仅本人可见，不创建家庭账号。</p><p>你可删除成员或在隐私页撤回。撤回删除过敏、成员和可识别敏感历史与本设备副本；普通口味保留。其他离线设备需重新联网校验后清理。不会因此授权向外部 AI 共享。</p><div class="row"><button onclick="this.closest('dialog').close()">暂不同意</button><button class="primary" id="agree">明确同意并继续</button></div></dialog>
+<script>
+const levels=['淡很多','淡一点','标准','重一点','重很多'];
+const flavors=document.querySelector('#flavors');
+for(const name of ['咸','甜','酸','辣','麻','鲜','油']){const row=document.createElement('div');row.className='row flavor';const label=document.createElement('label');label.textContent=name;const select=document.createElement('select');select.setAttribute('aria-label',name+'偏好');levels.forEach(x=>select.add(new Option(x,x)));select.value='标准';const confidence=document.createElement('small');confidence.textContent='把握不大';select.onchange=()=>{confidence.textContent='以你的明确选择为准 · 把握高';document.querySelector('#saved').textContent='样稿：已保存 '+name+' · '+select.value;document.querySelector('#history').textContent=name+'：标准 → '+select.value+' · 你手动修改 · 生效';};row.append(label,select,confidence);flavors.append(row);}
+document.querySelector('#theme').onclick=()=>document.documentElement.toggleAttribute('data-dark');
+document.querySelector('#why').onclick=()=>document.querySelector('#reason').showModal();
+document.querySelector('#reset').onclick=()=>{flavors.querySelectorAll('select').forEach(s=>s.value='标准');flavors.querySelectorAll('small').forEach(s=>s.textContent='把握不大');document.querySelector('#history').textContent='恢复标准默认 · 你手动修改 · 生效';};
+document.querySelector('#sensitive').onclick=()=>document.querySelector('#consent').showModal();
+document.querySelector('#agree').onclick=()=>{document.querySelector('#consent').close();document.querySelector('#family').hidden=false;};
+document.querySelector('#withdraw').onclick=()=>{document.querySelector('#family').hidden=true;document.querySelector('#saved').textContent='样稿：已撤回并删除敏感数据，普通口味保留';};
+document.querySelector('#delete').onclick=()=>{document.querySelector('#family').querySelectorAll('p')[1].remove();document.querySelector('#delete').disabled=true;};
+document.querySelector('#network').onclick=()=>{const banner=document.querySelector('#offline');banner.hidden=!banner.hidden;document.querySelectorAll('main input,main select,main button:not(#network):not(#theme):not(#why)').forEach(e=>e.disabled=!banner.hidden);};
+</script>
+</html>

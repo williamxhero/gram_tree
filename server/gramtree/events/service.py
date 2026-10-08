@@ -162,6 +162,42 @@ def _report_conflict(session: Session, redis: Redis, existing: Event) -> None:
     )
 
 
+def record_taste_profile_changed(
+    session: Session, user_id: uuid.UUID, change_id: uuid.UUID, *, now: datetime
+) -> None:
+    """Append metadata in the caller's profile/history transaction, without commit.
+
+    The immutable change UUID is also the event UUID. Upload retries therefore
+    use the existing global deduplication rule, never invent a second event.
+    """
+    item = EventInput(
+        id=change_id,
+        event_type="taste_profile.changed",
+        type_version=1,
+        device_id="server",
+        device_time=now,
+        app_version="server",
+        correlation={"taste_profile_change_id": str(change_id)},
+        content={},
+    )
+    session.add(
+        Event(
+            id=item.id,
+            user_id=user_id,
+            event_type=item.event_type,
+            type_version=item.type_version,
+            device_id=item.device_id,
+            device_time=now,
+            app_version=item.app_version,
+            correlation=item.correlation,
+            content=item.content,
+            content_fingerprint=_fingerprint(user_id, item),
+            received_at=now,
+            device_time_suspicious=False,
+        )
+    )
+
+
 def record_recipe_version_saved(
     session: Session,
     redis: Redis,
