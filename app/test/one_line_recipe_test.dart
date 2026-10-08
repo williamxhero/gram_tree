@@ -182,6 +182,24 @@ Future<void> _open(WidgetTester tester, TestEnv env) async {
 }
 
 void main() {
+  testWidgets('本人生成结果提供改文字入口，预览前不创建菜谱', (tester) async {
+    final env = _env();
+    await _open(tester, env);
+    await _tap(tester, 'ai-design-new');
+    await _tap(tester, 'ai-skip-questions');
+    await tester.scrollUntilVisible(
+      find.byKey(const ValueKey('text-edit-input')),
+      300,
+      scrollable: find.byWidgetPredicate(
+        (w) => w is Scrollable && w.axisDirection == AxisDirection.down,
+      ).first,
+    );
+    expect(find.byKey(const ValueKey('text-edit-input')), findsOneWidget);
+    expect(find.text('只支持改文字；其他修改暂未支持。确认前不会保存。'), findsOneWidget);
+    expect(env.server.calls('POST', '/v1/ai/recipes/requests/$_requestId/save'), isEmpty);
+    expect(env.server.calls('POST', '/v1/recipes'), isEmpty);
+  });
+
   testWidgets('先检索、显式选择新设计、跳过问题、显示依据、复用编辑器保存', (tester) async {
     final env = _env();
     await _open(tester, env);

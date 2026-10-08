@@ -12,6 +12,7 @@ import '../../ui_protocol/recipe_safety.dart';
 import '../../ui_protocol/source_mark.dart';
 import '../../ui_protocol/source_types.dart';
 import '../recipes/recipe_pages.dart';
+import '../recipes/text_edit_panel.dart';
 
 /// A thin retrieval/choice surface. Generation, validation and provenance are
 /// server-owned; editing uses the existing complete structured recipe editor.
@@ -232,6 +233,13 @@ class _OneLineRecipePageState extends ConsumerState<OneLineRecipePage> {
               ),
           ],
           if (draft != null) ...[
+            TextEditPanel(
+              key: ValueKey('text-edit-generation-${result!.requestId}'),
+              generationRequestId: result.requestId,
+              onSaved: (detail) async {
+                if (mounted) context.pushReplacement('/recipes/${detail.id}');
+              },
+            ),
             ComponentCard(
               detail: ComponentDescriptorDetailEnum.detailed,
               conclusion: Text(
