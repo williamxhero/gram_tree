@@ -19,6 +19,7 @@ const recipeOperations = {
   'text_cancel',
   'text_retry_status',
   'text_retry_checks',
+  'explain_changes',
 };
 
 bool validateRecipeOperation(Map<String, dynamic> params) {

@@ -763,6 +763,10 @@ class RecipeForm {
           ..aliases = _strings(value['aliases'])
           ..changeNote = _string(value['change_note']) ?? ''
           ..explanationFingerprint = _string(value['explanation_fingerprint'])
+          ..explanationNoteAuthored =
+              value['explanation_note_authored'] as bool?
+          ..explanationTagsAuthored =
+              value['explanation_tags_authored'] as bool?
           ..aiAssisted = value['ai_assisted'] == true
           ..imageIds = _strings(value['image_ids']);
       } catch (_) {
@@ -782,6 +786,8 @@ class RecipeForm {
   int activeTimeSeconds;
   String changeNote;
   String? explanationFingerprint;
+  bool? explanationNoteAuthored;
+  bool? explanationTagsAuthored;
   String description;
   MoldSpec? baseMold;
   String? cuisine;
@@ -821,6 +827,8 @@ class RecipeForm {
     'aliases': [...aliases],
     'change_note': changeNote,
     'explanation_fingerprint': explanationFingerprint,
+    'explanation_note_authored': explanationNoteAuthored,
+    'explanation_tags_authored': explanationTagsAuthored,
     'image_ids': [...imageIds],
     'snapshot': _snapshot(writable: false).toJson(),
   };

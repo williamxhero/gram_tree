@@ -11,6 +11,69 @@ import 'helpers.dart';
 
 void main() {
   testWidgets(
+    'reconstructed AI ownership clears stale note but preserves author tags',
+    (tester) async {
+      final form = ValueNotifier(_Form());
+      addTearDown(form.dispose);
+      Future<ChangeExplanationSuggestion> explain() async =>
+          const ChangeExplanationSuggestion(
+            available: true,
+            changeNote: '旧自动说明',
+            tags: ['自动标签'],
+            source: 'ai_estimated',
+            changesFingerprint: 'old',
+          );
+      await _pump(tester, form: form, explain: explain);
+      await tester.tap(find.text('生成改动说明'));
+      await tester.pump();
+      await tester.pump();
+      await tester.enterText(
+        find.byKey(const ValueKey('change-explanation-tags')),
+        '作者标签',
+      );
+      await tester.pump();
+      await tester.pumpWidget(const SizedBox());
+      await _pump(tester, form: form, explain: explain);
+      final old = form.value;
+      form.value = _Form(
+        binding: 'new-selection',
+        note: old.note,
+        tags: old.tags,
+        fingerprint: old.fingerprint,
+      );
+      await tester.pump();
+      await tester.pump();
+      expect(find.text('旧自动说明'), findsNothing);
+      expect(find.text('作者标签'), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'successful suggestion never labels preserved author fields as AI',
+    (tester) async {
+      final form = ValueNotifier(_Form(note: '作者说明', tags: ['作者标签']));
+      addTearDown(form.dispose);
+      await _pump(
+        tester,
+        form: form,
+        explain: () async => const ChangeExplanationSuggestion(
+          available: true,
+          changeNote: '自动说明',
+          tags: ['自动标签'],
+          source: 'ai_estimated',
+          changesFingerprint: 'ops',
+        ),
+      );
+      await tester.tap(find.text('生成改动说明'));
+      await tester.pump();
+      await tester.pump();
+      expect(find.text('作者说明'), findsOneWidget);
+      expect(find.text('作者标签'), findsOneWidget);
+      expect(find.text('AI 估算'), findsNothing);
+    },
+  );
+
+  testWidgets(
     'late suggestion preserves author tags independently of untouched note',
     (tester) async {
       final form = ValueNotifier(_Form());
@@ -546,7 +609,11 @@ class _Form {
     this.note = '',
     this.tags = const [],
     this.fingerprint,
+    this.noteAuthored,
+    this.tagsAuthored,
   });
+  final bool? noteAuthored;
+  final bool? tagsAuthored;
   final String binding;
   final String note;
   final List<String> tags;
@@ -610,6 +677,9 @@ class _SaveFormState extends State<_SaveForm> {
             bindingKey: form.binding,
             changeNote: form.note,
             tags: form.tags,
+            noteAuthored: form.noteAuthored,
+            tagsAuthored: form.tagsAuthored,
+            changesFingerprint: form.fingerprint,
             explain: widget.explain,
             unavailableReason: widget.unavailableReason,
             onChanged: (draft) {
@@ -618,6 +688,8 @@ class _SaveFormState extends State<_SaveForm> {
                 note: draft.changeNote,
                 tags: draft.tags,
                 fingerprint: draft.changesFingerprint,
+                noteAuthored: draft.noteAuthored,
+                tagsAuthored: draft.tagsAuthored,
               );
             },
           ),

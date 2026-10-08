@@ -201,6 +201,7 @@ class _RecipeEditorPageState extends ConsumerState<RecipeEditorPage> {
   bool _loadFailed = false;
   bool _saving = false;
   bool _hasManualEdits = false;
+  ChangeExplanationSuggestion? _manualExplanationResult;
   RecipeQuantificationOut? _quantification;
   RecipeReproducibilityResult? _reproducibility;
   String? _reproducibilityError;
@@ -895,6 +896,25 @@ class _RecipeEditorPageState extends ConsumerState<RecipeEditorPage> {
     ]);
   }
 
+  Future<ChangeExplanationSuggestion> _dispatchExplanation(
+    BuildContext context,
+  ) async {
+    _manualExplanationResult = null;
+    await ref
+        .read(intentDispatcherProvider)
+        .dispatch(
+          context,
+          compositionId: _operationCompositionId,
+          componentId: 'recipe-change-explanation',
+          action: ActionDescriptor(
+            intent: 'recipe_operation',
+            params: {'operation': 'explain_changes'},
+          ),
+        );
+    return _manualExplanationResult ??
+        const ChangeExplanationSuggestion(available: false);
+  }
+
   Future<ChangeExplanationSuggestion> _explainChanges() async {
     final result = await ref
         .read(recipeRepositoryProvider)
@@ -908,15 +928,7 @@ class _RecipeEditorPageState extends ConsumerState<RecipeEditorPage> {
             snapshot: _form.snapshot,
           ),
         );
-    return ChangeExplanationSuggestion(
-      available: result.status.available,
-      changeNote: result.changeNote,
-      tags: result.tags ?? const [],
-      source: result.source_?.value,
-      changesFingerprint: result.changesFingerprint,
-      reason: result.status.reason,
-      error: result.error,
-    );
+    return ChangeExplanationSuggestion.fromResult(result);
   }
 
   @override
@@ -1100,19 +1112,38 @@ class _RecipeEditorPageState extends ConsumerState<RecipeEditorPage> {
               child: _RecipeInfoFields(
                 form: _form,
                 onChanged: _changed,
-                showExplanationFields: !_canExplainChanges,
-                explanationPanel: _canExplainChanges ? ChangeExplanationPanel(
-                  bindingKey: _explanationBinding,
-                  changeNote: _form.changeNote,
-                  tags: _form.tags,
-                  explain: _explainChanges,
-                  onChanged: (draft) {
-                    _form.changeNote = draft.changeNote;
-                    _form.tags = draft.tags;
-                    _changed();
-                    _form.explanationFingerprint = draft.changesFingerprint;
-                  },
-                ) : null,
+                showExplanationFields: !_canExplainChanges || !_hasManualEdits,
+                explanationPanel: _canExplainChanges && _hasManualEdits
+                    ? RecipeOperationScope(
+                        handlers: {
+                          'explain_changes': (_) async {
+                            _manualExplanationResult = await _explainChanges();
+                          },
+                        },
+                        child: Builder(
+                          builder: (context) => ChangeExplanationPanel(
+                            bindingKey: _explanationBinding,
+                            changeNote: _form.changeNote,
+                            tags: _form.tags,
+                            noteAuthored: _form.explanationNoteAuthored,
+                            tagsAuthored: _form.explanationTagsAuthored,
+                            changesFingerprint: _form.explanationFingerprint,
+                            explain: () => _dispatchExplanation(context),
+                            onChanged: (draft) {
+                              _form.changeNote = draft.changeNote;
+                              _form.tags = draft.tags;
+                              _form.explanationNoteAuthored =
+                                  draft.noteAuthored;
+                              _form.explanationTagsAuthored =
+                                  draft.tagsAuthored;
+                              _changed();
+                              _form.explanationFingerprint =
+                                  draft.changesFingerprint;
+                            },
+                          ),
+                        ),
+                      )
+                    : null,
               ),
             ),
             const SizedBox(height: 8),
@@ -1312,6 +1343,7 @@ class _RecipeInfoFields extends StatelessWidget {
             value: form.tags.join('，'),
             onChanged: (value) {
               form.tags = _split(value);
+              form.explanationTagsAuthored = true;
               onChanged();
             },
           ),
@@ -1340,10 +1372,11 @@ class _RecipeInfoFields extends StatelessWidget {
             value: form.changeNote,
             onChanged: (value) {
               form.changeNote = value.trim();
+              form.explanationNoteAuthored = true;
               onChanged();
             },
           ),
-        if (explanationPanel != null) explanationPanel!,
+        ?explanationPanel,
       ],
     );
   }

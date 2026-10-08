@@ -55,12 +55,15 @@ class _TextEditPanelState extends ConsumerState<TextEditPanel>
   final _afterInputs = <String, String>{};
   final _invalidAfter = <String, String>{};
   AIStatus? _status;
+  ChangeExplanationSuggestion? _explanationResult;
   ModificationPreview? _preview;
   ModificationPreview? _confirmingPreview;
   Map<String, dynamic>? _pendingConfirmation;
   RecipeDetail? _savedDetail;
   bool get _locked => _busy || _pendingConfirmation != null;
   String _changeNote = '';
+  bool? _changeNoteAuthored;
+  bool? _tagsAuthored;
   List<String>? _tags;
   String? _explanationFingerprint;
   ({String note, List<String>? tags, String? fingerprint})?
@@ -135,6 +138,8 @@ class _TextEditPanelState extends ConsumerState<TextEditPanel>
       );
       _preview = preview;
       _changeNote = payload['change_note'] as String? ?? '';
+      _changeNoteAuthored = payload['note_authored'] as bool?;
+      _tagsAuthored = payload['tags_authored'] as bool?;
       _tags = payload['tags'] == null
           ? null
           : List<String>.from(payload['tags'] as List);
@@ -178,6 +183,8 @@ class _TextEditPanelState extends ConsumerState<TextEditPanel>
       'pending_confirmation': _pendingConfirmation,
       'saved_detail': _savedDetail?.toJson(),
       'change_note': _changeNote,
+      'note_authored': _changeNoteAuthored,
+      'tags_authored': _tagsAuthored,
       'tags': _tags == null ? null : List<String>.of(_tags!),
       'explanation_fingerprint': _explanationFingerprint,
       'choices': [for (final choice in _choices.values) choice.toJson()],
@@ -581,6 +588,15 @@ class _TextEditPanelState extends ConsumerState<TextEditPanel>
     }
   }
 
+  Future<ChangeExplanationSuggestion> _dispatchExplanation(
+    BuildContext context,
+  ) async {
+    _explanationResult = null;
+    await _dispatch(context, {'operation': 'explain_changes'});
+    return _explanationResult ??
+        const ChangeExplanationSuggestion(available: false);
+  }
+
   Future<ChangeExplanationSuggestion> _explain(
     ModificationPreview preview,
   ) async {
@@ -601,18 +617,8 @@ class _TextEditPanelState extends ConsumerState<TextEditPanel>
           _checksDirty) {
         return const ChangeExplanationSuggestion(available: false);
       }
-      setState(() => _status = result.status);
-      return ChangeExplanationSuggestion(
-        available: result.error == null && result.changeNote != null,
-        changeNote: result.changeNote,
-        tags: result.tags ?? [],
-        source: result.source_?.value,
-        changesFingerprint: result.error == null
-            ? result.changesFingerprint
-            : null,
-        reason: result.status.reason,
-        error: result.error,
-      );
+      // Explanation quota is a different product from modification quota.
+      return ChangeExplanationSuggestion.fromResult(result);
     } catch (error) {
       return ChangeExplanationSuggestion(
         available: false,
@@ -805,6 +811,11 @@ class _TextEditPanelState extends ConsumerState<TextEditPanel>
         'text_cancel': (_) => _cancel(),
         'text_retry_status': (_) => _loadStatus(),
         'text_retry_checks': (_) => _checkSelection(),
+        'explain_changes': (_) async {
+          if (_canConfirm && _pendingConfirmation == null) {
+            _explanationResult = await _explain(_preview!);
+          }
+        },
       },
       child: Builder(
         builder: (context) => Column(
@@ -918,15 +929,22 @@ class _TextEditPanelState extends ConsumerState<TextEditPanel>
                       _targetRevision,
                     ),
                     changeNote: _changeNote,
+                    noteAuthored: _changeNoteAuthored,
+                    tagsAuthored: _tagsAuthored,
+                    tagsTouched: _tags != null,
+                    changesFingerprint: _explanationFingerprint,
                     tags: _tags ?? _preview!.snapshot.tags ?? [],
-                    unavailableReason: _status?.available == false
-                        ? _reason(_status?.reason)
+                    explain: _canConfirm && !_locked
+                        ? () => _dispatchExplanation(context)
                         : null,
-                    explain: _canConfirm ? () => _explain(_preview!) : null,
                     onChanged: (draft) {
                       setState(() {
                         _changeNote = draft.changeNote;
-                        _tags = List<String>.of(draft.tags);
+                        _changeNoteAuthored = draft.noteAuthored;
+                        _tagsAuthored = draft.tagsAuthored;
+                        _tags = draft.tagsTouched
+                            ? List<String>.of(draft.tags)
+                            : null;
                         _explanationFingerprint = draft.changesFingerprint;
                       });
                       _persistLater();

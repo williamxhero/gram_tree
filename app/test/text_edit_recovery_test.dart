@@ -144,6 +144,24 @@ class _Fixture {
       '/v1/ai/recipes/modifications/status',
       (_) => (200, status.toJson()),
     );
+    env.server.on(
+      'POST',
+      '/v1/ai/recipes/change-explanation',
+      (_) => (
+        200,
+        ChangeExplanationResult(
+          changeNote: '自动说明：只澄清本次操作',
+          tags: ['澄清'],
+          changesFingerprint: 'checked-operations',
+          source_: ChangeExplanationResultSource_Enum.aiEstimated,
+          status: AIStatus(
+            available: false,
+            remaining: 0,
+            reason: 'daily_quota',
+          ),
+        ).toJson(),
+      ),
+    );
     env.server.on('POST', '/v1/ai/recipes/modifications', (_) {
       if (failProposal) return FakeServer.error(503, 'unavailable', '模型请求超时');
       return (200, preview());
@@ -323,8 +341,9 @@ Future<void> _selected(
   WidgetTester tester,
   _Fixture fixture, {
   bool generated = false,
+  Size size = const Size(360, 780),
 }) async {
-  await pumpApp(tester, env: fixture.env);
+  await pumpApp(tester, env: fixture.env, size: size);
   await _route(
     tester,
     generated ? '/recipes/one-line' : '/recipes/$_recipe/edit',
@@ -377,6 +396,78 @@ class _SlowEvents extends FakeEventQueue {
 }
 
 void main() {
+  testWidgets(
+    'AI metadata and untouched manual form never duplicate explanation keys',
+    (tester) async {
+      final fixture = _Fixture();
+      await _selected(tester, fixture, size: const Size(1200, 3000));
+      await _reveal(tester, 'recipe-dish-name');
+      expect(
+        find.byKey(const ValueKey('change-explanation-note')),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(const ValueKey('change-explanation-tags')),
+        findsOneWidget,
+      );
+    },
+  );
+
+  testWidgets(
+    'explanation uses persisted intent and does not replace modification quota',
+    (tester) async {
+      final events = _SlowEvents();
+      final fixture = _Fixture(events: events);
+      await _selected(tester, fixture);
+      await _reveal(tester, 'change-explanation-generate');
+      final gate = Completer<void>();
+      events.gate = gate;
+      addTearDown(() {
+        if (!gate.isCompleted) gate.complete();
+      });
+      await tester.tap(
+        find.byKey(const ValueKey('change-explanation-generate')),
+      );
+      await tester.pump();
+      expect(
+        fixture.env.server.calls('POST', '/v1/ai/recipes/change-explanation'),
+        isEmpty,
+      );
+      events.gate = null;
+      gate.complete();
+      await tester.pumpAndSettle();
+      expect(find.text('自动说明：只澄清本次操作'), findsOneWidget);
+      await _reveal(tester, 'text-edit-quota');
+      expect(find.text('今日修改剩余 48 次'), findsOneWidget);
+      expect(
+        tester
+            .widget<OutlinedButton>(
+              find.byKey(const ValueKey('text-edit-preview')),
+            )
+            .onPressed,
+        isNotNull,
+      );
+    },
+  );
+
+  testWidgets('manual explanation adopts successful last-allowance result', (
+    tester,
+  ) async {
+    final fixture = _Fixture();
+    await _selected(tester, fixture);
+    await _reveal(tester, 'recipe-step-instruction-cook');
+    await tester.enterText(
+      find.byKey(const ValueKey('recipe-step-instruction-cook')),
+      '手动澄清本次操作',
+    );
+    // Start outside the centred field's selection handle.
+    await tester.dragFrom(const Offset(30, 220), const Offset(0, 500));
+    await tester.pumpAndSettle();
+    await _tap(tester, 'change-explanation-generate');
+    expect(find.text('自动说明：只澄清本次操作'), findsOneWidget);
+    expect(find.text('澄清'), findsOneWidget);
+  });
+
   testWidgets(
     'lost save response retries the exact confirmation without replaying saved decisions',
     (tester) async {
@@ -443,6 +534,18 @@ void main() {
     await tester.pumpAndSettle();
     await tester.pump(const Duration(milliseconds: 300));
     await tester.pumpAndSettle();
+    expect(find.text('请输入有效的 JSON 数值。'), findsOneWidget);
+    await _reveal(tester, 'text-edit-confirm');
+    expect(
+      tester
+          .widget<FilledButton>(find.byKey(const ValueKey('text-edit-confirm')))
+          .onPressed,
+      isNull,
+    );
+    await restartApp(tester, fixture.env);
+    await _route(tester, '/recipes/$_recipe/edit');
+    await _reveal(tester, 'text-edit-after-clarify');
+    expect(find.text('不是数字'), findsOneWidget);
     expect(find.text('请输入有效的 JSON 数值。'), findsOneWidget);
     await _reveal(tester, 'text-edit-confirm');
     expect(

@@ -14,11 +14,17 @@ class ChangeExplanationDraft {
     required this.changeNote,
     required this.tags,
     this.changesFingerprint,
+    this.noteAuthored = true,
+    this.tagsAuthored = true,
+    this.tagsTouched = false,
   });
 
   final String changeNote;
   final List<String> tags;
   final String? changesFingerprint;
+  final bool noteAuthored;
+  final bool tagsAuthored;
+  final bool tagsTouched;
 }
 
 /// Adapter seam for the generated change-explanation endpoint. The parent owns
@@ -33,6 +39,21 @@ class ChangeExplanationSuggestion {
     this.reason,
     this.error,
   });
+
+  factory ChangeExplanationSuggestion.fromResult(
+    ChangeExplanationResult result,
+  ) => ChangeExplanationSuggestion(
+    available:
+        result.error == null &&
+        result.changeNote?.trim().isNotEmpty == true &&
+        result.changesFingerprint.isNotEmpty,
+    changeNote: result.changeNote,
+    tags: result.tags ?? const [],
+    source: result.source_?.value,
+    changesFingerprint: result.error == null ? result.changesFingerprint : null,
+    reason: result.status.reason,
+    error: result.error,
+  );
 
   final bool available;
   final String? changeNote;
@@ -56,6 +77,10 @@ class ChangeExplanationPanel extends StatefulWidget {
     required this.onChanged,
     this.explain,
     this.unavailableReason,
+    this.noteAuthored,
+    this.tagsAuthored,
+    this.changesFingerprint,
+    this.tagsTouched = false,
   });
 
   final Object bindingKey;
@@ -64,6 +89,11 @@ class ChangeExplanationPanel extends StatefulWidget {
   final ValueChanged<ChangeExplanationDraft> onChanged;
   final Future<ChangeExplanationSuggestion> Function()? explain;
   final String? unavailableReason;
+  // Null preserves compatibility with pre-ownership form drafts.
+  final bool? noteAuthored;
+  final bool? tagsAuthored;
+  final String? changesFingerprint;
+  final bool tagsTouched;
 
   @override
   State<ChangeExplanationPanel> createState() => _ChangeExplanationPanelState();
@@ -77,6 +107,7 @@ class _ChangeExplanationPanelState extends State<ChangeExplanationPanel> {
   bool _busy = false;
   late bool _noteAuthored;
   late bool _tagsAuthored;
+  late bool _tagsTouched;
   String? _message;
   int _requestEpoch = 0;
 
@@ -85,8 +116,14 @@ class _ChangeExplanationPanelState extends State<ChangeExplanationPanel> {
     super.initState();
     _note = TextEditingController(text: widget.changeNote);
     _tags = TextEditingController(text: widget.tags.join('，'));
-    _noteAuthored = widget.changeNote.trim().isNotEmpty;
-    _tagsAuthored = widget.tags.isNotEmpty;
+    _noteAuthored = widget.noteAuthored ?? widget.changeNote.trim().isNotEmpty;
+    _tagsAuthored = widget.tagsAuthored ?? widget.tags.isNotEmpty;
+    _tagsTouched = widget.tagsTouched;
+    _fingerprint = widget.changesFingerprint;
+    if ((!_noteAuthored && widget.changeNote.isNotEmpty) ||
+        (!_tagsAuthored && widget.tags.isNotEmpty)) {
+      _source = sourceTypeAiEstimated;
+    }
   }
 
   @override
@@ -104,6 +141,20 @@ class _ChangeExplanationPanelState extends State<ChangeExplanationPanel> {
       _tags.text = widget.tags.join('，');
       _tagsAuthored = true;
     }
+    if (widget.noteAuthored != null &&
+        widget.noteAuthored != oldWidget.noteAuthored) {
+      _noteAuthored = widget.noteAuthored!;
+    }
+    if (widget.tagsAuthored != null &&
+        widget.tagsAuthored != oldWidget.tagsAuthored) {
+      _tagsAuthored = widget.tagsAuthored!;
+    }
+    if (widget.changesFingerprint != oldWidget.changesFingerprint) {
+      _fingerprint = widget.changesFingerprint;
+    }
+    if (widget.tagsTouched != oldWidget.tagsTouched) {
+      _tagsTouched = widget.tagsTouched;
+    }
     if (_busy && (widget.unavailableReason != null || widget.explain == null)) {
       _requestEpoch++;
       _busy = false;
@@ -115,7 +166,10 @@ class _ChangeExplanationPanelState extends State<ChangeExplanationPanel> {
       _source = null;
       _message = '改动已变化，请重新生成说明或手写。';
       if (!_noteAuthored) _note.clear();
-      if (!_tagsAuthored) _tags.clear();
+      if (!_tagsAuthored) {
+        _tags.clear();
+        _tagsTouched = false;
+      }
       final binding = widget.bindingKey;
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted && widget.bindingKey == binding) _notify();
@@ -141,6 +195,9 @@ class _ChangeExplanationPanelState extends State<ChangeExplanationPanel> {
       changeNote: _note.text.trim(),
       tags: _tagValues,
       changesFingerprint: _fingerprint,
+      noteAuthored: _noteAuthored,
+      tagsAuthored: _tagsAuthored,
+      tagsTouched: _tagsTouched,
     ),
   );
 
@@ -179,7 +236,10 @@ class _ChangeExplanationPanelState extends State<ChangeExplanationPanel> {
     setState(() {
       _busy = false;
       if (!_noteAuthored) _note.text = suggestion.changeNote ?? '';
-      if (!_tagsAuthored) _tags.text = suggestion.tags.join('，');
+      if (!_tagsAuthored) {
+        _tags.text = suggestion.tags.join('，');
+        _tagsTouched = true;
+      }
       _fingerprint = suggestion.changesFingerprint;
       _source = suggestion.source;
     });
@@ -204,13 +264,18 @@ class _ChangeExplanationPanelState extends State<ChangeExplanationPanel> {
       standardExtra: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          if (_source == sourceTypeAiEstimated)
+          if (_source == sourceTypeAiEstimated &&
+              ((!_noteAuthored && _note.text.isNotEmpty) ||
+                  (!_tagsAuthored && _tagValues.isNotEmpty)))
             Align(
               alignment: Alignment.centerLeft,
               child: SourceMark(
                 sourceType: sourceTypeAiEstimated,
                 componentId: 'change-explanation',
-                value: [_note.text, ..._tagValues].join('；'),
+                value: [
+                  if (!_noteAuthored) _note.text,
+                  if (!_tagsAuthored) ..._tagValues,
+                ].join('；'),
                 basisText: '仅依据本次最终改动生成，不代表已做过验证。作者可以修改说明和标签。',
                 required: false,
                 neutral: true,
@@ -236,7 +301,10 @@ class _ChangeExplanationPanelState extends State<ChangeExplanationPanel> {
             controller: _tags,
             decoration: InputDecoration(labelText: l10n.recipeTags),
             onChanged: (_) {
-              setState(() => _tagsAuthored = true);
+              setState(() {
+                _tagsAuthored = true;
+                _tagsTouched = true;
+              });
               _notify();
             },
           ),
