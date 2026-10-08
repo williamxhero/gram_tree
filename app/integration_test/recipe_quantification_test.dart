@@ -5,7 +5,7 @@ import 'package:gram_tree/config/app_config.dart';
 import 'package:gram_tree/main.dart' as app;
 import 'package:integration_test/integration_test.dart';
 
-import 'event_pipeline_support.dart' show resetLocalAppState;
+import 'event_pipeline_support.dart' show resetLocalAppState, waitUntil;
 
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
@@ -167,6 +167,13 @@ void main() {
       await waitFor(
         tester,
         find.byKey(const ValueKey('recipe-select-comparison')),
+      );
+      // The save notification survives navigation and can cover the last row
+      // at maximum scroll extent. Wait for its real dwell timer, not just frames.
+      await waitUntil(
+        tester,
+        () => find.byType(SnackBar).evaluate().isEmpty,
+        tries: 40,
       );
       // Comparison conclusions make history rows taller on a small phone;
       // scroll to the lazy older version before asserting or tapping it.
