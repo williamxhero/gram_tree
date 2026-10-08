@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gramtree_api/gramtree_api.dart';
 
 import '../../api/api_client.dart';
+import '../../app/theme.dart';
 import '../../auth/auth_controller.dart';
 import '../../l10n/app_localizations.dart';
 import '../../ui_protocol/components/component_scaffold.dart';
@@ -253,13 +254,18 @@ class _HistoryCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text('${change.reason} · $status'),
-          Text(time),
+          Text(
+            time,
+            style: GramTreeColors.of(context)
+                .numberStyle(Theme.of(context).textTheme.bodyMedium!),
+          ),
           SourceMark(
             key: ValueKey('taste-history-why-${change.id}'),
             sourceType: sourceTypeAuthorFilled,
-            componentId: 'taste-history-${change.id}',
+            componentId: 'taste-history',
             value: '$field · $newLabel',
             originalValue: '$field · $oldLabel',
+            valueChanged: false,
             basisText: '${change.reason} · $status · $time',
             required: false,
             feedbackEnabled: false,

@@ -1,7 +1,9 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:gram_tree/app/theme.dart';
 import 'package:gramtree_api/gramtree_api.dart';
 
 import 'helpers.dart';
@@ -98,7 +100,99 @@ Future<void> signOut(WidgetTester tester) async {
   expect(find.text('登录味谱'), findsOneWidget);
 }
 
+Future<void> openHistoryWhy(WidgetTester tester) async {
+  final why = find.byKey(ValueKey('taste-history-why-${historyFixture().id}'));
+  await tester.scrollUntilVisible(why, 350);
+  await tapVisible(tester, why);
+}
+
+void installHistory(FakeServer server) {
+  installProfile(server, () => profileFixture(saltyLevel: 1, manual: true));
+  server.on(
+    'GET',
+    '$tastePath/changes',
+    (_) => (200, PageTasteProfileChangeOut(items: [historyFixture()]).toJson()),
+  );
+}
+
 void main() {
+  testWidgets(
+    'history why telemetry uses a generic identifier without private IDs',
+    (tester) async {
+      final server = FakeServer();
+      installHistory(server);
+      await pumpApp(tester, env: TestEnv.signedIn(server: server));
+      await openTaste(tester);
+      await openHistoryWhy(tester);
+      final opened = server
+          .calls('POST', '/v1/events/upload')
+          .expand(
+            (request) => ((request.body as Map)['events'] as List).cast<Map>(),
+          )
+          .where((event) => event['event_type'] == 'ui.why_panel_opened')
+          .toList();
+      expect(opened, hasLength(1));
+      expect(opened.single['content'], {
+        'component_id': 'taste-history',
+        'source_type': 'author_filled',
+      });
+      expect(opened.single['correlation'], isNull);
+      final telemetry = jsonEncode(opened.single['content']);
+      for (final privateId in [
+        profileFixture().id,
+        historyFixture().id,
+        server.user.id,
+      ]) {
+        expect(telemetry, isNot(contains(privateId)));
+      }
+    },
+  );
+
+  testWidgets('history timestamp uses themed number typography', (
+    tester,
+  ) async {
+    final server = FakeServer();
+    installHistory(server);
+    await pumpApp(tester, env: TestEnv.signedIn(server: server));
+    await openTaste(tester);
+    final why = find.byKey(
+      ValueKey('taste-history-why-${historyFixture().id}'),
+    );
+    await tester.scrollUntilVisible(why, 350);
+    final context = tester.element(why);
+    final local = MaterialLocalizations.of(context);
+    final date = DateTime.parse(historyFixture().createdAt).toLocal();
+    final time =
+        '${local.formatShortDate(date)} ${local.formatTimeOfDay(TimeOfDay.fromDateTime(date))}';
+    final expected = GramTreeColors.of(context)
+        .numberStyle(Theme.of(context).textTheme.bodyMedium!);
+    expect(tester.widget<Text>(find.text(time)).style, expected);
+  });
+
+  for (final brightness in Brightness.values) {
+    testWidgets('manual history WhyPanel stays neutral in $brightness', (
+      tester,
+    ) async {
+      final server = FakeServer();
+      installHistory(server);
+      await pumpApp(
+        tester,
+        env: TestEnv.signedIn(server: server),
+        brightness: brightness,
+      );
+      await openTaste(tester);
+      await openHistoryWhy(tester);
+      final current = find.text('现在：咸 · 淡一点');
+      expect(current, findsOneWidget);
+      final context = tester.element(current);
+      final style = tester.widget<Text>(current).style!;
+      expect(style.color, Theme.of(context).textTheme.bodyMedium!.color);
+      expect(style.color, isNot(GramTreeColors.of(context).accent));
+      expect(find.text('原来：咸 · 标准'), findsOneWidget);
+      expect(find.text('这次不用'), findsNothing);
+      expect(find.text('以后别这样'), findsNothing);
+    });
+  }
   testWidgets(
     'configured levels drive requests, history labels and read-only local cuisines',
     (tester) async {

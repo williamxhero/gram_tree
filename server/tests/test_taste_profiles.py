@@ -4,10 +4,12 @@ import json
 import uuid
 from concurrent.futures import ThreadPoolExecutor
 
-from sqlalchemy import Engine, text
+from fastapi.testclient import TestClient
 
 from gramtree.cli import main as cli
+from gramtree.main import create_app
 from tests.accounts_support import Api, bearer
+from tests.conftest import make_settings
 from tests.test_account_deletion import _purge, _reauth_email
 
 PATH = "/v1/me/taste-profile"
@@ -280,39 +282,51 @@ def test_configurable_mapping_and_invalid_configuration_fail_closed(api: Api) ->
     assert api.client.get(PATH, headers=owner).json() == before
 
 
-def test_profile_event_storage_is_metadata_only_and_purge_removes_private_data(
-    api: Api, engine: Engine
-) -> None:
+def test_storage_diagnostics_are_not_available_in_dev(api: Api) -> None:
+    owner = bearer(api.login("taste-dev-diagnostics@example.com"))
+    with TestClient(create_app(make_settings(env="dev"))) as client:
+        assert client.get("/v1/dev/events/taste-profile-storage", headers=owner).status_code == 404
+
+
+def test_profile_event_storage_is_metadata_only_and_purge_removes_private_data(api: Api) -> None:
     email = "taste-delete@example.com"
     tokens = api.login(email)
     owner = bearer(tokens)
     api.client.patch(PATH, json={"flavors": {"salty": 0.75}}, headers=owner)
-    change = api.client.get(PATH + "/changes", headers=owner).json()["items"][0]
-    # Privacy acceptance inspects storage, not internal business implementations.
-    with engine.connect() as connection:
-        event = connection.execute(
-            text("SELECT correlation, content FROM events WHERE id = :id"),
-            {"id": uuid.UUID(change["id"])},
-        ).one()
-        assert event.content == {}
-        assert event.correlation == {"taste_profile_change_id": change["id"]}
+    changes = api.client.get(PATH + "/changes", headers=owner).json()["items"]
+    assert len(changes) == 1
+    diagnostic = "/v1/dev/events/taste-profile-storage"
+    before = api.client.get(diagnostic, headers=owner)
+    assert before.status_code == 200, before.text
+    assert before.json() == {
+        "profiles": 1,
+        "changes": 1,
+        "events": 1,
+        "taste_events": 1,
+        "metadata_only": True,
+    }
+    assert api.client.get(diagnostic).status_code == 401
+    observer = bearer(api.login("taste-storage-observer@example.com"))
+    assert (
+        api.client.get(
+            diagnostic, params={"owner_id": tokens["user"]["id"]}, headers=observer
+        ).status_code
+        == 404
+    )
+    assert diagnostic not in api.client.get("/openapi.json").json()["paths"]
     assert _reauth_email(api, tokens, email) == 204
     due = api.client.post("/v1/me/deletion", headers=owner).json()["deletion_due_at"]
     assert api.client.get(PATH, headers=owner).status_code == 401
     assert "已删除 1 个" in _purge(due)
-    with engine.connect() as connection:
-        for table, column in [
-            ("taste_profiles", "owner_id"),
-            ("taste_profile_changes", "owner_id"),
-            ("events", "user_id"),
-        ]:
-            assert (
-                connection.scalar(
-                    text(f"SELECT count(*) FROM {table} WHERE {column} = :owner"),
-                    {"owner": uuid.UUID(tokens["user"]["id"])},
-                )
-                == 0
-            )
+    after = api.client.get(diagnostic, params={"owner_id": tokens["user"]["id"]}, headers=observer)
+    assert after.status_code == 200, after.text
+    assert after.json() == {
+        "profiles": 0,
+        "changes": 0,
+        "events": 0,
+        "taste_events": 0,
+        "metadata_only": True,
+    }
     api.clock.advance(seconds=61)
     fresh = bearer(api.login(email))
     assert api.client.get(PATH, headers=fresh).json()["version"] == 1
