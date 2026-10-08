@@ -81,6 +81,7 @@ import 'package:gramtree_api/src/model/recipe_create.dart';
 import 'package:gramtree_api/src/model/recipe_derived.dart';
 import 'package:gramtree_api/src/model/recipe_detail.dart';
 import 'package:gramtree_api/src/model/recipe_displayed_ingredient.dart';
+import 'package:gramtree_api/src/model/recipe_flavor_contribution.dart';
 import 'package:gramtree_api/src/model/recipe_image_out.dart';
 import 'package:gramtree_api/src/model/recipe_image_staged_out.dart';
 import 'package:gramtree_api/src/model/recipe_image_upload.dart';
@@ -382,6 +383,9 @@ ReturnType deserialize<ReturnType, BaseType>(
       return RecipeDetail.fromJson(value as Map<String, dynamic>) as ReturnType;
     case 'RecipeDisplayedIngredient':
       return RecipeDisplayedIngredient.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'RecipeFlavorContribution':
+      return RecipeFlavorContribution.fromJson(value as Map<String, dynamic>)
           as ReturnType;
     case 'RecipeImageOut':
       return RecipeImageOut.fromJson(value as Map<String, dynamic>)

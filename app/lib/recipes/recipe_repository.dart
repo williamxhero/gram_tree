@@ -269,6 +269,9 @@ class RecipeIngredientDraft {
     this.quantitySource,
     this.optional = false,
     this.functional = false,
+    this.flavorContribution,
+    this.flavorSource,
+    this.functionalSource,
     this.replacement,
   });
 
@@ -290,6 +293,9 @@ class RecipeIngredientDraft {
         quantitySource: value.quantitySource,
         optional: value.optional == true,
         functional: value.functional == true,
+        flavorContribution: value.flavorContribution,
+        flavorSource: value.flavorSource,
+        functionalSource: value.functionalSource,
         replacement: value.replacement is String
             ? RecipeReplacementDraft(
                 ingredientId: null,
@@ -318,6 +324,13 @@ class RecipeIngredientDraft {
       quantitySource: _valueSource(value['quantity_source']),
       optional: value['optional'] == true,
       functional: value['functional'] == true,
+      flavorContribution: value['flavor_contribution'] is Map
+          ? RecipeFlavorContribution.fromJson(
+              Map<String, dynamic>.from(value['flavor_contribution'] as Map),
+            )
+          : null,
+      flavorSource: _valueSource(value['flavor_source']),
+      functionalSource: _valueSource(value['functional_source']),
       replacement: replacement is String
           ? RecipeReplacementDraft(ingredientId: null, displayName: replacement)
           : replacement is Map
@@ -345,13 +358,54 @@ class RecipeIngredientDraft {
   ValueSource? quantitySource;
   bool optional;
   bool functional;
+  RecipeFlavorContribution? flavorContribution;
+  ValueSource? flavorSource;
+  ValueSource? functionalSource;
   RecipeReplacementDraft? replacement;
+
+  void adoptIngredientDefaults(IngredientDetail ingredient) {
+    final flavor = ingredient.attributes.flavor;
+    flavorContribution = flavor == null
+        ? null
+        : RecipeFlavorContribution.fromJson(flavor.value.toJson());
+    flavorSource = flavor == null
+        ? null
+        : _librarySource(flavor.estimate, ingredient.version, flavor.source_);
+    final functionalDefault = ingredient.attributes.functional;
+    functional = functionalDefault?.value ?? false;
+    functionalSource = functionalDefault == null
+        ? null
+        : _librarySource(
+            functionalDefault.estimate,
+            ingredient.version,
+            functionalDefault.source_,
+          );
+  }
+
+  void setFlavor(String axis, int? strength) {
+    final values = flavorContribution?.toJson() ?? <String, dynamic>{};
+    values[axis] = strength;
+    flavorContribution = values.values.every((value) => value == null)
+        ? null
+        : RecipeFlavorContribution.fromJson(values);
+    flavorSource = flavorContribution == null
+        ? null
+        : ValueSource(
+            source_: ValueSourceSource_Enum.authorFilled,
+            basis: '作者按这道菜的实际作用填写；未填写不代表零贡献',
+          );
+  }
 
   RecipeIngredient toModel() => RecipeIngredient(
     baseQuantity: baseQuantity,
     baseUnit: _baseUnit(baseUnit),
     displayName: displayName.trim(),
     functional: functional,
+    // dart-dio omits null properties. Send an empty, unknown profile so clearing
+    // a contribution is explicit and cannot re-adopt a mutable library default.
+    flavorContribution: flavorContribution ?? RecipeFlavorContribution(),
+    flavorSource: flavorSource,
+    functionalSource: functionalSource,
     group: _optionalText(group),
     id: id,
     ingredientId: ingredientId,
@@ -378,6 +432,9 @@ class RecipeIngredientDraft {
     'quantity_source': quantitySource?.toJson(),
     'optional': optional,
     'functional': functional,
+    'flavor_contribution': flavorContribution?.toJson(),
+    'flavor_source': flavorSource?.toJson(),
+    'functional_source': functionalSource?.toJson(),
     'replacement': replacement?.toJson(),
   };
 }
@@ -657,6 +714,16 @@ class RecipeForm {
     'snapshot': snapshot.toJson(),
   };
 }
+
+ValueSource _librarySource(bool estimate, String version, String source) =>
+    ValueSource(
+      source_: estimate
+          ? ValueSourceSource_Enum.aiEstimated
+          : ValueSourceSource_Enum.authorFilled,
+      basis:
+          '采用食材库 $version 默认参考；$source；'
+          '${estimate ? 'AI 起草、待核对' : '人工校对'}；不是做菜验证',
+    );
 
 ValueSource _authorSource(String original) => ValueSource(
   basis: '',

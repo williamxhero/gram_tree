@@ -58,6 +58,7 @@ from gramtree.recipes.schemas import (
     RecipeDerived,
     RecipeDetail,
     RecipeDisplayedIngredient,
+    RecipeFlavorContribution,
     RecipeImageOut,
     RecipeImageStagedOut,
     RecipeIngredient,
@@ -74,6 +75,7 @@ from gramtree.recipes.schemas import (
     RecipeVersionHistory,
     RecipeVersionOut,
     RecipeVersionSummary,
+    ValueSource,
 )
 from gramtree.recipes.schemas import MoldConversion as MoldConversionSchema
 from gramtree.recipes.schemas import (
@@ -228,6 +230,41 @@ def _base_quantity(session: Session, ingredient: RecipeIngredient) -> tuple[floa
     )
 
 
+def _recipe_flavor_defaults(session: Session, ingredient: RecipeIngredient) -> dict[str, Any]:
+    """Adopt library data once; an explicit null retains unknown contribution."""
+    result: dict[str, Any] = {}
+    standard = (
+        session.get(Ingredient, ingredient.ingredient_id) if ingredient.ingredient_id else None
+    )
+    attributes = _ingredient_attributes(session, standard.id) if standard else None
+    for field, source_field, attribute_name in (
+        ("flavor_contribution", "flavor_source", "flavor"),
+        ("functional", "functional_source", "functional"),
+    ):
+        value = getattr(ingredient, field)
+        source = getattr(ingredient, source_field)
+        attribute = getattr(attributes, attribute_name) if attributes else None
+        if field not in ingredient.model_fields_set and attribute is not None:
+            value = (
+                RecipeFlavorContribution.model_validate(attribute.value.model_dump())
+                if field == "flavor_contribution"
+                else attribute.value
+            )
+            source = ValueSource(
+                source="ai_estimated" if attribute.estimate else "author_filled",
+                basis=(
+                    f"采用食材库 {standard.version if standard else ''} 默认参考；"
+                    f"{attribute.source}；"
+                    f"{'AI 起草、待核对' if attribute.estimate else '人工校对'}；不是做菜验证"
+                ),
+            )
+        elif value is not None and source is None and field in ingredient.model_fields_set:
+            source = ValueSource(source="author_filled", basis="作者按这道菜的实际作用填写")
+        result[field] = value
+        result[source_field] = source if value is not None else None
+    return result
+
+
 def _normalize_ingredient(session: Session, ingredient: RecipeIngredient) -> RecipeIngredient:
     base_quantity, base_unit = _base_quantity(session, ingredient)
     return ingredient.model_copy(
@@ -235,6 +272,7 @@ def _normalize_ingredient(session: Session, ingredient: RecipeIngredient) -> Rec
             "base_quantity": base_quantity,
             "base_unit": base_unit,
             "scaling_mode": _effective_scaling_mode(session, ingredient),
+            **_recipe_flavor_defaults(session, ingredient),
         }
     )
 
@@ -1002,7 +1040,6 @@ def save_version(
     body: RecipeVersionCreate,
 ) -> RecipeDetail:
     recipe = _owned_recipe(session, owner, recipe_id)
-    snapshot = _validate_snapshot(session, body.snapshot)
     staged = _staged_rows(session, owner, body.image_ids)
     previous = session.get(RecipeVersion, recipe.current_version_id)
     if previous is None:
@@ -1011,6 +1048,30 @@ def save_version(
     if baseline is None or baseline.recipe_id != recipe.id:
         raise NotFound("菜谱基准版本不存在")
     previous_snapshot = RecipeSnapshot.model_validate(baseline.snapshot)
+    # An old client cannot send the new fields. Preserve its selected baseline,
+    # including legacy unknown values, rather than adopting today's library.
+    old_ingredients = {item.id: item for item in previous_snapshot.ingredients}
+    compatible = []
+    for item in body.snapshot.ingredients:
+        old = old_ingredients.get(item.id)
+        inherited: dict[str, Any] = {}
+        if old is not None and old.ingredient_id == item.ingredient_id:
+            for field, source_field in (
+                ("flavor_contribution", "flavor_source"),
+                ("functional", "functional_source"),
+            ):
+                if field not in item.model_fields_set:
+                    inherited[field] = getattr(old, field)
+                    if source_field not in item.model_fields_set:
+                        inherited[source_field] = getattr(old, source_field)
+                elif source_field not in item.model_fields_set and getattr(item, field) == getattr(
+                    old, field
+                ):
+                    inherited[source_field] = getattr(old, source_field)
+        compatible.append(item.model_copy(update=inherited))
+    snapshot = _validate_snapshot(
+        session, body.snapshot.model_copy(update={"ingredients": compatible})
+    )
     dish = session.get(Dish, recipe.dish_id)
     if dish is None:
         raise NotFound("菜谱关联数据不存在")

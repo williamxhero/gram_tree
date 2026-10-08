@@ -3269,6 +3269,112 @@
         "title": "RecipeDisplayedIngredient",
         "type": "object"
       },
+      "RecipeFlavorContribution": {
+        "additionalProperties": false,
+        "description": "This recipe's relative strengths; null means unknown, not zero.",
+        "properties": {
+          "numbing": {
+            "anyOf": [
+              {
+                "maximum": 3.0,
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "麻",
+            "title": "Numbing"
+          },
+          "oily": {
+            "anyOf": [
+              {
+                "maximum": 3.0,
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "油",
+            "title": "Oily"
+          },
+          "salty": {
+            "anyOf": [
+              {
+                "maximum": 3.0,
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "咸",
+            "title": "Salty"
+          },
+          "sour": {
+            "anyOf": [
+              {
+                "maximum": 3.0,
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "酸",
+            "title": "Sour"
+          },
+          "spicy": {
+            "anyOf": [
+              {
+                "maximum": 3.0,
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "辣",
+            "title": "Spicy"
+          },
+          "sweet": {
+            "anyOf": [
+              {
+                "maximum": 3.0,
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "甜",
+            "title": "Sweet"
+          },
+          "umami": {
+            "anyOf": [
+              {
+                "maximum": 3.0,
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "鲜",
+            "title": "Umami"
+          }
+        },
+        "title": "RecipeFlavorContribution",
+        "type": "object"
+      },
       "RecipeImageOut": {
         "properties": {
           "byte_size": {
@@ -3459,10 +3565,41 @@
             "title": "Display Name",
             "type": "string"
           },
+          "flavor_contribution": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RecipeFlavorContribution"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "本菜谱实际采用的味型贡献；未填写不代表零贡献"
+          },
+          "flavor_source": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ValueSource"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "functional": {
             "default": false,
             "title": "Functional",
             "type": "boolean"
+          },
+          "functional_source": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ValueSource"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "group": {
             "anyOf": [

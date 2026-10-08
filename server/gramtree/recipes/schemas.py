@@ -65,6 +65,20 @@ class RecipeReplacement(BaseModel):
     note: str | None = None
 
 
+class RecipeFlavorContribution(BaseModel):
+    """This recipe's relative strengths; null means unknown, not zero."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    salty: int | None = Field(None, ge=0, le=3, strict=True, description="咸")
+    sweet: int | None = Field(None, ge=0, le=3, strict=True, description="甜")
+    sour: int | None = Field(None, ge=0, le=3, strict=True, description="酸")
+    spicy: int | None = Field(None, ge=0, le=3, strict=True, description="辣")
+    umami: int | None = Field(None, ge=0, le=3, strict=True, description="鲜")
+    numbing: int | None = Field(None, ge=0, le=3, strict=True, description="麻")
+    oily: int | None = Field(None, ge=0, le=3, strict=True, description="油")
+
+
 class RecipeIngredient(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -83,12 +97,24 @@ class RecipeIngredient(BaseModel):
     optional: bool = False
     replacement: RecipeReplacement | str | None = None
     functional: bool = False
+    flavor_contribution: RecipeFlavorContribution | None = Field(
+        default=None, description="本菜谱实际采用的味型贡献；未填写不代表零贡献"
+    )
+    flavor_source: ValueSource | None = None
+    functional_source: ValueSource | None = None
     # 不填（或 null）表示作者没有设置：保存时用标准食材库的默认值，未收录的食材按比例。
     # 保存下来的版本快照里总是具体的缩放方式。
     scaling_mode: Literal["proportional", "unchanged", "round"] | None = Field(
         default=None, description="缩放方式；不填时用标准食材库的默认值，未收录的食材按比例"
     )
     quantity_source: ValueSource | None = None
+
+    @field_validator("flavor_source", "functional_source")
+    @classmethod
+    def contribution_not_verified(cls, value: ValueSource | None) -> ValueSource | None:
+        if value is not None and value.source == "verified":
+            raise ValueError("食材库校对和作者填写不是做菜验证，不能标为已验证")
+        return value
 
     @field_validator("display_name", "unit")
     @classmethod

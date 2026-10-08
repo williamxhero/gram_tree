@@ -104,6 +104,7 @@ export 'package:gramtree_api/src/model/recipe_create.dart';
 export 'package:gramtree_api/src/model/recipe_derived.dart';
 export 'package:gramtree_api/src/model/recipe_detail.dart';
 export 'package:gramtree_api/src/model/recipe_displayed_ingredient.dart';
+export 'package:gramtree_api/src/model/recipe_flavor_contribution.dart';
 export 'package:gramtree_api/src/model/recipe_image_out.dart';
 export 'package:gramtree_api/src/model/recipe_image_staged_out.dart';
 export 'package:gramtree_api/src/model/recipe_image_upload.dart';

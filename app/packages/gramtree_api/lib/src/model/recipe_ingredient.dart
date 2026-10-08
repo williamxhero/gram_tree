@@ -4,6 +4,7 @@
 
 // ignore_for_file: unused_element
 import 'package:gramtree_api/src/model/value_source.dart';
+import 'package:gramtree_api/src/model/recipe_flavor_contribution.dart';
 import 'package:copy_with_extension/copy_with_extension.dart';
 import 'package:json_annotation/json_annotation.dart';
 
@@ -25,7 +26,13 @@ class RecipeIngredient {
 
     required this.displayName,
 
+    this.flavorContribution,
+
+    this.flavorSource,
+
     this.functional = false,
+
+    this.functionalSource,
 
     this.group,
 
@@ -59,6 +66,13 @@ class RecipeIngredient {
   @JsonKey(name: r'display_name', required: true, includeIfNull: false)
   final String displayName;
 
+  /// 本菜谱实际采用的味型贡献；未填写不代表零贡献
+  @JsonKey(name: r'flavor_contribution', required: false, includeIfNull: false)
+  final RecipeFlavorContribution? flavorContribution;
+
+  @JsonKey(name: r'flavor_source', required: false, includeIfNull: false)
+  final ValueSource? flavorSource;
+
   @JsonKey(
     defaultValue: false,
     name: r'functional',
@@ -66,6 +80,9 @@ class RecipeIngredient {
     includeIfNull: false,
   )
   final bool? functional;
+
+  @JsonKey(name: r'functional_source', required: false, includeIfNull: false)
+  final ValueSource? functionalSource;
 
   /// 食材分组
   @JsonKey(name: r'group', required: false, includeIfNull: false)
@@ -116,7 +133,10 @@ class RecipeIngredient {
           other.baseQuantity == baseQuantity &&
           other.baseUnit == baseUnit &&
           other.displayName == displayName &&
+          other.flavorContribution == flavorContribution &&
+          other.flavorSource == flavorSource &&
           other.functional == functional &&
+          other.functionalSource == functionalSource &&
           other.group == group &&
           other.id == id &&
           other.ingredientId == ingredientId &&
@@ -133,7 +153,10 @@ class RecipeIngredient {
       baseQuantity.hashCode +
       (baseUnit == null ? 0 : baseUnit.hashCode) +
       displayName.hashCode +
+      flavorContribution.hashCode +
+      flavorSource.hashCode +
       functional.hashCode +
+      functionalSource.hashCode +
       group.hashCode +
       id.hashCode +
       ingredientId.hashCode +

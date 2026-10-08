@@ -51,6 +51,12 @@ void main() {
   Future<void> reveal(WidgetTester tester, Finder finder) async {
     tester.testTextInput.hide();
     await tester.pump();
+    // Do not unload an expanded lazy tile while locating its mounted controls.
+    if (finder.evaluate().isNotEmpty) {
+      await tester.ensureVisible(finder);
+      await settle(tester);
+      return;
+    }
     // The page body the user scrolls, found by its public key.
     final detail = find.byKey(const ValueKey('recipe-detail-content'));
     final body = detail.evaluate().isNotEmpty
@@ -156,6 +162,81 @@ void main() {
       final ingredient = find.byKey(const ValueKey('recipe-ingredient-search'));
       await reveal(tester, ingredient);
       await tester.enterText(ingredient, '鸡肉');
+      final flavorExpand = find.byKey(
+        const ValueKey('recipe-flavor-expand-ingredient-1'),
+      );
+      await reveal(tester, flavorExpand);
+      await tester.tap(flavorExpand);
+      await settle(tester);
+      final salty = find.byKey(
+        const ValueKey('recipe-flavor-salty-ingredient-1'),
+      );
+      await reveal(tester, salty);
+      await tester.tap(salty);
+      await settle(tester);
+      await tester.tap(find.text('咸 3').last);
+      await settle(tester);
+      final umami = find.byKey(
+        const ValueKey('recipe-flavor-umami-ingredient-1'),
+      );
+      await reveal(tester, umami);
+      await tester.tap(umami);
+      await settle(tester);
+      await tester.tap(find.text('鲜 2').last);
+      await settle(tester);
+      final addIngredient = find.byKey(const ValueKey('recipe-add-ingredient'));
+      await reveal(tester, addIngredient);
+      await tester.tap(addIngredient);
+      await settle(tester);
+      final secondSearch = find.byWidgetPredicate(
+        (widget) =>
+            widget is TextFormField &&
+            widget.key is ValueKey<String> &&
+            (widget.key as ValueKey<String>).value.startsWith(
+              'recipe-ingredient-search-ingredient-',
+            ),
+      );
+      await reveal(tester, secondSearch);
+      final searchKey =
+          (tester.widget(secondSearch).key as ValueKey<String>).value;
+      final secondId = searchKey.substring('recipe-ingredient-search-'.length);
+      await tester.enterText(secondSearch, '测试酱油');
+      await tester.tap(
+        find.byKey(ValueKey('recipe-search-ingredient-$secondId')),
+      );
+      final standardChoice = find.byWidgetPredicate(
+        (widget) =>
+            widget is ListTile &&
+            widget.key is ValueKey<String> &&
+            (widget.key as ValueKey<String>).value.startsWith(
+              'ingredient-result-',
+            ),
+      );
+      await waitFor(tester, standardChoice);
+      await reveal(tester, standardChoice.first);
+      await tester.tap(standardChoice.first);
+      await settle(tester);
+      final secondQuantity = find.byKey(
+        ValueKey('recipe-ingredient-quantity-$secondId'),
+      );
+      await reveal(tester, secondQuantity);
+      await tester.enterText(secondQuantity, '15');
+      await tester.enterText(
+        find.byKey(ValueKey('recipe-ingredient-unit-$secondId')),
+        'ml',
+      );
+      final secondFlavor = find.byKey(
+        ValueKey('recipe-flavor-expand-$secondId'),
+      );
+      await reveal(tester, secondFlavor);
+      await tester.tap(secondFlavor);
+      await settle(tester);
+      final secondSalty = find.byKey(ValueKey('recipe-flavor-salty-$secondId'));
+      await reveal(tester, secondSalty);
+      await tester.tap(secondSalty);
+      await settle(tester);
+      await tester.tap(find.text('咸 3').last);
+      await settle(tester);
       final step = find.byKey(const ValueKey('recipe-step-instruction'));
       await reveal(tester, step);
       await tester.enterText(step, '将鸡肉炒 2 分钟');
@@ -180,6 +261,32 @@ void main() {
         find.byKey(const ValueKey('recipe-history-button')),
       );
       expect(find.text('网页版验收菜谱'), findsWidgets);
+      final contributionDetail = find.byKey(
+        const ValueKey('recipe-flavor-detail-ingredient-1'),
+      );
+      final selectedContribution = find.byKey(
+        ValueKey('recipe-flavor-detail-$secondId'),
+      );
+      await reveal(tester, selectedContribution);
+      expect(
+        find.descendant(
+          of: selectedContribution,
+          matching: find.textContaining('咸 3'),
+        ),
+        findsOneWidget,
+      );
+      await reveal(tester, contributionDetail);
+      expect(find.textContaining('咸 3'), findsWidgets);
+      expect(find.textContaining('鲜 2'), findsWidgets);
+      final contributionSource = find.byKey(
+        const ValueKey('recipe-flavor-source-ingredient-1'),
+      );
+      await tester.tap(contributionSource);
+      await settle(tester);
+      expect(find.byKey(const ValueKey('why-panel')), findsOneWidget);
+      expect(find.textContaining('作者按这道菜'), findsWidgets);
+      await tester.tapAt(const Offset(10, 10));
+      await settle(tester);
       await reveal(tester, find.byKey(const ValueKey('recipe-allergen-card')));
       expect(find.textContaining('可能不完整'), findsWidgets);
       await reveal(
@@ -200,6 +307,12 @@ void main() {
       await tester.tap(find.byKey(const ValueKey('edit-old-recipe-button')));
       await waitFor(tester, find.byKey(const ValueKey('recipe-dish-name')));
       expect(find.text('网页版验收菜谱'), findsWidgets);
+      await reveal(
+        tester,
+        find.byKey(const ValueKey('recipe-flavor-editor-ingredient-1')),
+      );
+      expect(find.textContaining('咸 3'), findsWidgets);
+      expect(find.textContaining('鲜 2'), findsWidgets);
       await reveal(tester, find.bySemanticsLabel('这次改了什么'));
       await tester.enterText(find.bySemanticsLabel('这次改了什么'), '从第一版继续修改');
       final doneness = find.byKey(

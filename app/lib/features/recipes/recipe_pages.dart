@@ -21,6 +21,7 @@ import '../../recipes/mold_conversion.dart';
 import '../../recipes/serving_conversion.dart';
 import 'personal_measures_page.dart';
 import 'recipe_photo_panel.dart';
+import 'recipe_flavor_panel.dart';
 import '../../storage/local_store.dart';
 import '../../ui_protocol/components/component_scaffold.dart';
 import '../../ui_protocol/recipe_safety.dart';
@@ -521,6 +522,7 @@ class _RecipeEditorPageState extends ConsumerState<RecipeEditorPage> {
     final item = _form.ingredients.firstWhere((item) => item.id == id);
     item.ingredientId = value.id;
     item.displayName = value.standardName;
+    item.adoptIngredientDefaults(value);
     _libraryScaling[id] = scalingRuleForLibraryAttribute(
       value.attributes.scaling?.value,
     );
@@ -1256,6 +1258,7 @@ class _IngredientEditorCardState extends State<_IngredientEditorCard> {
                 onChanged();
               },
             ),
+            RecipeFlavorEditor(item: item, onChanged: onChanged),
             ExpansionTile(
               key: ValueKey('recipe-ingredient-advanced-$id'),
               title: Text(l10n.recipeStandardIngredient),
@@ -1302,6 +1305,7 @@ class _IngredientEditorCardState extends State<_IngredientEditorCard> {
                 const SizedBox(height: 8),
                 DropdownButtonFormField<String>(
                   key: ValueKey('recipe-ingredient-scaling-$id'),
+                  isExpanded: true,
                   initialValue:
                       item.scalingMode?.value ?? _scalingLibraryDefaultValue,
                   decoration: InputDecoration(
@@ -1356,6 +1360,10 @@ class _IngredientEditorCardState extends State<_IngredientEditorCard> {
                   title: Text(l10n.recipeFunctionalToggle),
                   onChanged: (value) {
                     item.functional = value == true;
+                    item.functionalSource = ValueSource(
+                      source_: ValueSourceSource_Enum.authorFilled,
+                      basis: '作者按这道菜的实际作用填写；不是做菜验证',
+                    );
                     onChanged();
                   },
                 ),
@@ -3061,20 +3069,34 @@ class _IngredientDetailRow extends StatelessWidget {
             ),
         ],
       ),
-      subtitle: Text.rich(
-        TextSpan(
-          children: [
+      subtitle: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text.rich(
             TextSpan(
-              text: quantity,
-              style: valueChanged
-                  ? TextStyle(color: GramTreeColors.of(context).accent)
-                  : null,
+              children: [
+                TextSpan(
+                  text: quantity,
+                  style: valueChanged
+                      ? TextStyle(color: GramTreeColors.of(context).accent)
+                      : null,
+                ),
+                for (final detail in subtitleDetails)
+                  TextSpan(text: ' · $detail'),
+              ],
             ),
-            for (final detail in subtitleDetails) TextSpan(text: ' · $detail'),
-          ],
-        ),
-        key: ValueKey('recipe-ingredient-amount-${ingredient.id}'),
-        style: subtitleStyle,
+            key: ValueKey('recipe-ingredient-amount-${ingredient.id}'),
+            style: subtitleStyle,
+          ),
+          RecipeFlavorSummary(
+            key: ValueKey('recipe-flavor-detail-${ingredient.id}'),
+            id: ingredient.id,
+            contribution: ingredient.flavorContribution,
+            flavorSource: ingredient.flavorSource,
+            functional: ingredient.functional == true,
+            functionalSource: ingredient.functionalSource,
+          ),
+        ],
       ),
     );
   }
