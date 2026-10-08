@@ -170,6 +170,7 @@ void _installModificationApi(
   TestEnv env, {
   String? error,
   bool unavailable = false,
+  bool failFirstDecision = false,
 }) {
   final status = AIStatus(
     available: !unavailable,
@@ -254,6 +255,10 @@ void _installModificationApi(
     'POST',
     '/v1/ai/recipes/modifications/$_modificationId/decisions',
     (request) {
+      if (failFirstDecision) {
+        failFirstDecision = false;
+        return FakeServer.error(503, 'temporarily_unavailable', '检查暂不可用，请重试');
+      }
       final supplied = (request.body as Map)['decisions'] as List;
       decisions = [
         for (final id in ['clarify-cook', 'remind-cook', 'explain-cook'])
@@ -376,6 +381,60 @@ class _SlowLocalEvents extends FakeEventQueue {
 }
 
 void main() {
+  testWidgets('读取修改额度失败可通过统一动作重试，原话保留', (tester) async {
+    final env = _env();
+    var first = true;
+    env.server.on('GET', '/v1/ai/recipes/modifications/status', (_) {
+      if (first) {
+        first = false;
+        return FakeServer.error(503, 'temporarily_unavailable', '暂不可用');
+      }
+      return (200, AIStatus(available: true, remaining: 47).toJson());
+    });
+    await _open(tester, env);
+    await _tap(tester, 'ai-design-new');
+    await _tap(tester, 'ai-skip-questions');
+    await _reveal(tester, 'text-edit-retry-status');
+    await _choose(tester, 'text-edit-retry-status');
+    expect(find.text('今日修改剩余 47 次'), findsOneWidget);
+    expect(find.byKey(const ValueKey('text-edit-error')), findsNothing);
+    await _reveal(tester, 'text-edit-input');
+    await tester.enterText(
+      find.byKey(const ValueKey('text-edit-input')),
+      _modifyText,
+    );
+    await tester.pumpAndSettle();
+    expect(
+      tester
+          .widget<OutlinedButton>(
+            find.byKey(const ValueKey('text-edit-preview')),
+          )
+          .onPressed,
+      isNotNull,
+    );
+  });
+
+  testWidgets('更新选择检查失败可统一动作重试，不用旧检查确认', (tester) async {
+    final env = _env();
+    _installModificationApi(env, failFirstDecision: true);
+    await _open(tester, env);
+    await _tap(tester, 'ai-design-new');
+    await _tap(tester, 'ai-skip-questions');
+    await _preview(tester);
+    await _choose(tester, 'text-edit-accept-clarify-cook');
+    await _reveal(tester, 'text-edit-retry-checks');
+    expect(
+      tester
+          .widget<FilledButton>(find.byKey(const ValueKey('text-edit-confirm')))
+          .onPressed,
+      isNull,
+    );
+    await _choose(tester, 'text-edit-retry-checks');
+    expect(find.text('待确认步骤 cook：$_clarified'), findsOneWidget);
+    expect(find.byKey(const ValueKey('text-edit-retry-checks')), findsNothing);
+    expect(find.byKey(const ValueKey('text-edit-error')), findsNothing);
+  });
+
   testWidgets('依赖上游待处理时明确提示，先处理上游才可接受依赖项', (tester) async {
     final env = _env();
     await _open(tester, env);
@@ -401,6 +460,23 @@ void main() {
       isNotNull,
       reason: '拒绝无需先接受依赖',
     );
+    await _choose(tester, 'text-edit-why-clarify-cook');
+    expect(
+      find.descendant(
+        of: find.byKey(const ValueKey('why-panel')),
+        matching: find.textContaining('把握程度：高'),
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(
+        of: find.byKey(const ValueKey('why-panel')),
+        matching: find.textContaining('95%'),
+      ),
+      findsNothing,
+    );
+    await tester.tapAt(const Offset(10, 10));
+    await tester.pumpAndSettle();
     await _choose(tester, 'text-edit-accept-clarify-cook');
     await _reveal(tester, 'text-edit-accept-remind-cook');
     expect(
@@ -452,6 +528,27 @@ void main() {
           .onPressed,
       isNull,
       reason: '可见后值已改变，即使本机事件存储仍在等待',
+    );
+    expect(
+      tester
+          .widget<TextField>(find.byKey(const ValueKey('text-edit-input')))
+          .enabled,
+      isFalse,
+      reason: '排队中的旧选择不能遇到替换后的新预览',
+    );
+    expect(
+      tester
+          .widget<OutlinedButton>(
+            find.byKey(const ValueKey('text-edit-preview')),
+          )
+          .onPressed,
+      isNull,
+    );
+    expect(
+      tester
+          .widget<TextButton>(find.byKey(const ValueKey('text-edit-cancel')))
+          .onPressed,
+      isNull,
     );
     write.complete();
     await tester.pump(const Duration(milliseconds: 300));
@@ -579,10 +676,14 @@ void main() {
     await _reveal(tester, 'recipe-step-instruction-cook');
     expect(
       tester
-          .widget<TextFormField>(
-            find.byKey(const ValueKey('recipe-step-instruction-cook')),
+          .widget<EditableText>(
+            find.descendant(
+              of: find.byKey(const ValueKey('recipe-step-instruction-cook')),
+              matching: find.byType(EditableText),
+            ),
           )
-          .initialValue,
+          .controller
+          .text,
       '中火炒熟鸡肉，中心达到 74°C',
     );
     await tester.enterText(

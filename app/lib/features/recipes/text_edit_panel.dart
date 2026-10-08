@@ -77,7 +77,12 @@ class _TextEditPanelState extends ConsumerState<TextEditPanel> {
   Future<void> _loadStatus() async {
     try {
       final status = await _repo.modificationStatus();
-      if (mounted) setState(() => _status = status);
+      if (mounted) {
+        setState(() {
+          _status = status;
+          _error = null;
+        });
+      }
     } catch (_) {
       if (mounted) {
         setState(() => _error = '暂时无法读取修改额度，请重试。手动编辑和保存不受影响。');
@@ -86,7 +91,13 @@ class _TextEditPanelState extends ConsumerState<TextEditPanel> {
   }
 
   Future<void> _propose(String text) async {
-    if (_busy || _checking || widget.manualEdits || text.trim().isEmpty) return;
+    if (_busy ||
+        _checking ||
+        _pendingChoices > 0 ||
+        widget.manualEdits ||
+        text.trim().isEmpty) {
+      return;
+    }
     final targetRevision = ++_targetRevision;
     setState(() {
       _busy = true;
@@ -165,6 +176,7 @@ class _TextEditPanelState extends ConsumerState<TextEditPanel> {
         if (revision != _selectionRevision) continue;
         setState(() {
           _preview = result;
+          _error = null;
           _checksDirty = false;
           _choices.clear();
           for (final choice
@@ -282,7 +294,11 @@ class _TextEditPanelState extends ConsumerState<TextEditPanel> {
         .where((id) => !_choices.containsKey(id))
         .toList();
     final evidence =
-        '${operation.reason}\n风险：${operation.risk}\n把握程度：${(operation.confidence * 100).round()}%\n依赖操作：${operation.dependsOn?.isNotEmpty == true ? operation.dependsOn!.join('、') : '无'}';
+        '${operation.reason}\n风险：${operation.risk}\n把握程度：${operation.confidence >= 0.8
+            ? '高'
+            : operation.confidence >= 0.5
+            ? '中'
+            : '低'}\n依赖操作：${operation.dependsOn?.isNotEmpty == true ? operation.dependsOn!.join('、') : '无'}';
     return ComponentCard(
       key: ValueKey('text-edit-operation-${operation.operationId}'),
       detail: ComponentDescriptorDetailEnum.detailed,
@@ -335,6 +351,7 @@ class _TextEditPanelState extends ConsumerState<TextEditPanel> {
                   onPressed:
                       _busy ||
                           _checking ||
+                          _pendingChoices > 0 ||
                           widget.manualEdits ||
                           (decision != 'reject' &&
                               (pendingDependencies.isNotEmpty ||
@@ -392,6 +409,8 @@ class _TextEditPanelState extends ConsumerState<TextEditPanel> {
       'text_choose': _choose,
       'text_confirm': (_) => _confirm(),
       'text_cancel': (_) => _cancel(),
+      'text_retry_status': (_) => _loadStatus(),
+      'text_retry_checks': (_) => _checkSelection(),
     },
     child: Builder(
       builder: (context) => Column(
@@ -409,7 +428,11 @@ class _TextEditPanelState extends ConsumerState<TextEditPanel> {
           TextField(
             key: const ValueKey('text-edit-input'),
             controller: _text,
-            enabled: !_busy && !_checking && !widget.manualEdits,
+            enabled:
+                !_busy &&
+                !_checking &&
+                _pendingChoices == 0 &&
+                !widget.manualEdits,
             maxLength: 1000,
             minLines: 1,
             maxLines: 4,
@@ -434,6 +457,7 @@ class _TextEditPanelState extends ConsumerState<TextEditPanel> {
             onPressed:
                 _busy ||
                     _checking ||
+                    _pendingChoices > 0 ||
                     widget.manualEdits ||
                     _status?.available != true ||
                     _text.text.trim().isEmpty
@@ -448,7 +472,12 @@ class _TextEditPanelState extends ConsumerState<TextEditPanel> {
           if (_error != null) ...[
             Text(_error!, key: const ValueKey('text-edit-error')),
             if (_status == null)
-              TextButton(onPressed: _loadStatus, child: const Text('重试读取修改额度')),
+              TextButton(
+                key: const ValueKey('text-edit-retry-status'),
+                onPressed: () =>
+                    _dispatch(context, {'operation': 'text_retry_status'}),
+                child: const Text('重试读取修改额度'),
+              ),
           ],
           if (_preview != null && _preview!.error == null) ...[
             for (final operation
@@ -467,9 +496,11 @@ class _TextEditPanelState extends ConsumerState<TextEditPanel> {
               for (final warning in _preview!.warnings ?? const <String>[])
                 Text(warning),
             ],
-            if (_checksDirty && !_checking)
+            if (_checksDirty && !_checking && _pendingChoices == 0)
               TextButton(
-                onPressed: _checkSelection,
+                key: const ValueKey('text-edit-retry-checks'),
+                onPressed: () =>
+                    _dispatch(context, {'operation': 'text_retry_checks'}),
                 child: const Text('重试检查所选修改'),
               ),
             const Text('请逐条处理后确认。只保存私有版本，不公开，也不修改口味档案。'),
@@ -482,7 +513,7 @@ class _TextEditPanelState extends ConsumerState<TextEditPanel> {
             ),
             TextButton(
               key: const ValueKey('text-edit-cancel'),
-              onPressed: _busy
+              onPressed: _busy || _pendingChoices > 0
                   ? null
                   : () => _dispatch(context, {'operation': 'text_cancel'}),
               child: const Text('取消预览，继续手动编辑'),

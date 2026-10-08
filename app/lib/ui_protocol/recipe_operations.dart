@@ -16,6 +16,8 @@ const recipeOperations = {
   'text_choose',
   'text_confirm',
   'text_cancel',
+  'text_retry_status',
+  'text_retry_checks',
 };
 
 bool validateRecipeOperation(Map<String, dynamic> params) {
