@@ -27,7 +27,7 @@
 from dataclasses import dataclass
 from typing import Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 @dataclass(frozen=True)
@@ -160,6 +160,12 @@ class RecipeGenerationContentV1(BaseModel):
     version_id: str | None = None
 
 
+class TasteProfileChangedContentV1(BaseModel):
+    """All necessary metadata lives in the owner-checked correlation ID."""
+
+    model_config = ConfigDict(extra="forbid")
+
+
 class QuantificationDecisionContentV1(BaseModel):
     recipe_version_id: str
     problem_id: str
@@ -173,6 +179,14 @@ class QuantificationDecisionContentV1(BaseModel):
 
 
 ITEMS: tuple[EventTypeSpec, ...] = (
+    EventTypeSpec(
+        event_type="taste_profile.changed",
+        version=1,
+        description="口味档案变更：仅关联本人变更 ID，不包含档案字段或值",
+        correlation_fields=("taste_profile_change_id",),
+        exportable=True,
+        content_schema=TasteProfileChangedContentV1,
+    ),
     EventTypeSpec(
         event_type="recipe.quantification_decision",
         version=1,

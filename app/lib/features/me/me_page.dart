@@ -10,6 +10,7 @@ import '../recipes/personal_measures_page.dart';
 import '../recipes/recipe_pages.dart';
 import 'account_data.dart';
 import 'settings_page.dart';
+import 'taste_profile_page.dart';
 
 /// “我的”：第一眼只有昵称；账号、登录方式和隐私入口都在设置里。
 class MePage extends ConsumerWidget {
@@ -68,6 +69,14 @@ class MePage extends ConsumerWidget {
             subtitle: Text(l10n.myRecipesSubtitle),
             trailing: const Icon(Icons.chevron_right),
             onTap: () => context.push(RecipeListPage.path),
+          ),
+          ListTile(
+            key: const ValueKey('taste-profile-entry'),
+            contentPadding: EdgeInsets.zero,
+            title: Text(l10n.tasteTitle),
+            subtitle: Text(l10n.tasteIntro),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => context.push(TasteProfilePage.path),
           ),
           ListTile(
             key: const ValueKey('personal-measures-entry'),

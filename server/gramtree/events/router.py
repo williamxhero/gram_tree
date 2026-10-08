@@ -27,6 +27,7 @@ from typing import Any, Literal
 from fastapi import APIRouter, Request
 from pydantic import BaseModel, Field
 from redis import Redis
+from sqlalchemy import select
 
 from gramtree.accounts.deps import CurrentAuth
 from gramtree.core.errors import ERROR_RESPONSES, ApiError
@@ -36,6 +37,7 @@ from gramtree.deps import RedisDep, SessionDep
 from gramtree.events import metrics as events_metrics
 from gramtree.events import service, validation
 from gramtree.runtime_config import service as config_service
+from gramtree.taste_profiles.models import TasteProfileChange
 
 router = APIRouter(prefix="/events", tags=["events"])
 
@@ -128,6 +130,8 @@ def upload_events(
     for e in body.events:
         correlation = e.correlation.model_dump(mode="json", exclude_none=True)
         rejection = validation.validate_event(e.event_type, e.type_version, correlation, e.content)
+        if rejection is None:
+            rejection = _validate_taste_link(session, auth.user.id, e, correlation)
         if rejection is not None:
             rejections[e.id] = RejectionReason(code=rejection.code, message=rejection.message)
             continue
@@ -157,6 +161,25 @@ def upload_events(
         else:
             results.append(EventUploadResultItem(id=e.id, status=outcome[e.id]))
     return EventUploadResponse(results=results)
+
+
+def _validate_taste_link(
+    session: SessionDep, owner_id: uuid.UUID, item: EventUploadItem, correlation: dict[str, str]
+) -> validation.Rejection | None:
+    change_id = correlation.get("taste_profile_change_id")
+    is_change = item.event_type == "taste_profile.changed"
+    if is_change and (set(correlation) != {"taste_profile_change_id"} or str(item.id) != change_id):
+        return validation.Rejection("invalid_correlation_id", "档案变更事件必须关联其唯一变更 ID")
+    if change_id is not None:
+        owned = session.scalar(
+            select(TasteProfileChange.id).where(
+                TasteProfileChange.id == uuid.UUID(change_id),
+                TasteProfileChange.owner_id == owner_id,
+            )
+        )
+        if owned is None:
+            return validation.Rejection("invalid_correlation_id", "档案变更关联不可用")
+    return None
 
 
 def _record_batch_metrics(

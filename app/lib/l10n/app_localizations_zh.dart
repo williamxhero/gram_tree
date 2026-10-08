@@ -1243,6 +1243,72 @@ class AppLocalizationsZh extends AppLocalizations {
   String get recipeAiAssisted => 'AI 协助';
 
   @override
+  String get tasteTitle => '我的口味';
+
+  @override
+  String get tasteIntro => '只代表你明确设置的七项口味，不会从行为猜测你的偏好。';
+
+  @override
+  String get tasteReset => '恢复标准默认';
+
+  @override
+  String get tasteResetBody => '七项口味恢复为标准，重新标记为把握低；修改记录保留。';
+
+  @override
+  String get tasteManual => '你手动填写';
+
+  @override
+  String get tasteDefault => '标准默认';
+
+  @override
+  String get tasteWhy => '为什么';
+
+  @override
+  String get tasteHistory => '修改历史';
+
+  @override
+  String get tasteHistoryEmpty => '还没有修改记录';
+
+  @override
+  String get tasteHistoryReadonly => '只读查看原因和历史，暂不提供撤销或锁定。';
+
+  @override
+  String get tasteLocal => '菜系局部偏好';
+
+  @override
+  String get tasteLocalEmpty => '还没有菜系局部偏好';
+
+  @override
+  String get tasteLocalReadonly => '菜系对应的味型调整只读显示，暂不提供学习或编辑。';
+
+  @override
+  String get tasteActive => '生效';
+
+  @override
+  String get tasteReverted => '已撤销';
+
+  @override
+  String get tasteSalty => '咸';
+
+  @override
+  String get tasteSweet => '甜';
+
+  @override
+  String get tasteSour => '酸';
+
+  @override
+  String get tasteSpicy => '辣';
+
+  @override
+  String get tasteNumbing => '麻';
+
+  @override
+  String get tasteUmami => '鲜';
+
+  @override
+  String get tasteOily => '油';
+
+  @override
   String get personalMeasuresTitle => '自家量具';
 
   @override
