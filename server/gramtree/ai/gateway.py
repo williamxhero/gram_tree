@@ -262,7 +262,12 @@ def call(
             if "prompt_tokens" in usage or "total_tokens" in usage:
                 row.reserved_cost = 0
             result = data["output"]
-            log.output = result
+            # Batch advice is untrusted until its schema/step references are checked.
+            # Preserve raw output as text: JSONB rejects NaN in structured replay
+            # objects before the caller can reject it and request one repair.
+            log.output = (
+                json.dumps(result, ensure_ascii=False) if capability == "batch_advice" else result
+            )
             row.status = "succeeded"
         except (
             Unavailable,
