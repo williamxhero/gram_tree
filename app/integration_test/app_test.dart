@@ -104,6 +104,12 @@ void main() {
     await tapText(tester, '我的');
     await waitFor(tester, find.text('设置'));
     await tapText(tester, '设置');
+    // The privacy controls place logout below a phone's lazy viewport.
+    await tester.scrollUntilVisible(
+      find.text('退出登录'),
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
     await tapText(tester, '退出登录');
     await tester.tap(find.widgetWithText(FilledButton, '退出登录'));
     await waitFor(tester, find.text('登录味谱'));

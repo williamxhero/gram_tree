@@ -45,11 +45,18 @@ void main() {
 
   final edit = find.byKey(const ValueKey('allergies-edit'));
   Future<void> openProfile(WidgetTester tester) async {
-    await tester.tap(find.byKey(const ValueKey('taste-profile-entry')));
+    final entry = find.byKey(const ValueKey('taste-profile-entry'));
+    await reveal(tester, entry, -300);
+    await tester.tap(entry);
     await waitFor(tester, find.byKey(const ValueKey('taste-profile-content')));
   }
 
   Future<void> reopen(WidgetTester tester) async {
+    // Text may also exist in the editor; wait for the page to be unobscured.
+    await waitFor(
+      tester,
+      find.byKey(const ValueKey('taste-profile-content')).hitTestable(),
+    );
     await tester.tap(find.byType(BackButton).last);
     await tester.pumpAndSettle();
     await openProfile(tester);

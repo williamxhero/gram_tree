@@ -114,14 +114,16 @@ void main() {
         tester,
         find.byKey(const ValueKey('taste-profile-content')),
       );
-      await reveal(tester, find.text('家庭默认：4 人'));
+      await reveal(tester, find.byKey(const ValueKey('cooking-constraints')));
+      await waitFor(tester, find.text('家庭默认：4 人'));
       await back(tester);
       await tap(tester, 'taste-profile-entry');
       await waitFor(
         tester,
         find.byKey(const ValueKey('taste-profile-content')),
       );
-      await reveal(tester, find.text('家庭默认：4 人'));
+      await reveal(tester, find.byKey(const ValueKey('cooking-constraints')));
+      await waitFor(tester, find.text('家庭默认：4 人'));
       expect(find.text('工作日晚餐：30 分钟'), findsOneWidget);
       expect(find.text('工作日晚餐：3 道（荤菜、素菜、汤）'), findsOneWidget);
 
@@ -162,14 +164,16 @@ void main() {
         tester,
         find.byKey(const ValueKey('taste-profile-content')),
       );
-      await reveal(tester, find.text('人数未设置，菜谱沿用作者份数'));
+      await reveal(tester, find.byKey(const ValueKey('cooking-constraints')));
+      await waitFor(tester, find.text('人数未设置，菜谱沿用作者份数'));
       await back(tester);
       await tap(tester, 'taste-profile-entry');
       await waitFor(
         tester,
         find.byKey(const ValueKey('taste-profile-content')),
       );
-      await reveal(tester, find.text('人数未设置，菜谱沿用作者份数'));
+      await reveal(tester, find.byKey(const ValueKey('cooking-constraints')));
+      await waitFor(tester, find.text('人数未设置，菜谱沿用作者份数'));
       expect(find.text('厨具未设置'), findsOneWidget);
       await tap(tester, 'cooking-constraints-edit', scroll: true);
       await tester.enterText(
@@ -181,7 +185,8 @@ void main() {
         tester,
         find.byKey(const ValueKey('taste-profile-content')),
       );
-      await reveal(tester, find.text('家庭默认：4 人'));
+      await reveal(tester, find.byKey(const ValueKey('cooking-constraints')));
+      await waitFor(tester, find.text('家庭默认：4 人'));
       await back(tester);
 
       phase = 'fill recipe author fields';
