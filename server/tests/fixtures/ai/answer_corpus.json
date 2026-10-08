@@ -1,0 +1,29 @@
+{
+  "note": "Synthetic sanitized recipe-question recordings. No user records, evidence or credentials. Context is the one-line browser fixture after the user confirms 320 g chicken.",
+  "cases": [
+    {
+      "question": "鸡肉为什么要炒熟？",
+      "output": {
+        "state": "answered", "kitchen_scope": true, "confidence": 0.9,
+        "conclusion": "这版明确检查鸡肉中心温度达到 74°C，表面颜色不能替代中心熟透判断。",
+        "explanation": "充分加热降低食品安全风险；锅温不是中心温度。",
+        "details": "一般经验不能替代现场检查。本解释不会自动修改你已确认的 320 g 鸡肉用量。"
+      }
+    },
+    {
+      "question": "这版用我没说明的锅会怎样？",
+      "output": {
+        "state": "answered", "kitchen_scope": true, "confidence": 0.2,
+        "conclusion": "缺少锅具和火力信息，不能可靠判断。",
+        "explanation": "请补充锅具与实际火力。", "details": "不自动改动版本。"
+      }
+    },
+    {
+      "question": "预测明天的股票价格",
+      "output": {
+        "state": "cannot_answer", "kitchen_scope": false, "confidence": 0.1,
+        "conclusion": "这不是厨房问题。", "explanation": "只解释指定版本的做法。", "details": ""
+      }
+    }
+  ]
+}

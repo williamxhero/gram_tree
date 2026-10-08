@@ -8,7 +8,7 @@ import io
 import logging
 import uuid
 import warnings
-from collections.abc import Iterable
+from collections.abc import Callable, Iterable
 from dataclasses import asdict
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
@@ -762,8 +762,12 @@ def create_recipe(
     body: RecipeCreate,
     *,
     generation_request_id: uuid.UUID | None = None,
+    confirmed_operations: list[dict[str, Any]] | None = None,
+    before_commit: Callable[[RecipeVersion], None] | None = None,
 ) -> RecipeDetail:
-    snapshot = normalize_sources(_validate_snapshot(session, body.snapshot))
+    snapshot = normalize_sources(
+        _validate_snapshot(session, body.snapshot), trusted_sources=confirmed_operations is not None
+    )
     staged = _staged_rows(session, owner, body.image_ids)
     dish_input = body.dish_input()
     safety_descriptions = [*dish_input.aliases, body.change_note]
@@ -786,7 +790,7 @@ def create_recipe(
         safety_current=safety.model_dump(mode="json"),
         safety_rules_version=safety.rules_version,
         safety_context={"title": dish.name, "descriptions": safety_descriptions},
-        edit_operations=[],
+        edit_operations=confirmed_operations or [],
         change_note=body.change_note,
         ai_assisted=body.ai_assisted,
     )
@@ -803,6 +807,8 @@ def create_recipe(
         if generation is None or generation.user_id != owner.id:
             raise NotFound()
         generation.saved_recipe_id = recipe.id
+    if before_commit is not None:
+        before_commit(version)
     session.commit()
     _drain_save_events(session, redis, owner)
     return _detail(session, settings, recipe, version)
@@ -1004,6 +1010,8 @@ def save_version(
     body: RecipeVersionCreate,
     *,
     trusted_sources: bool = False,
+    confirmed_operations: list[dict[str, Any]] | None = None,
+    before_commit: Callable[[RecipeVersion], None] | None = None,
     quantification_record: RecipeQuantification | None = None,
     decision_events: list[event_service.EventInput] | None = None,
     ignored_problem_ids: set[str] | None = None,
@@ -1050,7 +1058,9 @@ def save_version(
         safety_current=safety.model_dump(mode="json"),
         safety_rules_version=safety.rules_version,
         safety_context={"title": dish.name, "descriptions": safety_descriptions},
-        edit_operations=_operations(previous_snapshot, snapshot),
+        edit_operations=confirmed_operations
+        if confirmed_operations is not None
+        else _operations(previous_snapshot, snapshot),
         change_note=body.change_note,
         ai_assisted=body.ai_assisted,
     )
@@ -1079,6 +1089,8 @@ def save_version(
         event_service.upload(
             session, redis, owner.id, decision_events or [], utcnow(), commit=False
         )
+    if before_commit is not None:
+        before_commit(version)
     _copy_version_images(session, recipe, baseline, version)
     _attach_staged_images(session, owner, recipe, version, [row.id for row in staged])
     recipe.current_version_id = version.id

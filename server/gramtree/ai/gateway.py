@@ -66,15 +66,21 @@ def route(session: Session, capability: str) -> tuple[ModelRoute, Policy]:
         raise Unavailable("configuration") from exc
 
 
+def quota_capabilities(capability: str) -> tuple[str, ...]:
+    return (
+        ("modify", "modify_intent") if capability in ("modify", "modify_intent") else (capability,)
+    )
+
+
 def remaining(session: Session, user_id: uuid.UUID, capability: str) -> int:
-    _, policy = route(session, capability)
+    _, policy = route(session, "modify" if capability == "modify_intent" else capability)
     now = utcnow()
     midnight = now.replace(hour=0, minute=0, second=0, microsecond=0)
     used = (
         session.scalar(
             select(func.count(func.distinct(AICall.request_id))).where(
                 AICall.user_id == user_id,
-                AICall.capability == capability,
+                AICall.capability.in_(quota_capabilities(capability)),
                 AICall.created_at >= midnight,
             )
         )
@@ -148,10 +154,19 @@ def _invoke(
     else:
         endpoint = "chat/completions"
         prompt = (PROMPTS / f"{capability}-{PROMPT_VERSION}.txt").read_text(encoding="utf-8")
-        if capability in ("generate", "batch_advice"):
-            from gramtree.ai.schemas import BatchAdvice, GeneratedDraft
+        if capability in ("generate", "explain", "batch_advice"):
+            from gramtree.ai.schemas import BatchAdvice, GeneratedDraft, ModelAnswer
 
-            schema = BatchAdvice if capability == "batch_advice" else GeneratedDraft
+            schema = {
+                "generate": GeneratedDraft,
+                "explain": ModelAnswer,
+                "batch_advice": BatchAdvice,
+            }[capability]
+            prompt += "\nJSON schema: " + json.dumps(schema.model_json_schema(), ensure_ascii=False)
+        if capability in ("modify", "modify_intent"):
+            from gramtree.ai.modification_schemas import ModificationIntent, ModificationOutput
+
+            schema = ModificationOutput if capability == "modify" else ModificationIntent
             prompt += "\nJSON schema: " + json.dumps(schema.model_json_schema(), ensure_ascii=False)
         if capability == "quantify":
             from gramtree.recipes.quantification_schemas import QuantificationOutput
@@ -215,7 +230,7 @@ def call(
             select(AICall.id)
             .where(
                 AICall.user_id == user_id,
-                AICall.capability == capability,
+                AICall.capability.in_(quota_capabilities(capability)),
                 AICall.request_id == operation_id,
             )
             .limit(1)
@@ -272,7 +287,9 @@ def call(
             # Preserve raw output as text: JSONB rejects NaN in structured replay
             # objects before the caller can reject it and request one repair.
             log.output = (
-                json.dumps(result, ensure_ascii=False) if capability == "batch_advice" else result
+                json.dumps(result, ensure_ascii=False)
+                if capability in ("batch_advice", "modify", "modify_intent")
+                else result
             )
             row.status = "succeeded"
         except (

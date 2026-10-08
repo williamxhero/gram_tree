@@ -68,6 +68,103 @@ class AppLocalizationsZh extends AppLocalizations {
   String get snapshotProtectedOverLimit => '受保护的菜谱超出缓存容量，内容已保留；请释放不再需要的保护。';
 
   @override
+  String get recipeAnswerBasis => '这是一般经验，还没有足够记录验证';
+
+  @override
+  String get recipeAnswerAnswered => '已回答 · 一般经验';
+
+  @override
+  String get recipeAnswerUncertain => '不确定 · 一般经验';
+
+  @override
+  String get recipeAnswerCannotAnswer => '无法回答 · 一般经验';
+
+  @override
+  String get recipeAnswerUnavailable => '能力不可用 · 一般经验';
+
+  @override
+  String get recipeAnswerBudget => '月预算已用完';
+
+  @override
+  String get recipeAnswerQuota => '今日解释配额已用完';
+
+  @override
+  String get recipeAnswerTimeout => '模型响应超时';
+
+  @override
+  String get recipeAnswerDisabled => '模型已停用';
+
+  @override
+  String get recipeAnswerNotConfigured => '模型暂未配置';
+
+  @override
+  String get recipeAnswerNetwork => '模型或网络暂时不可用';
+
+  @override
+  String recipeAnswerUnavailableConclusion(String reason) {
+    return '菜谱解释（explain）：$reason。';
+  }
+
+  @override
+  String get recipeAnswerSource => 'AI 估算 · 菜谱解释';
+
+  @override
+  String get recipeAnswerClose => '关闭解释';
+
+  @override
+  String recipeAnswerQuestion(String question) {
+    return '问题：$question';
+  }
+
+  @override
+  String get recipeAnswerContinue => '查看、表单编辑和规则换算仍可使用；问题已保留，可以重试。';
+
+  @override
+  String recipeAnswerVersion(int version) {
+    return '明细 · 第 $version 版；解释不会自动修改菜谱。';
+  }
+
+  @override
+  String recipeAnswerAllergens(String allergens) {
+    return '过敏原：$allergens';
+  }
+
+  @override
+  String recipeAnswerReplacementAllergens(String allergens) {
+    return '替换食材过敏原：$allergens';
+  }
+
+  @override
+  String get recipeAnswerIncompleteAllergens => '过敏信息可能不完整，请核对实际食材。';
+
+  @override
+  String get recipeAnswerTitle => '问这版的做法';
+
+  @override
+  String get recipeAnswerSemantics => '问这版的做法；只提供一般经验，不改动菜谱';
+
+  @override
+  String get recipeAnswerInput => '厨房问题';
+
+  @override
+  String get recipeAnswerHint => '例如：这一步为什么要炒熟？';
+
+  @override
+  String get recipeAnswerBusy => '正在解释…';
+
+  @override
+  String get recipeAnswerRetry => '重试解释';
+
+  @override
+  String get recipeAnswerSubmit => '查看解释';
+
+  @override
+  String get recipeAnswerExperience => '一般经验';
+
+  @override
+  String get recipeAnswerWhy => '为什么 · 明细';
+
+  @override
   String get appTitle => '味谱';
 
   @override
@@ -1202,6 +1299,72 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get recipeAiAssisted => 'AI 协助';
+
+  @override
+  String get tasteTitle => '我的口味';
+
+  @override
+  String get tasteIntro => '只代表你明确设置的七项口味，不会从行为猜测你的偏好。';
+
+  @override
+  String get tasteReset => '恢复标准默认';
+
+  @override
+  String get tasteResetBody => '七项口味恢复为标准，重新标记为把握低；修改记录保留。';
+
+  @override
+  String get tasteManual => '你手动填写';
+
+  @override
+  String get tasteDefault => '标准默认';
+
+  @override
+  String get tasteWhy => '为什么';
+
+  @override
+  String get tasteHistory => '修改历史';
+
+  @override
+  String get tasteHistoryEmpty => '还没有修改记录';
+
+  @override
+  String get tasteHistoryReadonly => '只读查看原因和历史，暂不提供撤销或锁定。';
+
+  @override
+  String get tasteLocal => '菜系局部偏好';
+
+  @override
+  String get tasteLocalEmpty => '还没有菜系局部偏好';
+
+  @override
+  String get tasteLocalReadonly => '菜系对应的味型调整只读显示，暂不提供学习或编辑。';
+
+  @override
+  String get tasteActive => '生效';
+
+  @override
+  String get tasteReverted => '已撤销';
+
+  @override
+  String get tasteSalty => '咸';
+
+  @override
+  String get tasteSweet => '甜';
+
+  @override
+  String get tasteSour => '酸';
+
+  @override
+  String get tasteSpicy => '辣';
+
+  @override
+  String get tasteNumbing => '麻';
+
+  @override
+  String get tasteUmami => '鲜';
+
+  @override
+  String get tasteOily => '油';
 
   @override
   String get personalMeasuresTitle => '自家量具';

@@ -44,10 +44,12 @@ from gramtree.accounts.models import (
     User,
     UserStatus,
 )
+from gramtree.events.models import Event
 from gramtree.events.sync_models import WriteFactOutbox, WriteReceipt
 from gramtree.recipes.measure_models import PersonalMeasure
 from gramtree.runtime_config import service as config
 from gramtree.settings import Settings
+from gramtree.taste_profiles.models import TasteProfile
 
 logger = logging.getLogger("gramtree.accounts")
 
@@ -637,6 +639,12 @@ def purge_due_accounts(session: Session, apple: AppleClient, now: datetime) -> i
         # accounts' confirmations and retry dependencies remain untouched.
         session.execute(delete(WriteFactOutbox).where(WriteFactOutbox.owner_id == user.id))
         session.execute(delete(WriteReceipt).where(WriteReceipt.owner_id == user.id))
+        session.execute(
+            delete(Event).where(
+                Event.user_id == user.id, Event.correlation.has_key("taste_profile_change_id")
+            )
+        )
+        session.execute(delete(TasteProfile).where(TasteProfile.owner_id == user.id))
         session_ids = select(DeviceSession.id).where(DeviceSession.user_id == user.id)
         session.execute(delete(RefreshToken).where(RefreshToken.session_id.in_(session_ids)))
         session.execute(delete(DeviceSession).where(DeviceSession.user_id == user.id))

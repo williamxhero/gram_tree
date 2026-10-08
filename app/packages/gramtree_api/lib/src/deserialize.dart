@@ -52,9 +52,18 @@ import 'package:gramtree_api/src/model/health_response.dart';
 import 'package:gramtree_api/src/model/identity_out.dart';
 import 'package:gramtree_api/src/model/ingredient_attributes.dart';
 import 'package:gramtree_api/src/model/ingredient_detail.dart';
+import 'package:gramtree_api/src/model/local_cuisine_out.dart';
 import 'package:gramtree_api/src/model/measure_display_out.dart';
 import 'package:gramtree_api/src/model/measure_display_request.dart';
 import 'package:gramtree_api/src/model/merge_relation.dart';
+import 'package:gramtree_api/src/model/modification_confirm_input.dart';
+import 'package:gramtree_api/src/model/modification_decision.dart';
+import 'package:gramtree_api/src/model/modification_decision_out.dart';
+import 'package:gramtree_api/src/model/modification_decisions_input.dart';
+import 'package:gramtree_api/src/model/modification_input.dart';
+import 'package:gramtree_api/src/model/modification_intent.dart';
+import 'package:gramtree_api/src/model/modification_operation.dart';
+import 'package:gramtree_api/src/model/modification_preview.dart';
 import 'package:gramtree_api/src/model/mold_conversion.dart';
 import 'package:gramtree_api/src/model/mold_conversion_ingredient.dart';
 import 'package:gramtree_api/src/model/mold_conversion_step.dart';
@@ -71,6 +80,7 @@ import 'package:gramtree_api/src/model/nutrition_estimate.dart';
 import 'package:gramtree_api/src/model/one_line_input.dart';
 import 'package:gramtree_api/src/model/page_description.dart';
 import 'package:gramtree_api/src/model/page_personal_measure_out.dart';
+import 'package:gramtree_api/src/model/page_taste_profile_change_out.dart';
 import 'package:gramtree_api/src/model/page_unrecorded_ingredient_item.dart';
 import 'package:gramtree_api/src/model/personal_measure_input.dart';
 import 'package:gramtree_api/src/model/personal_measure_out.dart';
@@ -83,6 +93,7 @@ import 'package:gramtree_api/src/model/quantification_decisions_input.dart';
 import 'package:gramtree_api/src/model/quantification_input.dart';
 import 'package:gramtree_api/src/model/quantification_suggestion.dart';
 import 'package:gramtree_api/src/model/question.dart';
+import 'package:gramtree_api/src/model/recipe_answer.dart';
 import 'package:gramtree_api/src/model/recipe_author.dart';
 import 'package:gramtree_api/src/model/recipe_batch_advice_out.dart';
 import 'package:gramtree_api/src/model/recipe_create.dart';
@@ -101,6 +112,7 @@ import 'package:gramtree_api/src/model/recipe_list_item.dart';
 import 'package:gramtree_api/src/model/recipe_mold_conversion_out.dart';
 import 'package:gramtree_api/src/model/recipe_mold_conversion_request.dart';
 import 'package:gramtree_api/src/model/recipe_quantification_out.dart';
+import 'package:gramtree_api/src/model/recipe_question.dart';
 import 'package:gramtree_api/src/model/recipe_replacement.dart';
 import 'package:gramtree_api/src/model/recipe_replacement_allergens.dart';
 import 'package:gramtree_api/src/model/recipe_reproducibility_check_out.dart';
@@ -137,6 +149,12 @@ import 'package:gramtree_api/src/model/source_basis.dart';
 import 'package:gramtree_api/src/model/sourced_value.dart';
 import 'package:gramtree_api/src/model/storage_advice.dart';
 import 'package:gramtree_api/src/model/storage_attribute.dart';
+import 'package:gramtree_api/src/model/taste_flavor_out.dart';
+import 'package:gramtree_api/src/model/taste_level.dart';
+import 'package:gramtree_api/src/model/taste_profile_change_out.dart';
+import 'package:gramtree_api/src/model/taste_profile_out.dart';
+import 'package:gramtree_api/src/model/taste_profile_patch.dart';
+import 'package:gramtree_api/src/model/taste_scale.dart';
 import 'package:gramtree_api/src/model/text_attribute.dart';
 import 'package:gramtree_api/src/model/token_pair.dart';
 import 'package:gramtree_api/src/model/unrecorded_ingredient_item.dart';
@@ -320,6 +338,9 @@ ReturnType deserialize<ReturnType, BaseType>(
     case 'IngredientDetail':
       return IngredientDetail.fromJson(value as Map<String, dynamic>)
           as ReturnType;
+    case 'LocalCuisineOut':
+      return LocalCuisineOut.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
     case 'MeasureDisplayOut':
       return MeasureDisplayOut.fromJson(value as Map<String, dynamic>)
           as ReturnType;
@@ -328,6 +349,30 @@ ReturnType deserialize<ReturnType, BaseType>(
           as ReturnType;
     case 'MergeRelation':
       return MergeRelation.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'ModificationConfirmInput':
+      return ModificationConfirmInput.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'ModificationDecision':
+      return ModificationDecision.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'ModificationDecisionOut':
+      return ModificationDecisionOut.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'ModificationDecisionsInput':
+      return ModificationDecisionsInput.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'ModificationInput':
+      return ModificationInput.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'ModificationIntent':
+      return ModificationIntent.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'ModificationOperation':
+      return ModificationOperation.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'ModificationPreview':
+      return ModificationPreview.fromJson(value as Map<String, dynamic>)
           as ReturnType;
     case 'MoldConversion':
       return MoldConversion.fromJson(value as Map<String, dynamic>)
@@ -374,6 +419,9 @@ ReturnType deserialize<ReturnType, BaseType>(
     case 'PagePersonalMeasureOut':
       return PagePersonalMeasureOut.fromJson(value as Map<String, dynamic>)
           as ReturnType;
+    case 'PageTasteProfileChangeOut':
+      return PageTasteProfileChangeOut.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
     case 'PageUnrecordedIngredientItem':
       return PageUnrecordedIngredientItem.fromJson(
             value as Map<String, dynamic>,
@@ -412,6 +460,8 @@ ReturnType deserialize<ReturnType, BaseType>(
           as ReturnType;
     case 'Question':
       return Question.fromJson(value as Map<String, dynamic>) as ReturnType;
+    case 'RecipeAnswer':
+      return RecipeAnswer.fromJson(value as Map<String, dynamic>) as ReturnType;
     case 'RecipeAuthor':
       return RecipeAuthor.fromJson(value as Map<String, dynamic>) as ReturnType;
     case 'RecipeBatchAdviceOut':
@@ -460,6 +510,9 @@ ReturnType deserialize<ReturnType, BaseType>(
           as ReturnType;
     case 'RecipeQuantificationOut':
       return RecipeQuantificationOut.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'RecipeQuestion':
+      return RecipeQuestion.fromJson(value as Map<String, dynamic>)
           as ReturnType;
     case 'RecipeReplacement':
       return RecipeReplacement.fromJson(value as Map<String, dynamic>)
@@ -567,6 +620,22 @@ ReturnType deserialize<ReturnType, BaseType>(
     case 'StorageAttribute':
       return StorageAttribute.fromJson(value as Map<String, dynamic>)
           as ReturnType;
+    case 'TasteFlavorOut':
+      return TasteFlavorOut.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'TasteLevel':
+      return TasteLevel.fromJson(value as Map<String, dynamic>) as ReturnType;
+    case 'TasteProfileChangeOut':
+      return TasteProfileChangeOut.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'TasteProfileOut':
+      return TasteProfileOut.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'TasteProfilePatch':
+      return TasteProfilePatch.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'TasteScale':
+      return TasteScale.fromJson(value as Map<String, dynamic>) as ReturnType;
     case 'TextAttribute':
       return TextAttribute.fromJson(value as Map<String, dynamic>)
           as ReturnType;

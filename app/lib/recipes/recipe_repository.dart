@@ -17,6 +17,42 @@ class RecipeRepository {
 
   Future<AIStatus> aiStatus() async => (await _ai.recipeAiStatus()).data!;
 
+  Future<AIStatus> modificationStatus() async =>
+      (await _ai.recipeModificationStatus()).data!;
+
+  Future<ModificationPreview> proposeModification(
+    ModificationInput input,
+  ) async =>
+      (await _ai.proposeRecipeModification(modificationInput: input)).data!;
+
+  Future<ModificationPreview> decideModification(
+    String modificationId,
+    List<ModificationDecision> decisions,
+  ) async => (await _ai.decideRecipeModification(
+    modificationId: modificationId,
+    modificationDecisionsInput: ModificationDecisionsInput(
+      decisions: decisions,
+    ),
+  )).data!;
+
+  Future<RecipeDetail> confirmModification(
+    String modificationId,
+    int revision,
+  ) async => (await _ai.confirmRecipeModification(
+    modificationId: modificationId,
+    modificationConfirmInput: ModificationConfirmInput(revision: revision),
+  )).data!;
+
+  Future<RecipeAnswer> answerQuestion(
+    String recipeId,
+    String versionId,
+    String question,
+  ) async => (await _ai.answerRecipeQuestion(
+    recipeId: recipeId,
+    versionId: versionId,
+    recipeQuestion: RecipeQuestion(question: question),
+  )).data!;
+
   Future<RetrievalResult> findForRequest(String text) async =>
       (await _ai.findRecipeForRequest(oneLineInput: OneLineInput(text: text)))
           .data!;
@@ -295,6 +331,30 @@ class RecipeRepository {
 final recipeRepositoryProvider = Provider<RecipeRepository>(
   (ref) => RecipeRepository(ref.watch(apiClientProvider)),
 );
+
+/// One in-flight version operation shared by its intent handler and mounted UI.
+/// Each submission calls HTTP anew; this is not a question/answer cache.
+class RecipeAnswerOperation {
+  RecipeAnswerOperation(this._repository, this._version);
+  final RecipeRepository _repository;
+  final (String, String) _version;
+  RecipeAnswer? result;
+
+  Future<void> submit(String question) async {
+    result = null;
+    result = await _repository.answerQuestion(
+      _version.$1,
+      _version.$2,
+      question,
+    );
+  }
+}
+
+final recipeAnswerOperationProvider = Provider.autoDispose
+    .family<RecipeAnswerOperation, (String, String)>(
+      (ref, version) =>
+          RecipeAnswerOperation(ref.watch(recipeRepositoryProvider), version),
+    );
 
 /// A mutable, serializable ingredient row used by the editor. It intentionally
 /// keeps both the author-entered quantity and the server-facing base quantity;

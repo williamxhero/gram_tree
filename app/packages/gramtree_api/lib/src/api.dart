@@ -18,6 +18,7 @@ import 'package:gramtree_api/src/api/personal_measures_api.dart';
 import 'package:gramtree_api/src/api/recipe_ai_api.dart';
 import 'package:gramtree_api/src/api/recipes_api.dart';
 import 'package:gramtree_api/src/api/sync_api.dart';
+import 'package:gramtree_api/src/api/taste_profile_api.dart';
 import 'package:gramtree_api/src/api/ui_protocol_api.dart';
 
 class GramtreeApi {
@@ -153,6 +154,12 @@ class GramtreeApi {
   /// by doing that all interceptors will not be executed
   SyncApi getSyncApi() {
     return SyncApi(dio);
+  }
+
+  /// Get TasteProfileApi instance, base route and serializer can be overridden by a given but be careful,
+  /// by doing that all interceptors will not be executed
+  TasteProfileApi getTasteProfileApi() {
+    return TasteProfileApi(dio);
   }
 
   /// Get UiProtocolApi instance, base route and serializer can be overridden by a given but be careful,

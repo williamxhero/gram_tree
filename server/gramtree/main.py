@@ -21,6 +21,7 @@ from gramtree.legal import router as legal
 from gramtree.recipes import measure_router as personal_measures
 from gramtree.recipes import router as recipes
 from gramtree.settings import Settings, get_settings
+from gramtree.taste_profiles import router as taste_profiles
 from gramtree.ui_protocol import router as ui_protocol
 
 API_PREFIX = "/v1"
@@ -73,6 +74,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     v1.include_router(recipes.router)
     v1.include_router(recipe_ai.router)
     v1.include_router(personal_measures.router)
+    v1.include_router(taste_profiles.router)
     v1.include_router(ui_protocol.router)
     if settings.dev_tools_enabled:
         v1.include_router(accounts_dev.router)

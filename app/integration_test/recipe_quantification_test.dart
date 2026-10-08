@@ -63,10 +63,12 @@ void main() {
         'quantification-e2e-${DateTime.now().microsecondsSinceEpoch}@example.com';
     var step = 'login';
     try {
+      // iOS Keychain sessions survive app uninstall between test targets.
       await resetLocalAppState();
       await app.main();
       await waitFor(tester, find.byKey(const ValueKey('consent-agree')));
-      // Consent actions are below the fold in the intended 320x640 viewport.
+      // Consent actions, including iOS safe-area insets, are below the fold
+      // in the intended 320x640 viewport.
       await tap(tester, 'consent-agree');
       await waitFor(tester, find.byKey(const ValueKey('login-email')));
       await tester.enterText(find.byKey(const ValueKey('login-email')), email);
@@ -91,6 +93,7 @@ void main() {
         tester,
         find.byKey(const ValueKey('recipe-editor-content')),
       );
+      // Build the lazy form row before waiting for it on a small iOS viewport.
       await reveal(tester, 'recipe-dish-name');
       await waitFor(tester, find.byKey(const ValueKey('recipe-dish-name')));
       await tester.enterText(

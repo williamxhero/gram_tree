@@ -9,6 +9,7 @@ import 'package:gramtree_api/gramtree_api.dart'
 
 import '../api/api_client.dart';
 import '../events/event_recorder.dart';
+import '../recipes/recipe_repository.dart';
 import '../recipes/batch_advice.dart';
 import 'registered_pages.dart';
 import 'recipe_operations.dart';
@@ -130,13 +131,34 @@ void _handleOpenRecordCard(
   Map<String, dynamic> params,
 ) {}
 
-/// `call_operation`：调用已登记的接口操作。范围边界（#81 明确写在票里）：这张票只
-/// 登记"这是一个合法的意图名"和参数格式（`operation` 是哪个已登记的接口操作的
-/// 名字），不实现一个通用的"按名字调用任意接口"机制——目前没有任何接口操作登记
-/// 在这里可以调用，`handler` 留空；等真的有业务场景要用这个意图时，再在这里给
-/// 具体的 `operation` 取值接处理逻辑。
-bool _validateCallOperation(Map<String, dynamic> params) =>
-    _requireNonEmptyString(params, 'operation');
+/// Only the concrete recipe-question operation executes. Legacy placeholder
+/// operation names remain structurally valid but cannot call arbitrary APIs.
+bool _validateCallOperation(Map<String, dynamic> params) {
+  if (!_requireNonEmptyString(params, 'operation')) return false;
+  if (params['operation'] != 'answer_recipe_question') return true;
+  final question = params['question'];
+  return _requireNonEmptyString(params, 'recipe_id') &&
+      _requireNonEmptyString(params, 'recipe_version_id') &&
+      question is String &&
+      question.trim().isNotEmpty &&
+      question.length <= 1000;
+}
+
+Future<void> _handleCallOperation(
+  BuildContext context,
+  Ref ref,
+  Map<String, dynamic> params,
+) async {
+  if (params['operation'] != 'answer_recipe_question') return;
+  await ref
+      .read(
+        recipeAnswerOperationProvider((
+          params['recipe_id'] as String,
+          params['recipe_version_id'] as String,
+        )),
+      )
+      .submit((params['question'] as String).trim());
+}
 
 /// `save_to_taste`/`apply_change`：还没有实现处理器的子 SPEC 接手，这两个意图这张
 /// 票只登记名字，参数格式留给以后按业务需要再收紧，这里先只要求 `params` 是一个
@@ -291,6 +313,7 @@ final defaultIntentRegistry = IntentRegistry(const [
     name: 'call_operation',
     defaultLabel: '去操作',
     validateParams: _validateCallOperation,
+    handler: _handleCallOperation,
   ),
   IntentSpec(
     name: 'save_to_taste',

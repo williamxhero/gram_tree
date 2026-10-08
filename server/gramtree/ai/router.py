@@ -1,13 +1,21 @@
 from fastapi import APIRouter
 
 from gramtree.accounts.deps import CurrentAuth
-from gramtree.ai import gateway, service
+from gramtree.ai import answers, gateway, modifications, service
+from gramtree.ai.modification_schemas import (
+    ModificationConfirmInput,
+    ModificationDecisionsInput,
+    ModificationInput,
+    ModificationPreview,
+)
 from gramtree.ai.schemas import (
     AIStatus,
     ExistingChoice,
     GenerateInput,
     GenerationResult,
     OneLineInput,
+    RecipeAnswer,
+    RecipeQuestion,
     RetrievalResult,
 )
 from gramtree.core.errors import ERROR_RESPONSES
@@ -16,6 +24,70 @@ from gramtree.deps import RedisDep, SessionDep, SettingsDep
 from gramtree.recipes.schemas import RecipeCreate, RecipeDetail
 
 router = APIRouter(prefix="/ai/recipes", tags=["recipe-ai"], responses=ERROR_RESPONSES)
+
+
+@router.get(
+    "/modifications/status", response_model=AIStatus, operation_id="recipe_modification_status"
+)
+def modification_status(auth: CurrentAuth, session: SessionDep, settings: SettingsDep) -> AIStatus:
+    return AIStatus.model_validate(gateway.availability(session, settings, auth.user.id, "modify"))
+
+
+@router.post(
+    "/modifications", response_model=ModificationPreview, operation_id="propose_recipe_modification"
+)
+def propose_modification(
+    body: ModificationInput,
+    auth: CurrentAuth,
+    session: SessionDep,
+    redis: RedisDep,
+    settings: SettingsDep,
+) -> ModificationPreview:
+    return modifications.propose(session, redis, settings, auth.user, body)
+
+
+@router.get(
+    "/modifications/{modification_id}",
+    response_model=ModificationPreview,
+    operation_id="get_recipe_modification",
+)
+def get_modification(
+    modification_id: IdV4, auth: CurrentAuth, session: SessionDep, settings: SettingsDep
+) -> ModificationPreview:
+    return modifications.get(session, settings, auth.user, modification_id)
+
+
+@router.post(
+    "/modifications/{modification_id}/decisions",
+    response_model=ModificationPreview,
+    operation_id="decide_recipe_modification",
+)
+def decide_modification(
+    modification_id: IdV4,
+    body: ModificationDecisionsInput,
+    auth: CurrentAuth,
+    session: SessionDep,
+    redis: RedisDep,
+    settings: SettingsDep,
+) -> ModificationPreview:
+    return modifications.decide(session, redis, settings, auth.user, modification_id, body)
+
+
+@router.post(
+    "/modifications/{modification_id}/confirm",
+    response_model=RecipeDetail,
+    status_code=201,
+    operation_id="confirm_recipe_modification",
+)
+def confirm_modification(
+    modification_id: IdV4,
+    body: ModificationConfirmInput,
+    auth: CurrentAuth,
+    session: SessionDep,
+    redis: RedisDep,
+    settings: SettingsDep,
+) -> RecipeDetail:
+    return modifications.confirm(session, redis, settings, auth.user, modification_id, body)
 
 
 @router.get("/status", response_model=AIStatus)
@@ -68,3 +140,17 @@ def save_generated_recipe(
     settings: SettingsDep,
 ) -> RecipeDetail:
     return service.save(session, redis, settings, auth.user, request_id, body)
+
+
+@router.post("/{recipe_id}/versions/{version_id}/answer", response_model=RecipeAnswer)
+def answer_recipe_question(
+    recipe_id: IdV4,
+    version_id: IdV4,
+    body: RecipeQuestion,
+    auth: CurrentAuth,
+    session: SessionDep,
+    settings: SettingsDep,
+) -> RecipeAnswer:
+    return answers.answer(
+        session, settings, auth.user, recipe_id, version_id, body.question.strip()
+    )
