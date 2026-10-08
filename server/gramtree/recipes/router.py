@@ -10,11 +10,12 @@ from fastapi import APIRouter, Depends, Query, status
 from fastapi.responses import Response
 
 from gramtree.accounts.deps import CurrentAuth
+from gramtree.ai.schemas import BatchAdviceInput, RecipeBatchAdviceOut
 from gramtree.core.errors import ERROR_RESPONSES, ApiError, ErrorResponse
 from gramtree.core.ids import IdV4
 from gramtree.core.pagination import PageParams, page_params
 from gramtree.deps import RedisDep, SessionDep, SettingsDep
-from gramtree.recipes import service
+from gramtree.recipes import batch_advice, service
 from gramtree.recipes.comparison import RecipeIngredientComparison, compare_ingredients
 from gramtree.recipes.schemas import (
     MoldSpec,
@@ -316,6 +317,24 @@ def convert_recipe_version_servings(
 ) -> RecipeServingConversionOut:
     return service.convert_recipe_servings(
         session, auth.user, recipe_id, target_servings, version_id
+    )
+
+
+@router.post(
+    "/{recipe_id}/versions/{version_id}/batch-advice",
+    response_model=RecipeBatchAdviceOut,
+    responses=_errors(401, 404, 422),
+)
+def request_recipe_batch_advice(
+    recipe_id: IdV4,
+    version_id: IdV4,
+    body: BatchAdviceInput,
+    auth: CurrentAuth,
+    session: SessionDep,
+    settings: SettingsDep,
+) -> RecipeBatchAdviceOut:
+    return batch_advice.request_advice(
+        session, settings, auth.user, recipe_id, version_id, body.target_servings
     )
 
 

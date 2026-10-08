@@ -14,6 +14,7 @@
 | [`food-safety/`](food-safety/) | 食品安全与过敏原提示样稿：必显过敏原、菜谱/步骤提醒、高风险、估算营养与疗效措辞改写 | #22 SPEC-011.1 | Artifact 服务实际返回 503；本地 HTML 样稿（浏览器可直接打开） |
 | [`one-line-recipe/`](one-line-recipe/) | 一句话生成：先检索、选择已有或新设计、可跳过问题、依据与校验、编辑保存及降级 | #23 SPEC-003.1 | 本会话无 Artifact 发布工具；本地交互 HTML 样稿 |
 | [`recipe-frontier/`](recipe-frontier/) | 菜谱内味型与功能性、个人量具确认录入、按同份数的食材版本比较；浅色/深色与共用为什么面板 | #2 SPEC-002，#137、#139、#141 | 本会话无 Artifact 发布工具；实现前发布到开发分支的交互 HTML 样稿 |
+| [`large-batch-advice/`](large-batch-advice/) | 大份量只读时间建议：主动请求、原时长对照、分批与成熟提醒、切换清除及失败降级 | #25 SPEC-003.2 / #175 | 本会话无 Artifact 发布工具；本地交互 HTML 样稿 |
 
 ## 说明
 
