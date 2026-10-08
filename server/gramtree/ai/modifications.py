@@ -178,7 +178,7 @@ def _apply(
         choice = requested.get(op.operation_id)
         decision = (
             "reject"
-            if blocked
+            if blocked or (choice and choice.decision == "reject")
             else "pending"
             if pending
             else choice.decision
@@ -204,6 +204,8 @@ def _apply(
         decision = resolve(op)
         if decision.decision in ("reject", "pending"):
             continue
+        if decision.after is not None and not decision.after.strip():
+            raise ValueError("修改后文字不能为空白")
         if decision.after == op.before:
             continue
         node = _node(result, op)
@@ -250,6 +252,10 @@ def preview(
     session: Session, settings: Settings, owner: User, row: RecipeModification
 ) -> ModificationPreview:
     changed, ops, decisions, _ = _state(session, row)
+    status = AIStatus.model_validate(gateway.availability(session, settings, owner.id, "modify"))
+    if row.error in ("model_unavailable", "configuration", "daily_quota", "monthly_budget"):
+        status.available = False
+        status.reason = row.error
     return ModificationPreview(
         id=row.id,
         revision=row.revision,
@@ -264,7 +270,7 @@ def preview(
             session, changed, row.baseline["dish_name"], descriptions=row.baseline["dish_aliases"]
         ),
         reproducibility=reproducibility.check(changed),
-        status=AIStatus.model_validate(gateway.availability(session, settings, owner.id, "modify")),
+        status=status,
         warnings=row.proposal.get("warnings", []),
         error=row.error,
     )

@@ -547,7 +547,8 @@ def save(
     # the recipe remains AI-assisted; callers cannot erase the AI origin.
     body.snapshot.cuisine = original.cuisine
     body.snapshot.design_rationale = original.rationale
-    body.snapshot.text_source = original.recipe.snapshot.text_source
+    if confirmed_operations is None:
+        body.snapshot.text_source = original.recipe.snapshot.text_source
     body.snapshot.servings_source = (
         original.recipe.snapshot.servings_source
         if body.snapshot.servings == original.recipe.snapshot.servings
