@@ -27,6 +27,8 @@ class RecipeStep {
 
     this.doneness,
 
+    this.donenessSource,
+
     this.durationSeconds = 0,
 
     this.durationSource,
@@ -40,6 +42,8 @@ class RecipeStep {
     this.ingredientIds,
 
     required this.instruction,
+
+    this.instructionSource,
 
     this.notes,
 
@@ -63,6 +67,9 @@ class RecipeStep {
 
   @JsonKey(name: r'doneness', required: false, includeIfNull: false)
   final String? doneness;
+
+  @JsonKey(name: r'doneness_source', required: false, includeIfNull: false)
+  final ValueSource? donenessSource;
 
   // minimum: 0
   // maximum: 86400
@@ -92,6 +99,9 @@ class RecipeStep {
 
   @JsonKey(name: r'instruction', required: true, includeIfNull: false)
   final String instruction;
+
+  @JsonKey(name: r'instruction_source', required: false, includeIfNull: false)
+  final ValueSource? instructionSource;
 
   @JsonKey(name: r'notes', required: false, includeIfNull: false)
   final String? notes;
@@ -123,6 +133,7 @@ class RecipeStep {
           other.cookware == cookware &&
           other.dependsOn == dependsOn &&
           other.doneness == doneness &&
+          other.donenessSource == donenessSource &&
           other.durationSeconds == durationSeconds &&
           other.durationSource == durationSource &&
           other.heat == heat &&
@@ -130,6 +141,7 @@ class RecipeStep {
           other.id == id &&
           other.ingredientIds == ingredientIds &&
           other.instruction == instruction &&
+          other.instructionSource == instructionSource &&
           other.notes == notes &&
           other.temperatureCelsius == temperatureCelsius &&
           other.temperatureSource == temperatureSource &&
@@ -142,6 +154,7 @@ class RecipeStep {
       (cookware == null ? 0 : cookware.hashCode) +
       dependsOn.hashCode +
       (doneness == null ? 0 : doneness.hashCode) +
+      donenessSource.hashCode +
       durationSeconds.hashCode +
       durationSource.hashCode +
       (heat == null ? 0 : heat.hashCode) +
@@ -149,6 +162,7 @@ class RecipeStep {
       id.hashCode +
       ingredientIds.hashCode +
       instruction.hashCode +
+      instructionSource.hashCode +
       (notes == null ? 0 : notes.hashCode) +
       (temperatureCelsius == null ? 0 : temperatureCelsius.hashCode) +
       temperatureSource.hashCode +

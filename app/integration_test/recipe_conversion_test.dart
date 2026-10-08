@@ -222,7 +222,7 @@ void main() {
 
       // The user-visible serving amount is part of this web acceptance flow;
       // exhaustive fixture permutations remain in native/page tests.
-      await waitFor(tester, find.byKey(const ValueKey('recipe-serving-value')));
+      await reveal(tester, find.byKey(const ValueKey('recipe-serving-value')));
       await reveal(
         tester,
         find.byKey(const ValueKey('recipe-serving-increase')),

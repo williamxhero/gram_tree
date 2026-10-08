@@ -242,6 +242,57 @@
         "title": "AttributeStatus",
         "type": "string"
       },
+      "BatchAdvice": {
+        "additionalProperties": false,
+        "properties": {
+          "basis": {
+            "maxLength": 2000,
+            "minLength": 1,
+            "pattern": "\\S",
+            "title": "Basis",
+            "type": "string"
+          },
+          "risk": {
+            "maxLength": 2000,
+            "minLength": 1,
+            "pattern": "\\S",
+            "title": "Risk",
+            "type": "string"
+          },
+          "steps": {
+            "items": {
+              "$ref": "#/components/schemas/BatchStepAdvice"
+            },
+            "maxItems": 200,
+            "minItems": 1,
+            "title": "Steps",
+            "type": "array"
+          }
+        },
+        "required": [
+          "steps",
+          "basis",
+          "risk"
+        ],
+        "title": "BatchAdvice",
+        "type": "object"
+      },
+      "BatchAdviceInput": {
+        "additionalProperties": false,
+        "properties": {
+          "target_servings": {
+            "maximum": 1000.0,
+            "minimum": 1.0,
+            "title": "Target Servings",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "target_servings"
+        ],
+        "title": "BatchAdviceInput",
+        "type": "object"
+      },
       "BatchRequest": {
         "description": "批量读取的请求体（#101）。",
         "properties": {
@@ -289,6 +340,82 @@
           "missing_ids"
         ],
         "title": "BatchResponse",
+        "type": "object"
+      },
+      "BatchStepAdvice": {
+        "additionalProperties": false,
+        "properties": {
+          "basis": {
+            "maxLength": 1000,
+            "minLength": 1,
+            "pattern": "\\S",
+            "title": "Basis",
+            "type": "string"
+          },
+          "batch_count": {
+            "maximum": 100.0,
+            "minimum": 1.0,
+            "title": "Batch Count",
+            "type": "integer"
+          },
+          "batch_guidance": {
+            "maxLength": 1000,
+            "minLength": 1,
+            "pattern": "\\S",
+            "title": "Batch Guidance",
+            "type": "string"
+          },
+          "confidence": {
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Confidence",
+            "type": "number"
+          },
+          "doneness": {
+            "maxLength": 1000,
+            "minLength": 1,
+            "pattern": "\\S",
+            "title": "Doneness",
+            "type": "string"
+          },
+          "risk": {
+            "maxLength": 1000,
+            "minLength": 1,
+            "pattern": "\\S",
+            "title": "Risk",
+            "type": "string"
+          },
+          "source": {
+            "const": "ai_estimated",
+            "title": "Source",
+            "type": "string"
+          },
+          "step_id": {
+            "maxLength": 100,
+            "minLength": 1,
+            "pattern": "\\S",
+            "title": "Step Id",
+            "type": "string"
+          },
+          "suggested_duration_seconds": {
+            "maximum": 86400.0,
+            "minimum": 1.0,
+            "title": "Suggested Duration Seconds",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "step_id",
+          "suggested_duration_seconds",
+          "batch_count",
+          "batch_guidance",
+          "doneness",
+          "basis",
+          "risk",
+          "confidence",
+          "source"
+        ],
+        "title": "BatchStepAdvice",
         "type": "object"
       },
       "BindAppleRequest": {
@@ -2944,6 +3071,170 @@
         "title": "PurchaseUnitsAttribute",
         "type": "object"
       },
+      "QuantificationDecision": {
+        "additionalProperties": false,
+        "properties": {
+          "decision": {
+            "enum": [
+              "accept",
+              "modify",
+              "ignore"
+            ],
+            "title": "Decision",
+            "type": "string"
+          },
+          "problem_id": {
+            "title": "Problem Id",
+            "type": "string"
+          },
+          "unit": {
+            "anyOf": [
+              {
+                "maxLength": 20,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unit"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Value"
+          }
+        },
+        "required": [
+          "problem_id",
+          "decision"
+        ],
+        "title": "QuantificationDecision",
+        "type": "object"
+      },
+      "QuantificationDecisionsInput": {
+        "additionalProperties": false,
+        "properties": {
+          "accept_all": {
+            "default": false,
+            "title": "Accept All",
+            "type": "boolean"
+          },
+          "decisions": {
+            "items": {
+              "$ref": "#/components/schemas/QuantificationDecision"
+            },
+            "maxItems": 2000,
+            "title": "Decisions",
+            "type": "array"
+          }
+        },
+        "title": "QuantificationDecisionsInput",
+        "type": "object"
+      },
+      "QuantificationInput": {
+        "additionalProperties": false,
+        "properties": {
+          "base_version_id": {
+            "format": "uuid",
+            "title": "Base Version Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "base_version_id"
+        ],
+        "title": "QuantificationInput",
+        "type": "object"
+      },
+      "QuantificationSuggestion": {
+        "additionalProperties": false,
+        "properties": {
+          "adjustment": {
+            "anyOf": [
+              {
+                "maxLength": 500,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Adjustment"
+          },
+          "baseline": {
+            "anyOf": [
+              {
+                "maxLength": 500,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Baseline"
+          },
+          "basis": {
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Basis",
+            "type": "string"
+          },
+          "confidence": {
+            "enum": [
+              "high",
+              "medium",
+              "low"
+            ],
+            "title": "Confidence",
+            "type": "string"
+          },
+          "problem_id": {
+            "maxLength": 300,
+            "minLength": 1,
+            "title": "Problem Id",
+            "type": "string"
+          },
+          "unit": {
+            "anyOf": [
+              {
+                "maxLength": 20,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unit"
+          },
+          "value": {
+            "maxLength": 2000,
+            "minLength": 1,
+            "title": "Value",
+            "type": "string"
+          }
+        },
+        "required": [
+          "problem_id",
+          "value",
+          "basis",
+          "confidence"
+        ],
+        "title": "QuantificationSuggestion",
+        "type": "object"
+      },
       "Question": {
         "properties": {
           "default": {
@@ -2988,6 +3279,66 @@
           "nickname"
         ],
         "title": "RecipeAuthor",
+        "type": "object"
+      },
+      "RecipeBatchAdviceOut": {
+        "properties": {
+          "advice": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/BatchAdvice"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "eligible": {
+            "title": "Eligible",
+            "type": "boolean"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "original_servings": {
+            "title": "Original Servings",
+            "type": "integer"
+          },
+          "recipe_id": {
+            "format": "uuid",
+            "title": "Recipe Id",
+            "type": "string"
+          },
+          "status": {
+            "$ref": "#/components/schemas/AIStatus"
+          },
+          "target_servings": {
+            "title": "Target Servings",
+            "type": "integer"
+          },
+          "version_id": {
+            "format": "uuid",
+            "title": "Version Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "recipe_id",
+          "version_id",
+          "original_servings",
+          "target_servings",
+          "eligible",
+          "status"
+        ],
+        "title": "RecipeBatchAdviceOut",
         "type": "object"
       },
       "RecipeCreate": {
@@ -3513,6 +3864,16 @@
             "description": "处理方式",
             "title": "Preparation"
           },
+          "preparation_source": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ValueSource"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "quantity": {
             "maximum": 10000000.0,
             "minimum": 0.0,
@@ -3816,6 +4177,53 @@
         "title": "RecipeMoldConversionRequest",
         "type": "object"
       },
+      "RecipeQuantificationOut": {
+        "properties": {
+          "base_version_id": {
+            "format": "uuid",
+            "title": "Base Version Id",
+            "type": "string"
+          },
+          "detail": {
+            "default": "standard",
+            "description": "服务端选择的组件详略档位",
+            "enum": [
+              "brief",
+              "standard",
+              "detailed"
+            ],
+            "title": "Detail",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "problems": {
+            "items": {
+              "$ref": "#/components/schemas/ReproducibilityProblem"
+            },
+            "title": "Problems",
+            "type": "array"
+          },
+          "suggestions": {
+            "items": {
+              "$ref": "#/components/schemas/QuantificationSuggestion"
+            },
+            "title": "Suggestions",
+            "type": "array"
+          }
+        },
+        "required": [
+          "id",
+          "base_version_id",
+          "problems",
+          "suggestions"
+        ],
+        "title": "RecipeQuantificationOut",
+        "type": "object"
+      },
       "RecipeReplacement": {
         "additionalProperties": false,
         "properties": {
@@ -3891,6 +4299,82 @@
           "display_name"
         ],
         "title": "RecipeReplacementAllergens",
+        "type": "object"
+      },
+      "RecipeReproducibilityCheckOut": {
+        "properties": {
+          "result": {
+            "$ref": "#/components/schemas/RecipeReproducibilityResult"
+          }
+        },
+        "required": [
+          "result"
+        ],
+        "title": "RecipeReproducibilityCheckOut",
+        "type": "object"
+      },
+      "RecipeReproducibilityCheckRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "snapshot": {
+            "$ref": "#/components/schemas/RecipeSnapshot"
+          }
+        },
+        "required": [
+          "snapshot"
+        ],
+        "title": "RecipeReproducibilityCheckRequest",
+        "type": "object"
+      },
+      "RecipeReproducibilityResult": {
+        "properties": {
+          "concrete_field_count": {
+            "title": "Concrete Field Count",
+            "type": "integer"
+          },
+          "field_completeness": {
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Field Completeness",
+            "type": "number"
+          },
+          "problems": {
+            "items": {
+              "$ref": "#/components/schemas/ReproducibilityProblem"
+            },
+            "title": "Problems",
+            "type": "array"
+          },
+          "remaining_count": {
+            "title": "Remaining Count",
+            "type": "integer"
+          },
+          "required_field_count": {
+            "title": "Required Field Count",
+            "type": "integer"
+          },
+          "rules_version": {
+            "title": "Rules Version",
+            "type": "string"
+          },
+          "state": {
+            "enum": [
+              "incomplete",
+              "reproducible"
+            ],
+            "title": "State",
+            "type": "string"
+          }
+        },
+        "required": [
+          "rules_version",
+          "state",
+          "remaining_count",
+          "required_field_count",
+          "concrete_field_count",
+          "field_completeness"
+        ],
+        "title": "RecipeReproducibilityResult",
         "type": "object"
       },
       "RecipeSafetyCheckOut": {
@@ -4315,6 +4799,16 @@
             ],
             "title": "Doneness"
           },
+          "doneness_source": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ValueSource"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "duration_seconds": {
             "default": 0,
             "maximum": 86400.0,
@@ -4373,6 +4867,16 @@
             "minLength": 1,
             "title": "Instruction",
             "type": "string"
+          },
+          "instruction_source": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ValueSource"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "notes": {
             "anyOf": [
@@ -4456,6 +4960,19 @@
             "maxLength": 2000,
             "title": "Change Note",
             "type": "string"
+          },
+          "expected_current_version_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "可选并发保护；不改变显式从历史版分支的行为",
+            "title": "Expected Current Version Id"
           },
           "image_ids": {
             "items": {
@@ -4551,6 +5068,16 @@
               }
             ],
             "title": "Previous Version Id"
+          },
+          "reproducibility": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RecipeReproducibilityResult"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "safety": {
             "anyOf": [
@@ -4689,6 +5216,114 @@
           "changelog"
         ],
         "title": "ReleaseNote",
+        "type": "object"
+      },
+      "ReproducibilityPosition": {
+        "properties": {
+          "collection": {
+            "enum": [
+              "ingredients",
+              "steps",
+              "snapshot"
+            ],
+            "title": "Collection",
+            "type": "string"
+          },
+          "end": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "End"
+          },
+          "field": {
+            "title": "Field",
+            "type": "string"
+          },
+          "item_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Item Id"
+          },
+          "start": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Start"
+          }
+        },
+        "required": [
+          "collection",
+          "field"
+        ],
+        "title": "ReproducibilityPosition",
+        "type": "object"
+      },
+      "ReproducibilityProblem": {
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "message": {
+            "title": "Message",
+            "type": "string"
+          },
+          "original": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Original"
+          },
+          "position": {
+            "$ref": "#/components/schemas/ReproducibilityPosition"
+          },
+          "status": {
+            "enum": [
+              "unresolved",
+              "ignored",
+              "resolved"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "type": {
+            "enum": [
+              "ambiguous",
+              "missing"
+            ],
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "type",
+          "status",
+          "message",
+          "position"
+        ],
+        "title": "ReproducibilityProblem",
         "type": "object"
       },
       "RetrievalResult": {
@@ -5417,6 +6052,28 @@
       "ValueSource": {
         "additionalProperties": false,
         "properties": {
+          "adjustment": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Adjustment"
+          },
+          "baseline": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Baseline"
+          },
           "basis": {
             "anyOf": [
               {
@@ -5440,6 +6097,22 @@
               }
             ],
             "title": "Confidence"
+          },
+          "confidence_level": {
+            "anyOf": [
+              {
+                "enum": [
+                  "high",
+                  "medium",
+                  "low"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Confidence Level"
           },
           "original": {
             "anyOf": [
@@ -8567,6 +9240,72 @@
         ]
       }
     },
+    "/v1/recipes/reproducibility/check": {
+      "post": {
+        "operationId": "check_recipe_reproducibility",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RecipeReproducibilityCheckRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecipeReproducibilityCheckOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "参数错误"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "服务端错误"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Check Recipe Reproducibility",
+        "tags": [
+          "recipes"
+        ]
+      }
+    },
     "/v1/recipes/safety/check": {
       "post": {
         "operationId": "check_recipe_safety",
@@ -9198,6 +9937,222 @@
         ]
       }
     },
+    "/v1/recipes/{recipe_id}/quantification": {
+      "post": {
+        "operationId": "quantify_recipe",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "recipe_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Recipe Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/QuantificationInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecipeQuantificationOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "服务端错误"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Quantify Recipe",
+        "tags": [
+          "recipes"
+        ]
+      }
+    },
+    "/v1/recipes/{recipe_id}/quantification/{proposal_id}/decisions": {
+      "post": {
+        "operationId": "decide_recipe_quantification",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "recipe_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Recipe Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "proposal_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Proposal Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/QuantificationDecisionsInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecipeDetail"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "服务端错误"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Decide Recipe Quantification",
+        "tags": [
+          "recipes"
+        ]
+      }
+    },
     "/v1/recipes/{recipe_id}/servings": {
       "get": {
         "operationId": "convert_current_recipe_servings",
@@ -9563,6 +10518,104 @@
           }
         ],
         "summary": "Get Recipe Version",
+        "tags": [
+          "recipes"
+        ]
+      }
+    },
+    "/v1/recipes/{recipe_id}/versions/{version_id}/batch-advice": {
+      "post": {
+        "operationId": "request_recipe_batch_advice",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "recipe_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Recipe Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "version_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Version Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BatchAdviceInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecipeBatchAdviceOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "服务端错误"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Request Recipe Batch Advice",
         "tags": [
           "recipes"
         ]

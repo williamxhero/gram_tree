@@ -26,7 +26,7 @@ from gramtree.events import service as event_service
 from gramtree.events.registry import SourceType
 from gramtree.ingredients.attributes import IngredientAttributes
 from gramtree.ingredients.models import Ingredient, IngredientAttribute
-from gramtree.recipes import food_safety
+from gramtree.recipes import food_safety, reproducibility
 from gramtree.recipes.measure_display import display_amount, quantity_text
 from gramtree.recipes.measure_models import PersonalMeasure
 from gramtree.recipes.models import (
@@ -35,6 +35,7 @@ from gramtree.recipes.models import (
     Recipe,
     RecipeImage,
     RecipeImageStaging,
+    RecipeQuantification,
     RecipeSaveOutbox,
     RecipeVersion,
 )
@@ -48,6 +49,7 @@ from gramtree.recipes.mold_conversion import (
     convert_mold,
     mold_area,
 )
+from gramtree.recipes.provenance import normalize_sources
 from gramtree.recipes.schemas import (
     DishInput,
     DishOut,
@@ -66,6 +68,7 @@ from gramtree.recipes.schemas import (
     RecipeList,
     RecipeListItem,
     RecipeMoldConversionOut,
+    RecipeReproducibilityResult,
     RecipeSafetyCheckRequest,
     RecipeSafetyResult,
     RecipeServingConversionOut,
@@ -196,9 +199,14 @@ def _snapshot_scaling_mode(
     return ingredient.scaling_mode or "proportional"
 
 
-def _base_quantity(session: Session, ingredient: RecipeIngredient) -> tuple[float, str]:
-    """Convert a kitchen quantity to g/ml/count and reject unknown conversions."""
+def _base_quantity(
+    session: Session, ingredient: RecipeIngredient
+) -> tuple[float | None, str | None]:
+    """Convert known units without inventing capacities for private drafts."""
     unit = ingredient.unit.strip().casefold()
+    # Private drafts may contain household amounts; never invent their capacity.
+    if reproducibility.household_unit(unit):
+        return None, None
     if unit in _MASS_UNITS:
         return ingredient.quantity * _MASS_UNITS[unit], "g"
     if unit in _VOLUME_UNITS:
@@ -211,21 +219,9 @@ def _base_quantity(session: Session, ingredient: RecipeIngredient) -> tuple[floa
         # quantity would make an egg written as ``3 个`` come back as ``150 g``
         # and would lose the author's unit and count semantics.
         return ingredient.quantity, "count"
-    if ingredient.ingredient_id is not None:
-        attributes = _ingredient_attributes(session, ingredient.ingredient_id)
-        if attributes.base_unit is not None and attributes.base_unit.value == "克":
-            raise ApiError(
-                422,
-                "invalid_recipe",
-                "菜谱结构有误",
-                f"ingredients[{ingredient.id}].unit 无法换算为克：{ingredient.unit}",
-            )
-    raise ApiError(
-        422,
-        "invalid_recipe",
-        "菜谱结构有误",
-        f"ingredients[{ingredient.id}].unit 不支持：{ingredient.unit}",
-    )
+    # Preserve unconvertible amounts as unresolved execution fields. The check
+    # records the missing standard instead of rejecting a legitimate private draft.
+    return None, None
 
 
 def _normalize_ingredient(session: Session, ingredient: RecipeIngredient) -> RecipeIngredient:
@@ -541,6 +537,11 @@ def _version_out(
         previous_version_id=row.previous_version_id,
         snapshot=RecipeSnapshot.model_validate(row.snapshot),
         derived=RecipeDerived.model_validate(row.derived),
+        reproducibility=(
+            RecipeReproducibilityResult.model_validate(row.reproducibility)
+            if row.reproducibility is not None
+            else None
+        ),
         safety=(
             RecipeSafetyResult.model_validate(row.safety_current).model_copy(
                 update={"stale": not food_safety.is_current(session, row, food_safety.rules())}
@@ -762,7 +763,7 @@ def create_recipe(
     *,
     generation_request_id: uuid.UUID | None = None,
 ) -> RecipeDetail:
-    snapshot = _validate_snapshot(session, body.snapshot)
+    snapshot = normalize_sources(_validate_snapshot(session, body.snapshot))
     staged = _staged_rows(session, owner, body.image_ids)
     dish_input = body.dish_input()
     safety_descriptions = [*dish_input.aliases, body.change_note]
@@ -780,6 +781,7 @@ def create_recipe(
         version_number=1,
         snapshot=_snapshot_json(snapshot),
         derived=_derived(session, snapshot).model_dump(mode="json"),
+        reproducibility=reproducibility.check(snapshot).model_dump(mode="json"),
         safety_at_save=safety.model_dump(mode="json"),
         safety_current=safety.model_dump(mode="json"),
         safety_rules_version=safety.rules_version,
@@ -1000,8 +1002,25 @@ def save_version(
     owner: User,
     recipe_id: uuid.UUID,
     body: RecipeVersionCreate,
+    *,
+    trusted_sources: bool = False,
+    quantification_record: RecipeQuantification | None = None,
+    decision_events: list[event_service.EventInput] | None = None,
+    ignored_problem_ids: set[str] | None = None,
 ) -> RecipeDetail:
-    recipe = _owned_recipe(session, owner, recipe_id)
+    recipe = session.scalar(
+        select(Recipe)
+        .where(Recipe.id == recipe_id, Recipe.owner_id == owner.id)
+        .with_for_update()
+        .execution_options(populate_existing=True)
+    )
+    if recipe is None:
+        raise NotFound()
+    if (
+        body.expected_current_version_id is not None
+        and body.expected_current_version_id != recipe.current_version_id
+    ):
+        raise ApiError(409, "stale_recipe_version", "菜谱已有新版本，请重新载入后保存")
     snapshot = _validate_snapshot(session, body.snapshot)
     staged = _staged_rows(session, owner, body.image_ids)
     previous = session.get(RecipeVersion, recipe.current_version_id)
@@ -1011,6 +1030,7 @@ def save_version(
     if baseline is None or baseline.recipe_id != recipe.id:
         raise NotFound("菜谱基准版本不存在")
     previous_snapshot = RecipeSnapshot.model_validate(baseline.snapshot)
+    snapshot = normalize_sources(snapshot, previous_snapshot, trusted_sources=trusted_sources)
     dish = session.get(Dish, recipe.dish_id)
     if dish is None:
         raise NotFound("菜谱关联数据不存在")
@@ -1025,6 +1045,7 @@ def save_version(
         previous_version_id=previous.id,
         snapshot=_snapshot_json(snapshot),
         derived=_derived(session, snapshot).model_dump(mode="json"),
+        reproducibility=reproducibility.check(snapshot).model_dump(mode="json"),
         safety_at_save=safety.model_dump(mode="json"),
         safety_current=safety.model_dump(mode="json"),
         safety_rules_version=safety.rules_version,
@@ -1035,6 +1056,29 @@ def save_version(
     )
     session.add(version)
     session.flush()
+    if quantification_record is not None:
+        # Proposals, decision receipt and experience events share the version
+        # transaction. An event failure cannot leave a saved version without evidence.
+        from gramtree.events.registry import QuantificationDecisionContentV1
+
+        quantification_record.saved_version_id = version.id
+        ignored = ignored_problem_ids or set()
+        result = RecipeReproducibilityResult.model_validate(version.reproducibility)
+        for problem in result.problems:
+            if problem.id in ignored:
+                problem.status = "ignored"
+        version.reproducibility = result.model_dump(mode="json")
+        for event in decision_events or []:
+            event.correlation["recipe_version_id"] = str(version.id)
+            event.content["recipe_version_id"] = str(version.id)
+            event.content.update(
+                QuantificationDecisionContentV1.model_validate(event.content).model_dump(
+                    mode="json"
+                )
+            )
+        event_service.upload(
+            session, redis, owner.id, decision_events or [], utcnow(), commit=False
+        )
     _copy_version_images(session, recipe, baseline, version)
     _attach_staged_images(session, owner, recipe, version, [row.id for row in staged])
     recipe.current_version_id = version.id

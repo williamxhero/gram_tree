@@ -327,71 +327,73 @@ class WhyPanel extends StatelessWidget {
     return SafeArea(
       child: Padding(
         padding: const EdgeInsets.fromLTRB(20, 4, 20, 20),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              titleOverride ?? sourceTypeLabel(sourceType, l10n),
-              style: theme.textTheme.titleMedium,
-            ),
-            const SizedBox(height: 12),
-            if (originalValue != null) ...[
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
               Text(
-                l10n.whyOriginal(originalValue!),
-                style: theme.textTheme.bodyMedium,
+                titleOverride ?? sourceTypeLabel(sourceType, l10n),
+                style: theme.textTheme.titleMedium,
               ),
-              const SizedBox(height: 2),
-            ],
-            Text(
-              l10n.whyCurrent(value),
-              style: valueChanged
-                  ? theme.textTheme.bodyMedium?.copyWith(
-                      color: GramTreeColors.of(context).accent,
-                    )
-                  : theme.textTheme.bodyMedium,
-            ),
-            const SizedBox(height: 12),
-            Text(explanation, style: theme.textTheme.bodyMedium),
-            if (citation != null) ...[
-              const SizedBox(height: 6),
-              Text(
-                citation!,
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: theme.colorScheme.onSurfaceVariant,
+              const SizedBox(height: 12),
+              if (originalValue != null) ...[
+                Text(
+                  l10n.whyOriginal(originalValue!),
+                  style: theme.textTheme.bodyMedium,
                 ),
-              ),
-            ],
-            const SizedBox(height: 20),
-            if (onlineReason != null) Text(onlineReason!),
-            if (!feedbackEnabled)
-              const SizedBox.shrink()
-            else if (required)
+                const SizedBox(height: 2),
+              ],
               Text(
-                l10n.whyRequired,
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: theme.colorScheme.onSurfaceVariant,
-                ),
-              )
-            else
-              Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton(
-                      onPressed: onSkipOnce,
-                      child: Text(l10n.whySkipThisTime),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: OutlinedButton(
-                      onPressed: onNeverAgain,
-                      child: Text(l10n.whyDontDoAgain),
-                    ),
-                  ),
-                ],
+                l10n.whyCurrent(value),
+                style: valueChanged
+                    ? theme.textTheme.bodyMedium?.copyWith(
+                        color: GramTreeColors.of(context).accent,
+                      )
+                    : theme.textTheme.bodyMedium,
               ),
-          ],
+              const SizedBox(height: 12),
+              Text(explanation, style: theme.textTheme.bodyMedium),
+              if (citation != null) ...[
+                const SizedBox(height: 6),
+                Text(
+                  citation!,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ],
+              const SizedBox(height: 20),
+              if (onlineReason != null) Text(onlineReason!),
+              if (!feedbackEnabled)
+                const SizedBox.shrink()
+              else if (required)
+                Text(
+                  l10n.whyRequired,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                )
+              else
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: onSkipOnce,
+                        child: Text(l10n.whySkipThisTime),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: onNeverAgain,
+                        child: Text(l10n.whyDontDoAgain),
+                      ),
+                    ),
+                  ],
+                ),
+            ],
+          ),
         ),
       ),
     );
