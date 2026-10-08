@@ -14,7 +14,7 @@ from typing import Any
 
 from cryptography.exceptions import InvalidTag
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
-from sqlalchemy import delete, select
+from sqlalchemy import String, cast, delete, or_, select
 from sqlalchemy.orm import Session
 
 from gramtree.accounts.models import Consent
@@ -46,7 +46,18 @@ def erase_sensitive(session: Session, owner_id: uuid.UUID) -> None:
     changes = select(TasteProfileChange.id).where(
         TasteProfileChange.owner_id == owner_id, TasteProfileChange.field == "allergies"
     )
-    session.execute(delete(Event).where(Event.user_id == owner_id, Event.id.in_(changes)))
+    linked_changes = select(cast(TasteProfileChange.id, String)).where(
+        TasteProfileChange.owner_id == owner_id, TasteProfileChange.field == "allergies"
+    )
+    session.execute(
+        delete(Event).where(
+            Event.user_id == owner_id,
+            or_(
+                Event.id.in_(changes),
+                Event.correlation["taste_profile_change_id"].astext.in_(linked_changes),
+            ),
+        )
+    )
     session.execute(
         delete(TasteProfileChange).where(
             TasteProfileChange.owner_id == owner_id, TasteProfileChange.field == "allergies"

@@ -395,6 +395,57 @@ def test_backup_restore_does_not_resurrect_withdrawn_sensitive_authorization(
         assert restored.get(PATH, headers=owner).json()["consent_id"] is None
 
 
+def test_withdrawal_erases_every_event_linked_to_sensitive_history(
+    sensitive_api: Api, engine: Engine
+):
+    api = sensitive_api
+    owner = bearer(api.login("linked-sensitive@example.com"))
+    consent(api, owner)
+    state = api.client.get(PATH, headers=owner).json()
+    assert save(api, owner, state, ["花生"]).status_code == 200
+    change = api.client.get(PATH + "/changes", headers=owner).json()["items"][0]
+    linked = {
+        "id": str(uuid.uuid4()),
+        "event_type": "pipeline.self_check",
+        "type_version": 1,
+        "device_id": "private-event-test",
+        "device_time": api.clock.now.isoformat(),
+        "app_version": "1.0.0",
+        "content": {"ping": "pong"},
+        "correlation": {"taste_profile_change_id": change["id"]},
+    }
+    response = api.client.post("/v1/events/upload", headers=owner, json={"events": [linked]})
+    assert response.status_code == 200
+    assert response.json()["results"][0]["status"] == "accepted"
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        upload = pool.submit(
+            api.client.post,
+            "/v1/events/upload",
+            headers=owner,
+            json={"events": [{**linked, "id": str(uuid.uuid4())}]},
+        )
+        withdrawal = pool.submit(consent, api, owner, "withdraw")
+        raced = upload.result()
+        assert raced.status_code == 200
+        assert raced.json()["results"][0]["status"] in ("accepted", "rejected")
+        withdrawal.result()
+    with engine.connect() as conn:
+        assert (
+            conn.scalar(
+                text(
+                    "SELECT count(*) FROM events "
+                    "WHERE correlation ->> 'taste_profile_change_id' = :id"
+                ),
+                {"id": change["id"]},
+            )
+            == 0
+        )
+    late = {**linked, "id": str(uuid.uuid4())}
+    response = api.client.post("/v1/events/upload", headers=owner, json={"events": [late]})
+    assert response.status_code == 200
+    assert response.json()["results"][0]["status"] == "rejected"
+
+
 def test_concurrent_write_and_withdraw_serialize_with_no_sensitive_residue(
     sensitive_api: Api, engine: Engine
 ):

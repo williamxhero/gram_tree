@@ -124,6 +124,12 @@ def upload_events(
     redis: RedisDep,
 ) -> EventUploadResponse:
     _check_batch_limits(request, body, session)
+    if any(e.correlation.taste_profile_change_id is not None for e in body.events):
+        # Serialize link validation AND commit with sensitive withdrawal/deletion.
+        # Otherwise a validated event can commit after its target was erased.
+        from gramtree.taste_profiles.service import lock_owner
+
+        lock_owner(session, auth.user.id)
 
     accepted_items: list[service.EventInput] = []
     rejections: dict[uuid.UUID, RejectionReason] = {}
