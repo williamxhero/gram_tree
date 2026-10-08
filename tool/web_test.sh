@@ -24,14 +24,22 @@ else
   mapfile -t targets < <(find integration_test -name '*_test.dart' | sort)
 fi
 
-"$CHROMEDRIVER" --port="$PORT" >/tmp/chromedriver.log 2>&1 &
+"$CHROMEDRIVER" --port="$PORT" >"${CHROMEDRIVER_LOG:-/tmp/chromedriver.log}" 2>&1 &
 driver_pid=$!
+fixtures_created=0
+fixture_file="${GRAMTREE_E2E_ASSISTANCE_DEFINES:-${TMPDIR:-/tmp}/gramtree_e2e_server_${GRAMTREE_E2E_PORT:-8000}.assistance.json}"
 cleanup() {
   kill $driver_pid 2>/dev/null || true
-  [[ "${GRAMTREE_E2E_SERVER:-}" == external ]] || "$ROOT/tool/e2e_server.sh" stop
+  if [[ "${GRAMTREE_E2E_SERVER:-}" != external ]]; then
+    "$ROOT/tool/e2e_server.sh" stop
+    if [[ "$fixtures_created" == 1 ]]; then rm -f "$fixture_file"; fi
+  fi
 }
 trap cleanup EXIT
-[[ "${GRAMTREE_E2E_SERVER:-}" == external ]] || "$ROOT/tool/e2e_server.sh" start
+if [[ "${GRAMTREE_E2E_SERVER:-}" != external ]]; then
+  "$ROOT/tool/e2e_server.sh" start
+  fixtures_created=1
+fi
 for _ in $(seq 1 50); do
   curl -fs "http://localhost:$PORT/status" >/dev/null 2>&1 && break
   sleep 0.2
@@ -40,13 +48,21 @@ done
 status=0
 for target in "${targets[@]}"; do
   echo "== $target"
+  fixture_args=()
+  if [[ "$target" == integration_test/comparison_assistance_test.dart ]]; then
+    defines_path="${GRAMTREE_E2E_ASSISTANCE_DEFINES:-${TMPDIR:-/tmp}/gramtree_e2e_server_${GRAMTREE_E2E_PORT:-8000}.assistance.json}"
+    if command -v cygpath >/dev/null 2>&1; then
+      defines_path="$(cygpath -m "$defines_path")"
+    fi
+    fixture_args=("--dart-define-from-file=$defines_path")
+  fi
   "$FLUTTER" drive --timeout=300 --profile --no-web-resources-cdn \
     --driver=test_driver/integration_test.dart --driver-port="$PORT" \
     --target="$target" \
     -d web-server --browser-name=chrome --headless --driver-port="$PORT" \
     ${CHROME_EXECUTABLE:+--chrome-binary="$CHROME_EXECUTABLE"} \
     --dart-define=APP_ENV=dev \
-    --dart-define=API_BASE_URL="$API_BASE_URL" || status=1
+    --dart-define=API_BASE_URL="$API_BASE_URL" "${fixture_args[@]}" || status=1
 done
 if [[ "$status" != 0 ]]; then
   cat "${GRAMTREE_E2E_LOG_FILE:-${TMPDIR:-/tmp}/gramtree_e2e_server_${GRAMTREE_E2E_PORT:-8000}.log}" || true

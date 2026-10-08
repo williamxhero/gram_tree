@@ -12,6 +12,7 @@ PID_FILE="${GRAMTREE_E2E_PID_FILE:-${TMPDIR:-/tmp}/gramtree_e2e_server_${PORT}.p
 LOG_FILE="${GRAMTREE_E2E_LOG_FILE:-${TMPDIR:-/tmp}/gramtree_e2e_server_${PORT}.log}"
 PG="${GRAMTREE_E2E_PG:-postgresql+psycopg://postgres:postgres@localhost:5432}"
 DATABASE_NAME="${GRAMTREE_E2E_DATABASE_NAME:-gramtree_e2e}"
+ASSISTANCE_DEFINES="${GRAMTREE_E2E_ASSISTANCE_DEFINES:-${TMPDIR:-/tmp}/gramtree_e2e_server_${PORT}.assistance.json}"
 
 stop() {
   if [[ -f "$PID_FILE" ]]; then
@@ -58,6 +59,15 @@ EOF
   echo $! >"$PID_FILE"
   for _ in $(seq 1 100); do
     if curl -fs "http://localhost:$PORT/v1/health" >/dev/null 2>&1; then
+      local defines_path="$ASSISTANCE_DEFINES"
+      if command -v cygpath >/dev/null 2>&1; then
+        defines_path="$(cygpath -m "$defines_path")"
+      fi
+      if ! uv run python ../tool/seed_comparison_assistance.py \
+        --api "http://localhost:$PORT" --out "$defines_path"; then
+        stop
+        return 1
+      fi
       echo "e2e server ready on :$PORT (log: $LOG_FILE)"
       return 0
     fi

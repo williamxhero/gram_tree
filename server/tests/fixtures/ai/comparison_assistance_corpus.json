@@ -1,0 +1,64 @@
+{
+  "recipe": {
+    "dish_name": "完整比较菜",
+    "snapshot": {
+      "servings": 2,
+      "ingredients": [
+        {"id": "sauce", "display_name": "生抽", "quantity": 15, "unit": "ml", "group": "调味"}
+      ],
+      "steps": [
+        {"id": "cook", "action": "炒", "instruction": "炒熟", "ingredient_ids": ["sauce"], "duration_seconds": 100, "cookware": "炒锅"}
+      ]
+    }
+  },
+  "after_steps": [
+    {"id": "a", "action": "炒", "instruction": "炒熟", "ingredient_ids": ["sauce"], "duration_seconds": 100, "cookware": "炒锅"},
+    {"id": "b", "action": "炒", "instruction": "炒熟", "ingredient_ids": ["sauce"], "duration_seconds": 100, "cookware": "炒锅"}
+  ],
+  "input": {
+    "versions": {
+      "before": {"dish_name": "完整比较菜", "servings": 2, "duration_seconds": 100},
+      "after": {"dish_name": "完整比较菜", "servings": 2, "duration_seconds": 200}
+    },
+    "uncertain_steps": {
+      "before": [
+        {"id": "cook", "action": "炒", "instruction": "炒熟", "ingredient_names": ["生抽"], "duration_seconds": 100, "unattended": false, "heat": null, "temperature_celsius": null, "cookware": "炒锅", "doneness": null, "depends_on": []}
+      ],
+      "after": [
+        {"id": "a", "action": "炒", "instruction": "炒熟", "ingredient_names": ["生抽"], "duration_seconds": 100, "unattended": false, "heat": null, "temperature_celsius": null, "cookware": "炒锅", "doneness": null, "depends_on": []},
+        {"id": "b", "action": "炒", "instruction": "炒熟", "ingredient_names": ["生抽"], "duration_seconds": 100, "unattended": false, "heat": null, "temperature_celsius": null, "cookware": "炒锅", "doneness": null, "depends_on": []}
+      ]
+    },
+    "differences": {
+      "conclusion": "general",
+      "ingredients": [],
+      "snapshot_fields": [],
+      "steps": [
+        {"kind": "removed", "field": "step", "grade": "general", "before_index": 1, "after_index": null},
+        {"kind": "added", "field": "step", "grade": "general", "before_index": null, "after_index": 1},
+        {"kind": "added", "field": "step", "grade": "general", "before_index": null, "after_index": 2}
+      ],
+      "methods": []
+    }
+  },
+  "outputs": {
+    "high_a": {
+      "alignments": [{"before_step_id": "cook", "after_step_id": "a", "confidence": 0.95}],
+      "interpretation": "两版都炒熟，后一版分成两步，更适合分批操作。"
+    },
+    "high_b": {
+      "alignments": [{"before_step_id": "cook", "after_step_id": "b", "confidence": 0.95}],
+      "interpretation": "两版都炒熟，后一版分成两步，更适合分批操作。"
+    },
+    "low": {
+      "alignments": [{"before_step_id": "cook", "after_step_id": "a", "confidence": 0.25}],
+      "interpretation": null
+    }
+  },
+  "scenarios": {
+    "HIGH_A": {"dish_name": "完整比较菜高把握", "output": "high_a"},
+    "HIGH_B": {"dish_name": "完整比较菜另一对法", "output": "high_b"},
+    "LOW": {"dish_name": "完整比较菜低把握", "output": "low"},
+    "UNAVAILABLE": {"dish_name": "完整比较菜暂缺解读", "output": null}
+  }
+}

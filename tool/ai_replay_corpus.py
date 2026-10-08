@@ -7,6 +7,7 @@ Record mode can refresh the same files using ONLY these synthetic requests.
 import argparse
 import hashlib
 import json
+from copy import deepcopy
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -88,6 +89,18 @@ def main() -> None:
             batch["valid"],
         )
     )
+    assistance = json.loads(
+        (ROOT / "server/tests/fixtures/ai/comparison_assistance_corpus.json").read_text("utf-8")
+    )
+    records.append(("comparison", assistance["input"], assistance["outputs"]["high_a"]))
+    for scenario in assistance["scenarios"].values():
+        # A missing replay is intentional for the unavailable browser flow.
+        if scenario["output"] is None:
+            continue
+        payload = deepcopy(assistance["input"])
+        for version in payload["versions"].values():
+            version["dish_name"] = scenario["dish_name"]
+        records.append(("comparison", payload, assistance["outputs"][scenario["output"]]))
     args.out.mkdir(parents=True, exist_ok=True)
     for capability, payload, output in records:
         canonical = json.dumps(
