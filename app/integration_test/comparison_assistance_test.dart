@@ -74,10 +74,14 @@ Future<void> _waitFor(WidgetTester tester, Finder target) async {
   await _settle(tester);
 }
 
-Future<void> _reveal(WidgetTester tester, Finder target) async {
+Future<void> _reveal(
+  WidgetTester tester,
+  Finder target, {
+  String contentKey = 'full-comparison-content',
+}) async {
   tester.testTextInput.hide();
   await tester.pump();
-  final body = find.byKey(const ValueKey('full-comparison-content'));
+  final body = find.byKey(ValueKey(contentKey));
   if (target.evaluate().isEmpty) {
     for (var i = 0; i < 20; i++) {
       await tester.drag(body, const Offset(0, 500));
@@ -112,6 +116,9 @@ void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
   testWidgets('回放辅助对齐与一般经验解读保留确定规则、原始字段及历史；低把握和不可用可降级', (tester) async {
     try {
+      tester.view.physicalSize = const Size(320, 640);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
       const email = String.fromEnvironment('E2E_ASSISTANCE_EMAIL');
       expect(
         email,
@@ -307,6 +314,17 @@ void main() {
         expect(find.text('一般改动'), findsOneWidget);
         _mark('${caseStep}_open_b');
         await _tap(tester, find.byKey(const ValueKey('full-compare-detail-b')));
+        await _waitFor(
+          tester,
+          find.byKey(const ValueKey('recipe-detail-content')),
+        );
+        // Detail evidence can push the saved conclusion below a phone's lazy
+        // viewport; mount it by scrolling before checking the persisted grade.
+        await _reveal(
+          tester,
+          find.byKey(const ValueKey('recipe-version-conclusion')),
+          contentKey: 'recipe-detail-content',
+        );
         await _waitFor(
           tester,
           find.byKey(const ValueKey('recipe-version-conclusion')),
