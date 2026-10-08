@@ -1,0 +1,10 @@
+{
+  "manual": {"change_note": "把鸡肉切块大小写清楚", "tags": ["步骤更清楚"]},
+  "confirmed": {"change_note": "将鸡肉标签改为 Poultry", "tags": ["标签调整"]},
+  "medical_note": {"change_note": "调整用量后可以降血糖", "tags": ["调整用量"]},
+  "medical_tag": {"change_note": "调整食材用量", "tags": ["降血糖"]},
+  "verified_note": {"change_note": "调整用量且已经实测验证成功", "tags": ["调整用量"]},
+  "verified_tag": {"change_note": "调整用量", "tags": ["已验证"]},
+  "invalid_structure": {"change_note": "调整用量", "tags": [false]},
+  "whole_recipe": {"change_note": "调整用量", "tags": [], "snapshot": {"servings": 100}}
+}

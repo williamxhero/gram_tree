@@ -558,7 +558,11 @@ def save(
     body.snapshot.cuisine = original.cuisine
     body.snapshot.design_rationale = original.rationale
     if confirmed_operations is None:
-        body.snapshot.text_source = original.recipe.snapshot.text_source
+        body.snapshot.text_source = (
+            original.recipe.snapshot.text_source
+            if body.snapshot.description == original.recipe.snapshot.description
+            else ValueSource(source="author_filled")
+        )
     body.snapshot.servings_source = (
         original.recipe.snapshot.servings_source
         if body.snapshot.servings == original.recipe.snapshot.servings
