@@ -5,6 +5,7 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../config/app_config.dart';
+import '../l10n/app_localizations.dart';
 import '../privacy/consent.dart';
 
 /// API availability, not merely a Wi-Fi interface being connected. No business
@@ -13,12 +14,16 @@ enum ApiReachability { consentRequired, checking, online, unavailable }
 
 extension ApiReachabilityMessage on ApiReachability {
   bool get canRequest => this == ApiReachability.online;
-  String get message => switch (this) {
-    ApiReachability.consentRequired => '需要先同意隐私政策',
-    ApiReachability.checking => '正在检查连接，在线功能需要联网',
-    ApiReachability.online => '服务已连接',
-    ApiReachability.unavailable => '需要联网：暂时连接不到服务，请检查网络；本机内容仍可使用。',
-  };
+  String get message {
+    // Transport errors have no BuildContext; zh is the app's supported locale.
+    final l10n = lookupAppLocalizations(const Locale('zh'));
+    return switch (this) {
+      ApiReachability.consentRequired => l10n.networkConsentRequired,
+      ApiReachability.checking => l10n.networkChecking,
+      ApiReachability.online => l10n.networkConnected,
+      ApiReachability.unavailable => l10n.networkUnavailable,
+    };
+  }
 }
 
 abstract interface class ApiReachabilityProbe {

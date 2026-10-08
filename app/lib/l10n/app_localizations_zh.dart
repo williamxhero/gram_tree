@@ -10,6 +10,24 @@ class AppLocalizationsZh extends AppLocalizations {
   AppLocalizationsZh([String locale = 'zh']) : super(locale);
 
   @override
+  String get networkConsentRequired => '需要先同意隐私政策';
+
+  @override
+  String get networkChecking => '正在检查连接，在线功能需要联网';
+
+  @override
+  String get networkConnected => '服务已连接';
+
+  @override
+  String get networkUnavailable => '需要联网：暂时连接不到服务，请检查网络；本机内容仍可使用。';
+
+  @override
+  String get snapshotCapacityRejected => '本机缓存空间不足，此版本未离线保存；菜单和正在做的内容已保留。';
+
+  @override
+  String get snapshotProtectedOverLimit => '受保护的菜谱超出缓存容量，内容已保留；请释放不再需要的保护。';
+
+  @override
   String get appTitle => '味谱';
 
   @override

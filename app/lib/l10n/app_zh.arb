@@ -1,5 +1,11 @@
 {
   "@@locale": "zh",
+  "networkConsentRequired": "需要先同意隐私政策",
+  "networkChecking": "正在检查连接，在线功能需要联网",
+  "networkConnected": "服务已连接",
+  "networkUnavailable": "需要联网：暂时连接不到服务，请检查网络；本机内容仍可使用。",
+  "snapshotCapacityRejected": "本机缓存空间不足，此版本未离线保存；菜单和正在做的内容已保留。",
+  "snapshotProtectedOverLimit": "受保护的菜谱超出缓存容量，内容已保留；请释放不再需要的保护。",
   "appTitle": "味谱",
   "@appTitle": {
     "description": "App name shown in the task switcher and web tab."

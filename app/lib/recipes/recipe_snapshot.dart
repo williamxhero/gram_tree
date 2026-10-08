@@ -1,7 +1,9 @@
 import 'dart:convert';
+import 'dart:ui' show Locale;
 
 import 'package:gramtree_api/gramtree_api.dart';
 
+import '../l10n/app_localizations.dart';
 import '../storage/local_store.dart';
 
 /// A frozen execution/view payload, not an editable recipe or a new API model.
@@ -372,11 +374,14 @@ class SnapshotCapacity {
   final int bytes;
   final int maxBytes;
   bool get overLimit => bytes > maxBytes;
-  String? get message => !accepted
-      ? '本机缓存空间不足，此版本未离线保存；菜单和正在做的内容已保留。'
-      : overLimit
-      ? '受保护的菜谱超出缓存容量，内容已保留；请释放不再需要的保护。'
-      : null;
+  String? get message {
+    final l10n = lookupAppLocalizations(const Locale('zh'));
+    return !accepted
+        ? l10n.snapshotCapacityRejected
+        : overLimit
+        ? l10n.snapshotProtectedOverLimit
+        : null;
+  }
 }
 
 enum SnapshotProtectionKind { menu, cooking, pendingWrite }

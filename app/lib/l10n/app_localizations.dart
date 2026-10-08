@@ -94,6 +94,42 @@ abstract class AppLocalizations {
   /// A list of this localizations delegate's supported locales.
   static const List<Locale> supportedLocales = <Locale>[Locale('zh')];
 
+  /// No description provided for @networkConsentRequired.
+  ///
+  /// In zh, this message translates to:
+  /// **'需要先同意隐私政策'**
+  String get networkConsentRequired;
+
+  /// No description provided for @networkChecking.
+  ///
+  /// In zh, this message translates to:
+  /// **'正在检查连接，在线功能需要联网'**
+  String get networkChecking;
+
+  /// No description provided for @networkConnected.
+  ///
+  /// In zh, this message translates to:
+  /// **'服务已连接'**
+  String get networkConnected;
+
+  /// No description provided for @networkUnavailable.
+  ///
+  /// In zh, this message translates to:
+  /// **'需要联网：暂时连接不到服务，请检查网络；本机内容仍可使用。'**
+  String get networkUnavailable;
+
+  /// No description provided for @snapshotCapacityRejected.
+  ///
+  /// In zh, this message translates to:
+  /// **'本机缓存空间不足，此版本未离线保存；菜单和正在做的内容已保留。'**
+  String get snapshotCapacityRejected;
+
+  /// No description provided for @snapshotProtectedOverLimit.
+  ///
+  /// In zh, this message translates to:
+  /// **'受保护的菜谱超出缓存容量，内容已保留；请释放不再需要的保护。'**
+  String get snapshotProtectedOverLimit;
+
   /// App name shown in the task switcher and web tab.
   ///
   /// In zh, this message translates to:
