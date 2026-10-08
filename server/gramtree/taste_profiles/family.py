@@ -115,6 +115,11 @@ def write_member(
         },
         "source": "manual",
     }
+    if row is None:
+        # A syntactically valid replacement key can encrypt a new value while
+        # being unable to read existing private data. Authenticate existing owner
+        # state first rather than silently creating a mixed-key family.
+        allergies.read_sensitive(session, profile, settings)
     old = read_member(profile, row, settings) if row else {}
     if old == new and row is not None:
         return row

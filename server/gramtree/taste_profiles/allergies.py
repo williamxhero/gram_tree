@@ -174,7 +174,17 @@ def read_sensitive(session: Session, profile: TasteProfile, settings: Settings) 
     require_grant(profile)
     _cipher(settings)  # fail closed even for first save/empty state
     row = session.get(OwnerAllergies, profile.owner_id)
-    return decrypt(settings, profile.owner_id, "current", row.ciphertext) if row else EMPTY
+    if row:
+        return decrypt(settings, profile.owner_id, "current", row.ciphertext)
+    # Empty owner allergies do not mean an empty sensitive store: members use
+    # the same key. Authenticate one current payload as a bounded key sentinel
+    # so a replacement key cannot create a separate unreadable allergy island.
+    member = session.scalar(
+        select(FamilyMember).where(FamilyMember.owner_id == profile.owner_id).limit(1)
+    )
+    if member:
+        decrypt(settings, profile.owner_id, f"member:{member.id}:current", member.ciphertext)
+    return EMPTY
 
 
 def mutate_sensitive(
