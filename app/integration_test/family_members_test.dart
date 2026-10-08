@@ -8,8 +8,42 @@ import 'package:gram_tree/main.dart' as app;
 import 'package:gramtree_api/gramtree_api.dart';
 import 'package:integration_test/integration_test.dart';
 
+enum _FamilyStep {
+  login,
+  ordinaryTaste,
+  childConsentDisclosure,
+  childConsentRefusal,
+  ordinaryTasteAfterRefusal,
+  unauthorizedWrite,
+  childConsentAcceptance,
+  ageBands,
+  avoidances,
+  manualAllergies,
+  firstMemberSave,
+  firstMemberDetail,
+  firstMemberEdit,
+  privateHistory,
+  forbiddenFields,
+  accountIsolation,
+  whyPanel,
+  secondMember,
+  memberDeletion,
+  memberDeletionVerification,
+  ownerAllergies,
+  withdrawal,
+  withdrawalVerification,
+  regrant,
+  regrantVerification,
+  complete,
+}
+
 void main() {
-  IntegrationTestWidgetsFlutterBinding.ensureInitialized();
+  final binding = IntegrationTestWidgetsFlutterBinding.ensureInitialized();
+  void markStep(_FamilyStep step) {
+    // Fixed milestones only: never put private values or raw errors in reportData.
+    binding.reportData = {'e2e_step': step.name};
+  }
+
   final server = Dio(
     BaseOptions(baseUrl: AppConfig.fromEnvironment().apiBaseUrl),
   );
@@ -132,6 +166,7 @@ void main() {
     // Never collect page text, raw responses, errors or screenshots as diagnostics.
     tester.testTextInput.register();
     addTearDown(tester.testTextInput.unregister);
+    markStep(_FamilyStep.login);
     await app.main();
     await waitFor(tester, key('consent-agree'));
     await tester.tap(key('consent-agree'));
@@ -150,25 +185,55 @@ void main() {
     await tester.tap(find.text('我的'));
     await tester.pumpAndSettle();
     await openProfile(tester);
+    markStep(_FamilyStep.ordinaryTaste);
     await tester.tap(key('taste-level-salty'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('淡一点').last);
     await waitFor(tester, find.text('咸 · 淡一点'));
 
+    markStep(_FamilyStep.childConsentDisclosure);
     await reveal(tester, key('family-add'));
     await tester.tap(key('family-add'));
     await waitFor(tester, key('family-consent-refuse'));
-    expect(find.text('家庭成员信息单独同意'), findsOneWidget);
-    expect(find.textContaining('不满十四周岁'), findsOneWidget);
-    expect(find.textContaining('不收集真实姓名、生日或照片'), findsOneWidget);
-    expect(find.textContaining('加密'), findsOneWidget);
-    expect(find.textContaining('不代表同意外部 AI'), findsOneWidget);
+    final consentDialog = find.byType(AlertDialog).last;
+    expect(
+      find.descendant(of: consentDialog, matching: find.text('家庭成员信息单独同意')),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(
+        of: consentDialog,
+        matching: find.textContaining('不满十四周岁'),
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(
+        of: consentDialog,
+        matching: find.textContaining('不收集真实姓名、生日或照片'),
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(of: consentDialog, matching: find.textContaining('加密')),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(
+        of: consentDialog,
+        matching: find.textContaining('不代表同意外部 AI'),
+      ),
+      findsOneWidget,
+    );
+    markStep(_FamilyStep.childConsentRefusal);
     await tap(tester, key('family-consent-refuse'));
     expect(key('family-editor'), findsNothing);
     expect(keyed('family-view-'), findsNothing);
+    markStep(_FamilyStep.ordinaryTasteAfterRefusal);
     await reveal(tester, key('taste-level-salty'), -300);
     expect(find.text('咸 · 淡一点'), findsOneWidget);
 
+    markStep(_FamilyStep.unauthorizedWrite);
     final owner = await loginApi(email);
     final refused = (await familyApi.listFamilyMembers(headers: owner)).data!;
     expect(refused.consentId, isNull);
@@ -188,10 +253,12 @@ void main() {
 
     await reveal(tester, key('family-add'));
     await tester.tap(key('family-add'));
+    markStep(_FamilyStep.childConsentAcceptance);
     await waitFor(tester, key('family-consent-agree'));
     await tap(tester, key('family-consent-agree'));
     await waitFor(tester, key('family-nickname'));
     await tester.enterText(key('family-nickname'), '孩子');
+    markStep(_FamilyStep.ageBands);
     const ages = ['1 岁以下', '1～3 岁', '3～6 岁', '6～12 岁', '12～18 岁', '成人', '老人'];
     for (final age in ages) {
       await tap(tester, key('family-age-band'));
@@ -208,6 +275,7 @@ void main() {
     await tap(tester, find.text('1～3 岁').last);
     await tap(tester, key('family-flavor-spicy'));
     await tap(tester, find.text('不吃辣').last);
+    markStep(_FamilyStep.avoidances);
     await tap(tester, key('family-avoidance-add'));
     await waitFor(tester, key('taste-preference-category'));
     await tap(tester, key('taste-preference-category'));
@@ -222,6 +290,7 @@ void main() {
     await tap(tester, keyed('taste-search-').first);
     await tap(tester, key('taste-preference-save'));
     await waitFor(tester, key('family-nickname'));
+    markStep(_FamilyStep.manualAllergies);
     await tap(tester, key('family-allergy-category-花生'));
     await tap(tester, key('family-allergy-add'));
     await waitFor(tester, key('taste-ingredient-search'));
@@ -231,6 +300,7 @@ void main() {
     await tap(tester, keyed('taste-search-').first);
     await tap(tester, key('taste-preference-save'));
     await waitFor(tester, key('family-nickname'));
+    markStep(_FamilyStep.firstMemberSave);
     await tap(tester, key('family-save'));
     await waitFor(tester, find.text('孩子 · 1～3 岁'));
     await reopen(tester);
@@ -268,6 +338,7 @@ void main() {
     );
     expect(firstSaved['source'] == 'manual', isTrue);
 
+    markStep(_FamilyStep.firstMemberDetail);
     await tap(tester, key('family-view-$firstId'));
     await waitFor(tester, key('family-detail-close'));
     await waitFor(
@@ -284,6 +355,7 @@ void main() {
     expect(detailText('手动过敏（不会自动推断） · 测试酱油'), findsOneWidget);
     expect(detailText('手动过敏（不会自动推断） · 花生'), findsOneWidget);
     await tap(tester, key('family-detail-close'));
+    markStep(_FamilyStep.firstMemberEdit);
     await tap(tester, key('family-edit-$firstId'));
     await waitFor(tester, key('family-nickname'));
     expect(find.text('家庭成员信息单独同意'), findsNothing);
@@ -325,6 +397,7 @@ void main() {
     expect(edited['age_band'] == '6_to_12', isTrue);
     expect((edited['flavors'] as Map)['spicy'] == 0.75, isTrue);
     expect((edited['avoidances'] as List).length, 3);
+    markStep(_FamilyStep.privateHistory);
     final firstHistory = (await familyApi.listFamilyMemberChanges(
       headers: owner,
     )).data!;
@@ -366,6 +439,7 @@ void main() {
       'nickname': '孩子',
       'age_band': '6_to_12',
     };
+    markStep(_FamilyStep.forbiddenFields);
     // The generated write model cannot encode forbidden extra fields.
     for (final extra in [
       {'real_name': '不应收集'},
@@ -389,6 +463,7 @@ void main() {
           jsonEncode(edited),
       isTrue,
     );
+    markStep(_FamilyStep.accountIsolation);
     final other = await loginApi(
       'family-other-${DateTime.now().microsecondsSinceEpoch}@example.com',
     );
@@ -401,6 +476,7 @@ void main() {
       404,
     );
 
+    markStep(_FamilyStep.whyPanel);
     final why = key('family-why-${change.id}');
     await waitFor(tester, why);
     await reveal(tester, why);
@@ -447,6 +523,7 @@ void main() {
     await tester.tapAt(const Offset(5, 5));
     await tester.pumpAndSettle();
 
+    markStep(_FamilyStep.secondMember);
     await reveal(tester, key('family-add'), -300);
     await tester.tap(key('family-add'));
     await waitFor(tester, key('family-nickname'));
@@ -495,10 +572,12 @@ void main() {
         .map((entry) => entry.id)
         .toList();
     expect(secondHistoryIds, hasLength(1));
+    markStep(_FamilyStep.memberDeletion);
     await tap(tester, key('family-delete-$firstId'));
     await waitFor(tester, key('family-delete-confirm'));
     await tap(tester, key('family-delete-confirm'));
     await waitFor(tester, find.textContaining('家庭成员已删除（不保留身份）'));
+    markStep(_FamilyStep.memberDeletionVerification);
     await reopen(tester);
     await waitFor(tester, key('family-view-$secondId'));
     expect(key('family-view-$firstId'), findsNothing);
@@ -563,6 +642,7 @@ void main() {
     expect(detailText('手动过敏（不会自动推断） · 蛋类'), findsOneWidget);
     await tap(tester, key('family-detail-close'));
 
+    markStep(_FamilyStep.ownerAllergies);
     final allergyEdit = key('allergies-edit');
     await reveal(tester, allergyEdit, -300);
     await tester.tap(allergyEdit);
@@ -593,10 +673,12 @@ void main() {
     await tester.pumpAndSettle();
     await reveal(tester, find.text('设置'));
     await tester.tap(find.text('设置'));
+    markStep(_FamilyStep.withdrawal);
     await waitFor(tester, key('sensitive-withdraw'));
     await tap(tester, key('sensitive-withdraw'));
     await tap(tester, key('sensitive-withdraw-confirm'));
     await waitFor(tester, find.text('敏感同意已撤回，过敏、家庭成员及私密历史已删除'));
+    markStep(_FamilyStep.withdrawalVerification);
     await tester.tap(find.byType(BackButton).last);
     await tester.pumpAndSettle();
     await openProfile(tester);
@@ -652,6 +734,7 @@ void main() {
     await waitFor(tester, find.text('没有家庭成员私密修改历史'));
     expect(keyed('family-view-'), findsNothing);
     expect(keyed('family-why-'), findsNothing);
+    markStep(_FamilyStep.regrant);
     await tester.tap(key('family-add'));
     await waitFor(tester, key('family-consent-agree'));
     await tap(tester, key('family-consent-agree'));
@@ -673,6 +756,7 @@ void main() {
       ),
       findsOneWidget,
     );
+    markStep(_FamilyStep.regrantVerification);
     await tap(tester, key('family-editor-cancel'));
     await waitFor(tester, key('taste-profile-content').hitTestable());
     await reopen(tester);
@@ -729,5 +813,6 @@ void main() {
       ordinaryHistoryIds,
     );
     expect(tester.takeException(), isNull);
+    markStep(_FamilyStep.complete);
   });
 }

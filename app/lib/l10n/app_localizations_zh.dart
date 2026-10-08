@@ -28,6 +28,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get familySaveUnconfirmed => '保存尚未确认，请联网后重试';
 
   @override
+  String get familyCreateUnconfirmed => '创建尚未确认；请关闭并重新打开家庭成员列表，确认是否已创建后再操作。';
+
+  @override
   String get familyDeleteUnconfirmed => '删除尚未确认，信息已从本机内存清除；请重试';
 
   @override
@@ -93,6 +96,9 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get familyStandard => '标准（不单独记录）';
+
+  @override
+  String get familySavedCoefficient => '已保存系数';
 
   @override
   String get familyAvoidances => '忌口';

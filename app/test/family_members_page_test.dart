@@ -115,6 +115,217 @@ Future<void> loginFamilyAccount(
 
 void main() {
   testWidgets(
+    'committed create with lost response blocks blind POST retry and exposes created row on reopen',
+    (tester) async {
+      final server = FakeServer();
+      installProfile(server, () => profileFixture());
+      FamilyMemberOut? created;
+      server.on(
+        'GET',
+        familyPath,
+        (_) => (
+          200,
+          familyFixture(
+            consentId: familyConsentId,
+            members: created == null ? [] : [created!],
+          ).toJson(),
+        ),
+      );
+      server.on('POST', familyPath, (request) {
+        final body = request.body as Map;
+        created = memberFixture(
+          nickname: body['nickname'] as String,
+          age: body['age_band'] as String,
+        );
+        return FakeServer.error(503, 'unavailable', 'private-create-error');
+      });
+      server.on(
+        'GET',
+        '$familyPath/$familyMemberId',
+        (_) => (200, created!.toJson()),
+      );
+      await pumpApp(tester, env: TestEnv.signedIn(server: server));
+      await openFamily(tester);
+      await tapVisible(tester, find.byKey(const ValueKey('family-add')));
+      await tapVisible(
+        tester,
+        find.byKey(const ValueKey('family-consent-agree')),
+      );
+      await tester.enterText(
+        find.byKey(const ValueKey('family-nickname')),
+        '已创建私密称呼',
+      );
+      await tester.pumpAndSettle();
+      await chooseFamily(tester, 'family-age-band', '成人');
+      await tapVisible(tester, find.byKey(const ValueKey('family-save')));
+      expect(
+        tester
+            .widget<FilledButton>(find.byKey(const ValueKey('family-save')))
+            .onPressed,
+        isNull,
+      );
+      expect(find.text('创建尚未确认；请关闭并重新打开家庭成员列表，确认是否已创建后再操作。'), findsOneWidget);
+      await tester.tap(find.byKey(const ValueKey('family-save')));
+      await tester.pumpAndSettle();
+      expect(server.calls('POST', familyPath), hasLength(1));
+      expect(find.textContaining('private-create-error'), findsNothing);
+      await tapVisible(
+        tester,
+        find.byKey(const ValueKey('family-editor-cancel')),
+      );
+      await goBack(tester);
+      await openFamily(tester);
+      expect(find.text('已创建私密称呼 · 成人'), findsOneWidget);
+      await tapVisible(
+        tester,
+        find.byKey(const ValueKey('family-view-$familyMemberId')),
+      );
+      expect(find.text('家庭成员档案'), findsOneWidget);
+      expect(find.textContaining('已创建私密称呼'), findsWidgets);
+      expect(server.calls('POST', familyPath), hasLength(1));
+      expect(tester.takeException(), isNull);
+    },
+  );
+  testWidgets(
+    'editing a saved coefficient outside current scale preserves it until explicitly changed',
+    (tester) async {
+      final server = FakeServer();
+      installProfile(server, () => profileFixture());
+      var member = memberFixture(flavors: const {'salty': 0.6, 'spicy': 0});
+      server.on(
+        'GET',
+        familyPath,
+        (_) => (
+          200,
+          familyFixture(consentId: familyConsentId, members: [member]).toJson(),
+        ),
+      );
+      server.on(
+        'GET',
+        '$familyPath/$familyMemberId',
+        (_) => (200, member.toJson()),
+      );
+      server.on('PUT', '$familyPath/$familyMemberId', (request) {
+        final body = request.body as Map;
+        expect(body['flavors'], {'salty': 0.6, 'spicy': 0});
+        expect(body['nickname'], '新称呼');
+        member = member.copyWith(nickname: body['nickname'] as String);
+        return (200, member.toJson());
+      });
+      await pumpApp(tester, env: TestEnv.signedIn(server: server));
+      await openFamily(tester);
+      await tapVisible(
+        tester,
+        find.byKey(const ValueKey('family-edit-$familyMemberId')),
+      );
+      expect(tester.takeException(), isNull);
+      expect(find.text('已保存系数 · 0.6'), findsOneWidget);
+      await tester.enterText(
+        find.byKey(const ValueKey('family-nickname')),
+        '新称呼',
+      );
+      await tester.pumpAndSettle();
+      await tapVisible(tester, find.byKey(const ValueKey('family-save')));
+      expect(server.calls('PUT', '$familyPath/$familyMemberId'), hasLength(1));
+      await tapVisible(
+        tester,
+        find.byKey(const ValueKey('family-edit-$familyMemberId')),
+      );
+      expect(find.text('已保存系数 · 0.6'), findsOneWidget);
+      await tapVisible(
+        tester,
+        find.byKey(const ValueKey('family-editor-cancel')),
+      );
+      expect(tester.takeException(), isNull);
+    },
+  );
+  testWidgets(
+    'two unconfirmed deletions stay ID-only and retryable after leaving and reopening',
+    (tester) async {
+      final server = FakeServer();
+      installProfile(server, () => profileFixture());
+      const secondId = '88888888-8888-4888-8888-888888888888';
+      final members = <FamilyMemberOut>[
+        memberFixture(),
+        memberFixture(nickname: '另一私密称呼').copyWith(id: secondId),
+      ];
+      final attempts = <String, int>{};
+      server.on(
+        'GET',
+        familyPath,
+        (_) => (
+          200,
+          familyFixture(consentId: familyConsentId, members: members).toJson(),
+        ),
+      );
+      server.on(
+        'GET',
+        '$familyPath/changes',
+        (_) => (
+          200,
+          PageTasteProfileChangeOut(
+            items: members.map(privateFamilyHistory).toList(),
+          ).toJson(),
+        ),
+      );
+      for (final id in [familyMemberId, secondId]) {
+        server.on('DELETE', '$familyPath/$id', (_) {
+          attempts[id] = (attempts[id] ?? 0) + 1;
+          if (attempts[id] == 1) {
+            return FakeServer.error(500, 'unavailable', 'private-error');
+          }
+          members.removeWhere((member) => member.id == id);
+          return (204, null);
+        });
+      }
+      final env = TestEnv.signedIn(server: server);
+      await pumpApp(tester, env: env);
+      await openFamily(tester);
+      for (final id in [familyMemberId, secondId]) {
+        await tapVisible(tester, find.byKey(ValueKey('family-delete-$id')));
+        await tapVisible(
+          tester,
+          find.byKey(const ValueKey('family-delete-confirm')),
+        );
+      }
+      expect(members, hasLength(2));
+      await goBack(tester);
+      await openFamily(tester);
+      expect(find.textContaining('孩子私密称呼'), findsNothing);
+      expect(find.textContaining('另一私密称呼'), findsNothing);
+      expect(find.text('没有家庭成员私密修改历史'), findsOneWidget);
+      expect(find.text('删除尚未确认，信息已从本机内存清除；请重试'), findsOneWidget);
+      expect(
+        find.byKey(const ValueKey('family-delete-retry-$familyMemberId')),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(const ValueKey('family-delete-retry-$secondId')),
+        findsOneWidget,
+      );
+      await tapVisible(
+        tester,
+        find.byKey(const ValueKey('family-delete-retry-$familyMemberId')),
+      );
+      expect(members, hasLength(1));
+      await goBack(tester);
+      await openFamily(tester);
+      expect(
+        find.byKey(const ValueKey('family-delete-retry-$familyMemberId')),
+        findsNothing,
+      );
+      await tapVisible(
+        tester,
+        find.byKey(const ValueKey('family-delete-retry-$secondId')),
+      );
+      expect(members, isEmpty);
+      expect(find.byKey(const ValueKey('family-delete-retry')), findsNothing);
+      expect(attempts, {familyMemberId: 2, secondId: 2});
+      expect(jsonEncode(env.local.values), isNot(contains('私密称呼')));
+      expect(tester.takeException(), isNull);
+    },
+  );
+  testWidgets(
     'member deletion retains owner allergies and refetches shared authorization before owner save',
     (tester) async {
       final server = FakeServer();

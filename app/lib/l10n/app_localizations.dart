@@ -130,6 +130,12 @@ abstract class AppLocalizations {
   /// **'保存尚未确认，请联网后重试'**
   String get familySaveUnconfirmed;
 
+  /// No description provided for @familyCreateUnconfirmed.
+  ///
+  /// In zh, this message translates to:
+  /// **'创建尚未确认；请关闭并重新打开家庭成员列表，确认是否已创建后再操作。'**
+  String get familyCreateUnconfirmed;
+
   /// No description provided for @familyDeleteUnconfirmed.
   ///
   /// In zh, this message translates to:
@@ -261,6 +267,12 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'标准（不单独记录）'**
   String get familyStandard;
+
+  /// No description provided for @familySavedCoefficient.
+  ///
+  /// In zh, this message translates to:
+  /// **'已保存系数'**
+  String get familySavedCoefficient;
 
   /// No description provided for @familyAvoidances.
   ///

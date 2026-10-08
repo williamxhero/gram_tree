@@ -6,27 +6,45 @@ import '../../auth/auth_controller.dart';
 import '../../auth/session.dart';
 import 'allergies_data.dart';
 
+typedef FamilyMemoryState = ({
+  int epoch,
+  Set<String> deleted,
+  Set<String> pending,
+});
+
 /// ID-only tombstones prevent pre-deletion replies from restoring private values.
+/// Pending IDs survive page recreation, but never account/consent generations.
 /// A separate generation also clears open editors without hiding owner allergies.
-class FamilyMemory extends Notifier<({int epoch, Set<String> deleted})> {
+class FamilyMemory extends Notifier<FamilyMemoryState> {
   int _generation = 0;
   @override
-  ({int epoch, Set<String> deleted}) build() {
+  FamilyMemoryState build() {
     ref.watch(sensitiveMemoryProvider);
-    return (epoch: ++_generation, deleted: <String>{});
+    return (epoch: ++_generation, deleted: <String>{}, pending: <String>{});
   }
 
-  void evict(String id) =>
-      state = (epoch: ++_generation, deleted: {...state.deleted, id});
+  void evict(String id) => state = (
+    epoch: ++_generation,
+    deleted: {...state.deleted, id},
+    pending: {...state.pending, id},
+  );
 
-  void discardSnapshot() =>
-      state = (epoch: ++_generation, deleted: state.deleted);
+  void confirmDeletion(String id) => state = (
+    epoch: state.epoch,
+    deleted: state.deleted,
+    pending: {...state.pending}..remove(id),
+  );
+
+  void discardSnapshot() => state = (
+    epoch: ++_generation,
+    deleted: state.deleted,
+    pending: state.pending,
+  );
 }
 
-final familyMemoryProvider =
-    NotifierProvider<FamilyMemory, ({int epoch, Set<String> deleted})>(
-      FamilyMemory.new,
-    );
+final familyMemoryProvider = NotifierProvider<FamilyMemory, FamilyMemoryState>(
+  FamilyMemory.new,
+);
 
 final familyMembersProvider = FutureProvider.autoDispose<FamilyMembersOut?>((
   ref,

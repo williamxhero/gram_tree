@@ -115,8 +115,6 @@ class FamilyMembersSection extends ConsumerStatefulWidget {
 
 class _FamilyMembersSectionState extends ConsumerState<FamilyMembersSection> {
   bool _busy = false;
-  String? _deleteRetry;
-  String? _message;
 
   Future<void> _edit([String? id]) async {
     final scope = _FamilyScope.capture(ref);
@@ -243,11 +241,7 @@ class _FamilyMembersSectionState extends ConsumerState<FamilyMembersSection> {
       ref.read(familyMemoryProvider.notifier).evict(id);
     }
     final scope = _FamilyScope.capture(ref);
-    setState(() {
-      _busy = true;
-      _message = null;
-      _deleteRetry = id;
-    });
+    setState(() => _busy = true);
     try {
       final store = ref.read(sessionStoreProvider);
       try {
@@ -269,11 +263,10 @@ class _FamilyMembersSectionState extends ConsumerState<FamilyMembersSection> {
       ref.invalidate(familyMembersProvider);
       ref.invalidate(familyChangesProvider);
       ref.invalidate(tasteProfileProvider);
-      setState(() => _deleteRetry = null);
+      ref.read(familyMemoryProvider.notifier).confirmDeletion(id);
     } catch (_) {
-      if (mounted && scope.current(ref)) {
-        setState(() => _message = l.familyDeleteUnconfirmed);
-      }
+      // Retain the ID-only retry until server deletion is confirmed, including
+      // failed requests followed by leaving/reopening this section.
     } finally {
       if (mounted && ref.read(authProvider).value?.id == scope.account) {
         setState(() => _busy = false);
@@ -287,14 +280,9 @@ class _FamilyMembersSectionState extends ConsumerState<FamilyMembersSection> {
     final state = ref.watch(familyMembersProvider);
     final changes = ref.watch(familyChangesProvider);
     final scale = ref.watch(tasteProfileProvider).value?.scale;
+    final pending = ref.watch(familyMemoryProvider).pending;
     ref.listen(sensitiveMemoryProvider, (_, _) {
-      if (mounted) {
-        setState(() {
-          _deleteRetry = null;
-          _message = null;
-          _busy = false;
-        });
-      }
+      if (mounted) setState(() => _busy = false);
     });
     return ComponentCard(
       key: const ValueKey('family-section'),
@@ -352,15 +340,21 @@ class _FamilyMembersSectionState extends ConsumerState<FamilyMembersSection> {
             onPressed: _busy ? null : () => _edit(),
             child: Text(l.familyAdd),
           ),
-          if (_message != null) Text(_message!),
-          if (_deleteRetry != null && _message != null)
-            TextButton(
+          if (pending.isNotEmpty) ...[
+            Text(l.familyDeleteUnconfirmed),
+            Column(
               key: const ValueKey('family-delete-retry'),
-              onPressed: _busy
-                  ? null
-                  : () => _delete(_deleteRetry!, retry: true),
-              child: Text(l.familyDeleteRetry),
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                for (final id in pending)
+                  TextButton(
+                    key: ValueKey('family-delete-retry-$id'),
+                    onPressed: _busy ? null : () => _delete(id, retry: true),
+                    child: Text(l.familyDeleteRetry),
+                  ),
+              ],
             ),
+          ],
           Text(l.familyHistory),
           changes.when(
             loading: () => const LinearProgressIndicator(),
@@ -537,6 +531,7 @@ class _FamilyEditorState extends ConsumerState<_FamilyEditor> {
   final _ingredients = <String, String>{};
   bool _initialized = false;
   bool _busy = false;
+  bool _createUnconfirmed = false;
   String? _error;
   bool get _current => mounted && widget.scope.current(ref);
 
@@ -582,7 +577,7 @@ class _FamilyEditorState extends ConsumerState<_FamilyEditor> {
   }
 
   Future<void> _save() async {
-    if (!_current || _busy) return;
+    if (!_current || _busy || _createUnconfirmed) return;
     final l = AppLocalizations.of(context);
     if (_nickname.text.trim().isEmpty || _age == null) {
       setState(() => _error = l.familyNicknameRequired);
@@ -637,7 +632,20 @@ class _FamilyEditorState extends ConsumerState<_FamilyEditor> {
       }
       Navigator.pop(context);
     } catch (_) {
-      if (_current) setState(() => _error = l.familySaveUnconfirmed);
+      if (_current) {
+        if (widget.memberId == null) {
+          // A failed response does not prove creation failed. Require the user
+          // to inspect refreshed server state instead of blindly POSTing again.
+          ref.invalidate(familyMembersProvider);
+          ref.invalidate(familyChangesProvider);
+          setState(() {
+            _createUnconfirmed = true;
+            _error = l.familyCreateUnconfirmed;
+          });
+        } else {
+          setState(() => _error = l.familySaveUnconfirmed);
+        }
+      }
     } finally {
       if (_current) setState(() => _busy = false);
     }
@@ -729,6 +737,21 @@ class _FamilyEditorState extends ConsumerState<_FamilyEditor> {
                             value: _flavors[key] ?? profile.scale.default_,
                             isExpanded: true,
                             items: [
+                              // A valid saved sparse value can outlive the scale
+                              // that offered it. Preserve it unless explicitly
+                              // changed rather than snapping to a nearby step.
+                              if (_flavors.containsKey(key) &&
+                                  !(key == 'spicy' && _flavors[key] == 0) &&
+                                  !profile.scale.levels.any(
+                                    (level) =>
+                                        level.coefficient == _flavors[key],
+                                  ))
+                                DropdownMenuItem(
+                                  value: _flavors[key],
+                                  child: Text(
+                                    '${l.familySavedCoefficient} · ${_flavors[key]}',
+                                  ),
+                                ),
                               if (key == 'spicy')
                                 DropdownMenuItem(
                                   value: 0,
@@ -840,7 +863,9 @@ class _FamilyEditorState extends ConsumerState<_FamilyEditor> {
         ),
         FilledButton(
           key: const ValueKey('family-save'),
-          onPressed: _busy || !_initialized ? null : _save,
+          onPressed: _busy || !_initialized || _createUnconfirmed
+              ? null
+              : _save,
           child: Text(l.save),
         ),
       ],
