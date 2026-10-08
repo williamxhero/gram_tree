@@ -11,6 +11,8 @@ abstract class _$RecipeDetailCWProxy {
 
   RecipeDetail createdAt(String createdAt);
 
+  RecipeDetail defaultServings(int? defaultServings);
+
   RecipeDetail dish(DishOut dish);
 
   RecipeDetail id(String id);
@@ -18,6 +20,8 @@ abstract class _$RecipeDetailCWProxy {
   RecipeDetail rootRecipeId(String? rootRecipeId);
 
   RecipeDetail sourceVersionId(String? sourceVersionId);
+
+  RecipeDetail tasteProfileVersion(int? tasteProfileVersion);
 
   RecipeDetail updatedAt(String updatedAt);
 
@@ -34,10 +38,12 @@ abstract class _$RecipeDetailCWProxy {
   RecipeDetail call({
     RecipeAuthor author,
     String createdAt,
+    int? defaultServings,
     DishOut dish,
     String id,
     String? rootRecipeId,
     String? sourceVersionId,
+    int? tasteProfileVersion,
     String updatedAt,
     RecipeVersionOut version,
     RecipeDetailVisibilityEnum visibility,
@@ -57,6 +63,10 @@ class _$RecipeDetailCWProxyImpl implements _$RecipeDetailCWProxy {
   RecipeDetail createdAt(String createdAt) => this(createdAt: createdAt);
 
   @override
+  RecipeDetail defaultServings(int? defaultServings) =>
+      this(defaultServings: defaultServings);
+
+  @override
   RecipeDetail dish(DishOut dish) => this(dish: dish);
 
   @override
@@ -69,6 +79,10 @@ class _$RecipeDetailCWProxyImpl implements _$RecipeDetailCWProxy {
   @override
   RecipeDetail sourceVersionId(String? sourceVersionId) =>
       this(sourceVersionId: sourceVersionId);
+
+  @override
+  RecipeDetail tasteProfileVersion(int? tasteProfileVersion) =>
+      this(tasteProfileVersion: tasteProfileVersion);
 
   @override
   RecipeDetail updatedAt(String updatedAt) => this(updatedAt: updatedAt);
@@ -90,10 +104,12 @@ class _$RecipeDetailCWProxyImpl implements _$RecipeDetailCWProxy {
   RecipeDetail call({
     Object? author = const $CopyWithPlaceholder(),
     Object? createdAt = const $CopyWithPlaceholder(),
+    Object? defaultServings = const $CopyWithPlaceholder(),
     Object? dish = const $CopyWithPlaceholder(),
     Object? id = const $CopyWithPlaceholder(),
     Object? rootRecipeId = const $CopyWithPlaceholder(),
     Object? sourceVersionId = const $CopyWithPlaceholder(),
+    Object? tasteProfileVersion = const $CopyWithPlaceholder(),
     Object? updatedAt = const $CopyWithPlaceholder(),
     Object? version = const $CopyWithPlaceholder(),
     Object? visibility = const $CopyWithPlaceholder(),
@@ -107,6 +123,10 @@ class _$RecipeDetailCWProxyImpl implements _$RecipeDetailCWProxy {
           ? _value.createdAt
           // ignore: cast_nullable_to_non_nullable
           : createdAt as String,
+      defaultServings: defaultServings == const $CopyWithPlaceholder()
+          ? _value.defaultServings
+          // ignore: cast_nullable_to_non_nullable
+          : defaultServings as int?,
       dish: dish == const $CopyWithPlaceholder()
           ? _value.dish
           // ignore: cast_nullable_to_non_nullable
@@ -123,6 +143,10 @@ class _$RecipeDetailCWProxyImpl implements _$RecipeDetailCWProxy {
           ? _value.sourceVersionId
           // ignore: cast_nullable_to_non_nullable
           : sourceVersionId as String?,
+      tasteProfileVersion: tasteProfileVersion == const $CopyWithPlaceholder()
+          ? _value.tasteProfileVersion
+          // ignore: cast_nullable_to_non_nullable
+          : tasteProfileVersion as int?,
       updatedAt: updatedAt == const $CopyWithPlaceholder()
           ? _value.updatedAt
           // ignore: cast_nullable_to_non_nullable
@@ -172,6 +196,10 @@ RecipeDetail _$RecipeDetailFromJson(Map<String, dynamic> json) =>
             (v) => RecipeAuthor.fromJson(v as Map<String, dynamic>),
           ),
           createdAt: $checkedConvert('created_at', (v) => v as String),
+          defaultServings: $checkedConvert(
+            'default_servings',
+            (v) => (v as num?)?.toInt(),
+          ),
           dish: $checkedConvert(
             'dish',
             (v) => DishOut.fromJson(v as Map<String, dynamic>),
@@ -181,6 +209,10 @@ RecipeDetail _$RecipeDetailFromJson(Map<String, dynamic> json) =>
           sourceVersionId: $checkedConvert(
             'source_version_id',
             (v) => v as String?,
+          ),
+          tasteProfileVersion: $checkedConvert(
+            'taste_profile_version',
+            (v) => (v as num?)?.toInt(),
           ),
           updatedAt: $checkedConvert('updated_at', (v) => v as String),
           version: $checkedConvert(
@@ -196,8 +228,10 @@ RecipeDetail _$RecipeDetailFromJson(Map<String, dynamic> json) =>
       },
       fieldKeyMap: const {
         'createdAt': 'created_at',
+        'defaultServings': 'default_servings',
         'rootRecipeId': 'root_recipe_id',
         'sourceVersionId': 'source_version_id',
+        'tasteProfileVersion': 'taste_profile_version',
         'updatedAt': 'updated_at',
       },
     );
@@ -206,10 +240,12 @@ Map<String, dynamic> _$RecipeDetailToJson(RecipeDetail instance) =>
     <String, dynamic>{
       'author': instance.author.toJson(),
       'created_at': instance.createdAt,
+      'default_servings': ?instance.defaultServings,
       'dish': instance.dish.toJson(),
       'id': instance.id,
       'root_recipe_id': ?instance.rootRecipeId,
       'source_version_id': ?instance.sourceVersionId,
+      'taste_profile_version': ?instance.tasteProfileVersion,
       'updated_at': instance.updatedAt,
       'version': instance.version.toJson(),
       'visibility': _$RecipeDetailVisibilityEnumEnumMap[instance.visibility]!,

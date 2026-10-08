@@ -48,6 +48,11 @@ lib/src/model/compose_request.dart
 lib/src/model/consent_record_input.dart
 lib/src/model/consent_record_output.dart
 lib/src/model/consent_upload.dart
+lib/src/model/cooking_constraints.dart
+lib/src/model/cooking_constraints_out.dart
+lib/src/model/cooking_equipment.dart
+lib/src/model/cooking_meal_template.dart
+lib/src/model/cooking_meal_time.dart
 lib/src/model/count_unit.dart
 lib/src/model/count_units_attribute.dart
 lib/src/model/deletion_out.dart
@@ -78,6 +83,8 @@ lib/src/model/health_response.dart
 lib/src/model/identity_out.dart
 lib/src/model/ingredient_attributes.dart
 lib/src/model/ingredient_detail.dart
+lib/src/model/ingredient_preference.dart
+lib/src/model/ingredient_preference_out.dart
 lib/src/model/local_cuisine_out.dart
 lib/src/model/measure_display_out.dart
 lib/src/model/measure_display_request.dart

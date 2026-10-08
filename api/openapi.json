@@ -857,6 +857,218 @@
         "title": "ConsentUpload",
         "type": "object"
       },
+      "CookingConstraints": {
+        "additionalProperties": false,
+        "properties": {
+          "equipment": {
+            "items": {
+              "pattern": "^[a-z][a-z0-9_]{0,39}$",
+              "type": "string"
+            },
+            "maxItems": 100,
+            "title": "Equipment",
+            "type": "array"
+          },
+          "household_servings": {
+            "anyOf": [
+              {
+                "maximum": 1000.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Household Servings"
+          },
+          "meal_templates": {
+            "items": {
+              "$ref": "#/components/schemas/CookingMealTemplate"
+            },
+            "maxItems": 6,
+            "title": "Meal Templates",
+            "type": "array"
+          },
+          "meal_times": {
+            "items": {
+              "$ref": "#/components/schemas/CookingMealTime"
+            },
+            "maxItems": 6,
+            "title": "Meal Times",
+            "type": "array"
+          }
+        },
+        "title": "CookingConstraints",
+        "type": "object"
+      },
+      "CookingConstraintsOut": {
+        "properties": {
+          "constraints": {
+            "$ref": "#/components/schemas/CookingConstraints"
+          },
+          "dish_types": {
+            "items": {
+              "enum": [
+                "meat",
+                "vegetable",
+                "soup",
+                "staple",
+                "other"
+              ],
+              "type": "string"
+            },
+            "title": "Dish Types",
+            "type": "array"
+          },
+          "equipment_vocabulary": {
+            "items": {
+              "$ref": "#/components/schemas/CookingEquipment"
+            },
+            "title": "Equipment Vocabulary",
+            "type": "array"
+          },
+          "profile_version": {
+            "title": "Profile Version",
+            "type": "integer"
+          },
+          "servings_max": {
+            "title": "Servings Max",
+            "type": "integer"
+          },
+          "servings_min": {
+            "title": "Servings Min",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "profile_version",
+          "constraints",
+          "equipment_vocabulary",
+          "dish_types",
+          "servings_min",
+          "servings_max"
+        ],
+        "title": "CookingConstraintsOut",
+        "type": "object"
+      },
+      "CookingEquipment": {
+        "additionalProperties": false,
+        "properties": {
+          "aliases": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 20,
+            "title": "Aliases",
+            "type": "array"
+          },
+          "id": {
+            "pattern": "^[a-z][a-z0-9_]{0,39}$",
+            "title": "Id",
+            "type": "string"
+          },
+          "label": {
+            "maxLength": 40,
+            "minLength": 1,
+            "title": "Label",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "label"
+        ],
+        "title": "CookingEquipment",
+        "type": "object"
+      },
+      "CookingMealTemplate": {
+        "additionalProperties": false,
+        "properties": {
+          "composition": {
+            "items": {
+              "enum": [
+                "meat",
+                "vegetable",
+                "soup",
+                "staple",
+                "other"
+              ],
+              "type": "string"
+            },
+            "maxItems": 20,
+            "minItems": 1,
+            "title": "Composition",
+            "type": "array"
+          },
+          "day_type": {
+            "enum": [
+              "weekday",
+              "weekend"
+            ],
+            "title": "Day Type",
+            "type": "string"
+          },
+          "dish_count": {
+            "maximum": 20.0,
+            "minimum": 1.0,
+            "title": "Dish Count",
+            "type": "integer"
+          },
+          "meal": {
+            "enum": [
+              "breakfast",
+              "lunch",
+              "dinner"
+            ],
+            "title": "Meal",
+            "type": "string"
+          }
+        },
+        "required": [
+          "day_type",
+          "meal",
+          "dish_count",
+          "composition"
+        ],
+        "title": "CookingMealTemplate",
+        "type": "object"
+      },
+      "CookingMealTime": {
+        "additionalProperties": false,
+        "properties": {
+          "day_type": {
+            "enum": [
+              "weekday",
+              "weekend"
+            ],
+            "title": "Day Type",
+            "type": "string"
+          },
+          "meal": {
+            "enum": [
+              "breakfast",
+              "lunch",
+              "dinner"
+            ],
+            "title": "Meal",
+            "type": "string"
+          },
+          "minutes": {
+            "maximum": 1440.0,
+            "minimum": 1.0,
+            "title": "Minutes",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "day_type",
+          "meal",
+          "minutes"
+        ],
+        "title": "CookingMealTime",
+        "type": "object"
+      },
       "CountUnit": {
         "additionalProperties": false,
         "properties": {
@@ -1953,6 +2165,99 @@
           "attributes"
         ],
         "title": "IngredientDetail",
+        "type": "object"
+      },
+      "IngredientPreference": {
+        "additionalProperties": false,
+        "properties": {
+          "category": {
+            "anyOf": [
+              {
+                "maxLength": 20,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Category"
+          },
+          "ingredient_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ingredient Id"
+          },
+          "preference": {
+            "enum": [
+              "liked",
+              "disliked",
+              "avoided"
+            ],
+            "title": "Preference",
+            "type": "string"
+          }
+        },
+        "required": [
+          "preference"
+        ],
+        "title": "IngredientPreference",
+        "type": "object"
+      },
+      "IngredientPreferenceOut": {
+        "additionalProperties": false,
+        "properties": {
+          "category": {
+            "anyOf": [
+              {
+                "maxLength": 20,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Category"
+          },
+          "ingredient_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ingredient Id"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "preference": {
+            "enum": [
+              "liked",
+              "disliked",
+              "avoided"
+            ],
+            "title": "Preference",
+            "type": "string"
+          }
+        },
+        "required": [
+          "preference",
+          "name"
+        ],
+        "title": "IngredientPreferenceOut",
         "type": "object"
       },
       "LocalCuisineOut": {
@@ -3518,6 +3823,17 @@
             "title": "Created At",
             "type": "string"
           },
+          "default_servings": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Default Servings"
+          },
           "dish": {
             "$ref": "#/components/schemas/DishOut"
           },
@@ -3549,6 +3865,17 @@
               }
             ],
             "title": "Source Version Id"
+          },
+          "taste_profile_version": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Taste Profile Version"
           },
           "updated_at": {
             "title": "Updated At",
@@ -6086,6 +6413,20 @@
             "title": "Id",
             "type": "string"
           },
+          "ingredient_categories": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Ingredient Categories",
+            "type": "array"
+          },
+          "ingredient_preferences": {
+            "items": {
+              "$ref": "#/components/schemas/IngredientPreferenceOut"
+            },
+            "title": "Ingredient Preferences",
+            "type": "array"
+          },
           "local_cuisines": {
             "items": {
               "$ref": "#/components/schemas/LocalCuisineOut"
@@ -6106,7 +6447,9 @@
           "version",
           "flavors",
           "scale",
-          "local_cuisines"
+          "local_cuisines",
+          "ingredient_preferences",
+          "ingredient_categories"
         ],
         "title": "TasteProfileOut",
         "type": "object"
@@ -6115,29 +6458,48 @@
         "additionalProperties": false,
         "properties": {
           "flavors": {
-            "additionalProperties": {
-              "type": "number"
-            },
-            "maxProperties": 7,
-            "minProperties": 1,
-            "propertyNames": {
-              "enum": [
-                "salty",
-                "sweet",
-                "sour",
-                "spicy",
-                "numbing",
-                "umami",
-                "oily"
-              ]
-            },
-            "title": "Flavors",
-            "type": "object"
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "type": "number"
+                },
+                "maxProperties": 7,
+                "minProperties": 1,
+                "propertyNames": {
+                  "enum": [
+                    "salty",
+                    "sweet",
+                    "sour",
+                    "spicy",
+                    "numbing",
+                    "umami",
+                    "oily"
+                  ]
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Flavors"
+          },
+          "ingredient_preferences": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/IngredientPreference"
+                },
+                "maxItems": 100,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ingredient Preferences"
           }
         },
-        "required": [
-          "flavors"
-        ],
         "title": "TasteProfilePatch",
         "type": "object"
       },
@@ -9386,6 +9748,147 @@
           }
         ],
         "summary": "Get Taste Profile Change",
+        "tags": [
+          "taste-profile"
+        ]
+      }
+    },
+    "/v1/me/taste-profile/cooking-constraints": {
+      "get": {
+        "operationId": "get_cooking_constraints",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CookingConstraintsOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "参数错误"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "服务端错误"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Cooking Constraints",
+        "tags": [
+          "taste-profile"
+        ]
+      },
+      "put": {
+        "description": "Replace all cooking settings; an empty object clears them. Omitted fields use empty defaults.",
+        "operationId": "replace_cooking_constraints",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CookingConstraints"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CookingConstraintsOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "参数错误"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "服务端错误"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Replace Cooking Constraints",
         "tags": [
           "taste-profile"
         ]

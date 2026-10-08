@@ -22,6 +22,11 @@ import 'package:gramtree_api/src/model/compose_request.dart';
 import 'package:gramtree_api/src/model/consent_record_input.dart';
 import 'package:gramtree_api/src/model/consent_record_output.dart';
 import 'package:gramtree_api/src/model/consent_upload.dart';
+import 'package:gramtree_api/src/model/cooking_constraints.dart';
+import 'package:gramtree_api/src/model/cooking_constraints_out.dart';
+import 'package:gramtree_api/src/model/cooking_equipment.dart';
+import 'package:gramtree_api/src/model/cooking_meal_template.dart';
+import 'package:gramtree_api/src/model/cooking_meal_time.dart';
 import 'package:gramtree_api/src/model/count_unit.dart';
 import 'package:gramtree_api/src/model/count_units_attribute.dart';
 import 'package:gramtree_api/src/model/deletion_out.dart';
@@ -52,6 +57,8 @@ import 'package:gramtree_api/src/model/health_response.dart';
 import 'package:gramtree_api/src/model/identity_out.dart';
 import 'package:gramtree_api/src/model/ingredient_attributes.dart';
 import 'package:gramtree_api/src/model/ingredient_detail.dart';
+import 'package:gramtree_api/src/model/ingredient_preference.dart';
+import 'package:gramtree_api/src/model/ingredient_preference_out.dart';
 import 'package:gramtree_api/src/model/local_cuisine_out.dart';
 import 'package:gramtree_api/src/model/measure_display_out.dart';
 import 'package:gramtree_api/src/model/measure_display_request.dart';
@@ -241,6 +248,21 @@ ReturnType deserialize<ReturnType, BaseType>(
     case 'ConsentUpload':
       return ConsentUpload.fromJson(value as Map<String, dynamic>)
           as ReturnType;
+    case 'CookingConstraints':
+      return CookingConstraints.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'CookingConstraintsOut':
+      return CookingConstraintsOut.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'CookingEquipment':
+      return CookingEquipment.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'CookingMealTemplate':
+      return CookingMealTemplate.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'CookingMealTime':
+      return CookingMealTime.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
     case 'CountUnit':
       return CountUnit.fromJson(value as Map<String, dynamic>) as ReturnType;
     case 'CountUnitsAttribute':
@@ -322,6 +344,12 @@ ReturnType deserialize<ReturnType, BaseType>(
           as ReturnType;
     case 'IngredientDetail':
       return IngredientDetail.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'IngredientPreference':
+      return IngredientPreference.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'IngredientPreferenceOut':
+      return IngredientPreferenceOut.fromJson(value as Map<String, dynamic>)
           as ReturnType;
     case 'LocalCuisineOut':
       return LocalCuisineOut.fromJson(value as Map<String, dynamic>)
