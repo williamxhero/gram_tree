@@ -78,6 +78,16 @@ def main() -> None:
                 quantification["output"],
             )
         )
+    batch = json.loads(
+        (ROOT / "server/tests/fixtures/ai/batch_advice_corpus.json").read_text("utf-8")
+    )
+    records.append(
+        (
+            "batch_advice",
+            {"snapshot": batch["snapshot"], "target_servings": batch["target_servings"]},
+            batch["valid"],
+        )
+    )
     args.out.mkdir(parents=True, exist_ok=True)
     for capability, payload, output in records:
         canonical = json.dumps(

@@ -12,6 +12,45 @@ class AIStatus(BaseModel):
     reason: str | None = None
 
 
+class BatchAdviceInput(BaseModel):
+    model_config = ConfigDict(extra="forbid", strict=True)
+
+    target_servings: int = Field(ge=1, le=1000)
+
+
+class BatchStepAdvice(BaseModel):
+    model_config = ConfigDict(extra="forbid", strict=True)
+
+    step_id: str = Field(min_length=1, max_length=100, pattern=r"\S")
+    suggested_duration_seconds: int = Field(ge=1, le=86400)
+    batch_count: int = Field(ge=1, le=100)
+    batch_guidance: str = Field(min_length=1, max_length=1000, pattern=r"\S")
+    doneness: str = Field(min_length=1, max_length=1000, pattern=r"\S")
+    basis: str = Field(min_length=1, max_length=1000, pattern=r"\S")
+    risk: str = Field(min_length=1, max_length=1000, pattern=r"\S")
+    confidence: float = Field(ge=0, le=1, allow_inf_nan=False)
+    source: Literal["ai_estimated"]
+
+
+class BatchAdvice(BaseModel):
+    model_config = ConfigDict(extra="forbid", strict=True)
+
+    steps: list[BatchStepAdvice] = Field(min_length=1, max_length=200)
+    basis: str = Field(min_length=1, max_length=2000, pattern=r"\S")
+    risk: str = Field(min_length=1, max_length=2000, pattern=r"\S")
+
+
+class RecipeBatchAdviceOut(BaseModel):
+    recipe_id: IdV4
+    version_id: IdV4
+    original_servings: int
+    target_servings: int
+    eligible: bool
+    status: AIStatus
+    advice: BatchAdvice | None = None
+    error: str | None = None
+
+
 class OneLineInput(BaseModel):
     text: str = Field(min_length=1, max_length=1000, pattern=r"\S")
 

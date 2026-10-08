@@ -46,6 +46,16 @@ def _validate_open_record_card(params: Mapping[str, Any]) -> bool:
     return _require_non_empty_string(params, "cooking_record_id")
 
 
+def _validate_request_batch_advice(params: Mapping[str, Any]) -> bool:
+    target = params.get("target_servings")
+    return (
+        _require_non_empty_string(params, "recipe_id")
+        and _require_non_empty_string(params, "version_id")
+        and type(target) is int
+        and target > 0
+    )
+
+
 def _validate_call_operation(params: Mapping[str, Any]) -> bool:
     return _require_non_empty_string(params, "operation")
 
@@ -128,6 +138,7 @@ ITEMS: tuple[ActionSpec, ...] = (
     ActionSpec("open_record_card", _validate_open_record_card),
     ActionSpec("call_operation", _validate_call_operation),
     ActionSpec("recipe_operation", _validate_recipe_operation),
+    ActionSpec("request_batch_advice", _validate_request_batch_advice),
     ActionSpec("save_to_taste", _accept_any_params),
     ActionSpec("apply_change", _accept_any_params),
     ActionSpec("skip_this_time", _validate_source_feedback),

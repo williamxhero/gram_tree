@@ -9,6 +9,7 @@ import 'package:gramtree_api/gramtree_api.dart'
 
 import '../api/api_client.dart';
 import '../events/event_recorder.dart';
+import '../recipes/batch_advice.dart';
 import 'registered_pages.dart';
 import 'recipe_operations.dart';
 import 'source_overrides.dart';
@@ -261,6 +262,12 @@ final defaultIntentRegistry = IntentRegistry(const [
     defaultLabel: '菜谱操作',
     validateParams: validateRecipeOperation,
     handler: _handleRecipeOperation,
+  ),
+  IntentSpec(
+    name: 'request_batch_advice',
+    defaultLabel: 'AI 建议时间',
+    validateParams: validateBatchAdviceParams,
+    handler: handleBatchAdvice,
   ),
   IntentSpec(
     name: 'open_page',

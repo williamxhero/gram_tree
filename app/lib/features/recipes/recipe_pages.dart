@@ -19,6 +19,7 @@ import '../../recipes/recipe_draft.dart';
 import '../../recipes/recipe_repository.dart';
 import '../../recipes/mold_conversion.dart';
 import '../../recipes/serving_conversion.dart';
+import 'batch_advice_section.dart';
 import 'personal_measures_page.dart';
 import 'recipe_photo_panel.dart';
 import 'reproducibility_card.dart';
@@ -2085,6 +2086,7 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
   String? _selectedMeasureId;
   RecipeIngredientDisplayOut? _displayContract;
   String? _displayContractKey;
+  int _loadSerial = 0;
 
   @override
   void initState() {
@@ -2092,17 +2094,34 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
     unawaited(_load());
   }
 
+  @override
+  void didUpdateWidget(covariant RecipeDetailPage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.recipeId != widget.recipeId ||
+        oldWidget.versionId != widget.versionId) {
+      _detail = null;
+      _displayContract = null;
+      _displayContractKey = null;
+      _scaleMode = _RecipeScaleMode.servings;
+      unawaited(_load());
+    }
+  }
+
   Future<void> _load() async {
+    final serial = ++_loadSerial;
     if (mounted) setState(() => _error = null);
     try {
       final repo = ref.read(recipeRepositoryProvider);
-      _detail = widget.versionId == null
+      final detail = widget.versionId == null
           ? await repo.get(widget.recipeId)
           : await repo.getVersion(widget.recipeId, widget.versionId!);
-      _targetServings = _detail!.version.snapshot.servings;
-      _targetMold = _detail!.version.snapshot.baseMold;
-      if (mounted) setState(() {});
-      unawaited(_loadDisplayMetadata(_detail!));
+      if (!mounted || serial != _loadSerial) return;
+      setState(() {
+        _detail = detail;
+        _targetServings = detail.version.snapshot.servings;
+        _targetMold = detail.version.snapshot.baseMold;
+      });
+      unawaited(_loadDisplayMetadata(detail));
     } catch (error, stack) {
       developer.log(
         'recipe detail load failed',
@@ -2110,7 +2129,7 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
         error: error,
         stackTrace: stack,
       );
-      if (mounted) {
+      if (mounted && serial == _loadSerial) {
         final code = ApiFailure.from(error).code;
         setState(
           () => _error = code == 'not_found' ? 'not_found' : 'load_error',
@@ -2143,7 +2162,7 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
     } catch (_) {
       // Detail pages remain useful offline with base g/ml values and cached data.
     }
-    if (!mounted) return;
+    if (!mounted || _detail?.version.id != detail.version.id) return;
     setState(() {
       _densities = densities;
       _measures = measures;
@@ -2585,6 +2604,16 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
               ingredientNames: ingredientNames,
               onTargetChanged: (value) => setState(() => _targetMold = value),
               onReset: () => setState(() => _targetMold = snapshot.baseMold),
+            ),
+          if (_scaleMode == _RecipeScaleMode.servings &&
+              targetServings >=
+                  snapshot.servings * conversionConfig.batchMultiplier)
+            BatchAdviceSection(
+              key: ValueKey('batch-${detail.version.id}-$targetServings'),
+              recipeId: widget.recipeId,
+              versionId: detail.version.id,
+              targetServings: targetServings,
+              snapshot: snapshot,
             ),
           const SizedBox(height: 8),
           _DisplayModeControl(
