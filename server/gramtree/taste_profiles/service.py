@@ -18,11 +18,15 @@ from gramtree.accounts.models import User, UserStatus
 from gramtree.core.errors import ApiError
 from gramtree.core.time import utcnow
 from gramtree.events.service import record_taste_profile_changed
+from gramtree.ingredients.importer import CATEGORIES
+from gramtree.ingredients.router import _resolve as resolve_ingredient
 from gramtree.runtime_config import service as config
 from gramtree.taste_profiles.models import TasteProfile, TasteProfileChange
 from gramtree.taste_profiles.schemas import (
     FLAVOR_KEYS,
     FlavorKey,
+    IngredientPreference,
+    IngredientPreferenceOut,
     LocalCuisineOut,
     TasteFlavorOut,
     TasteProfileOut,
@@ -125,6 +129,49 @@ def mutate_flavors(
     return rows
 
 
+def mutate_ingredient_preferences(
+    session: Session, profile: TasteProfile, values: list[IngredientPreference]
+) -> list[TasteProfileChange]:
+    by_target: dict[str, dict[str, Any]] = {}
+    for value in values:
+        if value.ingredient_id is not None:
+            ingredient = resolve_ingredient(session, value.ingredient_id)
+            if ingredient is None:
+                raise ApiError(422, "invalid_ingredient_reference", "食材不存在，请重新搜索选择")
+            item = IngredientPreferenceOut(
+                ingredient_id=ingredient.id,
+                preference=value.preference,
+                name=ingredient.standard_name,
+            )
+        else:
+            if value.category not in CATEGORIES:
+                raise ApiError(422, "invalid_ingredient_category", "食材分类无效，请重新选择")
+            item = IngredientPreferenceOut(
+                category=value.category, preference=value.preference, name=value.category
+            )
+        key = f"ingredient:{item.ingredient_id}" if item.ingredient_id else f"category:{item.category}"
+        if key in by_target and by_target[key]["preference"] != item.preference:
+            raise ApiError(422, "conflicting_ingredient_preference", "同一食材或分类只能有一种偏好")
+        by_target[key] = item.model_dump(mode="json")
+    # Preferences are a set of explicit targets, not an ordered list. Reordering
+    # or repeated identical selections must not create a new profile version.
+    items = [by_target[key] for key in sorted(by_target)]
+    rows = record_changes(
+        session,
+        profile,
+        [
+            FieldChange(
+                "ingredient_preferences",
+                {"items": profile.ingredient_preferences},
+                {"items": items},
+            )
+        ],
+    )
+    if rows:
+        profile.ingredient_preferences = items
+    return rows
+
+
 def profile_out(profile: TasteProfile, scale: TasteScale) -> TasteProfileOut:
     flavors = {}
     for key, value in profile.flavors.items():
@@ -142,4 +189,8 @@ def profile_out(profile: TasteProfile, scale: TasteScale) -> TasteProfileOut:
         flavors=flavors,
         scale=scale,
         local_cuisines=[LocalCuisineOut.model_validate(row) for row in profile.local_cuisines],
+        ingredient_preferences=[
+            IngredientPreferenceOut.model_validate(row) for row in profile.ingredient_preferences
+        ],
+        ingredient_categories=list(CATEGORIES),
     )

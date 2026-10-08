@@ -38,9 +38,35 @@ class TasteScale(BaseModel):
         return self
 
 
+class IngredientPreference(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    ingredient_id: IdV4 | None = None
+    category: str | None = Field(None, min_length=1, max_length=20)
+    preference: Literal["liked", "disliked", "avoided"]
+
+    @model_validator(mode="after")
+    def one_target(self) -> "IngredientPreference":
+        if (self.ingredient_id is None) == (self.category is None):
+            raise ValueError("请选择一个标准食材或食材分类")
+        return self
+
+
+class IngredientPreferenceOut(IngredientPreference):
+    name: str
+
+
 class TasteProfilePatch(BaseModel):
     model_config = ConfigDict(extra="forbid")
-    flavors: dict[FlavorKey, FiniteNumber] = Field(min_length=1, max_length=7)
+    flavors: dict[FlavorKey, FiniteNumber] | None = Field(None, min_length=1, max_length=7)
+    ingredient_preferences: list[IngredientPreference] | None = Field(None, max_length=100)
+
+    @model_validator(mode="after")
+    def explicit_changes(self) -> "TasteProfilePatch":
+        if not self.model_fields_set or any(
+            getattr(self, key) is None for key in self.model_fields_set
+        ):
+            raise ValueError("请提交要修改的字段；清除食材偏好请提交空列表")
+        return self
 
 
 class TasteFlavorOut(BaseModel):
@@ -62,6 +88,8 @@ class TasteProfileOut(BaseModel):
     flavors: dict[str, TasteFlavorOut]
     scale: TasteScale
     local_cuisines: list[LocalCuisineOut]
+    ingredient_preferences: list[IngredientPreferenceOut]
+    ingredient_categories: list[str]
 
 
 class TasteProfileChangeOut(BaseModel):

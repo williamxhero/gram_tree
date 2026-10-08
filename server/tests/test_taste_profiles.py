@@ -3,6 +3,7 @@
 import json
 import uuid
 from concurrent.futures import ThreadPoolExecutor
+from pathlib import Path
 
 from fastapi.testclient import TestClient
 
@@ -14,6 +15,67 @@ from tests.test_account_deletion import _purge, _reauth_email
 
 PATH = "/v1/me/taste-profile"
 KEYS = {"salty", "sweet", "sour", "spicy", "numbing", "umami", "oily"}
+
+
+def test_ingredient_and_category_preferences_persist_with_shared_history(api: Api) -> None:
+    assert cli(["ingredients", "import", str(Path(__file__).parent / "data" / "ingredients")]) == 0
+    owner = bearer(api.login("ingredient-preferences@example.com"))
+    before = api.client.get(PATH, headers=owner).json()
+    assert before["ingredient_preferences"] == []
+    assert "蔬菜" in before["ingredient_categories"]
+    ingredient = api.client.post("/v1/ingredients/search", json={"query": "测试酱油"}).json()[
+        "items"
+    ][0]
+    choices = [
+        {"ingredient_id": ingredient["id"], "preference": "liked"},
+        {"category": "蔬菜", "preference": "avoided"},
+    ]
+    saved = api.client.patch(PATH, json={"ingredient_preferences": choices}, headers=owner)
+    assert saved.status_code == 200, saved.text
+    current = saved.json()
+    assert current["version"] == 2
+    assert current["flavors"] == before["flavors"]
+    assert {item["name"] for item in current["ingredient_preferences"]} == {"测试酱油", "蔬菜"}
+    assert api.client.get(PATH, headers=owner).json() == current
+    history = api.client.get(PATH + "/changes", headers=owner).json()["items"]
+    assert len(history) == 1
+    assert history[0]["field"] == "ingredient_preferences"
+    assert history[0]["old_value"] == {"items": []}
+    assert history[0]["new_value"] == {"items": current["ingredient_preferences"]}
+    assert history[0]["version"] == 2
+    assert history[0]["reason"] == "你手动修改"
+    assert history[0]["source"] == "manual"
+
+
+def test_preferences_deduplicate_conflicts_partial_updates_and_clear(api: Api) -> None:
+    owner = bearer(api.login("preferences-semantics@example.com"))
+    liked = {"category": "蔬菜", "preference": "liked"}
+    avoided = {"category": "肉禽", "preference": "avoided"}
+    patch = lambda items: api.client.patch(PATH, json={"ingredient_preferences": items}, headers=owner)
+    saved = patch([liked, avoided, liked])
+    assert saved.status_code == 200, saved.text
+    assert len(saved.json()["ingredient_preferences"]) == 2
+    assert saved.json()["version"] == 2
+    assert patch([avoided, liked]).json() == saved.json()
+    conflict = patch([liked, {"category": "蔬菜", "preference": "disliked"}])
+    assert conflict.status_code == 422, conflict.text
+    assert conflict.json()["error"]["code"] == "conflicting_ingredient_preference"
+    assert api.client.get(PATH, headers=owner).json() == saved.json()
+    edited = patch([{**liked, "preference": "disliked"}, avoided]).json()
+    assert edited["version"] == 3
+    assert len(edited["ingredient_preferences"]) == 2
+    flavors = api.client.patch(PATH, json={"flavors": {"salty": 0.75}}, headers=owner).json()
+    assert flavors["version"] == 4
+    assert flavors["ingredient_preferences"] == edited["ingredient_preferences"]
+    assert api.client.post(PATH + "/reset", headers=owner).json()["ingredient_preferences"] == edited["ingredient_preferences"]
+    cleared = patch([]).json()
+    assert cleared["version"] == 6
+    assert cleared["ingredient_preferences"] == []
+    assert patch([]).json() == cleared
+    history = api.client.get(PATH + "/changes", headers=owner).json()["items"]
+    assert len(history) == 5
+    assert history[0]["old_value"] == {"items": edited["ingredient_preferences"]}
+    assert history[0]["new_value"] == {"items": []}
 
 
 def test_defaults_manual_change_history_and_reset(api: Api) -> None:

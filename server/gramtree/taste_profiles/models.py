@@ -24,6 +24,8 @@ class TasteProfile(Base):
     version: Mapped[int] = mapped_column(default=1)
     flavors: Mapped[dict[str, Any]] = mapped_column(JSONB)
     local_cuisines: Mapped[list[dict[str, Any]]] = mapped_column(JSONB, default=list)
+    ingredient_preferences: Mapped[list[dict[str, Any]]] = mapped_column(JSONB, default=list)
+    cooking_constraints: Mapped[dict[str, Any]] = mapped_column(JSONB, default=dict)
     created_at: Mapped[datetime] = mapped_column(default=utcnow)
     updated_at: Mapped[datetime] = mapped_column(default=utcnow)
 
