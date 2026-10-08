@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="zh-CN">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>味谱 · 大份量时间建议样稿</title>
+<style>
+:root{color-scheme:light;--paper:#F7F4EE;--card:#FFFDF9;--ink:#1B1813;--line:#D8D0C3;--muted:#6B6256;--changed:#B0441E}
+body.dark{color-scheme:dark;--paper:#171510;--card:#211E18;--ink:#F0EBE2;--line:#494238;--muted:#B6ADA0;--changed:#E39774}
+*{box-sizing:border-box}body{margin:0;background:var(--paper);color:var(--ink);font-family:'Noto Sans SC',sans-serif;line-height:1.65}main{max-width:680px;margin:32px auto;padding:20px}h1,h2{font-family:'Noto Serif SC',serif}section,dialog{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:20px;margin:18px 0}button,select{font:inherit;border:1px solid var(--line);border-radius:8px;padding:8px 14px;cursor:pointer}button{background:var(--ink);color:var(--paper)}button.secondary{background:transparent;color:var(--ink)}.muted{color:var(--muted)}.number{font-family:'DM Mono',monospace}.changed{color:var(--changed)}[hidden]{display:none}dialog{max-width:520px;margin:auto;color:var(--ink)}
+</style>
+<main>
+<button class="secondary" onclick="document.body.classList.toggle('dark')">浅色 / 深色</button>
+<h1>番茄炖鸡</h1><p class="muted">已选版本 · 原配方 2 人份</p>
+<label>这次做 <select id="servings" onchange="reset()"><option value="2">2 人份</option><option value="3">3 人份</option><option value="4" selected>4 人份</option><option value="6">6 人份</option></select></label>
+<section><h2>原步骤不变</h2><p>腌制 <span class="number">20 分钟</span> · 炖煮 <span class="number">15 分钟</span></p><p class="changed">食材用量按份数换算，时间和温度不直接乘倍数。</p><p class="muted">大份量请分批烹饪，以实际成熟判断为准。</p></section>
+<section id="entry"><h2>大份量怎么安排时间？</h2><p>可以主动请求 AI 建议。建议只显示，不修改菜谱或保存新版本。</p><button onclick="request()">AI 建议时间</button></section>
+<section id="advice" hidden><h2>AI 建议 · 只供参考</h2><p id="target"></p><h3>步骤 2 · 炖煮</h3><p>建议 <span class="number">18–22 分钟</span>；分两批煎鸡肉，再合并炖煮。</p><p><strong>成熟判断：</strong>检查鸡肉中心熟透，时间只是参考。</p><p class="muted">风险 / 不确定性：锅的容量、鸡肉大小和火力会影响时长。</p><button class="secondary" onclick="document.querySelector('dialog').showModal()">AI 估算 · 为什么</button><details><summary>明细</summary><p>原时长 15 分钟仍保留。腌制时间和温度不按人数倍增。</p></details></section>
+<section id="failure" hidden><h2>AI 暂不可用</h2><p>额度用尽或模型失败时显示服务端原因。原用量换算和原步骤仍可查看。</p></section>
+<button class="secondary" onclick="document.querySelector('#advice').hidden=true;document.querySelector('#failure').hidden=false">演示 AI 失败 / 额度用尽</button>
+<p class="muted">样稿：数值仅用于演示。份数 / 版本切换会清除旧建议；入口阈值由服务端换算结果决定。</p>
+</main>
+<dialog><h2>为什么</h2><p>来源：AI 估算。依据是所选不可变版本、原份数和目标份数；没有做过验证，不保证固定时间即可熟透。</p><p>建议只读，不改变原配方、版本、操作或标签。</p><button onclick="this.closest('dialog').close()">关闭</button></dialog>
+<script>
+function reset(){document.querySelector('#entry').hidden=Number(document.querySelector('#servings').value)<4;document.querySelector('#advice').hidden=true;document.querySelector('#failure').hidden=true}
+function request(){document.querySelector('#target').textContent='当前版本 · '+document.querySelector('#servings').value+' 人份';document.querySelector('#advice').hidden=false;document.querySelector('#failure').hidden=true}
+</script>
+</html>
