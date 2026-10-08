@@ -39,7 +39,7 @@ def main() -> None:
     # The browser journey saves the synthetic draft after confirming 320 g.
     # Use the public snapshot contract's defaults, never a production recording.
     from gramtree.ai.answers import cooking_context
-    from gramtree.recipes.schemas import RecipeSnapshot
+    from gramtree.recipes.schemas import RecipeSnapshot, ValueSource
 
     snapshot = RecipeSnapshot.model_validate(corpus["valid"]["recipe"]["snapshot"])
     snapshot.ingredients[0].quantity = 320
@@ -143,6 +143,12 @@ def main() -> None:
     saved_modification_snapshot = normalize_sources(draft.recipe.snapshot)
     editor_modification_snapshot = saved_modification_snapshot.model_copy(deep=True)
     editor_modification_snapshot.difficulty = ""
+    # dart-dio omits null functional_source but sends functional=False. The
+    # recipe save consequently stamps author provenance in this editor baseline.
+    for ingredient in editor_modification_snapshot.ingredients:
+        ingredient.functional_source = ValueSource(
+            source="author_filled", basis="作者按这道菜的实际作用填写"
+        )
     modification_snapshots = [
         draft.recipe.snapshot,
         saved_modification_snapshot,
