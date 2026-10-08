@@ -148,10 +148,14 @@ def _invoke(
     else:
         endpoint = "chat/completions"
         prompt = (PROMPTS / f"{capability}-{PROMPT_VERSION}.txt").read_text(encoding="utf-8")
-        if capability in ("generate", "batch_advice"):
-            from gramtree.ai.schemas import BatchAdvice, GeneratedDraft
+        if capability in ("generate", "explain", "batch_advice"):
+            from gramtree.ai.schemas import BatchAdvice, GeneratedDraft, ModelAnswer
 
-            schema = BatchAdvice if capability == "batch_advice" else GeneratedDraft
+            schema = {
+                "generate": GeneratedDraft,
+                "explain": ModelAnswer,
+                "batch_advice": BatchAdvice,
+            }[capability]
             prompt += "\nJSON schema: " + json.dumps(schema.model_json_schema(), ensure_ascii=False)
         if capability == "quantify":
             from gramtree.recipes.quantification_schemas import QuantificationOutput

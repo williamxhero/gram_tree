@@ -3745,6 +3745,106 @@
         "title": "Question",
         "type": "object"
       },
+      "RecipeAnswer": {
+        "properties": {
+          "basis": {
+            "const": "general_experience",
+            "default": "general_experience",
+            "title": "Basis",
+            "type": "string"
+          },
+          "basis_text": {
+            "default": "这是一般经验，还没有足够记录验证",
+            "title": "Basis Text",
+            "type": "string"
+          },
+          "capability": {
+            "const": "explain",
+            "default": "explain",
+            "title": "Capability",
+            "type": "string"
+          },
+          "conclusion": {
+            "title": "Conclusion",
+            "type": "string"
+          },
+          "details": {
+            "default": "",
+            "title": "Details",
+            "type": "string"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "explanation": {
+            "default": "",
+            "title": "Explanation",
+            "type": "string"
+          },
+          "numeric_warnings": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Numeric Warnings",
+            "type": "array"
+          },
+          "question": {
+            "title": "Question",
+            "type": "string"
+          },
+          "recipe_id": {
+            "format": "uuid",
+            "title": "Recipe Id",
+            "type": "string"
+          },
+          "safety": {
+            "$ref": "#/components/schemas/RecipeSafetyResult"
+          },
+          "source": {
+            "const": "ai_estimated",
+            "default": "ai_estimated",
+            "title": "Source",
+            "type": "string"
+          },
+          "state": {
+            "enum": [
+              "answered",
+              "uncertain",
+              "cannot_answer",
+              "unavailable"
+            ],
+            "title": "State",
+            "type": "string"
+          },
+          "status": {
+            "$ref": "#/components/schemas/AIStatus"
+          },
+          "version_id": {
+            "format": "uuid",
+            "title": "Version Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "recipe_id",
+          "version_id",
+          "question",
+          "state",
+          "status",
+          "conclusion",
+          "safety"
+        ],
+        "title": "RecipeAnswer",
+        "type": "object"
+      },
       "RecipeAuthor": {
         "properties": {
           "id": {
@@ -4727,6 +4827,23 @@
           "suggestions"
         ],
         "title": "RecipeQuantificationOut",
+        "type": "object"
+      },
+      "RecipeQuestion": {
+        "additionalProperties": false,
+        "properties": {
+          "question": {
+            "maxLength": 1000,
+            "minLength": 1,
+            "pattern": "\\S",
+            "title": "Question",
+            "type": "string"
+          }
+        },
+        "required": [
+          "question"
+        ],
+        "title": "RecipeQuestion",
         "type": "object"
       },
       "RecipeReplacement": {
@@ -7220,6 +7337,84 @@
           }
         ],
         "summary": "Recipe Ai Status",
+        "tags": [
+          "recipe-ai"
+        ]
+      }
+    },
+    "/v1/ai/recipes/{recipe_id}/versions/{version_id}/answer": {
+      "post": {
+        "operationId": "answer_recipe_question",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "recipe_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Recipe Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "version_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Version Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RecipeQuestion"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecipeAnswer"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "参数错误"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "服务端错误"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Answer Recipe Question",
         "tags": [
           "recipe-ai"
         ]

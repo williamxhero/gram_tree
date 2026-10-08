@@ -330,6 +330,15 @@ def _affirmative_prefix(text: str, start: int, policy: Rules) -> bool:
     return not _has(prefix, policy.evidence_negation_prefixes)
 
 
+def core_temperatures(text: str, policy: Rules) -> list[float]:
+    """Only affirmative centre-temperature statements, using deployed negation rules."""
+    return [
+        float(match.group("temperature"))
+        for match in re.finditer(policy.core_temperature_pattern, text)
+        if _affirmative_prefix(text, match.start(), policy)
+    ]
+
+
 def _positive(text: str, term: str, policy: Rules) -> bool:
     return any(
         _affirmative_prefix(text, match.start(), policy)
@@ -378,11 +387,7 @@ def _evidence(evidence: Evidence, step: RecipeStep, policy: Rules) -> bool:
         return any(
             _positive(text, action, policy) for action in evidence.actions
         ) and step.duration_seconds >= (evidence.minimum or 0)
-    return any(
-        float(match.group("temperature")) >= (evidence.minimum or 0)
-        and _affirmative_prefix(text, match.start(), policy)
-        for match in re.finditer(policy.core_temperature_pattern, text)
-    )
+    return any(value >= (evidence.minimum or 0) for value in core_temperatures(text, policy))
 
 
 def _satisfied(rule: SafetyRule, steps: list[RecipeStep], policy: Rules) -> bool:

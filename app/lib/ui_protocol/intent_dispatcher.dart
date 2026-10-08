@@ -56,7 +56,10 @@ class IntentDispatcher {
     // 不做，不抛异常、不影响界面。
     if (spec == null || !spec.validateParams(params)) return;
 
-    _ref.read(sourceCompositionIdProvider.notifier).set(compositionId);
+    // Fixed business pages have no server composition; never invent its ID.
+    if (compositionId != null) {
+      _ref.read(sourceCompositionIdProvider.notifier).set(compositionId);
+    }
 
     try {
       await _ref
