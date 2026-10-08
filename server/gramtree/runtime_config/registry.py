@@ -37,7 +37,13 @@ ITEMS: tuple[ConfigItem, ...] = (
     ConfigItem(
         "ai.routes",
         "json",
-        {"intent": "small", "generate": "large", "normalize": "small", "embedding": "vector"},
+        {
+            "intent": "small",
+            "generate": "large",
+            "normalize": "small",
+            "embedding": "vector",
+            "explain": "large",
+        },
         "能力到模型档位的路由",
     ),
     ConfigItem(
@@ -56,6 +62,7 @@ ITEMS: tuple[ConfigItem, ...] = (
         {
             "intent": {"timeout": 15, "retries": 1, "daily_limit": 100},
             "generate": {"timeout": 60, "retries": 1, "daily_limit": 50},
+            "explain": {"timeout": 30, "retries": 1, "daily_limit": 50},
             "normalize": {"timeout": 15, "retries": 0, "daily_limit": 100},
             "embedding": {"timeout": 15, "retries": 1, "daily_limit": 500},
         },

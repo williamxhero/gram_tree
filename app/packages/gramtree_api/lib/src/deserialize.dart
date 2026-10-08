@@ -76,6 +76,7 @@ import 'package:gramtree_api/src/model/profile_update.dart';
 import 'package:gramtree_api/src/model/purchase_unit.dart';
 import 'package:gramtree_api/src/model/purchase_units_attribute.dart';
 import 'package:gramtree_api/src/model/question.dart';
+import 'package:gramtree_api/src/model/recipe_answer.dart';
 import 'package:gramtree_api/src/model/recipe_author.dart';
 import 'package:gramtree_api/src/model/recipe_create.dart';
 import 'package:gramtree_api/src/model/recipe_derived.dart';
@@ -92,6 +93,7 @@ import 'package:gramtree_api/src/model/recipe_list.dart';
 import 'package:gramtree_api/src/model/recipe_list_item.dart';
 import 'package:gramtree_api/src/model/recipe_mold_conversion_out.dart';
 import 'package:gramtree_api/src/model/recipe_mold_conversion_request.dart';
+import 'package:gramtree_api/src/model/recipe_question.dart';
 import 'package:gramtree_api/src/model/recipe_replacement.dart';
 import 'package:gramtree_api/src/model/recipe_replacement_allergens.dart';
 import 'package:gramtree_api/src/model/recipe_safety_check_out.dart';
@@ -371,6 +373,8 @@ ReturnType deserialize<ReturnType, BaseType>(
           as ReturnType;
     case 'Question':
       return Question.fromJson(value as Map<String, dynamic>) as ReturnType;
+    case 'RecipeAnswer':
+      return RecipeAnswer.fromJson(value as Map<String, dynamic>) as ReturnType;
     case 'RecipeAuthor':
       return RecipeAuthor.fromJson(value as Map<String, dynamic>) as ReturnType;
     case 'RecipeCreate':
@@ -413,6 +417,9 @@ ReturnType deserialize<ReturnType, BaseType>(
           as ReturnType;
     case 'RecipeMoldConversionRequest':
       return RecipeMoldConversionRequest.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'RecipeQuestion':
+      return RecipeQuestion.fromJson(value as Map<String, dynamic>)
           as ReturnType;
     case 'RecipeReplacement':
       return RecipeReplacement.fromJson(value as Map<String, dynamic>)

@@ -395,7 +395,7 @@ def _mark_sources(draft: GeneratedDraft) -> None:
         step.temperature_source = source if step.temperature_celsius is not None else None
 
 
-def numeric_warnings(draft: GeneratedDraft) -> list[str]:
+def numeric_warnings(draft: GeneratedDraft | RecipeSnapshot) -> list[str]:
     from pathlib import Path
 
     policy = json.loads(
@@ -404,10 +404,9 @@ def numeric_warnings(draft: GeneratedDraft) -> list[str]:
         .joinpath("numeric_guardrails.json")
         .read_text(encoding="utf-8")
     )
+    snapshot = draft if isinstance(draft, RecipeSnapshot) else draft.recipe.snapshot
     quantities = {
-        i.display_name: i.base_quantity
-        for i in draft.recipe.snapshot.ingredients
-        if i.base_unit == "g"
+        i.display_name: i.base_quantity for i in snapshot.ingredients if i.base_unit == "g"
     }
     warnings = []
     for rule in policy["rules"]:

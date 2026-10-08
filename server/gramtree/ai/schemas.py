@@ -76,3 +76,38 @@ class GenerationResult(BaseModel):
 
 class ExistingChoice(BaseModel):
     recipe_id: IdV4
+
+
+class RecipeQuestion(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    question: str = Field(min_length=1, max_length=1000, pattern=r"\S")
+
+
+class ModelAnswer(BaseModel):
+    """Model text is untrusted; provenance and safety are server decisions."""
+
+    model_config = ConfigDict(extra="forbid")
+    state: Literal["answered", "uncertain", "cannot_answer"]
+    kitchen_scope: bool
+    confidence: float = Field(ge=0, le=1, allow_inf_nan=False)
+    conclusion: str = Field(min_length=1, max_length=2000)
+    explanation: str = Field(min_length=1, max_length=4000)
+    details: str = Field(default="", max_length=4000)
+
+
+class RecipeAnswer(BaseModel):
+    recipe_id: IdV4
+    version_id: IdV4
+    question: str
+    state: Literal["answered", "uncertain", "cannot_answer", "unavailable"]
+    capability: Literal["explain"] = "explain"
+    status: AIStatus
+    source: Literal["ai_estimated"] = "ai_estimated"
+    basis: Literal["general_experience"] = "general_experience"
+    basis_text: str = "这是一般经验，还没有足够记录验证"
+    conclusion: str
+    explanation: str = ""
+    details: str = ""
+    safety: RecipeSafetyResult
+    numeric_warnings: list[str] = Field(default_factory=list)
+    error: str | None = None
