@@ -7,6 +7,8 @@ import 'package:gramtree_api/gramtree_api.dart';
 import '../auth/session.dart';
 import '../config/app_config.dart';
 import '../privacy/consent.dart';
+import '../network/reachability.dart';
+import '../network/online_features.dart';
 import '../storage/device_id.dart';
 
 /// 由服务端 OpenAPI 描述生成的接口客户端（packages/gramtree_api，不要手改）。
@@ -75,6 +77,46 @@ Dio _baseDio(Ref ref) {
     ),
   );
   dio.interceptors.add(ConsentGate(() => ref.read(privacyConsentProvider)));
+  dio.interceptors.add(
+    InterceptorsWrapper(
+      onRequest: (options, handler) async {
+        final feature =
+            options.extra[OnlineFeatures.requestFeatureKey] ??
+            OnlineFeatures.forRequest(options.method, options.uri.path);
+        if (feature == null) {
+          handler.next(options);
+          return;
+        }
+        final monitor = ref.read(apiReachabilityProvider.notifier);
+        // Recheck at the execution boundary; no recipe text or conversion input
+        // is sent until this small consent-gated health request succeeds.
+        if (!await monitor.check()) {
+          handler.reject(
+            DioException(
+              requestOptions: options,
+              type: DioExceptionType.connectionError,
+              error: OnlineFeatureUnavailable(
+                ref.read(apiReachabilityProvider),
+              ),
+            ),
+          );
+          return;
+        }
+        handler.next(options);
+      },
+      onError: (error, handler) {
+        if (error.error is! OnlineFeatureUnavailable &&
+            (error.type == DioExceptionType.connectionError ||
+                error.type == DioExceptionType.connectionTimeout ||
+                error.type == DioExceptionType.receiveTimeout ||
+                error.type == DioExceptionType.sendTimeout ||
+                (error.response?.statusCode ?? 0) >= 500)) {
+          ref.read(apiReachabilityProvider.notifier).markUnavailable();
+        }
+        handler.next(error);
+      },
+    ),
+  );
   dio.interceptors.add(
     InterceptorsWrapper(
       onRequest: (options, handler) {
@@ -211,6 +253,9 @@ class ApiFailure {
   const ApiFailure(this.code, this.message);
 
   factory ApiFailure.from(Object error) {
+    if (error is OnlineFeatureUnavailable) {
+      return ApiFailure('network', error.toString());
+    }
     if (error is DioException) {
       final data = error.response?.data;
       if (data is Map && data['error'] is Map) {
@@ -222,6 +267,9 @@ class ApiFailure {
       }
       if (error.error is ConsentRequired) {
         return const ApiFailure('consent_required', '需要先同意隐私政策');
+      }
+      if (error.error is OnlineFeatureUnavailable) {
+        return ApiFailure('network', error.error.toString());
       }
       if (error.response == null) {
         return const ApiFailure('network', '网络连接不上，请检查网络后再试');

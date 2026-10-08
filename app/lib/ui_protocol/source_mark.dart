@@ -6,6 +6,7 @@ import 'package:gramtree_api/gramtree_api.dart'
 import '../app/theme.dart';
 import '../events/event_recorder.dart';
 import '../l10n/app_localizations.dart';
+import '../network/reachability.dart';
 import 'source_types.dart';
 
 /// 这次组合的 `composition_id`，通过 [BuildContext] 往下传给任何组件（SPEC-009.1
@@ -169,47 +170,55 @@ class SourceMark extends ConsumerWidget {
     await showModalBottomSheet<void>(
       context: context,
       showDragHandle: true,
-      builder: (sheetContext) => WhyPanel(
-        key: const ValueKey('why-panel'),
-        sourceType: sourceType,
-        titleOverride: whyTitleOverride,
-        value: value,
-        originalValue: originalValue,
-        basisText: basisText,
-        citation: citation,
-        required: required,
-        valueChanged: currentValueChanged,
-        feedbackEnabled: canFeedback,
-        onSkipOnce: required || !canFeedback
-            ? null
-            : () {
-                Navigator.of(sheetContext).pop();
-                action(
-                  ActionDescriptor(
-                    intent: 'skip_this_time',
-                    params: _feedbackParams(
-                      componentId,
-                      sourceType,
-                      compositionId,
-                    ),
-                  ),
-                );
-              },
-        onNeverAgain: required || !canFeedback
-            ? null
-            : () {
-                Navigator.of(sheetContext).pop();
-                action(
-                  ActionDescriptor(
-                    intent: 'dont_do_again',
-                    params: _feedbackParams(
-                      componentId,
-                      sourceType,
-                      compositionId,
-                    ),
-                  ),
-                );
-              },
+      builder: (sheetContext) => Consumer(
+        builder: (_, sheetRef, _) {
+          final status = sheetRef.watch(apiReachabilityProvider);
+          return WhyPanel(
+            key: const ValueKey('why-panel'),
+            sourceType: sourceType,
+            titleOverride: whyTitleOverride,
+            value: value,
+            originalValue: originalValue,
+            basisText: basisText,
+            citation: citation,
+            required: required,
+            valueChanged: currentValueChanged,
+            feedbackEnabled: canFeedback,
+            onlineReason: canFeedback && !required && !status.canRequest
+                ? status.message
+                : null,
+            onSkipOnce: required || !canFeedback || !status.canRequest
+                ? null
+                : () {
+                    Navigator.of(sheetContext).pop();
+                    action(
+                      ActionDescriptor(
+                        intent: 'skip_this_time',
+                        params: _feedbackParams(
+                          componentId,
+                          sourceType,
+                          compositionId,
+                        ),
+                      ),
+                    );
+                  },
+            onNeverAgain: required || !canFeedback
+                ? null
+                : () {
+                    Navigator.of(sheetContext).pop();
+                    action(
+                      ActionDescriptor(
+                        intent: 'dont_do_again',
+                        params: _feedbackParams(
+                          componentId,
+                          sourceType,
+                          compositionId,
+                        ),
+                      ),
+                    );
+                  },
+          );
+        },
       ),
     );
   }
@@ -292,6 +301,7 @@ class WhyPanel extends StatelessWidget {
     this.feedbackEnabled = true,
     this.onSkipOnce,
     this.onNeverAgain,
+    this.onlineReason,
   });
 
   final String sourceType;
@@ -305,6 +315,7 @@ class WhyPanel extends StatelessWidget {
   final bool feedbackEnabled;
   final VoidCallback? onSkipOnce;
   final VoidCallback? onNeverAgain;
+  final String? onlineReason;
 
   @override
   Widget build(BuildContext context) {
@@ -352,6 +363,7 @@ class WhyPanel extends StatelessWidget {
               ),
             ],
             const SizedBox(height: 20),
+            if (onlineReason != null) Text(onlineReason!),
             if (!feedbackEnabled)
               const SizedBox.shrink()
             else if (required)

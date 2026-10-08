@@ -18,6 +18,7 @@ import 'package:gram_tree/ingredients/ingredient_api_client.dart';
 import 'package:gram_tree/ingredients/ingredient_provider.dart';
 import 'package:gram_tree/ingredients/ingredient_repository.dart';
 import 'package:gram_tree/observability/crash_reporting.dart';
+import 'package:gram_tree/network/reachability.dart';
 import 'package:gram_tree/platform/app_exit.dart';
 import 'package:gram_tree/platform/apple_sign_in.dart';
 import 'package:gram_tree/platform/device_capabilities.dart';
@@ -480,6 +481,15 @@ Map<String, String> signedInSecure(UserOut user) => {
   ),
 };
 
+class TestReachabilityProbe implements ApiReachabilityProbe {
+  TestReachabilityProbe(this.reachable);
+  bool reachable;
+  @override
+  Future<bool> check() async => reachable;
+  @override
+  void dispose() {}
+}
+
 /// 一次测试用到的替身，测试里可以检查它们记录了什么。
 class TestEnv {
   TestEnv({
@@ -497,6 +507,7 @@ class TestEnv {
     this.requiredComponentTypes,
     this.localDependencyVersions,
     this.offline = false,
+    this.probe,
   }) : server = server ?? FakeServer(),
        local = local ?? MemoryLocalStore(),
        secure = secure ?? MemorySecureStore(),
@@ -515,6 +526,7 @@ class TestEnv {
     Map<String, String>? localDependencyVersions,
     MemoryLocalStore? local,
     bool offline = false,
+    ApiReachabilityProbe? probe,
   }) {
     final s = server ?? FakeServer();
     return TestEnv(
@@ -526,9 +538,12 @@ class TestEnv {
       requiredComponentTypes: requiredComponentTypes,
       localDependencyVersions: localDependencyVersions,
       offline: offline,
+      probe: probe,
     );
   }
 
+  final ApiReachabilityProbe? probe;
+  late final reachability = TestReachabilityProbe(!offline);
   final FakeServer server;
   final MemoryLocalStore local;
   final MemorySecureStore secure;
@@ -565,6 +580,7 @@ class TestEnv {
     localStoreProvider.overrideWithValue(local),
     secureStoreProvider.overrideWithValue(secure),
     fakeServerProvider.overrideWithValue(server),
+    apiReachabilityProbeProvider.overrideWithValue(probe ?? reachability),
     // Page tests use the same cache interface with a fake-clock-safe store;
     // native drift persistence is exercised by installed integration tests.
     ingredientRepositoryProvider.overrideWith(

@@ -14,6 +14,8 @@
 | [`food-safety/`](food-safety/) | 食品安全与过敏原提示样稿：必显过敏原、菜谱/步骤提醒、高风险、估算营养与疗效措辞改写 | #22 SPEC-011.1 | Artifact 服务实际返回 503；本地 HTML 样稿（浏览器可直接打开） |
 | [`one-line-recipe/`](one-line-recipe/) | 一句话生成：先检索、选择已有或新设计、可跳过问题、依据与校验、编辑保存及降级 | #23 SPEC-003.1 | 本会话无 Artifact 发布工具；本地交互 HTML 样稿 |
 
+| [`offline-online.html`](offline-online.html) | 在线入口降级：需要联网说明、原话保留、本机能力可用，浅色/深色 | #27 SPEC-013.3 / #215 | 本会话无 Artifact 发布工具；本地 HTML 样稿 |
+
 ## 说明
 
 - `recipe-detail/` 是画布的**源文件**：`index.html` 引用平台运行时 `artifact-type/app.js`，`Pro.dc.html` 引用 `support.js`，这两个运行时文件属于 claude.ai 平台，没有导出，所以这份不能在本地直接打开渲染；要看效果请去 claude.ai 的原 Artifact，这里保存的是设计内容的备份。

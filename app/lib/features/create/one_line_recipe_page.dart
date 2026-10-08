@@ -6,6 +6,8 @@ import 'package:go_router/go_router.dart';
 import 'package:gramtree_api/gramtree_api.dart';
 
 import '../../api/api_client.dart';
+import '../../network/reachability.dart';
+import '../../network/online_features.dart';
 import '../../recipes/recipe_repository.dart';
 import '../../ui_protocol/components/component_scaffold.dart';
 import '../../ui_protocol/recipe_safety.dart';
@@ -41,6 +43,7 @@ class _OneLineRecipePageState extends ConsumerState<OneLineRecipePage> {
   }
 
   Future<void> _loadStatus() async {
+    if (!ref.read(apiReachabilityProvider).canRequest) return;
     try {
       final status = await ref.read(recipeRepositoryProvider).aiStatus();
       if (mounted) setState(() => _status = status);
@@ -56,6 +59,10 @@ class _OneLineRecipePageState extends ConsumerState<OneLineRecipePage> {
       _error = null;
     });
     try {
+      final status = ref.read(apiReachabilityProvider);
+      if (!status.canRequest) {
+        throw OnlineFeatureUnavailable(status);
+      }
       await action();
     } catch (error) {
       if (mounted) setState(() => _error = ApiFailure.from(error).message);
@@ -69,17 +76,14 @@ class _OneLineRecipePageState extends ConsumerState<OneLineRecipePage> {
       setState(() => _error = '先写下想做的菜和限制。');
       return;
     }
-    setState(() {
-      _found = null;
-      _result = null;
-      _questions = false;
-    });
     final found = await ref
         .read(recipeRepositoryProvider)
         .findForRequest(_text.text.trim());
     if (!mounted) return;
     setState(() {
       _found = found;
+      _result = null;
+      _questions = false;
       _status = found.status;
     });
   });
@@ -131,6 +135,13 @@ class _OneLineRecipePageState extends ConsumerState<OneLineRecipePage> {
 
   @override
   Widget build(BuildContext context) {
+    final connectivity = ref.watch(apiReachabilityProvider);
+    ref.listen(apiReachabilityProvider, (previous, next) {
+      if (next.canRequest && previous?.canRequest != true && _status == null) {
+        unawaited(_loadStatus());
+      }
+    });
+    final online = connectivity.canRequest;
     final found = _found;
     final result = _result;
     final draft = result?.draft;
@@ -143,7 +154,11 @@ class _OneLineRecipePageState extends ConsumerState<OneLineRecipePage> {
           const Text('先找你已有的菜谱，再决定是否让 AI 设计。请勿输入个人敏感信息。'),
           const SizedBox(height: 12),
           Text(
-            _status == null ? '正在读取今日额度…' : '今日生成剩余 ${_status!.remaining} 次',
+            !online
+                ? connectivity.message
+                : _status == null
+                ? '正在读取今日额度…'
+                : '今日生成剩余 ${_status!.remaining} 次',
             key: const ValueKey('ai-quota'),
             style: const TextStyle(fontFamily: 'DM Mono'),
           ),
@@ -169,7 +184,7 @@ class _OneLineRecipePageState extends ConsumerState<OneLineRecipePage> {
           ),
           FilledButton(
             key: const ValueKey('one-line-search'),
-            onPressed: _busy ? null : _find,
+            onPressed: _busy || !online ? null : _find,
             child: const Text('先找已有菜谱'),
           ),
           if (_busy) const LinearProgressIndicator(),
@@ -190,11 +205,15 @@ class _OneLineRecipePageState extends ConsumerState<OneLineRecipePage> {
                 conclusionSemanticsText: recipe.dishName,
                 basisText: recipe.basis,
                 primaryActionLabel: '用这道已有菜谱',
-                onPrimaryAction: _busy ? null : () => _existing(recipe),
+                onPrimaryAction: _busy || !online
+                    ? null
+                    : () => _existing(recipe),
               ),
             OutlinedButton(
               key: const ValueKey('ai-design-new'),
-              onPressed: _busy ? null : () => setState(() => _questions = true),
+              onPressed: _busy || !online
+                  ? null
+                  : () => setState(() => _questions = true),
               child: const Text('让 AI 设计新版本'),
             ),
             if (_questions) ...[
@@ -215,19 +234,25 @@ class _OneLineRecipePageState extends ConsumerState<OneLineRecipePage> {
                 ),
               FilledButton(
                 key: const ValueKey('ai-generate'),
-                onPressed: _busy ? null : () => _generate(skip: false),
+                onPressed: _busy || !online
+                    ? null
+                    : () => _generate(skip: false),
                 child: const Text('按这些信息生成'),
               ),
               TextButton(
                 key: const ValueKey('ai-skip-questions'),
-                onPressed: _busy ? null : () => _generate(skip: true),
+                onPressed: _busy || !online
+                    ? null
+                    : () => _generate(skip: true),
                 child: const Text('跳过，直接生成'),
               ),
             ],
             if (result?.error != null)
               TextButton(
                 key: const ValueKey('ai-retry'),
-                onPressed: _busy ? null : () => _generate(skip: false),
+                onPressed: _busy || !online
+                    ? null
+                    : () => _generate(skip: false),
                 child: const Text('保留原话，重试生成'),
               ),
           ],
