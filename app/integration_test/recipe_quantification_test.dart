@@ -89,6 +89,8 @@ void main() {
       await tester.tap(find.byKey(const ValueKey('primary-create-button')));
       await tester.pumpAndSettle();
       await tap(tester, 'create-recipe-entry');
+      // Build the lazy form row before waiting for it on a small iOS viewport.
+      await reveal(tester, 'recipe-dish-name');
       await waitFor(tester, find.byKey(const ValueKey('recipe-dish-name')));
       await tester.enterText(
         find.byKey(const ValueKey('recipe-dish-name')),

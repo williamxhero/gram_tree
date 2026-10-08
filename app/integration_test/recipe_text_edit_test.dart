@@ -85,6 +85,8 @@ void main() {
       _request,
     );
     await tap(tester, 'one-line-search');
+    // Existing-recipe matches can put this lazy action below the iOS viewport.
+    await reveal(tester, 'ai-design-new');
     await waitFor(tester, find.byKey(const ValueKey('ai-design-new')));
     await tap(tester, 'ai-design-new');
     await tap(tester, 'ai-skip-questions');
