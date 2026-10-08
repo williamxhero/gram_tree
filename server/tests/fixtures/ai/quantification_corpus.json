@@ -1,0 +1,18 @@
+{
+  "note": "Synthetic quantification replay only; no user data or paid model calls.",
+  "recipe": {
+    "dish_name": "量化验收盐用量",
+    "snapshot": {
+      "servings": 2, "difficulty": "", "dish_type": "", "active_time_seconds": 0, "total_time_seconds": 0,
+      "ingredients": [
+        {"id": "ingredient-1", "display_name": "盐", "quantity": 0, "unit": "少许", "scaling_mode": "proportional", "functional": false, "functional_source": {"source": "author_filled", "basis": "作者按这道菜的实际作用填写"}, "quantity_source": {"source": "author_filled", "original": "0", "basis": "", "confidence": 1}}
+      ],
+      "steps": [{"id": "step-1", "instruction": "搅拌均匀"}]
+    }
+  },
+  "output": {
+    "suggestions": [
+      {"problem_id": "ingredients:ingredient-1:quantity:ambiguous:field", "value": "3", "unit": "g", "basis": "按两人份主料量估算盐用量", "confidence": "medium", "baseline": "两人份盐 3 克", "adjustment": "偏淡时每次补 1 克"}
+    ]
+  }
+}

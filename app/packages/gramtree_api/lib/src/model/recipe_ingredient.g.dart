@@ -35,6 +35,8 @@ abstract class _$RecipeIngredientCWProxy {
 
   RecipeIngredient preparation(String? preparation);
 
+  RecipeIngredient preparationSource(ValueSource? preparationSource);
+
   RecipeIngredient quantity(num quantity);
 
   RecipeIngredient quantitySource(ValueSource? quantitySource);
@@ -65,6 +67,7 @@ abstract class _$RecipeIngredientCWProxy {
     String? measureInputToken,
     bool? optional,
     String? preparation,
+    ValueSource? preparationSource,
     num quantity,
     ValueSource? quantitySource,
     Object? replacement,
@@ -129,6 +132,10 @@ class _$RecipeIngredientCWProxyImpl implements _$RecipeIngredientCWProxy {
       this(preparation: preparation);
 
   @override
+  RecipeIngredient preparationSource(ValueSource? preparationSource) =>
+      this(preparationSource: preparationSource);
+
+  @override
   RecipeIngredient quantity(num quantity) => this(quantity: quantity);
 
   @override
@@ -167,6 +174,7 @@ class _$RecipeIngredientCWProxyImpl implements _$RecipeIngredientCWProxy {
     Object? measureInputToken = const $CopyWithPlaceholder(),
     Object? optional = const $CopyWithPlaceholder(),
     Object? preparation = const $CopyWithPlaceholder(),
+    Object? preparationSource = const $CopyWithPlaceholder(),
     Object? quantity = const $CopyWithPlaceholder(),
     Object? quantitySource = const $CopyWithPlaceholder(),
     Object? replacement = const $CopyWithPlaceholder(),
@@ -226,6 +234,10 @@ class _$RecipeIngredientCWProxyImpl implements _$RecipeIngredientCWProxy {
           ? _value.preparation
           // ignore: cast_nullable_to_non_nullable
           : preparation as String?,
+      preparationSource: preparationSource == const $CopyWithPlaceholder()
+          ? _value.preparationSource
+          // ignore: cast_nullable_to_non_nullable
+          : preparationSource as ValueSource?,
       quantity: quantity == const $CopyWithPlaceholder()
           ? _value.quantity
           // ignore: cast_nullable_to_non_nullable
@@ -303,6 +315,11 @@ RecipeIngredient _$RecipeIngredientFromJson(
       ),
       optional: $checkedConvert('optional', (v) => v as bool? ?? false),
       preparation: $checkedConvert('preparation', (v) => v as String?),
+      preparationSource: $checkedConvert(
+        'preparation_source',
+        (v) =>
+            v == null ? null : ValueSource.fromJson(v as Map<String, dynamic>),
+      ),
       quantity: $checkedConvert('quantity', (v) => v as num),
       quantitySource: $checkedConvert(
         'quantity_source',
@@ -327,6 +344,7 @@ RecipeIngredient _$RecipeIngredientFromJson(
     'functionalSource': 'functional_source',
     'ingredientId': 'ingredient_id',
     'measureInputToken': 'measure_input_token',
+    'preparationSource': 'preparation_source',
     'quantitySource': 'quantity_source',
     'scalingMode': 'scaling_mode',
   },
@@ -347,6 +365,7 @@ Map<String, dynamic> _$RecipeIngredientToJson(RecipeIngredient instance) =>
       'measure_input_token': ?instance.measureInputToken,
       'optional': ?instance.optional,
       'preparation': ?instance.preparation,
+      'preparation_source': ?instance.preparationSource?.toJson(),
       'quantity': instance.quantity,
       'quantity_source': ?instance.quantitySource?.toJson(),
       'replacement': ?instance.replacement,

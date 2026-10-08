@@ -15,8 +15,13 @@ from gramtree.core.errors import ERROR_RESPONSES, ApiError, ErrorResponse
 from gramtree.core.ids import IdV4
 from gramtree.core.pagination import PageParams, page_params
 from gramtree.deps import RedisDep, SessionDep, SettingsDep
-from gramtree.recipes import batch_advice, service
+from gramtree.recipes import batch_advice, quantification, reproducibility, service
 from gramtree.recipes.comparison import RecipeIngredientComparison, compare_ingredients
+from gramtree.recipes.quantification_schemas import (
+    QuantificationDecisionsInput,
+    QuantificationInput,
+    RecipeQuantificationOut,
+)
 from gramtree.recipes.schemas import (
     MoldSpec,
     RecipeComparisonCandidates,
@@ -29,6 +34,8 @@ from gramtree.recipes.schemas import (
     RecipeList,
     RecipeMoldConversionOut,
     RecipeMoldConversionRequest,
+    RecipeReproducibilityCheckOut,
+    RecipeReproducibilityCheckRequest,
     RecipeSafetyCheckOut,
     RecipeSafetyCheckRequest,
     RecipeServingConversionOut,
@@ -39,6 +46,18 @@ from gramtree.runtime_config import service as config
 
 router = APIRouter(prefix="/recipes", tags=["recipes"])
 PageDep = Annotated[PageParams, Depends(page_params)]
+
+
+@router.post(
+    "/reproducibility/check",
+    response_model=RecipeReproducibilityCheckOut,
+    responses={**ERROR_RESPONSES, 401: {"model": ErrorResponse}},
+)
+def check_recipe_reproducibility(
+    body: RecipeReproducibilityCheckRequest,
+    auth: CurrentAuth,
+) -> RecipeReproducibilityCheckOut:
+    return RecipeReproducibilityCheckOut(result=reproducibility.check(body.snapshot))
 
 
 @router.post(
@@ -261,6 +280,39 @@ def compare_recipe_ingredients(
     to_version_id: Annotated[IdV4, Query()],
 ) -> RecipeIngredientComparison:
     return compare_ingredients(session, auth.user, recipe_id, from_version_id, to_version_id)
+
+
+@router.post(
+    "/{recipe_id}/quantification",
+    response_model=RecipeQuantificationOut,
+    responses=_errors(401, 404, 409, 422, 503),
+)
+def quantify_recipe(
+    recipe_id: IdV4,
+    body: QuantificationInput,
+    auth: CurrentAuth,
+    session: SessionDep,
+    settings: SettingsDep,
+) -> RecipeQuantificationOut:
+    return quantification.propose(session, settings, auth.user, recipe_id, body.base_version_id)
+
+
+@router.post(
+    "/{recipe_id}/quantification/{proposal_id}/decisions",
+    response_model=RecipeDetail,
+    status_code=201,
+    responses=_errors(401, 404, 409, 422),
+)
+def decide_recipe_quantification(
+    recipe_id: IdV4,
+    proposal_id: IdV4,
+    body: QuantificationDecisionsInput,
+    auth: CurrentAuth,
+    session: SessionDep,
+    redis: RedisDep,
+    settings: SettingsDep,
+) -> RecipeDetail:
+    return quantification.decide(session, redis, settings, auth.user, recipe_id, proposal_id, body)
 
 
 @router.get("/{recipe_id}", response_model=RecipeDetail, responses=_errors(401, 404))

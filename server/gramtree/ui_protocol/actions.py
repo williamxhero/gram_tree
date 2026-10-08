@@ -112,6 +112,54 @@ def _validate_call_operation(params: Mapping[str, Any]) -> bool:
     )
 
 
+def _validate_recipe_operation(params: Mapping[str, Any]) -> bool:
+    operation = params.get("operation")
+    if operation not in ("check", "quantify", "locate", "cancel", "choose", "decide"):
+        return False
+    if operation == "choose":
+        return (
+            set(params) <= {"operation", "problem_id", "decision"}
+            and isinstance(params.get("problem_id"), str)
+            and bool(params["problem_id"].strip())
+            and params.get("decision") in ("accept", "modify", "ignore")
+        )
+    if operation != "decide":
+        return len(params) == 1
+    if not set(params) <= {"operation", "accept_all", "decisions"}:
+        return False
+    decisions = params.get("decisions")
+    if params.get("accept_all") is True:
+        return isinstance(decisions, list) and not decisions
+    if params.get("accept_all") is not False or not isinstance(decisions, list) or not decisions:
+        return False
+    ids = set()
+    for decision in decisions:
+        if not isinstance(decision, dict) or not set(decision) <= {
+            "problem_id",
+            "decision",
+            "value",
+            "unit",
+        }:
+            return False
+        id_ = decision.get("problem_id")
+        if not isinstance(id_, str) or not id_.strip() or id_ in ids:
+            return False
+        ids.add(id_)
+        if decision.get("decision") not in ("accept", "modify", "ignore"):
+            return False
+        value, unit = decision.get("value"), decision.get("unit")
+        if decision["decision"] == "modify":
+            if (
+                not isinstance(value, str)
+                or not value.strip()
+                or (unit is not None and (not isinstance(unit, str) or not unit.strip()))
+            ):
+                return False
+        elif value is not None or unit is not None:
+            return False
+    return True
+
+
 def _accept_any_params(params: Mapping[str, Any]) -> bool:
     # 存进口味/应用改动：还没有实现处理器的子 SPEC 接手，先只登记名字，见 App 端
     # `intent_registry.dart` 里同样的说明。
@@ -141,6 +189,7 @@ ITEMS: tuple[ActionSpec, ...] = (
     ActionSpec("start_cooking", _validate_start_cooking),
     ActionSpec("open_record_card", _validate_open_record_card),
     ActionSpec("call_operation", _validate_call_operation),
+    ActionSpec("recipe_operation", _validate_recipe_operation),
     ActionSpec("request_batch_advice", _validate_request_batch_advice),
     ActionSpec("save_to_taste", _accept_any_params),
     ActionSpec("apply_change", _accept_any_params),

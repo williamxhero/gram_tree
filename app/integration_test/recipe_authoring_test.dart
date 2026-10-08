@@ -81,6 +81,14 @@ void main() {
     }
     expect(finder, findsOneWidget);
     await tester.ensureVisible(finder);
+    await settle(tester);
+    // A cached lazy child can be built yet outside the phone viewport. Check
+    // actual hit testing, not only existence, before performing an action.
+    for (var i = 0; i < 8 && finder.hitTestable().evaluate().isEmpty; i++) {
+      await tester.drag(body, const Offset(0, -100));
+      await settle(tester);
+    }
+    expect(finder.hitTestable(), findsOneWidget);
   }
 
   Future<void> runWithDiagnostics(
@@ -154,7 +162,11 @@ void main() {
       await waitFor(tester, find.byKey(const ValueKey('create-recipe-entry')));
       await tester.tap(find.byKey(const ValueKey('create-recipe-entry')));
       await settle(tester);
-      await waitFor(tester, find.byKey(const ValueKey('recipe-dish-name')));
+      await waitFor(
+        tester,
+        find.byKey(const ValueKey('recipe-editor-content')),
+      );
+      await reveal(tester, find.byKey(const ValueKey('recipe-dish-name')));
       await tester.enterText(
         find.byKey(const ValueKey('recipe-dish-name')),
         '网页版验收菜谱',
@@ -313,7 +325,11 @@ void main() {
         find.byKey(const ValueKey('edit-old-recipe-button')),
       );
       await tester.tap(find.byKey(const ValueKey('edit-old-recipe-button')));
-      await waitFor(tester, find.byKey(const ValueKey('recipe-dish-name')));
+      await waitFor(
+        tester,
+        find.byKey(const ValueKey('recipe-editor-content')),
+      );
+      await reveal(tester, find.byKey(const ValueKey('recipe-dish-name')));
       expect(find.text('网页版验收菜谱'), findsWidgets);
       await reveal(
         tester,

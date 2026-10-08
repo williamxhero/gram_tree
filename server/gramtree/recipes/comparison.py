@@ -319,6 +319,7 @@ def compare_ingredients(
                         "base_quantity",
                         "base_unit",
                         "quantity_source",
+                        "preparation_source",
                         "measure_input_token",
                         "flavor_source",
                         "functional_source",

@@ -720,6 +720,568 @@ Future<void> _scrollUntilVisible(
 }
 
 void main() {
+  for (final brightness in [Brightness.light, Brightness.dark]) {
+    testWidgets(
+      'individual quantification choices and retry at large text $brightness',
+      (tester) async {
+        final server = FakeServer();
+        final state = _installRecipeApi(server);
+        final problemIds = ['amount', 'time', 'heat'];
+        server.on(
+          'POST',
+          '/v1/recipes/$_recipeId/quantification',
+          (_) => (
+            200,
+            {
+              'id': _secondVersionId,
+              'base_version_id': _secondVersionId,
+              'detail': 'standard',
+              'problems': [
+                for (final id in problemIds)
+                  {
+                    'id': id,
+                    'type': 'ambiguous',
+                    'status': 'unresolved',
+                    'message': '$id 待确定',
+                    'original': '原来的 $id',
+                    'position': {
+                      'collection': id == 'amount' ? 'ingredients' : 'steps',
+                      'item_id': id == 'amount' ? 'ingredient-1' : 'step-1',
+                      'field': id == 'amount'
+                          ? 'quantity'
+                          : id == 'time'
+                          ? 'duration_seconds'
+                          : 'heat',
+                    },
+                  },
+              ],
+              'suggestions': [
+                for (final id in problemIds)
+                  {
+                    'problem_id': id,
+                    'value': id == 'amount'
+                        ? '300'
+                        : id == 'time'
+                        ? '120'
+                        : '水面持续小泡',
+                    if (id == 'amount') 'unit': 'ml',
+                    'basis': '$id 的估算依据',
+                    'confidence': 'medium',
+                    'baseline': '$id 的基准',
+                    'adjustment': '$id 的调整方法',
+                  },
+              ],
+            },
+          ),
+        );
+        var attempts = 0;
+        server.on(
+          'POST',
+          '/v1/recipes/$_recipeId/quantification/$_secondVersionId/decisions',
+          (request) {
+            attempts++;
+            if (attempts == 1) {
+              return FakeServer.error(503, 'unavailable', '暂时无法保存，请重试');
+            }
+            expect((request.body as Map)['accept_all'], false);
+            expect((request.body as Map)['decisions'], [
+              {'problem_id': 'amount', 'decision': 'accept'},
+              {'problem_id': 'time', 'decision': 'modify', 'value': '180'},
+              {'problem_id': 'heat', 'decision': 'ignore'},
+            ]);
+            final updated =
+                jsonDecode(jsonEncode(state.current)) as Map<String, dynamic>;
+            (updated['version'] as Map)['reproducibility'] = {
+              'rules_version': 'reproducibility-v1',
+              'state': 'incomplete',
+              'remaining_count': 1,
+              'required_field_count': 3,
+              'concrete_field_count': 2,
+              'field_completeness': 2 / 3,
+              'problems': [
+                {
+                  'id': 'heat',
+                  'type': 'missing',
+                  'status': 'ignored',
+                  'message': '火候待确定',
+                  'position': {
+                    'collection': 'steps',
+                    'item_id': 'step-1',
+                    'field': 'heat',
+                  },
+                },
+              ],
+            };
+            return (201, updated);
+          },
+        );
+        await pumpApp(
+          tester,
+          env: TestEnv.signedIn(server: server),
+          brightness: brightness,
+          textScale: 1.6,
+          size: const Size(320, 640),
+        );
+        await _openMyRecipes(tester);
+        await tester.tap(find.byKey(const ValueKey('recipe-card-$_recipeId')));
+        await tester.pumpAndSettle();
+        await tester.tap(find.byKey(const ValueKey('edit-recipe-button')));
+        await tester.pumpAndSettle();
+        await _scrollUntilVisible(
+          tester,
+          find.byKey(const ValueKey('recipe-quantify')),
+        );
+        await tester.tap(find.byKey(const ValueKey('recipe-quantify')));
+        await tester.pumpAndSettle();
+        for (final (id, action) in [
+          ('amount', 'accept'),
+          ('time', 'modify'),
+          ('heat', 'ignore'),
+        ]) {
+          final button = find.byKey(ValueKey('quantification-$action-$id'));
+          await _scrollUntilVisible(tester, button);
+          await tester.tap(button);
+          await tester.pumpAndSettle();
+          if (action == 'modify') {
+            final input = find.byKey(
+              const ValueKey('quantification-value-time'),
+            );
+            await _scrollUntilVisible(tester, input);
+            await tester.enterText(input, '180');
+            await tester.pumpAndSettle();
+          }
+        }
+        final save = find.byKey(
+          const ValueKey('quantification-save-decisions'),
+        );
+        await _scrollUntilVisible(tester, save);
+        await tester.tap(save);
+        await tester.pumpAndSettle();
+        await _scrollToTop(tester);
+        expect(find.textContaining('暂时无法保存'), findsOneWidget);
+        await _scrollUntilVisible(tester, save);
+        await tester.tap(save);
+        await tester.pumpAndSettle();
+        await _scrollToTop(tester);
+        expect(find.text('还有 1 处需要确定'), findsOneWidget);
+        expect(attempts, 2);
+        expect(tester.takeException(), isNull);
+      },
+    );
+  }
+
+  testWidgets(
+    'AI field evidence survives local draft restore and manual edit clears it',
+    (tester) async {
+      final server = FakeServer();
+      final state = _installRecipeApi(server);
+      final snapshot = (state.current['version'] as Map)['snapshot'] as Map;
+      const source = {
+        'source': 'ai_estimated',
+        'original': '一碗',
+        'basis': '按中号碗容量估算',
+        'confidence': 0.7,
+        'confidence_level': 'medium',
+        'baseline': '中号碗约 300 毫升',
+        'adjustment': '按实际碗容量测量',
+      };
+      (snapshot['ingredients'] as List).first['quantity_source'] = source;
+      (snapshot['ingredients'] as List).first['preparation_source'] = source;
+      (snapshot['steps'] as List).first['instruction_source'] = source;
+      (snapshot['steps'] as List).first['doneness_source'] = source;
+      (snapshot['steps'] as List).first['duration_source'] = source;
+      (snapshot['steps'] as List).first['heat_source'] = source;
+      (snapshot['steps'] as List).first['temperature_source'] = source;
+      final env = TestEnv.signedIn(server: server);
+      await pumpApp(tester, env: env);
+      Future<void> openEditor() async {
+        await _openMyRecipes(tester);
+        await tester.tap(find.byKey(const ValueKey('recipe-card-$_recipeId')));
+        await tester.pumpAndSettle();
+        await tester.tap(find.byKey(const ValueKey('edit-recipe-button')));
+        await tester.pumpAndSettle();
+      }
+
+      await openEditor();
+      await tester.enterText(
+        find.byKey(const ValueKey('recipe-dish-name')),
+        '保留来源的草稿',
+      );
+      await tester.pump(const Duration(milliseconds: 500));
+      await restartApp(tester, env);
+      await openEditor();
+      expect(find.text('恢复未保存修改？'), findsOneWidget);
+      await tester.tap(find.text('恢复'));
+      await tester.pumpAndSettle();
+      final badge = find.byKey(
+        const ValueKey('editor-source-ingredient-1-quantity'),
+      );
+      await _scrollUntilVisible(tester, badge);
+      await tester.tap(badge);
+      await tester.pumpAndSettle();
+      expect(find.textContaining('一碗'), findsOneWidget);
+      expect(find.textContaining('按中号碗容量估算'), findsOneWidget);
+      expect(find.textContaining('把握程度：中'), findsOneWidget);
+      expect(find.textContaining('基准：中号碗约 300 毫升'), findsOneWidget);
+      expect(find.textContaining('调整方法：按实际碗容量测量'), findsOneWidget);
+      await tester.tapAt(const Offset(10, 10));
+      await tester.pumpAndSettle();
+      final instruction = find.byKey(const ValueKey('recipe-step-instruction'));
+      await _scrollUntilVisible(tester, instruction);
+      await tester.enterText(instruction, '作者手动改成搅拌均匀');
+      await tester.pumpAndSettle();
+      await _scrollToTop(tester);
+      await tester.tap(find.byKey(const ValueKey('save-recipe-button')));
+      await tester.pumpAndSettle();
+      final saved = (state.current['version'] as Map)['snapshot'] as Map;
+      expect((saved['ingredients'] as List).first['quantity_source'], source);
+      expect(
+        (saved['ingredients'] as List).first['preparation_source'],
+        source,
+      );
+      final step = (saved['steps'] as List).first as Map;
+      expect(step['instruction_source'], isNull);
+      for (final field in [
+        'doneness_source',
+        'duration_source',
+        'heat_source',
+        'temperature_source',
+      ]) {
+        expect(step[field], source, reason: field);
+      }
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
+    'AI quantity why preserves ambiguous original separately from conversion',
+    (tester) async {
+      final server = FakeServer();
+      final state = _installRecipeApi(server);
+      final ingredient =
+          (((state.current['version'] as Map)['snapshot'] as Map)['ingredients']
+                      as List)
+                  .first
+              as Map;
+      ingredient['quantity'] = 3;
+      ingredient['unit'] = 'g';
+      ingredient['quantity_source'] = {
+        'source': 'ai_estimated',
+        'original': '0 少许',
+        'basis': '按主料量估算',
+        'confidence': 0.7,
+        'confidence_level': 'medium',
+        'baseline': '两人份盐 3 克',
+        'adjustment': '偏淡每次补 1 克',
+      };
+      await pumpApp(tester, env: TestEnv.signedIn(server: server));
+      await _openMyRecipes(tester);
+      await tester.tap(find.byKey(const ValueKey('recipe-card-$_recipeId')));
+      await tester.pumpAndSettle();
+      final badge = find.byKey(
+        const ValueKey('recipe-source-mark-ingredient-1'),
+      );
+      await _scrollUntilVisible(tester, badge);
+      await tester.tap(badge);
+      await tester.pumpAndSettle();
+      expect(find.textContaining('0 少许'), findsOneWidget);
+      expect(find.textContaining('按主料量估算'), findsOneWidget);
+      expect(find.textContaining('把握程度：中'), findsOneWidget);
+      await tester.tapAt(const Offset(10, 10));
+      await tester.pumpAndSettle();
+      await _scrollToTop(tester);
+      await _scrollUntilVisible(
+        tester,
+        find.byKey(const ValueKey('recipe-serving-increase')),
+      );
+      await tester.tap(find.byKey(const ValueKey('recipe-serving-increase')));
+      await tester.pumpAndSettle();
+      await _scrollUntilVisible(tester, badge);
+      await tester.tap(badge);
+      await tester.pumpAndSettle();
+      expect(find.textContaining('3 g'), findsOneWidget);
+      expect(find.textContaining('4.5'), findsWidgets);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  for (final (entry, smallPhone) in [
+    ('button', false),
+    ('command', false),
+    ('button', true),
+    ('command', true),
+  ]) {
+    testWidgets(
+      'editor previews quantification basis and accepts all into a version via $entry${smallPhone ? ' at 320x640' : ''}',
+      (tester) async {
+        if (smallPhone) {
+          tester.view.physicalSize = const Size(320, 640);
+          tester.view.devicePixelRatio = 1;
+          addTearDown(tester.view.reset);
+        }
+        final server = FakeServer();
+        final state = _installRecipeApi(server);
+        server.on(
+          'POST',
+          '/v1/recipes/$_recipeId/quantification',
+          (_) => (
+            200,
+            {
+              'id': _secondVersionId,
+              'base_version_id': _firstVersionId,
+              'detail': 'standard',
+              'problems': [
+                {
+                  'id': 'amount',
+                  'type': 'ambiguous',
+                  'status': 'unresolved',
+                  'message': '水量待确定',
+                  'original': '一碗',
+                  'position': {
+                    'collection': 'ingredients',
+                    'item_id': 'ingredient-1',
+                    'field': 'quantity',
+                  },
+                },
+              ],
+              'suggestions': [
+                {
+                  'problem_id': 'amount',
+                  'value': '300',
+                  'unit': 'ml',
+                  'basis': '按中号碗容量估算',
+                  'confidence': 'medium',
+                  'baseline': '中号碗约 300 毫升',
+                  'adjustment': '按实际碗容量测量',
+                },
+              ],
+            },
+          ),
+        );
+        server.on(
+          'POST',
+          '/v1/recipes/$_recipeId/quantification/$_secondVersionId/decisions',
+          (_) {
+            final updated =
+                jsonDecode(jsonEncode(state.current)) as Map<String, dynamic>;
+            (updated['version'] as Map)['reproducibility'] = {
+              'rules_version': 'reproducibility-v1',
+              'state': 'reproducible',
+              'remaining_count': 0,
+              'required_field_count': 2,
+              'concrete_field_count': 2,
+              'field_completeness': 1,
+              'problems': [],
+            };
+            return (201, updated);
+          },
+        );
+        await pumpApp(tester, env: TestEnv.signedIn(server: server));
+        await _openMyRecipes(tester);
+        await tester.tap(find.byKey(const ValueKey('recipe-card-$_recipeId')));
+        await tester.pumpAndSettle();
+        await tester.tap(find.byKey(const ValueKey('edit-recipe-button')));
+        await tester.pumpAndSettle();
+        final command = find.byKey(const ValueKey('recipe-operation-command'));
+        if (entry == 'command') {
+          await _scrollUntilVisible(tester, command);
+          await tester.enterText(command, '请求量化');
+          await tester.testTextInput.receiveAction(TextInputAction.done);
+        } else {
+          final quantify = find.byKey(const ValueKey('recipe-quantify'));
+          await _scrollUntilVisible(tester, quantify);
+          expect(quantify.hitTestable(), findsOneWidget);
+          await tester.tap(quantify);
+        }
+        await tester.pumpAndSettle();
+        expect(find.text('300 ml'), findsOneWidget);
+        expect(find.text('按中号碗容量估算'), findsOneWidget);
+        expect(find.text('把握程度：中'), findsNothing);
+        final why = find.byKey(const ValueKey('quantification-why-amount'));
+        await _scrollUntilVisible(tester, why);
+        await tester.tap(why);
+        await tester.pumpAndSettle();
+        expect(find.textContaining('把握程度：中'), findsOneWidget);
+        expect(find.textContaining('基准：中号碗约 300 毫升'), findsOneWidget);
+        await tester.tapAt(const Offset(10, 10));
+        await tester.pumpAndSettle();
+        final acceptAll = find.byKey(
+          const ValueKey('quantification-accept-all'),
+        );
+        await _scrollUntilVisible(tester, acceptAll);
+        expect(acceptAll.hitTestable(), findsOneWidget);
+        if (entry == 'command') {
+          await _scrollUntilVisible(tester, command);
+          await tester.enterText(command, '全部接受');
+          await tester.testTextInput.receiveAction(TextInputAction.done);
+        } else {
+          await tester.tap(acceptAll);
+        }
+        await tester.pumpAndSettle();
+        expect(find.text('所有执行字段已具体化 · 可复刻'), findsOneWidget);
+        expect(
+          server.calls('POST', '/v1/recipes/$_recipeId/quantification').length,
+          1,
+        );
+        expect(
+          server
+              .calls(
+                'POST',
+                '/v1/recipes/$_recipeId/quantification/$_secondVersionId/decisions',
+              )
+              .length,
+          1,
+        );
+      },
+    );
+  }
+  testWidgets('detail shows saved reproducibility and field completeness', (
+    tester,
+  ) async {
+    final server = FakeServer();
+    final state = _installRecipeApi(server);
+    (state.current['version'] as Map)['reproducibility'] = {
+      'rules_version': 'reproducibility-v1',
+      'state': 'incomplete',
+      'remaining_count': 1,
+      'required_field_count': 2,
+      'concrete_field_count': 1,
+      'field_completeness': 0.5,
+      'problems': [
+        {
+          'id': 'steps:step-1:duration_seconds:missing',
+          'type': 'missing',
+          'status': 'unresolved',
+          'message': '加热步骤需要具体时长',
+          'position': {
+            'collection': 'steps',
+            'item_id': 'step-1',
+            'field': 'duration_seconds',
+          },
+        },
+      ],
+    };
+    await pumpApp(tester, env: TestEnv.signedIn(server: server));
+    await _openMyRecipes(tester);
+    await tester.tap(find.byKey(const ValueKey('recipe-card-$_recipeId')));
+    await tester.pumpAndSettle();
+    expect(find.text('还有 1 处需要确定'), findsOneWidget);
+    expect(find.text('执行字段完整度：50%（1 / 2）'), findsOneWidget);
+  });
+
+  testWidgets(
+    'unchanged verified recipe can be edited without client verified writes',
+    (tester) async {
+      final server = FakeServer();
+      final state = _installRecipeApi(server);
+      final snapshot = ((state.current['version'] as Map)['snapshot'] as Map);
+      snapshot['servings_source'] = {'source': 'verified'};
+      snapshot['text_source'] = {'source': 'verified'};
+      (snapshot['ingredients'] as List).first['quantity_source'] = {
+        'source': 'verified',
+      };
+      server.on('POST', '/v1/recipes/$_recipeId/versions', (request) {
+        if (jsonEncode(request.body).contains('"source":"verified"')) {
+          return (
+            422,
+            {
+              'error': {'code': 'invalid_request', 'message': '客户端不能写入已验证'},
+            },
+          );
+        }
+        return (201, state.current);
+      });
+      await pumpApp(tester, env: TestEnv.signedIn(server: server));
+      await _openMyRecipes(tester);
+      await tester.tap(find.byKey(const ValueKey('recipe-card-$_recipeId')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('edit-recipe-button')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('save-recipe-button')));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const ValueKey('recipe-save-error')), findsNothing);
+      expect(find.byKey(const ValueKey('edit-recipe-button')), findsOneWidget);
+    },
+  );
+
+  testWidgets('editor checks and locates remaining ingredient and step rows', (
+    tester,
+  ) async {
+    final server = FakeServer();
+    _installRecipeApi(server);
+    server.on(
+      'POST',
+      '/v1/recipes/reproducibility/check',
+      (_) => (
+        200,
+        {
+          'result': {
+            'rules_version': 'reproducibility-v1',
+            'state': 'incomplete',
+            'remaining_count': 2,
+            'required_field_count': 3,
+            'concrete_field_count': 1,
+            'field_completeness': 1 / 3,
+            'problems': [
+              {
+                'id': 'quantity',
+                'type': 'ambiguous',
+                'status': 'unresolved',
+                'message': '用量待确定',
+                'position': {
+                  'collection': 'ingredients',
+                  'item_id': 'ingredient-1',
+                  'field': 'quantity',
+                },
+              },
+              {
+                'id': 'duration',
+                'type': 'missing',
+                'status': 'unresolved',
+                'message': '时长待确定',
+                'position': {
+                  'collection': 'steps',
+                  'item_id': 'step-1',
+                  'field': 'duration_seconds',
+                },
+              },
+            ],
+          },
+        },
+      ),
+    );
+    await pumpApp(tester, env: TestEnv.signedIn(server: server));
+    await _openMyRecipes(tester);
+    await tester.tap(find.byKey(const ValueKey('recipe-card-$_recipeId')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('edit-recipe-button')));
+    await tester.pumpAndSettle();
+    await tester.tap(
+      find.byKey(const ValueKey('recipe-reproducibility-check')),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('还有 2 处需要确定'), findsOneWidget);
+    await tester.tap(
+      find.byKey(const ValueKey('recipe-reproducibility-locate')),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('当前定位：用量待确定'), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('recipe-ingredient-quantity')).hitTestable(),
+      findsOneWidget,
+    );
+    await _scrollToTop(tester);
+    await tester.tap(
+      find.byKey(const ValueKey('recipe-reproducibility-locate')),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('当前定位：时长待确定'), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('recipe-step-instruction')).hitTestable(),
+      findsOneWidget,
+    );
+  });
+
   testWidgets(
     'mold mode converts the original recipe and restores serving mode',
     (tester) async {
@@ -964,7 +1526,11 @@ void main() {
       addTearDown(() => tester.binding.setSurfaceSize(null));
       final server = FakeServer();
       _installRecipeApi(server);
-      await pumpApp(tester, env: TestEnv.signedIn(server: server));
+      await pumpApp(
+        tester,
+        env: TestEnv.signedIn(server: server),
+        size: const Size(320, 640),
+      );
       await _openMyRecipes(tester);
       await tester.tap(find.byKey(const ValueKey('recipe-card-$_recipeId')));
       await tester.pumpAndSettle();
@@ -1812,6 +2378,10 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byKey(const ValueKey('recipe-save-error')), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('recipe-save-error')).hitTestable(),
+      findsOneWidget,
+    );
     expect(find.textContaining('不得声称治疗疾病'), findsOneWidget);
     expect(find.textContaining('请改写为对做法的客观描述'), findsOneWidget);
     expect(server.calls('POST', '/v1/recipes'), isEmpty);
@@ -1855,6 +2425,72 @@ void main() {
     expect(find.textContaining('菜谱结构有误：步骤说明不完整'), findsOneWidget);
     expect(find.byKey(const ValueKey('recipe-dish-name')), findsOneWidget);
   });
+
+  testWidgets(
+    'small phone edits a historical version with saved reproducibility',
+    (tester) async {
+      final server = FakeServer();
+      final state = _installRecipeApi(server);
+      (state.current['version'] as Map)['reproducibility'] = {
+        'rules_version': 'reproducibility-v1',
+        'state': 'incomplete',
+        'remaining_count': 1,
+        'required_field_count': 2,
+        'concrete_field_count': 1,
+        'field_completeness': 0.5,
+        'problems': [
+          {
+            'id': 'steps:step-1:duration_seconds:missing',
+            'type': 'missing',
+            'status': 'unresolved',
+            'message': '加热步骤需要具体时长',
+            'position': {
+              'collection': 'steps',
+              'item_id': 'step-1',
+              'field': 'duration_seconds',
+            },
+          },
+        ],
+      };
+      await pumpApp(
+        tester,
+        env: TestEnv.signedIn(server: server),
+        size: const Size(320, 640),
+      );
+      await _openMyRecipes(tester);
+      await tester.tap(find.byKey(const ValueKey('recipe-card-$_recipeId')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('recipe-history-button')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('recipe-version-1')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('edit-old-recipe-button')));
+      await tester.pumpAndSettle();
+      expect(
+        find.byKey(const ValueKey('recipe-editor-content')),
+        findsOneWidget,
+      );
+      expect(find.text('还有 1 处需要确定'), findsOneWidget);
+      final dishName = find.byKey(const ValueKey('recipe-dish-name'));
+      // Saved checks can push this lazy child below a small phone's build range.
+      await _scrollUntilVisible(tester, dishName);
+      expect(dishName.hitTestable(), findsOneWidget);
+      await tester.enterText(dishName, '基础菜');
+      final changeNote = _fieldsWithLabel('这次改了什么');
+      await _scrollUntilVisible(tester, changeNote);
+      await tester.enterText(changeNote, '从历史版本继续修改');
+      await _scrollToTop(tester);
+      await tester.tap(find.byKey(const ValueKey('save-recipe-button')));
+      await tester.pumpAndSettle();
+      expect(state.versions, hasLength(2));
+      expect((state.current['version'] as Map)['change_note'], '从历史版本继续修改');
+      expect(
+        (state.current['version'] as Map)['previous_version_id'],
+        _firstVersionId,
+      );
+      expect(tester.takeException(), isNull);
+    },
+  );
 
   testWidgets(
     'save, history, old-version edit, list, and delete remain connected',

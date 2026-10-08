@@ -95,6 +95,32 @@ def test_same_dish_candidates_include_owned_roots_and_paginate_without_private_l
     assert api.client.get(path, params={"limit": 100000}, headers=headers).status_code == 422
 
 
+def test_preparation_evidence_alone_is_not_an_execution_change(api: Api) -> None:
+    headers = bearer(api.login("preparation-evidence-compare@example.com"))
+    first = create(
+        api,
+        headers,
+        [ingredient(preparation="切块", preparation_source={"source": "author_filled"})],
+    )
+    second = create(
+        api,
+        headers,
+        [
+            ingredient(
+                preparation="切块",
+                preparation_source={"source": "ai_estimated", "basis": "原有切法的估算依据"},
+            )
+        ],
+    )
+    response = compare(api, headers, first, second)
+    assert response.status_code == 200, response.text
+    row = response.json()["ingredients"][0]
+    assert row["before"]["preparation_source"]["source"] == "author_filled"
+    assert row["after"]["preparation_source"]["source"] == "ai_estimated"
+    assert row["changes"] == []
+    assert response.json()["snapshot_fields"] == []
+
+
 @pytest.mark.parametrize(
     "unit_a,qty_a,unit_b,qty_b,attrs,expected",
     [
