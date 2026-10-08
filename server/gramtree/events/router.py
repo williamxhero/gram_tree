@@ -137,6 +137,9 @@ def upload_events(
         correlation = e.correlation.model_dump(mode="json", exclude_none=True)
         rejection = validation.validate_event(e.event_type, e.type_version, correlation, e.content)
         if rejection is None:
+            # Validation accepts uuid.UUID spellings (hex, braces, URN, case).
+            # Store identity canonically so comparisons and erasure agree.
+            correlation = {key: str(uuid.UUID(value)) for key, value in correlation.items()}
             rejection = _validate_taste_link(session, auth.user.id, e, correlation)
         if rejection is not None:
             rejections[e.id] = RejectionReason(code=rejection.code, message=rejection.message)

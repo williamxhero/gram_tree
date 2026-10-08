@@ -14,7 +14,7 @@ from typing import Any
 
 from cryptography.exceptions import InvalidTag
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
-from sqlalchemy import String, cast, delete, or_, select
+from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
 
 from gramtree.accounts.models import Consent
@@ -43,21 +43,32 @@ def erase_sensitive(session: Session, owner_id: uuid.UUID) -> None:
     Single transactional extension point for future sensitive dependent copies.
     Authorization invalidation/versioning belongs to the locked calling transaction.
     """
-    changes = select(TasteProfileChange.id).where(
-        TasteProfileChange.owner_id == owner_id, TasteProfileChange.field == "allergies"
-    )
-    linked_changes = select(cast(TasteProfileChange.id, String)).where(
-        TasteProfileChange.owner_id == owner_id, TasteProfileChange.field == "allergies"
-    )
-    session.execute(
-        delete(Event).where(
-            Event.user_id == owner_id,
-            or_(
-                Event.id.in_(changes),
-                Event.correlation["taste_profile_change_id"].astext.in_(linked_changes),
-            ),
+    change_ids = set(
+        session.scalars(
+            select(TasteProfileChange.id).where(
+                TasteProfileChange.owner_id == owner_id, TasteProfileChange.field == "allergies"
+            )
         )
     )
+    event_ids = set(change_ids)
+    if change_ids:
+        link = Event.correlation["taste_profile_change_id"]
+        candidates = session.execute(
+            select(Event.id, link).where(Event.user_id == owner_id, link.is_not(None))
+        )
+        for event_id, value in candidates:
+            if not isinstance(value, str):
+                continue
+            # Historical uploads accepted every uuid.UUID spelling. Parse with
+            # those same semantics, never cast arbitrary legacy JSON to SQL UUID.
+            try:
+                change_id = uuid.UUID(value)
+            except (ValueError, AttributeError, TypeError):
+                continue
+            if change_id in change_ids:
+                event_ids.add(event_id)
+    if event_ids:
+        session.execute(delete(Event).where(Event.user_id == owner_id, Event.id.in_(event_ids)))
     session.execute(
         delete(TasteProfileChange).where(
             TasteProfileChange.owner_id == owner_id, TasteProfileChange.field == "allergies"

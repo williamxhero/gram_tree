@@ -446,6 +446,139 @@ def test_withdrawal_erases_every_event_linked_to_sensitive_history(
     assert response.json()["results"][0]["status"] == "rejected"
 
 
+@pytest.mark.parametrize(
+    "spelling",
+    ["uppercase", "hex", "braced", "urn", "upper_braced_hex", "extra_hyphens", "nested_braces"],
+)
+@pytest.mark.parametrize("legacy", [False, True], ids=["uploaded", "legacy_stored"])
+def test_withdrawal_erases_alternative_uuid_links(
+    sensitive_api: Api, engine: Engine, spelling: str, legacy: bool
+):
+    api = sensitive_api
+    owner = bearer(api.login("alternative-sensitive@example.com"))
+    consent(api, owner)
+    state = api.client.get(PATH, headers=owner).json()
+    assert save(api, owner, state, ["花生"]).status_code == 200
+    change = api.client.get(PATH + "/changes", headers=owner).json()["items"][0]
+    change_id = change["id"]
+    alternative = {
+        "uppercase": change_id.upper(),
+        "hex": change_id.replace("-", ""),
+        "braced": "{" + change_id + "}",
+        "urn": "urn:uuid:" + change_id,
+        "upper_braced_hex": "{" + change_id.replace("-", "").upper() + "}",
+        "extra_hyphens": "--" + change_id.replace("-", "---") + "--",
+        "nested_braces": "{{" + change_id + "}}",
+    }[spelling]
+    linked = {
+        "id": str(uuid.uuid4()),
+        "event_type": "pipeline.self_check",
+        "type_version": 1,
+        "device_id": "alternative-event-test",
+        "device_time": api.clock.now.isoformat(),
+        "app_version": "1.0.0",
+        "content": {"ping": "pong"},
+        "correlation": {"taste_profile_change_id": alternative, "plan_id": alternative},
+    }
+    response = api.client.post("/v1/events/upload", headers=owner, json={"events": [linked]})
+    assert response.status_code == 200, response.text
+    assert response.json()["results"][0]["status"] == "accepted"
+    if not legacy:
+        with engine.connect() as conn:
+            stored = conn.scalar(
+                text("SELECT correlation FROM events WHERE id=:id"), {"id": linked["id"]}
+            )
+        assert stored == {"taste_profile_change_id": change_id, "plan_id": change_id}
+    if legacy:
+        # Required storage audit: simulate historical accepted noncanonical data,
+        # so normalizing only new uploads cannot conceal an incomplete erasure.
+        with engine.begin() as conn:
+            conn.execute(
+                text("UPDATE events SET correlation=:correlation WHERE id=:id"),
+                {"id": linked["id"], "correlation": json.dumps(linked["correlation"])},
+            )
+    api.clock.advance(seconds=1)
+    consent(api, owner, "withdraw")
+    assert api.client.get(PATH, headers=owner).json()["consent_id"] is None
+    with engine.connect() as conn:
+        assert (
+            conn.scalar(text("SELECT count(*) FROM events WHERE id=:id"), {"id": linked["id"]}) == 0
+        )
+
+
+def test_uuid_erasure_preserves_malformed_legacy_and_unrelated_owner_events(
+    sensitive_api: Api, engine: Engine
+):
+    api = sensitive_api
+    owner = bearer(api.login("erasure-safety@example.com"))
+    ordinary = api.client.patch(
+        "/v1/me/taste-profile", headers=owner, json={"flavors": {"salty": 0.75}}
+    )
+    assert ordinary.status_code == 200
+    ordinary_id = api.client.get("/v1/me/taste-profile/changes", headers=owner).json()["items"][0][
+        "id"
+    ]
+    consent(api, owner)
+    state = api.client.get(PATH, headers=owner).json()
+    assert save(api, owner, state, ["花生"]).status_code == 200
+    sensitive_id = api.client.get(PATH + "/changes", headers=owner).json()["items"][0]["id"]
+    correlations = [
+        {},
+        None,
+        [],
+        "not-an-object",
+        {"taste_profile_change_id": None},
+        {"taste_profile_change_id": 42},
+        # Text extraction would make this number look like an accepted UUID v4.
+        {"taste_profile_change_id": 12345678123441238123123456789012},
+        {"taste_profile_change_id": True},
+        {"taste_profile_change_id": "not-a-uuid"},
+        {"taste_profile_change_id": {"nested": sensitive_id}},
+        {"taste_profile_change_id": [sensitive_id]},
+        {"taste_profile_change_id": ordinary_id.upper()},
+    ]
+    base_event = {
+        "event_type": "pipeline.self_check",
+        "type_version": 1,
+        "device_id": "erasure-safety",
+        "device_time": api.clock.now.isoformat(),
+        "app_version": "1.0.0",
+        "content": {"ping": "pong"},
+    }
+    retained = {}
+    for correlation in correlations:
+        event = {**base_event, "id": str(uuid.uuid4())}
+        response = api.client.post("/v1/events/upload", headers=owner, json={"events": [event]})
+        assert response.status_code == 200, response.text
+        assert response.json()["results"][0]["status"] == "accepted"
+        retained[event["id"]] = correlation
+    other = bearer(api.login("erasure-safety-other@example.com", device="other"))
+    other_event = {**base_event, "id": str(uuid.uuid4())}
+    response = api.client.post("/v1/events/upload", headers=other, json={"events": [other_event]})
+    assert response.status_code == 200, response.text
+    assert response.json()["results"][0]["status"] == "accepted"
+    retained[other_event["id"]] = {"taste_profile_change_id": sensitive_id.upper()}
+    # Explicit legacy-storage audit includes malformed JSON shapes, an ordinary
+    # change belonging to this owner and the sensitive link on another owner.
+    with engine.begin() as conn:
+        for event_id, correlation in retained.items():
+            conn.execute(
+                text("UPDATE events SET correlation=:correlation WHERE id=:id"),
+                {"id": event_id, "correlation": json.dumps(correlation)},
+            )
+    api.clock.advance(seconds=1)
+    consent(api, owner, "withdraw")
+    assert api.client.get(PATH, headers=owner).json()["consent_id"] is None
+    with engine.connect() as conn:
+        rows = conn.execute(
+            text("SELECT id, correlation FROM events WHERE device_id='erasure-safety'")
+        )
+        assert {str(row.id): row.correlation for row in rows} == retained
+        assert (
+            conn.scalar(text("SELECT count(*) FROM events WHERE id=:id"), {"id": ordinary_id}) == 1
+        )
+
+
 def test_concurrent_write_and_withdraw_serialize_with_no_sensitive_residue(
     sensitive_api: Api, engine: Engine
 ):
