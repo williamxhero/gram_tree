@@ -2175,6 +2175,96 @@ abstract class AppLocalizations {
   /// **'AI 协助'**
   String get recipeAiAssisted;
 
+  /// No description provided for @tasteCategory.
+  ///
+  /// In zh, this message translates to:
+  /// **'或选择食材分类'**
+  String get tasteCategory;
+
+  /// No description provided for @tastePreference.
+  ///
+  /// In zh, this message translates to:
+  /// **'偏好'**
+  String get tastePreference;
+
+  /// No description provided for @tastePreferenceDelete.
+  ///
+  /// In zh, this message translates to:
+  /// **'删除偏好'**
+  String get tastePreferenceDelete;
+
+  /// No description provided for @tastePreferenceDeleteBody.
+  ///
+  /// In zh, this message translates to:
+  /// **'只删除这项明确选择，不改动其他口味和过敏设置；修改历史保留。'**
+  String get tastePreferenceDeleteBody;
+
+  /// No description provided for @tasteIngredients.
+  ///
+  /// In zh, this message translates to:
+  /// **'食材偏好'**
+  String get tasteIngredients;
+
+  /// No description provided for @tasteIngredientsIntro.
+  ///
+  /// In zh, this message translates to:
+  /// **'喜欢、不喜欢和忌口由你明确选择，不等于过敏。'**
+  String get tasteIngredientsIntro;
+
+  /// No description provided for @tasteIngredientsEmpty.
+  ///
+  /// In zh, this message translates to:
+  /// **'还没有食材偏好'**
+  String get tasteIngredientsEmpty;
+
+  /// No description provided for @tastePreferenceAdd.
+  ///
+  /// In zh, this message translates to:
+  /// **'添加食材偏好'**
+  String get tastePreferenceAdd;
+
+  /// No description provided for @tasteIngredientSearch.
+  ///
+  /// In zh, this message translates to:
+  /// **'搜索标准食材'**
+  String get tasteIngredientSearch;
+
+  /// No description provided for @tasteSearch.
+  ///
+  /// In zh, this message translates to:
+  /// **'搜索'**
+  String get tasteSearch;
+
+  /// No description provided for @tasteSearchEmpty.
+  ///
+  /// In zh, this message translates to:
+  /// **'没有找到标准食材，请换一个名称搜索；不能保存自由文字。'**
+  String get tasteSearchEmpty;
+
+  /// No description provided for @tasteLiked.
+  ///
+  /// In zh, this message translates to:
+  /// **'喜欢'**
+  String get tasteLiked;
+
+  /// No description provided for @tasteDisliked.
+  ///
+  /// In zh, this message translates to:
+  /// **'不喜欢'**
+  String get tasteDisliked;
+
+  /// No description provided for @tasteAvoided.
+  ///
+  /// In zh, this message translates to:
+  /// **'忌口'**
+  String get tasteAvoided;
+
+  /// No description provided for @tasteUnset.
+  ///
+  /// In zh, this message translates to:
+  /// **'未设置'**
+  String get tasteUnset;
+
   /// No description provided for @tasteTitle.
   ///
   /// In zh, this message translates to:

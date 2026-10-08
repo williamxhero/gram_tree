@@ -9,6 +9,9 @@ import '../../l10n/app_localizations.dart';
 import '../../ui_protocol/components/component_scaffold.dart';
 import '../../ui_protocol/source_mark.dart';
 import '../../ui_protocol/source_types.dart';
+import 'cooking_constraints_section.dart';
+import 'ingredient_preferences_section.dart';
+import 'personal_measures_summary.dart';
 import 'taste_profile_data.dart';
 
 class TasteProfilePage extends ConsumerWidget {
@@ -173,6 +176,14 @@ class _TasteBodyState extends ConsumerState<_TasteBody> {
                   ],
                 ),
               ),
+            IngredientPreferencesSection(
+              profile: value,
+              accountId: widget.accountId,
+              busy: _busy,
+              onSave: (preferences) => _mutate(
+                (repository) => repository.setPreferences(preferences),
+              ),
+            ),
             OutlinedButton(
               key: const ValueKey('taste-reset'),
               onPressed: _busy ? null : _reset,
@@ -201,6 +212,10 @@ class _TasteBodyState extends ConsumerState<_TasteBody> {
                 ),
               ),
             const SizedBox(height: 24),
+            CookingConstraintsSection(
+              key: ValueKey('constraints-${widget.accountId}'),
+            ),
+            const PersonalMeasuresSummary(),
             Text(
               l10n.tasteHistory,
               style: Theme.of(context).textTheme.titleLarge,
@@ -236,9 +251,20 @@ class _HistoryCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final field = _flavorName(change.field.replaceFirst('flavors.', ''), l10n);
-    final oldLabel = _historyLabel(change.oldValue, scale);
-    final newLabel = _historyLabel(change.newValue, scale);
+    final preferences = change.field == 'ingredient_preferences';
+    final constraints = change.field == 'cooking_constraints';
+    final field = preferences
+        ? l10n.tasteIngredients
+        : constraints
+        ? '做菜约束'
+        : _flavorName(change.field.replaceFirst('flavors.', ''), l10n);
+    String label(Object value) => preferences
+        ? preferenceHistoryLabel(value, l10n)
+        : constraints
+        ? cookingConstraintsHistoryLabel(value)
+        : _historyLabel(value, scale);
+    final oldLabel = label(change.oldValue);
+    final newLabel = label(change.newValue);
     final status = change.status == TasteProfileChangeOutStatusEnum.active
         ? l10n.tasteActive
         : l10n.tasteReverted;

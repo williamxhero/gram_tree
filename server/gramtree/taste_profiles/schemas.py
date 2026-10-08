@@ -41,7 +41,7 @@ class TasteScale(BaseModel):
 class IngredientPreference(BaseModel):
     model_config = ConfigDict(extra="forbid")
     ingredient_id: IdV4 | None = None
-    category: str | None = Field(None, min_length=1, max_length=20)
+    category: str | None = Field(default=None, min_length=1, max_length=20)
     preference: Literal["liked", "disliked", "avoided"]
 
     @model_validator(mode="after")

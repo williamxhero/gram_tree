@@ -15,7 +15,15 @@ depends_on = None
 
 
 def upgrade() -> None:
-    op.add_column("taste_profiles", sa.Column("cooking_constraints", postgresql.JSONB(), nullable=False, server_default=sa.text("'{}'::jsonb")))
+    op.add_column(
+        "taste_profiles",
+        sa.Column(
+            "cooking_constraints",
+            postgresql.JSONB(),
+            nullable=False,
+            server_default=sa.text("'{}'::jsonb"),
+        ),
+    )
     op.alter_column("taste_profiles", "cooking_constraints", server_default=None)
 
 

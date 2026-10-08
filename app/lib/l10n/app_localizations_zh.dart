@@ -1146,6 +1146,51 @@ class AppLocalizationsZh extends AppLocalizations {
   String get recipeAiAssisted => 'AI 协助';
 
   @override
+  String get tasteCategory => '或选择食材分类';
+
+  @override
+  String get tastePreference => '偏好';
+
+  @override
+  String get tastePreferenceDelete => '删除偏好';
+
+  @override
+  String get tastePreferenceDeleteBody => '只删除这项明确选择，不改动其他口味和过敏设置；修改历史保留。';
+
+  @override
+  String get tasteIngredients => '食材偏好';
+
+  @override
+  String get tasteIngredientsIntro => '喜欢、不喜欢和忌口由你明确选择，不等于过敏。';
+
+  @override
+  String get tasteIngredientsEmpty => '还没有食材偏好';
+
+  @override
+  String get tastePreferenceAdd => '添加食材偏好';
+
+  @override
+  String get tasteIngredientSearch => '搜索标准食材';
+
+  @override
+  String get tasteSearch => '搜索';
+
+  @override
+  String get tasteSearchEmpty => '没有找到标准食材，请换一个名称搜索；不能保存自由文字。';
+
+  @override
+  String get tasteLiked => '喜欢';
+
+  @override
+  String get tasteDisliked => '不喜欢';
+
+  @override
+  String get tasteAvoided => '忌口';
+
+  @override
+  String get tasteUnset => '未设置';
+
+  @override
   String get tasteTitle => '我的口味';
 
   @override

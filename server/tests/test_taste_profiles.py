@@ -51,7 +51,10 @@ def test_preferences_deduplicate_conflicts_partial_updates_and_clear(api: Api) -
     owner = bearer(api.login("preferences-semantics@example.com"))
     liked = {"category": "蔬菜", "preference": "liked"}
     avoided = {"category": "肉禽", "preference": "avoided"}
-    patch = lambda items: api.client.patch(PATH, json={"ingredient_preferences": items}, headers=owner)
+
+    def patch(items: list[dict[str, str]]):
+        return api.client.patch(PATH, json={"ingredient_preferences": items}, headers=owner)
+
     saved = patch([liked, avoided, liked])
     assert saved.status_code == 200, saved.text
     assert len(saved.json()["ingredient_preferences"]) == 2
@@ -67,7 +70,10 @@ def test_preferences_deduplicate_conflicts_partial_updates_and_clear(api: Api) -
     flavors = api.client.patch(PATH, json={"flavors": {"salty": 0.75}}, headers=owner).json()
     assert flavors["version"] == 4
     assert flavors["ingredient_preferences"] == edited["ingredient_preferences"]
-    assert api.client.post(PATH + "/reset", headers=owner).json()["ingredient_preferences"] == edited["ingredient_preferences"]
+    assert (
+        api.client.post(PATH + "/reset", headers=owner).json()["ingredient_preferences"]
+        == edited["ingredient_preferences"]
+    )
     cleared = patch([]).json()
     assert cleared["version"] == 6
     assert cleared["ingredient_preferences"] == []
@@ -81,7 +87,12 @@ def test_preferences_deduplicate_conflicts_partial_updates_and_clear(api: Api) -
 def test_combined_preference_and_flavor_changes_share_one_version(api: Api) -> None:
     owner = bearer(api.login("combined-preferences@example.com"))
     result = api.client.patch(
-        PATH, json={"flavors": {"salty": 0.75}, "ingredient_preferences": [{"category": "蔬菜", "preference": "liked"}]}, headers=owner,
+        PATH,
+        json={
+            "flavors": {"salty": 0.75},
+            "ingredient_preferences": [{"category": "蔬菜", "preference": "liked"}],
+        },
+        headers=owner,
     )
     assert result.status_code == 200, result.text
     assert result.json()["version"] == 2
@@ -95,22 +106,41 @@ def test_invalid_preferences_are_atomic_private_and_never_allergy_writes(api: Ap
     assert cli(["ingredients", "import", str(Path(__file__).parent / "data" / "ingredients")]) == 0
     owner = bearer(api.login("preferences-validation@example.com"))
     other = bearer(api.login("preferences-private@example.com", device="other"))
-    before = api.client.patch(PATH, json={"ingredient_preferences": [{"category": "蔬菜", "preference": "avoided"}]}, headers=owner).json()
+    before = api.client.patch(
+        PATH,
+        json={"ingredient_preferences": [{"category": "蔬菜", "preference": "avoided"}]},
+        headers=owner,
+    ).json()
     history = api.client.get(PATH + "/changes", headers=owner).json()["items"]
     for invalid in (
         [{"ingredient_id": str(uuid.uuid4()), "preference": "liked"}],
         [{"category": "自造分类", "preference": "liked"}],
-        [{"category": "蔬菜", "ingredient_id": "00000000-0000-4000-8000-000000000001", "preference": "liked"}],
+        [
+            {
+                "category": "蔬菜",
+                "ingredient_id": "00000000-0000-4000-8000-000000000001",
+                "preference": "liked",
+            }
+        ],
         [{"preference": "liked"}],
         [{"category": "蔬菜", "preference": "allergic"}],
         [{"category": "蔬菜", "preference": "avoided", "source": "learning"}],
         None,
     ):
-        response = api.client.patch(PATH, json={"flavors": {"sweet": 0.75}, "ingredient_preferences": invalid}, headers=owner)
+        response = api.client.patch(
+            PATH,
+            json={"flavors": {"sweet": 0.75}, "ingredient_preferences": invalid},
+            headers=owner,
+        )
         assert response.status_code == 422, response.text
         assert api.client.get(PATH, headers=owner).json() == before
         assert api.client.get(PATH + "/changes", headers=owner).json()["items"] == history
-    assert api.client.patch(PATH, json={"ingredient_preferences": [], "allergies": []}, headers=owner).status_code == 422
+    assert (
+        api.client.patch(
+            PATH, json={"ingredient_preferences": [], "allergies": []}, headers=owner
+        ).status_code
+        == 422
+    )
     assert api.client.patch(PATH, json={}, headers=owner).status_code == 422
     assert api.client.get(PATH, headers=other).json()["ingredient_preferences"] == []
     assert api.client.get(PATH + "/changes", headers=other).json()["items"] == []
@@ -121,16 +151,30 @@ def test_invalid_preferences_are_atomic_private_and_never_allergy_writes(api: Ap
     assert "allergies" not in before
     # Only the ordinary preference field is changed; the server-generated event is metadata-only.
     assert {change["field"] for change in history} == {"ingredient_preferences"}
-    assert api.client.get("/v1/dev/events/taste-profile-storage", headers=owner).json()["metadata_only"] is True
+    assert (
+        api.client.get("/v1/dev/events/taste-profile-storage", headers=owner).json()[
+            "metadata_only"
+        ]
+        is True
+    )
 
 
 def test_merged_ingredient_ids_share_one_preference_target(api: Api) -> None:
-    assert cli(["ingredients", "import", str(Path(__file__).parent / "data" / "ingredients_normalize")]) == 0
+    assert (
+        cli(
+            ["ingredients", "import", str(Path(__file__).parent / "data" / "ingredients_normalize")]
+        )
+        == 0
+    )
     owner = bearer(api.login("preferences-merged@example.com"))
-    original = api.client.post("/v1/ingredients/normalize", json={"items": [{"name": "洋柿子"}]}).json()["results"][0]
+    original = api.client.post(
+        "/v1/ingredients/normalize", json={"items": [{"name": "洋柿子"}]}
+    ).json()["results"][0]
     # Obtain the actual retained old ID from the public release contract.
     release = api.client.get("/v1/ingredients/changes").json()
-    old_id = next(row["from_id"] for row in release["merged"] if row["to_id"] == original["ingredient_id"])
+    old_id = next(
+        row["from_id"] for row in release["merged"] if row["to_id"] == original["ingredient_id"]
+    )
     preferences = [
         {"ingredient_id": old_id, "preference": "disliked"},
         {"ingredient_id": original["ingredient_id"], "preference": "disliked"},
@@ -138,10 +182,17 @@ def test_merged_ingredient_ids_share_one_preference_target(api: Api) -> None:
     response = api.client.patch(PATH, json={"ingredient_preferences": preferences}, headers=owner)
     assert response.status_code == 200, response.text
     assert len(response.json()["ingredient_preferences"]) == 1
-    assert response.json()["ingredient_preferences"][0]["ingredient_id"] == original["ingredient_id"]
+    assert (
+        response.json()["ingredient_preferences"][0]["ingredient_id"] == original["ingredient_id"]
+    )
     assert response.json()["ingredient_preferences"][0]["name"] == original["standard_name"]
     conflicting = [{**preferences[0], "preference": "liked"}, preferences[1]]
-    assert api.client.patch(PATH, json={"ingredient_preferences": conflicting}, headers=owner).status_code == 422
+    assert (
+        api.client.patch(
+            PATH, json={"ingredient_preferences": conflicting}, headers=owner
+        ).status_code
+        == 422
+    )
     assert api.client.get(PATH, headers=owner).json() == response.json()
 
 

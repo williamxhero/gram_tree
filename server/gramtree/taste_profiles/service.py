@@ -128,7 +128,11 @@ def mutate_profile(
     if ingredient_preferences is not None:
         items = normalize_preferences(session, ingredient_preferences)
         changes.append(
-            FieldChange("ingredient_preferences", {"items": profile.ingredient_preferences}, {"items": items})
+            FieldChange(
+                "ingredient_preferences",
+                {"items": profile.ingredient_preferences},
+                {"items": items},
+            )
         )
     # Validate every submitted field before recording one shared mutation version.
     rows = record_changes(session, profile, changes)
@@ -158,7 +162,11 @@ def normalize_preferences(
             item = IngredientPreferenceOut(
                 category=value.category, preference=value.preference, name=value.category
             )
-        key = f"ingredient:{item.ingredient_id}" if item.ingredient_id else f"category:{item.category}"
+        key = (
+            f"ingredient:{item.ingredient_id}"
+            if item.ingredient_id
+            else f"category:{item.category}"
+        )
         if key in by_target and by_target[key]["preference"] != item.preference:
             raise ApiError(422, "conflicting_ingredient_preference", "同一食材或分类只能有一种偏好")
         by_target[key] = item.model_dump(mode="json")

@@ -51,7 +51,10 @@ def update_taste_profile(
     scale = service.scale_for(session)
     profile = service.locked_profile(session, auth.user.id, scale)
     service.mutate_profile(
-        session, profile, body.flavors or {}, scale,
+        session,
+        profile,
+        body.flavors or {},
+        scale,
         ingredient_preferences=body.ingredient_preferences,
     )
     result = service.profile_out(profile, scale)

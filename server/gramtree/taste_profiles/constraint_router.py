@@ -22,7 +22,10 @@ def get_cooking_constraints(auth: CurrentAuth, session: SessionDep) -> CookingCo
 def replace_cooking_constraints(
     body: CookingConstraints, auth: CurrentAuth, session: SessionDep
 ) -> CookingConstraintsOut:
-    """Replace all cooking settings; an empty object clears them. Omitted fields use empty defaults."""
+    """Replace cooking settings; an empty object clears them.
+
+    Omitted fields use empty defaults.
+    """
     profile = service.locked_profile(session, auth.user.id, service.scale_for(session))
     constraint_service.replace_constraints(session, profile, body)
     result = constraint_service.constraints_out(session, profile)

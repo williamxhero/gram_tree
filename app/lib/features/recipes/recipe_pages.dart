@@ -2087,10 +2087,33 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
   RecipeIngredientDisplayOut? _displayContract;
   String? _displayContractKey;
   int _loadSerial = 0;
+  String? _viewAccountId;
 
   @override
   void initState() {
     super.initState();
+    _viewAccountId = ref.read(authProvider).value?.id;
+    ref.listenManual(authProvider, (_, next) {
+      if (next.isLoading) return;
+      final accountId = next.value?.id;
+      if (accountId == _viewAccountId) return;
+      _viewAccountId = accountId;
+      _loadSerial++;
+      setState(() {
+        _detail = null;
+        _error = null;
+        _targetServings = null;
+        _targetMold = null;
+        _measures = const [];
+        _densities = const {};
+        _selectedMeasureId = null;
+        _displayContract = null;
+        _displayContractKey = null;
+        _scaleMode = _RecipeScaleMode.servings;
+        _displayMode = MeasureDisplayMode.base;
+      });
+      if (accountId != null) unawaited(_load());
+    });
     unawaited(_load());
   }
 
@@ -2103,6 +2126,8 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
       _displayContract = null;
       _displayContractKey = null;
       _scaleMode = _RecipeScaleMode.servings;
+      _targetServings = null;
+      _targetMold = null;
       unawaited(_load());
     }
   }
@@ -2118,8 +2143,11 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
       if (!mounted || serial != _loadSerial) return;
       setState(() {
         _detail = detail;
-        _targetServings = detail.version.snapshot.servings;
-        _targetMold = detail.version.snapshot.baseMold;
+        // Personal defaults initialize a new view only. Explicit choices (and
+        // resetting to author servings) survive recipe/measure refreshes.
+        _targetServings ??=
+            detail.defaultServings ?? detail.version.snapshot.servings;
+        _targetMold ??= detail.version.snapshot.baseMold;
       });
       unawaited(_loadDisplayMetadata(detail));
     } catch (error, stack) {
@@ -2139,6 +2167,7 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
   }
 
   Future<void> _loadDisplayMetadata(RecipeDetail detail) async {
+    final accountId = _viewAccountId;
     final List<String> ids = [
       for (final item in detail.version.snapshot.ingredients ?? const [])
         if (item.ingredientId?.isNotEmpty == true) item.ingredientId!,
@@ -2162,7 +2191,11 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
     } catch (_) {
       // Detail pages remain useful offline with base g/ml values and cached data.
     }
-    if (!mounted || _detail?.version.id != detail.version.id) return;
+    if (!mounted ||
+        accountId != _viewAccountId ||
+        _detail?.version.id != detail.version.id) {
+      return;
+    }
     setState(() {
       _densities = densities;
       _measures = measures;
@@ -2199,6 +2232,7 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
         ? targetServings
         : null;
     final key = [
+      _viewAccountId,
       widget.recipeId,
       _detail?.version.id ?? widget.versionId,
       displayMode.name,

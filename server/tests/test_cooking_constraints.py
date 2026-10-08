@@ -1,5 +1,8 @@
 """Household cooking constraints through authenticated HTTP and real PostgreSQL."""
 
+import json
+
+from gramtree.cli import main as cli
 from tests.accounts_support import Api, bearer
 from tests.test_recipes import recipe_input
 
@@ -13,15 +16,29 @@ def test_constraints_persist_clear_and_share_profile_history(api: Api) -> None:
     assert initial.status_code == 200, initial.text
     before = initial.json()
     assert before["constraints"] == {
-        "household_servings": None, "equipment": [], "meal_times": [], "meal_templates": []
+        "household_servings": None,
+        "equipment": [],
+        "meal_times": [],
+        "meal_templates": [],
     }
-    assert {item["id"] for item in before["equipment_vocabulary"]} >= {"wok", "oven", "air_fryer", "rice_cooker"}
+    assert {item["id"] for item in before["equipment_vocabulary"]} >= {
+        "wok",
+        "oven",
+        "air_fryer",
+        "rice_cooker",
+    }
     values = {
         "household_servings": 4,
         "equipment": ["wok", "rice_cooker"],
         "meal_times": [{"day_type": "weekday", "meal": "dinner", "minutes": 30}],
-        "meal_templates": [{"day_type": "weekday", "meal": "dinner", "dish_count": 3,
-                            "composition": ["meat", "vegetable", "soup"]}],
+        "meal_templates": [
+            {
+                "day_type": "weekday",
+                "meal": "dinner",
+                "dish_count": 3,
+                "composition": ["meat", "vegetable", "soup"],
+            }
+        ],
     }
     saved = api.client.put(PATH, headers=owner, json=values)
     assert saved.status_code == 200, saved.text
@@ -37,7 +54,10 @@ def test_constraints_persist_clear_and_share_profile_history(api: Api) -> None:
     assert changes[0]["new_value"] == values
     assert changes[0]["reason"] == "你手动修改"
     assert changes[0]["source"] == "manual"
-    assert api.client.put(PATH, headers=owner, json=values).json()["profile_version"] == current["profile_version"]
+    assert (
+        api.client.put(PATH, headers=owner, json=values).json()["profile_version"]
+        == current["profile_version"]
+    )
     cleared = api.client.put(PATH, headers=owner, json={})
     assert cleared.status_code == 200, cleared.text
     assert cleared.json()["constraints"] == before["constraints"]
@@ -49,20 +69,64 @@ def test_constraints_persist_clear_and_share_profile_history(api: Api) -> None:
     assert api.client.put(PATH, json=values).status_code == 401
 
 
+def test_reviewed_equipment_configuration_and_shared_version_are_readable(api: Api) -> None:
+    vocabulary = {"items": [{"id": "induction", "label": "电磁炉", "aliases": ["电磁灶"]}]}
+    assert (
+        cli(
+            [
+                "config",
+                "set",
+                "taste.equipment",
+                json.dumps(vocabulary),
+                "--by",
+                "test",
+                "--reason",
+                "规范厨具词表",
+            ]
+        )
+        == 0
+    )
+    owner = bearer(api.login("constraints-config@example.com"))
+    available = api.client.get(PATH, headers=owner).json()
+    assert available["equipment_vocabulary"] == vocabulary["items"]
+    saved = api.client.put(PATH, headers=owner, json={"equipment": ["induction"]})
+    assert saved.status_code == 200, saved.text
+    assert saved.json()["profile_version"] == 2
+    flavor = api.client.patch(PROFILE, headers=owner, json={"flavors": {"salty": 0.75}})
+    assert flavor.status_code == 200, flavor.text
+    read = api.client.get(PATH, headers=owner).json()
+    assert read["profile_version"] == flavor.json()["version"] == 3
+    assert read["constraints"]["equipment"] == ["induction"]
+    rejected = api.client.put(PATH, headers=owner, json={"equipment": ["wok"]})
+    assert rejected.status_code == 422, rejected.text
+    assert api.client.get(PATH, headers=owner).json() == read
+
+
 def test_invalid_constraints_never_partially_update(api: Api) -> None:
     owner = bearer(api.login("constraints-validation@example.com"))
     before = api.client.get(PATH, headers=owner).json()
     for invalid in (
-        {"household_servings": 0}, {"household_servings": 21},
-        {"household_servings": True}, {"household_servings": "4"},
+        {"household_servings": 0},
+        {"household_servings": 21},
+        {"household_servings": True},
+        {"household_servings": "4"},
         {"household_servings": 4, "equipment": ["unregistered"]},
         {"equipment": ["wok", "wok"]},
         {"meal_times": [{"day_type": "weekday", "meal": "dinner", "minutes": 0}]},
         {"meal_times": [{"day_type": "weekday", "meal": "dinner", "minutes": 1441}]},
         {"meal_times": [{"day_type": "weekday", "meal": "dinner", "minutes": 20}] * 2},
-        {"meal_templates": [{"day_type": "weekend", "meal": "lunch", "dish_count": 2, "composition": ["soup"]}]},
-        {"meal_templates": [{"day_type": "weekday", "meal": "dinner", "dish_count": 1, "composition": ["bad"]}]},
-        {"equipment": None}, {"owner_id": before["profile_version"]},
+        {
+            "meal_templates": [
+                {"day_type": "weekend", "meal": "lunch", "dish_count": 2, "composition": ["soup"]}
+            ]
+        },
+        {
+            "meal_templates": [
+                {"day_type": "weekday", "meal": "dinner", "dish_count": 1, "composition": ["bad"]}
+            ]
+        },
+        {"equipment": None},
+        {"owner_id": before["profile_version"]},
     ):
         response = api.client.put(PATH, headers=owner, json=invalid)
         assert response.status_code == 422, response.text
@@ -82,15 +146,23 @@ def test_household_default_is_metadata_not_a_recipe_snapshot_change(api: Api) ->
     assert api.client.put(PATH, headers=owner, json={"household_servings": 4}).status_code == 200
     changed = api.client.get(path, headers=owner).json()
     assert changed["default_servings"] == 4
-    assert changed["taste_profile_version"] == api.client.get(PATH, headers=owner).json()["profile_version"]
+    assert (
+        changed["taste_profile_version"]
+        == api.client.get(PATH, headers=owner).json()["profile_version"]
+    )
     assert changed["version"] == original["version"]
     version_path = path + "/versions/" + original["version"]["id"]
     assert api.client.get(version_path, headers=owner).json()["version"] == original["version"]
-    conversion = api.client.get(version_path + "/servings", params={"target_servings": 4}, headers=owner)
+    conversion = api.client.get(
+        version_path + "/servings", params={"target_servings": 4}, headers=owner
+    )
     assert conversion.status_code == 200, conversion.text
     assert conversion.json()["conversion"]["target_servings"] == 4
-    measure = api.client.post("/v1/me/measures", headers=owner,
-                             json={"name": "家用勺", "kind": "spoon", "capacity_ml": 10}).json()
+    measure = api.client.post(
+        "/v1/me/measures",
+        headers=owner,
+        json={"name": "家用勺", "kind": "spoon", "capacity_ml": 10},
+    ).json()
     api.client.patch("/v1/me/measures/" + measure["id"], headers=owner, json={"capacity_ml": 15})
     assert api.client.get(path, headers=owner).json()["version"] == original["version"]
     assert api.client.put(PATH, headers=owner, json={}).status_code == 200
