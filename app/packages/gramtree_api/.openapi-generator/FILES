@@ -80,6 +80,14 @@ lib/src/model/ingredient_detail.dart
 lib/src/model/measure_display_out.dart
 lib/src/model/measure_display_request.dart
 lib/src/model/merge_relation.dart
+lib/src/model/modification_confirm_input.dart
+lib/src/model/modification_decision.dart
+lib/src/model/modification_decision_out.dart
+lib/src/model/modification_decisions_input.dart
+lib/src/model/modification_input.dart
+lib/src/model/modification_intent.dart
+lib/src/model/modification_operation.dart
+lib/src/model/modification_preview.dart
 lib/src/model/mold_conversion.dart
 lib/src/model/mold_conversion_ingredient.dart
 lib/src/model/mold_conversion_step.dart
