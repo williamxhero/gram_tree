@@ -11,6 +11,8 @@ import '../api/api_client.dart';
 import '../events/event_recorder.dart';
 import '../recipes/batch_advice.dart';
 import 'registered_pages.dart';
+import 'allergy_actions.dart';
+import 'cooking_constraint_actions.dart';
 import 'recipe_operations.dart';
 import 'source_overrides.dart';
 import 'source_types.dart';
@@ -256,59 +258,61 @@ Future<void> _handleRecipeOperation(
 /// SPEC-009.1 #81 登记的意图表：#77/#80 用到的 `open_page`/`start_cooking`/
 /// `open_record_card` 沿用之前的默认文案，新增 `call_operation` 和四个先只登记
 /// 名字的意图。
-final defaultIntentRegistry = IntentRegistry(const [
-  IntentSpec(
+final defaultIntentRegistry = IntentRegistry([
+  ...allergyIntentSpecs,
+  ...cookingConstraintIntentSpecs,
+  const IntentSpec(
     name: 'recipe_operation',
     defaultLabel: '菜谱操作',
     validateParams: validateRecipeOperation,
     handler: _handleRecipeOperation,
   ),
-  IntentSpec(
+  const IntentSpec(
     name: 'request_batch_advice',
     defaultLabel: 'AI 建议时间',
     validateParams: validateBatchAdviceParams,
     handler: handleBatchAdvice,
   ),
-  IntentSpec(
+  const IntentSpec(
     name: 'open_page',
     defaultLabel: '去看看',
     validateParams: _validateOpenPage,
     handler: _handleOpenPage,
   ),
-  IntentSpec(
+  const IntentSpec(
     name: 'start_cooking',
     defaultLabel: '开始做',
     validateParams: _validateStartCooking,
     handler: _handleStartCooking,
   ),
-  IntentSpec(
+  const IntentSpec(
     name: 'open_record_card',
     defaultLabel: '打开记录卡',
     validateParams: _validateOpenRecordCard,
     handler: _handleOpenRecordCard,
   ),
-  IntentSpec(
+  const IntentSpec(
     name: 'call_operation',
     defaultLabel: '去操作',
     validateParams: _validateCallOperation,
   ),
-  IntentSpec(
+  const IntentSpec(
     name: 'save_to_taste',
     defaultLabel: '存进口味',
     validateParams: _acceptAnyParams,
   ),
-  IntentSpec(
+  const IntentSpec(
     name: 'apply_change',
     defaultLabel: '应用改动',
     validateParams: _acceptAnyParams,
   ),
-  IntentSpec(
+  const IntentSpec(
     name: 'skip_this_time',
     defaultLabel: '这次不用',
     validateParams: _validateSourceFeedback,
     handler: _handleSkipThisTime,
   ),
-  IntentSpec(
+  const IntentSpec(
     name: 'dont_do_again',
     defaultLabel: '以后别这样',
     validateParams: _validateSourceFeedback,

@@ -5,6 +5,8 @@ import 'package:gramtree_api/gramtree_api.dart';
 import '../../api/api_client.dart';
 import '../../auth/auth_controller.dart';
 import '../../app/theme.dart';
+import '../../l10n/app_localizations.dart';
+import '../../ui_protocol/cooking_constraint_actions.dart';
 import '../../ui_protocol/source_mark.dart';
 import '../../ui_protocol/source_types.dart';
 import '../../ui_protocol/components/component_scaffold.dart';
@@ -21,32 +23,89 @@ final cookingConstraintsProvider =
           .data!;
     });
 
-const _days = {'weekday': '工作日', 'weekend': '周末'};
-const _meals = {'breakfast': '早餐', 'lunch': '午餐', 'dinner': '晚餐'};
-const _dishes = {
-  'meat': '荤菜',
-  'vegetable': '素菜',
-  'soup': '汤',
-  'staple': '主食',
-  'other': '其他',
+const _days = ['weekday', 'weekend'];
+const _meals = ['breakfast', 'lunch', 'dinner'];
+
+Map<String, String> _dishLabels(AppLocalizations l10n) => {
+  'meat': l10n.cookingDishMeat,
+  'vegetable': l10n.cookingDishVegetable,
+  'soup': l10n.cookingDishSoup,
+  'staple': l10n.cookingDishStaple,
+  'other': l10n.cookingDishOther,
 };
 
-String cookingConstraintsHistoryLabel(Object value) {
-  if (value is! Map) return '做菜约束';
+String _mealLabel(String day, String meal, AppLocalizations l10n) =>
+    l10n.cookingMealSlot(
+      switch (day) {
+        'weekday' => l10n.cookingWeekday,
+        'weekend' => l10n.cookingWeekend,
+        _ => day,
+      },
+      switch (meal) {
+        'breakfast' => l10n.cookingBreakfast,
+        'lunch' => l10n.cookingLunch,
+        'dinner' => l10n.cookingDinner,
+        _ => meal,
+      },
+    );
+
+String cookingConstraintsHistoryLabel(
+  Object value,
+  AppLocalizations l10n, {
+  Map<String, String> equipmentNames = const {},
+}) {
+  if (value is! Map) return l10n.cookingConstraintsTitle;
   final parts = <String>[];
   final household = value['household_servings'];
-  if (household != null) parts.add('$household 人');
+  if (household != null) {
+    parts.add(l10n.cookingHouseholdHistory(household.toString()));
+  }
   final equipment = value['equipment'];
   if (equipment is List && equipment.isNotEmpty) {
-    parts.add('${equipment.length} 件厨具');
+    // Retain an ID when equipment has since left the configured vocabulary.
+    parts.add(
+      l10n.cookingEquipmentSummary(
+        equipment
+            .map((id) => equipmentNames[id] ?? id)
+            .join(l10n.cookingListSeparator),
+      ),
+    );
   }
+  String mealLabel(Map slot) =>
+      _mealLabel(slot['day_type'].toString(), slot['meal'].toString(), l10n);
   final times = value['meal_times'];
-  if (times is List && times.isNotEmpty) parts.add('${times.length} 餐时间');
-  final templates = value['meal_templates'];
-  if (templates is List && templates.isNotEmpty) {
-    parts.add('${templates.length} 餐模板');
+  if (times is List) {
+    for (final slot in times.whereType<Map>()) {
+      parts.add(
+        l10n.cookingMealTimeSummary(
+          mealLabel(slot),
+          slot['minutes'].toString(),
+        ),
+      );
+    }
   }
-  return parts.isEmpty ? '未设置' : parts.join('、');
+  final templates = value['meal_templates'];
+  if (templates is List) {
+    final labels = _dishLabels(l10n);
+    for (final slot in templates.whereType<Map>()) {
+      final composition = slot['composition'];
+      final dishes = composition is List
+          ? composition
+                .map((type) => labels[type] ?? type)
+                .join(l10n.cookingListSeparator)
+          : '—';
+      parts.add(
+        l10n.cookingMealTemplateSummary(
+          mealLabel(slot),
+          slot['dish_count'].toString(),
+          dishes,
+        ),
+      );
+    }
+  }
+  return parts.isEmpty
+      ? l10n.cookingConstraintsUnset
+      : parts.join(l10n.cookingListSeparator);
 }
 
 class CookingConstraintsSection extends ConsumerStatefulWidget {
@@ -99,21 +158,30 @@ class _CookingConstraintsSectionState
   }
 
   Future<void> _clear() async {
+    final l10n = AppLocalizations.of(context);
     final account = ref.read(authProvider).value?.id;
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('清除做菜约束？'),
-        content: const Text('人数、厨具、时间和餐型恢复为空。菜谱原始版本不会改变。'),
+        title: Text(l10n.cookingConstraintsClearTitle),
+        content: Text(l10n.cookingConstraintsClearBody),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('取消'),
+          cookingConstraintAction(
+            ref,
+            'cooking_constraints_cancel',
+            () => Navigator.pop(context, false),
+            (dispatch) =>
+                TextButton(onPressed: dispatch, child: Text(l10n.cancel)),
           ),
-          FilledButton(
-            key: const ValueKey('cooking-constraints-clear-confirm'),
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('清除'),
+          cookingConstraintAction(
+            ref,
+            'cooking_constraints_confirm_clear',
+            () => Navigator.pop(context, true),
+            (dispatch) => FilledButton(
+              key: const ValueKey('cooking-constraints-clear-confirm'),
+              onPressed: dispatch,
+              child: Text(l10n.cookingConstraintsClearConfirm),
+            ),
           ),
         ],
       ),
@@ -126,98 +194,139 @@ class _CookingConstraintsSectionState
   }
 
   @override
-  Widget build(BuildContext context) => ref
-      .watch(cookingConstraintsProvider)
-      .when(
-        loading: () => const LinearProgressIndicator(),
-        error: (error, _) => Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text('做菜约束暂时无法读取'),
-            TextButton(
-              onPressed: () => ref.invalidate(cookingConstraintsProvider),
-              child: const Text('重试'),
-            ),
-          ],
-        ),
-        data: (current) {
-          final values = current.constraints;
-          final names = {
-            for (final item in current.equipmentVocabulary) item.id: item.label,
-          };
-          return ComponentCard(
-            key: const ValueKey('cooking-constraints'),
-            detail: ComponentDescriptorDetailEnum.standard,
-            conclusion: Text(
-              values.householdServings == null
-                  ? '人数未设置，菜谱沿用作者份数'
-                  : '家庭默认：${values.householdServings} 人',
-            ),
-            conclusionSemanticsText: '做菜约束',
-            standardExtra: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text('做菜约束 · 仅作为家庭默认，不修改作者菜谱'),
-                const SourceMark(
-                  key: ValueKey('cooking-constraints-why'),
-                  sourceType: sourceTypeAuthorFilled,
-                  componentId: 'cooking-constraints',
-                  value: '家庭做菜约束',
-                  basisText: '来自你手动填写；未设置的项目为空。人数只用于新一次查看的默认份数，本次手动选择优先，作者配方和原始版本不变。厨具、时间与餐型仅保存，不在这里推荐或改写菜谱。',
-                  required: false,
-                  neutral: true,
-                  feedbackEnabled: false,
-                  showWhenAuthorFilled: true,
-                  labelOverride: '你手动设置',
-                  onAction: null,
-                ),
-                Text(
-                  values.equipment?.isNotEmpty == true
-                      ? '厨具：${values.equipment!.map((id) => names[id] ?? id).join('、')}'
-                      : '厨具未设置',
-                ),
-                if (values.mealTimes?.isEmpty != false) const Text('各餐可用时间未设置'),
-                for (final slot in values.mealTimes ?? <CookingMealTime>[])
-                  Text(
-                    '${_days[slot.dayType.value]}${_meals[slot.meal.value]}：${slot.minutes} 分钟',
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final numberStyle = GramTreeColors.of(context)
+        .numberStyle(Theme.of(context).textTheme.bodyMedium!);
+    final dishes = _dishLabels(l10n);
+    return ref
+        .watch(cookingConstraintsProvider)
+        .when(
+          loading: () => const LinearProgressIndicator(),
+          error: (error, _) => Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(l10n.cookingConstraintsLoadError),
+              cookingConstraintAction(
+                ref,
+                'cooking_constraints_retry',
+                () => ref.invalidate(cookingConstraintsProvider),
+                (dispatch) =>
+                    TextButton(onPressed: dispatch, child: Text(l10n.retry)),
+              ),
+            ],
+          ),
+          data: (current) {
+            final values = current.constraints;
+            final names = {
+              for (final item in current.equipmentVocabulary)
+                item.id: item.label,
+            };
+            return ComponentCard(
+              key: const ValueKey('cooking-constraints'),
+              detail: ComponentDescriptorDetailEnum.standard,
+              conclusion: Text(
+                values.householdServings == null
+                    ? l10n.cookingHouseholdEmpty
+                    : l10n.cookingHouseholdDefault(
+                        values.householdServings.toString(),
+                      ),
+                style: values.householdServings == null ? null : numberStyle,
+              ),
+              conclusionSemanticsText: l10n.cookingConstraintsTitle,
+              standardExtra: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(l10n.cookingConstraintsIntro),
+                  SourceMark(
+                    key: const ValueKey('cooking-constraints-why'),
+                    sourceType: sourceTypeAuthorFilled,
+                    componentId: 'cooking-constraints',
+                    value: l10n.cookingConstraintsSourceValue,
+                    basisText: l10n.cookingConstraintsBasis,
+                    required: false,
+                    neutral: true,
+                    feedbackEnabled: false,
+                    showWhenAuthorFilled: true,
+                    labelOverride: l10n.cookingConstraintsManual,
+                    onAction: null,
                   ),
-                if (values.mealTemplates?.isEmpty != false) const Text('餐型未设置'),
-                for (final slot
-                    in values.mealTemplates ?? <CookingMealTemplate>[])
                   Text(
-                    '${_days[slot.dayType.value]}${_meals[slot.meal.value]}：${slot.dishCount} 道（${slot.composition.map((type) => _dishes[type.value]).join('、')}）',
+                    values.equipment?.isNotEmpty == true
+                        ? l10n.cookingEquipmentSummary(
+                            values.equipment!
+                                .map((id) => names[id] ?? id)
+                                .join(l10n.cookingListSeparator),
+                          )
+                        : l10n.cookingEquipmentEmpty,
                   ),
-                Wrap(
-                  spacing: 12,
-                  children: [
-                    OutlinedButton(
-                      key: const ValueKey('cooking-constraints-edit'),
-                      onPressed: _busy ? null : () => _edit(current),
-                      child: const Text('设置做菜约束'),
+                  if (values.mealTimes?.isEmpty != false)
+                    Text(l10n.cookingMealTimesEmpty),
+                  for (final slot in values.mealTimes ?? <CookingMealTime>[])
+                    Text(
+                      l10n.cookingMealTimeSummary(
+                        _mealLabel(slot.dayType.value, slot.meal.value, l10n),
+                        slot.minutes.toString(),
+                      ),
+                      style: numberStyle,
                     ),
-                    TextButton(
-                      key: const ValueKey('cooking-constraints-clear'),
-                      onPressed: _busy ? null : _clear,
-                      child: const Text('清除做菜约束'),
+                  if (values.mealTemplates?.isEmpty != false)
+                    Text(l10n.cookingMealTemplatesEmpty),
+                  for (final slot
+                      in values.mealTemplates ?? <CookingMealTemplate>[])
+                    Text(
+                      l10n.cookingMealTemplateSummary(
+                        _mealLabel(slot.dayType.value, slot.meal.value, l10n),
+                        slot.dishCount.toString(),
+                        slot.composition
+                            .map((type) => dishes[type.value])
+                            .join(l10n.cookingListSeparator),
+                      ),
+                      style: numberStyle,
                     ),
-                  ],
-                ),
-              ],
-            ),
-          );
-        },
-      );
+                  Wrap(
+                    spacing: 12,
+                    children: [
+                      cookingConstraintAction(
+                        ref,
+                        'cooking_constraints_edit',
+                        () => _edit(current),
+                        (dispatch) => OutlinedButton(
+                          key: const ValueKey('cooking-constraints-edit'),
+                          onPressed: _busy ? null : dispatch,
+                          child: Text(l10n.cookingConstraintsEdit),
+                        ),
+                      ),
+                      cookingConstraintAction(
+                        ref,
+                        'cooking_constraints_clear',
+                        _clear,
+                        (dispatch) => TextButton(
+                          key: const ValueKey('cooking-constraints-clear'),
+                          onPressed: _busy ? null : dispatch,
+                          child: Text(l10n.cookingConstraintsClear),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+  }
 }
 
-class _ConstraintsDialog extends StatefulWidget {
+class _ConstraintsDialog extends ConsumerStatefulWidget {
   const _ConstraintsDialog({required this.current});
   final CookingConstraintsOut current;
 
   @override
-  State<_ConstraintsDialog> createState() => _ConstraintsDialogState();
+  ConsumerState<_ConstraintsDialog> createState() => _ConstraintsDialogState();
 }
 
-class _ConstraintsDialogState extends State<_ConstraintsDialog> {
+class _ConstraintsDialogState extends ConsumerState<_ConstraintsDialog> {
+  bool _templatesInitialized = false;
   final _formKey = GlobalKey<FormState>();
   late final TextEditingController _household;
   final _times = <String, TextEditingController>{};
@@ -232,8 +341,8 @@ class _ConstraintsDialogState extends State<_ConstraintsDialog> {
       text: values.householdServings?.toString() ?? '',
     );
     _equipment.addAll(values.equipment ?? []);
-    for (final day in _days.keys) {
-      for (final meal in _meals.keys) {
+    for (final day in _days) {
+      for (final meal in _meals) {
         final key = '$day-$meal';
         _times[key] = TextEditingController();
         _templates[key] = TextEditingController();
@@ -243,10 +352,20 @@ class _ConstraintsDialogState extends State<_ConstraintsDialog> {
       _times['${slot.dayType.value}-${slot.meal.value}']!.text = slot.minutes
           .toString();
     }
-    for (final slot in values.mealTemplates ?? <CookingMealTemplate>[]) {
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_templatesInitialized) return;
+    _templatesInitialized = true;
+    final labels = _dishLabels(AppLocalizations.of(context));
+    for (final slot
+        in widget.current.constraints.mealTemplates ??
+            <CookingMealTemplate>[]) {
       _templates['${slot.dayType.value}-${slot.meal.value}']!.text = slot
           .composition
-          .map((type) => _dishes[type.value])
+          .map((type) => labels[type.value])
           .join(',');
     }
   }
@@ -264,7 +383,8 @@ class _ConstraintsDialogState extends State<_ConstraintsDialog> {
     if (text == null || text.trim().isEmpty) return null;
     final value = int.tryParse(text.trim());
     return value == null || value < minimum || value > maximum
-        ? '请输入 $minimum～$maximum 的整数；留空清除'
+        ? AppLocalizations.of(context)
+              .cookingIntegerValidation(minimum, maximum)
         : null;
   }
 
@@ -276,10 +396,11 @@ class _ConstraintsDialogState extends State<_ConstraintsDialog> {
 
   void _submit() {
     if (!_formKey.currentState!.validate()) return;
+    final dishes = _dishLabels(AppLocalizations.of(context));
     final times = <CookingMealTime>[];
     final templates = <CookingMealTemplate>[];
-    for (final day in _days.keys) {
-      for (final meal in _meals.keys) {
+    for (final day in _days) {
+      for (final meal in _meals) {
         final key = '$day-$meal';
         final minutes = int.tryParse(_times[key]!.text.trim());
         if (minutes != null) {
@@ -300,7 +421,7 @@ class _ConstraintsDialogState extends State<_ConstraintsDialog> {
               'dish_count': composition.length,
               'composition': composition
                   .map(
-                    (label) => _dishes.entries
+                    (label) => dishes.entries
                         .singleWhere((item) => item.value == label)
                         .key,
                   )
@@ -322,92 +443,118 @@ class _ConstraintsDialogState extends State<_ConstraintsDialog> {
   }
 
   @override
-  Widget build(BuildContext context) => AlertDialog(
-    title: const Text('做菜约束'),
-    content: SizedBox(
-      width: 440,
-      child: SingleChildScrollView(
-        child: Form(
-          key: _formKey,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextFormField(
-                key: const ValueKey('household-servings'),
-                controller: _household,
-                style: GramTreeColors.of(context)
-                    .numberStyle(Theme.of(context).textTheme.bodyLarge!),
-                keyboardType: TextInputType.number,
-                decoration: const InputDecoration(labelText: '家庭人数（留空沿用作者份数）'),
-                validator: (text) => _integer(
-                  text,
-                  widget.current.servingsMin,
-                  widget.current.servingsMax,
-                ),
-              ),
-              const SizedBox(height: 12),
-              const Text('家里有哪些厨具'),
-              for (final item in widget.current.equipmentVocabulary)
-                CheckboxListTile(
-                  key: ValueKey('equipment-${item.id}'),
-                  title: Text(item.label),
-                  value: _equipment.contains(item.id),
-                  onChanged: (checked) => setState(() {
-                    if (checked == true) {
-                      _equipment.add(item.id);
-                    } else {
-                      _equipment.remove(item.id);
-                    }
-                  }),
-                ),
-              const Text('每餐时间与餐型（留空清除）'),
-              const Text('菜型用逗号分隔：荤菜、素菜、汤、主食、其他。每项代表一道，可重复。'),
-              for (final day in _days.entries)
-                for (final meal in _meals.entries) ...[
-                  const SizedBox(height: 12),
-                  Text('${day.value}${meal.value}'),
-                  TextFormField(
-                    key: ValueKey('meal-minutes-${day.key}-${meal.key}'),
-                    controller: _times['${day.key}-${meal.key}'],
-                    style: GramTreeColors.of(context)
-                        .numberStyle(Theme.of(context).textTheme.bodyLarge!),
-                    keyboardType: TextInputType.number,
-                    decoration: const InputDecoration(labelText: '可用分钟'),
-                    validator: (text) => _integer(text, 1, 1440),
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final dishes = _dishLabels(l10n);
+    return AlertDialog(
+      title: Text(l10n.cookingConstraintsTitle),
+      content: SizedBox(
+        width: 440,
+        child: SingleChildScrollView(
+          child: Form(
+            key: _formKey,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextFormField(
+                  key: const ValueKey('household-servings'),
+                  controller: _household,
+                  style: GramTreeColors.of(context)
+                      .numberStyle(Theme.of(context).textTheme.bodyLarge!),
+                  keyboardType: TextInputType.number,
+                  decoration: InputDecoration(
+                    labelText: l10n.cookingHouseholdInput,
                   ),
-                  TextFormField(
-                    key: ValueKey('meal-template-${day.key}-${meal.key}'),
-                    controller: _templates['${day.key}-${meal.key}'],
-                    decoration: const InputDecoration(
-                      labelText: '菜型组合，例如 荤菜,素菜,汤',
+                  validator: (text) => _integer(
+                    text,
+                    widget.current.servingsMin,
+                    widget.current.servingsMax,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Text(l10n.cookingEquipmentInput),
+                for (final item in widget.current.equipmentVocabulary)
+                  CheckboxListTile(
+                    key: ValueKey('equipment-${item.id}'),
+                    title: Text(item.label),
+                    value: _equipment.contains(item.id),
+                    onChanged: (checked) => setState(() {
+                      if (checked == true) {
+                        _equipment.add(item.id);
+                      } else {
+                        _equipment.remove(item.id);
+                      }
+                    }),
+                  ),
+                Text(l10n.cookingMealInput),
+                Text(
+                  l10n.cookingMealTemplateHint(
+                    dishes.values.join(l10n.cookingListSeparator),
+                  ),
+                ),
+                for (final day in _days)
+                  for (final meal in _meals) ...[
+                    const SizedBox(height: 12),
+                    Text(_mealLabel(day, meal, l10n)),
+                    TextFormField(
+                      key: ValueKey('meal-minutes-$day-$meal'),
+                      controller: _times['$day-$meal'],
+                      style: GramTreeColors.of(context)
+                          .numberStyle(Theme.of(context).textTheme.bodyLarge!),
+                      keyboardType: TextInputType.number,
+                      decoration: InputDecoration(
+                        labelText: l10n.cookingMealMinutesInput,
+                      ),
+                      validator: (text) => _integer(text, 1, 1440),
                     ),
-                    validator: (text) {
-                      final values = _composition(text ?? '');
-                      return values.length > 20 ||
-                              values.any(
-                                (label) => !_dishes.containsValue(label),
-                              )
-                          ? '请用上述菜型组合，最多 20 道'
-                          : null;
-                    },
-                  ),
-                ],
-            ],
+                    TextFormField(
+                      key: ValueKey('meal-template-$day-$meal'),
+                      controller: _templates['$day-$meal'],
+                      decoration: InputDecoration(
+                        labelText: l10n.cookingMealTemplateInput(
+                          [
+                            l10n.cookingDishMeat,
+                            l10n.cookingDishVegetable,
+                            l10n.cookingDishSoup,
+                          ].join(','),
+                        ),
+                      ),
+                      validator: (text) {
+                        final values = _composition(text ?? '');
+                        return values.length > 20 ||
+                                values.any(
+                                  (label) => !dishes.containsValue(label),
+                                )
+                            ? l10n.cookingTemplateValidation(20)
+                            : null;
+                      },
+                    ),
+                  ],
+              ],
+            ),
           ),
         ),
       ),
-    ),
-    actions: [
-      TextButton(
-        onPressed: () => Navigator.pop(context),
-        child: const Text('取消'),
-      ),
-      FilledButton(
-        key: const ValueKey('cooking-constraints-save'),
-        onPressed: _submit,
-        child: const Text('保存'),
-      ),
-    ],
-  );
+      actions: [
+        cookingConstraintAction(
+          ref,
+          'cooking_constraints_cancel',
+          () => Navigator.pop(context),
+          (dispatch) =>
+              TextButton(onPressed: dispatch, child: Text(l10n.cancel)),
+        ),
+        cookingConstraintAction(
+          ref,
+          'cooking_constraints_save',
+          _submit,
+          (dispatch) => FilledButton(
+            key: const ValueKey('cooking-constraints-save'),
+            onPressed: dispatch,
+            child: Text(l10n.save),
+          ),
+        ),
+      ],
+    );
+  }
 }

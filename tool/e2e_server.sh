@@ -27,6 +27,10 @@ start() {
   export GRAMTREE_DATABASE_URL="$PG/$DATABASE_NAME"
   export GRAMTREE_REDIS_URL="${GRAMTREE_E2E_REDIS:-redis://localhost:6379/14}"
   export GRAMTREE_MAIL_BACKEND=memory
+  # Ephemeral test-only key; honor an explicitly supplied key and never print it.
+  if [[ -z "${GRAMTREE_SENSITIVE_DATA_KEY:-}" ]]; then
+    export GRAMTREE_SENSITIVE_DATA_KEY="$(uv run python -c 'import base64,secrets; print(base64.urlsafe_b64encode(secrets.token_bytes(32)).decode())')"
+  fi
   # Browser acceptance is deterministic and never calls an external model.
   export GRAMTREE_AI_MODE="${GRAMTREE_AI_MODE:-replay}"
   export GRAMTREE_AI_REPLAY_DIR="${GRAMTREE_AI_REPLAY_DIR:-.data/ai-e2e}"

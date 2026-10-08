@@ -10,6 +10,7 @@ import '../../privacy/documents.dart';
 import '../../privacy/policy.dart';
 import '../../widgets/page_frame.dart';
 import 'account_data.dart';
+import 'allergies_section.dart';
 
 /// 我的 → 设置：账号、隐私、退出登录、注销账号。
 class SettingsPage extends ConsumerWidget {
@@ -86,6 +87,10 @@ class SettingsPage extends ConsumerWidget {
             value: ref.watch(consentProvider).productAnalyticsEnabled,
             onChanged: (enabled) => _setProductAnalytics(ref, enabled),
           ),
+          if (user != null)
+            SensitiveWithdrawalTile(
+              key: ValueKey('sensitive-withdraw-${user.id}'),
+            ),
           item(l10n.settingsWithdraw, onTap: () => context.push(withdraw)),
           const Divider(height: 32),
           item(l10n.signOut, onTap: () => _signOut(context, ref)),

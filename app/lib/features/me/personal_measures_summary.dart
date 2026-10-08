@@ -7,6 +7,7 @@ import '../../app/theme.dart';
 import '../../l10n/app_localizations.dart';
 import '../../recipes/personal_measure_repository.dart';
 import '../../ui_protocol/components/component_scaffold.dart';
+import '../../ui_protocol/cooking_constraint_actions.dart';
 import '../recipes/personal_measures_page.dart';
 
 // Native Dart prints whole doubles as 12.0, while JavaScript prints 12.
@@ -31,7 +32,7 @@ class PersonalMeasuresSummary extends ConsumerWidget {
       standardExtra: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('你登记的量具，仅用于显示，不改变配方。'),
+          Text(l10n.personalMeasuresSummaryIntro),
           ref
               .watch(personalMeasuresProvider)
               .when(
@@ -43,7 +44,10 @@ class PersonalMeasuresSummary extends ConsumerWidget {
                     if (items.isEmpty) Text(l10n.personalMeasuresEmpty),
                     for (final item in items)
                       Text(
-                        '${item.name} · ${_capacityText(item.capacityMl)} 毫升',
+                        l10n.personalMeasuresSummaryValue(
+                          item.name,
+                          _capacityText(item.capacityMl),
+                        ),
                         key: ValueKey('taste-measure-${item.id}'),
                         style: GramTreeColors.of(
                           context,
@@ -52,13 +56,18 @@ class PersonalMeasuresSummary extends ConsumerWidget {
                   ],
                 ),
               ),
-          TextButton(
-            key: const ValueKey('taste-measures-manage'),
-            onPressed: () async {
+          cookingConstraintAction(
+            ref,
+            'personal_measures_manage',
+            () async {
               await context.push(PersonalMeasuresPage.path);
               if (context.mounted) ref.invalidate(personalMeasuresProvider);
             },
-            child: const Text('管理个人量具'),
+            (dispatch) => TextButton(
+              key: const ValueKey('taste-measures-manage'),
+              onPressed: dispatch,
+              child: Text(l10n.personalMeasuresManage),
+            ),
           ),
         ],
       ),

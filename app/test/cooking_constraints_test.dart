@@ -34,6 +34,85 @@ Map<String, dynamic> constraintsFixture({Map<String, dynamic>? values}) => {
 
 void main() {
   testWidgets(
+    'cooking history and why show actual old and new settings with configured names',
+    (tester) async {
+      final server = FakeServer();
+      installProfile(server, () => profileFixture());
+      final current = constraintsFixture();
+      (current['equipment_vocabulary'] as List)[1]['label'] = '台式烤箱';
+      server.on('GET', constraintsPath, (_) => (200, current));
+      server.on(
+        'GET',
+        '/v1/me/taste-profile/changes',
+        (_) => (
+          200,
+          {
+            'items': [
+              {
+                'id': '88888888-8888-4888-8888-888888888888',
+                'version': 2,
+                'field': 'cooking_constraints',
+                'old_value': {
+                  'household_servings': 4,
+                  'equipment': ['wok'],
+                  'meal_times': [
+                    {'day_type': 'weekday', 'meal': 'dinner', 'minutes': 30},
+                  ],
+                  'meal_templates': [
+                    {
+                      'day_type': 'weekday',
+                      'meal': 'dinner',
+                      'dish_count': 3,
+                      'composition': ['meat', 'vegetable', 'soup'],
+                    },
+                  ],
+                },
+                'new_value': {
+                  'household_servings': 4,
+                  'equipment': ['oven'],
+                  'meal_times': [
+                    {'day_type': 'weekday', 'meal': 'dinner', 'minutes': 60},
+                  ],
+                  'meal_templates': [
+                    {
+                      'day_type': 'weekday',
+                      'meal': 'dinner',
+                      'dish_count': 3,
+                      'composition': ['vegetable', 'vegetable', 'vegetable'],
+                    },
+                  ],
+                },
+                'reason': '你手动修改',
+                'source': 'manual',
+                'status': 'active',
+                'created_at': '2026-10-08T10:00:00Z',
+              },
+            ],
+            'next_cursor': null,
+          },
+        ),
+      );
+      await pumpApp(tester, env: TestEnv.signedIn(server: server));
+      await openTaste(tester);
+      final why = find.byKey(
+        const ValueKey(
+          'taste-history-why-88888888-8888-4888-8888-888888888888',
+        ),
+      );
+      await tester.scrollUntilVisible(why, 450);
+      const oldLabel = '4 人、厨具：炒锅、工作日晚餐：30 分钟、工作日晚餐：3 道（荤菜、素菜、汤）';
+      const newLabel = '4 人、厨具：台式烤箱、工作日晚餐：60 分钟、工作日晚餐：3 道（素菜、素菜、素菜）';
+      expect(find.text('做菜约束：$oldLabel → $newLabel'), findsOneWidget);
+      await tapVisible(tester, why);
+      expect(find.text('原来：做菜约束 · $oldLabel'), findsOneWidget);
+      expect(find.text('现在：做菜约束 · $newLabel'), findsOneWidget);
+      expect(find.text('这次不用'), findsNothing);
+      expect(find.text('以后别这样'), findsNothing);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
     'cooking settings reuse read-only why without private telemetry',
     (tester) async {
       final server = FakeServer();
@@ -165,6 +244,22 @@ void main() {
     await tester.scrollUntilVisible(manager, 450);
     expect(find.text('我的勺 · 15.0 毫升'), findsOneWidget);
     expect(server.calls('POST', '/v1/recipes'), isEmpty);
+    final actions = server
+        .calls('POST', '/v1/events/upload')
+        .expand(
+          (request) => ((request.body as Map)['events'] as List).cast<Map>(),
+        )
+        .where((event) => event['event_type'] == 'ui.component_action')
+        .toList();
+    expect(actions.map((event) => event['content']).toList(), [
+      {
+        'component_id': 'personal-measures',
+        'intent': 'personal_measures_manage',
+      },
+    ]);
+    expect(actions.single['correlation'], {
+      'ui_composition_id': 'taste-profile-private',
+    });
   });
 
   testWidgets(
@@ -232,6 +327,36 @@ void main() {
       );
       expect(jsonEncode(server.calls('PUT', constraintsPath).last.body), '{}');
       expect(find.text('人数未设置，菜谱沿用作者份数'), findsOneWidget);
+      final actions = server
+          .calls('POST', '/v1/events/upload')
+          .expand(
+            (request) => ((request.body as Map)['events'] as List).cast<Map>(),
+          )
+          .where((event) => event['event_type'] == 'ui.component_action')
+          .toList();
+      expect(actions.map((event) => event['content']).toList(), [
+        {
+          'component_id': 'cooking-constraints',
+          'intent': 'cooking_constraints_edit',
+        },
+        {
+          'component_id': 'cooking-constraints',
+          'intent': 'cooking_constraints_save',
+        },
+        {
+          'component_id': 'cooking-constraints',
+          'intent': 'cooking_constraints_clear',
+        },
+        {
+          'component_id': 'cooking-constraints',
+          'intent': 'cooking_constraints_confirm_clear',
+        },
+      ]);
+      for (final action in actions) {
+        expect(action['correlation'], {
+          'ui_composition_id': 'taste-profile-private',
+        });
+      }
     },
   );
 }
