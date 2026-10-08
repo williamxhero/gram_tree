@@ -7,6 +7,8 @@ import 'package:gram_tree/main.dart' as app;
 import 'package:gram_tree/ui_protocol/components/component_scaffold.dart';
 import 'package:integration_test/integration_test.dart';
 
+import 'event_pipeline_support.dart' show resetLocalAppState;
+
 // Runner inputs describe the public, synthetic replay corpus, not API models.
 typedef _Case = ({
   String label,
@@ -116,8 +118,9 @@ void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
   testWidgets('回放辅助对齐与一般经验解读保留确定规则、原始字段及历史；低把握和不可用可降级', (tester) async {
     try {
-      tester.view.physicalSize = const Size(320, 640);
-      tester.view.devicePixelRatio = 1;
+      // Keep native physical safe-area insets consistent with the real DPR.
+      tester.view.physicalSize =
+          const Size(320, 640) * tester.view.devicePixelRatio;
       addTearDown(tester.view.reset);
       const email = String.fromEnvironment('E2E_ASSISTANCE_EMAIL');
       expect(
@@ -136,9 +139,12 @@ void main() {
       }
       tester.testTextInput.register();
       addTearDown(tester.testTextInput.unregister);
+      await resetLocalAppState();
       await app.main();
       await _settle(tester);
       if (find.byKey(const ValueKey('consent-agree')).evaluate().isNotEmpty) {
+        await tester.ensureVisible(find.byKey(const ValueKey('consent-agree')));
+        await _settle(tester);
         await tester.tap(find.byKey(const ValueKey('consent-agree')));
         await _settle(tester);
       }

@@ -5,6 +5,8 @@ import 'package:gram_tree/config/app_config.dart';
 import 'package:gram_tree/main.dart' as app;
 import 'package:integration_test/integration_test.dart';
 
+import 'event_pipeline_support.dart' show resetLocalAppState;
+
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
   final server = Dio(
@@ -28,11 +30,15 @@ void main() {
           (w) => w is Scrollable && w.axisDirection == AxisDirection.down,
         )
         .first;
-    // Reset upward before looking for lazy rows, including controls above the
-    // current position after the proposal panel changes the page height.
-    for (var i = 0; i < 12; i++) {
+    final position = tester.state<ScrollableState>(scrollable).position;
+    // Reach the actual top and settle native bouncing before seeking a row.
+    for (
+      var i = 0;
+      i < 60 && position.pixels > position.minScrollExtent + 1;
+      i++
+    ) {
       await tester.drag(scrollable, const Offset(0, 500));
-      await tester.pump(const Duration(milliseconds: 100));
+      await tester.pumpAndSettle();
     }
     await tester.scrollUntilVisible(
       finder,
@@ -52,8 +58,9 @@ void main() {
   }
 
   testWidgets('量化确认创建新版本并在统一为什么面板保留依据', (tester) async {
-    tester.view.physicalSize = const Size(320, 640);
-    tester.view.devicePixelRatio = 1;
+    // Keep native physical safe-area insets consistent with the real DPR.
+    tester.view.physicalSize =
+        const Size(320, 640) * tester.view.devicePixelRatio;
     addTearDown(tester.view.reset);
     tester.testTextInput.register();
     addTearDown(tester.testTextInput.unregister);
@@ -61,8 +68,11 @@ void main() {
         'quantification-e2e-${DateTime.now().microsecondsSinceEpoch}@example.com';
     var step = 'login';
     try {
+      await resetLocalAppState();
       await app.main();
       await waitFor(tester, find.byKey(const ValueKey('consent-agree')));
+      await tester.ensureVisible(find.byKey(const ValueKey('consent-agree')));
+      await tester.pumpAndSettle();
       await tester.tap(find.byKey(const ValueKey('consent-agree')));
       await waitFor(tester, find.byKey(const ValueKey('login-email')));
       await tester.enterText(find.byKey(const ValueKey('login-email')), email);

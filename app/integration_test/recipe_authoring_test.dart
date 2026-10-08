@@ -7,6 +7,8 @@ import 'package:gram_tree/config/app_config.dart';
 import 'package:gram_tree/main.dart' as app;
 import 'package:integration_test/integration_test.dart';
 
+import 'event_pipeline_support.dart' show resetLocalAppState;
+
 void _markE2eStep(String step) {
   final binding = IntegrationTestWidgetsFlutterBinding.instance;
   binding.reportData = {...?binding.reportData, 'e2e_step': step};
@@ -65,15 +67,28 @@ void main() {
         : detail.evaluate().isNotEmpty
         ? detail
         : find.byKey(const ValueKey('recipe-editor-content'));
-    // Sliver children outside the viewport may not exist yet. Start from the
-    // top so revealing an earlier control never scrolls in the wrong direction.
-    for (var i = 0; i < 12; i++) {
-      await tester.drag(body, const Offset(0, 500));
-      await tester.pump(const Duration(milliseconds: 100));
+    final scrollable = find
+        .descendant(
+          of: body,
+          matching: find.byWidgetPredicate(
+            (w) => w is Scrollable && w.axisDirection == AxisDirection.down,
+          ),
+        )
+        .first;
+    final position = tester.state<ScrollableState>(scrollable).position;
+    // Reach the actual top and settle native bouncing before reversing;
+    // fixed short pumps can leave an iOS drag fighting the previous scroll.
+    for (
+      var i = 0;
+      i < 60 && position.pixels > position.minScrollExtent + 1;
+      i++
+    ) {
+      await tester.drag(scrollable, const Offset(0, 500));
+      await tester.pumpAndSettle();
     }
     for (var i = 0; i < 40 && finder.evaluate().isEmpty; i++) {
-      await tester.drag(body, const Offset(0, -300));
-      await tester.pump(const Duration(milliseconds: 100));
+      await tester.drag(scrollable, const Offset(0, -300));
+      await tester.pumpAndSettle();
     }
     if (finder.evaluate().isEmpty) {
       final message = 'E2E reveal failed: $finder';
@@ -130,10 +145,13 @@ void main() {
       tester.testTextInput.register();
       addTearDown(tester.testTextInput.unregister);
 
+      await resetLocalAppState();
       await app.main();
       await settle(tester);
       final consent = find.text('开始之前，先说清楚我们会用到什么');
       if (consent.evaluate().isNotEmpty) {
+        await tester.ensureVisible(find.byKey(const ValueKey('consent-agree')));
+        await settle(tester);
         await tester.tap(find.byKey(const ValueKey('consent-agree')));
         await settle(tester);
       } else {

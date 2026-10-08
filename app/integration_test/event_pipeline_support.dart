@@ -128,6 +128,8 @@ Future<({String email, String deviceId})> signInFreshUser(
 
   await app.main();
   await waitFor(tester, find.text('开始之前，先说清楚我们会用到什么'));
+  await tester.ensureVisible(find.byKey(const ValueKey('consent-agree')));
+  await settle(tester);
   await tester.tap(find.byKey(const ValueKey('consent-agree')));
   await settle(tester);
 
