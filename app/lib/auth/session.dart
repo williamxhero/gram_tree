@@ -52,6 +52,18 @@ class SessionStore extends ChangeNotifier {
   final SecureStore _secure;
   AuthSession? _current;
   bool _loaded = false;
+  Future<void> _persistence = Future<void>.value();
+
+  Future<void> _persist(Future<void> Function() operation) {
+    // Keep writes/deletes in invocation order. A slow old refresh write must
+    // never finish after logout deletion or a subsequent account's write.
+    final pending = _persistence.then((_) => operation());
+    _persistence = pending.then<void>(
+      (_) {},
+      onError: (Object _, StackTrace _) {},
+    );
+    return pending;
+  }
 
   /// 为什么变成了未登录（续期失败、撤回同意等），给登录页显示提示用。
   String? lastExpiryReason;
@@ -87,16 +99,18 @@ class SessionStore extends ChangeNotifier {
     _current = session;
     _loaded = true;
     lastExpiryReason = null;
-    await _secure.write(sessionStorageKey, jsonEncode(session.toJson()));
-    notifyListeners();
+    final value = jsonEncode(session.toJson());
+    await _persist(() => _secure.write(sessionStorageKey, value));
+    if (identical(_current, session)) notifyListeners();
   }
 
   /// 清掉本机的登录状态。
   Future<void> clear() async {
     _current = null;
     _loaded = true;
-    await _secure.delete(sessionStorageKey);
+    // Hide account-private UI immediately, even while older storage IO drains.
     notifyListeners();
+    await _persist(() => _secure.delete(sessionStorageKey));
   }
 
   Future<void> expire({required String reason}) async {

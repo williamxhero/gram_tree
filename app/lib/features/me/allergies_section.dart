@@ -137,8 +137,9 @@ class _AllergiesSectionState extends ConsumerState<AllergiesSection> {
     }
     if (!mounted ||
         ref.read(authProvider).value?.id != account ||
-        ref.read(sensitiveMemoryProvider).epoch != epoch)
+        ref.read(sensitiveMemoryProvider).epoch != epoch) {
       return;
+    }
     await showModalBottomSheet<void>(
       context: context,
       builder: (_) =>

@@ -6,13 +6,20 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:gramtree_api/gramtree_api.dart';
 
 import 'package:gram_tree/util/ids.dart';
+import 'package:gram_tree/storage/secure_store.dart';
 import 'package:gram_tree/events/event_queue.dart';
 import 'package:gram_tree/events/fake_event_queue.dart';
 
 import 'helpers.dart';
 import 'settings_test.dart' show openSettings;
 import 'taste_profile_page_test.dart'
-    show installProfile, profileFixture, openTaste, signOut, pumpFrames;
+    show
+        installProfile,
+        profileFixture,
+        openTaste,
+        signOut,
+        pumpFrames,
+        chooseSalty;
 
 const allergyPath = '/v1/me/taste-profile/allergies';
 const categories = [
@@ -46,8 +53,13 @@ Future<void> _withdraw(WidgetTester tester) async {
   );
 }
 
-Future<void> _loginOther(WidgetTester tester, FakeServer server) async {
-  server.user = server.user.copyWith(id: newUuidV4(), nickname: '另一位味友');
+Future<void> _loginOther(
+  WidgetTester tester,
+  FakeServer server, {
+  UserOut? user,
+}) async {
+  server.user =
+      user ?? server.user.copyWith(id: newUuidV4(), nickname: '另一位味友');
   await tester.enterText(
     find.byKey(const ValueKey('login-email')),
     'other@example.com',
@@ -56,6 +68,22 @@ Future<void> _loginOther(WidgetTester tester, FakeServer server) async {
   await tester.pumpAndSettle();
   await tester.enterText(find.byKey(const ValueKey('code-input')), goodCode);
   await tester.pumpAndSettle();
+}
+
+class _DelayedSecureStore extends MemorySecureStore {
+  _DelayedSecureStore(super.values);
+  bool blockNextWrite = false;
+  final started = Completer<void>();
+  final release = Completer<void>();
+  @override
+  Future<void> write(String key, String value) async {
+    if (blockNextWrite) {
+      blockNextWrite = false;
+      started.complete();
+      await release.future;
+    }
+    await super.write(key, value);
+  }
 }
 
 class _UnavailableTelemetry extends FakeEventQueue {
@@ -71,6 +99,199 @@ class _UnavailableTelemetry extends FakeEventQueue {
 }
 
 void main() {
+  testWidgets(
+    'delayed refresh persistence cannot resurrect a signed-out allergy account after restart',
+    (tester) async {
+      final server = FakeServer();
+      installProfile(server, () => profileFixture());
+      server.on(
+        'POST',
+        '/v1/me/consents',
+        (r) => jsonEncode(r.body).contains('sensitive_personal_info')
+            ? FakeServer.error(401, 'token_expired', 'expired')
+            : (204, null),
+      );
+      final base = TestEnv.signedIn(server: server);
+      final secure = _DelayedSecureStore(base.secure.values);
+      final env = TestEnv(server: server, local: base.local, secure: secure);
+      await pumpApp(tester, env: env);
+      await openTaste(tester);
+      await tester.scrollUntilVisible(
+        find.byKey(const ValueKey('allergies-edit')),
+        300,
+      );
+      await tapVisible(tester, find.byKey(const ValueKey('allergies-edit')));
+      secure.blockNextWrite = true;
+      await tapVisible(tester, find.byKey(const ValueKey('allergies-agree')));
+      expect(secure.started.isCompleted, isTrue);
+      await signOut(tester);
+      expect(find.text('登录味谱'), findsOneWidget);
+      secure.release.complete();
+      await tester.pumpAndSettle();
+      await restartApp(tester, env);
+      expect(find.text('登录味谱'), findsOneWidget);
+      expect(find.byKey(const ValueKey('taste-profile-entry')), findsNothing);
+      expect(tester.takeException(), isNull);
+    },
+  );
+  testWidgets(
+    'delayed refresh persistence cannot replace the next account after restart',
+    (tester) async {
+      final server = FakeServer();
+      installProfile(server, () => profileFixture());
+      var revokedOld = false;
+      server.on('POST', '/v1/auth/logout', (_) {
+        revokedOld = true;
+        return (204, null);
+      });
+      server.on(
+        'GET',
+        allergyPath,
+        (r) => revokedOld && r.headers['Authorization'] != 'Bearer access-2'
+            ? FakeServer.error(401, 'token_revoked', 'revoked')
+            : (200, allergyFixture().toJson()),
+      );
+      server.on(
+        'POST',
+        '/v1/me/consents',
+        (r) => jsonEncode(r.body).contains('sensitive_personal_info')
+            ? FakeServer.error(401, 'token_expired', 'expired')
+            : (204, null),
+      );
+      final base = TestEnv.signedIn(server: server);
+      final secure = _DelayedSecureStore(base.secure.values);
+      final env = TestEnv(server: server, local: base.local, secure: secure);
+      await pumpApp(tester, env: env);
+      await openTaste(tester);
+      await tester.scrollUntilVisible(
+        find.byKey(const ValueKey('allergies-edit')),
+        300,
+      );
+      await tapVisible(tester, find.byKey(const ValueKey('allergies-edit')));
+      secure.blockNextWrite = true;
+      await tapVisible(tester, find.byKey(const ValueKey('allergies-agree')));
+      expect(secure.started.isCompleted, isTrue);
+      await signOut(tester);
+      server.user = server.user.copyWith(id: newUuidV4(), nickname: '另一位味友');
+      await tester.enterText(
+        find.byKey(const ValueKey('login-email')),
+        'other@example.com',
+      );
+      await tester.tap(find.text('发送验证码'));
+      await tester.pumpAndSettle();
+      await tester.enterText(
+        find.byKey(const ValueKey('code-input')),
+        goodCode,
+      );
+      await pumpFrames(tester);
+      secure.release.complete();
+      await tester.pumpAndSettle();
+      await restartApp(tester, env);
+      await openTaste(tester);
+      await tester.scrollUntilVisible(
+        find.byKey(const ValueKey('allergies-edit')),
+        300,
+      );
+      await tester.pumpAndSettle();
+      expect(
+        server.calls('GET', allergyPath).last.headers['Authorization'],
+        'Bearer access-2',
+      );
+      expect(find.text('尚未填写本人过敏'), findsOneWidget);
+      await tapVisible(tester, find.byKey(const ValueKey('allergies-edit')));
+      expect(find.text('过敏信息单独同意'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    },
+  );
+  for (final refreshFails in [false, true]) {
+    testWidgets(
+      'a switched account survives an old awaited refresh ${refreshFails ? 'failure' : 'success'}',
+      (tester) async {
+        final server = FakeServer();
+        installProfile(server, () => profileFixture());
+        final staleTokens = server.tokens();
+        final pending = Completer<(int, Object?)>();
+        var started = false;
+        server.on('POST', '/v1/auth/refresh', (_) {
+          started = true;
+          return pending.future;
+        });
+        server.on(
+          'POST',
+          '/v1/me/consents',
+          (r) => jsonEncode(r.body).contains('sensitive_personal_info')
+              ? FakeServer.error(401, 'token_expired', 'expired')
+              : (204, null),
+        );
+        await pumpApp(tester, env: TestEnv.signedIn(server: server));
+        await openTaste(tester);
+        await tester.scrollUntilVisible(
+          find.byKey(const ValueKey('allergies-edit')),
+          300,
+        );
+        await tapVisible(tester, find.byKey(const ValueKey('allergies-edit')));
+        await tapVisible(tester, find.byKey(const ValueKey('allergies-agree')));
+        expect(started, isTrue);
+        await signOut(tester);
+        await _loginOther(tester, server);
+        pending.complete(
+          refreshFails
+              ? FakeServer.error(401, 'refresh_invalid', 'invalid')
+              : (200, staleTokens),
+        );
+        await tester.pumpAndSettle();
+        expect(find.text('登录味谱'), findsNothing);
+        final receipts = server
+            .calls('POST', '/v1/me/consents')
+            .where(
+              (r) => jsonEncode(r.body).contains('sensitive_personal_info'),
+            );
+        expect(receipts, hasLength(1));
+        await openTaste(tester);
+        await tester.scrollUntilVisible(
+          find.byKey(const ValueKey('allergies-edit')),
+          300,
+        );
+        await tester.pumpAndSettle();
+        expect(
+          server.calls('GET', allergyPath).last.headers['Authorization'],
+          'Bearer access-2',
+        );
+        await tapVisible(tester, find.byKey(const ValueKey('allergies-edit')));
+        expect(find.text('过敏信息单独同意'), findsOneWidget);
+        expect(tester.takeException(), isNull);
+      },
+    );
+  }
+  testWidgets(
+    'an ordinary profile mutation never retries under the next account',
+    (tester) async {
+      final server = FakeServer();
+      installProfile(server, () => profileFixture());
+      final pending = Completer<(int, Object?)>();
+      server.on('PATCH', '/v1/me/taste-profile', (_) => pending.future);
+      await pumpApp(tester, env: TestEnv.signedIn(server: server));
+      await openTaste(tester);
+      await chooseSalty(tester);
+      expect(server.calls('PATCH', '/v1/me/taste-profile'), hasLength(1));
+      await signOut(tester);
+      await _loginOther(tester, server);
+      pending.complete(FakeServer.error(401, 'token_expired', 'expired'));
+      await tester.pumpAndSettle();
+      expect(server.calls('PATCH', '/v1/me/taste-profile'), hasLength(1));
+      expect(server.calls('POST', '/v1/auth/refresh'), isEmpty);
+      await openTaste(tester);
+      expect(find.text('咸 · 标准'), findsOneWidget);
+      expect(
+        server
+            .calls('GET', '/v1/me/taste-profile')
+            .last
+            .headers['Authorization'],
+        'Bearer access-1',
+      );
+      expect(tester.takeException(), isNull);
+    },
+  );
   testWidgets(
     'optional telemetry failure cannot block confirmed sensitive withdrawal',
     (tester) async {
@@ -88,8 +309,9 @@ void main() {
         ),
       );
       server.on('POST', '/v1/me/consents', (r) {
-        if (jsonEncode(r.body).contains('sensitive_personal_info'))
+        if (jsonEncode(r.body).contains('sensitive_personal_info')) {
           withdrawn = true;
+        }
         return (204, null);
       });
       final base = TestEnv.signedIn(server: server);
