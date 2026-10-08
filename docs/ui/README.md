@@ -15,6 +15,7 @@
 | [`one-line-recipe/`](one-line-recipe/) | 一句话生成：先检索、选择已有或新设计、可跳过问题、依据与校验、编辑保存及降级 | #23 SPEC-003.1 | 本会话无 Artifact 发布工具；本地交互 HTML 样稿 |
 | [`recipe-frontier/`](recipe-frontier/) | 菜谱内味型与功能性、个人量具确认录入、按同份数的食材版本比较；浅色/深色与共用为什么面板 | #2 SPEC-002，#137、#139、#141 | 本会话无 Artifact 发布工具；实现前发布到开发分支的交互 HTML 样稿 |
 | [`recipe-quantification/`](recipe-quantification/) | 可复刻量化：剩余问题定位、逐条接受/修改/忽略、全部接受、来源追溯和基准调整；浅色/深色交互样稿 | #24 SPEC-002.4 | 本会话无 Artifact 发布工具；本地交互 HTML 样稿 |
+| [`version-comparison/`](version-comparison/) | 完整版本比较：确定性幅度、步骤原文、历史结论、筛选布局与 AI 辅助/失败降级；#140 证据等级明确未实现 | #2 SPEC-002，#142、#143 | 本会话无 Artifact 发布工具；实现前发布到开发分支的交互 HTML 样稿 |
 | [`large-batch-advice/`](large-batch-advice/) | 大份量只读时间建议：主动请求、原时长对照、分批与成熟提醒、切换清除及失败降级 | #25 SPEC-003.2 / #175 | 本会话无 Artifact 发布工具；本地交互 HTML 样稿 |
 
 ## 说明
