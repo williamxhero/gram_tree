@@ -7,6 +7,7 @@ from typing import Any
 
 from redis import Redis
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from gramtree.accounts.models import User
@@ -224,6 +225,21 @@ def _apply(
                     confidence=op.confidence,
                 ),
             )
+    result = RecipeSnapshot.model_validate(result.model_dump(mode="json"))
+    # Field validators can canonicalize text (for example ingredient labels).
+    # Visible selections, immutable operations and experience receipts must all
+    # use the exact value that passed snapshot validation, not raw model text.
+    for op in ops:
+        decision = resolved[op.operation_id]
+        if decision.decision in ("reject", "pending"):
+            continue
+        node = _node(result, op)
+        decision.after = getattr(node, op.field)
+        if decision.after == op.before:
+            source_field = SOURCE_FIELDS.get(op.field)
+            if source_field:
+                setattr(node, source_field, getattr(_node(snapshot, op), source_field))
+            continue
         accepted.append(
             {
                 **op.model_dump(mode="json"),
@@ -232,11 +248,7 @@ def _apply(
                 "decision": decision.decision,
             }
         )
-    return (
-        RecipeSnapshot.model_validate(result.model_dump(mode="json")),
-        [resolved[op.operation_id] for op in ops],
-        accepted,
-    )
+    return result, [resolved[op.operation_id] for op in ops], accepted
 
 
 def _state(session, row):
@@ -328,7 +340,22 @@ def propose(
         baseline=baseline,
     )
     session.add(row)
-    session.commit()
+    try:
+        session.commit()
+    except IntegrityError:
+        session.rollback()
+        existing = session.get(RecipeModification, body.request_id) if body.request_id else None
+        if existing is None:
+            raise
+        if existing.user_id != owner.id:
+            raise NotFound() from None
+        if existing.request != canonical:
+            raise ApiError(
+                409, "modification_request_conflict", "请求标识已用于另一项修改"
+            ) from None
+        # The winning request may still be running; return its honest pending
+        # receipt without a second gateway reservation or experience event.
+        return get(session, settings, owner, existing.id)
     proposal: dict[str, Any] = {}
     try:
         raw = gateway.call(
@@ -386,6 +413,10 @@ def propose(
                         ],
                     )
                     recipes._validate_snapshot(session, changed)
+                    for op in output.operations:
+                        op.after = getattr(_node(changed, op), op.field)
+                        if op.after == op.before:
+                            raise ValueError("操作没有实际改动")
                     proposal.update(output.model_dump(mode="json"))
                     proposal["warnings"] = warnings
                     row.error = None

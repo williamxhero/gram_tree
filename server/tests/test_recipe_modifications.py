@@ -2,6 +2,8 @@
 
 import copy
 import uuid
+from concurrent.futures import ThreadPoolExecutor
+from threading import Barrier
 
 import pytest
 
@@ -224,6 +226,99 @@ def test_pending_rejection_dependencies_and_modified_value_recheck(modification_
     assert len(cli("ai", "audit", "--user", user_id)["modification_events"]) == len(
         audit["modification_events"]
     )
+
+
+@pytest.mark.parametrize("decision", ["accept", "modify"])
+def test_canonical_selected_display_name_matches_version_and_event_audit(
+    modification_api, decision
+):
+    api, directory = modification_api
+    headers = bearer(api.login(f"text-canonical-{decision}@example.com"))
+    created = api.client.post("/v1/recipes", headers=headers, json=recipe_input()).json()
+    item = created["version"]["snapshot"]["ingredients"][0]
+    op = operation(
+        created["version"]["snapshot"],
+        type="change_display_name",
+        id=item["id"],
+        field="display_name",
+        before=item["display_name"],
+        after="  Poultry  ",
+        scope=["ingredients"],
+        intent="把食材标签写清楚",
+    )
+    preview = propose(api, directory, headers, created, operations=[op])
+    assert preview["operations"][0]["after"] == "Poultry"
+    selected = choice(
+        api,
+        headers,
+        preview,
+        [
+            {
+                "operation_id": op["operation_id"],
+                "decision": decision,
+                **({"after": "  Poultry  "} if decision == "modify" else {}),
+            }
+        ],
+    )
+    assert selected["snapshot"]["ingredients"][0]["display_name"] == "Poultry"
+    assert selected["decisions"][0]["after"] == "Poultry"
+    response = api.client.post(
+        f"/v1/ai/recipes/modifications/{preview['id']}/confirm",
+        headers=headers,
+        json={"revision": selected["revision"]},
+    )
+    assert response.status_code == 201, response.text
+    version = response.json()["version"]
+    assert version["snapshot"]["ingredients"][0]["display_name"] == "Poultry"
+    assert version["edit_operations"][0]["after"] == "Poultry"
+    user_id = api.client.get("/v1/me", headers=headers).json()["id"]
+    audit = cli("ai", "audit", "--user", user_id)
+    saved_event = [e for e in audit["modification_events"] if e["content"]["stage"] == "saved"]
+    assert saved_event[0]["content"]["decisions"][0]["after"] == "Poultry"
+    version_event = [
+        e for e in audit["version_events"] if e["content"]["recipe_version_id"] == version["id"]
+    ]
+    assert version_event[0]["content"]["edit_operations"][0]["after"] == "Poultry"
+
+
+def test_concurrent_proposal_retries_reserve_one_owned_receipt(modification_api):
+    api, directory = modification_api
+    headers = bearer(api.login("text-concurrent@example.com"))
+    created = api.client.post("/v1/recipes", headers=headers, json=recipe_input()).json()
+    snapshot = created["version"]["snapshot"]
+    recording(directory, "modify_intent", {"text": TEXT}, INTENT)
+    recording(
+        directory,
+        "modify",
+        {"text": TEXT, "snapshot": snapshot, "intent": INTENT},
+        {"operations": [operation(snapshot)]},
+    )
+    request_id = str(uuid.uuid4())
+    body = {
+        "request_id": request_id,
+        "text": TEXT,
+        "recipe_id": created["id"],
+        "base_version_id": created["version"]["id"],
+    }
+    gate = Barrier(16)
+
+    def retry():
+        gate.wait(timeout=30)
+        return api.client.post("/v1/ai/recipes/modifications", headers=headers, json=body)
+
+    with ThreadPoolExecutor(max_workers=16) as pool:
+        responses = list(pool.map(lambda _: retry(), range(16)))
+    assert all(r.status_code == 200 for r in responses), [r.text for r in responses]
+    assert {r.json()["id"] for r in responses} == {request_id}
+    assert all(r.json()["error"] in (None, "pending") for r in responses)
+    finished = api.client.get(f"/v1/ai/recipes/modifications/{request_id}", headers=headers).json()
+    assert finished["error"] is None and len(finished["operations"]) == 1
+    assert finished["status"]["remaining"] == 49
+    user_id = api.client.get("/v1/me", headers=headers).json()["id"]
+    audit = cli("ai", "audit", "--user", user_id)
+    assert [c["capability"] for c in audit["calls"]] == ["modify_intent", "modify"]
+    assert len(audit["modification_events"]) == 1
+    assert audit["modification_events"][0]["content"]["stage"] == "proposed"
 
 
 def test_single_repair_and_unreferenced_fields_are_not_applied(modification_api):

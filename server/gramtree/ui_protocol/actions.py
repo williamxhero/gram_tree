@@ -77,9 +77,7 @@ def _validate_recipe_operation(params: Mapping[str, Any]) -> bool:
         if not _require_non_empty_string(params, "operation_id"):
             return False
         if params.get("decision") == "modify":
-            return "after" in params and (
-                params["after"] is None or isinstance(params["after"], str)
-            )
+            return isinstance(params.get("after"), str) and len(params["after"]) <= 4000
         return params.get("decision") in ("accept", "reject") and "after" not in params
     if operation not in ("check", "quantify", "locate", "cancel", "choose", "decide"):
         return False
