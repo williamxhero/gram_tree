@@ -5,6 +5,7 @@ import 'package:gramtree_api/src/model/analytics_event_in.dart';
 import 'package:gramtree_api/src/model/analytics_upload_request.dart';
 import 'package:gramtree_api/src/model/apple_login_request.dart';
 import 'package:gramtree_api/src/model/apple_reauth_request.dart';
+import 'package:gramtree_api/src/model/assisted_step_pair.dart';
 import 'package:gramtree_api/src/model/batch_advice.dart';
 import 'package:gramtree_api/src/model/batch_advice_input.dart';
 import 'package:gramtree_api/src/model/batch_request.dart';
@@ -94,6 +95,7 @@ import 'package:gramtree_api/src/model/quantification_suggestion.dart';
 import 'package:gramtree_api/src/model/question.dart';
 import 'package:gramtree_api/src/model/recipe_author.dart';
 import 'package:gramtree_api/src/model/recipe_batch_advice_out.dart';
+import 'package:gramtree_api/src/model/recipe_comparison_assistance.dart';
 import 'package:gramtree_api/src/model/recipe_comparison_candidate.dart';
 import 'package:gramtree_api/src/model/recipe_comparison_candidates.dart';
 import 'package:gramtree_api/src/model/recipe_create.dart';
@@ -206,6 +208,9 @@ ReturnType deserialize<ReturnType, BaseType>(
           as ReturnType;
     case 'AppleReauthRequest':
       return AppleReauthRequest.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'AssistedStepPair':
+      return AssistedStepPair.fromJson(value as Map<String, dynamic>)
           as ReturnType;
     case 'AttributeStatus':
     case 'BatchAdvice':
@@ -462,6 +467,9 @@ ReturnType deserialize<ReturnType, BaseType>(
       return RecipeAuthor.fromJson(value as Map<String, dynamic>) as ReturnType;
     case 'RecipeBatchAdviceOut':
       return RecipeBatchAdviceOut.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'RecipeComparisonAssistance':
+      return RecipeComparisonAssistance.fromJson(value as Map<String, dynamic>)
           as ReturnType;
     case 'RecipeComparisonCandidate':
       return RecipeComparisonCandidate.fromJson(value as Map<String, dynamic>)

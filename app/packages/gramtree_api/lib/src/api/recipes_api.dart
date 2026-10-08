@@ -14,6 +14,7 @@ import 'package:gramtree_api/src/model/error_response.dart';
 import 'package:gramtree_api/src/model/quantification_decisions_input.dart';
 import 'package:gramtree_api/src/model/quantification_input.dart';
 import 'package:gramtree_api/src/model/recipe_batch_advice_out.dart';
+import 'package:gramtree_api/src/model/recipe_comparison_assistance.dart';
 import 'package:gramtree_api/src/model/recipe_comparison_candidates.dart';
 import 'package:gramtree_api/src/model/recipe_create.dart';
 import 'package:gramtree_api/src/model/recipe_detail.dart';
@@ -213,6 +214,98 @@ class RecipesApi {
     }
 
     return Response<RecipeSafetyCheckOut>(
+      data: _responseData,
+      headers: _response.headers,
+      isRedirect: _response.isRedirect,
+      requestOptions: _response.requestOptions,
+      redirects: _response.redirects,
+      statusCode: _response.statusCode,
+      statusMessage: _response.statusMessage,
+      extra: _response.extra,
+    );
+  }
+
+  /// Compare Recipe Assistance
+  ///
+  ///
+  /// Parameters:
+  /// * [recipeId]
+  /// * [fromVersionId]
+  /// * [toVersionId]
+  /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
+  /// * [headers] - Can be used to add additional headers to the request
+  /// * [extras] - Can be used to add flags to the request
+  /// * [validateStatus] - A [ValidateStatus] callback that can be used to determine request success based on the HTTP status of the response
+  /// * [onSendProgress] - A [ProgressCallback] that can be used to get the send progress
+  /// * [onReceiveProgress] - A [ProgressCallback] that can be used to get the receive progress
+  ///
+  /// Returns a [Future] containing a [Response] with a [RecipeComparisonAssistance] as data
+  /// Throws [DioException] if API call or serialization fails
+  Future<Response<RecipeComparisonAssistance>> compareRecipeAssistance({
+    required String recipeId,
+    required String fromVersionId,
+    required String toVersionId,
+    CancelToken? cancelToken,
+    Map<String, dynamic>? headers,
+    Map<String, dynamic>? extra,
+    ValidateStatus? validateStatus,
+    ProgressCallback? onSendProgress,
+    ProgressCallback? onReceiveProgress,
+  }) async {
+    final _path = r'/v1/recipes/{recipe_id}/comparison-assistance'.replaceAll(
+      '{'
+      r'recipe_id'
+      '}',
+      recipeId.toString(),
+    );
+    final _options = Options(
+      method: r'GET',
+      headers: <String, dynamic>{...?headers},
+      extra: <String, dynamic>{
+        'secure': <Map<String, String>>[
+          {'type': 'http', 'scheme': 'bearer', 'name': 'HTTPBearer'},
+        ],
+        ...?extra,
+      },
+      validateStatus: validateStatus,
+    );
+
+    final _queryParameters = <String, dynamic>{
+      r'from_version_id': fromVersionId,
+      r'to_version_id': toVersionId,
+    };
+
+    final _response = await _dio.request<Object>(
+      _path,
+      options: _options,
+      queryParameters: _queryParameters,
+      cancelToken: cancelToken,
+      onSendProgress: onSendProgress,
+      onReceiveProgress: onReceiveProgress,
+    );
+
+    RecipeComparisonAssistance? _responseData;
+
+    try {
+      final rawData = _response.data;
+      _responseData = rawData == null
+          ? null
+          : deserialize<RecipeComparisonAssistance, RecipeComparisonAssistance>(
+              rawData,
+              'RecipeComparisonAssistance',
+              growable: true,
+            );
+    } catch (error, stackTrace) {
+      throw DioException(
+        requestOptions: _response.requestOptions,
+        response: _response,
+        type: DioExceptionType.unknown,
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+
+    return Response<RecipeComparisonAssistance>(
       data: _responseData,
       headers: _response.headers,
       isRedirect: _response.isRedirect,

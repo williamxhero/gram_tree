@@ -111,6 +111,22 @@ class RecipeComparisonCache(Base):
     result: Mapped[dict[str, Any]] = mapped_column(JSONB)
 
 
+class RecipeComparisonAssistanceCache(Base):
+    """Separate shared overlay; confidence/prompt revision never changes rule evidence."""
+
+    __tablename__ = "recipe_comparison_assistance_cache"
+
+    from_version_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("recipe_versions.id", ondelete="CASCADE"), primary_key=True
+    )
+    to_version_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("recipe_versions.id", ondelete="CASCADE"), primary_key=True
+    )
+    rules_version: Mapped[str] = mapped_column(String(64), primary_key=True)
+    assistance_version: Mapped[str] = mapped_column(String(64), primary_key=True)
+    result: Mapped[dict[str, Any]] = mapped_column(JSONB)
+
+
 class RecipeQuantification(Base):
     """Immutable model proposals bound to one saved version; one decision batch."""
 

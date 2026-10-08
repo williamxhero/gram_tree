@@ -17,6 +17,7 @@ from gramtree.core.pagination import PageParams, page_params
 from gramtree.deps import RedisDep, SessionDep, SettingsDep
 from gramtree.recipes import batch_advice, quantification, reproducibility, service
 from gramtree.recipes.comparison import RecipeIngredientComparison, compare_ingredients
+from gramtree.recipes.comparison_assistance import RecipeComparisonAssistance, request_assistance
 from gramtree.recipes.full_comparison import RecipeFullComparison, compare_full
 from gramtree.recipes.quantification_schemas import (
     QuantificationDecisionsInput,
@@ -297,6 +298,26 @@ def compare_recipe_full(
     to_version_id: Annotated[IdV4, Query()],
 ) -> RecipeFullComparison:
     return compare_full(session, auth.user, recipe_id, from_version_id, to_version_id)
+
+
+@router.get(
+    "/{recipe_id}/comparison-assistance",
+    response_model=RecipeComparisonAssistance,
+    operation_id="compare_recipe_assistance",
+    responses=_errors(401, 404, 422),
+)
+def compare_recipe_assistance(
+    recipe_id: IdV4,
+    auth: CurrentAuth,
+    session: SessionDep,
+    settings: SettingsDep,
+    redis: RedisDep,
+    from_version_id: Annotated[IdV4, Query()],
+    to_version_id: Annotated[IdV4, Query()],
+) -> RecipeComparisonAssistance:
+    return request_assistance(
+        session, settings, auth.user, recipe_id, from_version_id, to_version_id, redis=redis
+    )
 
 
 @router.post(

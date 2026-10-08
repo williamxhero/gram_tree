@@ -233,6 +233,47 @@
         "title": "AppleReauthRequest",
         "type": "object"
       },
+      "AssistedStepPair": {
+        "properties": {
+          "after_step_id": {
+            "title": "After Step Id",
+            "type": "string"
+          },
+          "alignment": {
+            "const": "ai_assisted",
+            "title": "Alignment",
+            "type": "string"
+          },
+          "basis": {
+            "$ref": "#/components/schemas/SourceBasis"
+          },
+          "before_step_id": {
+            "title": "Before Step Id",
+            "type": "string"
+          },
+          "confidence": {
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Confidence",
+            "type": "number"
+          },
+          "source_type": {
+            "const": "ai_estimated",
+            "title": "Source Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "before_step_id",
+          "after_step_id",
+          "alignment",
+          "confidence",
+          "source_type",
+          "basis"
+        ],
+        "title": "AssistedStepPair",
+        "type": "object"
+      },
       "AttributeStatus": {
         "description": "字段的校对状态。",
         "enum": [
@@ -3788,6 +3829,68 @@
           "status"
         ],
         "title": "RecipeBatchAdviceOut",
+        "type": "object"
+      },
+      "RecipeComparisonAssistance": {
+        "properties": {
+          "alignments": {
+            "items": {
+              "$ref": "#/components/schemas/AssistedStepPair"
+            },
+            "title": "Alignments",
+            "type": "array"
+          },
+          "from_version_id": {
+            "format": "uuid",
+            "title": "From Version Id",
+            "type": "string"
+          },
+          "interpretation": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SourcedValue"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "reason_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason Code"
+          },
+          "rules_version": {
+            "title": "Rules Version",
+            "type": "string"
+          },
+          "status": {
+            "default": "unavailable",
+            "enum": [
+              "ready",
+              "unavailable"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "to_version_id": {
+            "format": "uuid",
+            "title": "To Version Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "from_version_id",
+          "to_version_id",
+          "rules_version"
+        ],
+        "title": "RecipeComparisonAssistance",
         "type": "object"
       },
       "RecipeComparisonCandidate": {
@@ -11294,6 +11397,104 @@
           }
         ],
         "summary": "Compare Recipe Ingredients",
+        "tags": [
+          "recipes"
+        ]
+      }
+    },
+    "/v1/recipes/{recipe_id}/comparison-assistance": {
+      "get": {
+        "operationId": "compare_recipe_assistance",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "recipe_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Recipe Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "from_version_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "From Version Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "to_version_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "To Version Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecipeComparisonAssistance"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "服务端错误"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Compare Recipe Assistance",
         "tags": [
           "recipes"
         ]
