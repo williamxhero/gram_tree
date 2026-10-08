@@ -8,6 +8,7 @@ import '../../ui_protocol/components/component_scaffold.dart';
 import '../../ui_protocol/intent_dispatcher.dart';
 import '../../ui_protocol/source_mark.dart';
 import '../../ui_protocol/source_types.dart';
+import 'comparison_assistance_cards.dart';
 import 'comparison_cards.dart';
 import 'comparison_snapshot_details.dart';
 import 'recipe_source_badge.dart';
@@ -37,6 +38,8 @@ typedef _ComparisonData = ({
 
 class _FullComparisonPageState extends ConsumerState<FullComparisonPage> {
   late Future<_ComparisonData> _result;
+  late Future<RecipeComparisonAssistance?> _assistance;
+  int _loadGeneration = 0;
   bool _showAll = false;
   bool _expandDetails = false;
   bool _stacked = false;
@@ -51,7 +54,21 @@ class _FullComparisonPageState extends ConsumerState<FullComparisonPage> {
   }
 
   void _load() {
+    final generation = ++_loadGeneration;
+    final recipeId = widget.recipeId;
+    final from = widget.fromVersionId;
+    final to = widget.toVersionId;
     _result = _fetch();
+    // Optional assistance is never awaited by the authoritative comparison.
+    // Decode/network/model failures leave the full deterministic page intact.
+    _assistance = _result
+        .then<RecipeComparisonAssistance?>((_) {
+          if (!mounted || generation != _loadGeneration) return null;
+          return ref
+              .read(recipeRepositoryProvider)
+              .compareAssistance(recipeId, from, to);
+        })
+        .catchError((Object _) => null);
   }
 
   Future<_ComparisonData> _fetch() async {
@@ -95,12 +112,162 @@ class _FullComparisonPageState extends ConsumerState<FullComparisonPage> {
       (_grade == 'all' || _grade == grade) &&
       (_kind == 'all' || _kind == kind);
 
+  bool _validAssistance(
+    RecipeComparisonAssistance assistance,
+    _ComparisonData data,
+  ) {
+    final comparison = data.comparison;
+    if (assistance.fromVersionId != comparison.fromVersion.versionId ||
+        assistance.toVersionId != comparison.toVersion.versionId ||
+        assistance.rulesVersion != comparison.rulesVersion) {
+      return false;
+    }
+    final before = {
+      for (final row in comparison.steps)
+        if (row.alignment.value == 'uncertain' && row.before != null)
+          row.before!.id,
+    };
+    final after = {
+      for (final row in comparison.steps)
+        if (row.alignment.value == 'uncertain' && row.after != null)
+          row.after!.id,
+    };
+    final savedBefore = {
+      for (final step in (data.before.steps ?? <RecipeStep>[])) step.id,
+    };
+    final savedAfter = {
+      for (final step in (data.after.steps ?? <RecipeStep>[])) step.id,
+    };
+    final usedBefore = <String>{};
+    final usedAfter = <String>{};
+    for (final pair in assistance.alignments ?? <AssistedStepPair>[]) {
+      // Confidence acceptance belongs to the server. Only reject values outside
+      // the wire domain, references outside the authorized uncertain pools, and
+      // conflicting display mappings. Do not derive an alignment or a grade.
+      if (pair.alignment != AssistedStepPairAlignmentEnum.aiAssisted ||
+          pair.sourceType != AssistedStepPairSourceTypeEnum.aiEstimated ||
+          !pair.confidence.isFinite ||
+          pair.confidence < 0 ||
+          pair.confidence > 1 ||
+          !before.contains(pair.beforeStepId) ||
+          !after.contains(pair.afterStepId) ||
+          !savedBefore.contains(pair.beforeStepId) ||
+          !savedAfter.contains(pair.afterStepId) ||
+          !usedBefore.add(pair.beforeStepId) ||
+          !usedAfter.add(pair.afterStepId)) {
+        return false;
+      }
+    }
+    final interpretation = assistance.interpretation;
+    return interpretation == null ||
+        (interpretation.sourceType == SourcedValueSourceTypeEnum.aiEstimated &&
+            interpretation.basis.reasonCode == 'general_experience' &&
+            interpretation.value.trim().isNotEmpty);
+  }
+
+  Widget _assistancePanel(_ComparisonData data, bool sideBySide) {
+    final comparison = data.comparison;
+    return FutureBuilder<RecipeComparisonAssistance?>(
+      key: ValueKey(
+        'assistance-${comparison.fromVersion.versionId}-${comparison.toVersion.versionId}-${comparison.rulesVersion}',
+      ),
+      future: _assistance,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState != ConnectionState.done) {
+          return const Padding(
+            key: ValueKey('comparison-assistance-loading'),
+            padding: EdgeInsets.all(16),
+            child: Text('AI 辅助加载中；确定性比较已可使用。'),
+          );
+        }
+        final response = snapshot.data;
+        final assistance =
+            response != null &&
+                response.status == RecipeComparisonAssistanceStatusEnum.ready &&
+                _validAssistance(response, data)
+            ? response
+            : null;
+        final pairs = assistance?.alignments ?? <AssistedStepPair>[];
+        final beforeSteps = {
+          for (final step in (data.before.steps ?? <RecipeStep>[]))
+            step.id: step,
+        };
+        final afterSteps = {
+          for (final step in (data.after.steps ?? <RecipeStep>[]))
+            step.id: step,
+        };
+        final beforeNumbers = {
+          for (final (index, step)
+              in (data.before.steps ?? <RecipeStep>[]).indexed)
+            step.id: index + 1,
+        };
+        final afterNumbers = {
+          for (final (index, step)
+              in (data.after.steps ?? <RecipeStep>[]).indexed)
+            step.id: index + 1,
+        };
+        return Column(
+          key: ValueKey(
+            assistance == null
+                ? 'comparison-assistance-unavailable'
+                : 'comparison-assistance-ready',
+          ),
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            ComparisonInterpretationCard(
+              interpretation: assistance?.interpretation,
+              rulesVersion: comparison.rulesVersion,
+            ),
+            if (_includes('steps', null)) ...[
+              if (pairs.isEmpty &&
+                  comparison.steps.any(
+                    (row) => row.alignment.value == 'uncertain',
+                  ))
+                const Padding(
+                  key: ValueKey('comparison-assistance-unaligned'),
+                  padding: EdgeInsets.all(16),
+                  child: Text('未能对齐 · 双方原文保留；幅度与结论仍由确定规则判定。'),
+                ),
+              for (final (index, pair) in pairs.indexed)
+                ComparisonAssistedStepCard(
+                  id: '$index',
+                  pair: pair,
+                  before: beforeSteps[pair.beforeStepId]!,
+                  after: afterSteps[pair.afterStepId]!,
+                  beforeIndex: beforeNumbers[pair.beforeStepId]!,
+                  afterIndex: afterNumbers[pair.afterStepId]!,
+                  rulesVersion: comparison.rulesVersion,
+                  sideBySide: sideBySide,
+                  expandDetails: _expandDetails,
+                  beforeIngredientNames: {
+                    for (final item
+                        in (data.before.ingredients ?? <RecipeIngredient>[]))
+                      item.id: item.displayName,
+                  },
+                  afterIngredientNames: {
+                    for (final item
+                        in (data.after.ingredients ?? <RecipeIngredient>[]))
+                      item.id: item.displayName,
+                  },
+                  beforeStepNumbers: beforeNumbers,
+                  afterStepNumbers: afterNumbers,
+                ),
+            ],
+          ],
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     return Scaffold(
       appBar: AppBar(title: const Text('完整版本对比')),
       body: FutureBuilder<_ComparisonData>(
+        key: ValueKey(
+          '${widget.recipeId}-${widget.fromVersionId}-${widget.toVersionId}',
+        ),
         future: _result,
         builder: (context, snapshot) {
           if (snapshot.hasError) {
@@ -175,6 +342,7 @@ class _FullComparisonPageState extends ConsumerState<FullComparisonPage> {
                   ],
                 ),
               ),
+              _assistancePanel(snapshot.data!, sideBySide),
               Padding(
                 padding: const EdgeInsets.all(16),
                 child: Text(

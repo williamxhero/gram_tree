@@ -40,6 +40,99 @@ Future<void> pumpAssistance(
 }
 
 void main() {
+  for (final brightness in Brightness.values) {
+    for (final size in const [Size(360, 780), Size(900, 480)]) {
+      testWidgets(
+        'AI pair $brightness $size large text retains original fields and read-only Why',
+        (tester) async {
+          final before = RecipeStep(
+            id: 'before',
+            instruction: '分批炒熟并观察中心颜色，保持原始说明完整。',
+            action: '炒',
+            durationSeconds: 100,
+            ingredientIds: ['sauce'],
+            doneness: '中心无粉红',
+            cookware: '炒锅',
+          );
+          final after = RecipeStep(
+            id: 'after',
+            instruction: '另一版分两次炒熟，完整原文不因辅助配对改变。',
+            action: '炒',
+            durationSeconds: 100,
+            ingredientIds: ['sauce'],
+            doneness: '中心无粉红',
+            cookware: '炒锅',
+          );
+          await pumpAssistance(
+            tester,
+            ComparisonAssistedStepCard(
+              id: 'layout',
+              before: before,
+              after: after,
+              beforeIndex: 1,
+              afterIndex: 2,
+              rulesVersion: 'rules-layout',
+              sideBySide: size.width >= 600,
+              expandDetails: true,
+              beforeIngredientNames: const {'sauce': '生抽'},
+              afterIngredientNames: const {'sauce': '生抽'},
+              pair: AssistedStepPair(
+                beforeStepId: 'before',
+                afterStepId: 'after',
+                alignment: AssistedStepPairAlignmentEnum.aiAssisted,
+                confidence: .95,
+                sourceType: AssistedStepPairSourceTypeEnum.aiEstimated,
+                basis: SourceBasis(
+                  reasonCode: 'general_experience',
+                  text: '只为辅助阅读，不更改确定规则。',
+                ),
+              ),
+            ),
+            brightness: brightness,
+            size: size,
+            scale: 1.6,
+          );
+          expect(find.text('把握程度：95%'), findsOneWidget);
+          expect(
+            tester.widget<Text>(find.text('把握程度：95%')).style?.fontFamily,
+            numberFont,
+          );
+          final a = tester.getTopLeft(find.text('A · ${before.instruction}'));
+          final b = tester.getTopLeft(find.text('B · ${after.instruction}'));
+          if (size.width >= 600) {
+            expect(a.dy, b.dy);
+            expect(b.dx, greaterThan(a.dx));
+          } else {
+            expect(b.dy, greaterThan(a.dy));
+          }
+          for (final id in ['before', 'after']) {
+            final original = find.text('步骤 ID：$id');
+            await tester.ensureVisible(original);
+            await tester.pumpAndSettle();
+            expect(original, findsOneWidget);
+            expect(tester.takeException(), isNull);
+          }
+          expect(find.text('引用食材 ID：["sauce"]'), findsNWidgets(2));
+          expect(find.text('成熟判断：中心无粉红'), findsNWidgets(2));
+          final why = find.byKey(
+            const ValueKey('comparison-assistance-why-layout'),
+          );
+          await tester.ensureVisible(why);
+          await tester.pumpAndSettle();
+          await tester.tap(why);
+          await tester.pumpAndSettle();
+          expect(find.byKey(const ValueKey('why-panel')), findsOneWidget);
+          expect(find.text('AI 辅助对齐依据'), findsOneWidget);
+          expect(find.textContaining('服务端把握程度原值：0.95'), findsOneWidget);
+          expect(find.text('这次不用'), findsNothing);
+          expect(find.text('以后别这样'), findsNothing);
+          expect(find.text('已验证'), findsNothing);
+          expect(tester.takeException(), isNull);
+        },
+      );
+    }
+  }
+
   testWidgets(
     'AI interpretation is general experience, opens shared read-only Why, and leaves the rule grade intact',
     (tester) async {

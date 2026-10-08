@@ -1,3 +1,6 @@
+import 'dart:async';
+
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -5,6 +8,7 @@ import 'package:gram_tree/app/router.dart';
 import 'package:gram_tree/app/theme.dart';
 import 'package:gram_tree/features/recipes/full_comparison_page.dart';
 import 'package:gram_tree/l10n/app_localizations.dart';
+import 'package:gram_tree/ui_protocol/components/component_scaffold.dart';
 import 'package:gramtree_api/gramtree_api.dart';
 
 import 'helpers.dart';
@@ -263,9 +267,38 @@ RecipeFullComparison fixture() => RecipeFullComparison.fromJson({
   ],
 });
 
+RecipeComparisonAssistance assistanceFixture() => RecipeComparisonAssistance(
+  fromVersionId: versionA,
+  toVersionId: versionB,
+  rulesVersion: 'rules-test-1',
+  status: RecipeComparisonAssistanceStatusEnum.ready,
+  alignments: [
+    AssistedStepPair(
+      beforeStepId: 'old',
+      afterStepId: 'new',
+      alignment: AssistedStepPairAlignmentEnum.aiAssisted,
+      confidence: .95,
+      sourceType: AssistedStepPairSourceTypeEnum.aiEstimated,
+      basis: SourceBasis(
+        reasonCode: 'general_experience',
+        text: '仅辅助展示不确定步骤，不改变确定规则的新增删除。',
+      ),
+    ),
+  ],
+  interpretation: SourcedValue(
+    value: '两版都炒熟，后一版分成两步，更适合分批操作。',
+    sourceType: SourcedValueSourceTypeEnum.aiEstimated,
+    basis: SourceBasis(
+      reasonCode: 'general_experience',
+      text: '仅依据有权读取的版本差异，属于一般经验。',
+    ),
+  ),
+);
+
 FakeServer serverForComparison({
   bool failFirst = false,
   String toRecipe = recipe,
+  RecipeComparisonAssistance? assistance,
 }) {
   final server = FakeServer();
   var attempts = 0;
@@ -282,11 +315,44 @@ FakeServer serverForComparison({
     (data['to_version'] as Map<String, dynamic>)['recipe_id'] = toRecipe;
     return (200, RecipeFullComparison.fromJson(data).toJson());
   });
+  server.on('GET', '/v1/recipes/$recipe/comparison-assistance', (request) {
+    if (request.query['from_version_id'] != versionA ||
+        request.query['to_version_id'] != versionB) {
+      return FakeServer.error(422, 'invalid_request', '辅助比较方向错误');
+    }
+    return (
+      200,
+      (assistance ??
+              RecipeComparisonAssistance(
+                fromVersionId: versionA,
+                toVersionId: versionB,
+                rulesVersion: 'rules-test-1',
+                status: RecipeComparisonAssistanceStatusEnum.unavailable,
+                reasonCode: 'model_unavailable',
+              ))
+          .toJson(),
+    );
+  });
   for (final (version, number) in [(versionA, 1), (versionB, 2)]) {
     server.on(
       'GET',
       '/v1/recipes/${number == 1 ? recipe : toRecipe}/versions/$version',
-      (_) => (200, detail(version, number).toJson()),
+      (_) {
+        final saved = detail(version, number).toJson();
+        if (assistance != null) {
+          final snapshot =
+              (saved['version'] as Map<String, dynamic>)['snapshot']
+                  as Map<String, dynamic>;
+          (snapshot['steps'] as List).add(
+            step(
+              number == 1 ? 'old' : 'new',
+              number == 1 ? '不确定原步骤' : '不确定新步骤',
+              60,
+            ).toJson(),
+          );
+        }
+        return (200, RecipeDetail.fromJson(saved).toJson());
+      },
     );
   }
   return server;
@@ -329,7 +395,338 @@ Future<void> choose(WidgetTester tester, String filter, String label) async {
   await tester.pumpAndSettle();
 }
 
+class _AssistanceTransportFailure extends FakeServer {
+  _AssistanceTransportFailure(this.delegate, this.failure);
+  final FakeServer delegate;
+  final DioExceptionType failure;
+
+  @override
+  Future<void> onRequest(
+    RequestOptions options,
+    RequestInterceptorHandler handler,
+  ) async {
+    if (options.uri.path.endsWith('/comparison-assistance')) {
+      handler.reject(
+        DioException(
+          requestOptions: options,
+          type: failure,
+          message: '合成辅助请求传输故障',
+        ),
+      );
+      return;
+    }
+    await delegate.onRequest(options, handler);
+  }
+}
+
+Future<void> expectUnassistedOriginals(WidgetTester tester) async {
+  await reveal(tester, find.text('显著改动'));
+  expect(find.text('显著改动'), findsOneWidget);
+  expect(
+    find.byKey(const ValueKey('comparison-assistance-unavailable')),
+    findsOneWidget,
+  );
+  expect(find.text('AI 辅助对齐'), findsNothing);
+  expect(find.text('AI · 一般经验'), findsNothing);
+  expect(find.text('两版都炒熟，后一版分成两步，更适合分批操作。'), findsNothing);
+  expect(find.textContaining('未能对齐 · 双方原文保留'), findsOneWidget);
+  await tap(tester, find.byKey(const ValueKey('full-compare-expand-all')));
+  for (final id in ['old', 'new']) {
+    await reveal(tester, find.text('步骤 ID：$id'));
+    expect(find.text('步骤 ID：$id'), findsOneWidget);
+    expect(find.text('幅度：一般'), findsWidgets);
+  }
+  expect(tester.takeException(), isNull);
+}
+
 void main() {
+  for (final reason in [
+    'low_confidence',
+    'model_unavailable',
+    'replay_miss',
+    'budget_exhausted',
+  ]) {
+    testWidgets('辅助 $reason 不伪造结果；确定结论与双方完整原文仍可用', (tester) async {
+      final assistance = RecipeComparisonAssistance.fromJson({
+        ...assistanceFixture().toJson(),
+        'status': 'unavailable',
+        'alignments': [],
+        'interpretation': null,
+        'reason_code': reason,
+      });
+      await openComparison(tester, serverForComparison(assistance: assistance));
+      await expectUnassistedOriginals(tester);
+    });
+  }
+
+  final valid = assistanceFixture().toJson();
+  final validPair =
+      (valid['alignments'] as List).single as Map<String, dynamic>;
+  for (final entry in <String, Map<String, dynamic>>{
+    '反向起点': {'from_version_id': versionB},
+    '反向终点': {'to_version_id': versionA},
+    '过期规则': {'rules_version': 'expired-rules'},
+    '越权前步骤': {
+      'alignments': [
+        {...validPair, 'before_step_id': 'foreign-before'},
+      ],
+    },
+    '越权后步骤': {
+      'alignments': [
+        {...validPair, 'after_step_id': 'foreign-after'},
+      ],
+    },
+    '确定步骤不可交给 AI': {
+      'alignments': [
+        {...validPair, 'before_step_id': 'cook'},
+      ],
+    },
+    '冲突对法': {
+      'alignments': [validPair, validPair],
+    },
+    '把握超出上界': {
+      'alignments': [
+        {...validPair, 'confidence': 1.1},
+      ],
+    },
+    '把握超出下界': {
+      'alignments': [
+        {...validPair, 'confidence': -0.1},
+      ],
+    },
+    '不能冒充已验证': {
+      'interpretation': {
+        ...(valid['interpretation'] as Map<String, dynamic>),
+        'source_type': 'verified',
+      },
+    },
+    '不能引用个人经验': {
+      'interpretation': {
+        ...(valid['interpretation'] as Map<String, dynamic>),
+        'basis': {'reason_code': 'personal_feedback', 'text': '不可使用的个人经验'},
+      },
+    },
+  }.entries) {
+    testWidgets('拒绝${entry.key}辅助展示，原始规则和字段不变', (tester) async {
+      final assistance = RecipeComparisonAssistance.fromJson({
+        ...valid,
+        ...entry.value,
+      });
+      await openComparison(tester, serverForComparison(assistance: assistance));
+      await expectUnassistedOriginals(tester);
+    });
+  }
+
+  testWidgets('未能对齐的 unpaired 步骤不是可辅助的 uncertain 池', (tester) async {
+    final server = serverForComparison(assistance: assistanceFixture());
+    final comparison = fixture().toJson();
+    ((comparison['steps'] as List)[2] as Map<String, dynamic>)['alignment'] =
+        'unpaired';
+    server.on(
+      'GET',
+      '/v1/recipes/$recipe/full-comparison',
+      (_) => (200, comparison),
+    );
+    await openComparison(tester, server);
+    await expectUnassistedOriginals(tester);
+  });
+
+  for (final entry in <String, Map<String, dynamic>>{
+    '格式错误': {
+      'alignments': [
+        {'before_step_id': 'old'},
+      ],
+    },
+    '来源非法': {
+      'alignments': [
+        {...validPair, 'source_type': 'verified'},
+      ],
+    },
+  }.entries) {
+    testWidgets('辅助${entry.key}反序列化失败不阻塞完整对比', (tester) async {
+      final server = serverForComparison(assistance: assistanceFixture());
+      server.on(
+        'GET',
+        '/v1/recipes/$recipe/comparison-assistance',
+        (_) => (200, {...valid, ...entry.value}),
+      );
+      await openComparison(tester, server);
+      await expectUnassistedOriginals(tester);
+    });
+  }
+
+  for (final failure in [
+    DioExceptionType.connectionError,
+    DioExceptionType.receiveTimeout,
+  ]) {
+    testWidgets('辅助 $failure 与确定对比加载、原始明细隔离', (tester) async {
+      final server = _AssistanceTransportFailure(
+        serverForComparison(assistance: assistanceFixture()),
+        failure,
+      );
+      await openComparison(tester, server);
+      await expectUnassistedOriginals(tester);
+    });
+  }
+
+  testWidgets('服务端已接受的把握值原样展示，客户端不另设阈值', (tester) async {
+    final assistance = RecipeComparisonAssistance.fromJson({
+      ...valid,
+      'alignments': [
+        {...validPair, 'confidence': .25},
+      ],
+    });
+    await openComparison(tester, serverForComparison(assistance: assistance));
+    expect(find.text('把握程度：25%'), findsOneWidget);
+    expect(find.text('AI 辅助对齐'), findsOneWidget);
+    expect(find.text('显著改动'), findsOneWidget);
+  });
+
+  testWidgets('辅助请求未完成时仍能筛选确定差异；失败后完整比较保持可用', (tester) async {
+    final pending = Completer<(int, Object?)>();
+    final server = serverForComparison(assistance: assistanceFixture());
+    server.on(
+      'GET',
+      '/v1/recipes/$recipe/comparison-assistance',
+      (_) => pending.future,
+    );
+    await openComparison(tester, server);
+    expect(
+      find.byKey(const ValueKey('comparison-assistance-loading')),
+      findsOneWidget,
+    );
+    expect(find.text('显著改动'), findsOneWidget);
+    await choose(tester, 'grade', '一般');
+    await reveal(tester, find.text('幅度：一般'));
+    expect(find.text('幅度：一般'), findsWidgets);
+    pending.complete(FakeServer.error(503, 'unavailable', '辅助不可用'));
+    await tester.pumpAndSettle();
+    await choose(tester, 'grade', '全部幅度');
+    await reveal(
+      tester,
+      find.byKey(const ValueKey('comparison-assistance-unavailable')),
+    );
+    await expectUnassistedOriginals(tester);
+  });
+
+  testWidgets('两种 AI 对法只改变辅助伙伴，不改变逐条等级、规则结论或保存的历史标签', (tester) async {
+    for (final afterId in ['new', 'alternate']) {
+      final assistance = RecipeComparisonAssistance.fromJson({
+        ...valid,
+        'alignments': [
+          {...validPair, 'after_step_id': afterId},
+        ],
+      });
+      final server = serverForComparison(assistance: assistance);
+      final comparison = fixture().toJson();
+      (comparison['steps'] as List).add({
+        'after': step('alternate', '另一个不确定新步骤', 60).toJson(),
+        'after_index': 4,
+        'alignment': 'uncertain',
+        'confidence': .4,
+        'basis': '两个候选不能唯一匹配',
+        'changes': [
+          change(
+            kind: 'added',
+            field: 'step',
+            before: null,
+            after: '另一个不确定新步骤',
+            grade: 'general',
+          ),
+        ],
+      });
+      server.on(
+        'GET',
+        '/v1/recipes/$recipe/full-comparison',
+        (_) => (200, RecipeFullComparison.fromJson(comparison).toJson()),
+      );
+      final savedB = detail(versionB, 2).toJson();
+      final snapshot =
+          (savedB['version'] as Map<String, dynamic>)['snapshot']
+              as Map<String, dynamic>;
+      (snapshot['steps'] as List).addAll(<Map<String, dynamic>>[
+        step('new', '不确定新步骤', 60).toJson(),
+        step('alternate', '另一个不确定新步骤', 60).toJson(),
+      ]);
+      server.on(
+        'GET',
+        '/v1/recipes/$recipe/versions/$versionB',
+        (_) => (200, RecipeDetail.fromJson(savedB).toJson()),
+      );
+      await openComparison(tester, server);
+      expect(find.text('显著改动'), findsOneWidget);
+      expect(
+        find.text('AI 辅助展示 · A 第 3 步 → B 第 ${afterId == 'new' ? 3 : 4} 步'),
+        findsOneWidget,
+      );
+      await tap(tester, find.byKey(const ValueKey('full-compare-expand-all')));
+      for (final index in [2, 3, 4]) {
+        final marker = find.byKey(ValueKey('comparison-why-step-$index-step'));
+        await reveal(tester, marker);
+        final card = find.ancestor(
+          of: marker,
+          matching: find.byType(ComponentCard),
+        );
+        expect(
+          find.descendant(of: card, matching: find.text('幅度：一般')),
+          findsOneWidget,
+        );
+      }
+      await choose(tester, 'grade', '一般');
+      expect(find.text('AI 辅助对齐'), findsNothing);
+      await reveal(
+        tester,
+        find.byKey(const ValueKey('comparison-why-step-2-step')),
+      );
+      expect(find.text('幅度：一般'), findsWidgets);
+      await tap(tester, find.byKey(const ValueKey('full-compare-detail-b')));
+      expect(
+        find.descendant(
+          of: find.byKey(const ValueKey('recipe-version-conclusion')),
+          matching: find.textContaining('显著改动'),
+        ),
+        findsOneWidget,
+      );
+      expect(tester.takeException(), isNull);
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pumpAndSettle();
+    }
+  });
+
+  testWidgets('高把握 AI 辅助是独立展示，原始字段与确定规则新增删除仍完整可见', (tester) async {
+    await openComparison(
+      tester,
+      serverForComparison(assistance: assistanceFixture()),
+    );
+    expect(find.text('显著改动'), findsOneWidget);
+    expect(find.text('两版都炒熟，后一版分成两步，更适合分批操作。'), findsOneWidget);
+    expect(find.text('AI · 一般经验'), findsOneWidget);
+    await tap(
+      tester,
+      find.byKey(const ValueKey('comparison-assistance-why-0')),
+    );
+    expect(find.byKey(const ValueKey('why-panel')), findsOneWidget);
+    expect(find.text('AI 辅助对齐依据'), findsOneWidget);
+    expect(find.textContaining('把握程度：95%'), findsWidgets);
+    expect(find.textContaining('不改变确定规则的新增删除'), findsOneWidget);
+    expect(find.text('这次不用'), findsNothing);
+    expect(find.text('以后别这样'), findsNothing);
+    await tester.tapAt(const Offset(10, 10));
+    await tester.pumpAndSettle();
+    await tap(tester, find.byKey(const ValueKey('full-compare-expand-all')));
+    final pair = find.byKey(const ValueKey('comparison-assistance-pair-0'));
+    for (final text in ['步骤 ID：old', '步骤 ID：new', '成熟判断：中心无粉红']) {
+      final raw = find.descendant(of: pair, matching: find.text(text));
+      await reveal(tester, raw);
+      expect(raw, findsWidgets);
+    }
+    for (final id in ['step-2-step', 'step-3-step']) {
+      await reveal(tester, find.byKey(ValueKey('comparison-why-$id')));
+      expect(find.text('幅度：一般'), findsWidgets);
+    }
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('完整对比保留 A→B、归一、确定规则结论和只读决定性依据', (tester) async {
     await openComparison(tester, serverForComparison());
     expect(find.text('显著改动'), findsOneWidget);
@@ -377,6 +774,42 @@ void main() {
     await reveal(tester, find.text('不确定原步骤'));
     await reveal(tester, find.text('不确定新步骤'));
     expect(find.textContaining('对齐不确定'), findsWidgets);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('AI 辅助按步骤、幅度和类型筛选隐藏及恢复，不把辅助配对伪装成规则变化', (tester) async {
+    await openComparison(
+      tester,
+      serverForComparison(assistance: assistanceFixture()),
+    );
+    const pairKey = ValueKey('comparison-assistance-pair-0');
+    await reveal(tester, find.byKey(pairKey));
+    expect(find.text('AI 辅助对齐'), findsOneWidget);
+    await choose(tester, 'section', '食材');
+    expect(find.byKey(pairKey), findsNothing);
+    await reveal(tester, find.text('AI · 一般经验'));
+    expect(find.text('AI · 一般经验'), findsOneWidget);
+    await reveal(tester, find.text('显著改动'));
+    expect(find.text('显著改动'), findsOneWidget);
+    await choose(tester, 'section', '步骤');
+    await reveal(tester, find.byKey(pairKey));
+    expect(find.text('AI 辅助对齐'), findsOneWidget);
+    await choose(tester, 'grade', '一般');
+    expect(find.byKey(pairKey), findsNothing);
+    await reveal(
+      tester,
+      find.byKey(const ValueKey('comparison-why-step-2-step')),
+    );
+    expect(find.text('幅度：一般'), findsWidgets);
+    await choose(tester, 'grade', '全部幅度');
+    await choose(tester, 'kind', '文字修改');
+    expect(find.byKey(pairKey), findsNothing);
+    await reveal(tester, find.text('幅度：不计配方幅度'));
+    await choose(tester, 'kind', '全部类型');
+    await reveal(tester, find.byKey(pairKey));
+    expect(find.text('把握程度：95%'), findsOneWidget);
+    await reveal(tester, find.text('显著改动'));
+    expect(find.text('显著改动'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 
@@ -451,6 +884,91 @@ void main() {
     expect(find.text('已确认小勺输入依据'), findsOneWidget);
     expect(find.textContaining('小勺 1 平勺'), findsWidgets);
     expect(find.textContaining('signed-transport-fixture'), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('A 详情经真实历史入口重新完整比较，B 保存结论打开历史且详情仍返回食谱列表', (tester) async {
+    final server = serverForComparison(assistance: assistanceFixture());
+    final current = detail(versionB, 2);
+    server.on(
+      'GET',
+      '/v1/recipes',
+      (_) => (
+        200,
+        RecipeList(
+          items: [
+            RecipeListItem(
+              activeTimeSeconds: current.version.derived.activeTimeSeconds,
+              dish: current.dish,
+              id: current.id,
+              servings: current.version.snapshot.servings,
+              totalTimeSeconds: current.version.derived.totalTimeSeconds,
+              updatedAt: current.updatedAt,
+              versionNumber: current.version.versionNumber,
+              visibility: RecipeListItemVisibilityEnum.private,
+            ),
+          ],
+        ).toJson(),
+      ),
+    );
+    server.on(
+      'GET',
+      '/v1/recipes/$recipe/versions',
+      (_) => (
+        200,
+        RecipeVersionHistory(
+          items: [
+            RecipeVersionSummary(
+              id: versionB,
+              versionNumber: 2,
+              previousVersionId: versionA,
+              conclusion: RecipeVersionSummaryConclusionEnum.significant,
+              rulesVersion: 'rules-test-1',
+              aiAssisted: false,
+              changeNote: '第二版',
+              createdAt: '2026-10-02T00:00:00Z',
+            ),
+            RecipeVersionSummary(
+              id: versionA,
+              versionNumber: 1,
+              aiAssisted: false,
+              changeNote: '首版',
+              createdAt: '2026-10-01T00:00:00Z',
+            ),
+          ],
+        ).toJson(),
+      ),
+    );
+    await openComparison(tester, server);
+    await tap(tester, find.byKey(const ValueKey('full-compare-detail-a')));
+    expect(find.byKey(const ValueKey('recipe-detail-content')), findsOneWidget);
+    expect(find.byKey(const ValueKey('recipe-list-button')), findsOneWidget);
+    expect(find.byTooltip('返回'), findsNothing);
+    await tester.tap(find.byKey(const ValueKey('recipe-history-button')));
+    await tester.pumpAndSettle();
+    expect(find.text('显著改动 · 对比上一版本'), findsOneWidget);
+    await tester.tap(
+      find.byKey(const ValueKey('recipe-full-compare-previous-2')),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('显著改动'), findsOneWidget);
+    await tap(tester, find.byKey(const ValueKey('full-compare-detail-b')));
+    final saved = find.byKey(const ValueKey('recipe-version-conclusion'));
+    expect(
+      find.descendant(of: saved, matching: find.textContaining('显著改动')),
+      findsOneWidget,
+    );
+    await tester.ensureVisible(saved);
+    await tester.tap(saved);
+    await tester.pumpAndSettle();
+    expect(find.text('显著改动 · 对比上一版本'), findsOneWidget);
+    await tester.tap(find.byTooltip('返回'));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('recipe-detail-content')), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('recipe-list-button')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('new-recipe-button')), findsOneWidget);
+    expect(find.byKey(const ValueKey('full-comparison-content')), findsNothing);
     expect(tester.takeException(), isNull);
   });
 
