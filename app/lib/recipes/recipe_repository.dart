@@ -17,6 +17,32 @@ class RecipeRepository {
 
   Future<AIStatus> aiStatus() async => (await _ai.recipeAiStatus()).data!;
 
+  Future<AIStatus> modificationStatus() async =>
+      (await _ai.recipeModificationStatus()).data!;
+
+  Future<ModificationPreview> proposeModification(
+    ModificationInput input,
+  ) async =>
+      (await _ai.proposeRecipeModification(modificationInput: input)).data!;
+
+  Future<ModificationPreview> decideModification(
+    String modificationId,
+    List<ModificationDecision> decisions,
+  ) async => (await _ai.decideRecipeModification(
+    modificationId: modificationId,
+    modificationDecisionsInput: ModificationDecisionsInput(
+      decisions: decisions,
+    ),
+  )).data!;
+
+  Future<RecipeDetail> confirmModification(
+    String modificationId,
+    int revision,
+  ) async => (await _ai.confirmRecipeModification(
+    modificationId: modificationId,
+    modificationConfirmInput: ModificationConfirmInput(revision: revision),
+  )).data!;
+
   Future<RetrievalResult> findForRequest(String text) async =>
       (await _ai.findRecipeForRequest(oneLineInput: OneLineInput(text: text)))
           .data!;

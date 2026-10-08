@@ -236,6 +236,9 @@ class _OneLineRecipePageState extends ConsumerState<OneLineRecipePage> {
             TextEditPanel(
               key: ValueKey('text-edit-generation-${result!.requestId}'),
               generationRequestId: result.requestId,
+              onSavingChanged: (saving) {
+                if (mounted) setState(() => _busy = saving);
+              },
               onSaved: (detail) async {
                 if (mounted) context.pushReplacement('/recipes/${detail.id}');
               },

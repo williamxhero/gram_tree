@@ -154,7 +154,186 @@ TestEnv _env({String? failure}) {
     '/v1/recipes/$_recipeId',
     (_) => (200, _detail(saved).toJson()),
   );
+  _installModificationApi(env);
   return env;
+}
+
+const _modificationId = '33333333-3333-4333-8333-333333333333';
+const _modifyText = '把步骤说明写清楚，不改食材和用量';
+const _clarified = '中火翻炒鸡肉，直到中心达到 74°C，盛出。';
+
+void _installModificationApi(
+  TestEnv env, {
+  String? error,
+  bool unavailable = false,
+}) {
+  final status = AIStatus(
+    available: !unavailable,
+    remaining: unavailable ? 0 : 48,
+    reason: unavailable ? 'daily_quota' : null,
+  );
+  env.server.on(
+    'GET',
+    '/v1/ai/recipes/modifications/status',
+    (_) => (200, status.toJson()),
+  );
+  var revision = 0;
+  var snapshot = _snapshot();
+  var decisions = <Map<String, dynamic>>[
+    for (final id in ['clarify-cook', 'remind-cook', 'explain-cook'])
+      {'operation_id': id, 'decision': 'pending', 'blocked_by': <String>[]},
+  ];
+  Map<String, dynamic> preview() => ModificationPreview.fromJson({
+    'id': _modificationId,
+    'revision': revision,
+    'intent': {
+      'category': 'text',
+      'parameters': {'field': 'instruction'},
+      'confidence': 0.95,
+    },
+    'operations': [
+      for (final (id, field, before, after, dependencies) in [
+        (
+          'clarify-cook',
+          'instruction',
+          '中火炒熟鸡肉，中心达到 74°C',
+          _clarified,
+          <String>[],
+        ),
+        ('remind-cook', 'notes', null, '用温度计确认中心温度。', ['clarify-cook']),
+        ('explain-cook', 'why', '充分加热降低食品安全风险', '充分加热降低食品安全风险。', <String>[]),
+      ])
+        {
+          'operation_id': id,
+          'type': 'change_step_field',
+          'id': 'cook',
+          'field': field,
+          'before': before,
+          'after': after,
+          'scope': ['steps:cook'],
+          'intent': _modifyText,
+          'reason': '只澄清步骤文字，保留用量和时长',
+          'risk': '仍需实际做过验证',
+          'confidence': 0.95,
+          'depends_on': dependencies,
+        },
+    ],
+    'decisions': decisions,
+    'snapshot': snapshot.toJson(),
+    'safety': _safety()
+        .copyWith(
+          canSave: snapshot.steps!.first.instruction != '包治百病',
+          prohibitedClaims: snapshot.steps!.first.instruction == '包治百病'
+              ? ['包治百病']
+              : [],
+        )
+        .toJson(),
+    'reproducibility': {
+      'rules_version': 'test-v1',
+      'state': 'reproducible',
+      'required_field_count': 1,
+      'concrete_field_count': 1,
+      'field_completeness': 1.0,
+      'remaining_count': 0,
+      'problems': [],
+    },
+    'status': status.toJson(),
+    'warnings': [],
+    if (error != null) 'error': error,
+  }).toJson();
+  env.server.on(
+    'POST',
+    '/v1/ai/recipes/modifications',
+    (_) => (200, preview()),
+  );
+  env.server.on(
+    'POST',
+    '/v1/ai/recipes/modifications/$_modificationId/decisions',
+    (request) {
+      final supplied = (request.body as Map)['decisions'] as List;
+      decisions = [
+        for (final id in ['clarify-cook', 'remind-cook', 'explain-cook'])
+          {
+            'operation_id': id,
+            'decision': 'pending',
+            'blocked_by': <String>[],
+            ...?supplied.where((d) => d['operation_id'] == id).firstOrNull
+                as Map?,
+          },
+      ];
+      if (decisions.first['decision'] == 'reject') {
+        decisions[1] = {
+          'operation_id': 'remind-cook',
+          'decision': 'reject',
+          'blocked_by': ['clarify-cook'],
+        };
+      }
+      final instruction = switch (decisions.first['decision']) {
+        'accept' => _clarified,
+        'modify' => decisions.first['after'] as String,
+        _ => '中火炒熟鸡肉，中心达到 74°C',
+      };
+      snapshot = _snapshot().copyWith(
+        steps: [_snapshot().steps!.first.copyWith(instruction: instruction)],
+      );
+      revision++;
+      return (200, preview());
+    },
+  );
+  env.server.on(
+    'POST',
+    '/v1/ai/recipes/modifications/$_modificationId/confirm',
+    (_) {
+      final saved = _detail(snapshot);
+      env.server.on(
+        'GET',
+        '/v1/recipes/$_recipeId',
+        (_) => (200, saved.toJson()),
+      );
+      return (201, saved.toJson());
+    },
+  );
+}
+
+Future<void> _reveal(WidgetTester tester, String key) async {
+  final scrollable = find
+      .byWidgetPredicate(
+        (w) => w is Scrollable && w.axisDirection == AxisDirection.down,
+      )
+      .first;
+  for (var i = 0; i < 12; i++) {
+    await tester.drag(scrollable, const Offset(0, 500));
+    await tester.pump(const Duration(milliseconds: 50));
+  }
+  await tester.scrollUntilVisible(
+    find.byKey(ValueKey(key)),
+    250,
+    scrollable: scrollable,
+    maxScrolls: 60,
+  );
+  await Scrollable.ensureVisible(
+    tester.element(find.byKey(ValueKey(key))),
+    alignment: 0.5,
+  );
+  await tester.pumpAndSettle();
+}
+
+Future<void> _choose(WidgetTester tester, String key) async {
+  await _reveal(tester, key);
+  await tester.tap(find.byKey(ValueKey(key)));
+  await tester.pumpAndSettle();
+  await tester.pump(const Duration(milliseconds: 300));
+  await tester.pumpAndSettle();
+}
+
+Future<void> _preview(WidgetTester tester) async {
+  await _reveal(tester, 'text-edit-input');
+  await tester.enterText(
+    find.byKey(const ValueKey('text-edit-input')),
+    _modifyText,
+  );
+  await tester.pumpAndSettle();
+  await _choose(tester, 'text-edit-preview');
 }
 
 Future<void> _tap(WidgetTester tester, String key) async {
@@ -182,6 +361,196 @@ Future<void> _open(WidgetTester tester, TestEnv env) async {
 }
 
 void main() {
+  testWidgets('生成结果逐条处理才确认，编辑后更新安全检查，保存后能查看', (tester) async {
+    final env = _env();
+    await _open(tester, env);
+    await _tap(tester, 'ai-design-new');
+    await _tap(tester, 'ai-skip-questions');
+    await _preview(tester);
+    await _reveal(tester, 'text-edit-confirm');
+    expect(
+      tester
+          .widget<FilledButton>(find.byKey(const ValueKey('text-edit-confirm')))
+          .onPressed,
+      isNull,
+    );
+    expect(
+      env.server.calls(
+        'POST',
+        '/v1/ai/recipes/modifications/$_modificationId/confirm',
+      ),
+      isEmpty,
+    );
+    await _choose(tester, 'text-edit-modify-clarify-cook');
+    await _reveal(tester, 'text-edit-after-clarify-cook');
+    await tester.enterText(
+      find.byKey(const ValueKey('text-edit-after-clarify-cook')),
+      '包治百病',
+    );
+    await tester.pump();
+    await _reveal(tester, 'text-edit-confirm');
+    expect(
+      tester
+          .widget<FilledButton>(find.byKey(const ValueKey('text-edit-confirm')))
+          .onPressed,
+      isNull,
+    );
+    await tester.pump(const Duration(milliseconds: 300));
+    await tester.pumpAndSettle();
+    await _choose(tester, 'text-edit-reject-remind-cook');
+    await _choose(tester, 'text-edit-reject-explain-cook');
+    await _reveal(tester, 'text-edit-confirm');
+    expect(
+      tester
+          .widget<FilledButton>(find.byKey(const ValueKey('text-edit-confirm')))
+          .onPressed,
+      isNull,
+      reason: '安全检查禁止医疗宣称',
+    );
+    await _reveal(tester, 'text-edit-after-clarify-cook');
+    await tester.enterText(
+      find.byKey(const ValueKey('text-edit-after-clarify-cook')),
+      '中火翻炒至鸡肉中心达到 74°C，再盛出。',
+    );
+    await tester.pump(const Duration(milliseconds: 300));
+    await tester.pumpAndSettle();
+    await _reveal(tester, 'text-edit-confirm');
+    expect(
+      tester
+          .widget<FilledButton>(find.byKey(const ValueKey('text-edit-confirm')))
+          .onPressed,
+      isNotNull,
+    );
+    expect(env.server.calls('POST', '/v1/recipes'), isEmpty);
+    expect(
+      env.server.calls('POST', '/v1/ai/recipes/requests/$_requestId/save'),
+      isEmpty,
+    );
+    await _choose(tester, 'text-edit-confirm');
+    expect(find.byKey(const ValueKey('recipe-detail-content')), findsOneWidget);
+    await _reveal(tester, 'recipe-step-0');
+    expect(find.textContaining('中火翻炒至鸡肉中心达到 74°C，再盛出。'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('本人编辑页拒绝上游默认拒绝依赖，未处理项不应用，表单保存不偷用预览', (tester) async {
+    final env = _env();
+    await _open(tester, env);
+    await _tap(tester, 'ai-design-new');
+    await _tap(tester, 'ai-skip-questions');
+    await _tap(tester, 'ai-edit-draft');
+    await _reveal(tester, 'save-recipe-button');
+    await _choose(tester, 'save-recipe-button');
+    await _choose(tester, 'edit-recipe-button');
+    expect(find.byKey(const ValueKey('text-edit-input')), findsOneWidget);
+    await _preview(tester);
+    await _choose(tester, 'text-edit-reject-clarify-cook');
+    await _reveal(tester, 'text-edit-operation-remind-cook');
+    expect(find.text('依赖被拒绝，已默认拒绝：clarify-cook'), findsOneWidget);
+    await _reveal(tester, 'text-edit-confirm');
+    expect(
+      tester
+          .widget<FilledButton>(find.byKey(const ValueKey('text-edit-confirm')))
+          .onPressed,
+      isNull,
+      reason: '独立操作还待处理',
+    );
+    await _choose(tester, 'text-edit-accept-explain-cook');
+    await _reveal(tester, 'text-edit-confirm');
+    expect(
+      tester
+          .widget<FilledButton>(find.byKey(const ValueKey('text-edit-confirm')))
+          .onPressed,
+      isNotNull,
+    );
+    await _choose(tester, 'text-edit-cancel');
+    expect(
+      env.server.calls(
+        'POST',
+        '/v1/ai/recipes/modifications/$_modificationId/confirm',
+      ),
+      isEmpty,
+    );
+    await _reveal(tester, 'recipe-step-instruction-cook');
+    expect(
+      tester
+          .widget<TextFormField>(
+            find.byKey(const ValueKey('recipe-step-instruction-cook')),
+          )
+          .initialValue,
+      '中火炒熟鸡肉，中心达到 74°C',
+    );
+    await tester.enterText(
+      find.byKey(const ValueKey('recipe-step-instruction-cook')),
+      '作者手动改文字',
+    );
+    await tester.pumpAndSettle();
+    await _reveal(tester, 'text-edit-input');
+    expect(
+      tester
+          .widget<TextField>(find.byKey(const ValueKey('text-edit-input')))
+          .enabled,
+      isFalse,
+    );
+    expect(find.text('当前有未保存的表单修改，请先手动保存，再请求文字修改。'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  for (final error in [
+    'unsupported_intent',
+    'uncertain_intent',
+    'invalid_output',
+  ]) {
+    testWidgets('$error 原话保留并诚实提示，手动生成流程不受影响', (tester) async {
+      final env = _env();
+      _installModificationApi(env, error: error);
+      await _open(tester, env);
+      await _tap(tester, 'ai-design-new');
+      await _tap(tester, 'ai-skip-questions');
+      await _preview(tester);
+      expect(
+        tester
+            .widget<TextField>(find.byKey(const ValueKey('text-edit-input')))
+            .controller!
+            .text,
+        _modifyText,
+      );
+      await _reveal(tester, 'text-edit-error');
+      expect(find.byKey(const ValueKey('text-edit-error')), findsOneWidget);
+      expect(find.byKey(const ValueKey('text-edit-confirm')), findsNothing);
+      await _choose(tester, 'ai-edit-draft');
+      expect(
+        find.byKey(const ValueKey('recipe-editor-content')),
+        findsOneWidget,
+      );
+    });
+  }
+
+  testWidgets('修改额度耗尽仍可走手动编辑保存', (tester) async {
+    final env = _env();
+    _installModificationApi(env, unavailable: true);
+    await _open(tester, env);
+    await _tap(tester, 'ai-design-new');
+    await _tap(tester, 'ai-skip-questions');
+    await _reveal(tester, 'text-edit-input');
+    expect(find.text('今日修改剩余 0 次'), findsOneWidget);
+    await tester.enterText(
+      find.byKey(const ValueKey('text-edit-input')),
+      _modifyText,
+    );
+    await tester.pumpAndSettle();
+    expect(
+      tester
+          .widget<OutlinedButton>(
+            find.byKey(const ValueKey('text-edit-preview')),
+          )
+          .onPressed,
+      isNull,
+    );
+    await _choose(tester, 'ai-edit-draft');
+    expect(find.byKey(const ValueKey('recipe-editor-content')), findsOneWidget);
+  });
+
   testWidgets('本人生成结果提供改文字入口，预览前不创建菜谱', (tester) async {
     final env = _env();
     await _open(tester, env);
@@ -190,13 +559,18 @@ void main() {
     await tester.scrollUntilVisible(
       find.byKey(const ValueKey('text-edit-input')),
       300,
-      scrollable: find.byWidgetPredicate(
-        (w) => w is Scrollable && w.axisDirection == AxisDirection.down,
-      ).first,
+      scrollable: find
+          .byWidgetPredicate(
+            (w) => w is Scrollable && w.axisDirection == AxisDirection.down,
+          )
+          .first,
     );
     expect(find.byKey(const ValueKey('text-edit-input')), findsOneWidget);
     expect(find.text('只支持改文字；其他修改暂未支持。确认前不会保存。'), findsOneWidget);
-    expect(env.server.calls('POST', '/v1/ai/recipes/requests/$_requestId/save'), isEmpty);
+    expect(
+      env.server.calls('POST', '/v1/ai/recipes/requests/$_requestId/save'),
+      isEmpty,
+    );
     expect(env.server.calls('POST', '/v1/recipes'), isEmpty);
   });
 

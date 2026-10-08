@@ -12,11 +12,33 @@ const recipeOperations = {
   'cancel',
   'choose',
   'decide',
+  'text_preview',
+  'text_choose',
+  'text_confirm',
+  'text_cancel',
 };
 
 bool validateRecipeOperation(Map<String, dynamic> params) {
   final operation = params['operation'];
   if (!recipeOperations.contains(operation)) return false;
+  if (operation == 'text_preview') {
+    return params.keys.every({'operation', 'text'}.contains) &&
+        params['text'] is String &&
+        (params['text'] as String).trim().isNotEmpty &&
+        (params['text'] as String).length <= 1000;
+  }
+  if (operation == 'text_choose') {
+    return params.keys.every(
+          {'operation', 'operation_id', 'decision', 'after'}.contains,
+        ) &&
+        params['operation_id'] is String &&
+        (params['operation_id'] as String).isNotEmpty &&
+        {'accept', 'reject', 'modify'}.contains(params['decision']) &&
+        (params['decision'] == 'modify'
+            ? params['after'] is String &&
+                  (params['after'] as String).length <= 4000
+            : !params.containsKey('after'));
+  }
   if (operation == 'choose') {
     return params.keys.every(
           {'operation', 'problem_id', 'decision'}.contains,
