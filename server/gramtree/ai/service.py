@@ -3,6 +3,7 @@
 import json
 import re
 import uuid
+from collections.abc import Callable
 from typing import Any
 
 from pydantic import ValidationError
@@ -524,6 +525,9 @@ def save(
     owner: User,
     request_id: uuid.UUID,
     body: RecipeCreate,
+    *,
+    confirmed_operations: list[dict[str, Any]] | None = None,
+    before_commit: Callable[[RecipeVersion], None] | None = None,
 ):
     row = session.scalar(
         select(GenerationRequest)
@@ -548,6 +552,9 @@ def save(
         original.recipe.snapshot.servings_source
         if body.snapshot.servings == original.recipe.snapshot.servings
         else ValueSource(source="author_filled")
+    )
+    confirmed_snapshot = (
+        body.snapshot.model_copy(deep=True) if confirmed_operations is not None else None
     )
     old_items = {i.id: i for i in original.recipe.snapshot.ingredients}
     for item in body.snapshot.ingredients:
@@ -581,11 +588,20 @@ def save(
                 if old and getattr(step, field) == getattr(old, field)
                 else ValueSource(source="author_filled"),
             )
+    if confirmed_snapshot is not None:
+        body.snapshot = confirmed_snapshot
     safety = food_safety.check(session, body.snapshot, body.dish_input().name)
     if safety.high_risk:
         raise ApiError(422, "unsafe_ai_output", "AI 辅助菜谱不能保存高风险食材")
     detail = recipes.create_recipe(
-        session, redis, settings, owner, body, generation_request_id=request_id
+        session,
+        redis,
+        settings,
+        owner,
+        body,
+        generation_request_id=request_id,
+        confirmed_operations=confirmed_operations,
+        before_commit=before_commit,
     )
     record_event(
         session,

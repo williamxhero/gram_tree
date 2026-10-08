@@ -88,6 +88,35 @@ def main() -> None:
             batch["valid"],
         )
     )
+    from gramtree.ai.schemas import GeneratedDraft
+    from gramtree.ai.service import _mark_sources
+
+    modification = json.loads(
+        (ROOT / "server/tests/fixtures/ai/modification_corpus.json").read_text("utf-8")
+    )
+    draft = GeneratedDraft.model_validate(corpus["valid"])
+    _mark_sources(draft)
+    for ingredient in draft.recipe.snapshot.ingredients:
+        ingredient.base_quantity = ingredient.quantity
+        ingredient.base_unit = "g"
+        ingredient.scaling_mode = "proportional"
+        ingredient.ingredient_id = None
+    # Generation previews retain model provenance; the unchanged first save
+    # also normalizes missing author sources. Record both exact owned inputs.
+    modification_snapshots = [draft.recipe.snapshot, normalize_sources(draft.recipe.snapshot)]
+    records.append(("modify_intent", {"text": modification["text"]}, modification["intent"]))
+    for modification_snapshot in modification_snapshots:
+        records.append(
+            (
+                "modify",
+                {
+                    "text": modification["text"],
+                    "snapshot": modification_snapshot.model_dump(mode="json"),
+                    "intent": modification["intent"],
+                },
+                modification["output"],
+            )
+        )
     args.out.mkdir(parents=True, exist_ok=True)
     for capability, payload, output in records:
         canonical = json.dumps(
