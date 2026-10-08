@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:gram_tree/api/api_client.dart';
 import 'package:gram_tree/app/router.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -117,6 +118,10 @@ void main() {
         ...?binding.reportData,
         'e2e_error': error.toString(),
         'e2e_stack': stack.toString(),
+        'visible_text': [
+          for (final text in tester.widgetList<Text>(find.byType(Text)))
+            if (text.data != null) text.data,
+        ],
       };
       debugPrint('E2E failure: $error');
       debugDumpApp();
@@ -360,13 +365,21 @@ void main() {
         tester.element(find.byType(Scaffold).first),
       );
       final router = container.read(routerProvider);
-      final recipePath = router.routeInformationProvider.value.uri.path;
+      // Imperative pushes retain the underlying tab's browser URL. Capture the
+      // actual recipe route from its visible page, not that tab's URI.
+      final recipePath = GoRouterState.of(
+        tester.element(find.byKey(const ValueKey('recipe-detail-content'))),
+      ).matchedLocation;
       container.read(offlineSimulationProvider.notifier).set(true);
       router.go('/today');
       await settle(tester);
       router.go(recipePath);
-      await waitFor(tester, find.textContaining('离线快照'));
-      await waitFor(tester, find.textContaining('177.78 克 · 没有密度数据，保留克'));
+      await waitFor(
+        tester,
+        find.byKey(const ValueKey('recipe-detail-content')),
+      );
+      await reveal(tester, find.textContaining('离线快照'));
+      await reveal(tester, find.textContaining('177.78 克 · 没有密度数据，保留克'));
       expect(
         find.byKey(const ValueKey('recipe-serving-control')),
         findsNothing,
