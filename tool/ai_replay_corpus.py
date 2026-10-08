@@ -101,9 +101,17 @@ def main() -> None:
         ingredient.base_unit = "g"
         ingredient.scaling_mode = "proportional"
         ingredient.ingredient_id = None
-    # Generation previews retain model provenance; the unchanged first save
-    # also normalizes missing author sources. Record both exact owned inputs.
-    modification_snapshots = [draft.recipe.snapshot, normalize_sources(draft.recipe.snapshot)]
+    # Generation previews retain model provenance; first saves also normalize
+    # missing author sources. The editor serializes unset difficulty as "",
+    # so register that exact saved input without weakening semantic replay keys.
+    saved_modification_snapshot = normalize_sources(draft.recipe.snapshot)
+    editor_modification_snapshot = saved_modification_snapshot.model_copy(deep=True)
+    editor_modification_snapshot.difficulty = ""
+    modification_snapshots = [
+        draft.recipe.snapshot,
+        saved_modification_snapshot,
+        editor_modification_snapshot,
+    ]
     records.append(("modify_intent", {"text": modification["text"]}, modification["intent"]))
     for modification_snapshot in modification_snapshots:
         records.append(

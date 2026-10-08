@@ -12,7 +12,7 @@
 - `ai.models`：每档 `provider`、`base_url`（OpenAI 兼容 API 根地址）、`model`，可选 `input_price` / `output_price`（每百万 token 同一计价单位）。供应商名称无硬编码。
 - `ai.policies`：每能力 `timeout` 秒、`retries`（0–2）、`daily_limit`、`users`（用户 UUID → 每日额度覆盖）。按 UTC 日统计；一次生成的纠正和网络重试共享操作 ID，不重复计用户次数。
 - `ai.monthly_budget`、`ai.budget_alert_ratio`、`ai.call_reservation`：全平台 UTC 月上限、告警比例、未知用量保守预留。配置价格需采用供应商实际上界；失败调用保留预留，避免未知成本漏算。
-- `ai.log_retention_days`：请求/回答和生成会话默认 90 天。用量汇总长期保留以核算月预算，不通过 HTTP 暴露内部日志。
+- `ai.log_retention_days`：请求/回答、生成会话和修改预览会话默认 90 天；既有 `ai purge-logs` 一起清理。用量汇总长期保留以核算月预算，不通过 HTTP 暴露内部日志。
 
 通过现有审计入口修改，例如：
 
