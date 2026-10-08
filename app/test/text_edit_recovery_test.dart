@@ -426,6 +426,102 @@ class _SlowEvents extends FakeEventQueue {
 }
 
 void main() {
+  testWidgets(
+    'adopted AI explanation survives unchanged server recheck after restart',
+    (tester) async {
+      final fixture = _Fixture();
+      await _selected(tester, fixture);
+      await _tap(tester, 'change-explanation-generate');
+      expect(find.text('自动说明：只澄清本次操作'), findsOneWidget);
+      await restartApp(tester, fixture.env);
+      await _route(tester, '/recipes/$_recipe/edit');
+      await _reveal(tester, 'change-explanation-note');
+      expect(find.text('自动说明：只澄清本次操作'), findsOneWidget);
+      expect(find.text('澄清'), findsOneWidget);
+      await _tap(tester, 'text-edit-confirm');
+      final save =
+          fixture.env.server
+                  .calls(
+                    'POST',
+                    '/v1/ai/recipes/modifications/$_modification/confirm',
+                  )
+                  .single
+                  .body
+              as Map;
+      expect(save['change_note'], '自动说明：只澄清本次操作');
+      expect(save['tags'], ['澄清']);
+      expect(save['explanation_fingerprint'], 'checked-operations');
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
+    'failed later proposal retains adopted AI explanation without stale fingerprint',
+    (tester) async {
+      final fixture = _Fixture();
+      await _selected(tester, fixture);
+      await _tap(tester, 'change-explanation-generate');
+      expect(find.text('自动说明：只澄清本次操作'), findsOneWidget);
+      fixture.failProposal = true;
+      await _reveal(tester, 'text-edit-input');
+      await tester.enterText(
+        find.byKey(const ValueKey('text-edit-input')),
+        '再试另一种写法',
+      );
+      await _tap(tester, 'text-edit-preview');
+      await _reveal(tester, 'change-explanation-note');
+      expect(find.text('自动说明：只澄清本次操作'), findsOneWidget);
+      expect(find.text('澄清'), findsOneWidget);
+      await _tap(tester, 'text-edit-confirm');
+      final save =
+          fixture.env.server
+                  .calls(
+                    'POST',
+                    '/v1/ai/recipes/modifications/$_modification/confirm',
+                  )
+                  .single
+                  .body
+              as Map;
+      expect(save['change_note'], '自动说明：只澄清本次操作');
+      expect(save['tags'], ['澄清']);
+      expect(save['explanation_fingerprint'], isNull);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
+    'cancel abandons author metadata ownership before a fresh explanation',
+    (tester) async {
+      final fixture = _Fixture();
+      await _selected(tester, fixture);
+      await _reveal(tester, 'change-explanation-note');
+      await tester.enterText(
+        find.byKey(const ValueKey('change-explanation-note')),
+        '放弃的作者说明',
+      );
+      await _reveal(tester, 'change-explanation-tags');
+      await tester.enterText(
+        find.byKey(const ValueKey('change-explanation-tags')),
+        '放弃的作者标签',
+      );
+      await _tap(tester, 'text-edit-cancel');
+      await _reveal(tester, 'text-edit-input');
+      await tester.enterText(
+        find.byKey(const ValueKey('text-edit-input')),
+        '重新澄清做法',
+      );
+      await _tap(tester, 'text-edit-preview');
+      await _tap(tester, 'text-edit-accept-clarify');
+      await _tap(tester, 'text-edit-reject-remind');
+      await _tap(tester, 'change-explanation-generate');
+      expect(find.text('自动说明：只澄清本次操作'), findsOneWidget);
+      expect(find.text('澄清'), findsOneWidget);
+      expect(find.text('放弃的作者说明'), findsNothing);
+      expect(find.text('放弃的作者标签'), findsNothing);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
   for (final cleanupFails in [false, true]) {
     testWidgets(
       'save response after disposal cleans old baseline without deleting newer form; cleanup failure $cleanupFails',

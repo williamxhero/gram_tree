@@ -504,7 +504,9 @@ class _TextEditPanelState extends ConsumerState<TextEditPanel>
         _requestId = null;
         _failedRequest = false;
         _changeNote = '';
+        _changeNoteAuthored = null;
         _tags = null;
+        _tagsAuthored = null;
         _explanationFingerprint = null;
         _text.clear();
         _error = null;
@@ -925,11 +927,15 @@ class _TextEditPanelState extends ConsumerState<TextEditPanel>
                   absorbing: !_canConfirm || _locked,
                   child: ChangeExplanationPanel(
                     key: const ValueKey('text-edit-explanation'),
+                    // Check receipts may advance without changing selected
+                    // content, including after restoring an unsaved draft.
                     bindingKey: (
                       _preview!.id,
-                      _preview!.revision,
+                      jsonEncode([
+                        for (final choice in _preview!.decisions!)
+                          choice.toJson(),
+                      ]),
                       _selectionRevision,
-                      _targetRevision,
                     ),
                     changeNote: _changeNote,
                     noteAuthored: _changeNoteAuthored,

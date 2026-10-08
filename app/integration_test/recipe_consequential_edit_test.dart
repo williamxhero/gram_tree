@@ -502,6 +502,7 @@ void main() {
         await journey.choose('accept', id);
       }
       await journey.confirm();
+      await journey.reveal('recipe-duration');
       expect(find.text('难度：简单'), findsOneWidget);
       await journey.reveal('recipe-step-0');
       expect(find.textContaining('鸡肉直接入炒锅'), findsOneWidget);
