@@ -287,20 +287,27 @@ void main() {
       final selectedContribution = find.byKey(
         ValueKey('recipe-flavor-detail-$secondId'),
       );
-      await reveal(tester, selectedContribution);
-      expect(
+      final selectedFlavorText = find.descendant(
+        of: selectedContribution,
+        matching: find.textContaining('咸 3'),
+      );
+      // A summary Column spans the row, but its center may be blank. Reveal
+      // the painted text whose visibility we assert, not the container center.
+      await reveal(tester, selectedFlavorText);
+      expect(selectedFlavorText, findsOneWidget);
+      await reveal(
+        tester,
         find.descendant(
-          of: selectedContribution,
+          of: contributionDetail,
           matching: find.textContaining('咸 3'),
         ),
-        findsOneWidget,
       );
-      await reveal(tester, contributionDetail);
       expect(find.textContaining('咸 3'), findsWidgets);
       expect(find.textContaining('鲜 2'), findsWidgets);
       final contributionSource = find.byKey(
         const ValueKey('recipe-flavor-source-ingredient-1'),
       );
+      await reveal(tester, contributionSource);
       await tester.tap(contributionSource);
       await settle(tester);
       expect(find.byKey(const ValueKey('why-panel')), findsOneWidget);
