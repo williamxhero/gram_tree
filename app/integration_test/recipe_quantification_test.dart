@@ -87,6 +87,11 @@ void main() {
       await tester.tap(find.byKey(const ValueKey('primary-create-button')));
       await tester.pumpAndSettle();
       await tap(tester, 'create-recipe-entry');
+      await waitFor(
+        tester,
+        find.byKey(const ValueKey('recipe-editor-content')),
+      );
+      await reveal(tester, 'recipe-dish-name');
       await waitFor(tester, find.byKey(const ValueKey('recipe-dish-name')));
       await tester.enterText(
         find.byKey(const ValueKey('recipe-dish-name')),
