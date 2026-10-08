@@ -17,6 +17,16 @@ class RecipeRepository {
 
   Future<AIStatus> aiStatus() async => (await _ai.recipeAiStatus()).data!;
 
+  Future<RecipeAnswer> answerQuestion(
+    String recipeId,
+    String versionId,
+    String question,
+  ) async => (await _ai.answerRecipeQuestion(
+    recipeId: recipeId,
+    versionId: versionId,
+    recipeQuestion: RecipeQuestion(question: question),
+  )).data!;
+
   Future<RetrievalResult> findForRequest(String text) async =>
       (await _ai.findRecipeForRequest(oneLineInput: OneLineInput(text: text)))
           .data!;

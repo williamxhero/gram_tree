@@ -21,6 +21,7 @@ import '../../recipes/mold_conversion.dart';
 import '../../recipes/serving_conversion.dart';
 import 'personal_measures_page.dart';
 import 'recipe_photo_panel.dart';
+import 'recipe_answer_section.dart';
 import '../../storage/local_store.dart';
 import '../../ui_protocol/components/component_scaffold.dart';
 import '../../ui_protocol/recipe_safety.dart';
@@ -2121,6 +2122,12 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
             versionId: detail.version.id,
             authoring: false,
             loading: false,
+          ),
+          RecipeAnswerSection(
+            key: ValueKey(
+              'answer-${ref.watch(authProvider).value?.id}-${detail.version.id}',
+            ),
+            detail: detail,
           ),
           _RecipePhotoDisplay(images: detail.version.images),
           if (widget.versionId == null)
