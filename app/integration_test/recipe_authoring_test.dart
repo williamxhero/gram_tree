@@ -156,6 +156,22 @@ void main() {
       await waitFor(tester, find.text('先添加一道你常做的菜'));
       expect(find.text('今天还没有安排'), findsOneWidget);
 
+      // A random default nickname can contain the safety threshold "74" and
+      // collide with the later whole-page absence assertion. Set the actor's
+      // display name through the real profile UI, preserving that assertion.
+      await tapText(tester, '我的');
+      await waitFor(tester, find.byKey(const ValueKey('me-nickname')));
+      await tester.tap(find.byTooltip('改昵称'));
+      await waitFor(tester, find.byKey(const ValueKey('nickname-input')));
+      await tester.enterText(
+        find.byKey(const ValueKey('nickname-input')),
+        '菜谱验收作者',
+      );
+      await tapText(tester, '保存');
+      await waitFor(tester, find.text('菜谱验收作者'));
+      await tapText(tester, '今天');
+      await waitFor(tester, find.text('先添加一道你常做的菜'));
+
       await waitFor(
         tester,
         find.byKey(const ValueKey('primary-create-button')),
