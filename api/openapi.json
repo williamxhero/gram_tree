@@ -1758,6 +1758,133 @@
         "title": "GenerationResult",
         "type": "object"
       },
+      "GradedComparisonChange": {
+        "properties": {
+          "after": {
+            "title": "After"
+          },
+          "basis": {
+            "title": "Basis",
+            "type": "string"
+          },
+          "before": {
+            "title": "Before"
+          },
+          "field": {
+            "title": "Field",
+            "type": "string"
+          },
+          "grade": {
+            "enum": [
+              "excluded",
+              "minor",
+              "general",
+              "significant"
+            ],
+            "title": "Grade",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "added",
+              "removed",
+              "replacement",
+              "quantity",
+              "unit",
+              "field",
+              "text"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "relative_change": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Relative Change"
+          },
+          "rule_id": {
+            "title": "Rule Id",
+            "type": "string"
+          },
+          "rules_version": {
+            "title": "Rules Version",
+            "type": "string"
+          },
+          "unit": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unit"
+          }
+        },
+        "required": [
+          "kind",
+          "field",
+          "basis",
+          "grade",
+          "rule_id",
+          "rules_version"
+        ],
+        "title": "GradedComparisonChange",
+        "type": "object"
+      },
+      "GradedIngredientComparisonRow": {
+        "properties": {
+          "after": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RecipeIngredient"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "before": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RecipeIngredient"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "changes": {
+            "items": {
+              "$ref": "#/components/schemas/GradedComparisonChange"
+            },
+            "title": "Changes",
+            "type": "array"
+          },
+          "pairing": {
+            "enum": [
+              "stable_id",
+              "identity_group",
+              "group_replacement",
+              "unpaired"
+            ],
+            "title": "Pairing",
+            "type": "string"
+          }
+        },
+        "required": [
+          "pairing"
+        ],
+        "title": "GradedIngredientComparisonRow",
+        "type": "object"
+      },
       "HealthChecks": {
         "properties": {
           "api": {
@@ -3673,9 +3800,38 @@
             "title": "Author",
             "type": "string"
           },
+          "base_version_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Base Version Id"
+          },
           "change_note": {
             "title": "Change Note",
             "type": "string"
+          },
+          "conclusion": {
+            "anyOf": [
+              {
+                "enum": [
+                  "no_change",
+                  "minor_only",
+                  "general",
+                  "significant"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Conclusion"
           },
           "created_at": {
             "title": "Created At",
@@ -3702,6 +3858,17 @@
             "format": "uuid",
             "title": "Recipe Id",
             "type": "string"
+          },
+          "rules_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rules Version"
           },
           "version_number": {
             "title": "Version Number",
@@ -4130,6 +4297,89 @@
           }
         },
         "title": "RecipeFlavorContribution",
+        "type": "object"
+      },
+      "RecipeFullComparison": {
+        "properties": {
+          "basis": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Basis",
+            "type": "array"
+          },
+          "conclusion": {
+            "enum": [
+              "no_change",
+              "minor_only",
+              "general",
+              "significant"
+            ],
+            "title": "Conclusion",
+            "type": "string"
+          },
+          "from_version": {
+            "$ref": "#/components/schemas/ComparisonVersion"
+          },
+          "ingredients": {
+            "items": {
+              "$ref": "#/components/schemas/GradedIngredientComparisonRow"
+            },
+            "title": "Ingredients",
+            "type": "array"
+          },
+          "method_changes": {
+            "items": {
+              "$ref": "#/components/schemas/GradedComparisonChange"
+            },
+            "title": "Method Changes",
+            "type": "array"
+          },
+          "normalized_servings": {
+            "title": "Normalized Servings",
+            "type": "integer"
+          },
+          "rules_version": {
+            "title": "Rules Version",
+            "type": "string"
+          },
+          "scope": {
+            "const": "full",
+            "default": "full",
+            "title": "Scope",
+            "type": "string"
+          },
+          "snapshot_fields": {
+            "items": {
+              "$ref": "#/components/schemas/GradedComparisonChange"
+            },
+            "title": "Snapshot Fields",
+            "type": "array"
+          },
+          "steps": {
+            "items": {
+              "$ref": "#/components/schemas/StepComparisonRow"
+            },
+            "title": "Steps",
+            "type": "array"
+          },
+          "to_version": {
+            "$ref": "#/components/schemas/ComparisonVersion"
+          }
+        },
+        "required": [
+          "from_version",
+          "to_version",
+          "normalized_servings",
+          "ingredients",
+          "snapshot_fields",
+          "steps",
+          "method_changes",
+          "conclusion",
+          "rules_version",
+          "basis"
+        ],
+        "title": "RecipeFullComparison",
         "type": "object"
       },
       "RecipeImageOut": {
@@ -5648,9 +5898,38 @@
             "title": "Ai Assisted",
             "type": "boolean"
           },
+          "base_version_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Base Version Id"
+          },
           "change_note": {
             "title": "Change Note",
             "type": "string"
+          },
+          "conclusion": {
+            "anyOf": [
+              {
+                "enum": [
+                  "no_change",
+                  "minor_only",
+                  "general",
+                  "significant"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Conclusion"
           },
           "created_at": {
             "title": "Created At",
@@ -5701,6 +5980,17 @@
               }
             ]
           },
+          "rules_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rules Version"
+          },
           "safety": {
             "anyOf": [
               {
@@ -5748,9 +6038,38 @@
             "title": "Ai Assisted",
             "type": "boolean"
           },
+          "base_version_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Base Version Id"
+          },
           "change_note": {
             "title": "Change Note",
             "type": "string"
+          },
+          "conclusion": {
+            "anyOf": [
+              {
+                "enum": [
+                  "no_change",
+                  "minor_only",
+                  "general",
+                  "significant"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Conclusion"
           },
           "created_at": {
             "title": "Created At",
@@ -5772,6 +6091,17 @@
               }
             ],
             "title": "Previous Version Id"
+          },
+          "rules_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rules Version"
           },
           "version_number": {
             "title": "Version Number",
@@ -6454,6 +6784,164 @@
           "basis"
         ],
         "title": "SourcedValue",
+        "type": "object"
+      },
+      "StepComparisonChange": {
+        "properties": {
+          "after": {
+            "title": "After"
+          },
+          "basis": {
+            "title": "Basis",
+            "type": "string"
+          },
+          "before": {
+            "title": "Before"
+          },
+          "field": {
+            "title": "Field",
+            "type": "string"
+          },
+          "grade": {
+            "enum": [
+              "excluded",
+              "minor",
+              "general",
+              "significant"
+            ],
+            "title": "Grade",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "added",
+              "removed",
+              "field",
+              "text",
+              "order"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "relative_change": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Relative Change"
+          },
+          "rule_id": {
+            "title": "Rule Id",
+            "type": "string"
+          },
+          "rules_version": {
+            "title": "Rules Version",
+            "type": "string"
+          },
+          "unit": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unit"
+          }
+        },
+        "required": [
+          "kind",
+          "field",
+          "basis",
+          "grade",
+          "rule_id",
+          "rules_version"
+        ],
+        "title": "StepComparisonChange",
+        "type": "object"
+      },
+      "StepComparisonRow": {
+        "properties": {
+          "after": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RecipeStep"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "after_index": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "After Index"
+          },
+          "alignment": {
+            "enum": [
+              "deterministic",
+              "uncertain",
+              "unpaired"
+            ],
+            "title": "Alignment",
+            "type": "string"
+          },
+          "basis": {
+            "title": "Basis",
+            "type": "string"
+          },
+          "before": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RecipeStep"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "before_index": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Before Index"
+          },
+          "changes": {
+            "items": {
+              "$ref": "#/components/schemas/StepComparisonChange"
+            },
+            "title": "Changes",
+            "type": "array"
+          },
+          "confidence": {
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Confidence",
+            "type": "number"
+          }
+        },
+        "required": [
+          "alignment",
+          "confidence",
+          "basis"
+        ],
+        "title": "StepComparisonRow",
         "type": "object"
       },
       "StorageAdvice": {
@@ -11058,6 +11546,104 @@
           }
         ],
         "summary": "Display Current Recipe Ingredients",
+        "tags": [
+          "recipes"
+        ]
+      }
+    },
+    "/v1/recipes/{recipe_id}/full-comparison": {
+      "get": {
+        "operationId": "compare_recipe_full",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "recipe_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Recipe Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "from_version_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "From Version Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "to_version_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "To Version Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecipeFullComparison"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "服务端错误"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Compare Recipe Full",
         "tags": [
           "recipes"
         ]

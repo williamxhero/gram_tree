@@ -227,6 +227,9 @@ def cmd_recipes(args: argparse.Namespace) -> int:
                 "event_id": str(event.id),
                 "recipe_version_id": event.content.get("recipe_version_id"),
                 "previous_version_id": event.content.get("previous_version_id"),
+                "base_version_id": event.content.get("base_version_id"),
+                "conclusion": event.content.get("conclusion"),
+                "rules_version": event.content.get("rules_version"),
                 "edit_operations": event.content.get("edit_operations", []),
                 "ai_assisted": event.content.get("ai_assisted", False),
             }

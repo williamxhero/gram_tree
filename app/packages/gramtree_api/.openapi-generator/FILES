@@ -75,6 +75,8 @@ lib/src/model/flavor_profile.dart
 lib/src/model/generate_input.dart
 lib/src/model/generated_draft.dart
 lib/src/model/generation_result.dart
+lib/src/model/graded_comparison_change.dart
+lib/src/model/graded_ingredient_comparison_row.dart
 lib/src/model/health_checks.dart
 lib/src/model/health_response.dart
 lib/src/model/identity_out.dart
@@ -125,6 +127,7 @@ lib/src/model/recipe_derived.dart
 lib/src/model/recipe_detail.dart
 lib/src/model/recipe_displayed_ingredient.dart
 lib/src/model/recipe_flavor_contribution.dart
+lib/src/model/recipe_full_comparison.dart
 lib/src/model/recipe_image_out.dart
 lib/src/model/recipe_image_staged_out.dart
 lib/src/model/recipe_image_upload.dart
@@ -172,6 +175,8 @@ lib/src/model/skip_adjustment_request.dart
 lib/src/model/skip_adjustment_result.dart
 lib/src/model/source_basis.dart
 lib/src/model/sourced_value.dart
+lib/src/model/step_comparison_change.dart
+lib/src/model/step_comparison_row.dart
 lib/src/model/storage_advice.dart
 lib/src/model/storage_attribute.dart
 lib/src/model/taste_flavor_out.dart

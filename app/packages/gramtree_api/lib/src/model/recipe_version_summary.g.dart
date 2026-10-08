@@ -9,13 +9,21 @@ part of 'recipe_version_summary.dart';
 abstract class _$RecipeVersionSummaryCWProxy {
   RecipeVersionSummary aiAssisted(bool aiAssisted);
 
+  RecipeVersionSummary baseVersionId(String? baseVersionId);
+
   RecipeVersionSummary changeNote(String changeNote);
+
+  RecipeVersionSummary conclusion(
+    RecipeVersionSummaryConclusionEnum? conclusion,
+  );
 
   RecipeVersionSummary createdAt(String createdAt);
 
   RecipeVersionSummary id(String id);
 
   RecipeVersionSummary previousVersionId(String? previousVersionId);
+
+  RecipeVersionSummary rulesVersion(String? rulesVersion);
 
   RecipeVersionSummary versionNumber(int versionNumber);
 
@@ -27,10 +35,13 @@ abstract class _$RecipeVersionSummaryCWProxy {
   /// ````
   RecipeVersionSummary call({
     bool aiAssisted,
+    String? baseVersionId,
     String changeNote,
+    RecipeVersionSummaryConclusionEnum? conclusion,
     String createdAt,
     String id,
     String? previousVersionId,
+    String? rulesVersion,
     int versionNumber,
   });
 }
@@ -47,8 +58,17 @@ class _$RecipeVersionSummaryCWProxyImpl
       this(aiAssisted: aiAssisted);
 
   @override
+  RecipeVersionSummary baseVersionId(String? baseVersionId) =>
+      this(baseVersionId: baseVersionId);
+
+  @override
   RecipeVersionSummary changeNote(String changeNote) =>
       this(changeNote: changeNote);
+
+  @override
+  RecipeVersionSummary conclusion(
+    RecipeVersionSummaryConclusionEnum? conclusion,
+  ) => this(conclusion: conclusion);
 
   @override
   RecipeVersionSummary createdAt(String createdAt) =>
@@ -60,6 +80,10 @@ class _$RecipeVersionSummaryCWProxyImpl
   @override
   RecipeVersionSummary previousVersionId(String? previousVersionId) =>
       this(previousVersionId: previousVersionId);
+
+  @override
+  RecipeVersionSummary rulesVersion(String? rulesVersion) =>
+      this(rulesVersion: rulesVersion);
 
   @override
   RecipeVersionSummary versionNumber(int versionNumber) =>
@@ -74,10 +98,13 @@ class _$RecipeVersionSummaryCWProxyImpl
   /// ````
   RecipeVersionSummary call({
     Object? aiAssisted = const $CopyWithPlaceholder(),
+    Object? baseVersionId = const $CopyWithPlaceholder(),
     Object? changeNote = const $CopyWithPlaceholder(),
+    Object? conclusion = const $CopyWithPlaceholder(),
     Object? createdAt = const $CopyWithPlaceholder(),
     Object? id = const $CopyWithPlaceholder(),
     Object? previousVersionId = const $CopyWithPlaceholder(),
+    Object? rulesVersion = const $CopyWithPlaceholder(),
     Object? versionNumber = const $CopyWithPlaceholder(),
   }) {
     return RecipeVersionSummary(
@@ -85,10 +112,18 @@ class _$RecipeVersionSummaryCWProxyImpl
           ? _value.aiAssisted
           // ignore: cast_nullable_to_non_nullable
           : aiAssisted as bool,
+      baseVersionId: baseVersionId == const $CopyWithPlaceholder()
+          ? _value.baseVersionId
+          // ignore: cast_nullable_to_non_nullable
+          : baseVersionId as String?,
       changeNote: changeNote == const $CopyWithPlaceholder()
           ? _value.changeNote
           // ignore: cast_nullable_to_non_nullable
           : changeNote as String,
+      conclusion: conclusion == const $CopyWithPlaceholder()
+          ? _value.conclusion
+          // ignore: cast_nullable_to_non_nullable
+          : conclusion as RecipeVersionSummaryConclusionEnum?,
       createdAt: createdAt == const $CopyWithPlaceholder()
           ? _value.createdAt
           // ignore: cast_nullable_to_non_nullable
@@ -101,6 +136,10 @@ class _$RecipeVersionSummaryCWProxyImpl
           ? _value.previousVersionId
           // ignore: cast_nullable_to_non_nullable
           : previousVersionId as String?,
+      rulesVersion: rulesVersion == const $CopyWithPlaceholder()
+          ? _value.rulesVersion
+          // ignore: cast_nullable_to_non_nullable
+          : rulesVersion as String?,
       versionNumber: versionNumber == const $CopyWithPlaceholder()
           ? _value.versionNumber
           // ignore: cast_nullable_to_non_nullable
@@ -138,13 +177,20 @@ RecipeVersionSummary _$RecipeVersionSummaryFromJson(
     );
     final val = RecipeVersionSummary(
       aiAssisted: $checkedConvert('ai_assisted', (v) => v as bool),
+      baseVersionId: $checkedConvert('base_version_id', (v) => v as String?),
       changeNote: $checkedConvert('change_note', (v) => v as String),
+      conclusion: $checkedConvert(
+        'conclusion',
+        (v) =>
+            $enumDecodeNullable(_$RecipeVersionSummaryConclusionEnumEnumMap, v),
+      ),
       createdAt: $checkedConvert('created_at', (v) => v as String),
       id: $checkedConvert('id', (v) => v as String),
       previousVersionId: $checkedConvert(
         'previous_version_id',
         (v) => v as String?,
       ),
+      rulesVersion: $checkedConvert('rules_version', (v) => v as String?),
       versionNumber: $checkedConvert(
         'version_number',
         (v) => (v as num).toInt(),
@@ -154,9 +200,11 @@ RecipeVersionSummary _$RecipeVersionSummaryFromJson(
   },
   fieldKeyMap: const {
     'aiAssisted': 'ai_assisted',
+    'baseVersionId': 'base_version_id',
     'changeNote': 'change_note',
     'createdAt': 'created_at',
     'previousVersionId': 'previous_version_id',
+    'rulesVersion': 'rules_version',
     'versionNumber': 'version_number',
   },
 );
@@ -165,9 +213,20 @@ Map<String, dynamic> _$RecipeVersionSummaryToJson(
   RecipeVersionSummary instance,
 ) => <String, dynamic>{
   'ai_assisted': instance.aiAssisted,
+  'base_version_id': ?instance.baseVersionId,
   'change_note': instance.changeNote,
+  'conclusion':
+      ?_$RecipeVersionSummaryConclusionEnumEnumMap[instance.conclusion],
   'created_at': instance.createdAt,
   'id': instance.id,
   'previous_version_id': ?instance.previousVersionId,
+  'rules_version': ?instance.rulesVersion,
   'version_number': instance.versionNumber,
+};
+
+const _$RecipeVersionSummaryConclusionEnumEnumMap = {
+  RecipeVersionSummaryConclusionEnum.noChange: 'no_change',
+  RecipeVersionSummaryConclusionEnum.minorOnly: 'minor_only',
+  RecipeVersionSummaryConclusionEnum.general: 'general',
+  RecipeVersionSummaryConclusionEnum.significant: 'significant',
 };

@@ -49,6 +49,8 @@ import 'package:gramtree_api/src/model/flavor_profile.dart';
 import 'package:gramtree_api/src/model/generate_input.dart';
 import 'package:gramtree_api/src/model/generated_draft.dart';
 import 'package:gramtree_api/src/model/generation_result.dart';
+import 'package:gramtree_api/src/model/graded_comparison_change.dart';
+import 'package:gramtree_api/src/model/graded_ingredient_comparison_row.dart';
 import 'package:gramtree_api/src/model/health_checks.dart';
 import 'package:gramtree_api/src/model/health_response.dart';
 import 'package:gramtree_api/src/model/identity_out.dart';
@@ -99,6 +101,7 @@ import 'package:gramtree_api/src/model/recipe_derived.dart';
 import 'package:gramtree_api/src/model/recipe_detail.dart';
 import 'package:gramtree_api/src/model/recipe_displayed_ingredient.dart';
 import 'package:gramtree_api/src/model/recipe_flavor_contribution.dart';
+import 'package:gramtree_api/src/model/recipe_full_comparison.dart';
 import 'package:gramtree_api/src/model/recipe_image_out.dart';
 import 'package:gramtree_api/src/model/recipe_image_staged_out.dart';
 import 'package:gramtree_api/src/model/recipe_image_upload.dart';
@@ -146,6 +149,8 @@ import 'package:gramtree_api/src/model/skip_adjustment_request.dart';
 import 'package:gramtree_api/src/model/skip_adjustment_result.dart';
 import 'package:gramtree_api/src/model/source_basis.dart';
 import 'package:gramtree_api/src/model/sourced_value.dart';
+import 'package:gramtree_api/src/model/step_comparison_change.dart';
+import 'package:gramtree_api/src/model/step_comparison_row.dart';
 import 'package:gramtree_api/src/model/storage_advice.dart';
 import 'package:gramtree_api/src/model/storage_attribute.dart';
 import 'package:gramtree_api/src/model/taste_flavor_out.dart';
@@ -325,6 +330,14 @@ ReturnType deserialize<ReturnType, BaseType>(
     case 'GenerationResult':
       return GenerationResult.fromJson(value as Map<String, dynamic>)
           as ReturnType;
+    case 'GradedComparisonChange':
+      return GradedComparisonChange.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'GradedIngredientComparisonRow':
+      return GradedIngredientComparisonRow.fromJson(
+            value as Map<String, dynamic>,
+          )
+          as ReturnType;
     case 'HealthChecks':
       return HealthChecks.fromJson(value as Map<String, dynamic>) as ReturnType;
     case 'HealthResponse':
@@ -469,6 +482,9 @@ ReturnType deserialize<ReturnType, BaseType>(
     case 'RecipeFlavorContribution':
       return RecipeFlavorContribution.fromJson(value as Map<String, dynamic>)
           as ReturnType;
+    case 'RecipeFullComparison':
+      return RecipeFullComparison.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
     case 'RecipeImageOut':
       return RecipeImageOut.fromJson(value as Map<String, dynamic>)
           as ReturnType;
@@ -606,6 +622,12 @@ ReturnType deserialize<ReturnType, BaseType>(
       return SourceBasis.fromJson(value as Map<String, dynamic>) as ReturnType;
     case 'SourcedValue':
       return SourcedValue.fromJson(value as Map<String, dynamic>) as ReturnType;
+    case 'StepComparisonChange':
+      return StepComparisonChange.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'StepComparisonRow':
+      return StepComparisonRow.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
     case 'StorageAdvice':
       return StorageAdvice.fromJson(value as Map<String, dynamic>)
           as ReturnType;

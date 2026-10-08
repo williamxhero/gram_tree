@@ -12,6 +12,7 @@ from gramtree.core.ids import IdV4
 from gramtree.core.time import Timestamp
 from gramtree.ui_protocol.protocol import SourcedValue
 
+ChangeConclusion = Literal["no_change", "minor_only", "general", "significant"]
 SourceType = Literal["author_filled", "ai_estimated", "verified"]
 MoldShape = Literal["round", "square", "rectangular", "custom"]
 MoldUnit = Literal["cm", "in", "inch"]
@@ -513,6 +514,9 @@ class RecipeVersionOut(BaseModel):
     id: IdV4
     version_number: int
     previous_version_id: IdV4 | None = None
+    base_version_id: IdV4 | None = None
+    conclusion: ChangeConclusion | None = None
+    rules_version: str | None = None
     snapshot: RecipeSnapshot
     derived: RecipeDerived
     safety: RecipeSafetyResult | None = None
@@ -541,6 +545,9 @@ class RecipeVersionSummary(BaseModel):
     id: IdV4
     version_number: int
     previous_version_id: IdV4 | None = None
+    base_version_id: IdV4 | None = None
+    conclusion: ChangeConclusion | None = None
+    rules_version: str | None = None
     change_note: str
     ai_assisted: bool
     created_at: Timestamp

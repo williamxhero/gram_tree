@@ -52,6 +52,7 @@ from gramtree.recipes.mold_conversion import (
 )
 from gramtree.recipes.provenance import normalize_sources
 from gramtree.recipes.schemas import (
+    ChangeConclusion,
     DishInput,
     DishOut,
     MoldSpec,
@@ -600,6 +601,9 @@ def _version_out(
         id=row.id,
         version_number=row.version_number,
         previous_version_id=row.previous_version_id,
+        base_version_id=row.base_version_id,
+        conclusion=cast("ChangeConclusion | None", row.conclusion),
+        rules_version=row.rules_version,
         snapshot=RecipeSnapshot.model_validate(row.snapshot),
         derived=RecipeDerived.model_validate(row.derived),
         reproducibility=(
@@ -723,6 +727,9 @@ def _enqueue_save_event(
             version_id=version.id,
             owner_id=owner.id,
             previous_version_id=version.previous_version_id,
+            base_version_id=version.base_version_id,
+            conclusion=version.conclusion,
+            rules_version=version.rules_version,
             edit_operations=version.edit_operations,
             ai_assisted=version.ai_assisted,
         )
@@ -750,6 +757,9 @@ def _drain_save_events(session: Session, redis: Redis, owner: User) -> int:
                 outbox.edit_operations,
                 outbox.ai_assisted,
                 now=outbox.created_at,
+                base_version_id=outbox.base_version_id,
+                conclusion=outbox.conclusion,
+                rules_version=outbox.rules_version,
             )
             outbox.delivered_at = utcnow()
             session.commit()
@@ -1145,6 +1155,7 @@ def save_version(
         recipe_id=recipe.id,
         version_number=previous.version_number + 1,
         previous_version_id=previous.id,
+        base_version_id=baseline.id,
         snapshot=_snapshot_json(snapshot),
         derived=_derived(session, snapshot).model_dump(mode="json"),
         reproducibility=reproducibility.check(snapshot).model_dump(mode="json"),
@@ -1158,6 +1169,13 @@ def save_version(
     )
     session.add(version)
     session.flush()
+    from gramtree.recipes.full_comparison import compare_full
+
+    # Edit operations remain relative to the chosen baseline; magnitude is
+    # always relative to the actual prior current version, in this transaction.
+    comparison = compare_full(session, owner, recipe.id, previous.id, version.id, commit=False)
+    version.conclusion = comparison.conclusion
+    version.rules_version = comparison.rules_version
     if quantification_record is not None:
         # Proposals, decision receipt and experience events share the version
         # transaction. An event failure cannot leave a saved version without evidence.
@@ -1811,6 +1829,9 @@ def list_versions(
                 id=row.id,
                 version_number=row.version_number,
                 previous_version_id=row.previous_version_id,
+                base_version_id=row.base_version_id,
+                conclusion=cast("ChangeConclusion | None", row.conclusion),
+                rules_version=row.rules_version,
                 change_note=row.change_note,
                 ai_assisted=row.ai_assisted,
                 created_at=row.created_at,
@@ -1865,6 +1886,9 @@ def list_comparison_candidates(
                 author=owner.nickname,
                 version_number=row.version_number,
                 previous_version_id=row.previous_version_id,
+                base_version_id=row.base_version_id,
+                conclusion=cast("ChangeConclusion | None", row.conclusion),
+                rules_version=row.rules_version,
                 change_note=row.change_note,
                 ai_assisted=row.ai_assisted,
                 created_at=row.created_at,

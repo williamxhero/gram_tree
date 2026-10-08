@@ -58,7 +58,7 @@ def _validate_open_page(params: Mapping[str, Any]) -> bool:
         return False
     if page == "recipe_version":
         return _recipe_id(params.get("version_id"))
-    if page == "ingredient_comparison":
+    if page in {"ingredient_comparison", "full_comparison"}:
         return _recipe_id(params.get("from_version_id")) and _recipe_id(params.get("to_version_id"))
     return False
 

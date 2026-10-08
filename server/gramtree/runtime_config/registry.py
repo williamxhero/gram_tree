@@ -163,6 +163,63 @@ ITEMS: tuple[ConfigItem, ...] = (
         maximum=10.0,
         public=True,
     ),
+    # —— 确定性版本比较（SPEC-002.5） ——
+    ConfigItem(
+        "recipe.comparison_minor_threshold",
+        "float",
+        0.20,
+        "单条用量/时长微调的严格上界",
+        minimum=0,
+        maximum=1,
+    ),
+    ConfigItem(
+        "recipe.comparison_main_groups",
+        "json",
+        {"values": ["主料", "main"]},
+        "比较中视为主料的分组；修改留审计历史",
+    ),
+    ConfigItem(
+        "recipe.comparison_heating_actions",
+        "json",
+        {
+            "values": [
+                "炒",
+                "炸",
+                "煎",
+                "煮",
+                "蒸",
+                "烤",
+                "炖",
+                "焖",
+                "焯",
+                "stir_fry",
+                "deep_fry",
+                "fry",
+                "boil",
+                "steam",
+                "bake",
+                "roast",
+                "simmer",
+            ]
+        },
+        "主料烹饪方法集合中的加热动作",
+    ),
+    ConfigItem(
+        "recipe.comparison_alignment_threshold",
+        "float",
+        0.35,
+        "动作及食材引用的最低确定性步骤相似度",
+        minimum=0,
+        maximum=1,
+    ),
+    ConfigItem(
+        "recipe.comparison_alignment_margin",
+        "float",
+        0.05,
+        "接近的步骤对齐得分保留不确定",
+        minimum=0,
+        maximum=1,
+    ),
     # —— 账号与登录（SPEC-013.2） ——
     ConfigItem(
         "auth.email_code_ttl_minutes",
