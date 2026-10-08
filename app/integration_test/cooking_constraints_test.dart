@@ -244,6 +244,12 @@ void main() {
       );
       phase = 'verify unchanged author quantity';
       await tap(tester, 'edit-recipe-button', scroll: true, delta: -350);
+      await waitFor(
+        tester,
+        find.byKey(const ValueKey('recipe-editor-content')),
+      );
+      // Saved reproducibility checks put this lazy row below a phone viewport.
+      await reveal(tester, find.byKey(const ValueKey('recipe-dish-name')));
       await waitFor(tester, find.byKey(const ValueKey('recipe-dish-name')));
       await reveal(
         tester,
