@@ -130,8 +130,7 @@ class ComparisonAssistedStepCard extends StatelessWidget {
             componentId: 'recipe-comparison-assistance-$id',
             value: 'A 第 $beforeIndex 步 → B 第 $afterIndex 步',
             valueChanged: false,
-            basisText:
-                '${pair.basis.text}\n$confidence\n服务端把握程度原值：${pair.confidence}',
+            basisText: '${pair.basis.text}\n把握程度：达到辅助展示门槛，非验证结论。',
             citation: [
               '依据代码：${pair.basis.reasonCode}',
               '规则版本：$rulesVersion',

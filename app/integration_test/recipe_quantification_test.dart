@@ -154,6 +154,13 @@ void main() {
       await tester.tapAt(const Offset(10, 10));
       await tester.pumpAndSettle();
       await tap(tester, 'recipe-history-button');
+      await waitFor(
+        tester,
+        find.byKey(const ValueKey('recipe-select-comparison')),
+      );
+      // Comparison conclusions make history rows taller on a small phone;
+      // scroll to the lazy older version before asserting or tapping it.
+      await reveal(tester, 'recipe-version-1');
       await waitFor(tester, find.byKey(const ValueKey('recipe-version-1')));
       await tester.tap(find.byKey(const ValueKey('recipe-version-1')));
       await tester.pumpAndSettle();
