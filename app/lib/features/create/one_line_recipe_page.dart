@@ -6,7 +6,10 @@ import 'package:go_router/go_router.dart';
 import 'package:gramtree_api/gramtree_api.dart';
 
 import '../../api/api_client.dart';
+import '../../auth/auth_controller.dart';
+import '../../recipes/recipe_draft.dart';
 import '../../recipes/recipe_repository.dart';
+import '../../storage/local_store.dart';
 import '../../ui_protocol/components/component_scaffold.dart';
 import '../../ui_protocol/recipe_safety.dart';
 import '../../ui_protocol/source_mark.dart';
@@ -34,24 +37,59 @@ class _OneLineRecipePageState extends ConsumerState<OneLineRecipePage> {
   String? _error;
   bool _busy = false;
   bool _questions = false;
+  late final RecipeDraftStore _draftStore;
+  late String _accountId;
+  int _runRevision = 0;
 
   @override
   void initState() {
     super.initState();
+    _draftStore = RecipeDraftStore(ref.read(localStoreProvider));
+    _accountId = ref.read(authProvider).value?.id ?? 'anonymous';
+    _restoreResult();
     unawaited(_loadStatus());
   }
 
+  void _restoreResult() {
+    final draft = _draftStore.read(
+      recipeKey: RecipeDraftStore.generatedResultKey,
+      accountId: _accountId,
+    );
+    if (draft == null) return;
+    try {
+      final result = GenerationResult.fromJson(
+        Map<String, dynamic>.from(draft.payload['result'] as Map),
+      );
+      if (result.draft == null) return;
+      _result = result;
+      _text.text = draft.payload['text'] as String;
+    } catch (_) {
+      // A corrupt cached result never becomes an editable server baseline.
+    }
+  }
+
+  Future<void> _persistResult() => _draftStore.save(
+    RecipeDraft(
+      recipeKey: RecipeDraftStore.generatedResultKey,
+      accountId: _accountId,
+      baselineVersionId: null,
+      payload: {'text': _text.text, 'result': _result!.toJson()},
+    ),
+  );
+
   Future<void> _loadStatus() async {
+    final accountId = _accountId;
     try {
       final status = await ref.read(recipeRepositoryProvider).aiStatus();
-      if (mounted) setState(() => _status = status);
+      if (mounted && accountId == _accountId) setState(() => _status = status);
     } catch (_) {
-      if (mounted) setState(() => _error = '暂时无法读取 AI 状态，仍可检索或手动新建。');
+      if (mounted && accountId == _accountId) setState(() => _error = '暂时无法读取 AI 状态，仍可检索或手动新建。');
     }
   }
 
   Future<void> _run(Future<void> Function() action) async {
     if (_busy) return;
+    final revision = ++_runRevision;
     setState(() {
       _busy = true;
       _error = null;
@@ -59,9 +97,9 @@ class _OneLineRecipePageState extends ConsumerState<OneLineRecipePage> {
     try {
       await action();
     } catch (error) {
-      if (mounted) setState(() => _error = ApiFailure.from(error).message);
+      if (mounted && revision == _runRevision) setState(() => _error = ApiFailure.from(error).message);
     } finally {
-      if (mounted) setState(() => _busy = false);
+      if (mounted && revision == _runRevision) setState(() => _busy = false);
     }
   }
 
@@ -75,10 +113,11 @@ class _OneLineRecipePageState extends ConsumerState<OneLineRecipePage> {
       _result = null;
       _questions = false;
     });
+    final revision = _runRevision;
     final found = await ref
         .read(recipeRepositoryProvider)
         .findForRequest(_text.text.trim());
-    if (!mounted) return;
+    if (!mounted || revision != _runRevision) return;
     setState(() {
       _found = found;
       _status = found.status;
@@ -95,6 +134,7 @@ class _OneLineRecipePageState extends ConsumerState<OneLineRecipePage> {
       setState(() => _error = '人数请填写 1 到 100 的整数，或跳过。');
       return;
     }
+    final revision = _runRevision;
     final result = await ref
         .read(recipeRepositoryProvider)
         .generate(
@@ -106,20 +146,22 @@ class _OneLineRecipePageState extends ConsumerState<OneLineRecipePage> {
                 : _cookware.text.trim(),
           ),
         );
-    if (!mounted) return;
+    if (!mounted || revision != _runRevision) return;
     setState(() {
       _result = result;
       _status = result.status;
       _questions = false;
       _error = result.error == null ? null : _reason(result.error);
     });
+    if (result.draft != null) await _persistResult();
   });
 
   Future<void> _existing(SimilarRecipe recipe) => _run(() async {
+    final revision = _runRevision;
     final detail = await ref
         .read(recipeRepositoryProvider)
         .chooseExisting(_found!.requestId, recipe.recipeId);
-    if (mounted) context.push('/recipes/${detail.id}');
+    if (mounted && revision == _runRevision) context.push('/recipes/${detail.id}');
   });
 
   @override
@@ -132,6 +174,25 @@ class _OneLineRecipePageState extends ConsumerState<OneLineRecipePage> {
 
   @override
   Widget build(BuildContext context) {
+    ref.listen(authProvider, (previous, next) {
+      final accountId = next.value?.id ?? 'anonymous';
+      if (accountId == _accountId) return;
+      setState(() {
+        _accountId = accountId;
+        _runRevision++;
+        _busy = false;
+        _status = null;
+        _error = null;
+        _found = null;
+        _result = null;
+        _questions = false;
+        _text.clear();
+        _servings.clear();
+        _cookware.clear();
+        _restoreResult();
+      });
+      unawaited(_loadStatus());
+    });
     final found = _found;
     final result = _result;
     final draft = result?.draft;
@@ -270,13 +331,26 @@ class _OneLineRecipePageState extends ConsumerState<OneLineRecipePage> {
               ),
             ),
             TextEditPanel(
-              key: ValueKey('text-edit-generation-${result!.requestId}'),
+              key: ValueKey(
+                'text-edit-generation-$_accountId-${result!.requestId}',
+              ),
               generationRequestId: result.requestId,
               onSavingChanged: (saving) {
                 if (mounted) setState(() => _busy = saving);
               },
               onSaved: (detail) async {
-                if (mounted) context.pushReplacement('/recipes/${detail.id}');
+                final accountId = _accountId;
+                await _draftStore.discard(
+                  'ai-${result.requestId}',
+                  accountId: accountId,
+                );
+                await _draftStore.discardGeneratedResult(
+                  result.requestId,
+                  accountId: accountId,
+                );
+                if (context.mounted && accountId == _accountId) {
+                  context.pushReplacement('/recipes/${detail.id}');
+                }
               },
             ),
             FoodSafetyCard(result: result.safety),

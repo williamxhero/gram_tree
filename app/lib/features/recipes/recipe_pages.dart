@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:developer' as developer;
 
 import 'package:flutter/material.dart';
@@ -27,6 +28,7 @@ import 'reproducibility_card.dart';
 import 'quantification_panel.dart';
 import 'recipe_source_badge.dart';
 import 'text_edit_panel.dart';
+import 'change_explanation_panel.dart';
 import '../../storage/local_store.dart';
 import '../../ui_protocol/components/component_scaffold.dart';
 import '../../ui_protocol/intent_dispatcher.dart';
@@ -215,6 +217,7 @@ class _RecipeEditorPageState extends ConsumerState<RecipeEditorPage> {
   bool _safetyAwaitingCheck = true;
   int _safetyRevision = 0;
   int _editorRevision = 0;
+  int _textEditEpoch = 0;
   Timer? _draftTimer;
   Future<void>? _draftWrite;
   int _draftGeneration = 0;
@@ -313,11 +316,13 @@ class _RecipeEditorPageState extends ConsumerState<RecipeEditorPage> {
       setState(() {});
     } else {
       await _discardDraft();
+      if (mounted) setState(() => _textEditEpoch++);
     }
   }
 
   void _changed() {
     if (!mounted) return;
+    _form.explanationFingerprint = null;
     setState(() {
       _hasManualEdits = true;
       _quantification = null;
@@ -363,6 +368,9 @@ class _RecipeEditorPageState extends ConsumerState<RecipeEditorPage> {
   }
 
   Future<void> _discardDraft() async {
+    final accountId = _accountId;
+    final recipeKey = _recipeKey;
+    final baselineVersionId = _loaded?.version.id;
     ++_draftGeneration;
     _draftTimer?.cancel();
     _draftTimer = null;
@@ -371,7 +379,18 @@ class _RecipeEditorPageState extends ConsumerState<RecipeEditorPage> {
     } catch (_) {
       // A failed local write must not prevent leaving the editor.
     }
-    await _draftStore.discard(_recipeKey, accountId: _accountId);
+    await _draftStore.discard(recipeKey, accountId: accountId);
+    await _draftStore.discardModification(
+      recipeKey: recipeKey,
+      accountId: accountId,
+      baselineVersionId: baselineVersionId,
+    );
+    if (widget.generation != null) {
+      await _draftStore.discardGeneratedResult(
+        widget.generation!.requestId,
+        accountId: accountId,
+      );
+    }
     _draftWrite = null;
     _draft = null;
   }
@@ -863,6 +882,43 @@ class _RecipeEditorPageState extends ConsumerState<RecipeEditorPage> {
     _changed();
   }
 
+  bool get _canExplainChanges => _loaded != null || widget.generation != null;
+
+  String get _explanationBinding {
+    final snapshot = _form.snapshot.toJson()..remove('tags');
+    return jsonEncode([
+      _accountId,
+      _loaded?.id,
+      _loaded?.version.id,
+      widget.generation?.requestId,
+      snapshot,
+    ]);
+  }
+
+  Future<ChangeExplanationSuggestion> _explainChanges() async {
+    final result = await ref
+        .read(recipeRepositoryProvider)
+        .explainChanges(
+          ChangeExplanationInput(
+            recipeId: _loaded?.id,
+            baseVersionId: _loaded?.version.id,
+            generationRequestId: _loaded == null
+                ? widget.generation?.requestId
+                : null,
+            snapshot: _form.snapshot,
+          ),
+        );
+    return ChangeExplanationSuggestion(
+      available: result.status.available,
+      changeNote: result.changeNote,
+      tags: result.tags ?? const [],
+      source: result.source_?.value,
+      changesFingerprint: result.changesFingerprint,
+      reason: result.status.reason,
+      error: result.error,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
@@ -895,7 +951,9 @@ class _RecipeEditorPageState extends ConsumerState<RecipeEditorPage> {
             if (_loaded != null &&
                 _loaded!.author.id == ref.watch(authProvider).value?.id)
               TextEditPanel(
-                key: ValueKey('text-edit-recipe-${_loaded!.version.id}'),
+                key: ValueKey(
+                  'text-edit-recipe-$_accountId-${_loaded!.version.id}-$_textEditEpoch',
+                ),
                 recipeId: _loaded!.id,
                 baseVersionId: _loaded!.version.id,
                 manualEdits: _hasManualEdits,
@@ -903,8 +961,9 @@ class _RecipeEditorPageState extends ConsumerState<RecipeEditorPage> {
                   if (mounted) setState(() => _saving = saving);
                 },
                 onSaved: (detail) async {
+                  final accountId = _accountId;
                   await _discardDraft();
-                  if (context.mounted) {
+                  if (context.mounted && accountId == _accountId) {
                     context.pushReplacement('/recipes/${detail.id}');
                   }
                 },
@@ -1038,7 +1097,23 @@ class _RecipeEditorPageState extends ConsumerState<RecipeEditorPage> {
             const SizedBox(height: 12),
             KeyedSubtree(
               key: ValueKey('recipe-info-$_editorRevision'),
-              child: _RecipeInfoFields(form: _form, onChanged: _changed),
+              child: _RecipeInfoFields(
+                form: _form,
+                onChanged: _changed,
+                showExplanationFields: !_canExplainChanges,
+                explanationPanel: _canExplainChanges ? ChangeExplanationPanel(
+                  bindingKey: _explanationBinding,
+                  changeNote: _form.changeNote,
+                  tags: _form.tags,
+                  explain: _explainChanges,
+                  onChanged: (draft) {
+                    _form.changeNote = draft.changeNote;
+                    _form.tags = draft.tags;
+                    _changed();
+                    _form.explanationFingerprint = draft.changesFingerprint;
+                  },
+                ) : null,
+              ),
             ),
             const SizedBox(height: 8),
             OutlinedButton.icon(
@@ -1167,9 +1242,16 @@ class _RecipeEditorPageState extends ConsumerState<RecipeEditorPage> {
 }
 
 class _RecipeInfoFields extends StatelessWidget {
-  const _RecipeInfoFields({required this.form, required this.onChanged});
+  const _RecipeInfoFields({
+    required this.form,
+    required this.onChanged,
+    this.showExplanationFields = true,
+    this.explanationPanel,
+  });
   final RecipeForm form;
   final VoidCallback onChanged;
+  final bool showExplanationFields;
+  final Widget? explanationPanel;
 
   @override
   Widget build(BuildContext context) {
@@ -1224,14 +1306,15 @@ class _RecipeInfoFields extends StatelessWidget {
           },
         ),
         const SizedBox(height: 8),
-        _text(
-          label: l10n.recipeTags,
-          value: form.tags.join('，'),
-          onChanged: (value) {
-            form.tags = _split(value);
-            onChanged();
-          },
-        ),
+        if (showExplanationFields)
+          _text(
+            label: l10n.recipeTags,
+            value: form.tags.join('，'),
+            onChanged: (value) {
+              form.tags = _split(value);
+              onChanged();
+            },
+          ),
         const SizedBox(height: 8),
         _number(
           label: l10n.recipeTotalTime,
@@ -1251,14 +1334,16 @@ class _RecipeInfoFields extends StatelessWidget {
           },
         ),
         const SizedBox(height: 8),
-        _text(
-          label: l10n.recipeChangeNote,
-          value: form.changeNote,
-          onChanged: (value) {
-            form.changeNote = value.trim();
-            onChanged();
-          },
-        ),
+        if (showExplanationFields)
+          _text(
+            label: l10n.recipeChangeNote,
+            value: form.changeNote,
+            onChanged: (value) {
+              form.changeNote = value.trim();
+              onChanged();
+            },
+          ),
+        if (explanationPanel != null) explanationPanel!,
       ],
     );
   }
@@ -2425,16 +2510,20 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
     final selectedMeasure = _measures
         .where((item) => item.id == _selectedMeasureId)
         .firstOrNull;
-    _scheduleDisplayContract(
-      snapshot: snapshot,
-      targetServings: targetServings,
-      targetMold: _targetMold,
-      displayMode: _displayMode,
-      measureId: selectedMeasure?.id,
-      measureFingerprint: selectedMeasure == null
-          ? null
-          : '${selectedMeasure.id}:${selectedMeasure.name}:${selectedMeasure.capacityMl}:${selectedMeasure.updatedAt}',
-    );
+    // Nested edit routes retain this detail page underneath them. Do not start
+    // hidden display requests while the user is editing or restoring drafts.
+    if (ModalRoute.of(context)?.isCurrent == true) {
+      _scheduleDisplayContract(
+        snapshot: snapshot,
+        targetServings: targetServings,
+        targetMold: _targetMold,
+        displayMode: _displayMode,
+        measureId: selectedMeasure?.id,
+        measureFingerprint: selectedMeasure == null
+            ? null
+            : '${selectedMeasure.id}:${selectedMeasure.name}:${selectedMeasure.capacityMl}:${selectedMeasure.updatedAt}',
+      );
+    }
     // Only a contract computed from the version on screen may replace the
     // local kernel's values.
     final contract = _displayContract?.display.versionId == detail.version.id

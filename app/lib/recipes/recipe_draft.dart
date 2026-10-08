@@ -61,6 +61,20 @@ class RecipeDraftStore {
   // Editor and modification surfaces share one platform store. A queue per
   // store also orders a disposal write before a successful-save removal.
   static final _writeTails = Expando<Future<void>>();
+  static final _modificationEpochs = Expando<Map<String, int>>();
+
+  int modificationEpoch({
+    required String recipeKey,
+    required String accountId,
+    String? baselineVersionId,
+  }) {
+    final epochs = _modificationEpochs[_store] ??= <String, int>{};
+    final key = keyFor(
+      modificationKey(recipeKey, baselineVersionId),
+      accountId: accountId,
+    );
+    return epochs[key] ?? 0;
+  }
 
   String modificationKey(String recipeKey, String? baselineVersionId) =>
       'modification:$recipeKey:${baselineVersionId ?? 'generated'}';
@@ -79,24 +93,49 @@ class RecipeDraftStore {
     required String recipeKey,
     required String accountId,
     required Map<String, dynamic> payload,
+    required int expectedEpoch,
     String? baselineVersionId,
-  }) => save(
-    RecipeDraft(
-      accountId: accountId,
-      recipeKey: modificationKey(recipeKey, baselineVersionId),
-      baselineVersionId: baselineVersionId,
-      payload: payload,
-    ),
-  );
+  }) {
+    final key = modificationKey(recipeKey, baselineVersionId);
+    final encoded = jsonEncode(
+      RecipeDraft(
+        accountId: accountId,
+        recipeKey: key,
+        baselineVersionId: baselineVersionId,
+        payload: payload,
+      ).toJson(),
+    );
+    return _enqueue(() async {
+      if (expectedEpoch !=
+          modificationEpoch(
+            recipeKey: recipeKey,
+            accountId: accountId,
+            baselineVersionId: baselineVersionId,
+          )) {
+        return;
+      }
+      await _store.setString(keyFor(key, accountId: accountId), encoded);
+    });
+  }
 
   Future<void> discardModification({
     required String recipeKey,
     required String accountId,
     String? baselineVersionId,
-  }) => discard(
-    modificationKey(recipeKey, baselineVersionId),
-    accountId: accountId,
-  );
+  }) {
+    final epochs = _modificationEpochs[_store] ??= <String, int>{};
+    final key = keyFor(
+      modificationKey(recipeKey, baselineVersionId),
+      accountId: accountId,
+    );
+    // Invalidate mounted writers immediately, not only after platform removal.
+    // Late checks or metadata callbacks must not recreate an abandoned draft.
+    epochs[key] = (epochs[key] ?? 0) + 1;
+    return discard(
+      modificationKey(recipeKey, baselineVersionId),
+      accountId: accountId,
+    );
+  }
 
   String keyFor(String recipeKey, {String accountId = ''}) =>
       '$keyPrefix$accountId:$recipeKey';
@@ -133,6 +172,18 @@ class RecipeDraftStore {
 
   Future<void> discard(String recipeKey, {String accountId = ''}) =>
       _enqueue(() => _store.remove(keyFor(recipeKey, accountId: accountId)));
+
+  Future<void> discardGeneratedResult(
+    String requestId, {
+    required String accountId,
+  }) => _enqueue(() async {
+    final draft = read(recipeKey: generatedResultKey, accountId: accountId);
+    final result = draft?.payload['result'];
+    // An older editor must not remove a newer generation's reopen target.
+    if (result is Map && result['request_id'] == requestId) {
+      await _store.remove(keyFor(generatedResultKey, accountId: accountId));
+    }
+  });
 
   Future<void> _enqueue(Future<void> Function() operation) {
     final result = (_writeTails[_store] ?? Future<void>.value()).then(
