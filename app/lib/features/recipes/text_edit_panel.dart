@@ -420,6 +420,8 @@ class _TextEditPanelState extends ConsumerState<TextEditPanel>
         widget.manualEdits) {
       return;
     }
+    final onSaved = widget.onSaved;
+    final repo = _repo;
     try {
       _pendingConfirmation ??= {
         'id': preview.id,
@@ -432,7 +434,7 @@ class _TextEditPanelState extends ConsumerState<TextEditPanel>
       final pending = _pendingConfirmation!;
       final detail =
           _savedDetail ??
-          await _repo.confirmModification(
+          await repo.confirmModification(
             pending['id'] as String,
             pending['revision'] as int,
             changeNote: pending['note'] as String,
@@ -443,9 +445,10 @@ class _TextEditPanelState extends ConsumerState<TextEditPanel>
           );
       _savedDetail = detail;
       await _persist();
-      if (!mounted) return;
+      // A committed save still owns its cleanup after the editor is disposed.
+      // The captured parent callback guards navigation, not durable removal.
       await _discard();
-      await widget.onSaved(detail);
+      await onSaved(detail);
     } catch (error) {
       if (_savedDetail != null) {
         // Parent cleanup may have removed our scope before another removal

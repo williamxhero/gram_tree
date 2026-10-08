@@ -368,10 +368,21 @@ class _RecipeEditorPageState extends ConsumerState<RecipeEditorPage> {
     if (generation != _draftGeneration) return;
   }
 
-  Future<void> _discardDraft() async {
-    final accountId = _accountId;
-    final recipeKey = _recipeKey;
-    final baselineVersionId = _loaded?.version.id;
+  Future<void> _discardDraft() => _discardDraftForScope(
+    accountId: _accountId,
+    recipeKey: _recipeKey,
+    baselineVersionId: _loaded?.version.id,
+    generationRequestId: widget.generation?.requestId,
+  );
+
+  Future<void> _discardDraftForScope({
+    required String accountId,
+    required String recipeKey,
+    required String? baselineVersionId,
+    required String? generationRequestId,
+    bool preserveNewerForm = false,
+    RecipeDraft? expectedFormDraft,
+  }) async {
     ++_draftGeneration;
     _draftTimer?.cancel();
     _draftTimer = null;
@@ -380,15 +391,19 @@ class _RecipeEditorPageState extends ConsumerState<RecipeEditorPage> {
     } catch (_) {
       // A failed local write must not prevent leaving the editor.
     }
-    await _draftStore.discard(recipeKey, accountId: accountId);
+    if (preserveNewerForm) {
+      await _draftStore.discardMatching(expectedFormDraft);
+    } else {
+      await _draftStore.discard(recipeKey, accountId: accountId);
+    }
     await _draftStore.discardModification(
       recipeKey: recipeKey,
       accountId: accountId,
       baselineVersionId: baselineVersionId,
     );
-    if (widget.generation != null) {
+    if (generationRequestId != null) {
       await _draftStore.discardGeneratedResult(
-        widget.generation!.requestId,
+        generationRequestId,
         accountId: accountId,
       );
     }
@@ -949,6 +964,17 @@ class _RecipeEditorPageState extends ConsumerState<RecipeEditorPage> {
         ),
       );
     }
+    // Cleanup can finish after this page is disposed or another account signs
+    // in. Bind storage work now; only navigation consults the live account.
+    final accountId = ref.watch(authProvider).value?.id ?? 'anonymous';
+    final recipeKey = _recipeKey;
+    final baselineVersionId = _loaded?.version.id;
+    final generationRequestId = widget.generation?.requestId;
+    final expectedFormDraft = _draftStore.read(
+      recipeKey: recipeKey,
+      accountId: accountId,
+      baselineVersionId: baselineVersionId,
+    );
     return Scaffold(
       appBar: AppBar(
         title: Text(_loaded == null ? l10n.newRecipe : l10n.recipeContinueEdit),
@@ -960,11 +986,10 @@ class _RecipeEditorPageState extends ConsumerState<RecipeEditorPage> {
           controller: _editorScroll,
           padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
           children: [
-            if (_loaded != null &&
-                _loaded!.author.id == ref.watch(authProvider).value?.id)
+            if (_loaded != null && _loaded!.author.id == accountId)
               TextEditPanel(
                 key: ValueKey(
-                  'text-edit-recipe-$_accountId-${_loaded!.version.id}-$_textEditEpoch',
+                  'text-edit-recipe-$accountId-${_loaded!.version.id}-$_textEditEpoch',
                 ),
                 recipeId: _loaded!.id,
                 baseVersionId: _loaded!.version.id,
@@ -973,8 +998,14 @@ class _RecipeEditorPageState extends ConsumerState<RecipeEditorPage> {
                   if (mounted) setState(() => _saving = saving);
                 },
                 onSaved: (detail) async {
-                  final accountId = _accountId;
-                  await _discardDraft();
+                  await _discardDraftForScope(
+                    accountId: accountId,
+                    recipeKey: recipeKey,
+                    baselineVersionId: baselineVersionId,
+                    generationRequestId: generationRequestId,
+                    preserveNewerForm: true,
+                    expectedFormDraft: expectedFormDraft,
+                  );
                   if (context.mounted && accountId == _accountId) {
                     context.pushReplacement('/recipes/${detail.id}');
                   }
@@ -2649,6 +2680,16 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
               onAction: null,
             ),
           ],
+          // Saved author tags belong with the source conclusion, not below
+          // long checks where a lazy phone list may not build them yet.
+          if (snapshot.tags?.isNotEmpty == true)
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                for (final tag in snapshot.tags!) Chip(label: Text(tag)),
+              ],
+            ),
           ReproducibilityCard(result: detail.version.reproducibility),
           RecipeSafetyProtocolSection(
             result: detail.version.safety ?? detail.version.safetyAtSave,
@@ -2703,8 +2744,6 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
                 ),
               if (snapshot.dishType?.isNotEmpty == true)
                 Chip(label: Text(l10n.recipeDishTypeValue(snapshot.dishType!))),
-              for (final tag in snapshot.tags ?? const [])
-                Chip(label: Text(tag)),
             ],
           ),
           if (durationNote != null)

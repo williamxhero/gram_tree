@@ -83,7 +83,9 @@ class _OneLineRecipePageState extends ConsumerState<OneLineRecipePage> {
       final status = await ref.read(recipeRepositoryProvider).aiStatus();
       if (mounted && accountId == _accountId) setState(() => _status = status);
     } catch (_) {
-      if (mounted && accountId == _accountId) setState(() => _error = '暂时无法读取 AI 状态，仍可检索或手动新建。');
+      if (mounted && accountId == _accountId) {
+        setState(() => _error = '暂时无法读取 AI 状态，仍可检索或手动新建。');
+      }
     }
   }
 
@@ -97,7 +99,9 @@ class _OneLineRecipePageState extends ConsumerState<OneLineRecipePage> {
     try {
       await action();
     } catch (error) {
-      if (mounted && revision == _runRevision) setState(() => _error = ApiFailure.from(error).message);
+      if (mounted && revision == _runRevision) {
+        setState(() => _error = ApiFailure.from(error).message);
+      }
     } finally {
       if (mounted && revision == _runRevision) setState(() => _busy = false);
     }
@@ -161,7 +165,9 @@ class _OneLineRecipePageState extends ConsumerState<OneLineRecipePage> {
     final detail = await ref
         .read(recipeRepositoryProvider)
         .chooseExisting(_found!.requestId, recipe.recipeId);
-    if (mounted && revision == _runRevision) context.push('/recipes/${detail.id}');
+    if (mounted && revision == _runRevision) {
+      context.push('/recipes/${detail.id}');
+    }
   });
 
   @override
@@ -196,6 +202,8 @@ class _OneLineRecipePageState extends ConsumerState<OneLineRecipePage> {
     final found = _found;
     final result = _result;
     final draft = result?.draft;
+    final accountId = _accountId;
+    final draftStore = _draftStore;
     return Scaffold(
       appBar: AppBar(title: const Text('一句话生成菜谱')),
       body: ListView(
@@ -332,19 +340,18 @@ class _OneLineRecipePageState extends ConsumerState<OneLineRecipePage> {
             ),
             TextEditPanel(
               key: ValueKey(
-                'text-edit-generation-$_accountId-${result!.requestId}',
+                'text-edit-generation-$accountId-${result!.requestId}',
               ),
               generationRequestId: result.requestId,
               onSavingChanged: (saving) {
                 if (mounted) setState(() => _busy = saving);
               },
               onSaved: (detail) async {
-                final accountId = _accountId;
-                await _draftStore.discard(
+                await draftStore.discard(
                   'ai-${result.requestId}',
                   accountId: accountId,
                 );
-                await _draftStore.discardGeneratedResult(
+                await draftStore.discardGeneratedResult(
                   result.requestId,
                   accountId: accountId,
                 );

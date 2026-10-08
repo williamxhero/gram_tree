@@ -10,6 +10,43 @@ import 'package:gram_tree/l10n/app_localizations.dart';
 import 'helpers.dart';
 
 void main() {
+  for (final brightness in Brightness.values) {
+    testWidgets('AI explanation renders the shared dashed marker $brightness', (
+      tester,
+    ) async {
+      final form = ValueNotifier(_Form());
+      addTearDown(form.dispose);
+      await _pump(
+        tester,
+        form: form,
+        brightness: brightness,
+        explain: () async => const ChangeExplanationSuggestion(
+          available: true,
+          changeNote: '自动说明',
+          tags: ['自动标签'],
+          source: 'ai_estimated',
+          changesFingerprint: 'ops',
+        ),
+      );
+      await tester.tap(find.text('生成改动说明'));
+      await tester.pump();
+      await tester.pump();
+      final border = tester.widget<CustomPaint>(
+        find
+            .ancestor(
+              of: find.text('AI 估算'),
+              matching: find.byType(CustomPaint),
+            )
+            .first,
+      );
+      expect(border.painter, isNotNull, reason: 'AI 来源使用共享虚线边框，不替换为实线');
+      expect(
+        tester.widget<Text>(find.text('AI 估算')).style?.color,
+        buildTheme(brightness).colorScheme.onSurfaceVariant,
+      );
+    });
+  }
+
   testWidgets(
     'reconstructed AI ownership clears stale note but preserves author tags',
     (tester) async {

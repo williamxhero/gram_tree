@@ -173,6 +173,26 @@ class RecipeDraftStore {
   Future<void> discard(String recipeKey, {String accountId = ''}) =>
       _enqueue(() => _store.remove(keyFor(recipeKey, accountId: accountId)));
 
+  /// A completed save may outlive its editor. Remove only that editor's form
+  /// receipt, never a newer draft written while its cleanup was pending.
+  Future<void> discardMatching(RecipeDraft? expected) {
+    if (expected == null) return Future<void>.value();
+    return _enqueue(() async {
+      final current = read(
+        recipeKey: expected.recipeKey,
+        accountId: expected.accountId,
+        baselineVersionId: expected.baselineVersionId,
+      );
+      if (current == null ||
+          jsonEncode(current.toJson()) != jsonEncode(expected.toJson())) {
+        return;
+      }
+      await _store.remove(
+        keyFor(expected.recipeKey, accountId: expected.accountId),
+      );
+    });
+  }
+
   Future<void> discardGeneratedResult(
     String requestId, {
     required String accountId,

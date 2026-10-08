@@ -278,7 +278,6 @@ class _ChangeExplanationPanelState extends State<ChangeExplanationPanel> {
                 ].join('；'),
                 basisText: '仅依据本次最终改动生成，不代表已做过验证。作者可以修改说明和标签。',
                 required: false,
-                neutral: true,
                 valueChanged: false,
                 feedbackEnabled: false,
                 onAction: null,

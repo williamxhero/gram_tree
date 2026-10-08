@@ -79,6 +79,7 @@ class _Fixture {
   bool loseConfirmationResponse = false;
   bool numeric = false;
   Completer<void>? checkGate;
+  Completer<void>? confirmationGate;
   List<Map<String, dynamic>> decisions = [];
   int revision = 0;
 
@@ -141,6 +142,11 @@ class _Fixture {
     );
     env.server.on(
       'GET',
+      '/v1/recipes/$_recipe/versions/baseline',
+      (_) => (200, _detail().toJson()),
+    );
+    env.server.on(
+      'GET',
       '/v1/ai/recipes/modifications/status',
       (_) => (200, status.toJson()),
     );
@@ -186,11 +192,15 @@ class _Fixture {
     env.server.on(
       'POST',
       '/v1/ai/recipes/modifications/$_modification/confirm',
-      (_) {
+      (_) async {
         if (failConfirmation) {
           return FakeServer.error(503, 'unavailable', '保存失败');
         }
         saved = true;
+        if (confirmationGate != null) {
+          version = 'saved';
+          await confirmationGate!.future;
+        }
         if (loseConfirmationResponse) {
           loseConfirmationResponse = false;
           return FakeServer.error(503, 'unavailable', '保存响应丢失');
@@ -386,6 +396,26 @@ class _DelayedRemoveStore extends MemoryLocalStore {
   }
 }
 
+Future<void> _signInAs(
+  WidgetTester tester,
+  _Fixture fixture,
+  UserOut user,
+) async {
+  await _route(tester, '/me/settings');
+  await tapVisible(tester, find.text('退出登录'));
+  await tester.tap(find.widgetWithText(FilledButton, '退出登录'));
+  await tester.pumpAndSettle();
+  fixture.env.server.user = user;
+  await tester.enterText(
+    find.byKey(const ValueKey('login-email')),
+    'another@example.com',
+  );
+  await tester.tap(find.text('发送验证码'));
+  await tester.pumpAndSettle();
+  await tester.enterText(find.byKey(const ValueKey('code-input')), goodCode);
+  await tester.pumpAndSettle();
+}
+
 class _SlowEvents extends FakeEventQueue {
   Completer<void>? gate;
   @override
@@ -396,6 +426,289 @@ class _SlowEvents extends FakeEventQueue {
 }
 
 void main() {
+  for (final cleanupFails in [false, true]) {
+    testWidgets(
+      'save response after disposal cleans old baseline without deleting newer form; cleanup failure $cleanupFails',
+      (tester) async {
+        final local = _DelayedRemoveStore();
+        final fixture = _Fixture(local: local);
+        await _selected(tester, fixture);
+        await _reveal(tester, 'text-edit-confirm');
+        final response = Completer<void>();
+        fixture.confirmationGate = response;
+        local.failRemoval = cleanupFails;
+        addTearDown(() {
+          if (!response.isCompleted) response.complete();
+        });
+        await tester.tap(find.byKey(const ValueKey('text-edit-confirm')));
+        for (var i = 0; i < 5; i++) {
+          await tester.pump(const Duration(milliseconds: 50));
+        }
+        expect(fixture.saved, isTrue);
+        expect(fixture.version, 'saved');
+        await _route(tester, '/recipes');
+        await _route(tester, '/recipes/$_recipe/edit');
+        await _reveal(tester, 'recipe-step-instruction-cook');
+        await tester.enterText(
+          find.byKey(const ValueKey('recipe-step-instruction-cook')),
+          '新版本上仍未保存的步骤',
+        );
+        await tester.pump(const Duration(milliseconds: 300));
+        await tester.pumpAndSettle();
+        response.complete();
+        await tester.pumpAndSettle();
+        expect(
+          GoRouter.of(tester.element(find.byType(Scaffold).first))
+              .routeInformationProvider
+              .value
+              .uri
+              .path,
+          '/recipes/$_recipe/edit',
+        );
+        await restartApp(tester, fixture.env);
+        await _route(tester, '/recipes/$_recipe/edit');
+        expect(find.text('恢复未保存修改？'), findsOneWidget);
+        await tester.tap(find.text('恢复'));
+        await tester.pumpAndSettle();
+        await _reveal(tester, 'recipe-step-instruction-cook');
+        expect(find.text('新版本上仍未保存的步骤'), findsOneWidget);
+        // Visit the immutable historical baseline through its public editor to
+        // expose a stranded old receipt, without inspecting local-store keys.
+        local.failRemoval = false;
+        await _route(tester, '/recipes');
+        await _route(tester, '/recipes/$_recipe/edit?versionId=baseline');
+        expect(
+          GoRouter.of(tester.element(find.byType(Scaffold).first))
+              .routeInformationProvider
+              .value
+              .uri
+              .path,
+          cleanupFails ? '/recipes/$_recipe' : '/recipes/$_recipe/edit',
+        );
+        expect(find.byKey(const ValueKey('text-edit-confirm')), findsNothing);
+        expect(
+          fixture.env.server.calls(
+            'POST',
+            '/v1/ai/recipes/modifications/$_modification/confirm',
+          ),
+          hasLength(1),
+        );
+        expect(tester.takeException(), isNull);
+      },
+    );
+  }
+
+  testWidgets(
+    'old committed cleanup cannot delete a reopened editor newer form draft',
+    (tester) async {
+      final local = _DelayedRemoveStore();
+      final fixture = _Fixture(local: local);
+      await _selected(tester, fixture);
+      await _reveal(tester, 'text-edit-confirm');
+      final gate = Completer<void>();
+      local.gate = gate;
+      addTearDown(() {
+        if (!gate.isCompleted) gate.complete();
+      });
+      await tester.tap(find.byKey(const ValueKey('text-edit-confirm')));
+      for (var i = 0; i < 5; i++) {
+        await tester.pump(const Duration(milliseconds: 50));
+      }
+      expect(
+        fixture.env.server.calls(
+          'POST',
+          '/v1/ai/recipes/modifications/$_modification/confirm',
+        ),
+        hasLength(1),
+      );
+      fixture.version = 'saved';
+      await _route(tester, '/recipes');
+      await _route(tester, '/recipes/$_recipe/edit');
+      await _reveal(tester, 'recipe-step-instruction-cook');
+      await tester.enterText(
+        find.byKey(const ValueKey('recipe-step-instruction-cook')),
+        '新编辑器的未保存手写步骤',
+      );
+      await tester.pump(const Duration(milliseconds: 300));
+      await tester.pumpAndSettle();
+      gate.complete();
+      await tester.pumpAndSettle();
+      await restartApp(tester, fixture.env);
+      await _route(tester, '/recipes/$_recipe/edit');
+      expect(find.text('恢复未保存修改？'), findsOneWidget);
+      await tester.tap(find.text('恢复'));
+      await tester.pumpAndSettle();
+      await _reveal(tester, 'recipe-step-instruction-cook');
+      expect(find.text('新编辑器的未保存手写步骤'), findsOneWidget);
+      expect(find.byKey(const ValueKey('text-edit-confirm')), findsNothing);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
+    'old abandonment cleanup preserves reopened editor newer choices',
+    (tester) async {
+      final local = _DelayedRemoveStore();
+      final fixture = _Fixture(local: local);
+      await _selected(tester, fixture);
+      await _reveal(tester, 'text-edit-cancel');
+      final gate = Completer<void>();
+      local.gate = gate;
+      addTearDown(() {
+        if (!gate.isCompleted) gate.complete();
+      });
+      await tester.tap(find.byKey(const ValueKey('text-edit-cancel')));
+      for (var i = 0; i < 5; i++) {
+        await tester.pump(const Duration(milliseconds: 50));
+      }
+      await _route(tester, '/recipes');
+      // Restored checking is waiting behind the held storage removal. Keep
+      // exercising the public editor without settling its deliberate spinner.
+      await _route(tester, '/recipes/$_recipe/edit', settle: false);
+      await _reveal(tester, 'text-edit-after-clarify', settle: false);
+      await tester.enterText(
+        find.byKey(const ValueKey('text-edit-after-clarify')),
+        '新编辑器确认的后值',
+      );
+      await tester.pump(const Duration(milliseconds: 300));
+      gate.complete();
+      await tester.pumpAndSettle();
+      await restartApp(tester, fixture.env);
+      await _route(tester, '/recipes/$_recipe/edit');
+      await _reveal(tester, 'text-edit-after-clarify');
+      expect(find.text('新编辑器确认的后值'), findsOneWidget);
+      await _reveal(tester, 'text-edit-confirm');
+      expect(
+        tester
+            .widget<FilledButton>(
+              find.byKey(const ValueKey('text-edit-confirm')),
+            )
+            .onPressed,
+        isNotNull,
+      );
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  for (final generated in [false, true]) {
+    testWidgets(
+      'committed cleanup stays in the originating account after public sign-in switch from ${generated ? 'generation' : 'editing'}',
+      (tester) async {
+        final local = _DelayedRemoveStore();
+        final fixture = _Fixture(local: local);
+        await _selected(tester, fixture, generated: generated);
+        await _reveal(tester, 'text-edit-confirm');
+        final gate = Completer<void>();
+        local.gate = gate;
+        addTearDown(() {
+          if (!gate.isCompleted) gate.complete();
+        });
+        await tester.tap(find.byKey(const ValueKey('text-edit-confirm')));
+        for (var i = 0; i < 5; i++) {
+          await tester.pump(const Duration(milliseconds: 50));
+        }
+        expect(
+          fixture.env.server.calls(
+            'POST',
+            '/v1/ai/recipes/modifications/$_modification/confirm',
+          ),
+          hasLength(1),
+        );
+        await _signInAs(
+          tester,
+          fixture,
+          testUser().copyWith(
+            id: '99999999-9999-4999-8999-999999999999',
+            nickname: '另一位味友',
+          ),
+        );
+        gate.complete();
+        await tester.pumpAndSettle();
+        expect(
+          GoRouter.of(tester.element(find.byType(Scaffold).first))
+              .routeInformationProvider
+              .value
+              .uri
+              .path,
+          '/today',
+        );
+        await _route(tester, '/recipes/one-line');
+        expect(find.byKey(const ValueKey('text-edit-confirm')), findsNothing);
+        await _signInAs(tester, fixture, testUser());
+        final path = generated ? '/recipes/one-line' : '/recipes/$_recipe/edit';
+        await _route(tester, path);
+        expect(
+          GoRouter.of(tester.element(find.byType(Scaffold).first))
+              .routeInformationProvider
+              .value
+              .uri
+              .path,
+          path,
+        );
+        expect(find.byKey(const ValueKey('text-edit-confirm')), findsNothing);
+        expect(tester.takeException(), isNull);
+      },
+    );
+
+    testWidgets(
+      'committed cleanup safely finishes after leaving the ${generated ? 'generated result' : 'ordinary editor'}',
+      (tester) async {
+        final local = _DelayedRemoveStore();
+        final fixture = _Fixture(local: local);
+        await _selected(tester, fixture, generated: generated);
+        await _reveal(tester, 'text-edit-confirm');
+        final gate = Completer<void>();
+        local.gate = gate;
+        addTearDown(() {
+          if (!gate.isCompleted) gate.complete();
+        });
+        await tester.tap(find.byKey(const ValueKey('text-edit-confirm')));
+        for (var i = 0; i < 5; i++) {
+          await tester.pump(const Duration(milliseconds: 50));
+        }
+        expect(
+          fixture.env.server.calls(
+            'POST',
+            '/v1/ai/recipes/modifications/$_modification/confirm',
+          ),
+          hasLength(1),
+        );
+        await _route(tester, '/recipes');
+        gate.complete();
+        await tester.pumpAndSettle();
+        expect(
+          GoRouter.of(tester.element(find.byType(Scaffold).first))
+              .routeInformationProvider
+              .value
+              .uri
+              .path,
+          '/recipes',
+        );
+        await restartApp(tester, fixture.env);
+        final path = generated ? '/recipes/one-line' : '/recipes/$_recipe/edit';
+        await _route(tester, path);
+        expect(
+          GoRouter.of(tester.element(find.byType(Scaffold).first))
+              .routeInformationProvider
+              .value
+              .uri
+              .path,
+          path,
+        );
+        expect(find.byKey(const ValueKey('text-edit-confirm')), findsNothing);
+        expect(find.text('恢复未保存修改？'), findsNothing);
+        expect(
+          fixture.env.server.calls(
+            'POST',
+            '/v1/ai/recipes/modifications/$_modification/confirm',
+          ),
+          hasLength(1),
+        );
+        expect(tester.takeException(), isNull);
+      },
+    );
+  }
+
   testWidgets(
     'AI metadata and untouched manual form never duplicate explanation keys',
     (tester) async {

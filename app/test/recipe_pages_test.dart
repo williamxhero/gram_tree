@@ -720,6 +720,56 @@ Future<void> _scrollUntilVisible(
 }
 
 void main() {
+  for (final aiAssisted in [false, true]) {
+    testWidgets(
+      'small phone shows saved author tags before long checks while retaining AI origin $aiAssisted',
+      (tester) async {
+        final server = FakeServer();
+        final state = _installRecipeApi(server);
+        final version = state.current['version'] as Map;
+        version['ai_assisted'] = aiAssisted;
+        (version['snapshot'] as Map)['tags'] = ['两厘米丁', '手动修改', '作者确认', '手写说明'];
+        version['reproducibility'] = {
+          'rules_version': 'reproducibility-v1',
+          'state': 'incomplete',
+          'remaining_count': 1,
+          'required_field_count': 2,
+          'concrete_field_count': 1,
+          'field_completeness': 0.5,
+          'problems': [
+            {
+              'id': 'steps:step-1:duration_seconds:missing',
+              'type': 'missing',
+              'status': 'unresolved',
+              'message': '加热步骤需要具体时长',
+              'position': {
+                'collection': 'steps',
+                'item_id': 'step-1',
+                'field': 'duration_seconds',
+              },
+            },
+          ],
+        };
+        await pumpApp(
+          tester,
+          env: TestEnv.signedIn(server: server),
+          size: const Size(320, 640),
+        );
+        await _openMyRecipes(tester);
+        await tester.tap(find.byKey(const ValueKey('recipe-card-$_recipeId')));
+        await tester.pumpAndSettle();
+        for (final tag in ['手动修改', '作者确认', '手写说明']) {
+          expect(find.text(tag).hitTestable(), findsOneWidget);
+        }
+        expect(
+          find.text('AI 辅助 · 尚未做过验证'),
+          aiAssisted ? findsOneWidget : findsNothing,
+        );
+        expect(tester.takeException(), isNull);
+      },
+    );
+  }
+
   for (final brightness in [Brightness.light, Brightness.dark]) {
     testWidgets(
       'individual quantification choices and retry at large text $brightness',
