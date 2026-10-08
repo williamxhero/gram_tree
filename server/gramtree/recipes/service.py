@@ -1039,6 +1039,15 @@ def save_version(
         raise NotFound("菜谱基准版本不存在")
     previous_snapshot = RecipeSnapshot.model_validate(baseline.snapshot)
     snapshot = normalize_sources(snapshot, previous_snapshot, trusted_sources=trusted_sources)
+    if body.explanation_fingerprint is not None:
+        from gramtree.ai import explanations
+
+        explanations.validate_fingerprint(
+            owner.id,
+            explanations.manual_target(recipe.id, baseline.id),
+            _operations(previous_snapshot, snapshot),
+            body.explanation_fingerprint,
+        )
     dish = session.get(Dish, recipe.dish_id)
     if dish is None:
         raise NotFound("菜谱关联数据不存在")

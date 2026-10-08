@@ -358,6 +358,7 @@ def cmd_ai(args: argparse.Namespace) -> int:
                             "input_tokens": c.input_tokens,
                             "output_tokens": c.output_tokens,
                             "cost": c.cost,
+                            "reserved_cost": c.reserved_cost,
                             "duration_ms": c.duration_ms,
                             "status": c.status,
                             "error_code": c.error_code,

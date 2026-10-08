@@ -5,6 +5,7 @@ import logging
 import uuid
 from typing import Any
 
+from pydantic import TypeAdapter
 from redis import Redis
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
@@ -43,12 +44,21 @@ TEXT_FIELDS = {
     "change_display_name": ("ingredients", {"display_name"}),
     "change_recipe_info": ("snapshot", {"description"}),
 }
+REGISTERED_FIELDS = {
+    **TEXT_FIELDS,
+    "change_step_field": ("steps", {*TEXT_FIELDS["change_step_field"][1], "cookware"}),
+    "change_step_duration": ("steps", {"duration_seconds"}),
+    "change_step_heat": ("steps", {"heat", "temperature_celsius"}),
+}
 SOURCE_FIELDS = {
     "instruction": "instruction_source",
     "doneness": "doneness_source",
     "preparation": "preparation_source",
     "display_name": "quantity_source",
     "description": "text_source",
+    "duration_seconds": "duration_source",
+    "heat": "heat_source",
+    "temperature_celsius": "temperature_source",
 }
 
 
@@ -114,7 +124,7 @@ def _fresh(session: Session, owner: User, row: RecipeModification) -> None:
 
 
 def _node(snapshot: RecipeSnapshot, op: ModificationOperation):
-    collection, fields = TEXT_FIELDS[op.type]
+    collection, fields = REGISTERED_FIELDS[op.type]
     if op.field not in fields or (collection == "snapshot" and op.id is not None):
         raise ValueError("操作字段未登记")
     if collection == "snapshot":
@@ -132,7 +142,7 @@ def _validate_operations(snapshot: RecipeSnapshot, ops: list[ModificationOperati
     targets = set()
     for op in ops:
         node = _node(snapshot, op)
-        target = (TEXT_FIELDS[op.type][0], op.id, op.field)
+        target = (REGISTERED_FIELDS[op.type][0], op.id, op.field)
         if target in targets:
             raise ValueError("同一字段只能提出一条操作")
         targets.add(target)
@@ -159,6 +169,52 @@ def _validate_operations(snapshot: RecipeSnapshot, ops: list[ModificationOperati
 
     for key in by_id:
         visit(key)
+
+
+def _validate_intent_operations(
+    snapshot: RecipeSnapshot, intent: ModificationIntent, ops: list[ModificationOperation]
+) -> None:
+    if intent.category == "text":
+        if any(op.type not in TEXT_FIELDS or op.field not in TEXT_FIELDS[op.type][1] for op in ops):
+            raise ValueError("改文字不得改变烹饪条件")
+        return
+    if intent.category != "cookware" or not ops:
+        return
+    target = intent.parameters.get("target_cookware")
+    if not isinstance(target, str) or not target.strip():
+        raise ValueError("缺少目标厨具")
+    roots = {op.id: op for op in ops if op.field == "cookware"}
+    if not roots:
+        raise ValueError("换厨具需要明确步骤")
+    affected = intent.parameters.get("step_ids")
+    if affected is not None and (
+        not isinstance(affected, str) or set(affected.split(",")) != set(roots)
+    ):
+        raise ValueError("受影响步骤不一致")
+    by_id = {op.operation_id: op for op in ops}
+
+    def ancestors(op):
+        return set(op.depends_on).union(*(ancestors(by_id[key]) for key in op.depends_on))
+
+    for step_id, root in roots.items():
+        if root.after != target:
+            raise ValueError("厨具与请求目标不一致")
+        changes = {op.field: op for op in ops if op.id == step_id}
+        if not {"instruction", "notes", "doneness"}.issubset(changes):
+            raise ValueError("转换需要步骤、容器要求和成熟判断")
+        step = next(step for step in snapshot.steps if step.id == step_id)
+        for field in ("duration_seconds", "temperature_celsius"):
+            value = changes[field].after if field in changes else getattr(step, field)
+            if isinstance(value, bool) or not isinstance(value, (int, float)) or value <= 0:
+                raise ValueError("转换需要明确的时间和温度")
+        if step.heat is not None and "heat" not in changes:
+            raise ValueError("转换需要重新说明火候")
+    for op in ops:
+        root = roots.get(op.id)
+        if REGISTERED_FIELDS[op.type][0] != "steps" or root is None:
+            raise ValueError("厨具转换不得更改无关字段")
+        if op is not root and root.operation_id not in ancestors(op):
+            raise ValueError("烹饪条件必须依赖厨具转换")
 
 
 def _apply(
@@ -205,12 +261,14 @@ def _apply(
         decision = resolve(op)
         if decision.decision in ("reject", "pending"):
             continue
-        if decision.after is not None and not decision.after.strip():
+        if isinstance(decision.after, str) and not decision.after.strip():
             raise ValueError("修改后文字不能为空白")
         if decision.after == op.before:
             continue
         node = _node(result, op)
-        setattr(node, op.field, decision.after)
+        adapter = TypeAdapter(type(node).model_fields[op.field].rebuild_annotation())
+        value = adapter.validate_python(decision.after, strict=True)
+        setattr(node, op.field, value)
         source_field = SOURCE_FIELDS.get(op.field)
         if source_field:
             setattr(
@@ -220,7 +278,9 @@ def _apply(
                 if decision.decision == "modify"
                 else ValueSource(
                     source="ai_estimated",
-                    original=op.before,
+                    original=op.before
+                    if isinstance(op.before, str) or op.before is None
+                    else json.dumps(op.before, ensure_ascii=False),
                     basis=op.reason,
                     confidence=op.confidence,
                 ),
@@ -320,26 +380,46 @@ def _event(session, redis, owner, row, stage, decisions=None, version=None):
 def propose(
     session: Session, redis: Redis, settings: Settings, owner: User, body: ModificationInput
 ) -> ModificationPreview:
-    canonical = body.model_dump(mode="json", exclude={"request_id"})
+    canonical = body.model_dump(mode="json", exclude={"request_id", "retry_failed"})
+    row = None
     if body.request_id:
-        existing = session.get(RecipeModification, body.request_id)
+        existing = session.scalar(
+            select(RecipeModification)
+            .where(RecipeModification.id == body.request_id)
+            .with_for_update()
+            .execution_options(populate_existing=True)
+        )
         if existing:
             if existing.user_id != owner.id:
                 raise NotFound()
             if existing.request != canonical:
                 raise ApiError(409, "modification_request_conflict", "请求标识已用于另一项修改")
-            return get(session, settings, owner, existing.id)
-    baseline = _target(session, owner, body)
-    row = RecipeModification(
-        id=body.request_id or uuid.uuid4(),
-        user_id=owner.id,
-        recipe_id=body.recipe_id,
-        base_version_id=body.base_version_id,
-        generation_request_id=body.generation_request_id,
-        request=canonical,
-        baseline=baseline,
-    )
-    session.add(row)
+            if not body.retry_failed or existing.error not in (
+                "model_unavailable",
+                "configuration",
+                "daily_quota",
+                "monthly_budget",
+                "invalid_output",
+            ):
+                return get(session, settings, owner, existing.id)
+            _fresh(session, owner, existing)
+            # Claim the retry before gateway I/O commits. Concurrent retries see
+            # pending, and all actual attempts retain the original quota identity.
+            existing.error = "pending"
+            existing.revision += 1
+            row = existing
+    baseline = row.baseline if row is not None else _target(session, owner, body)
+    if row is None:
+        row = RecipeModification(
+            id=body.request_id or uuid.uuid4(),
+            user_id=owner.id,
+            recipe_id=body.recipe_id,
+            base_version_id=body.base_version_id,
+            generation_request_id=body.generation_request_id,
+            request=canonical,
+            baseline=baseline,
+        )
+        session.add(row)
     try:
         session.commit()
     except IntegrityError:
@@ -371,7 +451,7 @@ def propose(
         proposal["intent"] = intent.model_dump(mode="json")
         if intent.category == "unknown" or intent.confidence < 0.7:
             row.error = "uncertain_intent"
-        elif intent.category != "text":
+        elif intent.category not in ("text", "cookware"):
             row.error = "unsupported_intent"
         else:
             payload = {
@@ -394,7 +474,9 @@ def propose(
                     if not isinstance(value, dict):
                         raise ValueError("需要 operations 列表")
                     warnings = (
-                        ["unreferenced_fields_dropped"] if set(value) - {"operations"} else []
+                        ["unreferenced_fields_dropped"]
+                        if set(value) - {"operations", "explanation"}
+                        else []
                     )
                     if warnings:
                         logger.warning(
@@ -402,8 +484,19 @@ def propose(
                             extra={"modification_id": str(row.id)},
                         )
                     output = ModificationOutput.model_validate(
-                        {"operations": value.get("operations")}
+                        {
+                            "operations": value.get("operations"),
+                            "explanation": value.get("explanation"),
+                        }
                     )
+                    base = RecipeSnapshot.model_validate(baseline["snapshot"])
+                    _validate_operations(base, output.operations)
+                    _validate_intent_operations(base, intent, output.operations)
+                    if not output.operations:
+                        proposal["operations"] = []
+                        proposal["warnings"] = [output.explanation]
+                        row.error = "cannot_modify"
+                        break
                     changed, _, _ = _apply(
                         RecipeSnapshot.model_validate(baseline["snapshot"]),
                         output.operations,
@@ -482,7 +575,7 @@ def confirm(
     body: ModificationConfirmInput,
 ):
     row = _owned(session, owner, request_id)
-    canonical = body.model_dump(mode="json")
+    canonical = body.model_dump(mode="json", exclude_none=True)
     if row.saved_version_id:
         if row.confirmation != canonical:
             raise ApiError(409, "modification_already_saved", "这批修改已经保存")
@@ -503,6 +596,13 @@ def confirm(
     accepted = [op for op in accepted if op["before"] != op["after"]]
     if row.recipe_id and not accepted:
         raise ApiError(409, "no_modifications", "没有实际改动，不需要保存新版本")
+    from gramtree.ai import explanations
+
+    explanations.validate_modification_fingerprint(
+        owner.id, row.id, body.revision, accepted, body.explanation_fingerprint
+    )
+    if body.tags is not None:
+        changed.tags = body.tags
     # Re-run with current rules and the actual confirmation note; never trust a
     # previous preview's safety receipt, nor require completeness for private save.
     safety = food_safety.check(

@@ -2,7 +2,7 @@
 
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, JsonValue, model_validator
 
 from gramtree.ai.schemas import AIStatus
 from gramtree.core.ids import IdV4
@@ -13,6 +13,7 @@ class ModificationInput(BaseModel):
     model_config = ConfigDict(extra="forbid")
     text: str = Field(min_length=1, max_length=1000, pattern=r"\S")
     request_id: IdV4 | None = None
+    retry_failed: bool = False
     recipe_id: IdV4 | None = None
     base_version_id: IdV4 | None = None
     generation_request_id: IdV4 | None = None
@@ -41,12 +42,17 @@ class ModificationOperation(BaseModel):
     operation_id: str = Field(min_length=1, max_length=100, pattern=r"\S")
     # These names are the existing SPEC-002.2 vocabulary, not a generic patch.
     type: Literal[
-        "change_step_field", "change_preparation", "change_display_name", "change_recipe_info"
+        "change_step_field",
+        "change_step_duration",
+        "change_step_heat",
+        "change_preparation",
+        "change_display_name",
+        "change_recipe_info",
     ]
     id: str | None = Field(default=None, max_length=100)
     field: str = Field(min_length=1, max_length=100)
-    before: str | None
-    after: str | None
+    before: JsonValue
+    after: JsonValue
     scope: list[str] = Field(min_length=1, max_length=20)
     intent: str = Field(min_length=1, max_length=1000, pattern=r"\S")
     reason: str = Field(min_length=1, max_length=2000, pattern=r"\S")
@@ -57,14 +63,21 @@ class ModificationOperation(BaseModel):
 
 class ModificationOutput(BaseModel):
     model_config = ConfigDict(extra="forbid")
-    operations: list[ModificationOperation] = Field(min_length=1, max_length=100)
+    operations: list[ModificationOperation] = Field(max_length=100)
+    explanation: str | None = Field(default=None, min_length=1, max_length=2000, pattern=r"\S")
+
+    @model_validator(mode="after")
+    def explained_noop(self):
+        if not self.operations and self.explanation is None:
+            raise ValueError("无法修改时需要明确说明原因")
+        return self
 
 
 class ModificationDecision(BaseModel):
     model_config = ConfigDict(extra="forbid")
     operation_id: str = Field(min_length=1, max_length=100)
     decision: Literal["accept", "reject", "modify"]
-    after: str | None = Field(default=None, max_length=4000)
+    after: JsonValue = None
 
     @model_validator(mode="after")
     def only_modified_value(self):
@@ -78,7 +91,7 @@ class ModificationDecision(BaseModel):
 class ModificationDecisionOut(BaseModel):
     operation_id: str
     decision: Literal["pending", "accept", "reject", "modify"]
-    after: str | None = None
+    after: JsonValue = None
     blocked_by: list[str] = Field(default_factory=list)
 
 
@@ -91,6 +104,10 @@ class ModificationConfirmInput(BaseModel):
     model_config = ConfigDict(extra="forbid")
     revision: int = Field(ge=0)
     change_note: str = Field(default="", max_length=2000)
+    tags: list[str] | None = Field(default=None, max_length=50)
+    explanation_fingerprint: str | None = Field(
+        default=None, min_length=64, max_length=64, pattern=r"^[0-9a-f]{64}$"
+    )
 
 
 class ModificationPreview(BaseModel):

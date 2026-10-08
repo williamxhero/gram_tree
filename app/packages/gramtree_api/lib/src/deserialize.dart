@@ -14,6 +14,8 @@ import 'package:gramtree_api/src/model/bind_apple_request.dart';
 import 'package:gramtree_api/src/model/bind_email_request.dart';
 import 'package:gramtree_api/src/model/bool_attribute.dart';
 import 'package:gramtree_api/src/model/cache_info.dart';
+import 'package:gramtree_api/src/model/change_explanation_input.dart';
+import 'package:gramtree_api/src/model/change_explanation_result.dart';
 import 'package:gramtree_api/src/model/changes_response.dart';
 import 'package:gramtree_api/src/model/client_config.dart';
 import 'package:gramtree_api/src/model/component_descriptor.dart';
@@ -228,6 +230,12 @@ ReturnType deserialize<ReturnType, BaseType>(
           as ReturnType;
     case 'CacheInfo':
       return CacheInfo.fromJson(value as Map<String, dynamic>) as ReturnType;
+    case 'ChangeExplanationInput':
+      return ChangeExplanationInput.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'ChangeExplanationResult':
+      return ChangeExplanationResult.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
     case 'ChangesResponse':
       return ChangesResponse.fromJson(value as Map<String, dynamic>)
           as ReturnType;

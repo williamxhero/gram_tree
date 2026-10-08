@@ -17,6 +17,10 @@ def client_schema(value: Any) -> Any:
     if not isinstance(value, dict):
         return value
     result = {key: client_schema(item) for key, item in value.items()}
+    if result.get("$ref") == "#/components/schemas/JsonValue":
+        # Finite modification values keep their JSON type on the wire. Dart has
+        # no recursive JSON union; the server validates each registered field.
+        return {}
     variants = result.get("anyOf")
     if not isinstance(variants, list) or {"type": "null"} not in variants:
         return result
@@ -87,11 +91,12 @@ def main() -> None:
     source, target = (Path(arg) for arg in sys.argv[1:])
     document = json.loads(source.read_text(encoding="utf-8"))
     for name, schema in document["components"]["schemas"].items():
-        if name.startswith(("Recipe", "Modification")) or name in {
+        if name.startswith(("Recipe", "Modification", "ChangeExplanation")) or name in {
             "NutritionEstimate",
             "ValueSource",
         }:
             document["components"]["schemas"][name] = project_schema(schema)
+    document["components"]["schemas"].pop("JsonValue", None)
     target.write_text(json.dumps(document, ensure_ascii=False, sort_keys=True), encoding="utf-8")
 
 

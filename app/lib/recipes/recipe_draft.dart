@@ -56,8 +56,47 @@ class RecipeDraftStore {
   RecipeDraftStore(this._store);
 
   static const keyPrefix = 'recipe_draft:v1:';
+  static const generatedResultKey = 'generation-result';
   final LocalStore _store;
-  Future<void> _writeTail = Future<void>.value();
+  // Editor and modification surfaces share one platform store. A queue per
+  // store also orders a disposal write before a successful-save removal.
+  static final _writeTails = Expando<Future<void>>();
+
+  String modificationKey(String recipeKey, String? baselineVersionId) =>
+      'modification:$recipeKey:${baselineVersionId ?? 'generated'}';
+
+  RecipeDraft? readModification({
+    required String recipeKey,
+    required String accountId,
+    String? baselineVersionId,
+  }) => read(
+    recipeKey: modificationKey(recipeKey, baselineVersionId),
+    accountId: accountId,
+    baselineVersionId: baselineVersionId,
+  );
+
+  Future<void> saveModification({
+    required String recipeKey,
+    required String accountId,
+    required Map<String, dynamic> payload,
+    String? baselineVersionId,
+  }) => save(
+    RecipeDraft(
+      accountId: accountId,
+      recipeKey: modificationKey(recipeKey, baselineVersionId),
+      baselineVersionId: baselineVersionId,
+      payload: payload,
+    ),
+  );
+
+  Future<void> discardModification({
+    required String recipeKey,
+    required String accountId,
+    String? baselineVersionId,
+  }) => discard(
+    modificationKey(recipeKey, baselineVersionId),
+    accountId: accountId,
+  );
 
   String keyFor(String recipeKey, {String accountId = ''}) =>
       '$keyPrefix$accountId:$recipeKey';
@@ -96,8 +135,10 @@ class RecipeDraftStore {
       _enqueue(() => _store.remove(keyFor(recipeKey, accountId: accountId)));
 
   Future<void> _enqueue(Future<void> Function() operation) {
-    final result = _writeTail.then((_) => operation());
-    _writeTail = result.then<void>(
+    final result = (_writeTails[_store] ?? Future<void>.value()).then(
+      (_) => operation(),
+    );
+    _writeTails[_store] = result.then<void>(
       (_) {},
       onError: (Object error, StackTrace stackTrace) {},
     );

@@ -664,7 +664,7 @@ def test_ownership_stale_base_and_conflicting_receipt_are_guarded(modification_a
 @pytest.mark.parametrize(
     "category,confidence,error",
     [
-        (c, 0.95, "unsupported_intent")
+        (c, 0.95, "model_unavailable" if c == "cookware" else "unsupported_intent")
         for c in ["taste", "cookware", "substitution", "time_difficulty", "method"]
     ]
     + [("unknown", 0.95, "uncertain_intent"), ("text", 0.4, "uncertain_intent")],
@@ -692,9 +692,9 @@ def test_unsupported_or_uncertain_intent_is_explicit(modification_api, category,
     assert response.json()["error"] == error and response.json()["operations"] == []
     assert response.json()["snapshot"] == created["version"]["snapshot"]
     user_id = api.client.get("/v1/me", headers=headers).json()["id"]
-    assert [c["capability"] for c in cli("ai", "audit", "--user", user_id)["calls"]] == [
-        "modify_intent"
-    ]
+    assert [c["capability"] for c in cli("ai", "audit", "--user", user_id)["calls"]] == (
+        ["modify_intent", "modify"] if category == "cookware" else ["modify_intent"]
+    )
 
 
 def test_selected_health_claim_blocks_confirm_and_modified_text_rechecks(modification_api):

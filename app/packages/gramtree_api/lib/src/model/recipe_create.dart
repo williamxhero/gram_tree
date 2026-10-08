@@ -30,6 +30,8 @@ class RecipeCreate {
 
     this.dishName,
 
+    this.explanationFingerprint,
+
     this.imageIds,
 
     required this.snapshot,
@@ -60,6 +62,13 @@ class RecipeCreate {
   @JsonKey(name: r'dish_name', required: false, includeIfNull: false)
   final String? dishName;
 
+  @JsonKey(
+    name: r'explanation_fingerprint',
+    required: false,
+    includeIfNull: false,
+  )
+  final String? explanationFingerprint;
+
   @JsonKey(name: r'image_ids', required: false, includeIfNull: false)
   final List<String>? imageIds;
 
@@ -75,6 +84,7 @@ class RecipeCreate {
           other.dish == dish &&
           other.dishAliases == dishAliases &&
           other.dishName == dishName &&
+          other.explanationFingerprint == explanationFingerprint &&
           other.imageIds == imageIds &&
           other.snapshot == snapshot;
 
@@ -85,6 +95,7 @@ class RecipeCreate {
       dish.hashCode +
       dishAliases.hashCode +
       (dishName == null ? 0 : dishName.hashCode) +
+      (explanationFingerprint == null ? 0 : explanationFingerprint.hashCode) +
       imageIds.hashCode +
       snapshot.hashCode;
 

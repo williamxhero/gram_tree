@@ -17,6 +17,8 @@ abstract class _$RecipeVersionCreateCWProxy {
     String? expectedCurrentVersionId,
   );
 
+  RecipeVersionCreate explanationFingerprint(String? explanationFingerprint);
+
   RecipeVersionCreate imageIds(List<String>? imageIds);
 
   RecipeVersionCreate snapshot(RecipeSnapshot snapshot);
@@ -32,6 +34,7 @@ abstract class _$RecipeVersionCreateCWProxy {
     String? baseVersionId,
     String? changeNote,
     String? expectedCurrentVersionId,
+    String? explanationFingerprint,
     List<String>? imageIds,
     RecipeSnapshot snapshot,
   });
@@ -61,6 +64,10 @@ class _$RecipeVersionCreateCWProxyImpl implements _$RecipeVersionCreateCWProxy {
   ) => this(expectedCurrentVersionId: expectedCurrentVersionId);
 
   @override
+  RecipeVersionCreate explanationFingerprint(String? explanationFingerprint) =>
+      this(explanationFingerprint: explanationFingerprint);
+
+  @override
   RecipeVersionCreate imageIds(List<String>? imageIds) =>
       this(imageIds: imageIds);
 
@@ -80,6 +87,7 @@ class _$RecipeVersionCreateCWProxyImpl implements _$RecipeVersionCreateCWProxy {
     Object? baseVersionId = const $CopyWithPlaceholder(),
     Object? changeNote = const $CopyWithPlaceholder(),
     Object? expectedCurrentVersionId = const $CopyWithPlaceholder(),
+    Object? explanationFingerprint = const $CopyWithPlaceholder(),
     Object? imageIds = const $CopyWithPlaceholder(),
     Object? snapshot = const $CopyWithPlaceholder(),
   }) {
@@ -101,6 +109,11 @@ class _$RecipeVersionCreateCWProxyImpl implements _$RecipeVersionCreateCWProxy {
           ? _value.expectedCurrentVersionId
           // ignore: cast_nullable_to_non_nullable
           : expectedCurrentVersionId as String?,
+      explanationFingerprint:
+          explanationFingerprint == const $CopyWithPlaceholder()
+          ? _value.explanationFingerprint
+          // ignore: cast_nullable_to_non_nullable
+          : explanationFingerprint as String?,
       imageIds: imageIds == const $CopyWithPlaceholder()
           ? _value.imageIds
           // ignore: cast_nullable_to_non_nullable
@@ -139,6 +152,10 @@ RecipeVersionCreate _$RecipeVersionCreateFromJson(
         'expected_current_version_id',
         (v) => v as String?,
       ),
+      explanationFingerprint: $checkedConvert(
+        'explanation_fingerprint',
+        (v) => v as String?,
+      ),
       imageIds: $checkedConvert(
         'image_ids',
         (v) => (v as List<dynamic>?)?.map((e) => e as String).toList(),
@@ -155,6 +172,7 @@ RecipeVersionCreate _$RecipeVersionCreateFromJson(
     'baseVersionId': 'base_version_id',
     'changeNote': 'change_note',
     'expectedCurrentVersionId': 'expected_current_version_id',
+    'explanationFingerprint': 'explanation_fingerprint',
     'imageIds': 'image_ids',
   },
 );
@@ -166,6 +184,7 @@ Map<String, dynamic> _$RecipeVersionCreateToJson(
   'base_version_id': ?instance.baseVersionId,
   'change_note': ?instance.changeNote,
   'expected_current_version_id': ?instance.expectedCurrentVersionId,
+  'explanation_fingerprint': ?instance.explanationFingerprint,
   'image_ids': ?instance.imageIds,
   'snapshot': instance.snapshot.toJson(),
 };

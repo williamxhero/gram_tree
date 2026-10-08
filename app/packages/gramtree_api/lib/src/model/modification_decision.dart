@@ -26,7 +26,7 @@ class ModificationDecision {
   });
 
   @JsonKey(name: r'after', required: false, includeIfNull: false)
-  final String? after;
+  final Object? after;
 
   @JsonKey(name: r'decision', required: true, includeIfNull: false)
   final ModificationDecisionDecisionEnum decision;

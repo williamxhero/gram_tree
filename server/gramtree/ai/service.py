@@ -542,6 +542,17 @@ def save(
         raise ApiError(409, "generation_required", "请先生成并检查菜谱")
     body.ai_assisted = True
     original = GeneratedDraft.model_validate(row.draft)
+    if body.explanation_fingerprint is not None and confirmed_operations is None:
+        from gramtree.ai import explanations
+
+        explanations.validate_fingerprint(
+            owner.id,
+            explanations.generation_target(request_id),
+            recipes._operations(
+                original.recipe.snapshot, recipes._validate_snapshot(session, body.snapshot)
+            ),
+            body.explanation_fingerprint,
+        )
     # Keep server-owned provenance. Edited fields get author attribution while
     # the recipe remains AI-assisted; callers cannot erase the AI origin.
     body.snapshot.cuisine = original.cuisine

@@ -5,7 +5,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gramtree_api/gramtree_api.dart';
 
 import '../../api/api_client.dart';
+import '../../auth/auth_controller.dart';
+import '../../recipes/recipe_draft.dart';
 import '../../recipes/recipe_repository.dart';
+import '../../storage/local_store.dart';
 import '../../ui_protocol/components/component_scaffold.dart';
 import '../../ui_protocol/intent_dispatcher.dart';
 import '../../ui_protocol/recipe_operations.dart';
@@ -52,6 +55,7 @@ class _TextEditPanelState extends ConsumerState<TextEditPanel>
   ModificationPreview? _confirmingPreview;
   String? _error;
   String? _requestId;
+  bool _failedRequest = false;
   bool _busy = false;
   bool _checking = false;
   bool _checksDirty = false;
@@ -60,14 +64,88 @@ class _TextEditPanelState extends ConsumerState<TextEditPanel>
   int _pendingChoices = 0;
   Future<void> _choiceDispatch = Future<void>.value();
   Timer? _editTimer;
+  late final RecipeDraftStore _draftStore;
+  late final String _accountId;
 
+  String get _recipeKey =>
+      widget.recipeId ?? 'ai-${widget.generationRequestId}';
   RecipeRepository get _repo => ref.read(recipeRepositoryProvider);
 
   @override
   void initState() {
     super.initState();
+    _draftStore = RecipeDraftStore(ref.read(localStoreProvider));
+    _accountId = ref.read(authProvider).value?.id ?? 'anonymous';
+    _restore();
     unawaited(_loadStatus());
+    if (_checksDirty) unawaited(_checkSelection());
   }
+
+  void _restore() {
+    final draft = _draftStore.readModification(
+      recipeKey: _recipeKey,
+      accountId: _accountId,
+      baselineVersionId: widget.baseVersionId,
+    );
+    if (draft == null) return;
+    try {
+      final payload = draft.payload;
+      final preview = payload['preview'] == null
+          ? null
+          : ModificationPreview.fromJson(
+              Map<String, dynamic>.from(payload['preview'] as Map),
+            );
+      final choices = [
+        for (final value in payload['choices'] as List)
+          ModificationDecision.fromJson(
+            Map<String, dynamic>.from(value as Map),
+          ),
+      ];
+      _text.text = payload['text'] as String;
+      _requestId = payload['request_id'] as String?;
+      _failedRequest = payload['failed_request'] == true;
+      _preview = preview;
+      for (final choice in choices) {
+        _choices[choice.operationId] = choice;
+      }
+      // Cached checks are evidence to show again, never permission to save.
+      // Replay the exact local decisions through server-owned checks first.
+      _checksDirty = preview != null;
+    } catch (_) {
+      // Old form drafts and malformed modification drafts cannot grant a save.
+      _preview = null;
+      _choices.clear();
+    }
+  }
+
+  Future<void> _persist() => _draftStore.saveModification(
+    recipeKey: _recipeKey,
+    accountId: _accountId,
+    baselineVersionId: widget.baseVersionId,
+    payload: {
+      'text': _text.text,
+      'request_id': _requestId,
+      'failed_request': _failedRequest,
+      'preview': _preview?.toJson(),
+      'choices': [for (final choice in _choices.values) choice.toJson()],
+    },
+  );
+
+  void _persistLater() {
+    unawaited(
+      _persist().catchError((Object error) {
+        if (mounted) {
+          setState(() => _error = '本机草稿保存失败，请保留当前页面并重试。');
+        }
+      }),
+    );
+  }
+
+  Future<void> _discard() => _draftStore.discardModification(
+    recipeKey: _recipeKey,
+    accountId: _accountId,
+    baselineVersionId: widget.baseVersionId,
+  );
 
   @override
   void didUpdateWidget(TextEditPanel oldWidget) {
@@ -75,10 +153,10 @@ class _TextEditPanelState extends ConsumerState<TextEditPanel>
     if (widget.manualEdits && !oldWidget.manualEdits) {
       // A proposal targets an immutable baseline, not subsequent form edits.
       _targetRevision++;
-      _preview = null;
-      _choices.clear();
       _editTimer?.cancel();
-      _checksDirty = false;
+      // Keep the user's decisions recoverable, but never apply an immutable
+      // baseline proposal on top of unrelated unsaved form changes.
+      _checksDirty = _preview != null;
     }
   }
 
@@ -110,32 +188,41 @@ class _TextEditPanelState extends ConsumerState<TextEditPanel>
     setState(() {
       _busy = true;
       _error = null;
-      _preview = null;
-      _choices.clear();
-      _checksDirty = false;
     });
     try {
       _requestId ??= newUuidV4();
+      await _persist();
       final preview = await _repo.proposeModification(
-        ModificationInput(
-          requestId: _requestId,
-          text: text.trim(),
-          recipeId: widget.recipeId,
-          baseVersionId: widget.baseVersionId,
-          generationRequestId: widget.generationRequestId,
-        ),
+        ModificationInput.fromJson({
+          'request_id': _requestId,
+          'text': text.trim(),
+          'recipe_id': widget.recipeId,
+          'base_version_id': widget.baseVersionId,
+          'generation_request_id': widget.generationRequestId,
+          'retry_failed': _failedRequest,
+        }),
       );
-      if (!mounted) return;
-      setState(() => _status = preview.status);
-      if (targetRevision != _targetRevision) return;
+      if (!mounted || targetRevision != _targetRevision) return;
       setState(() {
-        _preview = preview;
+        _status = preview.status;
         _error = preview.error == null ? null : _reason(preview.error);
-        _requestId = null;
+        _failedRequest = preview.error != null;
+        // A failed later request must not erase the last usable checked result.
+        if (preview.error == null) {
+          _preview = preview;
+          _choices.clear();
+          _checksDirty = false;
+          _requestId = null;
+        }
       });
+      _persistLater();
     } catch (error) {
       if (mounted && targetRevision == _targetRevision) {
-        setState(() => _error = ApiFailure.from(error).message);
+        setState(() {
+          _error = ApiFailure.from(error).message;
+          _failedRequest = true;
+        });
+        _persistLater();
       }
     } finally {
       if (mounted) setState(() => _busy = false);
@@ -161,6 +248,7 @@ class _TextEditPanelState extends ConsumerState<TextEditPanel>
       _checksDirty = true;
       _error = null;
     });
+    _persistLater();
     _editTimer?.cancel();
     // Serialize checks so a slow old request cannot overwrite a newer selection.
     _editTimer = Timer(const Duration(milliseconds: 250), () {
@@ -176,6 +264,8 @@ class _TextEditPanelState extends ConsumerState<TextEditPanel>
     try {
       while (mounted && targetRevision == _targetRevision && _checksDirty) {
         final revision = _selectionRevision;
+        await _persist();
+        if (!mounted || targetRevision != _targetRevision) return;
         final result = await _repo.decideModification(
           id,
           _choices.values.toList(),
@@ -199,6 +289,7 @@ class _TextEditPanelState extends ConsumerState<TextEditPanel>
             }
           }
         });
+        _persistLater();
       }
     } catch (error) {
       if (mounted && targetRevision == _targetRevision) {
@@ -238,27 +329,40 @@ class _TextEditPanelState extends ConsumerState<TextEditPanel>
       return;
     }
     try {
+      await _persist();
       final detail = await _repo.confirmModification(
         preview.id,
         preview.revision,
       );
       if (!mounted) return;
+      await _discard();
       await widget.onSaved(detail);
     } catch (error) {
       if (mounted) setState(() => _error = ApiFailure.from(error).message);
     }
   }
 
-  void _cancel() {
+  Future<void> _cancel() async {
+    await _discard();
+    if (!mounted) return;
     _targetRevision++;
     _editTimer?.cancel();
     setState(() {
       _preview = null;
       _choices.clear();
       _checksDirty = false;
+      _requestId = null;
+      _failedRequest = false;
+      _text.clear();
       _error = null;
     });
   }
+
+  bool get _canRequest =>
+      _status?.available == true ||
+      (_failedRequest &&
+          _requestId != null &&
+          _status?.reason != 'monthly_budget');
 
   Future<void> _dispatch(
     BuildContext context,
@@ -353,8 +457,8 @@ class _TextEditPanelState extends ConsumerState<TextEditPanel>
             key: ValueKey('text-edit-why-${operation.operationId}'),
             sourceType: sourceTypeAiEstimated,
             componentId: 'text-edit-${operation.operationId}',
-            value: operation.after ?? '无',
-            originalValue: operation.before,
+            value: (operation.after ?? '无').toString(),
+            originalValue: operation.before?.toString(),
             basisText: evidence,
             required: false,
             feedbackEnabled: false,
@@ -405,7 +509,7 @@ class _TextEditPanelState extends ConsumerState<TextEditPanel>
           if (choice?.decision.value == 'modify')
             TextFormField(
               key: ValueKey('text-edit-after-${operation.operationId}'),
-              initialValue: choice?.after ?? operation.after ?? '',
+              initialValue: (choice?.after ?? operation.after ?? '').toString(),
               enabled: !_busy && !widget.manualEdits,
               maxLength: 4000,
               minLines: 1,
@@ -472,11 +576,14 @@ class _TextEditPanelState extends ConsumerState<TextEditPanel>
               maxLines: 4,
               decoration: const InputDecoration(labelText: '想改哪段文字？'),
               onChanged: (_) {
-                _requestId = null;
-                _cancel();
+                setState(() {
+                  _requestId = null;
+                  _failedRequest = false;
+                });
+                _persistLater();
               },
               onSubmitted: (text) {
-                if (_status?.available == true) {
+                if (_canRequest) {
                   unawaited(
                     _dispatch(context, {
                       'operation': 'text_preview',
@@ -493,7 +600,7 @@ class _TextEditPanelState extends ConsumerState<TextEditPanel>
                       _checking ||
                       _pendingChoices > 0 ||
                       widget.manualEdits ||
-                      _status?.available != true ||
+                      !_canRequest ||
                       _text.text.trim().isEmpty
                   ? null
                   : () => _dispatch(context, {

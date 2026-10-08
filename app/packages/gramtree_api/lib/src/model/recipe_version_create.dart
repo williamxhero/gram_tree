@@ -27,6 +27,8 @@ class RecipeVersionCreate {
 
     this.expectedCurrentVersionId,
 
+    this.explanationFingerprint,
+
     this.imageIds,
 
     required this.snapshot,
@@ -59,6 +61,13 @@ class RecipeVersionCreate {
   )
   final String? expectedCurrentVersionId;
 
+  @JsonKey(
+    name: r'explanation_fingerprint',
+    required: false,
+    includeIfNull: false,
+  )
+  final String? explanationFingerprint;
+
   @JsonKey(name: r'image_ids', required: false, includeIfNull: false)
   final List<String>? imageIds;
 
@@ -73,6 +82,7 @@ class RecipeVersionCreate {
           other.baseVersionId == baseVersionId &&
           other.changeNote == changeNote &&
           other.expectedCurrentVersionId == expectedCurrentVersionId &&
+          other.explanationFingerprint == explanationFingerprint &&
           other.imageIds == imageIds &&
           other.snapshot == snapshot;
 
@@ -84,6 +94,7 @@ class RecipeVersionCreate {
       (expectedCurrentVersionId == null
           ? 0
           : expectedCurrentVersionId.hashCode) +
+      (explanationFingerprint == null ? 0 : explanationFingerprint.hashCode) +
       imageIds.hashCode +
       snapshot.hashCode;
 

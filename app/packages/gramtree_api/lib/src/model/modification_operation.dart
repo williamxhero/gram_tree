@@ -44,10 +44,10 @@ class ModificationOperation {
   });
 
   @JsonKey(name: r'after', required: true, includeIfNull: true)
-  final String? after;
+  final Object? after;
 
   @JsonKey(name: r'before', required: true, includeIfNull: true)
-  final String? before;
+  final Object? before;
 
   // minimum: 0.0
   // maximum: 1.0
@@ -127,6 +127,10 @@ class ModificationOperation {
 enum ModificationOperationTypeEnum {
   @JsonValue(r'change_step_field')
   changeStepField(r'change_step_field'),
+  @JsonValue(r'change_step_duration')
+  changeStepDuration(r'change_step_duration'),
+  @JsonValue(r'change_step_heat')
+  changeStepHeat(r'change_step_heat'),
   @JsonValue(r'change_preparation')
   changePreparation(r'change_preparation'),
   @JsonValue(r'change_display_name')
