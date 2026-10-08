@@ -60,7 +60,9 @@ def refresh_authorization(session: Session, profile: TasteProfile, now: datetime
     # Server receipt is a revocation barrier: late offline grants dated before it
     # cannot revive consent. Same-time withdrawal always wins. Future grants are
     # stored for compatibility but permanently ineligible (not activated by time).
-    barrier = max((max(r.occurred_at, r.received_at) for r in withdrawals), default=None)
+    # Receipt is authoritative for withdrawal, even if a device clock is in the
+    # future. Never let an uploaded timestamp poison all later genuine grants.
+    barrier = max((r.received_at for r in withdrawals), default=None)
     grants = [r for r in records if (
         r.action == "agree" and r.version == CONSENT_VERSION
         and r.occurred_at <= r.received_at and r.occurred_at <= now
