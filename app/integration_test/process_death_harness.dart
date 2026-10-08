@@ -17,12 +17,14 @@ import 'package:gram_tree/auth/auth_controller.dart';
 import 'package:gram_tree/auth/session.dart';
 import 'package:gram_tree/config/app_config.dart';
 import 'package:gram_tree/events/event_queue.dart';
+import 'package:gram_tree/features_flags/features.dart';
 import 'package:gram_tree/network/reachability.dart';
 import 'package:gram_tree/privacy/consent.dart';
 import 'package:gram_tree/recipes/recipe_snapshot.dart';
 import 'package:gram_tree/recipes/recipe_snapshot_provider.dart';
 import 'package:gram_tree/storage/device_id.dart';
 import 'package:gram_tree/storage/local_store.dart';
+import 'package:gram_tree/ui_protocol/composition_provider.dart';
 import 'package:gram_tree/ui_protocol/source_mark.dart';
 import 'package:gramtree_api/gramtree_api.dart' show TokenPair;
 import 'package:integration_test/integration_test.dart';
@@ -379,6 +381,20 @@ Future<void> _restore(
   );
   _marker('RESTORE_DURABLE');
 
+  // This standalone APK uses the server/default 800ms budget, not the ordinary
+  // suite's compile-time override. Restored config must not change that dependency
+  // from its loading default and start a second composition generation.
+  final cachedConfig = container
+      .read(localStoreProvider)
+      .getString('client_config:conversion:v1');
+  final cachedParams = cachedConfig == null
+      ? const <String, dynamic>{}
+      : (jsonDecode(cachedConfig) as Map)['params'] as Map;
+  expect(
+    cachedParams['ui.composition_timeout_ms'] ?? defaultCompositionTimeoutMs,
+    defaultCompositionTimeoutMs,
+  );
+
   container.read(offlineSimulationProvider.notifier).set(true);
   await container.read(authProvider.future);
   container.read(routerProvider).go(path);
@@ -428,20 +444,107 @@ Future<void> _restore(
   );
   _marker('RESTORE_OFFLINE');
 
+  // Mounting the real offline safety UI records one new fallback observation.
+  // Its producer awaits durable enqueue before completing. Fence the already
+  // mounted composition and config, never start a synthetic recorder/fetch here.
+  final compositionProvider = recipeCompositionProvider((
+    pageType: 'recipe_detail',
+    recipeId: parts[2],
+    versionId: parts[4],
+  ));
+  List<QueueEntry> preReplay = [];
+  await _until(tester, () async {
+    if (!container.exists(compositionProvider)) return false;
+    final config = container.read(clientConfigProvider);
+    final composition = container.read(compositionProvider);
+    if (config.isLoading ||
+        !config.hasValue ||
+        composition.isLoading ||
+        !composition.hasValue) {
+      return false;
+    }
+    preReplay = await queue.entries(ownerId: owner);
+    return preReplay.every((e) => e.state != WriteState.uploading) &&
+        identical(config, container.read(clientConfigProvider)) &&
+        identical(composition, container.read(compositionProvider));
+  }, reason: 'offline-mounted composition durably completed');
+  expect(
+    container.read(compositionTimeoutMsProvider),
+    defaultCompositionTimeoutMs,
+  );
+  expect(container.read(compositionProvider).value, isA<CompositionFailed>());
+  final restoredIds = restored.map((e) => e.write.id).toSet();
+  final fresh = preReplay
+      .where((e) => !restoredIds.contains(e.write.id))
+      .toList();
+  expect(preReplay.length, restored.length + 1);
+  expect(fresh, hasLength(1));
+  final compositionObservation = fresh.single;
+  final write = compositionObservation.write;
+  expect(
+    RegExp(
+      r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-4[0-9a-fA-F]{3}-[89aAbB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$',
+    ).hasMatch(write.id),
+    isTrue,
+  );
+  expect(container.read(sessionStoreProvider).current!.user.id, owner);
+  expect(write.ownerId, owner);
+  expect(write.deviceId, container.read(deviceIdProvider));
+  expect(write.deviceId, manifest['device']);
+  expect(write.writeType, 'experience.event');
+  expect(write.typeVersion, 1);
+  expect(write.eventType, 'ui.composition_shown');
+  expect(write.payload['correlation'], <String, dynamic>{});
+  expect(write.dependencies, isEmpty);
+  expect(write.content, {
+    'page_type': 'recipe_detail',
+    'components': <dynamic>[],
+    'is_fallback': true,
+    'fallback_reason': 'server_error',
+  });
+  expect(
+    restored.every((e) => compositionObservation.sequence > e.sequence),
+    isTrue,
+  );
+  expect(compositionObservation.state, WriteState.pending);
+  expect(compositionObservation.result, isNull);
+  expect(compositionObservation.businessRecord, isNull);
+  expect(compositionObservation.confirmedAt, isNull);
+  for (final before in restored) {
+    final current = preReplay.singleWhere((e) => e.write.id == before.write.id);
+    expect(current.write.toJson(), before.write.toJson());
+    expect(current.sequence, before.sequence);
+    expect(current.businessRecord, before.businessRecord);
+    expect(current.result, before.result);
+    expect(current.confirmedAt, before.confirmedAt);
+  }
+  _diagnostic(
+    'Offline-mounted observation count=${fresh.length} '
+    'type=${write.eventType} state=${compositionObservation.state.name}',
+  );
+
   // ONLY the existing root listener receives this network-regain seam. No
   // uploader, manual retry, recorder, or reconstructed write is invoked here.
+  // The complete baseline includes the strictly validated new observation.
   container.read(offlineSimulationProvider.notifier).set(false);
   final ids = List<String>.from(manifest['write_ids'] as List);
   await _until(tester, () async {
     final entries = await queue.entries(ownerId: owner);
     return ids.every(
-      (id) => entries.any(
-        (e) => e.write.id == id && e.state == WriteState.confirmed,
-      ),
-    );
+          (id) => entries.any(
+            (e) => e.write.id == id && e.state == WriteState.confirmed,
+          ),
+        ) &&
+        preReplay.every(
+          (before) => entries.any(
+            (e) =>
+                e.write.id == before.write.id &&
+                e.state == WriteState.confirmed,
+          ),
+        );
   }, reason: 'root-triggered automatic replay');
   final after = await queue.entries(ownerId: owner);
-  expect(after.length, restored.length);
+  expect(after.length, preReplay.length);
   for (final before in restored) {
     final now = after.singleWhere((e) => e.write.id == before.write.id);
     expect(now.write.toJson(), before.write.toJson());
@@ -450,6 +553,19 @@ Future<void> _restore(
     expect(now.state, WriteState.confirmed);
     expect(now.result, isNotNull);
     expect(now.confirmedAt, isNotNull);
+  }
+  for (final before in preReplay) {
+    final now = after.singleWhere((e) => e.write.id == before.write.id);
+    expect(now.write.toJson(), before.write.toJson());
+    expect(now.sequence, before.sequence);
+    expect(now.businessRecord, before.businessRecord);
+    expect(now.state, WriteState.confirmed);
+    expect(now.result, isNotNull);
+    expect(now.confirmedAt, isNotNull);
+    if (before.state == WriteState.confirmed) {
+      expect(now.result, before.result);
+      expect(now.confirmedAt, before.confirmedAt);
+    }
   }
   final expectedCount = (manifest['baseline'] as int) + ids.length;
   expect(
