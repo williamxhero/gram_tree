@@ -37,7 +37,13 @@ ITEMS: tuple[ConfigItem, ...] = (
     ConfigItem(
         "ai.routes",
         "json",
-        {"intent": "small", "generate": "large", "normalize": "small", "embedding": "vector"},
+        {
+            "intent": "small",
+            "generate": "large",
+            "normalize": "small",
+            "embedding": "vector",
+            "batch_advice": "small",
+        },
         "能力到模型档位的路由",
     ),
     ConfigItem(
@@ -58,6 +64,7 @@ ITEMS: tuple[ConfigItem, ...] = (
             "generate": {"timeout": 60, "retries": 1, "daily_limit": 50},
             "normalize": {"timeout": 15, "retries": 0, "daily_limit": 100},
             "embedding": {"timeout": 15, "retries": 1, "daily_limit": 500},
+            "batch_advice": {"timeout": 30, "retries": 0, "daily_limit": 50},
         },
         "每种能力的超时、重试及每日额度（可带 users 覆盖）",
     ),

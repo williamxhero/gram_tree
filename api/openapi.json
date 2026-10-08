@@ -242,6 +242,57 @@
         "title": "AttributeStatus",
         "type": "string"
       },
+      "BatchAdvice": {
+        "additionalProperties": false,
+        "properties": {
+          "basis": {
+            "maxLength": 2000,
+            "minLength": 1,
+            "pattern": "\\S",
+            "title": "Basis",
+            "type": "string"
+          },
+          "risk": {
+            "maxLength": 2000,
+            "minLength": 1,
+            "pattern": "\\S",
+            "title": "Risk",
+            "type": "string"
+          },
+          "steps": {
+            "items": {
+              "$ref": "#/components/schemas/BatchStepAdvice"
+            },
+            "maxItems": 200,
+            "minItems": 1,
+            "title": "Steps",
+            "type": "array"
+          }
+        },
+        "required": [
+          "steps",
+          "basis",
+          "risk"
+        ],
+        "title": "BatchAdvice",
+        "type": "object"
+      },
+      "BatchAdviceInput": {
+        "additionalProperties": false,
+        "properties": {
+          "target_servings": {
+            "maximum": 1000.0,
+            "minimum": 1.0,
+            "title": "Target Servings",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "target_servings"
+        ],
+        "title": "BatchAdviceInput",
+        "type": "object"
+      },
       "BatchRequest": {
         "description": "批量读取的请求体（#101）。",
         "properties": {
@@ -289,6 +340,82 @@
           "missing_ids"
         ],
         "title": "BatchResponse",
+        "type": "object"
+      },
+      "BatchStepAdvice": {
+        "additionalProperties": false,
+        "properties": {
+          "basis": {
+            "maxLength": 1000,
+            "minLength": 1,
+            "pattern": "\\S",
+            "title": "Basis",
+            "type": "string"
+          },
+          "batch_count": {
+            "maximum": 100.0,
+            "minimum": 1.0,
+            "title": "Batch Count",
+            "type": "integer"
+          },
+          "batch_guidance": {
+            "maxLength": 1000,
+            "minLength": 1,
+            "pattern": "\\S",
+            "title": "Batch Guidance",
+            "type": "string"
+          },
+          "confidence": {
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Confidence",
+            "type": "number"
+          },
+          "doneness": {
+            "maxLength": 1000,
+            "minLength": 1,
+            "pattern": "\\S",
+            "title": "Doneness",
+            "type": "string"
+          },
+          "risk": {
+            "maxLength": 1000,
+            "minLength": 1,
+            "pattern": "\\S",
+            "title": "Risk",
+            "type": "string"
+          },
+          "source": {
+            "const": "ai_estimated",
+            "title": "Source",
+            "type": "string"
+          },
+          "step_id": {
+            "maxLength": 100,
+            "minLength": 1,
+            "pattern": "\\S",
+            "title": "Step Id",
+            "type": "string"
+          },
+          "suggested_duration_seconds": {
+            "maximum": 86400.0,
+            "minimum": 1.0,
+            "title": "Suggested Duration Seconds",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "step_id",
+          "suggested_duration_seconds",
+          "batch_count",
+          "batch_guidance",
+          "doneness",
+          "basis",
+          "risk",
+          "confidence",
+          "source"
+        ],
+        "title": "BatchStepAdvice",
         "type": "object"
       },
       "BindAppleRequest": {
@@ -2988,6 +3115,66 @@
           "nickname"
         ],
         "title": "RecipeAuthor",
+        "type": "object"
+      },
+      "RecipeBatchAdviceOut": {
+        "properties": {
+          "advice": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/BatchAdvice"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "eligible": {
+            "title": "Eligible",
+            "type": "boolean"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "original_servings": {
+            "title": "Original Servings",
+            "type": "integer"
+          },
+          "recipe_id": {
+            "format": "uuid",
+            "title": "Recipe Id",
+            "type": "string"
+          },
+          "status": {
+            "$ref": "#/components/schemas/AIStatus"
+          },
+          "target_servings": {
+            "title": "Target Servings",
+            "type": "integer"
+          },
+          "version_id": {
+            "format": "uuid",
+            "title": "Version Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "recipe_id",
+          "version_id",
+          "original_servings",
+          "target_servings",
+          "eligible",
+          "status"
+        ],
+        "title": "RecipeBatchAdviceOut",
         "type": "object"
       },
       "RecipeCreate": {
@@ -9394,6 +9581,104 @@
           }
         ],
         "summary": "Get Recipe Version",
+        "tags": [
+          "recipes"
+        ]
+      }
+    },
+    "/v1/recipes/{recipe_id}/versions/{version_id}/batch-advice": {
+      "post": {
+        "operationId": "request_recipe_batch_advice",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "recipe_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Recipe Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "version_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Version Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BatchAdviceInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecipeBatchAdviceOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "服务端错误"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Request Recipe Batch Advice",
         "tags": [
           "recipes"
         ]
