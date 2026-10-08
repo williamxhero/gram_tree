@@ -9,6 +9,12 @@ import '../../recipes/personal_measure_repository.dart';
 import '../../ui_protocol/components/component_scaffold.dart';
 import '../recipes/personal_measures_page.dart';
 
+// Native Dart prints whole doubles as 12.0, while JavaScript prints 12.
+// Keep the display stable without rounding fractional calibration values.
+String _capacityText(num value) => value == value.truncateToDouble()
+    ? value.toStringAsFixed(1)
+    : value.toString();
+
 /// Read the existing account-scoped measure repository; calibration stays in its
 /// existing manager and never mutates recipe quantities.
 class PersonalMeasuresSummary extends ConsumerWidget {
@@ -37,7 +43,7 @@ class PersonalMeasuresSummary extends ConsumerWidget {
                     if (items.isEmpty) Text(l10n.personalMeasuresEmpty),
                     for (final item in items)
                       Text(
-                        '${item.name} · ${item.capacityMl} 毫升',
+                        '${item.name} · ${_capacityText(item.capacityMl)} 毫升',
                         key: ValueKey('taste-measure-${item.id}'),
                         style: GramTreeColors.of(
                           context,

@@ -119,7 +119,15 @@ void main() {
       (_) => (
         200,
         {
-          'items': [measure],
+          'items': [
+            measure,
+            {
+              ...measure,
+              'id': '77777777-7777-4777-8777-777777777777',
+              'name': '我的量杯',
+              'capacity_ml': 12.125,
+            },
+          ],
           'next_cursor': null,
         },
       ),
@@ -135,6 +143,7 @@ void main() {
     final manager = find.byKey(const ValueKey('taste-measures-manage'));
     await tester.scrollUntilVisible(manager, 450);
     expect(find.text('我的勺 · 12.0 毫升'), findsOneWidget);
+    expect(find.text('我的量杯 · 12.125 毫升'), findsOneWidget);
     await tapVisible(tester, manager);
     expect(find.byKey(const ValueKey('measure-add')), findsOneWidget);
     await tester.tap(find.text('我的勺'));
