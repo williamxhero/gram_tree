@@ -15,6 +15,7 @@ lib/src/api/ingredients_api.dart
 lib/src/api/personal_measures_api.dart
 lib/src/api/recipe_ai_api.dart
 lib/src/api/recipes_api.dart
+lib/src/api/taste_profile_api.dart
 lib/src/api/ui_protocol_api.dart
 lib/src/auth/api_key_auth.dart
 lib/src/auth/auth.dart
@@ -77,6 +78,7 @@ lib/src/model/health_response.dart
 lib/src/model/identity_out.dart
 lib/src/model/ingredient_attributes.dart
 lib/src/model/ingredient_detail.dart
+lib/src/model/local_cuisine_out.dart
 lib/src/model/measure_display_out.dart
 lib/src/model/measure_display_request.dart
 lib/src/model/merge_relation.dart
@@ -96,6 +98,7 @@ lib/src/model/nutrition_estimate.dart
 lib/src/model/one_line_input.dart
 lib/src/model/page_description.dart
 lib/src/model/page_personal_measure_out.dart
+lib/src/model/page_taste_profile_change_out.dart
 lib/src/model/page_unrecorded_ingredient_item.dart
 lib/src/model/personal_measure_input.dart
 lib/src/model/personal_measure_out.dart
@@ -162,6 +165,12 @@ lib/src/model/source_basis.dart
 lib/src/model/sourced_value.dart
 lib/src/model/storage_advice.dart
 lib/src/model/storage_attribute.dart
+lib/src/model/taste_flavor_out.dart
+lib/src/model/taste_level.dart
+lib/src/model/taste_profile_change_out.dart
+lib/src/model/taste_profile_out.dart
+lib/src/model/taste_profile_patch.dart
+lib/src/model/taste_scale.dart
 lib/src/model/text_attribute.dart
 lib/src/model/token_pair.dart
 lib/src/model/unrecorded_ingredient_item.dart

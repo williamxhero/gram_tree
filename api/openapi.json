@@ -1955,6 +1955,38 @@
         "title": "IngredientDetail",
         "type": "object"
       },
+      "LocalCuisineOut": {
+        "properties": {
+          "adjustments": {
+            "additionalProperties": {
+              "type": "number"
+            },
+            "propertyNames": {
+              "enum": [
+                "salty",
+                "sweet",
+                "sour",
+                "spicy",
+                "numbing",
+                "umami",
+                "oily"
+              ]
+            },
+            "title": "Adjustments",
+            "type": "object"
+          },
+          "cuisine": {
+            "title": "Cuisine",
+            "type": "string"
+          }
+        },
+        "required": [
+          "cuisine",
+          "adjustments"
+        ],
+        "title": "LocalCuisineOut",
+        "type": "object"
+      },
       "MeasureDisplayOut": {
         "properties": {
           "display_quantity": {
@@ -2825,6 +2857,33 @@
           "items"
         ],
         "title": "Page[PersonalMeasureOut]",
+        "type": "object"
+      },
+      "Page_TasteProfileChangeOut_": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/TasteProfileChangeOut"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Cursor"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "title": "Page[TasteProfileChangeOut]",
         "type": "object"
       },
       "Page_UnrecordedIngredientItem_": {
@@ -5894,6 +5953,228 @@
         "title": "StorageAttribute",
         "type": "object"
       },
+      "TasteFlavorOut": {
+        "properties": {
+          "coefficient": {
+            "title": "Coefficient",
+            "type": "number"
+          },
+          "confidence": {
+            "enum": [
+              "low",
+              "high"
+            ],
+            "title": "Confidence",
+            "type": "string"
+          },
+          "confidence_text": {
+            "title": "Confidence Text",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "level": {
+            "title": "Level",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "coefficient",
+          "confidence",
+          "confidence_text",
+          "level",
+          "label"
+        ],
+        "title": "TasteFlavorOut",
+        "type": "object"
+      },
+      "TasteLevel": {
+        "additionalProperties": false,
+        "properties": {
+          "coefficient": {
+            "title": "Coefficient",
+            "type": "number"
+          },
+          "label": {
+            "maxLength": 32,
+            "minLength": 1,
+            "title": "Label",
+            "type": "string"
+          }
+        },
+        "required": [
+          "coefficient",
+          "label"
+        ],
+        "title": "TasteLevel",
+        "type": "object"
+      },
+      "TasteProfileChangeOut": {
+        "properties": {
+          "created_at": {
+            "title": "Created At",
+            "type": "string"
+          },
+          "field": {
+            "title": "Field",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "new_value": {
+            "additionalProperties": true,
+            "title": "New Value",
+            "type": "object"
+          },
+          "old_value": {
+            "additionalProperties": true,
+            "title": "Old Value",
+            "type": "object"
+          },
+          "reason": {
+            "title": "Reason",
+            "type": "string"
+          },
+          "source": {
+            "const": "manual",
+            "title": "Source",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "active",
+              "reverted"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "version",
+          "field",
+          "old_value",
+          "new_value",
+          "reason",
+          "source",
+          "status",
+          "created_at"
+        ],
+        "title": "TasteProfileChangeOut",
+        "type": "object"
+      },
+      "TasteProfileOut": {
+        "properties": {
+          "flavors": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/TasteFlavorOut"
+            },
+            "title": "Flavors",
+            "type": "object"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "local_cuisines": {
+            "items": {
+              "$ref": "#/components/schemas/LocalCuisineOut"
+            },
+            "title": "Local Cuisines",
+            "type": "array"
+          },
+          "scale": {
+            "$ref": "#/components/schemas/TasteScale"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "version",
+          "flavors",
+          "scale",
+          "local_cuisines"
+        ],
+        "title": "TasteProfileOut",
+        "type": "object"
+      },
+      "TasteProfilePatch": {
+        "additionalProperties": false,
+        "properties": {
+          "flavors": {
+            "additionalProperties": {
+              "type": "number"
+            },
+            "maxProperties": 7,
+            "minProperties": 1,
+            "propertyNames": {
+              "enum": [
+                "salty",
+                "sweet",
+                "sour",
+                "spicy",
+                "numbing",
+                "umami",
+                "oily"
+              ]
+            },
+            "title": "Flavors",
+            "type": "object"
+          }
+        },
+        "required": [
+          "flavors"
+        ],
+        "title": "TasteProfilePatch",
+        "type": "object"
+      },
+      "TasteScale": {
+        "additionalProperties": false,
+        "properties": {
+          "default": {
+            "title": "Default",
+            "type": "number"
+          },
+          "levels": {
+            "items": {
+              "$ref": "#/components/schemas/TasteLevel"
+            },
+            "maxItems": 5,
+            "minItems": 5,
+            "title": "Levels",
+            "type": "array"
+          },
+          "maximum": {
+            "title": "Maximum",
+            "type": "number"
+          },
+          "minimum": {
+            "title": "Minimum",
+            "type": "number"
+          }
+        },
+        "required": [
+          "minimum",
+          "maximum",
+          "default",
+          "levels"
+        ],
+        "title": "TasteScale",
+        "type": "object"
+      },
       "TextAttribute": {
         "additionalProperties": false,
         "description": "取值为登记值之一的属性（缩放方式、基础单位、超市分区）。",
@@ -8750,6 +9031,439 @@
         "summary": "Update Personal Measure",
         "tags": [
           "personal-measures"
+        ]
+      }
+    },
+    "/v1/me/taste-profile": {
+      "get": {
+        "operationId": "get_taste_profile",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TasteProfileOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "参数错误"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "服务端错误"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Taste Profile",
+        "tags": [
+          "taste-profile"
+        ]
+      },
+      "patch": {
+        "operationId": "update_taste_profile",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TasteProfilePatch"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TasteProfileOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "参数错误"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "服务端错误"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Update Taste Profile",
+        "tags": [
+          "taste-profile"
+        ]
+      }
+    },
+    "/v1/me/taste-profile/changes": {
+      "get": {
+        "operationId": "list_taste_profile_changes",
+        "parameters": [
+          {
+            "description": "上一页返回的 next_cursor",
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "上一页返回的 next_cursor",
+              "title": "Cursor"
+            }
+          },
+          {
+            "description": "每页条数，上限见配置项 api.page_size_max",
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "description": "每页条数，上限见配置项 api.page_size_max",
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page_TasteProfileChangeOut_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "参数错误"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "服务端错误"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Taste Profile Changes",
+        "tags": [
+          "taste-profile"
+        ]
+      }
+    },
+    "/v1/me/taste-profile/changes/{change_id}": {
+      "get": {
+        "operationId": "get_taste_profile_change",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "change_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Change Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TasteProfileChangeOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "参数错误"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "服务端错误"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Taste Profile Change",
+        "tags": [
+          "taste-profile"
+        ]
+      }
+    },
+    "/v1/me/taste-profile/reset": {
+      "post": {
+        "operationId": "reset_taste_profile",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TasteProfileOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "参数错误"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "服务端错误"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Reset Taste Profile",
+        "tags": [
+          "taste-profile"
         ]
       }
     },

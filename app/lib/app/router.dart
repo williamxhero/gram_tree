@@ -14,6 +14,7 @@ import '../features/me/document_page.dart';
 import '../features/me/identities_page.dart';
 import '../features/me/me_page.dart';
 import '../features/me/settings_page.dart';
+import '../features/me/taste_profile_page.dart';
 import '../features/me/withdraw_page.dart';
 import '../features/onboarding/consent_page.dart';
 import '../features/recipes/personal_measures_page.dart';
@@ -96,6 +97,10 @@ final routerProvider = Provider<GoRouter>((ref) {
           _branch(TabPaths.records, const RecordsPage()),
           _branch(TabPaths.me, const MePage()),
         ],
+      ),
+      GoRoute(
+        path: TasteProfilePage.path,
+        builder: (_, _) => const TasteProfilePage(),
       ),
       GoRoute(
         path: PersonalMeasuresPage.path,
