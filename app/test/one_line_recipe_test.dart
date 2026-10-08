@@ -1,6 +1,10 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gramtree_api/gramtree_api.dart';
+import 'package:gram_tree/events/event_queue.dart';
+import 'package:gram_tree/events/fake_event_queue.dart';
 
 import 'helpers.dart';
 
@@ -239,7 +243,7 @@ void _installModificationApi(
     },
     'status': status.toJson(),
     'warnings': [],
-    if (error != null) 'error': error,
+    'error': ?error,
   }).toJson();
   env.server.on(
     'POST',
@@ -360,7 +364,108 @@ Future<void> _open(WidgetTester tester, TestEnv env) async {
   await _tap(tester, 'one-line-search');
 }
 
+/// Simulates slow device persistence at the storage boundary, not an intent stub.
+class _SlowLocalEvents extends FakeEventQueue {
+  Completer<void>? write;
+
+  @override
+  Future<void> enqueue(QueuedEvent event) async {
+    await write?.future;
+    await super.enqueue(event);
+  }
+}
+
 void main() {
+  testWidgets('依赖上游待处理时明确提示，先处理上游才可接受依赖项', (tester) async {
+    final env = _env();
+    await _open(tester, env);
+    await _tap(tester, 'ai-design-new');
+    await _tap(tester, 'ai-skip-questions');
+    await _preview(tester);
+    await _reveal(tester, 'text-edit-accept-remind-cook');
+    expect(
+      tester
+          .widget<OutlinedButton>(
+            find.byKey(const ValueKey('text-edit-accept-remind-cook')),
+          )
+          .onPressed,
+      isNull,
+    );
+    expect(find.text('上游操作尚待处理：clarify-cook；请先处理依赖。'), findsOneWidget);
+    expect(
+      tester
+          .widget<OutlinedButton>(
+            find.byKey(const ValueKey('text-edit-reject-remind-cook')),
+          )
+          .onPressed,
+      isNotNull,
+      reason: '拒绝无需先接受依赖',
+    );
+    await _choose(tester, 'text-edit-accept-clarify-cook');
+    await _reveal(tester, 'text-edit-accept-remind-cook');
+    expect(
+      tester
+          .widget<OutlinedButton>(
+            find.byKey(const ValueKey('text-edit-accept-remind-cook')),
+          )
+          .onPressed,
+      isNotNull,
+    );
+  });
+
+  testWidgets('后值一改就关闭确认，不等待本机事件写入才失效旧检查', (tester) async {
+    final original = _env();
+    final queue = _SlowLocalEvents();
+    final env = TestEnv(
+      server: original.server,
+      local: original.local,
+      secure: original.secure,
+      eventQueue: queue,
+    );
+    await _open(tester, env);
+    await _tap(tester, 'ai-design-new');
+    await _tap(tester, 'ai-skip-questions');
+    await _preview(tester);
+    await _choose(tester, 'text-edit-modify-clarify-cook');
+    await _choose(tester, 'text-edit-reject-remind-cook');
+    await _choose(tester, 'text-edit-reject-explain-cook');
+    await _reveal(tester, 'text-edit-after-clarify-cook');
+    expect(
+      tester
+          .widget<FilledButton>(find.byKey(const ValueKey('text-edit-confirm')))
+          .onPressed,
+      isNotNull,
+    );
+    final write = Completer<void>();
+    queue.write = write;
+    addTearDown(() {
+      if (!write.isCompleted) write.complete();
+    });
+    await tester.enterText(
+      find.byKey(const ValueKey('text-edit-after-clarify-cook')),
+      '包治百病',
+    );
+    await tester.pump();
+    expect(
+      tester
+          .widget<FilledButton>(find.byKey(const ValueKey('text-edit-confirm')))
+          .onPressed,
+      isNull,
+      reason: '可见后值已改变，即使本机事件存储仍在等待',
+    );
+    write.complete();
+    await tester.pump(const Duration(milliseconds: 300));
+    await tester.pumpAndSettle();
+    await _reveal(tester, 'text-edit-confirm');
+    expect(
+      tester
+          .widget<FilledButton>(find.byKey(const ValueKey('text-edit-confirm')))
+          .onPressed,
+      isNull,
+      reason: '新的安全检查不能允许宣称包治百病',
+    );
+  });
+
   testWidgets('生成结果逐条处理才确认，编辑后更新安全检查，保存后能查看', (tester) async {
     final env = _env();
     await _open(tester, env);

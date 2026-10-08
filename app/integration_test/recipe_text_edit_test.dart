@@ -7,7 +7,7 @@ import 'package:integration_test/integration_test.dart';
 
 const _request = '想做一道小朋友能吃的、不辣的宫保鸡丁';
 const _edit = '把步骤说明写清楚，不改食材和用量';
-const _original = '中火炒熟鸡肉，中心达到 74°C';
+const _original = '中火炒鸡腿肉并加入盐，用食品温度计检查鸡肉中心温度达到 74°C';
 const _clarified = '中火翻炒鸡肉，直到中心达到 74°C，盛出。';
 const _manualWhy = '确认中心达到 74°C 后盛出，避免加热不足。';
 
@@ -182,7 +182,7 @@ void main() {
       await preview(tester);
       await tap(tester, 'text-edit-why-clarify-cook');
       expect(find.textContaining(_original), findsWidgets);
-      expect(find.textContaining('仍需实际做过验证'), findsWidgets);
+      expect(find.textContaining('需确认中心温度'), findsWidgets);
       expect(find.text('以后别这样'), findsNothing);
       await tester.tapAt(const Offset(10, 10));
       await tester.pumpAndSettle();

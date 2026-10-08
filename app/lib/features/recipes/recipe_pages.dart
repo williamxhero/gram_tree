@@ -903,7 +903,7 @@ class _RecipeEditorPageState extends ConsumerState<RecipeEditorPage> {
                 },
                 onSaved: (detail) async {
                   await _discardDraft();
-                  if (mounted) {
+                  if (context.mounted) {
                     context.pushReplacement('/recipes/${detail.id}');
                   }
                 },

@@ -50,6 +50,7 @@ class _TextEditPanelState extends ConsumerState<TextEditPanel> {
   bool _checksDirty = false;
   int _selectionRevision = 0;
   int _targetRevision = 0;
+  int _pendingChoices = 0;
   Timer? _editTimer;
 
   RecipeRepository get _repo => ref.read(recipeRepositoryProvider);
@@ -128,8 +129,9 @@ class _TextEditPanelState extends ConsumerState<TextEditPanel> {
     final id = params['operation_id'] as String;
     if (!(preview.operations ?? const <ModificationOperation>[]).any(
       (operation) => operation.operationId == id,
-    ))
+    )) {
       return;
+    }
     setState(() {
       _choices[id] = ModificationDecision.fromJson({
         'operation_id': id,
@@ -203,6 +205,7 @@ class _TextEditPanelState extends ConsumerState<TextEditPanel> {
             )) &&
         !_busy &&
         !_checking &&
+        _pendingChoices == 0 &&
         !_checksDirty &&
         !widget.manualEdits;
   }
@@ -243,8 +246,18 @@ class _TextEditPanelState extends ConsumerState<TextEditPanel> {
     });
   }
 
-  Future<void> _dispatch(BuildContext context, Map<String, dynamic> params) =>
-      ref
+  Future<void> _dispatch(
+    BuildContext context,
+    Map<String, dynamic> params,
+  ) async {
+    final choosing = params['operation'] == 'text_choose';
+    if (choosing) {
+      // Visible edits invalidate confirmation before the dispatcher awaits local
+      // event persistence. Slow storage must not leave the old check usable.
+      setState(() => _pendingChoices++);
+    }
+    try {
+      await ref
           .read(intentDispatcherProvider)
           .dispatch(
             context,
@@ -255,12 +268,19 @@ class _TextEditPanelState extends ConsumerState<TextEditPanel> {
               params: params,
             ),
           );
+    } finally {
+      if (choosing && mounted) setState(() => _pendingChoices--);
+    }
+  }
 
   Widget _operation(BuildContext context, ModificationOperation operation) {
     final choice = _choices[operation.operationId];
     final returned = (_preview!.decisions ?? const <ModificationDecisionOut>[])
         .where((decision) => decision.operationId == operation.operationId)
         .firstOrNull;
+    final pendingDependencies = (operation.dependsOn ?? const <String>[])
+        .where((id) => !_choices.containsKey(id))
+        .toList();
     final evidence =
         '${operation.reason}\n风险：${operation.risk}\n把握程度：${(operation.confidence * 100).round()}%\n依赖操作：${operation.dependsOn?.isNotEmpty == true ? operation.dependsOn!.join('、') : '无'}';
     return ComponentCard(
@@ -302,6 +322,8 @@ class _TextEditPanelState extends ConsumerState<TextEditPanel> {
               _ => '待处理',
             }}',
           ),
+          if (pendingDependencies.isNotEmpty)
+            Text('上游操作尚待处理：${pendingDependencies.join('、')}；请先处理依赖。'),
           if (returned?.blockedBy?.isNotEmpty == true)
             Text('依赖被拒绝，已默认拒绝：${returned!.blockedBy!.join('、')}'),
           Wrap(
@@ -310,7 +332,13 @@ class _TextEditPanelState extends ConsumerState<TextEditPanel> {
               for (final decision in ['accept', 'reject', 'modify'])
                 OutlinedButton(
                   key: ValueKey('text-edit-$decision-${operation.operationId}'),
-                  onPressed: _busy || _checking || widget.manualEdits
+                  onPressed:
+                      _busy ||
+                          _checking ||
+                          widget.manualEdits ||
+                          (decision != 'reject' &&
+                              (pendingDependencies.isNotEmpty ||
+                                  returned?.blockedBy?.isNotEmpty == true))
                       ? null
                       : () => _dispatch(context, {
                           'operation': 'text_choose',
@@ -427,7 +455,7 @@ class _TextEditPanelState extends ConsumerState<TextEditPanel> {
                 in _preview!.operations ?? const <ModificationOperation>[])
               _operation(context, operation),
             const Text('实际待确认结果 · 仅包含已接受或修改的操作；待处理不会应用。'),
-            if (_checksDirty || _checking)
+            if (_checksDirty || _checking || _pendingChoices > 0)
               const Text('选择或后值已改变，正在更新检查。旧检查不可用于确认。')
             else ...[
               for (final step
