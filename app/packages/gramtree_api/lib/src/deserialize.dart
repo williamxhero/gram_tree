@@ -1,6 +1,9 @@
 import 'package:gramtree_api/src/model/ai_status.dart';
 import 'package:gramtree_api/src/model/action_descriptor.dart';
 import 'package:gramtree_api/src/model/allergens_attribute.dart';
+import 'package:gramtree_api/src/model/allergies_out.dart';
+import 'package:gramtree_api/src/model/allergies_write.dart';
+import 'package:gramtree_api/src/model/allergy_ingredient_out.dart';
 import 'package:gramtree_api/src/model/analytics_event_in.dart';
 import 'package:gramtree_api/src/model/analytics_upload_request.dart';
 import 'package:gramtree_api/src/model/apple_login_request.dart';
@@ -187,6 +190,14 @@ ReturnType deserialize<ReturnType, BaseType>(
           as ReturnType;
     case 'AllergensAttribute':
       return AllergensAttribute.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'AllergiesOut':
+      return AllergiesOut.fromJson(value as Map<String, dynamic>) as ReturnType;
+    case 'AllergiesWrite':
+      return AllergiesWrite.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'AllergyIngredientOut':
+      return AllergyIngredientOut.fromJson(value as Map<String, dynamic>)
           as ReturnType;
     case 'AnalyticsEventIn':
       return AnalyticsEventIn.fromJson(value as Map<String, dynamic>)

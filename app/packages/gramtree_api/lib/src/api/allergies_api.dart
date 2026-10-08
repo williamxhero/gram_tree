@@ -9,20 +9,18 @@ import 'dart:convert';
 import 'package:gramtree_api/src/deserialize.dart';
 import 'package:dio/dio.dart';
 
-import 'package:gramtree_api/src/model/cooking_constraints.dart';
-import 'package:gramtree_api/src/model/cooking_constraints_out.dart';
+import 'package:gramtree_api/src/model/allergies_out.dart';
+import 'package:gramtree_api/src/model/allergies_write.dart';
 import 'package:gramtree_api/src/model/error_response.dart';
 import 'package:gramtree_api/src/model/page_taste_profile_change_out.dart';
 import 'package:gramtree_api/src/model/taste_profile_change_out.dart';
-import 'package:gramtree_api/src/model/taste_profile_out.dart';
-import 'package:gramtree_api/src/model/taste_profile_patch.dart';
 
-class TasteProfileApi {
+class AllergiesApi {
   final Dio _dio;
 
-  const TasteProfileApi(this._dio);
+  const AllergiesApi(this._dio);
 
-  /// Get Cooking Constraints
+  /// Get Allergies
   ///
   ///
   /// Parameters:
@@ -33,9 +31,9 @@ class TasteProfileApi {
   /// * [onSendProgress] - A [ProgressCallback] that can be used to get the send progress
   /// * [onReceiveProgress] - A [ProgressCallback] that can be used to get the receive progress
   ///
-  /// Returns a [Future] containing a [Response] with a [CookingConstraintsOut] as data
+  /// Returns a [Future] containing a [Response] with a [AllergiesOut] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<CookingConstraintsOut>> getCookingConstraints({
+  Future<Response<AllergiesOut>> getAllergies({
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
     Map<String, dynamic>? extra,
@@ -43,7 +41,7 @@ class TasteProfileApi {
     ProgressCallback? onSendProgress,
     ProgressCallback? onReceiveProgress,
   }) async {
-    final _path = r'/v1/me/taste-profile/cooking-constraints';
+    final _path = r'/v1/me/taste-profile/allergies';
     final _options = Options(
       method: r'GET',
       headers: <String, dynamic>{...?headers},
@@ -64,15 +62,15 @@ class TasteProfileApi {
       onReceiveProgress: onReceiveProgress,
     );
 
-    CookingConstraintsOut? _responseData;
+    AllergiesOut? _responseData;
 
     try {
       final rawData = _response.data;
       _responseData = rawData == null
           ? null
-          : deserialize<CookingConstraintsOut, CookingConstraintsOut>(
+          : deserialize<AllergiesOut, AllergiesOut>(
               rawData,
-              'CookingConstraintsOut',
+              'AllergiesOut',
               growable: true,
             );
     } catch (error, stackTrace) {
@@ -85,7 +83,7 @@ class TasteProfileApi {
       );
     }
 
-    return Response<CookingConstraintsOut>(
+    return Response<AllergiesOut>(
       data: _responseData,
       headers: _response.headers,
       isRedirect: _response.isRedirect,
@@ -97,82 +95,7 @@ class TasteProfileApi {
     );
   }
 
-  /// Get Taste Profile
-  ///
-  ///
-  /// Parameters:
-  /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
-  /// * [headers] - Can be used to add additional headers to the request
-  /// * [extras] - Can be used to add flags to the request
-  /// * [validateStatus] - A [ValidateStatus] callback that can be used to determine request success based on the HTTP status of the response
-  /// * [onSendProgress] - A [ProgressCallback] that can be used to get the send progress
-  /// * [onReceiveProgress] - A [ProgressCallback] that can be used to get the receive progress
-  ///
-  /// Returns a [Future] containing a [Response] with a [TasteProfileOut] as data
-  /// Throws [DioException] if API call or serialization fails
-  Future<Response<TasteProfileOut>> getTasteProfile({
-    CancelToken? cancelToken,
-    Map<String, dynamic>? headers,
-    Map<String, dynamic>? extra,
-    ValidateStatus? validateStatus,
-    ProgressCallback? onSendProgress,
-    ProgressCallback? onReceiveProgress,
-  }) async {
-    final _path = r'/v1/me/taste-profile';
-    final _options = Options(
-      method: r'GET',
-      headers: <String, dynamic>{...?headers},
-      extra: <String, dynamic>{
-        'secure': <Map<String, String>>[
-          {'type': 'http', 'scheme': 'bearer', 'name': 'HTTPBearer'},
-        ],
-        ...?extra,
-      },
-      validateStatus: validateStatus,
-    );
-
-    final _response = await _dio.request<Object>(
-      _path,
-      options: _options,
-      cancelToken: cancelToken,
-      onSendProgress: onSendProgress,
-      onReceiveProgress: onReceiveProgress,
-    );
-
-    TasteProfileOut? _responseData;
-
-    try {
-      final rawData = _response.data;
-      _responseData = rawData == null
-          ? null
-          : deserialize<TasteProfileOut, TasteProfileOut>(
-              rawData,
-              'TasteProfileOut',
-              growable: true,
-            );
-    } catch (error, stackTrace) {
-      throw DioException(
-        requestOptions: _response.requestOptions,
-        response: _response,
-        type: DioExceptionType.unknown,
-        error: error,
-        stackTrace: stackTrace,
-      );
-    }
-
-    return Response<TasteProfileOut>(
-      data: _responseData,
-      headers: _response.headers,
-      isRedirect: _response.isRedirect,
-      requestOptions: _response.requestOptions,
-      redirects: _response.redirects,
-      statusCode: _response.statusCode,
-      statusMessage: _response.statusMessage,
-      extra: _response.extra,
-    );
-  }
-
-  /// Get Taste Profile Change
+  /// Get Allergy Change
   ///
   ///
   /// Parameters:
@@ -186,7 +109,7 @@ class TasteProfileApi {
   ///
   /// Returns a [Future] containing a [Response] with a [TasteProfileChangeOut] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<TasteProfileChangeOut>> getTasteProfileChange({
+  Future<Response<TasteProfileChangeOut>> getAllergyChange({
     required String changeId,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -195,12 +118,13 @@ class TasteProfileApi {
     ProgressCallback? onSendProgress,
     ProgressCallback? onReceiveProgress,
   }) async {
-    final _path = r'/v1/me/taste-profile/changes/{change_id}'.replaceAll(
-      '{'
-      r'change_id'
-      '}',
-      changeId.toString(),
-    );
+    final _path = r'/v1/me/taste-profile/allergies/changes/{change_id}'
+        .replaceAll(
+          '{'
+          r'change_id'
+          '}',
+          changeId.toString(),
+        );
     final _options = Options(
       method: r'GET',
       headers: <String, dynamic>{...?headers},
@@ -254,7 +178,7 @@ class TasteProfileApi {
     );
   }
 
-  /// List Taste Profile Changes
+  /// List Allergy Changes
   ///
   ///
   /// Parameters:
@@ -269,7 +193,7 @@ class TasteProfileApi {
   ///
   /// Returns a [Future] containing a [Response] with a [PageTasteProfileChangeOut] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<PageTasteProfileChangeOut>> listTasteProfileChanges({
+  Future<Response<PageTasteProfileChangeOut>> listAllergyChanges({
     String? cursor,
     int? limit = 20,
     CancelToken? cancelToken,
@@ -279,7 +203,7 @@ class TasteProfileApi {
     ProgressCallback? onSendProgress,
     ProgressCallback? onReceiveProgress,
   }) async {
-    final _path = r'/v1/me/taste-profile/changes';
+    final _path = r'/v1/me/taste-profile/allergies/changes';
     final _options = Options(
       method: r'GET',
       headers: <String, dynamic>{...?headers},
@@ -339,11 +263,11 @@ class TasteProfileApi {
     );
   }
 
-  /// Replace Cooking Constraints
-  /// Replace cooking settings; an empty object clears them.  Omitted fields use empty defaults.
+  /// Set Allergies
+  ///
   ///
   /// Parameters:
-  /// * [cookingConstraints]
+  /// * [allergiesWrite]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -351,10 +275,10 @@ class TasteProfileApi {
   /// * [onSendProgress] - A [ProgressCallback] that can be used to get the send progress
   /// * [onReceiveProgress] - A [ProgressCallback] that can be used to get the receive progress
   ///
-  /// Returns a [Future] containing a [Response] with a [CookingConstraintsOut] as data
+  /// Returns a [Future] containing a [Response] with a [AllergiesOut] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<CookingConstraintsOut>> replaceCookingConstraints({
-    required CookingConstraints cookingConstraints,
+  Future<Response<AllergiesOut>> setAllergies({
+    required AllergiesWrite allergiesWrite,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
     Map<String, dynamic>? extra,
@@ -362,7 +286,7 @@ class TasteProfileApi {
     ProgressCallback? onSendProgress,
     ProgressCallback? onReceiveProgress,
   }) async {
-    final _path = r'/v1/me/taste-profile/cooking-constraints';
+    final _path = r'/v1/me/taste-profile/allergies';
     final _options = Options(
       method: r'PUT',
       headers: <String, dynamic>{...?headers},
@@ -379,7 +303,7 @@ class TasteProfileApi {
     dynamic _bodyData;
 
     try {
-      _bodyData = jsonEncode(cookingConstraints);
+      _bodyData = jsonEncode(allergiesWrite);
     } catch (error, stackTrace) {
       throw DioException(
         requestOptions: _options.compose(_dio.options, _path),
@@ -398,15 +322,15 @@ class TasteProfileApi {
       onReceiveProgress: onReceiveProgress,
     );
 
-    CookingConstraintsOut? _responseData;
+    AllergiesOut? _responseData;
 
     try {
       final rawData = _response.data;
       _responseData = rawData == null
           ? null
-          : deserialize<CookingConstraintsOut, CookingConstraintsOut>(
+          : deserialize<AllergiesOut, AllergiesOut>(
               rawData,
-              'CookingConstraintsOut',
+              'AllergiesOut',
               growable: true,
             );
     } catch (error, stackTrace) {
@@ -419,174 +343,7 @@ class TasteProfileApi {
       );
     }
 
-    return Response<CookingConstraintsOut>(
-      data: _responseData,
-      headers: _response.headers,
-      isRedirect: _response.isRedirect,
-      requestOptions: _response.requestOptions,
-      redirects: _response.redirects,
-      statusCode: _response.statusCode,
-      statusMessage: _response.statusMessage,
-      extra: _response.extra,
-    );
-  }
-
-  /// Reset Taste Profile
-  ///
-  ///
-  /// Parameters:
-  /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
-  /// * [headers] - Can be used to add additional headers to the request
-  /// * [extras] - Can be used to add flags to the request
-  /// * [validateStatus] - A [ValidateStatus] callback that can be used to determine request success based on the HTTP status of the response
-  /// * [onSendProgress] - A [ProgressCallback] that can be used to get the send progress
-  /// * [onReceiveProgress] - A [ProgressCallback] that can be used to get the receive progress
-  ///
-  /// Returns a [Future] containing a [Response] with a [TasteProfileOut] as data
-  /// Throws [DioException] if API call or serialization fails
-  Future<Response<TasteProfileOut>> resetTasteProfile({
-    CancelToken? cancelToken,
-    Map<String, dynamic>? headers,
-    Map<String, dynamic>? extra,
-    ValidateStatus? validateStatus,
-    ProgressCallback? onSendProgress,
-    ProgressCallback? onReceiveProgress,
-  }) async {
-    final _path = r'/v1/me/taste-profile/reset';
-    final _options = Options(
-      method: r'POST',
-      headers: <String, dynamic>{...?headers},
-      extra: <String, dynamic>{
-        'secure': <Map<String, String>>[
-          {'type': 'http', 'scheme': 'bearer', 'name': 'HTTPBearer'},
-        ],
-        ...?extra,
-      },
-      validateStatus: validateStatus,
-    );
-
-    final _response = await _dio.request<Object>(
-      _path,
-      options: _options,
-      cancelToken: cancelToken,
-      onSendProgress: onSendProgress,
-      onReceiveProgress: onReceiveProgress,
-    );
-
-    TasteProfileOut? _responseData;
-
-    try {
-      final rawData = _response.data;
-      _responseData = rawData == null
-          ? null
-          : deserialize<TasteProfileOut, TasteProfileOut>(
-              rawData,
-              'TasteProfileOut',
-              growable: true,
-            );
-    } catch (error, stackTrace) {
-      throw DioException(
-        requestOptions: _response.requestOptions,
-        response: _response,
-        type: DioExceptionType.unknown,
-        error: error,
-        stackTrace: stackTrace,
-      );
-    }
-
-    return Response<TasteProfileOut>(
-      data: _responseData,
-      headers: _response.headers,
-      isRedirect: _response.isRedirect,
-      requestOptions: _response.requestOptions,
-      redirects: _response.redirects,
-      statusCode: _response.statusCode,
-      statusMessage: _response.statusMessage,
-      extra: _response.extra,
-    );
-  }
-
-  /// Update Taste Profile
-  ///
-  ///
-  /// Parameters:
-  /// * [tasteProfilePatch]
-  /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
-  /// * [headers] - Can be used to add additional headers to the request
-  /// * [extras] - Can be used to add flags to the request
-  /// * [validateStatus] - A [ValidateStatus] callback that can be used to determine request success based on the HTTP status of the response
-  /// * [onSendProgress] - A [ProgressCallback] that can be used to get the send progress
-  /// * [onReceiveProgress] - A [ProgressCallback] that can be used to get the receive progress
-  ///
-  /// Returns a [Future] containing a [Response] with a [TasteProfileOut] as data
-  /// Throws [DioException] if API call or serialization fails
-  Future<Response<TasteProfileOut>> updateTasteProfile({
-    required TasteProfilePatch tasteProfilePatch,
-    CancelToken? cancelToken,
-    Map<String, dynamic>? headers,
-    Map<String, dynamic>? extra,
-    ValidateStatus? validateStatus,
-    ProgressCallback? onSendProgress,
-    ProgressCallback? onReceiveProgress,
-  }) async {
-    final _path = r'/v1/me/taste-profile';
-    final _options = Options(
-      method: r'PATCH',
-      headers: <String, dynamic>{...?headers},
-      extra: <String, dynamic>{
-        'secure': <Map<String, String>>[
-          {'type': 'http', 'scheme': 'bearer', 'name': 'HTTPBearer'},
-        ],
-        ...?extra,
-      },
-      contentType: 'application/json',
-      validateStatus: validateStatus,
-    );
-
-    dynamic _bodyData;
-
-    try {
-      _bodyData = jsonEncode(tasteProfilePatch);
-    } catch (error, stackTrace) {
-      throw DioException(
-        requestOptions: _options.compose(_dio.options, _path),
-        type: DioExceptionType.unknown,
-        error: error,
-        stackTrace: stackTrace,
-      );
-    }
-
-    final _response = await _dio.request<Object>(
-      _path,
-      data: _bodyData,
-      options: _options,
-      cancelToken: cancelToken,
-      onSendProgress: onSendProgress,
-      onReceiveProgress: onReceiveProgress,
-    );
-
-    TasteProfileOut? _responseData;
-
-    try {
-      final rawData = _response.data;
-      _responseData = rawData == null
-          ? null
-          : deserialize<TasteProfileOut, TasteProfileOut>(
-              rawData,
-              'TasteProfileOut',
-              growable: true,
-            );
-    } catch (error, stackTrace) {
-      throw DioException(
-        requestOptions: _response.requestOptions,
-        response: _response,
-        type: DioExceptionType.unknown,
-        error: error,
-        stackTrace: stackTrace,
-      );
-    }
-
-    return Response<TasteProfileOut>(
+    return Response<AllergiesOut>(
       data: _responseData,
       headers: _response.headers,
       isRedirect: _response.isRedirect,

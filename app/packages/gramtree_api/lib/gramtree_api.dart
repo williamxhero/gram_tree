@@ -9,6 +9,7 @@ export 'package:gramtree_api/src/auth/bearer_auth.dart';
 export 'package:gramtree_api/src/auth/oauth.dart';
 
 export 'package:gramtree_api/src/api/account_api.dart';
+export 'package:gramtree_api/src/api/allergies_api.dart';
 export 'package:gramtree_api/src/api/analytics_api.dart';
 export 'package:gramtree_api/src/api/auth_api.dart';
 export 'package:gramtree_api/src/api/config_api.dart';
@@ -24,6 +25,9 @@ export 'package:gramtree_api/src/api/ui_protocol_api.dart';
 export 'package:gramtree_api/src/model/ai_status.dart';
 export 'package:gramtree_api/src/model/action_descriptor.dart';
 export 'package:gramtree_api/src/model/allergens_attribute.dart';
+export 'package:gramtree_api/src/model/allergies_out.dart';
+export 'package:gramtree_api/src/model/allergies_write.dart';
+export 'package:gramtree_api/src/model/allergy_ingredient_out.dart';
 export 'package:gramtree_api/src/model/analytics_event_in.dart';
 export 'package:gramtree_api/src/model/analytics_upload_request.dart';
 export 'package:gramtree_api/src/model/apple_login_request.dart';

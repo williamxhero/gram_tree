@@ -6,6 +6,7 @@ build.yaml
 lib/gramtree_api.dart
 lib/src/api.dart
 lib/src/api/account_api.dart
+lib/src/api/allergies_api.dart
 lib/src/api/analytics_api.dart
 lib/src/api/auth_api.dart
 lib/src/api/config_api.dart
@@ -26,6 +27,9 @@ lib/src/deserialize.dart
 lib/src/model/action_descriptor.dart
 lib/src/model/ai_status.dart
 lib/src/model/allergens_attribute.dart
+lib/src/model/allergies_out.dart
+lib/src/model/allergies_write.dart
+lib/src/model/allergy_ingredient_out.dart
 lib/src/model/analytics_event_in.dart
 lib/src/model/analytics_upload_request.dart
 lib/src/model/apple_login_request.dart

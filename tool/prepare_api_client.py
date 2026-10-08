@@ -79,7 +79,7 @@ def main() -> None:
     source, target = (Path(arg) for arg in sys.argv[1:])
     document = json.loads(source.read_text(encoding="utf-8"))
     for name, schema in document["components"]["schemas"].items():
-        if name.startswith(("Recipe", "Cooking", "IngredientPreference")) or name in {
+        if name.startswith(("Recipe", "Cooking", "IngredientPreference", "Allerg")) or name in {
             "NutritionEstimate", "ValueSource", "TasteProfilePatch"
         }:
             document["components"]["schemas"][name] = project_schema(schema)
