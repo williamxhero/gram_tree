@@ -9,6 +9,10 @@ import '../../l10n/app_localizations.dart';
 import '../../ui_protocol/components/component_scaffold.dart';
 import '../../ui_protocol/source_mark.dart';
 import '../../ui_protocol/source_types.dart';
+import 'allergies_section.dart';
+import 'cooking_constraints_section.dart';
+import 'ingredient_preferences_section.dart';
+import 'personal_measures_summary.dart';
 import 'taste_profile_data.dart';
 
 class TasteProfilePage extends ConsumerWidget {
@@ -173,6 +177,15 @@ class _TasteBodyState extends ConsumerState<_TasteBody> {
                   ],
                 ),
               ),
+            IngredientPreferencesSection(
+              profile: value,
+              accountId: widget.accountId,
+              busy: _busy,
+              onSave: (preferences) => _mutate(
+                (repository) => repository.setPreferences(preferences),
+              ),
+            ),
+            AllergiesSection(key: ValueKey('allergies-${widget.accountId}')),
             OutlinedButton(
               key: const ValueKey('taste-reset'),
               onPressed: _busy ? null : _reset,
@@ -201,6 +214,10 @@ class _TasteBodyState extends ConsumerState<_TasteBody> {
                 ),
               ),
             const SizedBox(height: 24),
+            CookingConstraintsSection(
+              key: ValueKey('constraints-${widget.accountId}'),
+            ),
+            const PersonalMeasuresSummary(),
             Text(
               l10n.tasteHistory,
               style: Theme.of(context).textTheme.titleLarge,
@@ -228,17 +245,40 @@ class _TasteBodyState extends ConsumerState<_TasteBody> {
   }
 }
 
-class _HistoryCard extends StatelessWidget {
+class _HistoryCard extends ConsumerWidget {
   const _HistoryCard({required this.change, required this.scale});
   final TasteProfileChangeOut change;
   final TasteScale scale;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context);
-    final field = _flavorName(change.field.replaceFirst('flavors.', ''), l10n);
-    final oldLabel = _historyLabel(change.oldValue, scale);
-    final newLabel = _historyLabel(change.newValue, scale);
+    final preferences = change.field == 'ingredient_preferences';
+    final constraints = change.field == 'cooking_constraints';
+    final field = preferences
+        ? l10n.tasteIngredients
+        : constraints
+        ? l10n.cookingConstraintsTitle
+        : _flavorName(change.field.replaceFirst('flavors.', ''), l10n);
+    String label(Object value) => preferences
+        ? preferenceHistoryLabel(value, l10n)
+        : constraints
+        ? cookingConstraintsHistoryLabel(
+            value,
+            l10n,
+            equipmentNames: {
+              for (final item
+                  in ref
+                          .watch(cookingConstraintsProvider)
+                          .value
+                          ?.equipmentVocabulary ??
+                      <CookingEquipment>[])
+                item.id: item.label,
+            },
+          )
+        : _historyLabel(value, scale);
+    final oldLabel = label(change.oldValue);
+    final newLabel = label(change.newValue);
     final status = change.status == TasteProfileChangeOutStatusEnum.active
         ? l10n.tasteActive
         : l10n.tasteReverted;
@@ -248,7 +288,13 @@ class _HistoryCard extends StatelessWidget {
         '${local.formatShortDate(timestamp)} ${local.formatTimeOfDay(TimeOfDay.fromDateTime(timestamp))}';
     return ComponentCard(
       detail: ComponentDescriptorDetailEnum.standard,
-      conclusion: Text('$field：$oldLabel → $newLabel'),
+      conclusion: Text(
+        '$field：$oldLabel → $newLabel',
+        style: constraints
+            ? GramTreeColors.of(context)
+                  .numberStyle(Theme.of(context).textTheme.bodyMedium!)
+            : null,
+      ),
       conclusionSemanticsText: '$field，$oldLabel，$newLabel',
       standardExtra: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

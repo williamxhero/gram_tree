@@ -102,7 +102,60 @@ def restore(backup_file: Path, target_url: str, live_url: str) -> None:
         check=True,
         capture_output=True,
     )
-    logger.info("backup restored", extra={"file": str(backup_file), "database": target.database})
+    # A snapshot cannot prove which grants were withdrawn after it was taken.
+    # Before exposing the restored database, conservatively erase sensitive data
+    # and revoke every restored grant. Ordinary account/profile data is retained.
+    sanitize_restored_sensitive(target_url)
+    logger.info(
+        "backup restored; sensitive grants revoked",
+        extra={"file": str(backup_file), "database": target.database},
+    )
+
+
+def sanitize_restored_sensitive(target_url: str) -> None:
+    from sqlalchemy import inspect, select
+    from sqlalchemy.orm import Session
+
+    from gramtree.accounts.models import Consent
+    from gramtree.core.ids import new_id
+    from gramtree.taste_profiles.allergies import CONSENT_VERSION, erase_sensitive
+    from gramtree.taste_profiles.models import TasteProfile
+
+    engine = create_engine(target_url)
+    try:
+        # Old backups before sensitive storage have no grants to restore.
+        if not inspect(engine).has_table("owner_allergies"):
+            return
+        with Session(engine) as session, session.begin():
+            for profile in session.scalars(select(TasteProfile)):
+                erase_sensitive(session, profile.owner_id)
+                receipts = list(
+                    session.scalars(
+                        select(Consent.received_at).where(
+                            Consent.user_id == profile.owner_id,
+                            Consent.kind == "sensitive_personal_info",
+                        )
+                    )
+                )
+                barrier = max([utcnow(), *receipts])
+                session.add(
+                    Consent(
+                        id=new_id(),
+                        user_id=profile.owner_id,
+                        kind="sensitive_personal_info",
+                        version=CONSENT_VERSION,
+                        action="withdraw",
+                        occurred_at=barrier,
+                        received_at=barrier,
+                        device_id="server-restore",
+                    )
+                )
+                profile.sensitive_consent_id = None
+                profile.sensitive_authorization_version += 1
+                profile.version += 1
+                profile.updated_at = barrier
+    finally:
+        engine.dispose()
 
 
 def tools_available() -> bool:

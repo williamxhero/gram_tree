@@ -8,6 +8,7 @@ import 'package:gramtree_api/src/auth/basic_auth.dart';
 import 'package:gramtree_api/src/auth/bearer_auth.dart';
 import 'package:gramtree_api/src/auth/oauth.dart';
 import 'package:gramtree_api/src/api/account_api.dart';
+import 'package:gramtree_api/src/api/allergies_api.dart';
 import 'package:gramtree_api/src/api/analytics_api.dart';
 import 'package:gramtree_api/src/api/auth_api.dart';
 import 'package:gramtree_api/src/api/config_api.dart';
@@ -93,6 +94,12 @@ class GramtreeApi {
   /// by doing that all interceptors will not be executed
   AccountApi getAccountApi() {
     return AccountApi(dio);
+  }
+
+  /// Get AllergiesApi instance, base route and serializer can be overridden by a given but be careful,
+  /// by doing that all interceptors will not be executed
+  AllergiesApi getAllergiesApi() {
+    return AllergiesApi(dio);
   }
 
   /// Get AnalyticsApi instance, base route and serializer can be overridden by a given but be careful,

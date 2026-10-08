@@ -50,7 +50,13 @@ def update_taste_profile(
 ) -> TasteProfileOut:
     scale = service.scale_for(session)
     profile = service.locked_profile(session, auth.user.id, scale)
-    service.mutate_flavors(session, profile, body.flavors, scale)
+    service.mutate_profile(
+        session,
+        profile,
+        body.flavors or {},
+        scale,
+        ingredient_preferences=body.ingredient_preferences,
+    )
     result = service.profile_out(profile, scale)
     session.commit()
     return result
@@ -60,7 +66,7 @@ def update_taste_profile(
 def reset_taste_profile(auth: CurrentAuth, session: SessionDep) -> TasteProfileOut:
     scale = service.scale_for(session)
     profile = service.locked_profile(session, auth.user.id, scale)
-    service.mutate_flavors(
+    service.mutate_profile(
         session, profile, {key: scale.default for key in FLAVOR_KEYS}, scale, reset=True
     )
     result = service.profile_out(profile, scale)
@@ -73,7 +79,9 @@ def list_taste_profile_changes(
     auth: CurrentAuth, session: SessionDep, page: PageDep
 ) -> Page[TasteProfileChangeOut]:
     check_limit(page.limit, config.get(session, "api.page_size_max"))
-    query = select(TasteProfileChange).where(TasteProfileChange.owner_id == auth.user.id)
+    query = select(TasteProfileChange).where(
+        TasteProfileChange.owner_id == auth.user.id, TasteProfileChange.field != "allergies"
+    )
     if page.cursor:
         timestamp, row_id = decode_cursor(page.cursor)
         query = query.where(
@@ -101,7 +109,9 @@ def get_taste_profile_change(
 ) -> TasteProfileChangeOut:
     row = session.scalar(
         select(TasteProfileChange).where(
-            TasteProfileChange.id == change_id, TasteProfileChange.owner_id == auth.user.id
+            TasteProfileChange.id == change_id,
+            TasteProfileChange.owner_id == auth.user.id,
+            TasteProfileChange.field != "allergies",
         )
     )
     if row is None:

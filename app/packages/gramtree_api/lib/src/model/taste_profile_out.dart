@@ -4,6 +4,7 @@
 
 // ignore_for_file: unused_element
 import 'package:gramtree_api/src/model/taste_flavor_out.dart';
+import 'package:gramtree_api/src/model/ingredient_preference_out.dart';
 import 'package:gramtree_api/src/model/local_cuisine_out.dart';
 import 'package:gramtree_api/src/model/taste_scale.dart';
 import 'package:copy_with_extension/copy_with_extension.dart';
@@ -25,6 +26,10 @@ class TasteProfileOut {
 
     required this.id,
 
+    required this.ingredientCategories,
+
+    required this.ingredientPreferences,
+
     required this.localCuisines,
 
     required this.scale,
@@ -37,6 +42,16 @@ class TasteProfileOut {
 
   @JsonKey(name: r'id', required: true, includeIfNull: false)
   final String id;
+
+  @JsonKey(name: r'ingredient_categories', required: true, includeIfNull: false)
+  final List<String> ingredientCategories;
+
+  @JsonKey(
+    name: r'ingredient_preferences',
+    required: true,
+    includeIfNull: false,
+  )
+  final List<IngredientPreferenceOut> ingredientPreferences;
 
   @JsonKey(name: r'local_cuisines', required: true, includeIfNull: false)
   final List<LocalCuisineOut> localCuisines;
@@ -53,6 +68,8 @@ class TasteProfileOut {
       other is TasteProfileOut &&
           other.flavors == flavors &&
           other.id == id &&
+          other.ingredientCategories == ingredientCategories &&
+          other.ingredientPreferences == ingredientPreferences &&
           other.localCuisines == localCuisines &&
           other.scale == scale &&
           other.version == version;
@@ -61,6 +78,8 @@ class TasteProfileOut {
   int get hashCode =>
       flavors.hashCode +
       id.hashCode +
+      ingredientCategories.hashCode +
+      ingredientPreferences.hashCode +
       localCuisines.hashCode +
       scale.hashCode +
       version.hashCode;

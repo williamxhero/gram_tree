@@ -18,11 +18,15 @@ from gramtree.accounts.models import User, UserStatus
 from gramtree.core.errors import ApiError
 from gramtree.core.time import utcnow
 from gramtree.events.service import record_taste_profile_changed
+from gramtree.ingredients.importer import CATEGORIES
+from gramtree.ingredients.router import _resolve as resolve_ingredient
 from gramtree.runtime_config import service as config
 from gramtree.taste_profiles.models import TasteProfile, TasteProfileChange
 from gramtree.taste_profiles.schemas import (
     FLAVOR_KEYS,
     FlavorKey,
+    IngredientPreference,
+    IngredientPreferenceOut,
     LocalCuisineOut,
     TasteFlavorOut,
     TasteProfileOut,
@@ -41,13 +45,16 @@ def defaults(scale: TasteScale) -> dict[str, Any]:
     return {key: {"coefficient": scale.default, "confidence": "low"} for key in FLAVOR_KEYS}
 
 
-def locked_profile(session: Session, owner_id: uuid.UUID, scale: TasteScale) -> TasteProfile:
-    # Lock the stable owner row as well: SELECT FOR UPDATE on an absent profile
-    # cannot serialize two first reads. Unique owner_id remains a DB backstop.
+def lock_owner(session: Session, owner_id: uuid.UUID) -> None:
     owner_status = session.scalar(select(User.status).where(User.id == owner_id).with_for_update())
     # Auth was checked before acquiring this lock; deletion may have won the race.
     if owner_status != UserStatus.active:
         raise AccountUnavailable()
+
+
+def locked_profile(session: Session, owner_id: uuid.UUID, scale: TasteScale) -> TasteProfile:
+    # SELECT FOR UPDATE on an absent profile cannot serialize first reads.
+    lock_owner(session, owner_id)
     profile = session.scalar(
         select(TasteProfile)
         .where(TasteProfile.owner_id == owner_id)
@@ -103,12 +110,13 @@ def record_changes(
     return rows
 
 
-def mutate_flavors(
+def mutate_profile(
     session: Session,
     profile: TasteProfile,
     values: Mapping[FlavorKey, float],
     scale: TasteScale,
     *,
+    ingredient_preferences: list[IngredientPreference] | None = None,
     reset: bool = False,
 ) -> list[TasteProfileChange]:
     if any(not scale.minimum <= value <= scale.maximum for value in values.values()):
@@ -119,10 +127,55 @@ def mutate_flavors(
         new = {"coefficient": value, "confidence": "low" if reset else "high"}
         changes.append(FieldChange(f"flavors.{key}", flavors[key], new))
         flavors[key] = new
+    items = profile.ingredient_preferences
+    if ingredient_preferences is not None:
+        items = normalize_preferences(session, ingredient_preferences)
+        changes.append(
+            FieldChange(
+                "ingredient_preferences",
+                {"items": profile.ingredient_preferences},
+                {"items": items},
+            )
+        )
+    # Validate every submitted field before recording one shared mutation version.
     rows = record_changes(session, profile, changes)
     if rows:
         profile.flavors = flavors
+        profile.ingredient_preferences = items
     return rows
+
+
+def normalize_preferences(
+    session: Session, values: list[IngredientPreference]
+) -> list[dict[str, Any]]:
+    by_target: dict[str, dict[str, Any]] = {}
+    for value in values:
+        if value.ingredient_id is not None:
+            ingredient = resolve_ingredient(session, value.ingredient_id)
+            if ingredient is None:
+                raise ApiError(422, "invalid_ingredient_reference", "食材不存在，请重新搜索选择")
+            item = IngredientPreferenceOut(
+                ingredient_id=ingredient.id,
+                preference=value.preference,
+                name=ingredient.standard_name,
+            )
+        else:
+            if value.category not in CATEGORIES:
+                raise ApiError(422, "invalid_ingredient_category", "食材分类无效，请重新选择")
+            item = IngredientPreferenceOut(
+                category=value.category, preference=value.preference, name=value.category
+            )
+        key = (
+            f"ingredient:{item.ingredient_id}"
+            if item.ingredient_id
+            else f"category:{item.category}"
+        )
+        if key in by_target and by_target[key]["preference"] != item.preference:
+            raise ApiError(422, "conflicting_ingredient_preference", "同一食材或分类只能有一种偏好")
+        by_target[key] = item.model_dump(mode="json")
+    # Preferences are a set of explicit targets, not an ordered list. Reordering
+    # or repeated identical selections must not create a new profile version.
+    return [by_target[key] for key in sorted(by_target)]
 
 
 def profile_out(profile: TasteProfile, scale: TasteScale) -> TasteProfileOut:
@@ -142,4 +195,8 @@ def profile_out(profile: TasteProfile, scale: TasteScale) -> TasteProfileOut:
         flavors=flavors,
         scale=scale,
         local_cuisines=[LocalCuisineOut.model_validate(row) for row in profile.local_cuisines],
+        ingredient_preferences=[
+            IngredientPreferenceOut.model_validate(row) for row in profile.ingredient_preferences
+        ],
+        ingredient_categories=list(CATEGORIES),
     )

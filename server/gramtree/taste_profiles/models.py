@@ -4,7 +4,7 @@ import uuid
 from datetime import datetime
 from typing import Any
 
-from sqlalchemy import CheckConstraint, ForeignKey, Index, String
+from sqlalchemy import CheckConstraint, ForeignKey, Index, LargeBinary, String
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -24,8 +24,21 @@ class TasteProfile(Base):
     version: Mapped[int] = mapped_column(default=1)
     flavors: Mapped[dict[str, Any]] = mapped_column(JSONB)
     local_cuisines: Mapped[list[dict[str, Any]]] = mapped_column(JSONB, default=list)
+    ingredient_preferences: Mapped[list[dict[str, Any]]] = mapped_column(JSONB, default=list)
+    cooking_constraints: Mapped[dict[str, Any]] = mapped_column(JSONB, default=dict)
+    sensitive_consent_id: Mapped[uuid.UUID | None] = mapped_column(default=None)
+    sensitive_authorization_version: Mapped[int] = mapped_column(default=0)
     created_at: Mapped[datetime] = mapped_column(default=utcnow)
     updated_at: Mapped[datetime] = mapped_column(default=utcnow)
+
+
+class OwnerAllergies(Base):
+    __tablename__ = "owner_allergies"
+
+    owner_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), primary_key=True
+    )
+    ciphertext: Mapped[bytes] = mapped_column(LargeBinary)
 
 
 class TasteProfileChange(Base):
