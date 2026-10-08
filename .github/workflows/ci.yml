@@ -135,7 +135,7 @@ jobs:
       - run: flutter analyze
       - run: flutter test
       - name: 页面测试在浏览器里再跑一遍
-        run: flutter test --platform chrome --reporter expanded --verbose
+        run: flutter test --platform chrome
       - run: flutter build web --dart-define=APP_ENV=staging
 
   web-e2e:
