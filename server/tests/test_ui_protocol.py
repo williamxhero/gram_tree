@@ -32,6 +32,33 @@ def _compose(api: Api, tokens: dict, **overrides: object) -> Response:
     return api.client.post("/v1/ui/compositions", json=body, headers=bearer(tokens))
 
 
+@pytest.mark.parametrize("question", ["鸡肉为什么要炒熟？", "", "   ", "x" * 1001, None])
+def test_concrete_recipe_question_action_is_validated_before_delivery(
+    api: Api, monkeypatch: pytest.MonkeyPatch, question: str | None
+) -> None:
+    sample = schema_validation.load_sample("valid", "today_default.json")
+    params = {
+        "operation": "answer_recipe_question",
+        "recipe_id": "11111111-1111-4111-8111-111111111111",
+        "recipe_version_id": "22222222-2222-4222-8222-222222222222",
+    }
+    if question is not None:
+        params["question"] = question
+    sample["components"][0]["actions"] = [{"intent": "call_operation", "params": params}]
+    monkeypatch.setitem(
+        service.COMPOSERS,
+        "today",
+        lambda *args, **kwargs: service.PageDescription.model_validate(sample),
+    )
+    response = _compose(api, api.login("action-question@example.com"))
+    assert response.status_code == 200, response.text
+    components = response.json()["components"]
+    if question == "鸡肉为什么要炒熟？":
+        assert components[0]["actions"] == [{"intent": "call_operation", "params": params}]
+    else:
+        assert components == []
+
+
 def test_compose_without_login_returns_401(client: TestClient) -> None:
     resp = client.post(
         "/v1/ui/compositions",
