@@ -11,7 +11,10 @@ void main() {
     BaseOptions(baseUrl: AppConfig.fromEnvironment().apiBaseUrl),
   );
 
+  var lastTarget = 'startup';
+
   Future<void> waitFor(WidgetTester tester, Finder finder) async {
+    lastTarget = 'wait for $finder';
     for (var i = 0; i < 300 && finder.evaluate().isEmpty; i++) {
       await tester.pump(const Duration(milliseconds: 100));
     }
@@ -24,6 +27,7 @@ void main() {
     Finder finder, {
     double delta = 350,
   }) async {
+    lastTarget = 'reveal $finder (delta: $delta)';
     tester.testTextInput.hide();
     await tester.pump();
     final dialog = find.byType(AlertDialog);
@@ -50,6 +54,7 @@ void main() {
     final finder = find.byKey(ValueKey(key));
     if (scroll) await reveal(tester, finder, delta: delta);
     await waitFor(tester, finder);
+    lastTarget = 'tap $key';
     await tester.tap(finder);
     await tester.pumpAndSettle();
   }
@@ -62,6 +67,7 @@ void main() {
   testWidgets('做菜约束保存清除、重开、家庭默认份数与量具管理闭环', (tester) async {
     tester.testTextInput.register();
     addTearDown(tester.testTextInput.unregister);
+    var phase = 'login';
     try {
       await app.main();
       await waitFor(tester, find.byKey(const ValueKey('consent-agree')));
@@ -81,6 +87,7 @@ void main() {
         code.data['code'] as String,
       );
       await waitFor(tester, find.text('先添加一道你常做的菜'));
+      phase = 'save and reopen cooking constraints';
       await tester.tap(find.text('我的'));
       await tester.pumpAndSettle();
       await tap(tester, 'taste-profile-entry');
@@ -118,6 +125,7 @@ void main() {
       expect(find.text('工作日晚餐：30 分钟'), findsOneWidget);
       expect(find.text('工作日晚餐：3 道（荤菜、素菜、汤）'), findsOneWidget);
 
+      phase = 'register and recalibrate personal measure';
       await tap(tester, 'taste-measures-manage', scroll: true);
       await tap(tester, 'measure-add');
       await tester.enterText(find.byKey(const ValueKey('measure-name')), '家用勺');
@@ -147,6 +155,7 @@ void main() {
         find.byKey(const ValueKey('taste-profile-content')),
       );
       await reveal(tester, find.text('家用勺 · 15.0 毫升'));
+      phase = 'clear, reopen, and restore household default';
       await tap(tester, 'cooking-constraints-clear', scroll: true, delta: -350);
       await tap(tester, 'cooking-constraints-clear-confirm');
       await waitFor(
@@ -175,6 +184,7 @@ void main() {
       await reveal(tester, find.text('家庭默认：4 人'));
       await back(tester);
 
+      phase = 'fill recipe author fields';
       await tap(tester, 'my-recipes-list-entry');
       await tap(tester, 'new-recipe-button');
       await waitFor(tester, find.byKey(const ValueKey('recipe-dish-name')));
@@ -191,11 +201,14 @@ void main() {
       final instruction = find.byKey(const ValueKey('recipe-step-instruction'));
       await reveal(tester, instruction);
       await tester.enterText(instruction, '烤至成熟');
-      await tap(tester, 'save-recipe-button', scroll: true);
+      phase = 'save recipe';
+      // Save is above the lazy ingredient and step rows, not below them.
+      await tap(tester, 'save-recipe-button', scroll: true, delta: -350);
       await waitFor(
         tester,
         find.byKey(const ValueKey('recipe-history-button')),
       );
+      phase = 'household default and manual serving precedence';
       await reveal(tester, find.byKey(const ValueKey('recipe-serving-value')));
       expect(
         tester
@@ -229,6 +242,7 @@ void main() {
             .data,
         '2',
       );
+      phase = 'verify unchanged author quantity';
       await tap(tester, 'edit-recipe-button', scroll: true, delta: -350);
       await waitFor(tester, find.byKey(const ValueKey('recipe-dish-name')));
       await reveal(
@@ -248,6 +262,8 @@ void main() {
       expect(tester.takeException(), isNull);
     } catch (error, stack) {
       IntegrationTestWidgetsFlutterBinding.instance.reportData = {
+        'e2e_phase': phase,
+        'e2e_target': lastTarget,
         'e2e_error': error.toString(),
         'e2e_stack': stack.toString(),
         'page_text': tester
