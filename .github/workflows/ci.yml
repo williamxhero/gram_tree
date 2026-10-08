@@ -235,7 +235,8 @@ jobs:
     name: iOS 模拟器端到端测试（手动触发）
     if: github.event_name == 'workflow_dispatch'
     runs-on: macos-15
-    timeout-minutes: 45
+    # Each of the 13 targets rebuilds Xcode; keep individual test limits intact.
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
       - uses: subosito/flutter-action@v2

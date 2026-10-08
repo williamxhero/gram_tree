@@ -31,21 +31,28 @@ void main() {
         )
         .first;
     final position = tester.state<ScrollableState>(scrollable).position;
-    // Reach the actual top and settle native bouncing before seeking a row.
-    for (
-      var i = 0;
-      i < 60 && position.pixels > position.minScrollExtent + 1;
-      i++
-    ) {
-      await tester.drag(scrollable, const Offset(0, 500));
-      await tester.pumpAndSettle();
+    // Mounted controls need no reset. Position the lazy viewport in bounded
+    // steps, then use the same ensureVisible path as a mounted control.
+    if (finder.evaluate().isEmpty) {
+      position.jumpTo(position.minScrollExtent);
+      await tester.pump(const Duration(milliseconds: 200));
     }
-    await tester.scrollUntilVisible(
-      finder,
-      250,
-      scrollable: scrollable,
-      maxScrolls: 60,
-    );
+    for (var i = 0; i < 60 && finder.evaluate().isEmpty; i++) {
+      position.jumpTo(
+        (position.pixels + 250).clamp(
+          position.minScrollExtent,
+          position.maxScrollExtent,
+        ),
+      );
+      await tester.pump(const Duration(milliseconds: 100));
+    }
+    if (finder.evaluate().isEmpty) {
+      throw StateError(
+        'E2E reveal failed: $key; offset=${position.pixels}, '
+        'range=${position.minScrollExtent}..${position.maxScrollExtent}, '
+        'viewport=${position.viewportDimension}',
+      );
+    }
     await Scrollable.ensureVisible(tester.element(finder), alignment: 0.5);
     await tester.pumpAndSettle();
     expect(finder.hitTestable(), findsOneWidget);
@@ -104,6 +111,7 @@ void main() {
         ('recipe-ingredient-unit', '少许'),
         ('recipe-step-instruction', '搅拌均匀'),
       ]) {
+        step = 'fill_$key';
         await reveal(tester, key);
         await tester.enterText(find.byKey(ValueKey(key)), value);
         await tester.pumpAndSettle();

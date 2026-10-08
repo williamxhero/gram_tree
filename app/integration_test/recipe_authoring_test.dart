@@ -10,6 +10,7 @@ import 'package:integration_test/integration_test.dart';
 import 'event_pipeline_support.dart' show resetLocalAppState;
 
 void _markE2eStep(String step) {
+  debugPrint('E2E step: $step');
   final binding = IntegrationTestWidgetsFlutterBinding.instance;
   binding.reportData = {...?binding.reportData, 'e2e_step': step};
 }
@@ -51,6 +52,7 @@ void main() {
   }
 
   Future<void> reveal(WidgetTester tester, Finder finder) async {
+    _markE2eStep('reveal: $finder');
     tester.testTextInput.hide();
     await tester.pump();
     // Do not unload an expanded lazy tile while locating its mounted controls.
@@ -76,19 +78,19 @@ void main() {
         )
         .first;
     final position = tester.state<ScrollableState>(scrollable).position;
-    // Reach the actual top and settle native bouncing before reversing;
-    // fixed short pumps can leave an iOS drag fighting the previous scroll.
-    for (
-      var i = 0;
-      i < 60 && position.pixels > position.minScrollExtent + 1;
-      i++
-    ) {
-      await tester.drag(scrollable, const Offset(0, 500));
-      await tester.pumpAndSettle();
-    }
+    // Move the viewport in bounded steps to mount lazy children, just as
+    // ensureVisible positions mounted controls. This avoids platform flings
+    // and input-field gesture arenas without bypassing the visible UI.
+    position.jumpTo(position.minScrollExtent);
+    await settle(tester);
     for (var i = 0; i < 40 && finder.evaluate().isEmpty; i++) {
-      await tester.drag(scrollable, const Offset(0, -300));
-      await tester.pumpAndSettle();
+      position.jumpTo(
+        (position.pixels + 300).clamp(
+          position.minScrollExtent,
+          position.maxScrollExtent,
+        ),
+      );
+      await tester.pump(const Duration(milliseconds: 100));
     }
     if (finder.evaluate().isEmpty) {
       final message = 'E2E reveal failed: $finder';
