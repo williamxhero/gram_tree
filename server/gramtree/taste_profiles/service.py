@@ -107,12 +107,13 @@ def record_changes(
     return rows
 
 
-def mutate_flavors(
+def mutate_profile(
     session: Session,
     profile: TasteProfile,
     values: Mapping[FlavorKey, float],
     scale: TasteScale,
     *,
+    ingredient_preferences: list[IngredientPreference] | None = None,
     reset: bool = False,
 ) -> list[TasteProfileChange]:
     if any(not scale.minimum <= value <= scale.maximum for value in values.values()):
@@ -123,15 +124,23 @@ def mutate_flavors(
         new = {"coefficient": value, "confidence": "low" if reset else "high"}
         changes.append(FieldChange(f"flavors.{key}", flavors[key], new))
         flavors[key] = new
+    items = profile.ingredient_preferences
+    if ingredient_preferences is not None:
+        items = normalize_preferences(session, ingredient_preferences)
+        changes.append(
+            FieldChange("ingredient_preferences", {"items": profile.ingredient_preferences}, {"items": items})
+        )
+    # Validate every submitted field before recording one shared mutation version.
     rows = record_changes(session, profile, changes)
     if rows:
         profile.flavors = flavors
+        profile.ingredient_preferences = items
     return rows
 
 
-def mutate_ingredient_preferences(
-    session: Session, profile: TasteProfile, values: list[IngredientPreference]
-) -> list[TasteProfileChange]:
+def normalize_preferences(
+    session: Session, values: list[IngredientPreference]
+) -> list[dict[str, Any]]:
     by_target: dict[str, dict[str, Any]] = {}
     for value in values:
         if value.ingredient_id is not None:
@@ -155,21 +164,7 @@ def mutate_ingredient_preferences(
         by_target[key] = item.model_dump(mode="json")
     # Preferences are a set of explicit targets, not an ordered list. Reordering
     # or repeated identical selections must not create a new profile version.
-    items = [by_target[key] for key in sorted(by_target)]
-    rows = record_changes(
-        session,
-        profile,
-        [
-            FieldChange(
-                "ingredient_preferences",
-                {"items": profile.ingredient_preferences},
-                {"items": items},
-            )
-        ],
-    )
-    if rows:
-        profile.ingredient_preferences = items
-    return rows
+    return [by_target[key] for key in sorted(by_target)]
 
 
 def profile_out(profile: TasteProfile, scale: TasteScale) -> TasteProfileOut:

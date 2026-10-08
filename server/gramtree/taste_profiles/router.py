@@ -50,10 +50,10 @@ def update_taste_profile(
 ) -> TasteProfileOut:
     scale = service.scale_for(session)
     profile = service.locked_profile(session, auth.user.id, scale)
-    if body.flavors is not None:
-        service.mutate_flavors(session, profile, body.flavors, scale)
-    if body.ingredient_preferences is not None:
-        service.mutate_ingredient_preferences(session, profile, body.ingredient_preferences)
+    service.mutate_profile(
+        session, profile, body.flavors or {}, scale,
+        ingredient_preferences=body.ingredient_preferences,
+    )
     result = service.profile_out(profile, scale)
     session.commit()
     return result
@@ -63,7 +63,7 @@ def update_taste_profile(
 def reset_taste_profile(auth: CurrentAuth, session: SessionDep) -> TasteProfileOut:
     scale = service.scale_for(session)
     profile = service.locked_profile(session, auth.user.id, scale)
-    service.mutate_flavors(
+    service.mutate_profile(
         session, profile, {key: scale.default for key in FLAVOR_KEYS}, scale, reset=True
     )
     result = service.profile_out(profile, scale)
