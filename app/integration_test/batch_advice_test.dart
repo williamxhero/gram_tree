@@ -64,6 +64,8 @@ void main() {
     (tester) => runWithDiagnostics(tester, () async {
       tester.testTextInput.register();
       addTearDown(tester.testTextInput.unregister);
+      // iOS Keychain survives app uninstall; start this fixture signed out.
+      await support.resetLocalAppState();
       await app.main();
       await waitFor(tester, find.byKey(const ValueKey('consent-agree')));
       await tester.tap(find.byKey(const ValueKey('consent-agree')));

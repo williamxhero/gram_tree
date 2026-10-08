@@ -5,6 +5,8 @@ import 'package:gram_tree/config/app_config.dart';
 import 'package:gram_tree/main.dart' as app;
 import 'package:integration_test/integration_test.dart';
 
+import 'event_pipeline_support.dart' show resetLocalAppState;
+
 const _request = '想做一道小朋友能吃的、不辣的宫保鸡丁';
 const _edit = '把步骤说明写清楚，不改食材和用量';
 const _original = '中火炒鸡腿肉并加入盐，用食品温度计检查鸡肉中心温度达到 74°C';
@@ -154,8 +156,12 @@ void main() {
     addTearDown(tester.testTextInput.unregister);
     var phase = 'login';
     try {
+      // iOS Keychain sessions survive app uninstall between test targets.
+      await resetLocalAppState();
       await app.main();
       await waitFor(tester, find.byKey(const ValueKey('consent-agree')));
+      // iOS safe-area insets can place this action below the small viewport.
+      await reveal(tester, 'consent-agree');
       await tester.tap(find.byKey(const ValueKey('consent-agree')));
       await waitFor(tester, find.byKey(const ValueKey('login-email')));
       final email =
