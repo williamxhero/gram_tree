@@ -51,6 +51,35 @@ FrozenRecipeSnapshot frozenVersion(
 );
 
 void main() {
+  test('device budget evicts disposable entries across owners without exposing protected content', () async {
+    final platform = MemoryLocalStore();
+    final alice = RecipeSnapshotStore(
+      platform,
+      accountId: 'alice',
+      maxBytes: 5000,
+    );
+    final bob = RecipeSnapshotStore(platform, accountId: 'bob', maxBytes: 5000);
+    const cooking = SnapshotProtection(
+      SnapshotProtectionKind.cooking,
+      'session',
+    );
+    await alice.prefetchAndProtect(
+      cooking,
+      () async => frozenVersion('alice-protected'),
+    );
+    await alice.save(frozenVersion('alice-disposable'));
+    for (var i = 0; i < 8; i++) {
+      await bob.save(frozenVersion('bob-$i'));
+    }
+    expect(await alice.read('recipe', versionId: 'alice-disposable'), isNull);
+    expect((await alice.readProtected(cooking))!.versionId, 'alice-protected');
+    expect(await bob.readProtected(cooking), isNull);
+    expect(await bob.read('recipe', versionId: 'alice-protected'), isNull);
+    expect((await alice.capacity()).bytes, (await bob.capacity()).bytes);
+    expect((await bob.capacity()).bytes, lessThanOrEqualTo(5000));
+    await bob.clear();
+    expect((await alice.readProtected(cooking))!.versionId, 'alice-protected');
+  });
   test('LRU evicts unused versions but retains menu execution and reports excess capacity', () async {
     final platform = MemoryLocalStore();
     final cache = RecipeSnapshotStore(

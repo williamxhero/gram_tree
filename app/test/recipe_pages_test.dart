@@ -2,6 +2,10 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:gram_tree/app/router.dart';
+import 'package:gram_tree/network/reachability.dart';
+import 'package:gram_tree/recipes/recipe_snapshot.dart';
 import 'package:gramtree_api/gramtree_api.dart';
 
 import 'package:gram_tree/storage/local_store.dart';
@@ -719,6 +723,209 @@ Future<void> _scrollUntilVisible(
 }
 
 void main() {
+  testWidgets(
+    'visible recipe freezes its displayed conversion when API reachability is lost',
+    (tester) async {
+      final server = FakeServer();
+      _installRecipeApi(server);
+      final env = TestEnv.signedIn(server: server);
+      await pumpApp(tester, env: env);
+      await _openMyRecipes(tester);
+      await tester.tap(find.byKey(const ValueKey('recipe-card-$_recipeId')));
+      await tester.pumpAndSettle();
+      await _scrollUntilVisible(
+        tester,
+        find.byKey(const ValueKey('recipe-serving-increase')),
+      );
+      await tester.tap(find.byKey(const ValueKey('recipe-serving-increase')));
+      await tester.pumpAndSettle();
+      env.reachability.reachable = false;
+      final container = ProviderScope.containerOf(
+        tester.element(find.byType(Scaffold).first),
+      );
+      await container.read(apiReachabilityProvider.notifier).check();
+      await tester.pumpAndSettle();
+      await _scrollToTop(tester);
+      expect(find.textContaining('离线快照'), findsOneWidget);
+      expect(
+        find.byKey(const ValueKey('recipe-serving-increase')),
+        findsNothing,
+      );
+      await _scrollToBottom(tester);
+      expect(find.text('150 克'), findsWidgets);
+    },
+  );
+  testWidgets(
+    'offline uncached version and missing conversion have explicit unavailable states',
+    (tester) async {
+      final server = FakeServer();
+      final state = _installRecipeApi(server);
+      final env = TestEnv.signedIn(server: server, offline: true);
+      await pumpApp(tester, env: env);
+      ProviderScope.containerOf(tester.element(find.byType(Scaffold).first))
+          .read(routerProvider)
+          .go('/recipes/$_recipeId');
+      await tester.pumpAndSettle();
+      expect(find.text('此菜谱版本尚未缓存，需要联网后打开。'), findsOneWidget);
+      await RecipeSnapshotStore(env.local, accountId: testUser().id).save(
+        FrozenRecipeSnapshot(
+          detail: RecipeDetail.fromJson(state.current),
+          capturedAt: DateTime.utc(2026, 10, 1),
+          inputs: {
+            'target_servings': 3,
+            'target_mold': null,
+            'personal_measure': null,
+          },
+          render: null,
+          dependencies: {'ingredient_catalogue': null},
+        ),
+      );
+      await restartApp(tester, env);
+      ProviderScope.containerOf(tester.element(find.byType(Scaffold).first))
+          .read(routerProvider)
+          .go('/recipes/$_recipeId');
+      await tester.pumpAndSettle();
+      expect(find.text('此版本缺少已保存的换算结果，需要联网查看用量。'), findsOneWidget);
+      expect(find.text('150 克'), findsNothing);
+      expect(find.text('把水烧开'), findsOneWidget);
+    },
+  );
+  testWidgets(
+    'corrupt frozen conversion inputs are unavailable instead of crashing',
+    (tester) async {
+      final server = FakeServer();
+      final state = _installRecipeApi(server);
+      final env = TestEnv.signedIn(server: server, offline: true);
+      await RecipeSnapshotStore(env.local, accountId: testUser().id).save(
+        FrozenRecipeSnapshot(
+          detail: RecipeDetail.fromJson(state.current),
+          capturedAt: DateTime.utc(2026, 10, 1),
+          inputs: {'target_servings': 'corrupt'},
+          render: null,
+          dependencies: const {},
+        ),
+      );
+      await pumpApp(tester, env: env);
+      ProviderScope.containerOf(tester.element(find.byType(Scaffold).first))
+          .read(routerProvider)
+          .go('/recipes/$_recipeId');
+      await tester.pumpAndSettle();
+      expect(find.text('此菜谱版本尚未缓存，需要联网后打开。'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets('cached private content is unavailable to another account', (
+    tester,
+  ) async {
+    final server = FakeServer();
+    _installRecipeApi(server);
+    final env = TestEnv.signedIn(server: server);
+    await pumpApp(tester, env: env);
+    await _openMyRecipes(tester);
+    await tester.tap(find.byKey(const ValueKey('recipe-card-$_recipeId')));
+    await tester.pumpAndSettle();
+    await _resetPage(tester);
+    server.user = server.user.copyWith(id: 'different-account');
+    final other = TestEnv.signedIn(
+      server: server,
+      local: env.local,
+      offline: true,
+    );
+    await pumpApp(tester, env: other);
+    ProviderScope.containerOf(tester.element(find.byType(Scaffold).first))
+        .read(routerProvider)
+        .go('/recipes/$_recipeId');
+    await tester.pumpAndSettle();
+    expect(find.text('此菜谱版本尚未缓存，需要联网后打开。'), findsOneWidget);
+    expect(find.text('把水烧开'), findsNothing);
+  });
+
+  testWidgets(
+    'server access denial is not replaced by a cached private snapshot',
+    (tester) async {
+      final server = FakeServer();
+      _installRecipeApi(server);
+      final env = TestEnv.signedIn(server: server);
+      await pumpApp(tester, env: env);
+      await _openMyRecipes(tester);
+      await tester.tap(find.byKey(const ValueKey('recipe-card-$_recipeId')));
+      await tester.pumpAndSettle();
+      await _resetPage(tester);
+      server.on(
+        'GET',
+        '/v1/recipes/$_recipeId',
+        (_) => FakeServer.error(403, 'forbidden', '没有访问权限'),
+      );
+      await pumpApp(tester, env: env);
+      ProviderScope.containerOf(tester.element(find.byType(Scaffold).first))
+          .read(routerProvider)
+          .go('/recipes/$_recipeId');
+      await tester.pumpAndSettle();
+      expect(find.text('把水烧开'), findsNothing);
+      await _resetPage(tester);
+      await pumpApp(
+        tester,
+        env: TestEnv(
+          server: server,
+          local: env.local,
+          secure: env.secure,
+          offline: true,
+        ),
+      );
+      ProviderScope.containerOf(tester.element(find.byType(Scaffold).first))
+          .read(routerProvider)
+          .go('/recipes/$_recipeId');
+      await tester.pumpAndSettle();
+      expect(find.text('此菜谱版本尚未缓存，需要联网后打开。'), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'offline restart reopens the same version and frozen displayed conversion',
+    (tester) async {
+      final server = FakeServer();
+      _installRecipeApi(server);
+      final env = TestEnv.signedIn(server: server);
+      await pumpApp(tester, env: env);
+      await _openMyRecipes(tester);
+      await tester.tap(find.byKey(const ValueKey('recipe-card-$_recipeId')));
+      await tester.pumpAndSettle();
+      await _scrollUntilVisible(
+        tester,
+        find.byKey(const ValueKey('recipe-serving-increase')),
+      );
+      await tester.tap(find.byKey(const ValueKey('recipe-serving-increase')));
+      await tester.pumpAndSettle();
+      await _scrollToBottom(tester);
+      expect(find.text('150 克'), findsWidgets);
+      // Rebuild all in-memory state with the same device storage but no network.
+      await _resetPage(tester);
+      final offline = TestEnv(
+        server: server,
+        local: env.local,
+        secure: env.secure,
+        offline: true,
+        params: {
+          'recipe.servings_max': 2,
+          'recipe.scaling_round_deviation_threshold': 0.9,
+        },
+      );
+      await pumpApp(tester, env: offline);
+      ProviderScope.containerOf(tester.element(find.byType(Scaffold).first))
+          .read(routerProvider)
+          .go('/recipes/$_recipeId');
+      await tester.pumpAndSettle();
+      expect(find.textContaining('离线快照'), findsOneWidget);
+      await _scrollToBottom(tester);
+      expect(find.text('150 克'), findsWidgets);
+      expect(find.text('按场景调整'), findsOneWidget);
+      await tester.tap(find.text('按场景调整'));
+      await tester.pumpAndSettle();
+      expect(find.text('原来：100 g'), findsOneWidget);
+      expect(find.text('现在：150 克'), findsOneWidget);
+    },
+  );
   testWidgets(
     'mold mode converts the original recipe and restores serving mode',
     (tester) async {
@@ -2659,6 +2866,22 @@ void main() {
     await _scrollToBottom(tester);
     expect(find.textContaining('白瓷勺'), findsWidgets);
     expect(find.textContaining('100 克'), findsWidgets);
+    final local = ProviderScope.containerOf(
+      tester.element(find.byType(Scaffold).first),
+    ).read(localStoreProvider) as MemoryLocalStore;
+    await _resetPage(tester);
+    await pumpApp(
+      tester,
+      env: TestEnv.signedIn(server: server, local: local, offline: true),
+    );
+    ProviderScope.containerOf(tester.element(find.byType(Scaffold).first))
+        .read(routerProvider)
+        .go('/recipes/$_recipeId');
+    await tester.pumpAndSettle();
+    await _scrollToBottom(tester);
+    expect(find.textContaining('白瓷勺'), findsWidgets);
+    expect(find.textContaining('100 克'), findsWidgets);
+    expect(find.byKey(const ValueKey('recipe-measure-picker')), findsNothing);
   });
 
   testWidgets('recipe detail exposes no-density fallback provenance', (
