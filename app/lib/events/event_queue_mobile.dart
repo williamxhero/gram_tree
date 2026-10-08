@@ -115,6 +115,8 @@ class DriftEventQueue implements EventQueue {
   @override
   final WriteRegistry registry;
   final StreamController<void> _changes = StreamController<void>.broadcast();
+  final Set<Future<void>> _diagnosticReads = {};
+  Future<void>? _closeFuture;
   @override
   Stream<void> get changes => _changes.stream;
 
@@ -314,23 +316,34 @@ class DriftEventQueue implements EventQueue {
       (await entries()).where((e) => e.state == WriteState.failed).length;
   @override
   Future<LegacyQueueDiagnostics> legacyDiagnostics() async {
-    final unknownCount = _db.queuedEvents.id.count();
-    final unknown =
-        await (_db.selectOnly(_db.queuedEvents)
-              ..addColumns([unknownCount])
-              ..where(
-                _db.queuedEvents.ownerId.isNull() &
-                    _db.queuedEvents.deliveryState.equals('quarantined'),
-              ))
-            .getSingle();
-    final rejectedCount = _db.rejectedEvents.id.count();
-    final rejected = await (_db.selectOnly(
-      _db.rejectedEvents,
-    )..addColumns([rejectedCount])).getSingle();
-    return LegacyQueueDiagnostics(
-      ownerUnknownCount: unknown.read(unknownCount) ?? 0,
-      rejectedCount: rejected.read(rejectedCount) ?? 0,
-    );
+    if (_closeFuture != null) throw StateError('Event queue is closing');
+    final settled = Completer<void>();
+    _diagnosticReads.add(settled.future);
+    try {
+      // One snapshot: there must be no second query that can start after a
+      // root restart has closed the Drift isolate between the two counts.
+      final row = await _db
+          .customSelect(
+            '''
+        SELECT
+          (SELECT COUNT(*) FROM queued_events
+            WHERE owner_id IS NULL AND delivery_state = 'quarantined')
+            AS owner_unknown_count,
+          (SELECT COUNT(*) FROM rejected_events) AS rejected_count
+      ''',
+            readsFrom: {_db.queuedEvents, _db.rejectedEvents},
+          )
+          .getSingle();
+      return LegacyQueueDiagnostics(
+        ownerUnknownCount: row.read<int>('owner_unknown_count'),
+        rejectedCount: row.read<int>('rejected_count'),
+      );
+    } finally {
+      // The query's own future still delivers errors to its live consumer.
+      // This completion only lets close wait for transport work to finish.
+      _diagnosticReads.remove(settled.future);
+      settled.complete();
+    }
   }
 
   @override
@@ -343,7 +356,12 @@ class DriftEventQueue implements EventQueue {
   }
 
   @override
-  Future<void> close() async {
+  Future<void> close() => _closeFuture ??= _closeAfterDiagnostics();
+
+  Future<void> _closeAfterDiagnostics() async {
+    // Disposing a provider cannot cancel an already issued isolate request.
+    // Drain those reads before shutting its channel; repeated close shares it.
+    await Future.wait(_diagnosticReads.toList());
     await _db.close();
     await _changes.close();
   }

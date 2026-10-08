@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:drift/drift.dart' as drift;
 import 'package:flutter/material.dart';
 import 'package:gramtree_api/gramtree_api.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -9,6 +10,7 @@ import 'package:gram_tree/app/theme.dart';
 import 'package:gram_tree/auth/session.dart';
 import 'package:gram_tree/events/event_upload_lifecycle.dart';
 import 'package:gram_tree/events/event_queue.dart';
+import 'package:gram_tree/events/event_queue_mobile.dart' as mobile;
 import 'package:gram_tree/events/event_uploader.dart';
 import 'package:gram_tree/events/sync_status.dart';
 import 'package:gram_tree/l10n/app_localizations.dart';
@@ -17,6 +19,61 @@ import 'package:gram_tree/ui_protocol/source_mark.dart';
 import 'helpers.dart';
 
 void main() {
+  testWidgets('页面重启等待旧本机诊断查询结算，重复关闭不打断查询或污染新计数', (tester) async {
+    final env = TestEnv.signedIn();
+    final oldExecutor = _DiagnosticExecutor(ownerUnknownCount: 1);
+    final oldQueue = _RefreshableDiagnosticQueue(oldExecutor);
+    ProviderContainer root(mobile.DriftEventQueue queue) => ProviderContainer(
+      overrides: [
+        for (final override in env.overrides)
+          if (override.origin != eventQueueProvider) override,
+        eventQueueProvider.overrideWith((ref) {
+          ref.onDispose(queue.close);
+          return queue;
+        }),
+      ],
+    );
+    final oldRoot = root(oldQueue);
+    addTearDown(() {
+      if (!oldExecutor.releaseCount.isCompleted) {
+        oldExecutor.releaseCount.complete();
+      }
+    });
+    await oldRoot.read(sessionStoreProvider).load();
+    await _pumpSyncBadge(tester, oldRoot);
+    expect(find.text('本机有 1 条旧写入无法确定原账号，已隔离保留，不会上传'), findsOneWidget);
+    oldExecutor.blockNextCount = true;
+    oldQueue.refresh();
+    await tester.pumpAndSettle();
+    expect(oldExecutor.countStarted.isCompleted, isTrue);
+    // A buffered update must not read from the disposed root.
+    oldQueue.refresh();
+    await tester.pumpWidget(const SizedBox.shrink());
+    oldRoot.dispose();
+    final firstClose = oldQueue.close();
+    final repeatedClose = oldQueue.close();
+    await tester.pump();
+    expect(oldExecutor.closed, isFalse, reason: '已发出的真实诊断查询必须先结算再关闭连接');
+
+    final newExecutor = _DiagnosticExecutor(ownerUnknownCount: 2);
+    final newQueue = _RefreshableDiagnosticQueue(newExecutor);
+    final newRoot = root(newQueue);
+    addTearDown(newRoot.dispose);
+    await newRoot.read(sessionStoreProvider).load();
+    await _pumpSyncBadge(tester, newRoot);
+    expect(find.text('本机有 2 条旧写入无法确定原账号，已隔离保留，不会上传'), findsOneWidget);
+    oldExecutor.releaseCount.complete();
+    await Future.wait([firstClose, repeatedClose]);
+    await tester.pumpAndSettle();
+    expect(oldExecutor.closed, isTrue);
+    expect(oldExecutor.closeCalls, 1);
+    expect(oldExecutor.interruptedQueries, 0);
+    expect(oldExecutor.countRequests, 2);
+    expect(find.text('本机有 1 条旧写入无法确定原账号，已隔离保留，不会上传'), findsNothing);
+    expect(find.text('本机有 2 条旧写入无法确定原账号，已隔离保留，不会上传'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('21层逆序依赖不消耗等待重试额度，页面待同步全部确认且每条只发一次', (tester) async {
     final server = FakeServer();
     final committed = <String>{};
@@ -615,6 +672,91 @@ Future<void> _pumpSyncBadge(
     ),
   );
   await tester.pumpAndSettle();
+}
+
+// The production Drift adapter executes real query/close ordering against this
+// gated transport. It needs no native SQLite import, so the page seam runs on
+// both the VM and Chrome; business queue state is not mocked or inspected.
+class _RefreshableDiagnosticQueue extends mobile.DriftEventQueue {
+  _RefreshableDiagnosticQueue(drift.QueryExecutor executor)
+    : super(mobile.EventQueueDatabase.withExecutor(executor));
+  final _notifications = StreamController<void>.broadcast();
+  @override
+  Stream<void> get changes => _notifications.stream;
+  void refresh() => _notifications.add(null);
+  @override
+  Future<void> close() async {
+    await super.close();
+    await _notifications.close();
+  }
+}
+
+class _DiagnosticExecutor extends drift.QueryExecutor {
+  _DiagnosticExecutor({required this.ownerUnknownCount});
+  final int ownerUnknownCount;
+  bool blockNextCount = false;
+  bool closed = false;
+  int closeCalls = 0;
+  int interruptedQueries = 0;
+  int countRequests = 0;
+  final countStarted = Completer<void>();
+  final releaseCount = Completer<void>();
+  @override
+  drift.SqlDialect get dialect => drift.SqlDialect.sqlite;
+  @override
+  Future<bool> ensureOpen(drift.QueryExecutorUser user) async => true;
+  @override
+  Future<List<Map<String, Object?>>> runSelect(
+    String statement,
+    List<Object?> args,
+  ) async {
+    if (closed) throw StateError('Query started after connection close');
+    if (!statement.toLowerCase().contains('count(')) return [];
+    countRequests++;
+    if (blockNextCount) {
+      blockNextCount = false;
+      countStarted.complete();
+      await releaseCount.future;
+    }
+    if (closed) {
+      interruptedQueries++;
+      throw StateError('Connection closed before diagnostic response');
+    }
+    return [
+      {
+        'c0': statement.contains('queued_events') ? ownerUnknownCount : 0,
+        'owner_unknown_count': ownerUnknownCount,
+        'rejected_count': 0,
+      },
+    ];
+  }
+
+  @override
+  Future<void> close() async {
+    closeCalls++;
+    closed = true;
+  }
+
+  @override
+  drift.QueryExecutor beginExclusive() => this;
+  @override
+  drift.TransactionExecutor beginTransaction() =>
+      throw UnsupportedError('Read-only transport');
+  @override
+  Future<void> runBatched(drift.BatchedStatements statements) =>
+      throw UnsupportedError('Read-only transport');
+  @override
+  Future<void> runCustom(String statement, [List<Object?>? args]) =>
+      throw UnsupportedError('Read-only transport');
+  @override
+  Future<int> runDelete(String statement, List<Object?> args) =>
+      throw UnsupportedError('Read-only transport');
+  @override
+  Future<int> runInsert(String statement, List<Object?> args) =>
+      throw UnsupportedError('Read-only transport');
+  @override
+  Future<int> runUpdate(String statement, List<Object?> args) =>
+      throw UnsupportedError('Read-only transport');
 }
 
 QueuedEvent _dependencyWrite(
