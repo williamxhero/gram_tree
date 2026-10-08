@@ -226,7 +226,9 @@ jobs:
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
           disable-animations: true
           working-directory: app
-          script: flutter test integration_test --dart-define=APP_ENV=dev --dart-define=E2E_COMPOSITION_TIMEOUT_MS=3000 --dart-define=API_BASE_URL=http://10.0.2.2:8000 -d emulator-5554
+          script: |
+            flutter test integration_test --dart-define=APP_ENV=dev --dart-define=E2E_COMPOSITION_TIMEOUT_MS=3000 --dart-define=API_BASE_URL=http://10.0.2.2:8000 -d emulator-5554
+            python3 ../tool/android_process_death_test.py --serial emulator-5554
       - name: 服务端日志
         if: failure()
         run: cat /tmp/gramtree_e2e_server_8000.log || true
