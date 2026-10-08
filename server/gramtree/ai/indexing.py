@@ -8,7 +8,7 @@ from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
 
 from gramtree.ai import gateway
-from gramtree.ai.models import GenerationLog, GenerationRequest, RecipeEmbedding
+from gramtree.ai.models import GenerationLog, GenerationRequest, RecipeEmbedding, RecipeModification
 from gramtree.core.time import utcnow
 from gramtree.recipes.models import Dish, Recipe, RecipeVersion
 from gramtree.runtime_config import service as config
@@ -92,6 +92,15 @@ def purge(session: Session) -> dict[str, Any]:
             )
         )
     )
+    modifications = len(
+        list(
+            session.scalars(
+                delete(RecipeModification)
+                .where(RecipeModification.created_at < cutoff)
+                .returning(RecipeModification.id)
+            )
+        )
+    )
     requests = len(
         list(
             session.scalars(
@@ -102,4 +111,4 @@ def purge(session: Session) -> dict[str, Any]:
         )
     )
     session.commit()
-    return {"logs": logs, "requests": requests}
+    return {"logs": logs, "requests": requests, "modifications": modifications}

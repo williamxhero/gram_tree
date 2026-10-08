@@ -12,6 +12,7 @@ import '../../ui_protocol/recipe_safety.dart';
 import '../../ui_protocol/source_mark.dart';
 import '../../ui_protocol/source_types.dart';
 import '../recipes/recipe_pages.dart';
+import '../recipes/text_edit_panel.dart';
 
 /// A thin retrieval/choice surface. Generation, validation and provenance are
 /// server-owned; editing uses the existing complete structured recipe editor.
@@ -268,7 +269,17 @@ class _OneLineRecipePageState extends ConsumerState<OneLineRecipePage> {
                 ],
               ),
             ),
-            FoodSafetyCard(result: result!.safety),
+            TextEditPanel(
+              key: ValueKey('text-edit-generation-${result!.requestId}'),
+              generationRequestId: result.requestId,
+              onSavingChanged: (saving) {
+                if (mounted) setState(() => _busy = saving);
+              },
+              onSaved: (detail) async {
+                if (mounted) context.pushReplacement('/recipes/${detail.id}');
+              },
+            ),
+            FoodSafetyCard(result: result.safety),
             AllergenCard(result: result.safety),
             for (final warning in [
               ...?result.numericWarnings,

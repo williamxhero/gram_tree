@@ -7,6 +7,8 @@ import 'package:gram_tree/config/app_config.dart';
 import 'package:gram_tree/main.dart' as app;
 import 'package:integration_test/integration_test.dart';
 
+import 'event_pipeline_support.dart' as support;
+
 void _markE2eStep(String step) {
   final binding = IntegrationTestWidgetsFlutterBinding.instance;
   binding.reportData = {...?binding.reportData, 'e2e_step': step};
@@ -56,14 +58,20 @@ void main() {
     final body = detail.evaluate().isNotEmpty
         ? detail
         : find.byKey(const ValueKey('recipe-editor-content'));
+    // The list's 20px padding leaves a gutter outside editable controls.
+    Offset dragStart() {
+      final rect = tester.getRect(body);
+      return Offset(rect.left + 10, rect.center.dy);
+    }
+
     // Sliver children outside the viewport may not exist yet. Start from the
     // top so revealing an earlier control never scrolls in the wrong direction.
     for (var i = 0; i < 12; i++) {
-      await tester.drag(body, const Offset(0, 500));
+      await tester.dragFrom(dragStart(), const Offset(0, 500));
       await tester.pump(const Duration(milliseconds: 100));
     }
     for (var i = 0; i < 40 && finder.evaluate().isEmpty; i++) {
-      await tester.drag(body, const Offset(0, -300));
+      await tester.dragFrom(dragStart(), const Offset(0, -300));
       await tester.pump(const Duration(milliseconds: 100));
     }
     if (finder.evaluate().isEmpty) {
@@ -79,7 +87,7 @@ void main() {
     // A cached lazy child can be built yet outside the phone viewport. Check
     // actual hit testing, not only existence, before performing an action.
     for (var i = 0; i < 8 && finder.hitTestable().evaluate().isEmpty; i++) {
-      await tester.drag(body, const Offset(0, -100));
+      await tester.dragFrom(dragStart(), const Offset(0, -100));
       await settle(tester);
     }
     expect(finder.hitTestable(), findsOneWidget);
@@ -121,10 +129,14 @@ void main() {
       tester.testTextInput.register();
       addTearDown(tester.testTextInput.unregister);
 
+      // iOS Keychain survives app uninstall; start this fixture signed out.
+      await support.resetLocalAppState();
       await app.main();
       await settle(tester);
       final consent = find.text('开始之前，先说清楚我们会用到什么');
       if (consent.evaluate().isNotEmpty) {
+        await tester.ensureVisible(find.byKey(const ValueKey('consent-agree')));
+        await settle(tester);
         await tester.tap(find.byKey(const ValueKey('consent-agree')));
         await settle(tester);
       } else {

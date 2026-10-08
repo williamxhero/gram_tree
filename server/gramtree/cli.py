@@ -390,6 +390,28 @@ def cmd_ai(args: argparse.Namespace) -> int:
                         ).all()
                     ),
                     "events": [e.content for e in events],
+                    "modification_events": [
+                        {"id": str(e.id), "correlation": e.correlation, "content": e.content}
+                        for e in session.scalars(
+                            select(Event)
+                            .where(
+                                Event.user_id == user_id,
+                                Event.event_type == "ai.recipe_modification",
+                            )
+                            .order_by(Event.received_at, Event.id)
+                        )
+                    ],
+                    "version_events": [
+                        {"id": str(e.id), "correlation": e.correlation, "content": e.content}
+                        for e in session.scalars(
+                            select(Event)
+                            .where(
+                                Event.user_id == user_id,
+                                Event.event_type == "recipe.version_saved",
+                            )
+                            .order_by(Event.received_at, Event.id)
+                        )
+                    ],
                 }
             )
         )
