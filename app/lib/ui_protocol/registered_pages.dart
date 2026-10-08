@@ -1,3 +1,4 @@
+import '../features/me/taste_profile_page.dart';
 import '../features/recipes/recipe_pages.dart';
 import '../features/tab_paths.dart';
 
@@ -14,4 +15,5 @@ import '../features/tab_paths.dart';
 const Map<String, String> registeredPages = {
   'create': TabPaths.create,
   'my_recipes': RecipeListPage.path,
+  'taste_profile': TasteProfilePage.path,
 };
