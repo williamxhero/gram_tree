@@ -57,7 +57,19 @@ def _validate_request_batch_advice(params: Mapping[str, Any]) -> bool:
 
 
 def _validate_call_operation(params: Mapping[str, Any]) -> bool:
-    return _require_non_empty_string(params, "operation")
+    if not _require_non_empty_string(params, "operation"):
+        return False
+    # Preserve legacy placeholders; only this concrete operation can execute in App.
+    if params["operation"] != "answer_recipe_question":
+        return True
+    question = params.get("question")
+    return (
+        _require_non_empty_string(params, "recipe_id")
+        and _require_non_empty_string(params, "recipe_version_id")
+        and isinstance(question, str)
+        and bool(question.strip())
+        and len(question) <= 1000
+    )
 
 
 def _validate_recipe_operation(params: Mapping[str, Any]) -> bool:

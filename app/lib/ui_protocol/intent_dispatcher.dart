@@ -42,7 +42,7 @@ class IntentDispatcher {
 
   Future<void> dispatch(
     BuildContext context, {
-    required String compositionId,
+    required String? compositionId,
     required String componentId,
     required ActionDescriptor action,
   }) async {
@@ -56,14 +56,19 @@ class IntentDispatcher {
     // 不做，不抛异常、不影响界面。
     if (spec == null || !spec.validateParams(params)) return;
 
-    _ref.read(sourceCompositionIdProvider.notifier).set(compositionId);
+    // Fixed business pages have no server composition; never invent its ID.
+    if (compositionId != null) {
+      _ref.read(sourceCompositionIdProvider.notifier).set(compositionId);
+    }
 
     await _ref
         .read(eventRecorderProvider)
         .record(
           eventType: 'ui.component_action',
           typeVersion: 1,
-          correlation: EventCorrelationIds(uiCompositionId: compositionId),
+          correlation: compositionId == null
+              ? null
+              : EventCorrelationIds(uiCompositionId: compositionId),
           content: {'component_id': componentId, 'intent': action.intent},
         );
 

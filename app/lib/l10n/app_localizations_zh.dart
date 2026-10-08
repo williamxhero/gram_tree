@@ -10,6 +10,103 @@ class AppLocalizationsZh extends AppLocalizations {
   AppLocalizationsZh([String locale = 'zh']) : super(locale);
 
   @override
+  String get recipeAnswerBasis => '这是一般经验，还没有足够记录验证';
+
+  @override
+  String get recipeAnswerAnswered => '已回答 · 一般经验';
+
+  @override
+  String get recipeAnswerUncertain => '不确定 · 一般经验';
+
+  @override
+  String get recipeAnswerCannotAnswer => '无法回答 · 一般经验';
+
+  @override
+  String get recipeAnswerUnavailable => '能力不可用 · 一般经验';
+
+  @override
+  String get recipeAnswerBudget => '月预算已用完';
+
+  @override
+  String get recipeAnswerQuota => '今日解释配额已用完';
+
+  @override
+  String get recipeAnswerTimeout => '模型响应超时';
+
+  @override
+  String get recipeAnswerDisabled => '模型已停用';
+
+  @override
+  String get recipeAnswerNotConfigured => '模型暂未配置';
+
+  @override
+  String get recipeAnswerNetwork => '模型或网络暂时不可用';
+
+  @override
+  String recipeAnswerUnavailableConclusion(String reason) {
+    return '菜谱解释（explain）：$reason。';
+  }
+
+  @override
+  String get recipeAnswerSource => 'AI 估算 · 菜谱解释';
+
+  @override
+  String get recipeAnswerClose => '关闭解释';
+
+  @override
+  String recipeAnswerQuestion(String question) {
+    return '问题：$question';
+  }
+
+  @override
+  String get recipeAnswerContinue => '查看、表单编辑和规则换算仍可使用；问题已保留，可以重试。';
+
+  @override
+  String recipeAnswerVersion(int version) {
+    return '明细 · 第 $version 版；解释不会自动修改菜谱。';
+  }
+
+  @override
+  String recipeAnswerAllergens(String allergens) {
+    return '过敏原：$allergens';
+  }
+
+  @override
+  String recipeAnswerReplacementAllergens(String allergens) {
+    return '替换食材过敏原：$allergens';
+  }
+
+  @override
+  String get recipeAnswerIncompleteAllergens => '过敏信息可能不完整，请核对实际食材。';
+
+  @override
+  String get recipeAnswerTitle => '问这版的做法';
+
+  @override
+  String get recipeAnswerSemantics => '问这版的做法；只提供一般经验，不改动菜谱';
+
+  @override
+  String get recipeAnswerInput => '厨房问题';
+
+  @override
+  String get recipeAnswerHint => '例如：这一步为什么要炒熟？';
+
+  @override
+  String get recipeAnswerBusy => '正在解释…';
+
+  @override
+  String get recipeAnswerRetry => '重试解释';
+
+  @override
+  String get recipeAnswerSubmit => '查看解释';
+
+  @override
+  String get recipeAnswerExperience => '一般经验';
+
+  @override
+  String get recipeAnswerWhy => '为什么 · 明细';
+
+  @override
   String get appTitle => '味谱';
 
   @override

@@ -1,13 +1,15 @@
 from fastapi import APIRouter
 
 from gramtree.accounts.deps import CurrentAuth
-from gramtree.ai import gateway, service
+from gramtree.ai import answers, gateway, service
 from gramtree.ai.schemas import (
     AIStatus,
     ExistingChoice,
     GenerateInput,
     GenerationResult,
     OneLineInput,
+    RecipeAnswer,
+    RecipeQuestion,
     RetrievalResult,
 )
 from gramtree.core.errors import ERROR_RESPONSES
@@ -68,3 +70,17 @@ def save_generated_recipe(
     settings: SettingsDep,
 ) -> RecipeDetail:
     return service.save(session, redis, settings, auth.user, request_id, body)
+
+
+@router.post("/{recipe_id}/versions/{version_id}/answer", response_model=RecipeAnswer)
+def answer_recipe_question(
+    recipe_id: IdV4,
+    version_id: IdV4,
+    body: RecipeQuestion,
+    auth: CurrentAuth,
+    session: SessionDep,
+    settings: SettingsDep,
+) -> RecipeAnswer:
+    return answers.answer(
+        session, settings, auth.user, recipe_id, version_id, body.question.strip()
+    )
