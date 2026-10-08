@@ -18,6 +18,7 @@ export 'package:gramtree_api/src/api/ingredients_api.dart';
 export 'package:gramtree_api/src/api/personal_measures_api.dart';
 export 'package:gramtree_api/src/api/recipe_ai_api.dart';
 export 'package:gramtree_api/src/api/recipes_api.dart';
+export 'package:gramtree_api/src/api/sync_api.dart';
 export 'package:gramtree_api/src/api/ui_protocol_api.dart';
 
 export 'package:gramtree_api/src/model/ai_status.dart';
@@ -151,3 +152,8 @@ export 'package:gramtree_api/src/model/token_pair.dart';
 export 'package:gramtree_api/src/model/unrecorded_ingredient_item.dart';
 export 'package:gramtree_api/src/model/user_out.dart';
 export 'package:gramtree_api/src/model/value_source.dart';
+export 'package:gramtree_api/src/model/write_batch.dart';
+export 'package:gramtree_api/src/model/write_batch_response.dart';
+export 'package:gramtree_api/src/model/write_envelope.dart';
+export 'package:gramtree_api/src/model/write_resource_result.dart';
+export 'package:gramtree_api/src/model/write_result.dart';

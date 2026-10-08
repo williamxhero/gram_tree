@@ -15,6 +15,7 @@ from gramtree.core.middleware import RequestContextMiddleware
 from gramtree.db import make_engine, make_session_factory
 from gramtree.events import dev as events_dev
 from gramtree.events import router as events
+from gramtree.events import sync_router as sync
 from gramtree.ingredients import router as ingredients
 from gramtree.legal import router as legal
 from gramtree.recipes import measure_router as personal_measures
@@ -66,6 +67,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     v1.include_router(accounts.router)
     v1.include_router(accounts.me_router)
     v1.include_router(events.router)
+    v1.include_router(sync.router)
     v1.include_router(analytics.router)
     v1.include_router(ingredients.router)
     v1.include_router(recipes.router)
