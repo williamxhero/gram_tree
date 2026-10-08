@@ -86,6 +86,9 @@ void main() {
     await waitFor(tester, find.byKey(const ValueKey('ai-design-new')));
     await tap(tester, 'ai-design-new');
     await tap(tester, 'ai-skip-questions');
+    // Existing-recipe cards can scroll this lazy row out on a narrow phone.
+    // Reveal it before checking completion; keep the same enabled-state guard.
+    await reveal(tester, 'one-line-search');
     await waitFor(
       tester,
       find.byWidgetPredicate(
