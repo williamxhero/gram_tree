@@ -21,7 +21,9 @@
       "id": "chicken", "ingredient_id": null, "display_name": "鸡腿肉",
       "quantity": 300.0, "unit": "g", "base_quantity": 300.0, "base_unit": "g",
       "preparation": null, "group": null, "optional": false, "replacement": null,
-      "functional": false, "scaling_mode": "proportional", "quantity_source": null
+      "functional": false, "flavor_contribution": null, "flavor_source": null,
+      "functional_source": null, "scaling_mode": "proportional", "quantity_source": null,
+      "measure_input_token": null
     }],
     "steps": [
       {"id": "marinate", "action": "腌", "instruction": "鸡肉冷藏腌制", "ingredient_ids": ["chicken"], "duration_seconds": 900, "unattended": true, "heat": null, "temperature_celsius": null, "cookware": "碗", "doneness": "入味", "depends_on": [], "notes": null, "why": null, "duration_source": null, "heat_source": null, "temperature_source": null},
