@@ -157,9 +157,15 @@ class RecipeRepository {
   /// The server owns all rule thresholds; the client only presents the
   /// returned result. This is deliberately a separate call from save so an
   /// author can correct a finding before committing a new immutable version.
-  Future<RecipeSafetyResult> checkSafety(RecipeForm form) async {
+  Future<RecipeSafetyResult> checkSafety(
+    RecipeForm form, {
+    String? recipeId,
+    String? baseVersionId,
+  }) async {
     final response = await _recipes.checkRecipeSafety(
       recipeSafetyCheckRequest: RecipeSafetyCheckRequest(
+        recipeId: recipeId,
+        baseVersionId: baseVersionId,
         dishName: form.dishName,
         dishAliases: [...form.aliases],
         changeNote: form.changeNote,
@@ -267,6 +273,7 @@ class RecipeIngredientDraft {
     this.group = '',
     this.scalingMode,
     this.quantitySource,
+    this.measureInputToken,
     this.optional = false,
     this.functional = false,
     this.flavorContribution,
@@ -291,6 +298,7 @@ class RecipeIngredientDraft {
         scalingMode:
             value.scalingMode ?? RecipeIngredientScalingModeEnum.proportional,
         quantitySource: value.quantitySource,
+        measureInputToken: value.measureInputToken,
         optional: value.optional == true,
         functional: value.functional == true,
         flavorContribution: value.flavorContribution,
@@ -322,6 +330,7 @@ class RecipeIngredientDraft {
       group: _string(value['group']) ?? '',
       scalingMode: _scalingMode(value['scaling_mode']),
       quantitySource: _valueSource(value['quantity_source']),
+      measureInputToken: _nonEmpty(value['measure_input_token']),
       optional: value['optional'] == true,
       functional: value['functional'] == true,
       flavorContribution: value['flavor_contribution'] is Map
@@ -356,6 +365,7 @@ class RecipeIngredientDraft {
   /// historical behavior cannot drift with later library updates.
   RecipeIngredientScalingModeEnum? scalingMode;
   ValueSource? quantitySource;
+  String? measureInputToken;
   bool optional;
   bool functional;
   RecipeFlavorContribution? flavorContribution;
@@ -413,6 +423,7 @@ class RecipeIngredientDraft {
     preparation: _optionalText(preparation),
     quantity: quantity,
     quantitySource: quantitySource ?? _authorSource(quantity.toString()),
+    measureInputToken: measureInputToken,
     replacement: replacement?.toModel(),
     scalingMode: scalingMode,
     unit: unit.trim().isEmpty ? 'g' : unit.trim(),
@@ -430,6 +441,7 @@ class RecipeIngredientDraft {
     'group': group,
     'scaling_mode': scalingMode?.value,
     'quantity_source': quantitySource?.toJson(),
+    'measure_input_token': measureInputToken,
     'optional': optional,
     'functional': functional,
     'flavor_contribution': flavorContribution?.toJson(),

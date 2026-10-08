@@ -100,6 +100,90 @@ abstract class AppLocalizations {
   /// **'味谱'**
   String get appTitle;
 
+  /// No description provided for @measureInputAction.
+  ///
+  /// In zh, this message translates to:
+  /// **'用自家量具录入'**
+  String get measureInputAction;
+
+  /// No description provided for @measureInputTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'量具用量换算'**
+  String get measureInputTitle;
+
+  /// No description provided for @measureInputTool.
+  ///
+  /// In zh, this message translates to:
+  /// **'自家量具'**
+  String get measureInputTool;
+
+  /// No description provided for @measureInputCount.
+  ///
+  /// In zh, this message translates to:
+  /// **'几勺、几碗或几杯'**
+  String get measureInputCount;
+
+  /// No description provided for @measureInputBaseUnit.
+  ///
+  /// In zh, this message translates to:
+  /// **'采用的基础单位'**
+  String get measureInputBaseUnit;
+
+  /// No description provided for @measureInputPreview.
+  ///
+  /// In zh, this message translates to:
+  /// **'查看换算'**
+  String get measureInputPreview;
+
+  /// No description provided for @measureInputConfirm.
+  ///
+  /// In zh, this message translates to:
+  /// **'确认采用基础量'**
+  String get measureInputConfirm;
+
+  /// No description provided for @measureInputEstimate.
+  ///
+  /// In zh, this message translates to:
+  /// **'我了解这是估算，继续换算'**
+  String get measureInputEstimate;
+
+  /// No description provided for @measureInputFallback.
+  ///
+  /// In zh, this message translates to:
+  /// **'返回填写基础量'**
+  String get measureInputFallback;
+
+  /// No description provided for @measureInputNoTools.
+  ///
+  /// In zh, this message translates to:
+  /// **'还没有登记量具，请先在个人中心登记，或直接填写克、毫升。'**
+  String get measureInputNoTools;
+
+  /// No description provided for @measureInputOffline.
+  ///
+  /// In zh, this message translates to:
+  /// **'离线或缺少转换数据，不能可靠换算；请返回填写基础量。草稿不会改变。'**
+  String get measureInputOffline;
+
+  /// No description provided for @measureInputInvalid.
+  ///
+  /// In zh, this message translates to:
+  /// **'请输入有限、非负且不超过 10000000 的数量。'**
+  String get measureInputInvalid;
+
+  /// No description provided for @measureInputUnchanged.
+  ///
+  /// In zh, this message translates to:
+  /// **'尚未确认，当前食材用量不会改变。'**
+  String get measureInputUnchanged;
+
+  /// No description provided for @measureInputEvidence.
+  ///
+  /// In zh, this message translates to:
+  /// **'量具输入依据'**
+  String get measureInputEvidence;
+
   /// No description provided for @tabToday.
   ///
   /// In zh, this message translates to:
@@ -2184,7 +2268,7 @@ abstract class AppLocalizations {
   /// No description provided for @personalMeasuresIntro.
   ///
   /// In zh, this message translates to:
-  /// **'把空量具放在厨房秤上归零，装满水后的克数就是容量（毫升）。只影响显示，不会修改菜谱。'**
+  /// **'把空量具放在厨房秤上归零，装满水后的克数就是容量（毫升）。可用于显示或确认录入；重新校准不会修改已保存菜谱。'**
   String get personalMeasuresIntro;
 
   /// No description provided for @personalMeasuresOffline.

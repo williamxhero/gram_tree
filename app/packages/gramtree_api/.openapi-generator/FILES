@@ -76,6 +76,8 @@ lib/src/model/ingredient_attributes.dart
 lib/src/model/ingredient_detail.dart
 lib/src/model/measure_display_out.dart
 lib/src/model/measure_display_request.dart
+lib/src/model/measure_input_out.dart
+lib/src/model/measure_input_request.dart
 lib/src/model/merge_relation.dart
 lib/src/model/mold_conversion.dart
 lib/src/model/mold_conversion_ingredient.dart

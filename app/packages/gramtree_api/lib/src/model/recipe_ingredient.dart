@@ -40,6 +40,8 @@ class RecipeIngredient {
 
     this.ingredientId,
 
+    this.measureInputToken,
+
     this.optional = false,
 
     this.preparation,
@@ -96,6 +98,10 @@ class RecipeIngredient {
   @JsonKey(name: r'ingredient_id', required: false, includeIfNull: false)
   final String? ingredientId;
 
+  /// 本人确认的量具换算凭据；基础量与来源不随量具校准改变
+  @JsonKey(name: r'measure_input_token', required: false, includeIfNull: false)
+  final String? measureInputToken;
+
   @JsonKey(
     defaultValue: false,
     name: r'optional',
@@ -140,6 +146,7 @@ class RecipeIngredient {
           other.group == group &&
           other.id == id &&
           other.ingredientId == ingredientId &&
+          other.measureInputToken == measureInputToken &&
           other.optional == optional &&
           other.preparation == preparation &&
           other.quantity == quantity &&
@@ -160,6 +167,7 @@ class RecipeIngredient {
       group.hashCode +
       id.hashCode +
       ingredientId.hashCode +
+      measureInputToken.hashCode +
       optional.hashCode +
       preparation.hashCode +
       quantity.hashCode +

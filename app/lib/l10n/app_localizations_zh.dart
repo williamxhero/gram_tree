@@ -13,6 +13,48 @@ class AppLocalizationsZh extends AppLocalizations {
   String get appTitle => '味谱';
 
   @override
+  String get measureInputAction => '用自家量具录入';
+
+  @override
+  String get measureInputTitle => '量具用量换算';
+
+  @override
+  String get measureInputTool => '自家量具';
+
+  @override
+  String get measureInputCount => '几勺、几碗或几杯';
+
+  @override
+  String get measureInputBaseUnit => '采用的基础单位';
+
+  @override
+  String get measureInputPreview => '查看换算';
+
+  @override
+  String get measureInputConfirm => '确认采用基础量';
+
+  @override
+  String get measureInputEstimate => '我了解这是估算，继续换算';
+
+  @override
+  String get measureInputFallback => '返回填写基础量';
+
+  @override
+  String get measureInputNoTools => '还没有登记量具，请先在个人中心登记，或直接填写克、毫升。';
+
+  @override
+  String get measureInputOffline => '离线或缺少转换数据，不能可靠换算；请返回填写基础量。草稿不会改变。';
+
+  @override
+  String get measureInputInvalid => '请输入有限、非负且不超过 10000000 的数量。';
+
+  @override
+  String get measureInputUnchanged => '尚未确认，当前食材用量不会改变。';
+
+  @override
+  String get measureInputEvidence => '量具输入依据';
+
+  @override
   String get tabToday => '今天';
 
   @override
@@ -1150,7 +1192,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get personalMeasuresIntro =>
-      '把空量具放在厨房秤上归零，装满水后的克数就是容量（毫升）。只影响显示，不会修改菜谱。';
+      '把空量具放在厨房秤上归零，装满水后的克数就是容量（毫升）。可用于显示或确认录入；重新校准不会修改已保存菜谱。';
 
   @override
   String get personalMeasuresOffline => '离线：正在使用已缓存的量具；登记、修改和删除需要联网。';

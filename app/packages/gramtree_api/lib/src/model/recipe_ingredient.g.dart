@@ -29,6 +29,8 @@ abstract class _$RecipeIngredientCWProxy {
 
   RecipeIngredient ingredientId(String? ingredientId);
 
+  RecipeIngredient measureInputToken(String? measureInputToken);
+
   RecipeIngredient optional(bool? optional);
 
   RecipeIngredient preparation(String? preparation);
@@ -60,6 +62,7 @@ abstract class _$RecipeIngredientCWProxy {
     String? group,
     String id,
     String? ingredientId,
+    String? measureInputToken,
     bool? optional,
     String? preparation,
     num quantity,
@@ -115,6 +118,10 @@ class _$RecipeIngredientCWProxyImpl implements _$RecipeIngredientCWProxy {
       this(ingredientId: ingredientId);
 
   @override
+  RecipeIngredient measureInputToken(String? measureInputToken) =>
+      this(measureInputToken: measureInputToken);
+
+  @override
   RecipeIngredient optional(bool? optional) => this(optional: optional);
 
   @override
@@ -157,6 +164,7 @@ class _$RecipeIngredientCWProxyImpl implements _$RecipeIngredientCWProxy {
     Object? group = const $CopyWithPlaceholder(),
     Object? id = const $CopyWithPlaceholder(),
     Object? ingredientId = const $CopyWithPlaceholder(),
+    Object? measureInputToken = const $CopyWithPlaceholder(),
     Object? optional = const $CopyWithPlaceholder(),
     Object? preparation = const $CopyWithPlaceholder(),
     Object? quantity = const $CopyWithPlaceholder(),
@@ -206,6 +214,10 @@ class _$RecipeIngredientCWProxyImpl implements _$RecipeIngredientCWProxy {
           ? _value.ingredientId
           // ignore: cast_nullable_to_non_nullable
           : ingredientId as String?,
+      measureInputToken: measureInputToken == const $CopyWithPlaceholder()
+          ? _value.measureInputToken
+          // ignore: cast_nullable_to_non_nullable
+          : measureInputToken as String?,
       optional: optional == const $CopyWithPlaceholder()
           ? _value.optional
           // ignore: cast_nullable_to_non_nullable
@@ -285,6 +297,10 @@ RecipeIngredient _$RecipeIngredientFromJson(
       group: $checkedConvert('group', (v) => v as String?),
       id: $checkedConvert('id', (v) => v as String),
       ingredientId: $checkedConvert('ingredient_id', (v) => v as String?),
+      measureInputToken: $checkedConvert(
+        'measure_input_token',
+        (v) => v as String?,
+      ),
       optional: $checkedConvert('optional', (v) => v as bool? ?? false),
       preparation: $checkedConvert('preparation', (v) => v as String?),
       quantity: $checkedConvert('quantity', (v) => v as num),
@@ -310,6 +326,7 @@ RecipeIngredient _$RecipeIngredientFromJson(
     'flavorSource': 'flavor_source',
     'functionalSource': 'functional_source',
     'ingredientId': 'ingredient_id',
+    'measureInputToken': 'measure_input_token',
     'quantitySource': 'quantity_source',
     'scalingMode': 'scaling_mode',
   },
@@ -327,6 +344,7 @@ Map<String, dynamic> _$RecipeIngredientToJson(RecipeIngredient instance) =>
       'group': ?instance.group,
       'id': instance.id,
       'ingredient_id': ?instance.ingredientId,
+      'measure_input_token': ?instance.measureInputToken,
       'optional': ?instance.optional,
       'preparation': ?instance.preparation,
       'quantity': instance.quantity,

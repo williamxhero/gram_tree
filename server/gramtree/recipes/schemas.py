@@ -108,6 +108,11 @@ class RecipeIngredient(BaseModel):
         default=None, description="缩放方式；不填时用标准食材库的默认值，未收录的食材按比例"
     )
     quantity_source: ValueSource | None = None
+    measure_input_token: str | None = Field(
+        default=None,
+        max_length=8192,
+        description="本人确认的量具换算凭据；基础量与来源不随量具校准改变",
+    )
 
     @field_validator("flavor_source", "functional_source")
     @classmethod
@@ -361,6 +366,9 @@ class RecipeVersionCreate(BaseModel):
 
 class RecipeSafetyCheckRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
+
+    recipe_id: IdV4 | None = None
+    base_version_id: IdV4 | None = None
 
     dish_name: str = Field(default="", max_length=200)
     dish_aliases: list[str] = Field(default_factory=list, max_length=20)

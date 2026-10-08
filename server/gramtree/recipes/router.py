@@ -47,9 +47,10 @@ def check_recipe_safety(
     body: RecipeSafetyCheckRequest,
     auth: CurrentAuth,
     session: SessionDep,
+    settings: SettingsDep,
 ) -> RecipeSafetyCheckOut:
     # Draft checks use the same validation as saving, without creating a version.
-    result = service.check_safety(session, auth.user, body)
+    result = service.check_safety(session, auth.user, body, settings)
     return RecipeSafetyCheckOut(result=result)
 
 

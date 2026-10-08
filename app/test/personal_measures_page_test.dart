@@ -192,7 +192,7 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.byKey(const ValueKey('measure-add')), findsOneWidget);
       expect(
-        find.text('把空量具放在厨房秤上归零，装满水后的克数就是容量（毫升）。只影响显示，不会修改菜谱。'),
+        find.text('把空量具放在厨房秤上归零，装满水后的克数就是容量（毫升）。可用于显示或确认录入；重新校准不会修改已保存菜谱。'),
         findsOneWidget,
       );
     });

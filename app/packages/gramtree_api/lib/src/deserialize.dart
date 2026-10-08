@@ -51,6 +51,8 @@ import 'package:gramtree_api/src/model/ingredient_attributes.dart';
 import 'package:gramtree_api/src/model/ingredient_detail.dart';
 import 'package:gramtree_api/src/model/measure_display_out.dart';
 import 'package:gramtree_api/src/model/measure_display_request.dart';
+import 'package:gramtree_api/src/model/measure_input_out.dart';
+import 'package:gramtree_api/src/model/measure_input_request.dart';
 import 'package:gramtree_api/src/model/merge_relation.dart';
 import 'package:gramtree_api/src/model/mold_conversion.dart';
 import 'package:gramtree_api/src/model/mold_conversion_ingredient.dart';
@@ -299,6 +301,12 @@ ReturnType deserialize<ReturnType, BaseType>(
           as ReturnType;
     case 'MeasureDisplayRequest':
       return MeasureDisplayRequest.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'MeasureInputOut':
+      return MeasureInputOut.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'MeasureInputRequest':
+      return MeasureInputRequest.fromJson(value as Map<String, dynamic>)
           as ReturnType;
     case 'MergeRelation':
       return MergeRelation.fromJson(value as Map<String, dynamic>)

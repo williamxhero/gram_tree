@@ -28,6 +28,7 @@ from gramtree.ingredients.attributes import IngredientAttributes
 from gramtree.ingredients.models import Ingredient, IngredientAttribute
 from gramtree.recipes import food_safety
 from gramtree.recipes.measure_display import display_amount, quantity_text
+from gramtree.recipes.measure_input import confirmed_source
 from gramtree.recipes.measure_models import PersonalMeasure
 from gramtree.recipes.models import (
     Dish,
@@ -91,7 +92,7 @@ from gramtree.recipes.serving_conversion import (
 )
 from gramtree.recipes.storage import make_recipe_storage
 from gramtree.runtime_config import service as config
-from gramtree.settings import Settings
+from gramtree.settings import Settings, get_settings
 from gramtree.ui_protocol.protocol import SourceBasis, SourcedValue
 
 logger = logging.getLogger("gramtree.recipes")
@@ -258,7 +259,13 @@ def _recipe_flavor_defaults(session: Session, ingredient: RecipeIngredient) -> d
                     f"{'AI 起草、待核对' if attribute.estimate else '人工校对'}；不是做菜验证"
                 ),
             )
-        elif value is not None and source is None and field in ingredient.model_fields_set:
+        elif (
+            value is not None
+            and source is None
+            and field in ingredient.model_fields_set
+            and source_field not in ingredient.model_fields_set
+        ):
+            # An explicit null from an unchanged snapshot retains unknown provenance.
             source = ValueSource(source="author_filled", basis="作者按这道菜的实际作用填写")
         result[field] = value
         result[source_field] = source if value is not None else None
@@ -277,7 +284,14 @@ def _normalize_ingredient(session: Session, ingredient: RecipeIngredient) -> Rec
     )
 
 
-def _validate_snapshot(session: Session, snapshot: RecipeSnapshot) -> RecipeSnapshot:
+def _validate_snapshot(
+    session: Session,
+    snapshot: RecipeSnapshot,
+    owner_id: uuid.UUID | None = None,
+    *,
+    settings: Settings | None = None,
+    baseline: RecipeSnapshot | None = None,
+) -> RecipeSnapshot:
     ingredient_ids = [ingredient.id for ingredient in snapshot.ingredients]
     if len(set(ingredient_ids)) != len(ingredient_ids):
         raise ApiError(422, "invalid_recipe", "菜谱结构有误", "ingredients.id 不能重复")
@@ -297,9 +311,20 @@ def _validate_snapshot(session: Session, snapshot: RecipeSnapshot) -> RecipeSnap
             f"ingredients.ingredient_id 不存在：{', '.join(missing)}",
         )
 
-    normalized_ingredients = [
-        _normalize_ingredient(session, ingredient) for ingredient in snapshot.ingredients
-    ]
+    normalized_ingredients = []
+    for ingredient in snapshot.ingredients:
+        source = confirmed_source(
+            ingredient,
+            owner_id,
+            (settings or get_settings()).auth_secret,
+            next((item for item in baseline.ingredients if item.id == ingredient.id), None)
+            if baseline is not None
+            else None,
+        )
+        normalized = _normalize_ingredient(session, ingredient)
+        if source is not None:
+            normalized = normalized.model_copy(update={"quantity_source": source})
+        normalized_ingredients.append(normalized)
     replacement_ids = {
         ingredient.replacement.ingredient_id
         for ingredient in snapshot.ingredients
@@ -734,9 +759,17 @@ def _drain_save_events(session: Session, redis: Redis, owner: User) -> int:
 
 
 def check_safety(
-    session: Session, owner: User, body: RecipeSafetyCheckRequest
+    session: Session, owner: User, body: RecipeSafetyCheckRequest, settings: Settings
 ) -> RecipeSafetyResult:
-    snapshot = _validate_snapshot(session, body.snapshot)
+    baseline = None
+    if body.recipe_id is not None:
+        _, version = _owned_version(session, owner, body.recipe_id, body.base_version_id)
+        baseline = RecipeSnapshot.model_validate(version.snapshot)
+    elif body.base_version_id is not None:
+        raise ApiError(422, "invalid_request", "编辑基准需要关联菜谱")
+    snapshot = _validate_snapshot(
+        session, body.snapshot, owner.id, settings=settings, baseline=baseline
+    )
     return food_safety.check(
         session,
         snapshot,
@@ -800,7 +833,7 @@ def create_recipe(
     *,
     generation_request_id: uuid.UUID | None = None,
 ) -> RecipeDetail:
-    snapshot = _validate_snapshot(session, body.snapshot)
+    snapshot = _validate_snapshot(session, body.snapshot, owner.id, settings=settings)
     staged = _staged_rows(session, owner, body.image_ids)
     dish_input = body.dish_input()
     safety_descriptions = [*dish_input.aliases, body.change_note]
@@ -1040,7 +1073,6 @@ def save_version(
     body: RecipeVersionCreate,
 ) -> RecipeDetail:
     recipe = _owned_recipe(session, owner, recipe_id)
-    staged = _staged_rows(session, owner, body.image_ids)
     previous = session.get(RecipeVersion, recipe.current_version_id)
     if previous is None:
         raise NotFound("菜谱当前版本不存在")
@@ -1070,8 +1102,13 @@ def save_version(
                     inherited[source_field] = getattr(old, source_field)
         compatible.append(item.model_copy(update=inherited))
     snapshot = _validate_snapshot(
-        session, body.snapshot.model_copy(update={"ingredients": compatible})
+        session,
+        body.snapshot.model_copy(update={"ingredients": compatible}),
+        owner.id,
+        settings=settings,
+        baseline=previous_snapshot,
     )
+    staged = _staged_rows(session, owner, body.image_ids)
     dish = session.get(Dish, recipe.dish_id)
     if dish is None:
         raise NotFound("菜谱关联数据不存在")

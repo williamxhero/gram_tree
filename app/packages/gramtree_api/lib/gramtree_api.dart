@@ -74,6 +74,8 @@ export 'package:gramtree_api/src/model/ingredient_attributes.dart';
 export 'package:gramtree_api/src/model/ingredient_detail.dart';
 export 'package:gramtree_api/src/model/measure_display_out.dart';
 export 'package:gramtree_api/src/model/measure_display_request.dart';
+export 'package:gramtree_api/src/model/measure_input_out.dart';
+export 'package:gramtree_api/src/model/measure_input_request.dart';
 export 'package:gramtree_api/src/model/merge_relation.dart';
 export 'package:gramtree_api/src/model/mold_conversion.dart';
 export 'package:gramtree_api/src/model/mold_conversion_ingredient.dart';

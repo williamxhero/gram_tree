@@ -22,6 +22,7 @@ import '../../recipes/serving_conversion.dart';
 import 'personal_measures_page.dart';
 import 'recipe_photo_panel.dart';
 import 'recipe_flavor_panel.dart';
+import 'measure_input_dialog.dart';
 import '../../storage/local_store.dart';
 import '../../ui_protocol/components/component_scaffold.dart';
 import '../../ui_protocol/recipe_safety.dart';
@@ -357,7 +358,11 @@ class _RecipeEditorPageState extends ConsumerState<RecipeEditorPage> {
     try {
       final result = await ref
           .read(recipeRepositoryProvider)
-          .checkSafety(_form);
+          .checkSafety(
+            _form,
+            recipeId: widget.recipeId,
+            baseVersionId: _loaded?.version.id,
+          );
       if (!mounted || revision != _safetyRevision) return;
       setState(() {
         _safetyResult = result;
@@ -389,7 +394,11 @@ class _RecipeEditorPageState extends ConsumerState<RecipeEditorPage> {
       // Always re-check immediately before saving. A result obtained while the
       // form was unchanged is valid; a failed/stale check must never become a
       // way around the server's immutable safety gate.
-      final safety = await repo.checkSafety(_form);
+      final safety = await repo.checkSafety(
+        _form,
+        recipeId: widget.recipeId,
+        baseVersionId: _loaded?.version.id,
+      );
       if (!mounted) return;
       setState(() {
         _safetyResult = safety;
@@ -446,7 +455,12 @@ class _RecipeEditorPageState extends ConsumerState<RecipeEditorPage> {
     }
     if (_form.servings < 1 ||
         _form.ingredients.any(
-          (item) => item.quantity < 0 || item.baseQuantity < 0,
+          (item) =>
+              !item.quantity.isFinite ||
+              !item.baseQuantity.isFinite ||
+              item.quantity < 0 ||
+              item.baseQuantity < 0 ||
+              item.quantity > 10000000,
         ) ||
         _form.steps.any((item) => item.durationSeconds < 0)) {
       setState(() => _error = l10n.recipeInvalidNumber);
@@ -521,6 +535,8 @@ class _RecipeEditorPageState extends ConsumerState<RecipeEditorPage> {
   void _selectIngredient(String id, IngredientDetail value) {
     final item = _form.ingredients.firstWhere((item) => item.id == id);
     item.ingredientId = value.id;
+    item.measureInputToken = null;
+    item.quantitySource = null;
     item.displayName = value.standardName;
     item.adoptIngredientDefaults(value);
     _libraryScaling[id] = scalingRuleForLibraryAttribute(
@@ -540,6 +556,23 @@ class _RecipeEditorPageState extends ConsumerState<RecipeEditorPage> {
       ..ingredientId = value.id
       ..displayName = value.standardName;
     _replacementResults.remove(id);
+    _changed();
+  }
+
+  Future<void> _useMeasure(RecipeIngredientDraft item) async {
+    final result = await showMeasureInputDialog(
+      context,
+      ingredientId: item.ingredientId,
+    );
+    if (!mounted || result == null || !_form.ingredients.contains(item)) return;
+    item
+      ..quantity = result.baseQuantity!.toDouble()
+      ..unit = result.baseUnit.value
+      ..baseQuantity = result.baseQuantity!.toDouble()
+      ..baseUnit = result.baseUnit.value
+      ..quantitySource = result.quantitySource
+      ..measureInputToken = result.measureInputToken;
+    _editorRevision++;
     _changed();
   }
 
@@ -738,6 +771,7 @@ class _RecipeEditorPageState extends ConsumerState<RecipeEditorPage> {
               onSelect: (value) => _selectIngredient(entry.$2.id, value),
               onSelectReplacement: (value) =>
                   _selectReplacement(entry.$2.id, value),
+              onUseMeasure: () => _useMeasure(entry.$2),
               onDelete: () => _deleteIngredient(entry.$1),
               onMoveUp: () => _moveIngredient(entry.$1, -1),
               onMoveDown: () => _moveIngredient(entry.$1, 1),
@@ -1082,6 +1116,7 @@ class _IngredientEditorCard extends StatefulWidget {
     required this.onReplacementSearch,
     required this.onSelect,
     required this.onSelectReplacement,
+    required this.onUseMeasure,
     required this.onDelete,
     required this.onMoveUp,
     required this.onMoveDown,
@@ -1100,6 +1135,7 @@ class _IngredientEditorCard extends StatefulWidget {
   final VoidCallback onReplacementSearch;
   final ValueChanged<IngredientDetail> onSelect;
   final ValueChanged<IngredientDetail> onSelectReplacement;
+  final VoidCallback onUseMeasure;
   final VoidCallback onDelete;
   final VoidCallback onMoveUp;
   final VoidCallback onMoveDown;
@@ -1229,6 +1265,7 @@ class _IngredientEditorCardState extends State<_IngredientEditorCard> {
                       // A typed amount is the author's own value, whatever
                       // estimated or verified it before.
                       item.quantitySource = null;
+                      item.measureInputToken = null;
                       onChanged();
                     },
                   ),
@@ -1242,6 +1279,7 @@ class _IngredientEditorCardState extends State<_IngredientEditorCard> {
                     onChanged: (value) {
                       item.unit = value;
                       item.quantitySource = null;
+                      item.measureInputToken = null;
                       onChanged();
                     },
                   ),
@@ -1249,6 +1287,28 @@ class _IngredientEditorCardState extends State<_IngredientEditorCard> {
               ],
             ),
             const SizedBox(height: 8),
+            TextButton(
+              key: ValueKey('recipe-measure-input-$id'),
+              onPressed: widget.onUseMeasure,
+              child: Text(l10n.measureInputAction),
+            ),
+            if (item.measureInputToken != null &&
+                item.quantitySource != null) ...[
+              Text(item.quantitySource!.original ?? ''),
+              SourceMark(
+                sourceType: item.quantitySource!.source_.value,
+                componentId: 'measure-input-$id',
+                value: '${item.quantity} ${item.unit}',
+                originalValue: item.quantitySource!.original,
+                basisText: item.quantitySource!.basis ?? '',
+                required: false,
+                feedbackEnabled: false,
+                neutral: true,
+                showWhenAuthorFilled: true,
+                onAction: null,
+                labelOverride: l10n.measureInputEvidence,
+              ),
+            ],
             _text(
               key: _ingredientKey(id, 'preparation'),
               label: l10n.recipePreparationGroup,
@@ -1273,6 +1333,7 @@ class _IngredientEditorCardState extends State<_IngredientEditorCard> {
                         onChanged: (value) {
                           item.baseQuantity = double.tryParse(value) ?? 0;
                           item.quantitySource = null;
+                          item.measureInputToken = null;
                           onChanged();
                         },
                       ),
@@ -1286,6 +1347,7 @@ class _IngredientEditorCardState extends State<_IngredientEditorCard> {
                         onChanged: (value) {
                           item.baseUnit = value;
                           item.quantitySource = null;
+                          item.measureInputToken = null;
                           onChanged();
                         },
                       ),
@@ -2970,6 +3032,7 @@ class _IngredientDetailRow extends StatelessWidget {
         (sourceType == sourceTypeAuthorFilled ||
             sourceType == sourceTypeScenarioAdjusted);
     final showSource =
+        ingredient.measureInputToken != null ||
         displayOnly ||
         (serverSource != null
             ? serverSource.sourceType.value != sourceTypeAuthorFilled ||
@@ -3008,6 +3071,8 @@ class _IngredientDetailRow extends StatelessWidget {
     }
     final originalSourceValue = serverSource?.originalValue ?? source?.original;
     final subtitleDetails = [
+      if (ingredient.measureInputToken != null && source?.original != null)
+        source!.original!,
       if (noDensity) noDensityBasis,
       // Unchanged conversion results keep the author's value, so they get
       // no adjustment mark; the applied rule stays visible as text.
@@ -3047,7 +3112,9 @@ class _IngredientDetailRow extends StatelessWidget {
                   (displayed != null || conversionPresent
                       ? originalQuantity
                       : originalSourceValue),
-              basisText: sourceBasis,
+              basisText: ingredient.measureInputToken != null
+                  ? '$sourceBasis\n${source?.basis ?? ''}'
+                  : sourceBasis,
               citation: serverSource?.basis.citation,
               required: false,
               neutral:
@@ -3055,8 +3122,11 @@ class _IngredientDetailRow extends StatelessWidget {
                   (sourceType == sourceTypeScenarioAdjusted && !systemChanged),
               valueChanged: valueChanged,
               showWhenAuthorFilled:
-                  displayNeutralLabel && sourceType == sourceTypeAuthorFilled,
-              labelOverride: displayNeutralLabel
+                  ingredient.measureInputToken != null ||
+                  (displayNeutralLabel && sourceType == sourceTypeAuthorFilled),
+              labelOverride: ingredient.measureInputToken != null
+                  ? l10n.measureInputEvidence
+                  : displayNeutralLabel
                   ? l10n.recipeMeasureDisplaySource
                   : null,
               whyTitleOverride: displayNeutralLabel

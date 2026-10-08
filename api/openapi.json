@@ -1935,6 +1935,123 @@
         "title": "MeasureDisplayRequest",
         "type": "object"
       },
+      "MeasureInputOut": {
+        "properties": {
+          "base_quantity": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Base Quantity"
+          },
+          "base_unit": {
+            "enum": [
+              "g",
+              "ml"
+            ],
+            "title": "Base Unit",
+            "type": "string"
+          },
+          "basis": {
+            "title": "Basis",
+            "type": "string"
+          },
+          "measure_input_token": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Measure Input Token"
+          },
+          "original": {
+            "title": "Original",
+            "type": "string"
+          },
+          "quantity_source": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ValueSource"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "status": {
+            "enum": [
+              "ready",
+              "no_density",
+              "estimate_confirmation_required"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "original",
+          "base_unit",
+          "status",
+          "basis"
+        ],
+        "title": "MeasureInputOut",
+        "type": "object"
+      },
+      "MeasureInputRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "accept_estimate": {
+            "default": false,
+            "title": "Accept Estimate",
+            "type": "boolean"
+          },
+          "base_unit": {
+            "enum": [
+              "g",
+              "ml"
+            ],
+            "title": "Base Unit",
+            "type": "string"
+          },
+          "ingredient_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ingredient Id"
+          },
+          "measure_id": {
+            "format": "uuid",
+            "title": "Measure Id",
+            "type": "string"
+          },
+          "quantity": {
+            "maximum": 10000000.0,
+            "minimum": 0.0,
+            "title": "Quantity",
+            "type": "number"
+          }
+        },
+        "required": [
+          "measure_id",
+          "quantity",
+          "base_unit"
+        ],
+        "title": "MeasureInputRequest",
+        "type": "object"
+      },
       "MergeRelation": {
         "description": "一次合并：旧 ID 指向新 ID，并保留旧记录的身份信息（#101）。",
         "properties": {
@@ -3633,6 +3750,19 @@
             "description": "标准食材 UUID；为空表示未收录",
             "title": "Ingredient Id"
           },
+          "measure_input_token": {
+            "anyOf": [
+              {
+                "maxLength": 8192,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "本人确认的量具换算凭据；基础量与来源不随量具校准改变",
+            "title": "Measure Input Token"
+          },
           "optional": {
             "default": false,
             "title": "Optional",
@@ -4045,6 +4175,18 @@
       "RecipeSafetyCheckRequest": {
         "additionalProperties": false,
         "properties": {
+          "base_version_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Base Version Id"
+          },
           "change_note": {
             "default": "",
             "maxLength": 2000,
@@ -4076,6 +4218,18 @@
             "maxLength": 200,
             "title": "Dish Name",
             "type": "string"
+          },
+          "recipe_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Recipe Id"
           },
           "snapshot": {
             "$ref": "#/components/schemas/RecipeSnapshot"
@@ -7949,6 +8103,92 @@
           }
         ],
         "summary": "Display Personal Measure",
+        "tags": [
+          "personal-measures"
+        ]
+      }
+    },
+    "/v1/me/measures/input": {
+      "post": {
+        "operationId": "preview_personal_measure_input",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MeasureInputRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MeasureInputOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "参数错误"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "服务端错误"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Preview Personal Measure Input",
         "tags": [
           "personal-measures"
         ]
