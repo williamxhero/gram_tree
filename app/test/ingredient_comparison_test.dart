@@ -92,6 +92,71 @@ RecipeDetail detailFixture(String version, int number) => RecipeDetail(
 );
 
 void main() {
+  for (final kind in ['unit', 'unchanged', 'added', 'removed']) {
+    testWidgets('未知基础量保留原始用量和单位且不显示百分比 $kind', (tester) async {
+      final server = FakeServer();
+      final before = RecipeIngredient(
+        id: 'water',
+        displayName: '水',
+        quantity: 1,
+        unit: '碗',
+      );
+      final after = RecipeIngredient(
+        id: 'water',
+        displayName: '水',
+        quantity: kind == 'unchanged' ? 1 : 2,
+        unit: '碗',
+      );
+      final data = comparisonFixture().toJson();
+      data['ingredients'] = [
+        {
+          'before': kind == 'added' ? null : before.toJson(),
+          'after': kind == 'removed' ? null : after.toJson(),
+          'pairing': 'stable_id',
+          'changes': kind == 'unchanged'
+              ? []
+              : [
+                  {
+                    'kind': kind,
+                    'field': kind == 'unit' ? 'quantity_unit' : 'ingredient',
+                    'before': {'quantity': 1, 'unit': '碗'},
+                    'after': {'quantity': 2, 'unit': '碗'},
+                    'basis': '基础量未知，保留原始用量；不能可靠归一或换算',
+                  },
+                ],
+        },
+      ];
+      server.on('GET', '/v1/recipes/$recipeId/compare', (_) => (200, data));
+      await pumpApp(tester, env: TestEnv.signedIn(server: server));
+      ProviderScope.containerOf(tester.element(find.byType(Scaffold).first))
+          .read(routerProvider)
+          .push('/recipes/$recipeId/compare?from=$versionA&to=$versionB');
+      await tester.pumpAndSettle();
+      if (kind == 'unchanged') {
+        await tester.tap(find.byKey(const ValueKey('compare-show-all')));
+        await tester.pumpAndSettle();
+      }
+      await tester.scrollUntilVisible(find.text('食材明细'), 100);
+      if (kind != 'added') {
+        expect(find.text(kind == 'unit' ? 'A：1 碗' : 'A：水 1 碗'), findsOneWidget);
+      }
+      if (kind != 'removed') {
+        expect(
+          find.text(kind == 'unit' ? 'B：2 碗' : 'B：水 ${after.quantity} 碗'),
+          findsOneWidget,
+        );
+      }
+      await tester.tap(find.text('食材明细'));
+      await tester.pumpAndSettle();
+      if (kind != 'added') expect(find.textContaining('水 1 碗'), findsWidgets);
+      if (kind != 'removed') {
+        expect(find.textContaining('水 ${after.quantity} 碗'), findsWidgets);
+      }
+      expect(find.textContaining('无 碗'), findsNothing);
+      expect(find.textContaining('%'), findsNothing);
+      expect(tester.takeException(), isNull);
+    });
+  }
   testWidgets('历史可分页选择同菜的两个独立菜谱版本，保留 A 到 B 方向', (tester) async {
     const otherRecipe = '44444444-4444-4444-8444-444444444444';
     final server = FakeServer();

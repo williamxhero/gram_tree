@@ -200,6 +200,56 @@ def test_units_use_ingredient_specific_conversion(
     ] == ["text"]
 
 
+@pytest.mark.parametrize(
+    "unit_a,qty_a,unit_b,qty_b,servings_b,mode,changed",
+    [
+        ("碗", 1, "碗", 2, 2, "proportional", True),
+        ("碗", 1, "杯", 1, 2, "proportional", True),
+        ("g", 1, "碗", 2, 2, "proportional", True),
+        ("碗", 1, "g", 2, 2, "proportional", True),
+        ("碗", 1, "碗", 1, 2, "proportional", False),
+        ("碗", 1, "碗", 1, 4, "proportional", True),
+        ("碗", 1, "碗", 1, 4, "unchanged", False),
+    ],
+)
+def test_unresolved_amounts_preserve_original_quantities_without_percentage(
+    api: Api, unit_a, qty_a, unit_b, qty_b, servings_b, mode, changed
+) -> None:
+    headers = bearer(api.login("unresolved-compare@example.com"))
+    first = create(
+        api, headers, [ingredient(name="水", quantity=qty_a, unit=unit_a, scaling_mode=mode)]
+    )
+    second = save(
+        api,
+        headers,
+        first,
+        [ingredient(name="水", quantity=qty_b, unit=unit_b, scaling_mode=mode)],
+        servings=servings_b,
+    )
+    response = compare(api, headers, first, second)
+    assert response.status_code == 200, response.text
+    row = response.json()["ingredients"][0]
+    assert row["before"]["base_quantity"] == (qty_a if unit_a == "g" else None)
+    assert row["after"]["base_quantity"] == (qty_b if unit_b == "g" else None)
+    assert (row["before"]["quantity"], row["before"]["unit"]) == (qty_a, unit_a)
+    assert (row["after"]["quantity"], row["after"]["unit"]) == (qty_b, unit_b)
+    if changed:
+        assert len(row["changes"]) == 1
+        change = row["changes"][0]
+        assert change["kind"] == "unit"
+        assert change["field"] == "quantity_unit"
+        assert change["before"] == {"quantity": qty_a, "unit": unit_a}
+        assert change["after"] == {"quantity": qty_b, "unit": unit_b}
+        assert change["relative_change"] is None
+        assert "不能" in change["basis"]
+    else:
+        assert row["changes"] == []
+    assert (
+        api.client.get(f"/v1/recipes/{second['id']}", headers=headers).json()["version"]
+        == second["version"]
+    )
+
+
 def test_standard_replacement_and_unrecorded_alias_pairing(api: Api, tmp_path: Path) -> None:
     ids = [str(uuid4()), str(uuid4())]
     records = [

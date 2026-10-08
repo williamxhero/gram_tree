@@ -82,7 +82,12 @@ def _normalize_servings(snapshot: RecipeSnapshot, target: int) -> list[RecipeIng
     )
     result = []
     for item, converted in zip(snapshot.ingredients, conversion.ingredients, strict=True):
-        base = Decimal(str(item.base_quantity or 0))
+        if item.base_quantity is None:
+            # Household units have no reliable base amount; retain the author's
+            # quantity rather than fabricating a numerical zero during scaling.
+            result.append(item)
+            continue
+        base = Decimal(str(item.base_quantity))
         mode = service._snapshot_scaling_mode(item)
         if mode == "proportional":
             # Comparison is not display: do not round tiny amounts into zero or
@@ -173,9 +178,31 @@ def _grams_factor(session: Session, item: RecipeIngredient) -> float | None:
 
 
 def _quantity_changes(
-    session: Session, before: RecipeIngredient, after: RecipeIngredient, *, replacement: bool
+    session: Session,
+    before: RecipeIngredient,
+    after: RecipeIngredient,
+    *,
+    replacement: bool,
+    scaled_unknown: bool = False,
 ) -> list[ComparisonChange]:
-    a, b = float(before.base_quantity or 0), float(after.base_quantity or 0)
+    if (
+        before.base_quantity is None
+        or before.base_unit is None
+        or after.base_quantity is None
+        or after.base_unit is None
+    ):
+        if (before.quantity, before.unit) == (after.quantity, after.unit) and not scaled_unknown:
+            return []
+        return [
+            ComparisonChange(
+                kind="unit",
+                field="quantity_unit",
+                before={"quantity": before.quantity, "unit": before.unit},
+                after={"quantity": after.quantity, "unit": after.unit},
+                basis="基础量未知，保留原始用量；不能可靠归一或换算，不把未知量当零",
+            )
+        ]
+    a, b = float(before.base_quantity), float(after.base_quantity)
     same_unit = before.base_unit == after.base_unit and (
         before.base_unit != "count" or before.unit == after.unit
     )
@@ -306,7 +333,18 @@ def compare_ingredients(
                         basis="稳定食材 ID 的身份改变或同组唯一一删一加",
                     )
                 )
-            changes.extend(_quantity_changes(session, before, after, replacement=replacement))
+            changes.extend(
+                _quantity_changes(
+                    session,
+                    before,
+                    after,
+                    replacement=replacement,
+                    scaled_unknown=(
+                        a.servings != b.servings
+                        and service._snapshot_scaling_mode(after) != "unchanged"
+                    ),
+                )
+            )
             changes.extend(
                 _field_changes(
                     before,

@@ -327,18 +327,22 @@ class _DiffCard extends StatelessWidget {
         change!.kind == ComparisonChangeKindEnum.removed) {
       return ingredient == null
           ? l10n.recipeComparisonNone
-          : '${ingredient.displayName} ${_render(l10n, ingredient.baseQuantity)} ${ingredient.baseUnit?.value ?? ingredient.unit}';
+          : _ingredientAmount(l10n, ingredient);
     }
     final value = after ? change!.after : change!.before;
     return '${_render(l10n, value)}${change!.unit == null ? '' : ' ${change!.unit}'}';
   }
 }
 
+String _ingredientAmount(AppLocalizations l10n, RecipeIngredient value) =>
+    '${value.displayName} ${_render(l10n, value.baseQuantity ?? value.quantity)} '
+    '${value.baseQuantity == null ? value.unit : value.baseUnit?.value ?? value.unit}';
+
 String _ingredientDetails(AppLocalizations l10n, RecipeIngredient? value) =>
     value == null
     ? l10n.recipeComparisonNone
     : [
-        '${value.displayName} ${_render(l10n, value.baseQuantity)} ${value.baseUnit?.value ?? value.unit}',
+        _ingredientAmount(l10n, value),
         for (final entry in {
           l10n.recipeComparisonPreparation: value.preparation,
           l10n.recipeIngredientGroup: value.group,
@@ -357,6 +361,8 @@ String _render(AppLocalizations l10n, Object? value) => switch (value) {
   null => l10n.recipeComparisonNone,
   bool b => b ? l10n.recipeComparisonYes : l10n.recipeComparisonNo,
   num n => n == n.roundToDouble() ? n.toInt().toString() : n.toString(),
+  {'quantity': num quantity, 'unit': String unit} =>
+    '${_render(l10n, quantity)} $unit',
   Map() || List() => jsonEncode(value),
   _ => value.toString(),
 };
@@ -376,6 +382,7 @@ String _fieldLabel(AppLocalizations l10n, String field) =>
     {
       'base_quantity': l10n.recipeComparisonBaseQuantity,
       'base_unit': l10n.recipeComparisonBaseUnit,
+      'quantity_unit': l10n.recipeComparisonBaseQuantity,
       'ingredient_id': l10n.recipeIngredients,
       'display_name': l10n.recipeComparisonDisplayName,
       'preparation': l10n.recipeComparisonPreparation,
