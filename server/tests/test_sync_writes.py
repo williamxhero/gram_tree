@@ -117,6 +117,34 @@ def test_unregistered_or_invalid_business_content_and_analytics_are_rejected(api
     assert count(api, tokens) == 0
 
 
+def test_client_composition_observation_replays_but_cannot_forge_recipe_fact(api: Api) -> None:
+    tokens = api.login("composition-observation@example.com")
+    observation = envelope(tokens["user"]["id"])
+    observation["payload"].update(
+        event_type="ui.composition_shown",
+        content={"page_type": "today", "components": [], "is_fallback": True},
+    )
+    first = submit(api, tokens, observation)[0]
+    assert first["status"] == "confirmed"
+    replay = submit(api, tokens, observation)[0]
+    assert replay["status"] == "already_processed"
+    assert replay["result"] == first["result"]
+    facts = api.client.get(
+        "/v1/dev/events/count",
+        headers=bearer(tokens),
+        params={"event_type": "ui.composition_shown"},
+    )
+    assert facts.status_code == 200
+    assert facts.json()["count"] == 1
+    forged = envelope(tokens["user"]["id"])
+    forged["payload"].update(
+        event_type="recipe.version_saved",
+        correlation={"recipe_version_id": new_uuid()},
+        content={"recipe_version_id": new_uuid()},
+    )
+    assert submit(api, tokens, forged)[0]["reason_code"] == "server_fact_only"
+
+
 def test_different_devices_append_distinct_facts_even_with_same_time(api: Api) -> None:
     tokens = api.login("append@example.com")
     first = envelope(tokens["user"]["id"])
@@ -147,6 +175,38 @@ def test_invalid_parent_is_terminal_and_child_reports_failed_dependency(api: Api
     repaired = {**parent, "payload": {**parent["payload"], "content": {"ping": "fixed"}}}
     assert submit(api, tokens, repaired)[0]["reason_code"] == "write_id_reused"
     assert count(api, tokens) == 0
+
+
+def test_due_deletion_purges_only_owners_delivery_receipts_and_outbox(api: Api) -> None:
+    from tests.test_account_deletion import _purge, _reauth_email
+
+    alice = api.login("purge-queue@example.com")
+    bob = api.login("keep-queue@example.com")
+    rejected = envelope(alice["user"]["id"], write_type="unregistered.old_type")
+    assert submit(api, alice, rejected)[0]["status"] == "failed"
+    committed = envelope(alice["user"]["id"])
+    assert submit(api, alice, committed)[0]["status"] == "confirmed"
+    kept = envelope(bob["user"]["id"])
+    stable = submit(api, bob, kept)[0]["result"]
+    claimed = envelope(bob["user"]["id"], write_id=rejected["write_id"])
+    assert submit(api, bob, claimed)[0]["reason_code"] == "write_id_unavailable"
+    assert _reauth_email(api, alice, "purge-queue@example.com") == 204
+    deletion = api.client.post("/v1/me/deletion", headers=bearer(alice))
+    assert deletion.status_code == 202
+    assert "已删除 0 个" in _purge(api.clock.now.isoformat())
+    assert submit(api, bob, claimed)[0]["reason_code"] == "write_id_unavailable"
+    # A committed receipt has an outbox FK: administrative purge must remove
+    # the fact bundle first, then delivery receipts, while retaining the User ID.
+    assert "已删除 1 个" in _purge(deletion.json()["deletion_due_at"])
+    assert submit(api, bob, claimed)[0]["status"] == "confirmed"
+    assert submit(api, bob, kept)[0]["result"] == stable
+    assert count(api, bob) == 2
+    assert (
+        api.client.post(
+            "/v1/sync/writes", headers=bearer(alice), json={"writes": [committed]}
+        ).status_code
+        == 401
+    )
 
 
 def test_concurrent_replays_produce_one_confirmation_and_one_fact(api: Api) -> None:

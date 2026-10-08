@@ -39,8 +39,9 @@ def _validate(payload: dict[str, Any]) -> BaseModel:
     )
     if rejection:
         raise WriteFailure(rejection.code)
-    # Server-created business facts cannot be forged by a client event upload.
-    if parsed.event_type in {"recipe.version_saved", "ui.composition_shown"}:
+    # Recipe mutations produce authoritative facts on the server. Composition
+    # events also include legitimate client display/cache/fallback observations.
+    if parsed.event_type == "recipe.version_saved":
         raise WriteFailure("server_fact_only")
     return parsed
 

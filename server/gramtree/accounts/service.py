@@ -44,6 +44,7 @@ from gramtree.accounts.models import (
     User,
     UserStatus,
 )
+from gramtree.events.sync_models import WriteFactOutbox, WriteReceipt
 from gramtree.recipes.measure_models import PersonalMeasure
 from gramtree.runtime_config import service as config
 from gramtree.settings import Settings
@@ -631,6 +632,11 @@ def purge_due_accounts(session: Session, apple: AppleClient, now: datetime) -> i
         session.execute(delete(Identity).where(Identity.user_id == user.id))
         session.execute(delete(Consent).where(Consent.user_id == user.id))
         session.execute(delete(PersonalMeasure).where(PersonalMeasure.owner_id == user.id))
+        # User IDs are retained, so FK cascade cannot remove delivery payloads.
+        # Delete dependent fact bundles before their immutable receipts; other
+        # accounts' confirmations and retry dependencies remain untouched.
+        session.execute(delete(WriteFactOutbox).where(WriteFactOutbox.owner_id == user.id))
+        session.execute(delete(WriteReceipt).where(WriteReceipt.owner_id == user.id))
         session_ids = select(DeviceSession.id).where(DeviceSession.user_id == user.id)
         session.execute(delete(RefreshToken).where(RefreshToken.session_id.in_(session_ids)))
         session.execute(delete(DeviceSession).where(DeviceSession.user_id == user.id))
