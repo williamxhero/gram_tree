@@ -180,6 +180,39 @@ class RecipeRepository {
     return response.data!.result;
   }
 
+  Future<RecipeReproducibilityResult> checkReproducibility(
+    RecipeForm form,
+  ) async {
+    final response = await _recipes.checkRecipeReproducibility(
+      recipeReproducibilityCheckRequest: RecipeReproducibilityCheckRequest(
+        snapshot: form.snapshot,
+      ),
+    );
+    return response.data!.result;
+  }
+
+  Future<RecipeQuantificationOut> quantify(
+    String recipeId,
+    String baseVersionId,
+  ) async => (await _recipes.quantifyRecipe(
+    recipeId: recipeId,
+    quantificationInput: QuantificationInput(baseVersionId: baseVersionId),
+  )).data!;
+
+  Future<RecipeDetail> decideQuantification(
+    String recipeId,
+    String proposalId, {
+    List<QuantificationDecision> decisions = const [],
+    bool acceptAll = false,
+  }) async => (await _recipes.decideRecipeQuantification(
+    recipeId: recipeId,
+    proposalId: proposalId,
+    quantificationDecisionsInput: QuantificationDecisionsInput(
+      decisions: decisions,
+      acceptAll: acceptAll,
+    ),
+  )).data!;
+
   Future<RecipeDetail> create(RecipeForm form) async {
     final response = await _recipes.createRecipe(
       recipeCreate: RecipeCreate(
@@ -199,11 +232,13 @@ class RecipeRepository {
     String recipeId,
     RecipeForm form, {
     String? baseVersionId,
+    String? expectedCurrentVersionId,
   }) async {
     final response = await _recipes.saveRecipeVersion(
       recipeId: recipeId,
       recipeVersionCreate: RecipeVersionCreate(
         baseVersionId: baseVersionId,
+        expectedCurrentVersionId: expectedCurrentVersionId,
         aiAssisted: form.aiAssisted,
         snapshot: form.snapshot,
         changeNote: form.changeNote,
@@ -277,6 +312,7 @@ class RecipeIngredientDraft {
     this.group = '',
     this.scalingMode,
     this.quantitySource,
+    this.preparationSource,
     this.optional = false,
     this.functional = false,
     this.replacement,
@@ -298,6 +334,7 @@ class RecipeIngredientDraft {
         scalingMode:
             value.scalingMode ?? RecipeIngredientScalingModeEnum.proportional,
         quantitySource: value.quantitySource,
+        preparationSource: value.preparationSource,
         optional: value.optional == true,
         functional: value.functional == true,
         replacement: value.replacement is String
@@ -326,6 +363,7 @@ class RecipeIngredientDraft {
       group: _string(value['group']) ?? '',
       scalingMode: _scalingMode(value['scaling_mode']),
       quantitySource: _valueSource(value['quantity_source']),
+      preparationSource: _valueSource(value['preparation_source']),
       optional: value['optional'] == true,
       functional: value['functional'] == true,
       replacement: replacement is String
@@ -353,11 +391,12 @@ class RecipeIngredientDraft {
   /// historical behavior cannot drift with later library updates.
   RecipeIngredientScalingModeEnum? scalingMode;
   ValueSource? quantitySource;
+  ValueSource? preparationSource;
   bool optional;
   bool functional;
   RecipeReplacementDraft? replacement;
 
-  RecipeIngredient toModel() => RecipeIngredient(
+  RecipeIngredient toModel({bool writable = true}) => RecipeIngredient(
     baseQuantity: baseQuantity,
     baseUnit: _baseUnit(baseUnit),
     displayName: displayName.trim(),
@@ -368,7 +407,12 @@ class RecipeIngredientDraft {
     optional: optional,
     preparation: _optionalText(preparation),
     quantity: quantity,
-    quantitySource: quantitySource ?? _authorSource(quantity.toString()),
+    quantitySource: writable
+        ? _writableSource(quantitySource ?? _authorSource(quantity.toString()))
+        : quantitySource,
+    preparationSource: writable
+        ? _writableSource(preparationSource)
+        : preparationSource,
     replacement: replacement?.toModel(),
     scalingMode: scalingMode,
     unit: unit.trim().isEmpty ? 'g' : unit.trim(),
@@ -386,6 +430,7 @@ class RecipeIngredientDraft {
     'group': group,
     'scaling_mode': scalingMode?.value,
     'quantity_source': quantitySource?.toJson(),
+    'preparation_source': preparationSource?.toJson(),
     'optional': optional,
     'functional': functional,
     'replacement': replacement?.toJson(),
@@ -443,6 +488,11 @@ class RecipeStepDraft {
     List<String>? dependsOn,
     this.notes = '',
     this.why = '',
+    this.instructionSource,
+    this.donenessSource,
+    this.durationSource,
+    this.heatSource,
+    this.temperatureSource,
   }) : ingredientIds = [...?ingredientIds],
        dependsOn = [...?dependsOn];
 
@@ -460,6 +510,11 @@ class RecipeStepDraft {
     dependsOn: [...?value.dependsOn],
     notes: value.notes ?? '',
     why: value.why ?? '',
+    instructionSource: value.instructionSource,
+    donenessSource: value.donenessSource,
+    durationSource: value.durationSource,
+    heatSource: value.heatSource,
+    temperatureSource: value.temperatureSource,
   );
 
   factory RecipeStepDraft.fromJson(Map<String, dynamic> value) =>
@@ -477,6 +532,11 @@ class RecipeStepDraft {
         dependsOn: _strings(value['depends_on']),
         notes: _string(value['notes']) ?? '',
         why: _string(value['why']) ?? '',
+        instructionSource: _valueSource(value['instruction_source']),
+        donenessSource: _valueSource(value['doneness_source']),
+        durationSource: _valueSource(value['duration_source']),
+        heatSource: _valueSource(value['heat_source']),
+        temperatureSource: _valueSource(value['temperature_source']),
       );
 
   String id;
@@ -492,24 +552,33 @@ class RecipeStepDraft {
   List<String> dependsOn;
   String notes;
   String why;
+  ValueSource? instructionSource;
+  ValueSource? donenessSource;
+  ValueSource? durationSource;
+  ValueSource? heatSource;
+  ValueSource? temperatureSource;
 
-  RecipeStep toModel() => RecipeStep(
+  RecipeStep toModel({bool writable = true}) => RecipeStep(
     action: _optionalText(action),
     cookware: _optionalText(cookware),
     dependsOn: [...dependsOn],
     doneness: _optionalText(doneness),
     durationSeconds: durationSeconds,
-    durationSource: _authorSource(durationSeconds.toString()),
+    durationSource: writable ? _writableSource(durationSource) : durationSource,
+    instructionSource: writable
+        ? _writableSource(instructionSource)
+        : instructionSource,
+    donenessSource: writable ? _writableSource(donenessSource) : donenessSource,
     heat: _optionalText(heat),
-    heatSource: _optionalText(heat) == null ? null : _authorSource(heat),
+    heatSource: writable ? _writableSource(heatSource) : heatSource,
     id: id,
     ingredientIds: [...ingredientIds],
     instruction: instruction.trim(),
     notes: _optionalText(notes),
     temperatureCelsius: temperatureCelsius == 0 ? null : temperatureCelsius,
-    temperatureSource: temperatureCelsius == 0
-        ? null
-        : _authorSource(temperatureCelsius.toString()),
+    temperatureSource: writable
+        ? _writableSource(temperatureSource)
+        : temperatureSource,
     unattended: unattended,
     why: _optionalText(why),
   );
@@ -528,6 +597,11 @@ class RecipeStepDraft {
     'depends_on': [...dependsOn],
     'notes': notes,
     'why': why,
+    'instruction_source': instructionSource?.toJson(),
+    'doneness_source': donenessSource?.toJson(),
+    'duration_source': durationSource?.toJson(),
+    'heat_source': heatSource?.toJson(),
+    'temperature_source': temperatureSource?.toJson(),
   };
 }
 
@@ -640,20 +714,24 @@ class RecipeForm {
   List<RecipeStepDraft> steps;
   List<String> imageIds;
 
-  RecipeSnapshot get snapshot => RecipeSnapshot(
+  RecipeSnapshot get snapshot => _snapshot(writable: true);
+
+  RecipeSnapshot _snapshot({required bool writable}) => RecipeSnapshot(
     activeTimeSeconds: activeTimeSeconds,
     baseMold: baseMold,
     description: _optionalText(description),
     cuisine: cuisine,
     designRationale: designRationale,
-    textSource: textSource,
-    servingsSource: servingsSource,
+    textSource: writable ? _writableSource(textSource) : textSource,
+    servingsSource: writable ? _writableSource(servingsSource) : servingsSource,
     difficulty: difficulty,
     dishType: dishType,
     formatVersion: RecipeSnapshotFormatVersionEnum.number1,
-    ingredients: [for (final item in ingredients) item.toModel()],
+    ingredients: [
+      for (final item in ingredients) item.toModel(writable: writable),
+    ],
     servings: servings,
-    steps: [for (final item in steps) item.toModel()],
+    steps: [for (final item in steps) item.toModel(writable: writable)],
     tags: [...tags],
     totalTimeSeconds: totalTimeSeconds,
   );
@@ -664,9 +742,14 @@ class RecipeForm {
     'aliases': [...aliases],
     'change_note': changeNote,
     'image_ids': [...imageIds],
-    'snapshot': snapshot.toJson(),
+    'snapshot': _snapshot(writable: false).toJson(),
   };
 }
+
+// Verification belongs to the server. An unchanged baseline restores its
+// source there; sending it back would be an unauthorized client write.
+ValueSource? _writableSource(ValueSource? source) =>
+    source?.source_ == ValueSourceSource_Enum.verified ? null : source;
 
 ValueSource _authorSource(String original) => ValueSource(
   basis: '',
@@ -696,12 +779,7 @@ ValueSource? _valueSource(Object? value) {
       .where((item) => item.value == raw)
       .firstOrNull;
   if (sourceType == null) return null;
-  return ValueSource(
-    basis: _string(value['basis']) ?? '',
-    confidence: (value['confidence'] as num?)?.toDouble(),
-    original: _string(value['original']),
-    source_: sourceType,
-  );
+  return ValueSource.fromJson(Map<String, dynamic>.from(value));
 }
 
 String? _optionalText(String value) {

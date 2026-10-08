@@ -16,16 +16,20 @@
     "format_version": 1, "servings": 2, "base_mold": null,
     "total_time_seconds": 0, "active_time_seconds": 0, "difficulty": null,
     "dish_type": null, "description": null, "tags": [], "cuisine": null,
-    "design_rationale": null, "text_source": null, "servings_source": null,
+    "design_rationale": null,
+    "text_source": {"source": "author_filled", "original": null, "confidence": null, "basis": null, "confidence_level": null, "baseline": null, "adjustment": null},
+    "servings_source": {"source": "author_filled", "original": null, "confidence": null, "basis": null, "confidence_level": null, "baseline": null, "adjustment": null},
     "ingredients": [{
       "id": "chicken", "ingredient_id": null, "display_name": "鸡腿肉",
       "quantity": 300.0, "unit": "g", "base_quantity": 300.0, "base_unit": "g",
       "preparation": null, "group": null, "optional": false, "replacement": null,
-      "functional": false, "scaling_mode": "proportional", "quantity_source": null
+      "functional": false, "scaling_mode": "proportional",
+      "quantity_source": {"source": "author_filled", "original": null, "confidence": null, "basis": null, "confidence_level": null, "baseline": null, "adjustment": null},
+      "preparation_source": {"source": "author_filled", "original": null, "confidence": null, "basis": null, "confidence_level": null, "baseline": null, "adjustment": null}
     }],
     "steps": [
-      {"id": "marinate", "action": "腌", "instruction": "鸡肉冷藏腌制", "ingredient_ids": ["chicken"], "duration_seconds": 900, "unattended": true, "heat": null, "temperature_celsius": null, "cookware": "碗", "doneness": "入味", "depends_on": [], "notes": null, "why": null, "duration_source": null, "heat_source": null, "temperature_source": null},
-      {"id": "cook", "action": "炒", "instruction": "中火炒熟鸡肉，用食品温度计确认中心温度达到 74°C", "ingredient_ids": ["chicken"], "duration_seconds": 300, "unattended": false, "heat": "中火", "temperature_celsius": null, "cookware": "炒锅", "doneness": "中心温度达到 74°C", "depends_on": ["marinate"], "notes": null, "why": null, "duration_source": null, "heat_source": null, "temperature_source": null}
+      {"id": "marinate", "action": "腌", "instruction": "鸡肉冷藏腌制", "ingredient_ids": ["chicken"], "duration_seconds": 900, "unattended": true, "heat": null, "temperature_celsius": null, "cookware": "碗", "doneness": "入味", "depends_on": [], "notes": null, "why": null, "instruction_source": {"source": "author_filled", "original": null, "confidence": null, "basis": null, "confidence_level": null, "baseline": null, "adjustment": null}, "doneness_source": {"source": "author_filled", "original": null, "confidence": null, "basis": null, "confidence_level": null, "baseline": null, "adjustment": null}, "duration_source": {"source": "author_filled", "original": null, "confidence": null, "basis": null, "confidence_level": null, "baseline": null, "adjustment": null}, "heat_source": {"source": "author_filled", "original": null, "confidence": null, "basis": null, "confidence_level": null, "baseline": null, "adjustment": null}, "temperature_source": {"source": "author_filled", "original": null, "confidence": null, "basis": null, "confidence_level": null, "baseline": null, "adjustment": null}},
+      {"id": "cook", "action": "炒", "instruction": "中火炒熟鸡肉，用食品温度计确认中心温度达到 74°C", "ingredient_ids": ["chicken"], "duration_seconds": 300, "unattended": false, "heat": "中火", "temperature_celsius": null, "cookware": "炒锅", "doneness": "中心温度达到 74°C", "depends_on": ["marinate"], "notes": null, "why": null, "instruction_source": {"source": "author_filled", "original": null, "confidence": null, "basis": null, "confidence_level": null, "baseline": null, "adjustment": null}, "doneness_source": {"source": "author_filled", "original": null, "confidence": null, "basis": null, "confidence_level": null, "baseline": null, "adjustment": null}, "duration_source": {"source": "author_filled", "original": null, "confidence": null, "basis": null, "confidence_level": null, "baseline": null, "adjustment": null}, "heat_source": {"source": "author_filled", "original": null, "confidence": null, "basis": null, "confidence_level": null, "baseline": null, "adjustment": null}, "temperature_source": {"source": "author_filled", "original": null, "confidence": null, "basis": null, "confidence_level": null, "baseline": null, "adjustment": null}}
     ]
   },
   "target_servings": 4,

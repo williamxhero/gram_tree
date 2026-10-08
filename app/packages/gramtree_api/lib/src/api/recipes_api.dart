@@ -11,6 +11,8 @@ import 'package:dio/dio.dart';
 
 import 'package:gramtree_api/src/model/batch_advice_input.dart';
 import 'package:gramtree_api/src/model/error_response.dart';
+import 'package:gramtree_api/src/model/quantification_decisions_input.dart';
+import 'package:gramtree_api/src/model/quantification_input.dart';
 import 'package:gramtree_api/src/model/recipe_batch_advice_out.dart';
 import 'package:gramtree_api/src/model/recipe_create.dart';
 import 'package:gramtree_api/src/model/recipe_detail.dart';
@@ -21,6 +23,9 @@ import 'package:gramtree_api/src/model/recipe_ingredient_display_out.dart';
 import 'package:gramtree_api/src/model/recipe_list.dart';
 import 'package:gramtree_api/src/model/recipe_mold_conversion_out.dart';
 import 'package:gramtree_api/src/model/recipe_mold_conversion_request.dart';
+import 'package:gramtree_api/src/model/recipe_quantification_out.dart';
+import 'package:gramtree_api/src/model/recipe_reproducibility_check_out.dart';
+import 'package:gramtree_api/src/model/recipe_reproducibility_check_request.dart';
 import 'package:gramtree_api/src/model/recipe_safety_check_out.dart';
 import 'package:gramtree_api/src/model/recipe_safety_check_request.dart';
 import 'package:gramtree_api/src/model/recipe_serving_conversion_out.dart';
@@ -31,6 +36,98 @@ class RecipesApi {
   final Dio _dio;
 
   const RecipesApi(this._dio);
+
+  /// Check Recipe Reproducibility
+  ///
+  ///
+  /// Parameters:
+  /// * [recipeReproducibilityCheckRequest]
+  /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
+  /// * [headers] - Can be used to add additional headers to the request
+  /// * [extras] - Can be used to add flags to the request
+  /// * [validateStatus] - A [ValidateStatus] callback that can be used to determine request success based on the HTTP status of the response
+  /// * [onSendProgress] - A [ProgressCallback] that can be used to get the send progress
+  /// * [onReceiveProgress] - A [ProgressCallback] that can be used to get the receive progress
+  ///
+  /// Returns a [Future] containing a [Response] with a [RecipeReproducibilityCheckOut] as data
+  /// Throws [DioException] if API call or serialization fails
+  Future<Response<RecipeReproducibilityCheckOut>> checkRecipeReproducibility({
+    required RecipeReproducibilityCheckRequest
+    recipeReproducibilityCheckRequest,
+    CancelToken? cancelToken,
+    Map<String, dynamic>? headers,
+    Map<String, dynamic>? extra,
+    ValidateStatus? validateStatus,
+    ProgressCallback? onSendProgress,
+    ProgressCallback? onReceiveProgress,
+  }) async {
+    final _path = r'/v1/recipes/reproducibility/check';
+    final _options = Options(
+      method: r'POST',
+      headers: <String, dynamic>{...?headers},
+      extra: <String, dynamic>{
+        'secure': <Map<String, String>>[
+          {'type': 'http', 'scheme': 'bearer', 'name': 'HTTPBearer'},
+        ],
+        ...?extra,
+      },
+      contentType: 'application/json',
+      validateStatus: validateStatus,
+    );
+
+    dynamic _bodyData;
+
+    try {
+      _bodyData = jsonEncode(recipeReproducibilityCheckRequest);
+    } catch (error, stackTrace) {
+      throw DioException(
+        requestOptions: _options.compose(_dio.options, _path),
+        type: DioExceptionType.unknown,
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+
+    final _response = await _dio.request<Object>(
+      _path,
+      data: _bodyData,
+      options: _options,
+      cancelToken: cancelToken,
+      onSendProgress: onSendProgress,
+      onReceiveProgress: onReceiveProgress,
+    );
+
+    RecipeReproducibilityCheckOut? _responseData;
+
+    try {
+      final rawData = _response.data;
+      _responseData = rawData == null
+          ? null
+          : deserialize<
+              RecipeReproducibilityCheckOut,
+              RecipeReproducibilityCheckOut
+            >(rawData, 'RecipeReproducibilityCheckOut', growable: true);
+    } catch (error, stackTrace) {
+      throw DioException(
+        requestOptions: _response.requestOptions,
+        response: _response,
+        type: DioExceptionType.unknown,
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+
+    return Response<RecipeReproducibilityCheckOut>(
+      data: _responseData,
+      headers: _response.headers,
+      isRedirect: _response.isRedirect,
+      requestOptions: _response.requestOptions,
+      redirects: _response.redirects,
+      statusCode: _response.statusCode,
+      statusMessage: _response.statusMessage,
+      extra: _response.extra,
+    );
+  }
 
   /// Check Recipe Safety
   ///
@@ -559,6 +656,115 @@ class RecipesApi {
 
     try {
       _bodyData = jsonEncode(recipeCreate);
+    } catch (error, stackTrace) {
+      throw DioException(
+        requestOptions: _options.compose(_dio.options, _path),
+        type: DioExceptionType.unknown,
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+
+    final _response = await _dio.request<Object>(
+      _path,
+      data: _bodyData,
+      options: _options,
+      cancelToken: cancelToken,
+      onSendProgress: onSendProgress,
+      onReceiveProgress: onReceiveProgress,
+    );
+
+    RecipeDetail? _responseData;
+
+    try {
+      final rawData = _response.data;
+      _responseData = rawData == null
+          ? null
+          : deserialize<RecipeDetail, RecipeDetail>(
+              rawData,
+              'RecipeDetail',
+              growable: true,
+            );
+    } catch (error, stackTrace) {
+      throw DioException(
+        requestOptions: _response.requestOptions,
+        response: _response,
+        type: DioExceptionType.unknown,
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+
+    return Response<RecipeDetail>(
+      data: _responseData,
+      headers: _response.headers,
+      isRedirect: _response.isRedirect,
+      requestOptions: _response.requestOptions,
+      redirects: _response.redirects,
+      statusCode: _response.statusCode,
+      statusMessage: _response.statusMessage,
+      extra: _response.extra,
+    );
+  }
+
+  /// Decide Recipe Quantification
+  ///
+  ///
+  /// Parameters:
+  /// * [recipeId]
+  /// * [proposalId]
+  /// * [quantificationDecisionsInput]
+  /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
+  /// * [headers] - Can be used to add additional headers to the request
+  /// * [extras] - Can be used to add flags to the request
+  /// * [validateStatus] - A [ValidateStatus] callback that can be used to determine request success based on the HTTP status of the response
+  /// * [onSendProgress] - A [ProgressCallback] that can be used to get the send progress
+  /// * [onReceiveProgress] - A [ProgressCallback] that can be used to get the receive progress
+  ///
+  /// Returns a [Future] containing a [Response] with a [RecipeDetail] as data
+  /// Throws [DioException] if API call or serialization fails
+  Future<Response<RecipeDetail>> decideRecipeQuantification({
+    required String recipeId,
+    required String proposalId,
+    required QuantificationDecisionsInput quantificationDecisionsInput,
+    CancelToken? cancelToken,
+    Map<String, dynamic>? headers,
+    Map<String, dynamic>? extra,
+    ValidateStatus? validateStatus,
+    ProgressCallback? onSendProgress,
+    ProgressCallback? onReceiveProgress,
+  }) async {
+    final _path =
+        r'/v1/recipes/{recipe_id}/quantification/{proposal_id}/decisions'
+            .replaceAll(
+              '{'
+              r'recipe_id'
+              '}',
+              recipeId.toString(),
+            )
+            .replaceAll(
+              '{'
+              r'proposal_id'
+              '}',
+              proposalId.toString(),
+            );
+    final _options = Options(
+      method: r'POST',
+      headers: <String, dynamic>{...?headers},
+      extra: <String, dynamic>{
+        'secure': <Map<String, String>>[
+          {'type': 'http', 'scheme': 'bearer', 'name': 'HTTPBearer'},
+        ],
+        ...?extra,
+      },
+      contentType: 'application/json',
+      validateStatus: validateStatus,
+    );
+
+    dynamic _bodyData;
+
+    try {
+      _bodyData = jsonEncode(quantificationDecisionsInput);
     } catch (error, stackTrace) {
       throw DioException(
         requestOptions: _options.compose(_dio.options, _path),
@@ -1206,6 +1412,105 @@ class RecipesApi {
     }
 
     return Response<RecipeList>(
+      data: _responseData,
+      headers: _response.headers,
+      isRedirect: _response.isRedirect,
+      requestOptions: _response.requestOptions,
+      redirects: _response.redirects,
+      statusCode: _response.statusCode,
+      statusMessage: _response.statusMessage,
+      extra: _response.extra,
+    );
+  }
+
+  /// Quantify Recipe
+  ///
+  ///
+  /// Parameters:
+  /// * [recipeId]
+  /// * [quantificationInput]
+  /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
+  /// * [headers] - Can be used to add additional headers to the request
+  /// * [extras] - Can be used to add flags to the request
+  /// * [validateStatus] - A [ValidateStatus] callback that can be used to determine request success based on the HTTP status of the response
+  /// * [onSendProgress] - A [ProgressCallback] that can be used to get the send progress
+  /// * [onReceiveProgress] - A [ProgressCallback] that can be used to get the receive progress
+  ///
+  /// Returns a [Future] containing a [Response] with a [RecipeQuantificationOut] as data
+  /// Throws [DioException] if API call or serialization fails
+  Future<Response<RecipeQuantificationOut>> quantifyRecipe({
+    required String recipeId,
+    required QuantificationInput quantificationInput,
+    CancelToken? cancelToken,
+    Map<String, dynamic>? headers,
+    Map<String, dynamic>? extra,
+    ValidateStatus? validateStatus,
+    ProgressCallback? onSendProgress,
+    ProgressCallback? onReceiveProgress,
+  }) async {
+    final _path = r'/v1/recipes/{recipe_id}/quantification'.replaceAll(
+      '{'
+      r'recipe_id'
+      '}',
+      recipeId.toString(),
+    );
+    final _options = Options(
+      method: r'POST',
+      headers: <String, dynamic>{...?headers},
+      extra: <String, dynamic>{
+        'secure': <Map<String, String>>[
+          {'type': 'http', 'scheme': 'bearer', 'name': 'HTTPBearer'},
+        ],
+        ...?extra,
+      },
+      contentType: 'application/json',
+      validateStatus: validateStatus,
+    );
+
+    dynamic _bodyData;
+
+    try {
+      _bodyData = jsonEncode(quantificationInput);
+    } catch (error, stackTrace) {
+      throw DioException(
+        requestOptions: _options.compose(_dio.options, _path),
+        type: DioExceptionType.unknown,
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+
+    final _response = await _dio.request<Object>(
+      _path,
+      data: _bodyData,
+      options: _options,
+      cancelToken: cancelToken,
+      onSendProgress: onSendProgress,
+      onReceiveProgress: onReceiveProgress,
+    );
+
+    RecipeQuantificationOut? _responseData;
+
+    try {
+      final rawData = _response.data;
+      _responseData = rawData == null
+          ? null
+          : deserialize<RecipeQuantificationOut, RecipeQuantificationOut>(
+              rawData,
+              'RecipeQuantificationOut',
+              growable: true,
+            );
+    } catch (error, stackTrace) {
+      throw DioException(
+        requestOptions: _response.requestOptions,
+        response: _response,
+        type: DioExceptionType.unknown,
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+
+    return Response<RecipeQuantificationOut>(
       data: _responseData,
       headers: _response.headers,
       isRedirect: _response.isRedirect,

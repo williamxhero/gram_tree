@@ -25,6 +25,8 @@ class RecipeVersionCreate {
 
     this.changeNote = '',
 
+    this.expectedCurrentVersionId,
+
     this.imageIds,
 
     required this.snapshot,
@@ -49,6 +51,14 @@ class RecipeVersionCreate {
   )
   final String? changeNote;
 
+  /// 可选并发保护；不改变显式从历史版分支的行为
+  @JsonKey(
+    name: r'expected_current_version_id',
+    required: false,
+    includeIfNull: false,
+  )
+  final String? expectedCurrentVersionId;
+
   @JsonKey(name: r'image_ids', required: false, includeIfNull: false)
   final List<String>? imageIds;
 
@@ -62,6 +72,7 @@ class RecipeVersionCreate {
           other.aiAssisted == aiAssisted &&
           other.baseVersionId == baseVersionId &&
           other.changeNote == changeNote &&
+          other.expectedCurrentVersionId == expectedCurrentVersionId &&
           other.imageIds == imageIds &&
           other.snapshot == snapshot;
 
@@ -70,6 +81,9 @@ class RecipeVersionCreate {
       aiAssisted.hashCode +
       (baseVersionId == null ? 0 : baseVersionId.hashCode) +
       changeNote.hashCode +
+      (expectedCurrentVersionId == null
+          ? 0
+          : expectedCurrentVersionId.hashCode) +
       imageIds.hashCode +
       snapshot.hashCode;
 

@@ -389,7 +389,10 @@ def _mark_sources(draft: GeneratedDraft) -> None:
     draft.recipe.snapshot.servings_source = source
     for item in draft.recipe.snapshot.ingredients:
         item.quantity_source = source
+        item.preparation_source = source if item.preparation else None
     for step in draft.recipe.snapshot.steps:
+        step.instruction_source = source
+        step.doneness_source = source if step.doneness else None
         step.duration_source = source
         step.heat_source = source if step.heat else None
         step.temperature_source = source if step.temperature_celsius is not None else None
@@ -556,10 +559,17 @@ def save(
             == (item.quantity, item.unit, item.display_name)
             else ValueSource(source="author_filled")
         )
+        item.preparation_source = (
+            old.preparation_source
+            if old and item.preparation == old.preparation
+            else ValueSource(source="author_filled")
+        )
     old_steps = {s.id: s for s in original.recipe.snapshot.steps}
     for step in body.snapshot.steps:
         old = old_steps.get(step.id)
         for field, source_field in (
+            ("instruction", "instruction_source"),
+            ("doneness", "doneness_source"),
             ("duration_seconds", "duration_source"),
             ("heat", "heat_source"),
             ("temperature_celsius", "temperature_source"),

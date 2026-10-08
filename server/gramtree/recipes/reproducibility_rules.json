@@ -1,0 +1,18 @@
+{
+  "version": "reproducibility-v1",
+  "description": "检查当前执行字段，不检查来源原文。完整度按适用执行字段计数，每个字段最多扣一次；问题可以有多处。",
+  "quantity_terms": ["少许", "适量", "若干", "一点", "一些", "一小块", "一把", "一碗", "一勺"],
+  "household_units": ["碗", "把", "勺", "大勺", "小勺", "汤匙", "茶匙", "杯", "小块"],
+  "time_terms": ["一会儿", "一会", "片刻", "炒一阵", "炖到软烂"],
+  "heating_actions": ["炒", "煮", "炖", "蒸", "炸", "烤", "煎", "焖", "焯", "烧", "加热"],
+  "cutting_action_pattern": "切(?!去|除|掉)|剁",
+  "cut_size_pattern": "[0-9]+(?:\\.[0-9]+)?\\s*(?:厘米|毫米|cm|mm|公分)",
+  "temperature_pattern": "[0-9]+(?:\\.[0-9]+)?\\s*(?:℃|°C|摄氏度|度)",
+  "heat_observations": ["细纹", "沸腾", "烧开", "微沸", "冒小泡", "小气泡", "冒泡", "油面波纹", "滋滋"],
+  "needs_doneness_ingredients": ["肉", "鸡", "鸭", "鹅", "猪", "牛", "羊", "鱼", "虾", "贝", "豆", "排骨", "肝"],
+  "ready_to_eat_terms": ["熟", "罐头", "即食", "豆腐", "豆干", "豆芽", "豌豆", "生抽", "豆瓣酱", "豆豉"],
+  "doneness_observations": ["无粉红色", "没有粉红色", "无血水", "没有血水", "轻松插透", "能插透", "能戳透"],
+  "vague_doneness": ["软烂", "炖到软烂", "熟了", "熟透", "至熟", "差不多", "适量"],
+  "required_fields": {"ingredient": ["quantity"], "step": ["instruction"], "heating": ["duration_seconds", "heat"], "raw_meat_or_beans": ["doneness"]},
+  "standard_units": ["g", "克", "kg", "千克", "公斤", "ml", "毫升", "l", "升", "tsp", "tbsp", "个", "只", "颗", "粒", "瓣", "头", "根", "条", "片", "块", "张", "棵", "朵", "枚", "count"]
+}

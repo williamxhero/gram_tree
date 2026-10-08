@@ -76,6 +76,8 @@ def upload(
     user_id: uuid.UUID,
     items: list[EventInput],
     now: datetime,
+    *,
+    commit: bool = True,
 ) -> dict[uuid.UUID, UploadStatus]:
     """批量落库，返回每个事件 ID 对应的答复。"""
     if not items:
@@ -112,7 +114,8 @@ def upload(
             .returning(Event.id)
         )
     )
-    session.commit()
+    if commit:
+        session.commit()
 
     results: dict[uuid.UUID, UploadStatus] = {}
     conflicted_ids = [item.id for item in items if item.id not in inserted_ids]
