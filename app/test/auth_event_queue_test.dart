@@ -8,6 +8,7 @@ import 'package:gram_tree/auth/session.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gram_tree/events/event_queue.dart';
 import 'package:gram_tree/events/fake_event_queue.dart';
+import 'package:gram_tree/network/reachability.dart';
 import 'package:gramtree_api/gramtree_api.dart';
 
 import 'helpers.dart';
@@ -336,19 +337,30 @@ void main() {
     expect(find.text('待同步 1 条'), findsOneWidget);
     expectDeviceOnly();
     expectNoLegacyUpload();
-    final retained = await queue.entries();
-    final legacy = retained.singleWhere(
-      (entry) => entry.write.id == '66666666-6666-4666-8666-000000000001',
+    await tapTab(tester, 4);
+    await tapVisible(tester, find.byKey(const ValueKey('sync-status-entry')));
+    expect(find.text('失败 1 条'), findsOneWidget);
+    expect(find.byKey(const ValueKey('sync-item-$_bobWrite')), findsOneWidget);
+    expect(find.byKey(const ValueKey('sync-item-$_aliceWrite')), findsNothing);
+    expect(find.textContaining('权限或内容校验未通过；已保留内容'), findsOneWidget);
+    expect(find.textContaining('private-legacy-content'), findsNothing);
+    await goBack(tester);
+    await _logout(tester);
+    env.server.user = alice;
+    await _login(tester);
+    await restartApp(tester, env);
+    expect(find.text('待同步 1 条'), findsOneWidget);
+    expectDeviceOnly();
+    await tapTab(tester, 4);
+    await tapVisible(tester, find.byKey(const ValueKey('sync-status-entry')));
+    expect(find.text('失败 1 条'), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('sync-item-$_aliceWrite')),
+      findsOneWidget,
     );
-    expect(legacy.write.ownerId, isNull);
-    expect(legacy.state, WriteState.quarantined);
-    expect(legacy.reasonCode, 'legacy_owner_unknown');
-    expect(legacy.write.content, {'ping': 'private-legacy-content'});
-    for (final id in [_aliceWrite, _bobWrite]) {
-      final rejected = retained.singleWhere((entry) => entry.write.id == id);
-      expect(rejected.state, WriteState.failed);
-      expect(rejected.write.content, {'ping': 'retained'});
-    }
+    expect(find.byKey(const ValueKey('sync-item-$_bobWrite')), findsNothing);
+    expect(find.textContaining('权限或内容校验未通过；已保留内容'), findsOneWidget);
+    expectNoLegacyUpload();
   });
 
   testWidgets('退出提醒包含当前账号失败条数及保留说明，取消不退出也不删除', (tester) async {
@@ -879,6 +891,303 @@ void main() {
       await tapVisible(tester, find.text('关闭'));
     });
   }
+
+  testWidgets('注销明确被拒绝后恢复原账号同步，不必退出重新登录', (tester) async {
+    final env = await _fixture();
+    final rejection = Completer<(int, Object?)>();
+    env.server.on('POST', '/v1/me/deletion', (_) => rejection.future);
+    await pumpApp(tester, env: env);
+    await openSettings(tester);
+    await tapVisible(tester, find.text('注销账号'));
+    await tapVisible(tester, find.text('发送验证码'));
+    await tester.enterText(find.byKey(const ValueKey('code-input')), goodCode);
+    await tester.pumpAndSettle();
+    await tapVisible(tester, find.byKey(const ValueKey('delete-check')));
+    await tester.tap(find.byKey(const ValueKey('delete-confirm')));
+    for (var i = 0; i < 5; i++) {
+      await tester.pump(const Duration(milliseconds: 50));
+    }
+    const id = 'dddddddd-dddd-4ddd-8ddd-000000000001';
+    await env.eventQueue.enqueue(
+      QueuedEvent(
+        id: id,
+        ownerId: env.server.user.id,
+        eventType: 'pipeline.self_check',
+        typeVersion: 1,
+        deviceId: 'device-1',
+        deviceTime: DateTime.utc(2026, 10, 8),
+        appVersion: 'test',
+        content: {'ping': 'retained-after-rejection'},
+      ),
+    );
+    rejection.complete(
+      FakeServer.error(403, 'reauth_required', '为了安全，请先重新验证身份'),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('为了安全，请先重新验证身份'), findsOneWidget);
+    expect(find.text('登录味谱'), findsNothing);
+    final sent = env.server
+        .calls('POST', '/v1/sync/writes')
+        .where(
+          (request) =>
+              (((request.body as Map)['writes'] as List).single
+                  as Map)['write_id'] ==
+              id,
+        );
+    expect(sent, hasLength(1));
+    await goBack(tester);
+    await goBack(tester);
+    expect(find.text('待同步 1 条'), findsOneWidget);
+  });
+
+  testWidgets('注销结果未知时明确暂停并可重试确认，联网和页面重启不擅自上传', (tester) async {
+    final env = await _fixture();
+    final reply = Completer<(int, Object?)>();
+    env.server.on('POST', '/v1/me/deletion', (_) => reply.future);
+    await pumpApp(tester, env: env);
+    await openSettings(tester);
+    await tapVisible(tester, find.text('注销账号'));
+    await tapVisible(tester, find.text('发送验证码'));
+    await tester.enterText(find.byKey(const ValueKey('code-input')), goodCode);
+    await tester.pumpAndSettle();
+    await tapVisible(tester, find.byKey(const ValueKey('delete-check')));
+    await tester.tap(find.byKey(const ValueKey('delete-confirm')));
+    for (var i = 0; i < 5; i++) {
+      await tester.pump(const Duration(milliseconds: 50));
+    }
+    const id = 'dddddddd-dddd-4ddd-8ddd-000000000002';
+    await env.eventQueue.enqueue(
+      QueuedEvent(
+        id: id,
+        ownerId: env.server.user.id,
+        eventType: 'pipeline.self_check',
+        typeVersion: 1,
+        deviceId: 'device-1',
+        deviceTime: DateTime.utc(2026, 10, 8),
+        appVersion: 'test',
+        content: {'ping': 'never-send-unconfirmed-deletion'},
+      ),
+    );
+    reply.complete(FakeServer.error(503, 'unavailable', '暂不可用'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('注销结果尚未确认，同步已暂停'), findsOneWidget);
+    expect(find.widgetWithText(FilledButton, '重试确认注销'), findsOneWidget);
+    final container = ProviderScope.containerOf(
+      tester.element(find.byType(Scaffold).first),
+    );
+    container.read(offlineSimulationProvider.notifier).set(true);
+    await tester.pumpAndSettle();
+    env.reachability.reachable = true;
+    container.read(offlineSimulationProvider.notifier).set(false);
+    await container.read(apiReachabilityProvider.notifier).check();
+    await tester.pumpAndSettle();
+    List<Recorded> sent() => env.server
+        .calls('POST', '/v1/sync/writes')
+        .where(
+          (request) =>
+              (((request.body as Map)['writes'] as List).single
+                  as Map)['write_id'] ==
+              id,
+        )
+        .toList();
+    expect(sent(), isEmpty);
+    await restartApp(tester, env);
+    expect(sent(), isEmpty);
+    await openSettings(tester);
+    await tapVisible(tester, find.text('注销账号'));
+    expect(find.textContaining('注销结果尚未确认，同步已暂停'), findsOneWidget);
+    await tapVisible(tester, find.text('发送验证码'));
+    await tester.enterText(find.byKey(const ValueKey('code-input')), goodCode);
+    await tester.pumpAndSettle();
+    await tapVisible(tester, find.byKey(const ValueKey('delete-check')));
+    env.server.on(
+      'POST',
+      '/v1/me/deletion',
+      (_) => FakeServer.error(403, 'reauth_required', '为了安全，请先重新验证身份'),
+    );
+    await tapVisible(tester, find.widgetWithText(FilledButton, '重试确认注销'));
+    expect(find.text('发送验证码'), findsOneWidget);
+    expect(find.textContaining('注销结果尚未确认，同步已暂停'), findsOneWidget);
+    expect(sent(), isEmpty);
+    await tapVisible(tester, find.text('发送验证码'));
+    await tester.enterText(find.byKey(const ValueKey('code-input')), goodCode);
+    await tester.pumpAndSettle();
+    await tapVisible(tester, find.byKey(const ValueKey('delete-check')));
+    env.server.on(
+      'POST',
+      '/v1/me/deletion',
+      (_) => (
+        202,
+        {
+          'status': 'deleting',
+          'deletion_due_at': '2026-11-01T00:00:00Z',
+          'recovery_available': true,
+        },
+      ),
+    );
+    await tapVisible(tester, find.widgetWithText(FilledButton, '重试确认注销'));
+    expect(find.text('登录味谱'), findsOneWidget);
+    expect(sent(), isEmpty);
+    await _login(tester);
+    expect(find.byKey(const ValueKey('sync-pending')), findsNothing);
+  });
+
+  testWidgets('旧注销拒绝不能解除同账号新登录后再次确认注销的上传暂停', (tester) async {
+    final env = await _fixture();
+    final first = Completer<(int, Object?)>();
+    final second = Completer<(int, Object?)>();
+    var requests = 0;
+    env.server.on(
+      'POST',
+      '/v1/me/deletion',
+      (_) => ++requests == 1 ? first.future : second.future,
+    );
+    await pumpApp(tester, env: env);
+    Future<void> confirm() async {
+      await openSettings(tester);
+      await tapVisible(tester, find.text('注销账号'));
+      await tapVisible(tester, find.text('发送验证码'));
+      await tester.enterText(
+        find.byKey(const ValueKey('code-input')),
+        goodCode,
+      );
+      await tester.pumpAndSettle();
+      await tapVisible(tester, find.byKey(const ValueKey('delete-check')));
+      await tester.tap(find.byKey(const ValueKey('delete-confirm')));
+      for (var i = 0; i < 5; i++) {
+        await tester.pump(const Duration(milliseconds: 50));
+      }
+    }
+
+    await confirm();
+    expect(env.server.calls('POST', '/v1/me/deletion'), hasLength(1));
+    await goBack(tester);
+    await goBack(tester);
+    await _logout(tester);
+    await _login(tester);
+    await confirm();
+    expect(env.server.calls('POST', '/v1/me/deletion'), hasLength(2));
+    const id = 'dddddddd-dddd-4ddd-8ddd-000000000003';
+    await env.eventQueue.enqueue(
+      QueuedEvent(
+        id: id,
+        ownerId: env.server.user.id,
+        eventType: 'pipeline.self_check',
+        typeVersion: 1,
+        deviceId: 'device-1',
+        deviceTime: DateTime.utc(2026, 10, 8),
+        appVersion: 'test',
+        content: {'ping': 'new-generation-privacy-pause'},
+      ),
+    );
+    first.complete(FakeServer.error(403, 'reauth_required', '旧验证过期'));
+    for (var i = 0; i < 5; i++) {
+      await tester.pump(const Duration(milliseconds: 50));
+    }
+    final container = ProviderScope.containerOf(
+      tester.element(find.byType(Scaffold).first),
+    );
+    container.read(offlineSimulationProvider.notifier).set(true);
+    for (var i = 0; i < 5; i++) {
+      await tester.pump(const Duration(milliseconds: 50));
+    }
+    container.read(offlineSimulationProvider.notifier).set(false);
+    for (var i = 0; i < 5; i++) {
+      await tester.pump(const Duration(milliseconds: 50));
+    }
+    List<Recorded> sent() => env.server
+        .calls('POST', '/v1/sync/writes')
+        .where(
+          (request) =>
+              (((request.body as Map)['writes'] as List).single
+                  as Map)['write_id'] ==
+              id,
+        )
+        .toList();
+    expect(sent(), isEmpty);
+    expect(find.text('旧验证过期'), findsNothing);
+    second.complete((
+      202,
+      {
+        'status': 'deleting',
+        'deletion_due_at': '2026-11-01T00:00:00Z',
+        'recovery_available': true,
+      },
+    ));
+    await tester.pumpAndSettle();
+    expect(find.text('登录味谱'), findsOneWidget);
+    expect(sent(), isEmpty);
+  });
+
+  testWidgets('注销回执丢失且重试令牌被撤销时，可明确退出保留内容而不恢复上传', (tester) async {
+    final env = await _fixture();
+    final alice = env.server.user;
+    final reply = Completer<(int, Object?)>();
+    env.server.on('POST', '/v1/me/deletion', (_) => reply.future);
+    await pumpApp(tester, env: env);
+    await openSettings(tester);
+    await tapVisible(tester, find.text('注销账号'));
+    await tapVisible(tester, find.text('发送验证码'));
+    await tester.enterText(find.byKey(const ValueKey('code-input')), goodCode);
+    await tester.pumpAndSettle();
+    await tapVisible(tester, find.byKey(const ValueKey('delete-check')));
+    await tester.tap(find.byKey(const ValueKey('delete-confirm')));
+    for (var i = 0; i < 5; i++) {
+      await tester.pump(const Duration(milliseconds: 50));
+    }
+    const id = 'dddddddd-dddd-4ddd-8ddd-000000000004';
+    await env.eventQueue.enqueue(
+      QueuedEvent(
+        id: id,
+        ownerId: alice.id,
+        eventType: 'pipeline.self_check',
+        typeVersion: 1,
+        deviceId: 'device-1',
+        deviceTime: DateTime.utc(2026, 10, 8),
+        appVersion: 'test',
+        content: {'ping': 'retained-unknown-deletion'},
+      ),
+    );
+    reply.complete(FakeServer.error(503, 'unavailable', '回执暂时丢失'));
+    await tester.pumpAndSettle();
+    env.server.on(
+      'POST',
+      '/v1/me/deletion',
+      (_) => FakeServer.error(401, 'unauthorized', '请先登录'),
+    );
+    await tapVisible(tester, find.widgetWithText(FilledButton, '重试确认注销'));
+    expect(env.server.calls('POST', '/v1/me/deletion'), hasLength(2));
+    expect(find.text('请先登录'), findsOneWidget);
+    expect(find.textContaining('注销结果尚未确认，同步已暂停'), findsOneWidget);
+    await tapVisible(tester, find.text('退出并保留本机内容'));
+    expect(find.text('还有 2 条内容未同步'), findsOneWidget);
+    await tapVisible(tester, find.text('取消'));
+    expect(find.textContaining('注销结果尚未确认，同步已暂停'), findsOneWidget);
+    List<Recorded> sent() => env.server
+        .calls('POST', '/v1/sync/writes')
+        .where(
+          (request) =>
+              (((request.body as Map)['writes'] as List).single
+                  as Map)['write_id'] ==
+              id,
+        )
+        .toList();
+    expect(sent(), isEmpty);
+    await tapVisible(tester, find.text('退出并保留本机内容'));
+    await tapVisible(tester, find.widgetWithText(FilledButton, '退出登录'));
+    expect(find.text('登录味谱'), findsOneWidget);
+    await restartApp(tester, env);
+    expect(find.text('登录味谱'), findsOneWidget);
+    expect(sent(), isEmpty);
+    env.server.user = UserOut.fromJson({
+      ...alice.toJson(),
+      'id': _bobId,
+      'nickname': 'Bob',
+    });
+    await _login(tester);
+    expect(find.text('待同步 1 条'), findsOneWidget);
+    expect(sent(), isEmpty);
+  });
 
   testWidgets('确认注销删除当前账号待同步内容，不清除另一个账号的拒收内容', (tester) async {
     final env = await _fixture();

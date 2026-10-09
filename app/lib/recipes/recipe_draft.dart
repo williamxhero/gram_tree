@@ -59,11 +59,32 @@ class RecipeDraft {
 }
 
 class RecipeDraftStore {
-  RecipeDraftStore(this._store);
+  RecipeDraftStore(this._store) {
+    _coordinator = _coordinators[_store] ??= _DraftCoordinator();
+    _epochs = Map.of(_coordinator.epochs);
+  }
 
   static const keyPrefix = 'recipe_draft:v1:';
+  static final _coordinators = Expando<_DraftCoordinator>();
   final LocalStore _store;
-  Future<void> _writeTail = Future<void>.value();
+  late final _DraftCoordinator _coordinator;
+  late final Map<String, int> _epochs;
+
+  bool _canUseAccount(String owner) =>
+      (_epochs[owner] ?? 0) == (_coordinator.epochs[owner] ?? 0);
+
+  /// Successful account deletion only. Fence every old editor handle before
+  /// waiting for admitted platform writes, then erase pointers and all baselines.
+  Future<void> clearAccount(String owner) {
+    _coordinator.epochs[owner] = (_coordinator.epochs[owner] ?? 0) + 1;
+    return _enqueue(() async {
+      for (final key in _store.keys.where(
+        (key) => key.startsWith('$keyPrefix$owner:'),
+      )) {
+        await _store.remove(key);
+      }
+    });
+  }
 
   String keyFor(
     String recipeKey, {
@@ -73,6 +94,7 @@ class RecipeDraftStore {
       '$keyPrefix$accountId:$recipeKey${baselineVersionId == null ? '' : ':$baselineVersionId'}';
 
   RecipeDraft? readLatest({required String recipeKey, String accountId = ''}) {
+    if (!_canUseAccount(accountId)) return null;
     final raw = _store.getString(keyFor(recipeKey, accountId: accountId));
     if (raw == null) return null;
     try {
@@ -88,6 +110,7 @@ class RecipeDraftStore {
   /// Writes are serialized so a delayed platform write cannot reorder a newer
   /// draft behind an older one.
   Future<void> save(RecipeDraft draft) => _enqueue(() async {
+    if (!_canUseAccount(draft.accountId)) return;
     final encoded = jsonEncode(draft.toJson());
     await _store.setString(
       keyFor(
@@ -99,7 +122,7 @@ class RecipeDraftStore {
     );
     // The recipe pointer permits local-first recovery without a remote lookup;
     // baseline-specific copies remain separate when a newer version is edited.
-    if (draft.baselineVersionId != null) {
+    if (draft.baselineVersionId != null && _canUseAccount(draft.accountId)) {
       await _store.setString(
         keyFor(draft.recipeKey, accountId: draft.accountId),
         encoded,
@@ -112,6 +135,7 @@ class RecipeDraftStore {
     String? baselineVersionId,
     String accountId = '',
   }) {
+    if (!_canUseAccount(accountId)) return null;
     final raw =
         _store.getString(
           keyFor(
@@ -141,6 +165,7 @@ class RecipeDraftStore {
     String accountId = '',
     String? baselineVersionId,
   }) => _enqueue(() async {
+    if (!_canUseAccount(accountId)) return;
     final latest = readLatest(recipeKey: recipeKey, accountId: accountId);
     final baseline = baselineVersionId ?? latest?.baselineVersionId;
     await _store.remove(
@@ -152,11 +177,16 @@ class RecipeDraftStore {
   });
 
   Future<void> _enqueue(Future<void> Function() operation) {
-    final result = _writeTail.then((_) => operation());
-    _writeTail = result.then<void>(
+    final result = _coordinator.tail.then((_) => operation());
+    _coordinator.tail = result.then<void>(
       (_) {},
       onError: (Object error, StackTrace stackTrace) {},
     );
     return result;
   }
+}
+
+class _DraftCoordinator {
+  Future<void> tail = Future<void>.value();
+  final Map<String, int> epochs = {};
 }

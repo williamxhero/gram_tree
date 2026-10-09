@@ -136,6 +136,24 @@ abstract class AppLocalizations {
   /// **'查看同步状态'**
   String get logoutViewSync;
 
+  /// No description provided for @deletionUncertainBody.
+  ///
+  /// In zh, this message translates to:
+  /// **'注销结果尚未确认，同步已暂停。可以重新验证后重试确认注销，或退出并保留本机内容；在确认结果前，不会继续上传。'**
+  String get deletionUncertainBody;
+
+  /// No description provided for @deletionRetry.
+  ///
+  /// In zh, this message translates to:
+  /// **'重试确认注销'**
+  String get deletionRetry;
+
+  /// No description provided for @deletionExit.
+  ///
+  /// In zh, this message translates to:
+  /// **'退出并保留本机内容'**
+  String get deletionExit;
+
   /// No description provided for @syncStatusTitle.
   ///
   /// In zh, this message translates to:

@@ -87,11 +87,30 @@ class SessionStore extends ChangeNotifier {
 
   /// Fence private writes at confirmation, while allowing the captured login to
   /// send consent withdrawal/account deletion. Refresh cannot remove this fence.
-  void pauseAccountUploads(SessionIdentity identity) {
+  Future<void> pauseAccountUploads(SessionIdentity identity) async {
     if (!matches(identity)) return;
     _uploadsPausedEpoch = identity.epoch;
+    final value = _encode(_current!);
     notifyListeners();
+    await _persist(() => _secure.write(sessionStorageKey, value));
   }
+
+  /// Only a definite rejection may release this generation's privacy fence.
+  Future<bool> resumeAccountUploads(SessionIdentity identity) async {
+    if (!matches(identity) || _uploadsPausedEpoch != identity.epoch) {
+      return false;
+    }
+    _uploadsPausedEpoch = null;
+    final value = _encode(_current!);
+    notifyListeners();
+    await _persist(() => _secure.write(sessionStorageKey, value));
+    return true;
+  }
+
+  String _encode(AuthSession session) => jsonEncode({
+    ...session.toJson(),
+    if (_uploadsPausedEpoch == _identityEpoch) 'uploads_paused': true,
+  });
 
   /// 为什么变成了未登录（续期失败、撤回同意等），给登录页显示提示用。
   String? lastExpiryReason;
@@ -106,9 +125,11 @@ class SessionStore extends ChangeNotifier {
     if (_loaded || epoch != _identityEpoch) return _current;
     if (raw != null) {
       try {
-        _current = AuthSession.fromJson(
-          jsonDecode(raw) as Map<String, dynamic>,
-        );
+        final value = jsonDecode(raw) as Map<String, dynamic>;
+        _current = AuthSession.fromJson(value);
+        if (value['uploads_paused'] == true) {
+          _uploadsPausedEpoch = _identityEpoch;
+        }
       } catch (_) {
         await _persist(() => _secure.delete(sessionStorageKey));
         if (_loaded || epoch != _identityEpoch) return _current;
@@ -147,7 +168,7 @@ class SessionStore extends ChangeNotifier {
     _current = session;
     _loaded = true;
     lastExpiryReason = null;
-    final value = jsonEncode(session.toJson());
+    final value = _encode(session);
     // Fence old account work immediately; ordered persistence may still be slow.
     notifyListeners();
     await _persist(() => _secure.write(sessionStorageKey, value));

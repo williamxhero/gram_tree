@@ -34,6 +34,16 @@ class AppLocalizationsZh extends AppLocalizations {
   String get logoutViewSync => '查看同步状态';
 
   @override
+  String get deletionUncertainBody =>
+      '注销结果尚未确认，同步已暂停。可以重新验证后重试确认注销，或退出并保留本机内容；在确认结果前，不会继续上传。';
+
+  @override
+  String get deletionRetry => '重试确认注销';
+
+  @override
+  String get deletionExit => '退出并保留本机内容';
+
+  @override
   String get syncStatusTitle => '同步状态';
 
   @override
