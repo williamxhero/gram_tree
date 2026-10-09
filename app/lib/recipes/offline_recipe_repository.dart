@@ -97,11 +97,22 @@ class LocalRecipeVersion {
   bool get pending => entry.state != WriteState.confirmed;
   String get status => switch (entry.state) {
     WriteState.conflict => '等待处理：两份修改均已保留',
-    WriteState.failed => '同步失败：${entry.reasonCode ?? '请重试'}',
+    WriteState.failed => '同步失败：${_failureExplanation(entry.reasonCode)}',
     WriteState.loginPaused => '待同步：请重新登录',
     WriteState.deferred => '待同步：等待前置版本',
     WriteState.confirmed => '已同步',
     _ => '待同步',
+  };
+
+  // Unrecognized server reasons may contain private payloads. Only fixed,
+  // allowlisted explanations may become user-facing text.
+  static String _failureExplanation(String? reason) => switch (reason) {
+    'invalid_recipe' || 'invalid_payload' => '请检查食材和步骤后重新保存',
+    'prohibited_health_claim' => '请修改涉及疾病治疗的描述后重新保存',
+    'recipe_not_writable' || 'reference_forbidden' => '当前账号无法保存这份菜谱，修改已保留',
+    'dependency_failed' => '前置版本未能同步，修改已保留',
+    'retry_limit_exceeded' => '多次同步未成功，修改已保留，请稍后重试',
+    _ => '修改已保留，请稍后重试',
   };
 }
 
