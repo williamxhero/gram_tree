@@ -2959,8 +2959,13 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
               onAction: null,
             ),
           ],
-          // Saved author tags belong with the source conclusion, not below
-          // long checks where a lazy phone list may not build them yet.
+          // Saved explanation and tags belong with the source conclusion, not
+          // below long checks where a lazy phone list may not build them yet.
+          if (detail.version.changeNote.trim().isNotEmpty)
+            Text(
+              '${l10n.recipeChangeNote}：${detail.version.changeNote}',
+              key: const ValueKey('recipe-change-note'),
+            ),
           if (snapshot.tags?.isNotEmpty == true)
             Wrap(
               spacing: 8,
@@ -3137,6 +3142,9 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
           if ((snapshot.steps ?? const []).isEmpty) Text(l10n.recipeNoSteps),
           for (final (index, step) in (snapshot.steps ?? const []).indexed)
             _StepDetailTile(
+              // Lazy scrolling recreates tiles; retain expanded requirements
+              // only for this immutable version and stable step identity.
+              key: PageStorageKey('step-${detail.version.id}-${step.id}'),
               index: index,
               step: step,
               converted: _scaleMode == _RecipeScaleMode.servings
@@ -3969,6 +3977,7 @@ class _IngredientDetailRow extends StatelessWidget {
 
 class _StepDetailTile extends StatelessWidget {
   const _StepDetailTile({
+    super.key,
     required this.index,
     required this.step,
     this.converted,
@@ -4141,6 +4150,9 @@ class _StepDetailTile extends StatelessWidget {
               ),
             if (step.why?.isNotEmpty == true)
               Padding(
+                // The nested WhyPanel scroll offset must not read the tile's
+                // boolean expansion receipt from the same PageStorage entry.
+                key: PageStorageKey('step-why-${step.id}'),
                 padding: const EdgeInsets.symmetric(horizontal: 8),
                 child: WhyPanel(
                   sourceType: sourceTypeAuthorFilled,

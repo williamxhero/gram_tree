@@ -20,6 +20,18 @@ class _Journey {
 
   Finder key(String value) => find.byKey(ValueKey(value));
 
+  Finder instruction(int index, String text) => find.descendant(
+    of: key('recipe-step-$index'),
+    // Prerequisite summaries legitimately repeat other steps' instructions.
+    // Assert the intended numbered title, not every Text on the detail page.
+    matching: find.byWidgetPredicate(
+      (widget) =>
+          widget is Text &&
+          widget.data?.startsWith('${index + 1}. ') == true &&
+          widget.data!.contains(text),
+    ),
+  );
+
   Future<void> waitFor(Finder finder) async {
     for (var i = 0; i < 300 && finder.evaluate().isEmpty; i++) {
       await tester.pump(const Duration(milliseconds: 100));
@@ -321,7 +333,7 @@ void main() {
       await journey.enter('change-explanation-tags', '空气炸锅，作者确认');
       await journey.confirm();
       await journey.tap('recipe-step-1');
-      expect(find.textContaining('空气炸锅180°C加热鸡肉10分钟'), findsOneWidget);
+      expect(journey.instruction(1, '空气炸锅180°C加热鸡肉10分钟'), findsOneWidget);
       expect(find.textContaining('厨具：空气炸锅'), findsWidgets);
       expect(find.textContaining('温度'), findsWidgets);
       expect(find.textContaining('600 秒'), findsWidgets);
@@ -333,7 +345,7 @@ void main() {
       await journey.tap('recipe-version-1');
       await journey.waitFor(journey.key('recipe-detail-content'));
       await journey.reveal('recipe-step-1');
-      expect(find.textContaining(_original), findsOneWidget);
+      expect(journey.instruction(1, _original), findsOneWidget);
       expect(find.textContaining('厨具：炒锅'), findsWidgets);
       expect(find.textContaining('厨具：空气炸锅'), findsNothing);
       await tester.binding.handlePopRoute();
@@ -342,11 +354,17 @@ void main() {
       await journey.waitFor(journey.key('recipe-detail-content'));
       expect(find.text('作者确认'), findsOneWidget);
       await journey.tap('recipe-step-1');
-      expect(find.textContaining('空气炸锅180°C加热鸡肉10分钟'), findsOneWidget);
-      expect(find.textContaining('用食品温度计确认鸡肉中心达到74°C'), findsWidgets);
+      expect(journey.instruction(1, '空气炸锅180°C加热鸡肉10分钟'), findsOneWidget);
+      expect(
+        find.descendant(
+          of: journey.key('recipe-step-1'),
+          matching: find.textContaining('用食品温度计确认鸡肉中心温度达到74°C'),
+        ),
+        findsWidgets,
+      );
       await journey.reveal('recipe-step-0');
       expect(
-        find.textContaining('鸡腿肉切丁'),
+        journey.instruction(0, '鸡腿肉切丁'),
         findsOneWidget,
         reason: '无关准备步骤不得被换厨具重写',
       );
@@ -369,16 +387,16 @@ void main() {
       await journey.waitFor(journey.key('recipe-detail-content'));
       expect(find.text('手动修改'), findsOneWidget);
       await journey.reveal('recipe-step-0');
-      expect(find.textContaining('鸡腿肉切成大小一致的两厘米丁'), findsOneWidget);
+      expect(journey.instruction(0, '鸡腿肉切成大小一致的两厘米丁'), findsOneWidget);
       await journey.reveal('recipe-step-1');
-      expect(find.textContaining(_original), findsOneWidget);
+      expect(journey.instruction(1, _original), findsOneWidget);
       await journey.tap('recipe-history-button');
       await journey.waitFor(journey.key('recipe-version-2'));
       expect(find.textContaining('鸡肉切两厘米丁，其余配方保持不变。'), findsOneWidget);
       await journey.tap('recipe-version-1');
       await journey.waitFor(journey.key('recipe-detail-content'));
       await journey.reveal('recipe-step-0');
-      expect(find.textContaining('鸡腿肉切丁'), findsOneWidget);
+      expect(journey.instruction(0, '鸡腿肉切丁'), findsOneWidget);
       expect(find.textContaining('两厘米'), findsNothing);
       await tester.binding.handlePopRoute();
       await tester.pumpAndSettle();
@@ -386,7 +404,7 @@ void main() {
       await journey.waitFor(journey.key('recipe-detail-content'));
       expect(find.text('两厘米丁'), findsOneWidget);
       await journey.reveal('recipe-step-0');
-      expect(find.textContaining('鸡腿肉切成大小一致的两厘米丁'), findsOneWidget);
+      expect(journey.instruction(0, '鸡腿肉切成大小一致的两厘米丁'), findsOneWidget);
     });
   });
 
@@ -409,14 +427,14 @@ void main() {
       await journey.waitFor(journey.key('recipe-detail-content'));
       expect(find.text('手写说明'), findsOneWidget);
       await journey.reveal('recipe-step-0');
-      expect(find.textContaining('鸡腿肉切成大小一致的三厘米丁'), findsOneWidget);
+      expect(journey.instruction(0, '鸡腿肉切成大小一致的三厘米丁'), findsOneWidget);
       await journey.tap('recipe-history-button');
       await journey.waitFor(journey.key('recipe-version-2'));
       expect(find.textContaining('把鸡肉切成三厘米丁。'), findsOneWidget);
       await journey.tap('recipe-version-2');
       await journey.waitFor(journey.key('recipe-detail-content'));
       await journey.reveal('recipe-step-0');
-      expect(find.textContaining('鸡腿肉切成大小一致的三厘米丁'), findsOneWidget);
+      expect(journey.instruction(0, '鸡腿肉切成大小一致的三厘米丁'), findsOneWidget);
     });
   });
 
@@ -453,7 +471,7 @@ void main() {
       );
       await journey.confirm();
       await journey.reveal('recipe-step-1');
-      expect(find.textContaining('中火炒鸡肉120秒'), findsOneWidget);
+      expect(journey.instruction(1, '中火炒鸡肉120秒'), findsOneWidget);
       expect(find.textContaining('120 秒'), findsWidgets);
       expect(find.textContaining('厨具：炒锅'), findsWidgets);
       await journey.reveal('recipe-duration');
@@ -470,16 +488,16 @@ void main() {
       await journey.tap('recipe-version-1');
       await journey.waitFor(journey.key('recipe-detail-content'));
       await journey.reveal('recipe-step-1');
-      expect(find.textContaining(_original), findsOneWidget);
+      expect(journey.instruction(1, _original), findsOneWidget);
       expect(find.textContaining('300 秒'), findsWidgets);
       await tester.binding.handlePopRoute();
       await tester.pumpAndSettle();
       await journey.tap('recipe-version-2');
       await journey.waitFor(journey.key('recipe-detail-content'));
       await journey.reveal('recipe-step-0');
-      expect(find.textContaining('鸡腿肉切丁'), findsOneWidget);
+      expect(journey.instruction(0, '鸡腿肉切丁'), findsOneWidget);
       await journey.reveal('recipe-step-1');
-      expect(find.textContaining('中火炒鸡肉120秒'), findsOneWidget);
+      expect(journey.instruction(1, '中火炒鸡肉120秒'), findsOneWidget);
     });
   });
 
@@ -505,25 +523,25 @@ void main() {
       await journey.reveal('recipe-duration');
       expect(find.text('难度：简单'), findsOneWidget);
       await journey.reveal('recipe-step-0');
-      expect(find.textContaining('鸡肉直接入炒锅'), findsOneWidget);
+      expect(journey.instruction(0, '鸡肉直接入炒锅'), findsOneWidget);
       await journey.reveal('recipe-step-1');
-      expect(find.textContaining('将炒好的鸡肉装入干净餐盘'), findsOneWidget);
+      expect(journey.instruction(1, '将炒好的鸡肉装入干净餐盘'), findsOneWidget);
       expect(find.textContaining('鸡腿肉切丁后腌3分钟'), findsNothing);
       await journey.tap('recipe-history-button');
       await journey.waitFor(journey.key('recipe-version-2'));
       await journey.tap('recipe-version-1');
       await journey.waitFor(journey.key('recipe-detail-content'));
       await journey.reveal('recipe-step-0');
-      expect(find.textContaining('鸡腿肉切丁后腌3分钟'), findsOneWidget);
+      expect(journey.instruction(0, '鸡腿肉切丁后腌3分钟'), findsOneWidget);
       expect(find.textContaining('将炒好的鸡肉装入干净餐盘'), findsNothing);
       await tester.binding.handlePopRoute();
       await tester.pumpAndSettle();
       await journey.tap('recipe-version-2');
       await journey.waitFor(journey.key('recipe-detail-content'));
       await journey.reveal('recipe-step-0');
-      expect(find.textContaining('1. 鸡肉直接入炒锅'), findsOneWidget);
+      expect(journey.instruction(0, '1. 鸡肉直接入炒锅'), findsOneWidget);
       await journey.reveal('recipe-step-1');
-      expect(find.textContaining('2. 将炒好的鸡肉装入干净餐盘'), findsOneWidget);
+      expect(journey.instruction(1, '2. 将炒好的鸡肉装入干净餐盘'), findsOneWidget);
     });
   });
 
@@ -560,7 +578,7 @@ void main() {
       expect(find.text(_manualWhy), findsOneWidget);
       await journey.confirm();
       await journey.tap('recipe-step-1');
-      expect(find.textContaining(_original), findsOneWidget);
+      expect(journey.instruction(1, _original), findsOneWidget);
       expect(find.textContaining(_manualWhy), findsOneWidget);
       await journey.tap('edit-recipe-button');
       await journey.reveal('text-edit-input');
@@ -605,7 +623,7 @@ void main() {
       await journey.tap('recipe-version-1');
       await journey.waitFor(journey.key('recipe-detail-content'));
       await journey.tap('recipe-step-1');
-      expect(find.textContaining(_original), findsOneWidget);
+      expect(journey.instruction(1, _original), findsOneWidget);
       expect(find.textContaining(_manualWhy), findsOneWidget);
     });
   });

@@ -4713,4 +4713,102 @@ void main() {
       }
     },
   );
+
+  for (final brightness in Brightness.values) {
+    testWidgets(
+      'small phone retains expanded cookware notes after scrolling away $brightness',
+      (tester) async {
+        final server = FakeServer();
+        final state = _installRecipeApi(server);
+        const instruction = '空气炸锅180°C加热鸡肉10分钟，用食品温度计确认鸡肉中心温度达到74°C后盛出';
+        const notes = '使用耐热浅盘，鸡肉铺成单层，不要堵住热风。';
+        const source = {
+          'source': 'ai_estimated',
+          'basis': '作者确认了本次厨具转换，仍需检查实际成熟情况。',
+          'confidence': 0.8,
+        };
+        _replaceRecipeSnapshot(state, {
+          'steps': [
+            {
+              'id': 'prep',
+              'instruction': '鸡腿肉切丁并准备盐',
+              'action': '切',
+              'duration_seconds': 60,
+              'unattended': false,
+            },
+            {
+              'id': 'cook',
+              'instruction': instruction,
+              'action': '烤',
+              'ingredient_ids': ['ingredient-1'],
+              'duration_seconds': 600,
+              'unattended': false,
+              'heat': '热风',
+              'temperature_celsius': 180,
+              'cookware': '空气炸锅',
+              'doneness': '用食品温度计确认鸡肉中心温度达到74°C',
+              'depends_on': ['prep'],
+              'notes': notes,
+              'instruction_source': source,
+              'doneness_source': source,
+              'duration_source': source,
+              'heat_source': source,
+              'temperature_source': source,
+            },
+          ],
+        });
+        await pumpApp(
+          tester,
+          env: TestEnv.signedIn(server: server),
+          size: const Size(320, 640),
+          brightness: brightness,
+          textScale: 1.6,
+        );
+        await _openMyRecipes(tester);
+        await tester.tap(find.byKey(const ValueKey('recipe-card-$_recipeId')));
+        await tester.pumpAndSettle();
+        final tile = find.byKey(const ValueKey('recipe-step-1'));
+        await _scrollUntilVisible(tester, tile);
+        await tester.tap(tile);
+        await tester.pumpAndSettle();
+        expect(find.text(notes), findsOneWidget);
+        await _scrollToTop(tester);
+        expect(tile, findsNothing, reason: '步骤已滚出长页面的本机缓存区域');
+        await _scrollUntilVisible(tester, tile);
+        expect(
+          find.text(notes),
+          findsOneWidget,
+          reason: '返回步骤后应保留作者打开的容器要求，而不是悄悄折叠',
+        );
+        await _scrollUntilVisible(tester, find.text(notes));
+        expect(find.text(notes).hitTestable(), findsOneWidget);
+        expect(find.textContaining(instruction), findsOneWidget);
+        expect(tester.takeException(), isNull);
+      },
+    );
+  }
+
+  testWidgets('small phone shows saved version explanation with its tags', (
+    tester,
+  ) async {
+    final server = FakeServer();
+    final state = _installRecipeApi(server);
+    final version = state.current['version'] as Map;
+    version['change_note'] = '换空气炸锅，中心温度达到74°C后盛出。';
+    (version['snapshot'] as Map)['tags'] = ['空气炸锅', '作者确认'];
+    await pumpApp(
+      tester,
+      env: TestEnv.signedIn(server: server),
+      size: const Size(320, 640),
+    );
+    await _openMyRecipes(tester);
+    await tester.tap(find.byKey(const ValueKey('recipe-card-$_recipeId')));
+    await tester.pumpAndSettle();
+    expect(
+      find.text('这次改了什么：换空气炸锅，中心温度达到74°C后盛出。').hitTestable(),
+      findsOneWidget,
+    );
+    expect(find.text('作者确认').hitTestable(), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
 }
