@@ -11,6 +11,7 @@ lib/src/api/analytics_api.dart
 lib/src/api/auth_api.dart
 lib/src/api/config_api.dart
 lib/src/api/events_api.dart
+lib/src/api/family_members_api.dart
 lib/src/api/health_api.dart
 lib/src/api/ingredients_api.dart
 lib/src/api/personal_measures_api.dart
@@ -81,6 +82,13 @@ lib/src/model/event_upload_result_item.dart
 lib/src/model/existing_choice.dart
 lib/src/model/experiment_info.dart
 lib/src/model/fallback_info.dart
+lib/src/model/family_allergies_out.dart
+lib/src/model/family_allergies_write.dart
+lib/src/model/family_avoidance.dart
+lib/src/model/family_avoidance_out.dart
+lib/src/model/family_member_out.dart
+lib/src/model/family_member_write.dart
+lib/src/model/family_members_out.dart
 lib/src/model/flavor_attribute.dart
 lib/src/model/flavor_profile.dart
 lib/src/model/generate_input.dart

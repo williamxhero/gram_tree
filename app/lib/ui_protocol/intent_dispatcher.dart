@@ -94,7 +94,10 @@ class IntentDispatcher {
     } catch (_) {
       // Optional telemetry must never block privacy controls. Keep ordinary
       // intent behavior unchanged and never log queue errors/private payloads.
-      if (!action.intent.startsWith('allergies_')) rethrow;
+      if (!action.intent.startsWith('allergies_') &&
+          !action.intent.startsWith('family_')) {
+        rethrow;
+      }
     }
 
     final handler = spec.handler;

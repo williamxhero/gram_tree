@@ -14,7 +14,7 @@ from typing import Any
 
 from cryptography.exceptions import InvalidTag
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
-from sqlalchemy import delete, select
+from sqlalchemy import delete, inspect, or_, select
 from sqlalchemy.orm import Session
 
 from gramtree.accounts.models import Consent
@@ -23,10 +23,16 @@ from gramtree.core.ids import new_id
 from gramtree.core.time import utcnow
 from gramtree.events.models import Event
 from gramtree.events.service import record_taste_profile_changed
+from gramtree.events.sync_models import WriteFactOutbox, WriteReceipt
 from gramtree.ingredients.attributes import GB_ALLERGENS
 from gramtree.ingredients.router import _resolve as resolve_ingredient
 from gramtree.settings import Settings
-from gramtree.taste_profiles.models import OwnerAllergies, TasteProfile, TasteProfileChange
+from gramtree.taste_profiles.models import (
+    FamilyMember,
+    OwnerAllergies,
+    TasteProfile,
+    TasteProfileChange,
+)
 
 CONSENT_VERSION = "allergies-v1"
 EMPTY: dict[str, Any] = {"categories": [], "ingredients": []}
@@ -37,17 +43,38 @@ def require_grant(profile: TasteProfile) -> None:
         raise ApiError(403, "sensitive_consent_required", "请先单独同意收集过敏信息")
 
 
-def erase_sensitive(session: Session, owner_id: uuid.UUID) -> None:
-    """Erase current, all identifiable history and metadata, without a decrypt key.
+def erase_sensitive(session: Session, owner_id: uuid.UUID, *, include_family: bool = True) -> None:
+    """Erase sensitive current/history/events keylessly in the owner's transaction.
 
-    Single transactional extension point for future sensitive dependent copies.
-    Authorization invalidation/versioning belongs to the locked calling transaction.
+    Withdrawal, account deletion/purge and restore all use this extension point.
+    include_family=False is only for sanitizing pre-0026 backup schemas;
+    those may also predate the sync delivery tables introduced in 0023.
     """
+    erase_sensitive_history(
+        session,
+        owner_id,
+        include_sync=include_family or inspect(session.connection()).has_table("write_receipts"),
+    )
+    session.execute(delete(OwnerAllergies).where(OwnerAllergies.owner_id == owner_id))
+    if include_family:
+        session.execute(delete(FamilyMember).where(FamilyMember.owner_id == owner_id))
+
+
+def erase_sensitive_history(
+    session: Session, owner_id: uuid.UUID, *, field: str | None = None, include_sync: bool = True
+) -> None:
+    """Shared legacy-safe event/history erasure for one member or all sensitive data."""
+    predicate = (
+        TasteProfileChange.field == field
+        if field is not None
+        else or_(
+            TasteProfileChange.field == "allergies",
+            TasteProfileChange.field.startswith("family_members"),
+        )
+    )
     change_ids = set(
         session.scalars(
-            select(TasteProfileChange.id).where(
-                TasteProfileChange.owner_id == owner_id, TasteProfileChange.field == "allergies"
-            )
+            select(TasteProfileChange.id).where(TasteProfileChange.owner_id == owner_id, predicate)
         )
     )
     event_ids = set(change_ids)
@@ -67,6 +94,8 @@ def erase_sensitive(session: Session, owner_id: uuid.UUID) -> None:
                 continue
             if change_id in change_ids:
                 event_ids.add(event_id)
+    if include_sync and event_ids:
+        _erase_sync_references(session, owner_id, event_ids)
     # Bound SQL bind counts; every batch stays in the caller's atomic transaction.
     ids = list(event_ids)
     for offset in range(0, len(ids), 500):
@@ -74,11 +103,62 @@ def erase_sensitive(session: Session, owner_id: uuid.UUID) -> None:
             delete(Event).where(Event.user_id == owner_id, Event.id.in_(ids[offset : offset + 500]))
         )
     session.execute(
-        delete(TasteProfileChange).where(
-            TasteProfileChange.owner_id == owner_id, TasteProfileChange.field == "allergies"
-        )
+        delete(TasteProfileChange).where(TasteProfileChange.owner_id == owner_id, predicate)
     )
-    session.execute(delete(OwnerAllergies).where(OwnerAllergies.owner_id == owner_id))
+
+
+def _references_erased(value: Any, erased: set[uuid.UUID]) -> bool:
+    if isinstance(value, dict):
+        return any(_references_erased(item, erased) for item in (*value.keys(), *value.values()))
+    if isinstance(value, list):
+        return any(_references_erased(item, erased) for item in value)
+    if isinstance(value, str):
+        try:
+            return uuid.UUID(value) in erased
+        except (ValueError, AttributeError, TypeError):
+            pass
+    return False
+
+
+def _erase_sync_references(session: Session, owner_id: uuid.UUID, erased: set[uuid.UUID]) -> None:
+    # The caller holds the owner lock, also taken before sync receipt ID locks.
+    # Do not delete unrelated business writes merely because they depended on a
+    # sensitive write. Keep their confirmation but minimize identifying edges.
+    for row in session.scalars(select(WriteReceipt).where(WriteReceipt.owner_id == owner_id)):
+        if row.write_id in erased:
+            continue
+        dependencies = [d for d in row.dependencies if not _references_erased(d, erased)]
+        if dependencies != row.dependencies:
+            row.dependencies = dependencies
+            if row.status == "deferred":
+                row.status, row.reason_code = "failed", "dependency_failed"
+        if _references_erased(row.result, erased):
+            row.result = None
+            row.status, row.reason_code = "failed", "reference_unavailable"
+    for row in session.scalars(select(WriteFactOutbox).where(WriteFactOutbox.owner_id == owner_id)):
+        if row.write_id in erased:
+            continue
+        facts = [fact for fact in row.facts if not _references_erased(fact, erased)]
+        if facts != row.facts:
+            if facts:
+                row.facts = facts
+            else:
+                session.delete(row)
+    session.flush()
+    # Remove fact bundles first (receipt FK). No cross-owner lookup or deletion.
+    ids = list(erased)
+    for offset in range(0, len(ids), 500):
+        batch = ids[offset : offset + 500]
+        session.execute(
+            delete(WriteFactOutbox).where(
+                WriteFactOutbox.owner_id == owner_id, WriteFactOutbox.write_id.in_(batch)
+            )
+        )
+        session.execute(
+            delete(WriteReceipt).where(
+                WriteReceipt.owner_id == owner_id, WriteReceipt.write_id.in_(batch)
+            )
+        )
 
 
 def refresh_authorization(session: Session, profile: TasteProfile, now: datetime) -> None:
@@ -156,7 +236,17 @@ def read_sensitive(session: Session, profile: TasteProfile, settings: Settings) 
     require_grant(profile)
     _cipher(settings)  # fail closed even for first save/empty state
     row = session.get(OwnerAllergies, profile.owner_id)
-    return decrypt(settings, profile.owner_id, "current", row.ciphertext) if row else EMPTY
+    if row:
+        return decrypt(settings, profile.owner_id, "current", row.ciphertext)
+    # Empty owner allergies do not mean an empty sensitive store: members use
+    # the same key. Authenticate one current payload as a bounded key sentinel
+    # so a replacement key cannot create a separate unreadable allergy island.
+    member = session.scalar(
+        select(FamilyMember).where(FamilyMember.owner_id == profile.owner_id).limit(1)
+    )
+    if member:
+        decrypt(settings, profile.owner_id, f"member:{member.id}:current", member.ciphertext)
+    return EMPTY
 
 
 def mutate_sensitive(

@@ -16,11 +16,18 @@ from sqlalchemy import func, select
 
 from gramtree.accounts.deps import CurrentAuth
 from gramtree.accounts.models import User, UserStatus
-from gramtree.core.errors import NotFound
+from gramtree.core.errors import ApiError, NotFound
 from gramtree.deps import SessionDep, SettingsDep
 from gramtree.events.models import Event
 from gramtree.events.queries import query_events
-from gramtree.taste_profiles.models import TasteProfile, TasteProfileChange
+from gramtree.events.sync_models import WriteFactOutbox, WriteReceipt
+from gramtree.taste_profiles import allergies
+from gramtree.taste_profiles.models import (
+    FamilyMember,
+    OwnerAllergies,
+    TasteProfile,
+    TasteProfileChange,
+)
 
 router = APIRouter(prefix="/dev/events", include_in_schema=False)
 
@@ -50,6 +57,7 @@ def taste_profile_storage(
     session: SessionDep,
     settings: SettingsDep,
     owner_id: uuid.UUID | None = None,
+    include_sensitive: bool = False,
 ) -> dict[str, int | bool]:
     """Test-only aggregates: prove metadata minimization and actual account purge.
 
@@ -65,12 +73,36 @@ def taste_profile_storage(
         status = session.scalar(select(User.status).where(User.id == owner))
         if status != UserStatus.deleted:
             raise NotFound()
-    changes = set(
-        session.scalars(select(TasteProfileChange.id).where(TasteProfileChange.owner_id == owner))
+    change_rows = list(
+        session.scalars(select(TasteProfileChange).where(TasteProfileChange.owner_id == owner))
     )
+    changes = {row.id for row in change_rows}
+    members = list(session.scalars(select(FamilyMember).where(FamilyMember.owner_id == owner)))
+    owner_allergies = session.get(OwnerAllergies, owner)
+    sensitive_changes = [
+        row
+        for row in change_rows
+        if row.field == "allergies" or row.field.startswith("family_members.")
+    ]
+    current_encrypted = history_encrypted = True
+    try:
+        for member in members:
+            allergies.decrypt(settings, owner, f"member:{member.id}:current", member.ciphertext)
+        if owner_allergies:
+            allergies.decrypt(settings, owner, "current", owner_allergies.ciphertext)
+    except ApiError:
+        current_encrypted = False
+    try:
+        for change in sensitive_changes:
+            if set(change.old_value) != {"encrypted"} or set(change.new_value) != {"encrypted"}:
+                history_encrypted = False
+                break
+            allergies.change_values(settings, owner, change)
+    except (ApiError, ValueError, KeyError, TypeError):
+        history_encrypted = False
     events = list(session.scalars(select(Event).where(Event.user_id == owner)))
     taste_events = [event for event in events if event.event_type == "taste_profile.changed"]
-    return {
+    result: dict[str, int | bool] = {
         "profiles": session.scalar(
             select(func.count()).select_from(TasteProfile).where(TasteProfile.owner_id == owner)
         )
@@ -85,3 +117,31 @@ def taste_profile_storage(
             for event in taste_events
         ),
     }
+    if include_sensitive:
+        receipts = list(session.scalars(select(WriteReceipt).where(WriteReceipt.owner_id == owner)))
+        outbox = list(
+            session.scalars(select(WriteFactOutbox).where(WriteFactOutbox.owner_id == owner))
+        )
+        event_ids = {str(event.id) for event in events}
+
+        def orphan_event(value: dict | None) -> bool:
+            return bool(
+                value
+                and value.get("resource_type") == "experience.event"
+                and value.get("resource_id") not in event_ids
+            )
+
+        result.update(
+            sync_receipts=len(receipts),
+            sync_outbox=len(outbox),
+            sync_dependency_ids=sum(len(row.dependencies) for row in receipts),
+            sync_orphan_event_results=sum(orphan_event(row.result) for row in receipts),
+            sync_orphan_event_facts=sum(orphan_event(fact) for row in outbox for fact in row.facts),
+            family_members=len(members),
+            family_changes=sum(row.field.startswith("family_members") for row in change_rows),
+            owner_allergies=int(owner_allergies is not None),
+            sensitive_changes=len(sensitive_changes),
+            family_current_encrypted=current_encrypted,
+            sensitive_changes_encrypted=history_encrypted,
+        )
+    return result
