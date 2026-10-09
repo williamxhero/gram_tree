@@ -1,9 +1,11 @@
+import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gramtree_api/gramtree_api.dart';
 
 import '../../api/api_client.dart';
 import '../../auth/auth_controller.dart';
 import '../../auth/session.dart';
+import 'taste_profile_cache.dart';
 import '../../storage/device_id.dart';
 import '../../util/ids.dart';
 
@@ -79,14 +81,43 @@ final allergiesProvider = FutureProvider.autoDispose<AllergiesOut?>((
   final memory = ref.watch(sensitiveMemoryProvider);
   if (account == null || memory.suppressed) return null;
   final store = ref.read(sessionStoreProvider);
-  final result = await ref
-      .watch(apiClientProvider)
-      .getAllergiesApi()
-      .getAllergies(
-        headers: sensitiveAccountHeaders(store),
-        extra: sensitiveAccountExtra(store),
-      );
-  return ref.mounted ? result.data! : null;
+  final identity = store.identity;
+  if (identity == null || identity.ownerId != account) return null;
+  final cache = ref.read(tasteProfileCacheProvider);
+  try {
+    final result = await ref
+        .watch(apiClientProvider)
+        .getAllergiesApi()
+        .getAllergies(
+          headers: sensitiveAccountHeaders(store),
+          extra: sensitiveAccountExtra(store),
+        );
+    final value = result.data!;
+    if (!ref.mounted || !store.matches(identity)) return null;
+    await cache.writeAllergies(
+      account,
+      value,
+      stillCurrent: () =>
+          ref.mounted &&
+          store.matches(identity) &&
+          !ref.read(sensitiveMemoryProvider).suppressed,
+    );
+    return value;
+  } catch (error) {
+    if (error is DioException && error.response?.statusCode != null) rethrow;
+    if (!store.matches(identity) ||
+        ref.read(sensitiveMemoryProvider).suppressed) {
+      return null;
+    }
+    final snapshot = await cache.read(account);
+    if (snapshot?.profile == null ||
+        snapshot?.allergies == null ||
+        !snapshot!.hasCurrentProfile ||
+        !snapshot.hasAuthorizedSensitive) {
+      rethrow;
+    }
+    return snapshot.allergies;
+  }
 });
 final allergyChangesProvider =
     FutureProvider.autoDispose<List<TasteProfileChangeOut>>((ref) async {

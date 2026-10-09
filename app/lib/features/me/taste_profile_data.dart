@@ -1,17 +1,67 @@
+import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gramtree_api/gramtree_api.dart';
 
 import '../../api/api_client.dart';
 import '../../auth/auth_controller.dart';
+import '../../auth/session.dart';
+import 'taste_profile_cache.dart';
 
-/// No persistent copy: account switches invalidate all private profile reads.
+class TasteProfileSnapshot {
+  const TasteProfileSnapshot({
+    required this.profile,
+    required this.cachedAt,
+    required this.fromCache,
+  });
+
+  final TasteProfileOut profile;
+  final DateTime cachedAt;
+  final bool fromCache;
+}
+
+/// Online reads replace the secure snapshot. Offline reads are deliberately
+/// read-only and never enter the event queue.
 class TasteProfileRepository {
-  TasteProfileRepository(this.api, this.accountId);
+  TasteProfileRepository(this.api, this.accountId, this.session, this.cache);
 
   final TasteProfileApi api;
   final String accountId;
+  final SessionStore session;
+  final TasteProfileCache cache;
 
-  Future<TasteProfileOut> read() async => (await api.getTasteProfile()).data!;
+  Future<TasteProfileSnapshot> readSnapshot() async {
+    final identity = session.identity;
+    if (identity == null || identity.ownerId != accountId) {
+      throw StateError('account_unavailable');
+    }
+    try {
+      final profile = (await api.getTasteProfile()).data!;
+      if (!session.matches(identity))
+        throw StateError('stale_profile_response');
+      await cache.writeProfile(
+        accountId,
+        profile,
+        stillCurrent: () => session.matches(identity),
+      );
+      return TasteProfileSnapshot(
+        profile: profile,
+        cachedAt: DateTime.now().toUtc(),
+        fromCache: false,
+      );
+    } catch (error) {
+      if (error is DioException && error.response?.statusCode != null) rethrow;
+      if (error is StateError || !session.matches(identity)) rethrow;
+      final response = await cache.read(accountId);
+      if (response?.profile == null) rethrow;
+      return TasteProfileSnapshot(
+        profile: response!.profile!,
+        cachedAt: response.cachedAt,
+        fromCache: true,
+      );
+    }
+  }
+
+  Future<TasteProfileOut> read() async => (await readSnapshot()).profile;
 
   Future<TasteProfileOut> setLevel(String flavor, num coefficient) async =>
       (await api.updateTasteProfile(
@@ -46,11 +96,20 @@ final tasteProfileRepositoryProvider =
       return TasteProfileRepository(
         ref.watch(apiClientProvider).getTasteProfileApi(),
         accountId,
+        ref.watch(sessionStoreProvider),
+        ref.watch(tasteProfileCacheProvider),
       );
     });
 
+final tasteProfileSnapshotProvider =
+    FutureProvider.autoDispose<TasteProfileSnapshot>(
+      (ref) => ref.watch(tasteProfileRepositoryProvider).readSnapshot(),
+    );
+
 final tasteProfileProvider = FutureProvider.autoDispose<TasteProfileOut>(
-  (ref) => ref.watch(tasteProfileRepositoryProvider).read(),
+  (ref) => ref
+      .watch(tasteProfileSnapshotProvider.future)
+      .then((value) => value.profile),
 );
 
 final tasteProfileChangesProvider =

@@ -13,6 +13,7 @@ import '../../ui_protocol/components/component_scaffold.dart';
 import '../../ui_protocol/source_mark.dart';
 import '../../ui_protocol/source_types.dart';
 import 'allergies_data.dart';
+import 'taste_profile_cache.dart';
 import 'taste_profile_data.dart';
 
 String _summary(Object? value, AppLocalizations l10n) {
@@ -41,7 +42,11 @@ class _AllergiesSectionState extends ConsumerState<AllergiesSection> {
         mounted &&
         ref.read(authProvider).value?.id == account &&
         ref.read(sensitiveMemoryProvider).epoch == epoch;
-    if (_busy || account == null) return;
+    if (_busy ||
+        account == null ||
+        ref.read(tasteProfileSnapshotProvider).value?.fromCache == true) {
+      return;
+    }
     final l10n = AppLocalizations.of(context);
     setState(() => _busy = true);
     try {
@@ -152,6 +157,8 @@ class _AllergiesSectionState extends ConsumerState<AllergiesSection> {
     final l10n = AppLocalizations.of(context);
     final state = ref.watch(allergiesProvider);
     final history = ref.watch(allergyChangesProvider);
+    final offline =
+        ref.watch(tasteProfileSnapshotProvider).value?.fromCache == true;
     return ComponentCard(
       key: const ValueKey('allergies-section'),
       detail: ComponentDescriptorDetailEnum.standard,
@@ -183,7 +190,7 @@ class _AllergiesSectionState extends ConsumerState<AllergiesSection> {
             _edit,
             (run) => OutlinedButton(
               key: const ValueKey('allergies-edit'),
-              onPressed: _busy ? null : run,
+              onPressed: _busy || offline ? null : run,
               child: Text(l10n.allergyEdit),
             ),
           ),
@@ -545,6 +552,15 @@ class _SensitiveWithdrawalTileState
       return;
     }
     ref.read(sensitiveMemoryProvider.notifier).suppress();
+    await ref
+        .read(tasteProfileCacheProvider)
+        .clearSensitive(
+          account,
+          stillCurrent: () =>
+              mounted &&
+              ref.read(authProvider).value?.id == account &&
+              ref.read(sensitiveMemoryProvider).suppressed,
+        );
     final epoch = ref.read(sensitiveMemoryProvider).epoch;
     bool current() =>
         mounted &&

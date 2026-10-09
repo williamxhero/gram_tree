@@ -3357,6 +3357,12 @@ abstract class AppLocalizations {
   /// **'菜系对应的味型调整只读显示，暂不提供学习或编辑。'**
   String get tasteLocalReadonly;
 
+  /// No description provided for @tasteOfflineReadonly.
+  String get tasteOfflineReadonly;
+
+  /// No description provided for @tasteOfflineUpdated.
+  String tasteOfflineUpdated(String timestamp, int version);
+
   /// No description provided for @tasteActive.
   ///
   /// In zh, this message translates to:

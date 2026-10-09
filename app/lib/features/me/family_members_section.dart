@@ -17,6 +17,7 @@ import '../../ui_protocol/source_types.dart';
 import 'allergies_data.dart';
 import 'family_members_data.dart';
 import 'ingredient_preferences_section.dart';
+import 'taste_profile_cache.dart';
 import 'taste_profile_data.dart';
 
 String familyAgeLabel(String age, AppLocalizations l) => switch (age) {
@@ -139,7 +140,11 @@ class _FamilyMembersSectionState extends ConsumerState<FamilyMembersSection> {
 
   Future<void> _edit([String? id]) async {
     final scope = _FamilyScope.capture(ref);
-    if (_busy || !scope.current(ref)) return;
+    if (_busy ||
+        !scope.current(ref) ||
+        ref.read(tasteProfileSnapshotProvider).value?.fromCache == true) {
+      return;
+    }
     final l = AppLocalizations.of(context);
     setState(() => _busy = true);
     try {
@@ -236,7 +241,11 @@ class _FamilyMembersSectionState extends ConsumerState<FamilyMembersSection> {
 
   Future<void> _delete(String id, {bool retry = false}) async {
     final before = _FamilyScope.capture(ref);
-    if (_busy || !before.current(ref)) return;
+    if (_busy ||
+        !before.current(ref) ||
+        ref.read(tasteProfileSnapshotProvider).value?.fromCache == true) {
+      return;
+    }
     final l = AppLocalizations.of(context);
     if (!retry) {
       final ok = await showDialog<bool>(
@@ -289,6 +298,13 @@ class _FamilyMembersSectionState extends ConsumerState<FamilyMembersSection> {
         }
       }
       if (!mounted || !scope.current(ref)) return;
+      await ref
+          .read(tasteProfileCacheProvider)
+          .removeFamilyMember(
+            scope.account!,
+            id,
+            stillCurrent: () => mounted && scope.current(ref),
+          );
       ref.invalidate(familyMembersProvider);
       ref.invalidate(familyChangesProvider);
       ref.invalidate(tasteProfileProvider);

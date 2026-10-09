@@ -1,3 +1,4 @@
+import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gramtree_api/gramtree_api.dart';
 
@@ -5,6 +6,7 @@ import '../../api/api_client.dart';
 import '../../auth/auth_controller.dart';
 import '../../auth/session.dart';
 import 'allergies_data.dart';
+import 'taste_profile_cache.dart';
 
 typedef FamilyMemoryState = ({
   int epoch,
@@ -54,37 +56,69 @@ final familyMembersProvider = FutureProvider.autoDispose<FamilyMembersOut?>((
   final memory = ref.watch(familyMemoryProvider);
   if (account == null || sensitive.suppressed) return null;
   final store = ref.read(sessionStoreProvider);
+  final identity = store.identity;
+  if (identity == null || identity.ownerId != account) return null;
   final api = ref.watch(apiClientProvider).getFamilyMembersApi();
-  final headers = sensitiveAccountHeaders(store);
-  final extra = sensitiveAccountExtra(store);
-  FamilyMembersOut? result;
-  final members = <FamilyMemberOut>[];
-  String? cursor;
-  do {
-    final page = (await api.listFamilyMembers(
-      cursor: cursor,
-      headers: headers,
-      extra: extra,
-    )).data!;
-    if (!ref.mounted) {
-      members.clear();
+  final cache = ref.read(tasteProfileCacheProvider);
+  try {
+    final headers = sensitiveAccountHeaders(store);
+    final extra = sensitiveAccountExtra(store);
+    FamilyMembersOut? result;
+    final members = <FamilyMemberOut>[];
+    String? cursor;
+    do {
+      final page = (await api.listFamilyMembers(
+        cursor: cursor,
+        headers: headers,
+        extra: extra,
+      )).data!;
+      if (!ref.mounted || !store.matches(identity)) {
+        members.clear();
+        return null;
+      }
+      if (result != null &&
+          (page.consentId != result.consentId ||
+              page.authorizationVersion != result.authorizationVersion ||
+              page.profileVersion != result.profileVersion ||
+              page.consentVersion != result.consentVersion)) {
+        members.clear();
+        throw StateError('family_snapshot_changed');
+      }
+      result ??= page;
+      members.addAll(
+        page.items.where((item) => !memory.deleted.contains(item.id)),
+      );
+      cursor = page.nextCursor;
+    } while (cursor != null);
+    final value = result.copyWith(items: members);
+    await cache.writeFamily(
+      account,
+      value,
+      stillCurrent: () =>
+          ref.mounted &&
+          store.matches(identity) &&
+          !ref.read(sensitiveMemoryProvider).suppressed,
+    );
+    return value;
+  } catch (error) {
+    if (error is DioException && error.response?.statusCode != null) rethrow;
+    if (error is StateError) rethrow;
+    if (!store.matches(identity) ||
+        ref.read(sensitiveMemoryProvider).suppressed) {
       return null;
     }
-    if (result != null &&
-        (page.consentId != result.consentId ||
-            page.authorizationVersion != result.authorizationVersion ||
-            page.profileVersion != result.profileVersion ||
-            page.consentVersion != result.consentVersion)) {
-      members.clear();
-      throw StateError('family_snapshot_changed');
+    final snapshot = await cache.read(account);
+    if (snapshot?.family == null ||
+        !snapshot!.hasCurrentProfile ||
+        !snapshot.hasAuthorizedSensitive) {
+      rethrow;
     }
-    result ??= page;
-    members.addAll(
-      page.items.where((item) => !memory.deleted.contains(item.id)),
+    return snapshot.family!.copyWith(
+      items: snapshot.family!.items
+          .where((item) => !memory.deleted.contains(item.id))
+          .toList(),
     );
-    cursor = page.nextCursor;
-  } while (cursor != null);
-  return result.copyWith(items: members);
+  }
 });
 
 final familyMemberProvider = FutureProvider.autoDispose

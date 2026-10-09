@@ -128,11 +128,17 @@ class SessionStore extends ChangeNotifier {
   /// 清掉本机的登录状态。
   Future<void> clear() async {
     _identityEpoch++;
+    final ownerId = _current?.user.id;
     _current = null;
     _loaded = true;
     // Hide account-private UI immediately, even while older storage IO drains.
     notifyListeners();
-    await _persist(() => _secure.delete(sessionStorageKey));
+    await _persist(() async {
+      await _secure.delete(sessionStorageKey);
+      if (ownerId != null) {
+        await _secure.delete('taste_profile_cache_v1:$ownerId');
+      }
+    });
   }
 
   Future<void> expire({required String reason}) async {

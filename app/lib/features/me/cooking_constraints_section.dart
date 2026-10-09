@@ -1,26 +1,60 @@
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gramtree_api/gramtree_api.dart';
 
 import '../../api/api_client.dart';
 import '../../auth/auth_controller.dart';
+import '../../auth/session.dart';
 import '../../app/theme.dart';
 import '../../l10n/app_localizations.dart';
 import '../../ui_protocol/cooking_constraint_actions.dart';
 import '../../ui_protocol/source_mark.dart';
 import '../../ui_protocol/source_types.dart';
 import '../../ui_protocol/components/component_scaffold.dart';
+import 'taste_profile_cache.dart';
 import 'taste_profile_data.dart';
 
 final cookingConstraintsProvider =
     FutureProvider.autoDispose<CookingConstraintsOut>((ref) async {
       final account = ref.watch(authProvider).value?.id;
       if (account == null) throw StateError('做菜约束需要登录');
-      return (await ref
-              .watch(apiClientProvider)
-              .getTasteProfileApi()
-              .getCookingConstraints())
-          .data!;
+      final session = ref.read(sessionStoreProvider);
+      final identity = session.identity;
+      if (identity == null || identity.ownerId != account) {
+        throw StateError('account_unavailable');
+      }
+      final cache = ref.read(tasteProfileCacheProvider);
+      try {
+        final value =
+            (await ref
+                    .watch(apiClientProvider)
+                    .getTasteProfileApi()
+                    .getCookingConstraints())
+                .data!;
+        if (!ref.mounted || !session.matches(identity)) {
+          throw StateError('stale_profile_response');
+        }
+        await cache.writeConstraints(
+          account,
+          value,
+          stillCurrent: () => ref.mounted && session.matches(identity),
+        );
+        return value;
+      } catch (error) {
+        if (error is DioException && error.response?.statusCode != null) {
+          rethrow;
+        }
+        if (error is StateError) rethrow;
+        if (!session.matches(identity)) rethrow;
+        final snapshot = await cache.read(account);
+        if (snapshot?.profile == null ||
+            snapshot?.constraints == null ||
+            !snapshot!.hasCurrentProfile) {
+          rethrow;
+        }
+        return snapshot.constraints!;
+      }
     });
 
 const _days = ['weekday', 'weekend'];
@@ -122,7 +156,11 @@ class _CookingConstraintsSectionState
 
   Future<void> _save(CookingConstraints values) async {
     final account = ref.read(authProvider).value?.id;
-    if (_busy || account == null) return;
+    if (_busy ||
+        account == null ||
+        ref.read(tasteProfileSnapshotProvider).value?.fromCache == true) {
+      return;
+    }
     setState(() => _busy = true);
     try {
       await ref
@@ -196,6 +234,8 @@ class _CookingConstraintsSectionState
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
+    final offline =
+        ref.watch(tasteProfileSnapshotProvider).value?.fromCache == true;
     final numberStyle = GramTreeColors.of(context)
         .numberStyle(Theme.of(context).textTheme.bodyMedium!);
     final dishes = _dishLabels(l10n);
@@ -293,7 +333,7 @@ class _CookingConstraintsSectionState
                         () => _edit(current),
                         (dispatch) => OutlinedButton(
                           key: const ValueKey('cooking-constraints-edit'),
-                          onPressed: _busy ? null : dispatch,
+                          onPressed: _busy || offline ? null : dispatch,
                           child: Text(l10n.cookingConstraintsEdit),
                         ),
                       ),
@@ -303,7 +343,7 @@ class _CookingConstraintsSectionState
                         _clear,
                         (dispatch) => TextButton(
                           key: const ValueKey('cooking-constraints-clear'),
-                          onPressed: _busy ? null : dispatch,
+                          onPressed: _busy || offline ? null : dispatch,
                           child: Text(l10n.cookingConstraintsClear),
                         ),
                       ),
