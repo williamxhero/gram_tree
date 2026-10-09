@@ -36,7 +36,7 @@ FamilyMembersOut familyFixture({
   'profile_version': 1,
   'available_age_bands': familyAges,
   'available_allergen_categories': ['花生', '乳及乳制品'],
-  'members': members.map((member) => member.toJson()).toList(),
+  'items': members.map((member) => member.toJson()).toList(),
 });
 
 FamilyMemberOut memberFixture({
@@ -696,6 +696,22 @@ void main() {
           find.byKey(const ValueKey('taste-ingredient-search')),
           '自由文字不保存',
         );
+        final writesBeforeFreeTextSave = server
+            .calls('PUT', '$familyPath/$familyMemberId')
+            .length;
+        await tapVisible(
+          tester,
+          find.byKey(const ValueKey('taste-preference-save')),
+        );
+        expect(
+          find.byKey(const ValueKey('taste-ingredient-search')),
+          findsOneWidget,
+        );
+        expect(
+          server.calls('PUT', '$familyPath/$familyMemberId').length,
+          writesBeforeFreeTextSave,
+        );
+        // Keep the original disabled-control check as supplementary evidence.
         expect(
           tester
               .widget<FilledButton>(
@@ -1509,6 +1525,54 @@ void main() {
         ),
         isNot(contains('孩子私密称呼')),
       );
+      final actions = server
+          .calls('POST', '/v1/sync/writes')
+          .expand(
+            (request) => ((request.body as Map)['writes'] as List).cast<Map>(),
+          )
+          .map((write) => write['payload'] as Map)
+          .where(
+            (event) =>
+                event['event_type'] == 'ui.component_action' &&
+                ((event['content'] as Map)['intent'] as String).startsWith(
+                  'family_',
+                ),
+          )
+          .toList();
+      expect(actions.map((event) => (event['content'] as Map)['intent']), [
+        'family_add',
+        'family_agree',
+        for (var i = 0; i < 8; i++) 'family_age',
+        'family_flavor',
+        'family_save',
+        'family_view',
+        'family_close',
+        'family_why',
+        'family_edit',
+        'family_age',
+        'family_flavor',
+        'family_save',
+        'family_delete',
+        'family_confirm_delete',
+      ]);
+      for (final event in actions) {
+        expect(event['correlation'], <String, dynamic>{});
+        expect(event['content'], {
+          'component_id': 'family-members',
+          'intent': (event['content'] as Map)['intent'],
+        });
+      }
+      for (final private in [
+        '孩子私密称呼',
+        '1_to_3',
+        '6_to_12',
+        'spicy',
+        familyMemberId,
+        familyChangeId,
+        consent!,
+      ]) {
+        expect(jsonEncode(actions), isNot(contains(private)));
+      }
       expect(tester.takeException(), isNull);
     },
   );

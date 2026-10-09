@@ -3,10 +3,13 @@ import 'dart:convert';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:gram_tree/auth/session.dart';
 import 'package:gram_tree/config/app_config.dart';
 import 'package:gram_tree/main.dart' as app;
 import 'package:gramtree_api/gramtree_api.dart';
 import 'package:integration_test/integration_test.dart';
+
+import 'event_pipeline_support.dart' show containerOf;
 
 enum _FamilyStep {
   login,
@@ -22,6 +25,13 @@ enum _FamilyStep {
   firstMemberSave,
   firstMemberDetail,
   firstMemberEdit,
+  firstMemberEditLoaded,
+  firstMemberEditAge,
+  firstMemberEditFlavor,
+  firstMemberEditAvoidance,
+  firstMemberEditSave,
+  firstMemberEditReopen,
+  firstMemberEditVerification,
   privateHistory,
   forbiddenFields,
   accountIsolation,
@@ -142,6 +152,9 @@ void main() {
   Future<void> tap(WidgetTester tester, Finder finder) async {
     await Scrollable.ensureVisible(tester.element(finder), alignment: 0.5);
     await tester.pumpAndSettle();
+    // Intent dispatch can still await asynchronous work with no pending frame.
+    // Do not tap a control behind a dialog whose close intent is still queued.
+    await waitFor(tester, finder.hitTestable());
     await tester.tap(finder);
     await tester.pumpAndSettle();
   }
@@ -234,10 +247,15 @@ void main() {
     expect(find.text('咸 · 淡一点'), findsOneWidget);
 
     markStep(_FamilyStep.unauthorizedWrite);
-    final owner = await loginApi(email);
+    // The UI already authenticated this owner. A second code request would
+    // correctly hit the resend guard before any privacy assertion runs.
+    final owner = <String, dynamic>{
+      'Authorization':
+          'Bearer ${containerOf(tester).read(sessionStoreProvider).current!.accessToken}',
+    };
     final refused = (await familyApi.listFamilyMembers(headers: owner)).data!;
     expect(refused.consentId, isNull);
-    expect(refused.members, isEmpty);
+    expect(refused.items, isEmpty);
     await expectStatus(
       () => familyApi.createFamilyMember(
         familyMemberWrite: FamilyMemberWrite(
@@ -363,22 +381,29 @@ void main() {
       tester.widget<TextField>(key('family-nickname')).controller!.text == '孩子',
       isTrue,
     );
+    markStep(_FamilyStep.firstMemberEditLoaded);
     await tap(tester, key('family-age-band'));
     await tap(tester, find.text('6～12 岁').last);
+    markStep(_FamilyStep.firstMemberEditAge);
     await tap(tester, key('family-flavor-spicy'));
     await tap(tester, find.text('淡一点').last);
+    markStep(_FamilyStep.firstMemberEditFlavor);
     await tap(tester, key('family-avoidance-add'));
     await waitFor(tester, key('taste-preference-category'));
     await tap(tester, key('taste-preference-category'));
     await tap(tester, find.text('肉类').last);
     await tap(tester, key('taste-preference-save'));
+    markStep(_FamilyStep.firstMemberEditAvoidance);
     await waitFor(tester, key('family-nickname'));
     await tap(tester, key('family-save'));
+    markStep(_FamilyStep.firstMemberEditSave);
     await waitFor(tester, find.text('孩子 · 6～12 岁'));
     await reopen(tester);
+    markStep(_FamilyStep.firstMemberEditReopen);
     await waitFor(tester, find.text('孩子 · 6～12 岁'));
     expect(find.text('孩子 · 6～12 岁'), findsOneWidget);
     await tap(tester, key('family-view-$firstId'));
+    markStep(_FamilyStep.firstMemberEditVerification);
     await waitFor(
       tester,
       find.descendant(
@@ -468,7 +493,7 @@ void main() {
       'family-other-${DateTime.now().microsecondsSinceEpoch}@example.com',
     );
     expect(
-      (await familyApi.listFamilyMembers(headers: other)).data!.members,
+      (await familyApi.listFamilyMembers(headers: other)).data!.items,
       isEmpty,
     );
     await expectStatus(
@@ -589,11 +614,10 @@ void main() {
     expect(find.text('小家人 · 3～6 岁'), findsOneWidget);
     final afterDelete = (await familyApi.listFamilyMembers(headers: owner))
         .data!;
-    expect(afterDelete.members.length, 1);
-    expect(afterDelete.members.single.id == secondId, isTrue);
+    expect(afterDelete.items.length, 1);
+    expect(afterDelete.items.single.id == secondId, isTrue);
     expect(
-      jsonEncode(afterDelete.members.single.toJson()) ==
-          jsonEncode(secondSaved),
+      jsonEncode(afterDelete.items.single.toJson()) == jsonEncode(secondSaved),
       isTrue,
     );
     final remainingHistory = (await familyApi.listFamilyMemberChanges(
@@ -615,10 +639,10 @@ void main() {
       '测试酱油',
       '00000000-0000-4000-8000-000000000001',
     ];
-    expectAbsent(
-      afterDelete.members.map((member) => member.toJson()).toList(),
-      [firstId, ...firstValues],
-    );
+    expectAbsent(afterDelete.items.map((member) => member.toJson()).toList(), [
+      firstId,
+      ...firstValues,
+    ]);
     expectAbsent(remainingHistory.toJson(), [firstId, ...firstValues]);
     await expectStatus(
       () => familyApi.getFamilyMember(memberId: firstId, headers: owner),
@@ -699,8 +723,8 @@ void main() {
     expect(find.textContaining('蛋类'), findsNothing);
     final withdrawn = (await familyApi.listFamilyMembers(headers: owner)).data!;
     expect(withdrawn.consentId, isNull);
-    expect(withdrawn.members, isEmpty);
-    expectAbsent(withdrawn.members.map((member) => member.toJson()).toList(), [
+    expect(withdrawn.items, isEmpty);
+    expectAbsent(withdrawn.items.map((member) => member.toJson()).toList(), [
       firstId,
       secondId,
       ...firstValues,
@@ -771,7 +795,7 @@ void main() {
     final regranted = (await familyApi.listFamilyMembers(headers: owner)).data!;
     expect(regranted.consentId, isNotNull);
     expect(regranted.consentId == grant.consentId, isFalse);
-    expect(regranted.members, isEmpty);
+    expect(regranted.items, isEmpty);
     expect(
       (await familyApi.listFamilyMemberChanges(headers: owner)).data!.items,
       isEmpty,

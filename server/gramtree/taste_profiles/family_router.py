@@ -55,7 +55,7 @@ def list_family_members(
         profile_version=profile.version,
         available_age_bands=list(AGE_BANDS),
         available_allergen_categories=list(GB_ALLERGENS),
-        members=[family.member_out(profile, row, settings) for row in rows],
+        items=[family.member_out(profile, row, settings) for row in rows],
         next_cursor=encode_cursor(rows[-1].created_at, rows[-1].id) if more else None,
     )
     session.commit()

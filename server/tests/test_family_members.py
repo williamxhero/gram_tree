@@ -54,7 +54,7 @@ def test_family_creation_reuses_sensitive_consent_and_shared_manual_history(fami
     owner = bearer(api.login("family-owner@example.com"))
     before = api.client.get(PATH, headers=owner)
     assert before.status_code == 200, before.text
-    assert before.json()["members"] == []
+    assert before.json()["items"] == []
     denied = api.client.post(PATH, headers=owner, json=member_body(before.json()))
     assert denied.status_code == 403, denied.text
     grant = consent(api, owner)
@@ -70,7 +70,7 @@ def test_family_creation_reuses_sensitive_consent_and_shared_manual_history(fami
     assert member["source"] == "manual"
     assert api.client.get(PATH + "/" + member["id"], headers=owner).json() == member
     reopened = api.client.get(PATH, headers=owner).json()
-    assert reopened["members"] == [member]
+    assert reopened["items"] == [member]
     assert reopened["profile_version"] == state["profile_version"] + 1
     history = api.client.get(PATH + "/changes", headers=owner).json()["items"]
     assert len(history) == 1
@@ -120,7 +120,7 @@ def test_member_delete_is_keyless_erases_identifiable_history_and_linked_events(
     assert api.client.get(PATH + "/" + kept["id"], headers=owner).status_code == 503
     api.client.app.state.settings = settings
     reopened = api.client.get(PATH, headers=owner).json()
-    assert reopened["members"] == [kept]
+    assert reopened["items"] == [kept]
     assert reopened["profile_version"] == version + 1
     history = api.client.get(PATH + "/changes", headers=owner).json()["items"]
     assert not any(row["id"] in private_ids for row in history)
@@ -206,7 +206,7 @@ def test_seven_age_bands_sparse_flavors_and_canonical_selections_are_manual(fami
         page = api.client.get(
             PATH, headers=owner, params={"limit": 2, **({"cursor": cursor} if cursor else {})}
         ).json()
-        seen.extend(row["id"] for row in page["members"])
+        seen.extend(row["id"] for row in page["items"])
         cursor = page["next_cursor"]
         if cursor is None:
             break
@@ -423,7 +423,7 @@ def test_withdrawal_erases_all_family_owner_allergies_and_regrant_starts_empty(f
     api.client.app.state.settings = settings.model_copy(update={"sensitive_data_key": None})
     consent(api, owner, "withdraw", occurred_at=(api.clock.now + timedelta(days=365)).isoformat())
     revoked = api.client.get(PATH, headers=owner).json()
-    assert revoked["members"] == []
+    assert revoked["items"] == []
     assert revoked["consent_id"] is None
     assert revoked["authorization_version"] > state["authorization_version"]
     assert revoked["profile_version"] == version + 1
@@ -458,7 +458,7 @@ def test_withdrawal_erases_all_family_owner_allergies_and_regrant_starts_empty(f
     fresh = consent(api, owner)
     empty = api.client.get(PATH, headers=owner).json()
     assert empty["consent_id"] == fresh["id"]
-    assert empty["members"] == []
+    assert empty["items"] == []
     assert api.client.get(PATH + "/changes", headers=owner).json()["items"] == []
     api.client.app.state.settings = settings
     assert api.client.post(PATH, headers=owner, json=member_body(state)).status_code == 409
@@ -501,7 +501,7 @@ def test_account_deletion_and_purge_clear_family_storage_with_no_key(family_api:
     fresh = bearer(api.login(email))
     reopened = api.client.get(PATH, headers=fresh).json()
     assert reopened["consent_id"] is None
-    assert reopened["members"] == []
+    assert reopened["items"] == []
 
 
 def test_member_delete_erases_large_legacy_links_but_preserves_unrelated_storage(
@@ -635,7 +635,7 @@ def test_concurrent_family_write_and_erasure_leave_no_identifiable_residue(
         if action == "delete":
             assert isinstance(erased, Response)
             assert erased.status_code == 204, erased.text
-    assert api.client.get(PATH, headers=owner).json()["members"] == []
+    assert api.client.get(PATH, headers=owner).json()["items"] == []
     assert api.client.get(PATH + "/" + member["id"], headers=owner).status_code == 404
     audit = audit_storage(api, owner)
     assert audit["family_members"] == audit["sensitive_changes"] == 0
@@ -690,7 +690,7 @@ def test_public_backup_restore_erases_family_and_does_not_revive_stale_consent(
         ) as restored:
             response = restored.get(PATH, headers=owner)
             assert response.status_code == 200, response.text
-            assert response.json()["members"] == []
+            assert response.json()["items"] == []
             assert response.json()["consent_id"] is None
             assert restored.get(PATH + "/changes", headers=owner).status_code == 403
             assert restored.post(PATH, headers=owner, json=member_body(state)).status_code == 403
@@ -731,7 +731,7 @@ def test_family_and_history_are_owner_scoped_not_ordinary_profile_or_public(fami
     other = bearer(other_tokens)
     consent(api, other)
     other_state = api.client.get(PATH, headers=other).json()
-    assert other_state["members"] == []
+    assert other_state["items"] == []
     for method, path, body in (
         ("get", PATH + "/" + member["id"], None),
         ("put", PATH + "/" + member["id"], member_body(other_state)),

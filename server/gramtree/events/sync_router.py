@@ -22,8 +22,9 @@ from gramtree.events.sync_contract import (
     WriteResult,
 )
 from gramtree.events.sync_models import WriteFactOutbox, WriteReceipt
-from gramtree.events.sync_registry import REGISTERED_WRITES
+from gramtree.events.sync_registry import REGISTERED_WRITES, authorize_envelope
 from gramtree.runtime_config import service as config_service
+from gramtree.taste_profiles.service import lock_owner
 
 router = APIRouter(prefix="/sync", tags=["sync"])
 
@@ -61,6 +62,10 @@ def _process(session: SessionDep, owner: uuid.UUID, write: WriteEnvelope) -> Wri
     # happens before this check. Another account gets no result or existence hint.
     if write.owner_id != owner:
         return WriteResult(write_id=write.write_id, status="failed", reason_code="owner_mismatch")
+    # Erasure also edits dependency metadata on otherwise unrelated writes.
+    # Serialize every owner write, including replays, before any ID advisory lock
+    # and recheck account status after waiting for deletion's owner lock.
+    lock_owner(session, owner)
     spec = REGISTERED_WRITES.get(write.write_type)
     parsed = None
     validation_code = "unknown_write_type" if spec is None else None
@@ -72,9 +77,16 @@ def _process(session: SessionDep, owner: uuid.UUID, write: WriteEnvelope) -> Wri
             validation_code = error.code if isinstance(error, WriteFailure) else "invalid_content"
         if parsed is not None:
             try:
+                authorize_envelope(session, owner, write, parsed)
                 spec.authorize(session, owner, parsed)
             except WriteFailure as error:
                 authorization_code = error.code
+
+    if authorization_code == "invalid_correlation_id":
+        # A deleted sensitive link must not disclose an old result or recreate
+        # identifying delivery metadata, even when its old receipt is absent.
+        session.rollback()
+        return WriteResult(write_id=write.write_id, status="failed", reason_code=authorization_code)
 
     # The transaction lock covers first receipt creation too (SELECT FOR UPDATE
     # cannot lock a row that doesn't exist). A collision only serializes unrelated

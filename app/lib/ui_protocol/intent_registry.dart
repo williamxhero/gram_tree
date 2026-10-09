@@ -14,6 +14,7 @@ import '../recipes/batch_advice.dart';
 import 'registered_pages.dart';
 import 'allergy_actions.dart';
 import 'cooking_constraint_actions.dart';
+import 'family_actions.dart';
 import 'ingredient_preference_actions.dart';
 import 'recipe_operations.dart';
 import 'source_overrides.dart';
@@ -284,6 +285,7 @@ Future<void> _handleRecipeOperation(
 final defaultIntentRegistry = IntentRegistry([
   ...allergyIntentSpecs,
   ...cookingConstraintIntentSpecs,
+  ...familyIntentSpecs,
   ...ingredientPreferenceIntentSpecs,
   const IntentSpec(
     name: 'recipe_operation',

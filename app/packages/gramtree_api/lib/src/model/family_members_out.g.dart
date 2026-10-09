@@ -21,7 +21,7 @@ abstract class _$FamilyMembersOutCWProxy {
 
   FamilyMembersOut consentVersion(String consentVersion);
 
-  FamilyMembersOut members(List<FamilyMemberOut> members);
+  FamilyMembersOut items(List<FamilyMemberOut> items);
 
   FamilyMembersOut nextCursor(String? nextCursor);
 
@@ -39,7 +39,7 @@ abstract class _$FamilyMembersOutCWProxy {
     List<String> availableAllergenCategories,
     String? consentId,
     String consentVersion,
-    List<FamilyMemberOut> members,
+    List<FamilyMemberOut> items,
     String? nextCursor,
     int profileVersion,
   });
@@ -73,8 +73,7 @@ class _$FamilyMembersOutCWProxyImpl implements _$FamilyMembersOutCWProxy {
       this(consentVersion: consentVersion);
 
   @override
-  FamilyMembersOut members(List<FamilyMemberOut> members) =>
-      this(members: members);
+  FamilyMembersOut items(List<FamilyMemberOut> items) => this(items: items);
 
   @override
   FamilyMembersOut nextCursor(String? nextCursor) =>
@@ -97,7 +96,7 @@ class _$FamilyMembersOutCWProxyImpl implements _$FamilyMembersOutCWProxy {
     Object? availableAllergenCategories = const $CopyWithPlaceholder(),
     Object? consentId = const $CopyWithPlaceholder(),
     Object? consentVersion = const $CopyWithPlaceholder(),
-    Object? members = const $CopyWithPlaceholder(),
+    Object? items = const $CopyWithPlaceholder(),
     Object? nextCursor = const $CopyWithPlaceholder(),
     Object? profileVersion = const $CopyWithPlaceholder(),
   }) {
@@ -123,10 +122,10 @@ class _$FamilyMembersOutCWProxyImpl implements _$FamilyMembersOutCWProxy {
           ? _value.consentVersion
           // ignore: cast_nullable_to_non_nullable
           : consentVersion as String,
-      members: members == const $CopyWithPlaceholder()
-          ? _value.members
+      items: items == const $CopyWithPlaceholder()
+          ? _value.items
           // ignore: cast_nullable_to_non_nullable
-          : members as List<FamilyMemberOut>,
+          : items as List<FamilyMemberOut>,
       nextCursor: nextCursor == const $CopyWithPlaceholder()
           ? _value.nextCursor
           // ignore: cast_nullable_to_non_nullable
@@ -162,7 +161,7 @@ FamilyMembersOut _$FamilyMembersOutFromJson(Map<String, dynamic> json) =>
             'available_allergen_categories',
             'consent_id',
             'consent_version',
-            'members',
+            'items',
             'profile_version',
           ],
         );
@@ -191,8 +190,8 @@ FamilyMembersOut _$FamilyMembersOutFromJson(Map<String, dynamic> json) =>
             'consent_version',
             (v) => v as String,
           ),
-          members: $checkedConvert(
-            'members',
+          items: $checkedConvert(
+            'items',
             (v) => (v as List<dynamic>)
                 .map((e) => FamilyMemberOut.fromJson(e as Map<String, dynamic>))
                 .toList(),
@@ -225,7 +224,7 @@ Map<String, dynamic> _$FamilyMembersOutToJson(FamilyMembersOut instance) =>
       'available_allergen_categories': instance.availableAllergenCategories,
       'consent_id': instance.consentId,
       'consent_version': instance.consentVersion,
-      'members': instance.members.map((e) => e.toJson()).toList(),
+      'items': instance.items.map((e) => e.toJson()).toList(),
       'next_cursor': ?instance.nextCursor,
       'profile_version': instance.profileVersion,
     };

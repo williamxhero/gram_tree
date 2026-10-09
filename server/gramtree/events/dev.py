@@ -20,6 +20,7 @@ from gramtree.core.errors import ApiError, NotFound
 from gramtree.deps import SessionDep, SettingsDep
 from gramtree.events.models import Event
 from gramtree.events.queries import query_events
+from gramtree.events.sync_models import WriteFactOutbox, WriteReceipt
 from gramtree.taste_profiles import allergies
 from gramtree.taste_profiles.models import (
     FamilyMember,
@@ -117,7 +118,25 @@ def taste_profile_storage(
         ),
     }
     if include_sensitive:
+        receipts = list(session.scalars(select(WriteReceipt).where(WriteReceipt.owner_id == owner)))
+        outbox = list(
+            session.scalars(select(WriteFactOutbox).where(WriteFactOutbox.owner_id == owner))
+        )
+        event_ids = {str(event.id) for event in events}
+
+        def orphan_event(value: dict | None) -> bool:
+            return bool(
+                value
+                and value.get("resource_type") == "experience.event"
+                and value.get("resource_id") not in event_ids
+            )
+
         result.update(
+            sync_receipts=len(receipts),
+            sync_outbox=len(outbox),
+            sync_dependency_ids=sum(len(row.dependencies) for row in receipts),
+            sync_orphan_event_results=sum(orphan_event(row.result) for row in receipts),
+            sync_orphan_event_facts=sum(orphan_event(fact) for row in outbox for fact in row.facts),
             family_members=len(members),
             family_changes=sum(row.field.startswith("family_members") for row in change_rows),
             owner_allergies=int(owner_allergies is not None),

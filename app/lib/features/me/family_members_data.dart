@@ -80,11 +80,11 @@ final familyMembersProvider = FutureProvider.autoDispose<FamilyMembersOut?>((
     }
     result ??= page;
     members.addAll(
-      page.members.where((item) => !memory.deleted.contains(item.id)),
+      page.items.where((item) => !memory.deleted.contains(item.id)),
     );
     cursor = page.nextCursor;
   } while (cursor != null);
-  return result.copyWith(members: members);
+  return result.copyWith(items: members);
 });
 
 final familyMemberProvider = FutureProvider.autoDispose

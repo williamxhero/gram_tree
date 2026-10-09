@@ -2076,11 +2076,11 @@
             "title": "Consent Version",
             "type": "string"
           },
-          "members": {
+          "items": {
             "items": {
               "$ref": "#/components/schemas/FamilyMemberOut"
             },
-            "title": "Members",
+            "title": "Items",
             "type": "array"
           },
           "next_cursor": {
@@ -2106,7 +2106,7 @@
           "profile_version",
           "available_age_bands",
           "available_allergen_categories",
-          "members"
+          "items"
         ],
         "title": "FamilyMembersOut",
         "type": "object"

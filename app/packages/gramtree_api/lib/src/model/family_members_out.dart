@@ -29,7 +29,7 @@ class FamilyMembersOut {
 
     required this.consentVersion,
 
-    required this.members,
+    required this.items,
 
     this.nextCursor,
 
@@ -55,8 +55,8 @@ class FamilyMembersOut {
   @JsonKey(name: r'consent_version', required: true, includeIfNull: false)
   final String consentVersion;
 
-  @JsonKey(name: r'members', required: true, includeIfNull: false)
-  final List<FamilyMemberOut> members;
+  @JsonKey(name: r'items', required: true, includeIfNull: false)
+  final List<FamilyMemberOut> items;
 
   @JsonKey(name: r'next_cursor', required: false, includeIfNull: false)
   final String? nextCursor;
@@ -73,7 +73,7 @@ class FamilyMembersOut {
           other.availableAllergenCategories == availableAllergenCategories &&
           other.consentId == consentId &&
           other.consentVersion == consentVersion &&
-          other.members == members &&
+          other.items == items &&
           other.nextCursor == nextCursor &&
           other.profileVersion == profileVersion;
 
@@ -84,7 +84,7 @@ class FamilyMembersOut {
       availableAllergenCategories.hashCode +
       (consentId == null ? 0 : consentId.hashCode) +
       consentVersion.hashCode +
-      members.hashCode +
+      items.hashCode +
       (nextCursor == null ? 0 : nextCursor.hashCode) +
       profileVersion.hashCode;
 

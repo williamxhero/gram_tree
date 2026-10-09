@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -9,6 +11,7 @@ import '../../auth/auth_controller.dart';
 import '../../auth/session.dart';
 import '../../l10n/app_localizations.dart';
 import '../../ui_protocol/components/component_scaffold.dart';
+import '../../ui_protocol/family_actions.dart';
 import '../../ui_protocol/source_mark.dart';
 import '../../ui_protocol/source_types.dart';
 import 'allergies_data.dart';
@@ -99,6 +102,24 @@ class _FamilyScope {
       ref.watch(familyMemoryProvider).epoch == familyEpoch;
 }
 
+Widget _familyAction(
+  WidgetRef ref,
+  String name,
+  Widget Function(void Function(FutureOr<void> Function() run) dispatch)
+  builder,
+) {
+  // Bind to the rendered account/generations before dispatch awaits telemetry.
+  final scope = _FamilyScope.capture(ref);
+  return FamilyAction(
+    name: name,
+    builder: (dispatch) => builder(
+      (run) => dispatch(() {
+        if (ref.context.mounted && scope.current(ref)) return run();
+      }),
+    ),
+  );
+}
+
 void _dismiss(BuildContext context) =>
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (context.mounted && ModalRoute.of(context)?.isCurrent == true) {
@@ -127,7 +148,7 @@ class _FamilyMembersSectionState extends ConsumerState<FamilyMembersSection> {
         familyMembersProvider.future,
       );
       if (!mounted || !scope.current(ref) || state == null) return;
-      if (state.consentId == null || (id == null && state.members.isEmpty)) {
+      if (state.consentId == null || (id == null && state.items.isEmpty)) {
         final agree = await showDialog<bool>(
           context: context,
           builder: (_) => _FamilyConsent(scope: scope),
@@ -224,14 +245,22 @@ class _FamilyMembersSectionState extends ConsumerState<FamilyMembersSection> {
           title: Text(l.familyDeleteTitle),
           content: Text(l.familyDeleteBody),
           actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context, false),
-              child: Text(l.cancel),
+            _familyAction(
+              ref,
+              'cancel',
+              (dispatch) => TextButton(
+                onPressed: () => dispatch(() => Navigator.pop(context, false)),
+                child: Text(l.cancel),
+              ),
             ),
-            FilledButton(
-              key: const ValueKey('family-delete-confirm'),
-              onPressed: () => Navigator.pop(context, true),
-              child: Text(l.familyDelete),
+            _familyAction(
+              ref,
+              'confirm_delete',
+              (dispatch) => FilledButton(
+                key: const ValueKey('family-delete-confirm'),
+                onPressed: () => dispatch(() => Navigator.pop(context, true)),
+                child: Text(l.familyDelete),
+              ),
             ),
           ],
         ),
@@ -301,9 +330,9 @@ class _FamilyMembersSectionState extends ConsumerState<FamilyMembersSection> {
               children: [
                 if (value == null)
                   Text(l.familyHidden)
-                else if (value.members.isEmpty)
+                else if (value.items.isEmpty)
                   Text(l.familyEmpty),
-                for (final member in value?.members ?? <FamilyMemberOut>[])
+                for (final member in value?.items ?? <FamilyMemberOut>[])
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -313,20 +342,38 @@ class _FamilyMembersSectionState extends ConsumerState<FamilyMembersSection> {
                       Wrap(
                         spacing: 8,
                         children: [
-                          TextButton(
-                            key: ValueKey('family-view-${member.id}'),
-                            onPressed: _busy ? null : () => _view(member.id),
-                            child: Text(l.familyView),
+                          _familyAction(
+                            ref,
+                            'view',
+                            (dispatch) => TextButton(
+                              key: ValueKey('family-view-${member.id}'),
+                              onPressed: _busy
+                                  ? null
+                                  : () => dispatch(() => _view(member.id)),
+                              child: Text(l.familyView),
+                            ),
                           ),
-                          TextButton(
-                            key: ValueKey('family-edit-${member.id}'),
-                            onPressed: _busy ? null : () => _edit(member.id),
-                            child: Text(l.familyEdit),
+                          _familyAction(
+                            ref,
+                            'edit',
+                            (dispatch) => TextButton(
+                              key: ValueKey('family-edit-${member.id}'),
+                              onPressed: _busy
+                                  ? null
+                                  : () => dispatch(() => _edit(member.id)),
+                              child: Text(l.familyEdit),
+                            ),
                           ),
-                          TextButton(
-                            key: ValueKey('family-delete-${member.id}'),
-                            onPressed: _busy ? null : () => _delete(member.id),
-                            child: Text(l.familyDelete),
+                          _familyAction(
+                            ref,
+                            'delete',
+                            (dispatch) => TextButton(
+                              key: ValueKey('family-delete-${member.id}'),
+                              onPressed: _busy
+                                  ? null
+                                  : () => dispatch(() => _delete(member.id)),
+                              child: Text(l.familyDelete),
+                            ),
                           ),
                         ],
                       ),
@@ -335,10 +382,14 @@ class _FamilyMembersSectionState extends ConsumerState<FamilyMembersSection> {
               ],
             ),
           ),
-          OutlinedButton(
-            key: const ValueKey('family-add'),
-            onPressed: _busy ? null : () => _edit(),
-            child: Text(l.familyAdd),
+          _familyAction(
+            ref,
+            'add',
+            (dispatch) => OutlinedButton(
+              key: const ValueKey('family-add'),
+              onPressed: _busy ? null : () => dispatch(_edit),
+              child: Text(l.familyAdd),
+            ),
           ),
           if (pending.isNotEmpty) ...[
             Text(l.familyDeleteUnconfirmed),
@@ -347,10 +398,16 @@ class _FamilyMembersSectionState extends ConsumerState<FamilyMembersSection> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 for (final id in pending)
-                  TextButton(
-                    key: ValueKey('family-delete-retry-$id'),
-                    onPressed: _busy ? null : () => _delete(id, retry: true),
-                    child: Text(l.familyDeleteRetry),
+                  _familyAction(
+                    ref,
+                    'retry_delete',
+                    (dispatch) => TextButton(
+                      key: ValueKey('family-delete-retry-$id'),
+                      onPressed: _busy
+                          ? null
+                          : () => dispatch(() => _delete(id, retry: true)),
+                      child: Text(l.familyDeleteRetry),
+                    ),
                   ),
               ],
             ),
@@ -384,18 +441,22 @@ class _FamilyMembersSectionState extends ConsumerState<FamilyMembersSection> {
                           ),
                         ],
                       ),
-                      trailing: TextButton(
-                        key: ValueKey('family-why-${row.id}'),
-                        child: Text(l.familyWhy),
-                        onPressed: () {
-                          final scope = _FamilyScope.capture(ref);
-                          if (!scope.current(ref)) return;
-                          showModalBottomSheet<void>(
-                            context: context,
-                            builder: (_) =>
-                                _FamilyWhy(scope: scope, changeId: row.id),
-                          );
-                        },
+                      trailing: _familyAction(
+                        ref,
+                        'why',
+                        (dispatch) => TextButton(
+                          key: ValueKey('family-why-${row.id}'),
+                          child: Text(l.familyWhy),
+                          onPressed: () => dispatch(() {
+                            final scope = _FamilyScope.capture(ref);
+                            if (!scope.current(ref)) return;
+                            showModalBottomSheet<void>(
+                              context: context,
+                              builder: (_) =>
+                                  _FamilyWhy(scope: scope, changeId: row.id),
+                            );
+                          }),
+                        ),
                       ),
                     ),
               ],
@@ -421,15 +482,23 @@ class _FamilyConsent extends ConsumerWidget {
       title: Text(l.familyConsentTitle),
       content: SingleChildScrollView(child: Text(l.familyConsentBody)),
       actions: [
-        TextButton(
-          key: const ValueKey('family-consent-refuse'),
-          onPressed: () => Navigator.pop(context, false),
-          child: Text(l.familyRefuse),
+        _familyAction(
+          ref,
+          'refuse',
+          (dispatch) => TextButton(
+            key: const ValueKey('family-consent-refuse'),
+            onPressed: () => dispatch(() => Navigator.pop(context, false)),
+            child: Text(l.familyRefuse),
+          ),
         ),
-        FilledButton(
-          key: const ValueKey('family-consent-agree'),
-          onPressed: () => Navigator.pop(context, true),
-          child: Text(l.familyAgree),
+        _familyAction(
+          ref,
+          'agree',
+          (dispatch) => FilledButton(
+            key: const ValueKey('family-consent-agree'),
+            onPressed: () => dispatch(() => Navigator.pop(context, true)),
+            child: Text(l.familyAgree),
+          ),
         ),
       ],
     );
@@ -464,10 +533,14 @@ class _FamilyDetail extends ConsumerWidget {
         ),
       ),
       actions: [
-        TextButton(
-          key: const ValueKey('family-detail-close'),
-          onPressed: () => Navigator.pop(context),
-          child: Text(l.familyClose),
+        _familyAction(
+          ref,
+          'close',
+          (dispatch) => TextButton(
+            key: const ValueKey('family-detail-close'),
+            onPressed: () => dispatch(() => Navigator.pop(context)),
+            child: Text(l.familyClose),
+          ),
         ),
       ],
     );
@@ -708,23 +781,27 @@ class _FamilyEditorState extends ConsumerState<_FamilyEditor> {
                       enabled: !_busy,
                       decoration: InputDecoration(labelText: l.familyNickname),
                     ),
-                    DropdownButton<String>(
-                      key: const ValueKey('family-age-band'),
-                      value: _age,
-                      hint: Text(l.familyAgeBand),
-                      isExpanded: true,
-                      items: [
-                        for (final age in widget.ageBands)
-                          DropdownMenuItem(
-                            value: age,
-                            child: Text(familyAgeLabel(age, l)),
-                          ),
-                      ],
-                      onChanged: _busy
-                          ? null
-                          : (value) {
-                              if (_current) setState(() => _age = value);
-                            },
+                    _familyAction(
+                      ref,
+                      'age',
+                      (dispatch) => DropdownButton<String>(
+                        key: const ValueKey('family-age-band'),
+                        value: _age,
+                        hint: Text(l.familyAgeBand),
+                        isExpanded: true,
+                        items: [
+                          for (final age in widget.ageBands)
+                            DropdownMenuItem(
+                              value: age,
+                              child: Text(familyAgeLabel(age, l)),
+                            ),
+                        ],
+                        onChanged: _busy
+                            ? null
+                            : (value) => dispatch(() {
+                                if (_current) setState(() => _age = value);
+                              }),
+                      ),
                     ),
                     Text(l.familyFlavors),
                     for (final key in profile.flavors.keys)
@@ -732,54 +809,59 @@ class _FamilyEditorState extends ConsumerState<_FamilyEditor> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(_flavorLabel(key, l)),
-                          DropdownButton<num>(
-                            key: ValueKey('family-flavor-$key'),
-                            value: _flavors[key] ?? profile.scale.default_,
-                            isExpanded: true,
-                            items: [
-                              // A valid saved sparse value can outlive the scale
-                              // that offered it. Preserve it unless explicitly
-                              // changed rather than snapping to a nearby step.
-                              if (_flavors.containsKey(key) &&
-                                  !(key == 'spicy' && _flavors[key] == 0) &&
-                                  !profile.scale.levels.any(
-                                    (level) =>
-                                        level.coefficient == _flavors[key],
-                                  ))
-                                DropdownMenuItem(
-                                  value: _flavors[key],
-                                  child: Text(
-                                    '${l.familySavedCoefficient} · ${_flavors[key]}',
+                          _familyAction(
+                            ref,
+                            'flavor',
+                            (dispatch) => DropdownButton<num>(
+                              key: ValueKey('family-flavor-$key'),
+                              value: _flavors[key] ?? profile.scale.default_,
+                              isExpanded: true,
+                              items: [
+                                // A valid saved sparse value can outlive the scale
+                                // that offered it. Preserve it unless explicitly
+                                // changed rather than snapping to a nearby step.
+                                if (_flavors.containsKey(key) &&
+                                    !(key == 'spicy' && _flavors[key] == 0) &&
+                                    !profile.scale.levels.any(
+                                      (level) =>
+                                          level.coefficient == _flavors[key],
+                                    ))
+                                  DropdownMenuItem(
+                                    value: _flavors[key],
+                                    child: Text(
+                                      '${l.familySavedCoefficient} · ${_flavors[key]}',
+                                    ),
                                   ),
-                                ),
-                              if (key == 'spicy')
-                                DropdownMenuItem(
-                                  value: 0,
-                                  child: Text(l.familyNoChili),
-                                ),
-                              for (final level in profile.scale.levels)
-                                DropdownMenuItem(
-                                  value: level.coefficient,
-                                  child: Text(
-                                    level.coefficient == profile.scale.default_
-                                        ? l.familyStandard
-                                        : level.label,
+                                if (key == 'spicy')
+                                  DropdownMenuItem(
+                                    value: 0,
+                                    child: Text(l.familyNoChili),
                                   ),
-                                ),
-                            ],
-                            onChanged: _busy
-                                ? null
-                                : (value) {
-                                    if (_current && value != null) {
-                                      setState(() {
-                                        if (value == profile.scale.default_) {
-                                          _flavors.remove(key);
-                                        } else {
-                                          _flavors[key] = value;
-                                        }
-                                      });
-                                    }
-                                  },
+                                for (final level in profile.scale.levels)
+                                  DropdownMenuItem(
+                                    value: level.coefficient,
+                                    child: Text(
+                                      level.coefficient ==
+                                              profile.scale.default_
+                                          ? l.familyStandard
+                                          : level.label,
+                                    ),
+                                  ),
+                              ],
+                              onChanged: _busy
+                                  ? null
+                                  : (value) => dispatch(() {
+                                      if (_current && value != null) {
+                                        setState(() {
+                                          if (value == profile.scale.default_) {
+                                            _flavors.remove(key);
+                                          } else {
+                                            _flavors[key] = value;
+                                          }
+                                        });
+                                      }
+                                    }),
+                            ),
                           ),
                         ],
                       ),
@@ -787,68 +869,92 @@ class _FamilyEditorState extends ConsumerState<_FamilyEditor> {
                     for (final item in _avoidances)
                       ListTile(
                         title: Text(item.name),
-                        trailing: IconButton(
-                          key: ValueKey(
-                            'family-avoidance-remove-${item.ingredientId ?? item.category}',
+                        trailing: _familyAction(
+                          ref,
+                          'avoidance_remove',
+                          (dispatch) => IconButton(
+                            key: ValueKey(
+                              'family-avoidance-remove-${item.ingredientId ?? item.category}',
+                            ),
+                            tooltip: l.familyRemove,
+                            icon: const Icon(Icons.close),
+                            onPressed: _busy
+                                ? null
+                                : () => dispatch(() {
+                                    if (_current) {
+                                      setState(() => _avoidances.remove(item));
+                                    }
+                                  }),
                           ),
-                          tooltip: l.familyRemove,
-                          icon: const Icon(Icons.close),
-                          onPressed: _busy
-                              ? null
-                              : () {
-                                  if (_current) {
-                                    setState(() => _avoidances.remove(item));
-                                  }
-                                },
                         ),
                       ),
-                    TextButton(
-                      key: const ValueKey('family-avoidance-add'),
-                      onPressed: _busy ? null : () => _pick(false),
-                      child: Text(l.familyAvoidanceAdd),
+                    _familyAction(
+                      ref,
+                      'avoidance_add',
+                      (dispatch) => TextButton(
+                        key: const ValueKey('family-avoidance-add'),
+                        onPressed: _busy
+                            ? null
+                            : () => dispatch(() => _pick(false)),
+                        child: Text(l.familyAvoidanceAdd),
+                      ),
                     ),
                     Text(l.familyAllergies),
                     for (final category in widget.allergenCategories)
-                      CheckboxListTile(
-                        key: ValueKey('family-allergy-category-$category'),
-                        title: Text(category),
-                        value: _categories.contains(category),
-                        onChanged: _busy
-                            ? null
-                            : (value) {
-                                if (_current) {
-                                  setState(() {
-                                    if (value == true) {
-                                      _categories.add(category);
-                                    } else {
-                                      _categories.remove(category);
-                                    }
-                                  });
-                                }
-                              },
+                      _familyAction(
+                        ref,
+                        'allergy_toggle',
+                        (dispatch) => CheckboxListTile(
+                          key: ValueKey('family-allergy-category-$category'),
+                          title: Text(category),
+                          value: _categories.contains(category),
+                          onChanged: _busy
+                              ? null
+                              : (value) => dispatch(() {
+                                  if (_current) {
+                                    setState(() {
+                                      if (value == true) {
+                                        _categories.add(category);
+                                      } else {
+                                        _categories.remove(category);
+                                      }
+                                    });
+                                  }
+                                }),
+                        ),
                       ),
                     for (final item in _ingredients.entries)
                       ListTile(
                         title: Text(item.value),
-                        trailing: IconButton(
-                          key: ValueKey('family-allergy-remove-${item.key}'),
-                          tooltip: l.familyRemove,
-                          icon: const Icon(Icons.close),
-                          onPressed: _busy
-                              ? null
-                              : () {
-                                  if (_current) {
-                                    setState(
-                                      () => _ingredients.remove(item.key),
-                                    );
-                                  }
-                                },
+                        trailing: _familyAction(
+                          ref,
+                          'allergy_remove',
+                          (dispatch) => IconButton(
+                            key: ValueKey('family-allergy-remove-${item.key}'),
+                            tooltip: l.familyRemove,
+                            icon: const Icon(Icons.close),
+                            onPressed: _busy
+                                ? null
+                                : () => dispatch(() {
+                                    if (_current) {
+                                      setState(
+                                        () => _ingredients.remove(item.key),
+                                      );
+                                    }
+                                  }),
+                          ),
                         ),
                       ),
-                    TextButton(
-                      key: const ValueKey('family-allergy-add'),
-                      onPressed: _busy ? null : () => _pick(true),
-                      child: Text(l.familyAllergyAdd),
+                    _familyAction(
+                      ref,
+                      'allergy_add',
+                      (dispatch) => TextButton(
+                        key: const ValueKey('family-allergy-add'),
+                        onPressed: _busy
+                            ? null
+                            : () => dispatch(() => _pick(true)),
+                        child: Text(l.familyAllergyAdd),
+                      ),
                     ),
                     if (_error != null) Text(_error!),
                   ],
@@ -856,17 +962,25 @@ class _FamilyEditorState extends ConsumerState<_FamilyEditor> {
         ),
       ),
       actions: [
-        TextButton(
-          key: const ValueKey('family-editor-cancel'),
-          onPressed: () => Navigator.pop(context),
-          child: Text(l.cancel),
+        _familyAction(
+          ref,
+          'cancel',
+          (dispatch) => TextButton(
+            key: const ValueKey('family-editor-cancel'),
+            onPressed: () => dispatch(() => Navigator.pop(context)),
+            child: Text(l.cancel),
+          ),
         ),
-        FilledButton(
-          key: const ValueKey('family-save'),
-          onPressed: _busy || !_initialized || _createUnconfirmed
-              ? null
-              : _save,
-          child: Text(l.save),
+        _familyAction(
+          ref,
+          'save',
+          (dispatch) => FilledButton(
+            key: const ValueKey('family-save'),
+            onPressed: _busy || !_initialized || _createUnconfirmed
+                ? null
+                : () => dispatch(_save),
+            child: Text(l.save),
+          ),
         ),
       ],
     );

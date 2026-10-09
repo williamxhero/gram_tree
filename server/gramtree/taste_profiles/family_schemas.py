@@ -80,5 +80,5 @@ class FamilyMembersOut(BaseModel):
     profile_version: int
     available_age_bands: list[AgeBand]
     available_allergen_categories: list[str]
-    members: list[FamilyMemberOut]
+    items: list[FamilyMemberOut]
     next_cursor: str | None = None

@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 
 from gramtree.events import service, validation
 from gramtree.events.models import Event
+from gramtree.events.router import EventCorrelationIds, EventUploadItem, _validate_taste_link
 from gramtree.events.sync_contract import (
     WriteApplication,
     WriteDeferred,
@@ -43,7 +44,29 @@ def _validate(payload: dict[str, Any]) -> BaseModel:
     # events also include legitimate client display/cache/fallback observations.
     if parsed.event_type == "recipe.version_saved":
         raise WriteFailure("server_fact_only")
+    parsed.correlation = {key: str(uuid.UUID(value)) for key, value in parsed.correlation.items()}
     return parsed
+
+
+def authorize_envelope(
+    session: Session, owner: uuid.UUID, envelope: WriteEnvelope, payload: BaseModel
+) -> None:
+    """Reuse the upload boundary before looking up even a replay's receipt."""
+    if not isinstance(payload, ExperiencePayload):
+        return
+    item = EventUploadItem(
+        id=envelope.write_id,
+        event_type=payload.event_type,
+        type_version=payload.type_version,
+        device_id=payload.device_id,
+        device_time=envelope.device_time,
+        app_version=payload.app_version,
+        correlation=EventCorrelationIds.model_validate(payload.correlation),
+        content=payload.content,
+    )
+    rejection = _validate_taste_link(session, owner, item, payload.correlation)
+    if rejection:
+        raise WriteFailure(rejection.code)
 
 
 def _authorize(session: Session, owner: uuid.UUID, payload: BaseModel) -> None:

@@ -589,7 +589,7 @@ class _SensitiveWithdrawalTileState
           result.categories.isNotEmpty ||
           result.ingredients.isNotEmpty ||
           family.consentId != null ||
-          family.members.isNotEmpty ||
+          family.items.isNotEmpty ||
           family.nextCursor != null) {
         throw StateError('withdrawal_unconfirmed');
       }
