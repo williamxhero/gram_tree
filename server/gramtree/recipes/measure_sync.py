@@ -75,10 +75,16 @@ def resolve(
     return parsed
 
 
+def lock_owner(session: Session, owner: uuid.UUID) -> None:
+    # Serialize snapshot evidence with every measure mutation through commit.
+    lock_entity(session, "personal_measure_owner", owner)
+
+
 def apply(
     session: Session, owner: uuid.UUID, envelope: WriteEnvelope, payload: BaseModel, now: datetime
 ) -> WriteApplication:
     parsed = MeasureChange.model_validate(payload)
+    lock_owner(session, owner)
     lock_entity(session, RESOURCE_TYPE, parsed.resource_id)
     # Authorize again after the entity lock: concurrent creates cannot claim
     # another account's stable identity between the preflight and mutation.

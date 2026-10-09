@@ -6,6 +6,7 @@ import 'package:gramtree_api/gramtree_api.dart';
 
 import '../api/api_client.dart';
 import '../auth/auth_controller.dart';
+import '../auth/session.dart';
 import '../events/event_queue.dart';
 import '../events/event_uploader.dart';
 import '../storage/local_store.dart';
@@ -33,16 +34,30 @@ class PersonalMeasureRepository {
   final bool Function() isCurrentAccount;
   bool offline = false;
   bool _erased = false;
+  int _readGeneration = 0;
+  Future<void> _cacheWrites = Future.value();
   final Set<String> pendingIds = {};
   final Map<String, PersonalMeasureOut> deletedMeasures = {};
 
   /// Explicit withdrawal/deletion only. Never called on ordinary logout.
   Future<void> clearAccount() async {
     _erased = true;
+    await _cacheWrites;
     await store.remove(_key);
     await store.remove('measure_history:v1:$accountId');
     pendingIds.clear();
     deletedMeasures.clear();
+  }
+
+  Future<void> _persistCache(Future<void> Function() operation) {
+    final pending = _cacheWrites.then((_) async {
+      if (_canUseAccount) await operation();
+    });
+    _cacheWrites = pending.then<void>(
+      (_) {},
+      onError: (Object _, StackTrace _) {},
+    );
+    return pending;
   }
 
   bool get _canUseAccount => !_erased && isCurrentAccount();
@@ -77,8 +92,8 @@ class PersonalMeasureRepository {
     jsonEncode({
       'account_id': accountId,
       'items': [for (final value in values) value.toJson()],
-      // Reads supersede confirmations known BEFORE the HTTP read began. A
-      // write confirmed during this read remains a newer retained projection.
+      // Only causally observed writes are covered, including writes whose
+      // confirmation response was lost. Receipt delivery is not freshness.
       'covered_write_ids': coveredWrites.toList(),
     }),
   );
@@ -102,9 +117,8 @@ class PersonalMeasureRepository {
         ..sort((a, b) => a.sequence.compareTo(b.sequence));
 
   Future<List<PersonalMeasureOut>> _project(
-    List<PersonalMeasureOut> base, {
-    required bool remote,
-  }) async {
+    List<PersonalMeasureOut> base,
+  ) async {
     final entries = await _entries();
     final values = {for (final item in base) item.id: item.toJson()};
     pendingIds.clear();
@@ -120,10 +134,10 @@ class PersonalMeasureRepository {
         deletedMeasures[item.id] = item;
       }
     }
-    // The newest confirmation is the last authoritative snapshot received, not
-    // the last device timestamp. Server reads supersede all old confirmations.
-    if (!remote) {
-      final covered = _coveredWrites();
+    final covered = _coveredWrites();
+    // A confirmation racing a read still applies unless that read proves the
+    // write was already included. Replayed receipts cannot undo covered reads.
+    {
       final confirmed =
           entries
               .where(
@@ -152,6 +166,7 @@ class PersonalMeasureRepository {
     for (final entry in entries.where((entry) => entry.needsSync)) {
       final id = entry.write.payload['resource_id'] as String;
       pendingIds.add(id);
+      if (covered.contains(entry.write.id)) continue;
       if (entry.write.payload['action'] == 'delete') {
         values.remove(id);
         continue;
@@ -171,28 +186,103 @@ class PersonalMeasureRepository {
   }
 
   Future<List<PersonalMeasureOut>> list() async {
+    final generation = ++_readGeneration;
     try {
-      final covered = {
-        for (final entry in await _entries())
-          if (entry.state == WriteState.confirmed) entry.write.id,
-      };
-      final values = <PersonalMeasureOut>[];
+      var covered = <String>{};
+      (List<PersonalMeasureOut>, Set<String>)? snapshot;
+      for (var attempt = 0; attempt < 3 && snapshot == null; attempt++) {
+        final entries = await _entries();
+        final relevant = {for (final entry in entries) entry.write.id};
+        // Confirmations received before this attempt causally precede its GET.
+        // Existing evidence stays valid while owner history is retained.
+        covered = _coveredWrites().intersection(relevant)
+          ..addAll(
+            entries
+                .where((e) => e.state == WriteState.confirmed)
+                .map((e) => e.write.id),
+          );
+        snapshot = await _readSnapshot(relevant.difference(covered).toList());
+        // A write enqueued during the read may already be included in the
+        // returned snapshot. Expand evidence before admitting its old receipt.
+        if (snapshot != null &&
+            (await _entries()).any((e) => !relevant.contains(e.write.id))) {
+          snapshot = null;
+        }
+      }
+      if (snapshot == null) {
+        // A continuously changing collection is not safe to reconcile. Keep the
+        // last coherent cache, rather than admit partial causal evidence.
+        if (!_canUseAccount) throw StateError('账号已切换');
+        if (generation == _readGeneration) offline = true;
+        return await _project(cached());
+      }
+      final values = snapshot.$1;
+      covered.addAll(snapshot.$2);
+      if (!_canUseAccount) throw StateError('账号已切换');
+      // Serialize cache writes as well as fencing stale concurrent requests; an
+      // older delayed HTTP response must never replace a newer snapshot.
+      await _persistCache(() async {
+        if (generation == _readGeneration) await _cache(values, covered);
+      });
+      if (!_canUseAccount) throw StateError('账号已切换');
+      if (generation == _readGeneration) offline = false;
+      return await _project(cached());
+    } catch (error) {
+      if (ApiFailure.from(error).code != 'network') rethrow;
+      if (!_canUseAccount) throw StateError('账号已切换');
+      if (generation == _readGeneration) offline = true;
+      return _project(cached());
+    }
+  }
+
+  Future<(List<PersonalMeasureOut>, Set<String>)?> _readSnapshot(
+    List<String> unknown,
+  ) async {
+    String? version;
+    var requests = 0;
+    var values = <PersonalMeasureOut>[];
+    final covered = <String>{};
+    for (
+      var offset = 0;
+      offset < unknown.length || offset == 0;
+      offset += 100
+    ) {
+      final chunk = unknown.skip(offset).take(100).toSet();
+      Set<String>? observed;
+      values = [];
       String? cursor;
       do {
-        final response = await api.listPersonalMeasures(cursor: cursor);
+        final response = await api.listPersonalMeasures(
+          cursor: cursor,
+          headers: {'X-Measure-Known-Writes': chunk.join(',')},
+        );
+        final currentVersion = response.headers.value(
+          'X-Measure-Snapshot-Version',
+        );
+        if (requests++ == 0) {
+          version = currentVersion;
+        } else if (version == null || version != currentVersion) {
+          // The owner lock proves each response; an identical history version
+          // proves the collection did not change BETWEEN pages or ID chunks.
+          // Old servers without metadata remain compatible for a single page,
+          // but cannot prove a coherent multi-request collection.
+          return null;
+        }
+        final evidence =
+            (response.headers.value('X-Measure-Observed-Writes') ?? '')
+                .split(',')
+                .where(chunk.contains)
+                .toSet();
+        observed = observed == null
+            ? evidence
+            : observed.intersection(evidence);
         final page = response.data ?? PagePersonalMeasureOut(items: const []);
         values.addAll(page.items);
         cursor = page.nextCursor;
       } while (cursor != null);
-      if (!_canUseAccount) throw StateError('账号已切换');
-      await _cache(values, covered);
-      offline = false;
-      return await _project(values, remote: true);
-    } catch (error) {
-      if (ApiFailure.from(error).code != 'network') rethrow;
-      offline = true;
-      return _project(cached(), remote: false);
+      covered.addAll(observed);
     }
+    return (values, covered);
   }
 
   Future<PersonalMeasureOut> create(PersonalMeasureInput input) async {
@@ -216,7 +306,7 @@ class PersonalMeasureRepository {
     String id,
     PersonalMeasureUpdate input,
   ) async {
-    final items = await _project(cached(), remote: false);
+    final items = await _project(cached());
     final old = items.firstWhere((item) => item.id == id);
     // Generated nullable update models serialize omitted members as null. Our
     // UI has non-null fields, so send only supplied fields that actually changed.
@@ -235,7 +325,7 @@ class PersonalMeasureRepository {
   }
 
   Future<void> delete(String id) async {
-    final items = await _project(cached(), remote: false);
+    final items = await _project(cached());
     final old = items.firstWhere((item) => item.id == id);
     await _enqueue(
       id,
@@ -307,12 +397,15 @@ class PersonalMeasureRepository {
       } while (cursor != null);
       if (!_canUseAccount) throw StateError('账号已切换');
       final key = 'measure_history:v1:$accountId';
-      final previous = store.getString(key);
-      final histories = previous == null
-          ? <String, dynamic>{}
-          : Map<String, dynamic>.from(jsonDecode(previous) as Map);
-      histories[id] = rows;
-      await store.setString(key, jsonEncode(histories));
+      await _persistCache(() async {
+        final previous = store.getString(key);
+        final histories = previous == null
+            ? <String, dynamic>{}
+            : Map<String, dynamic>.from(jsonDecode(previous) as Map);
+        histories[id] = rows;
+        await store.setString(key, jsonEncode(histories));
+      });
+      if (!_canUseAccount) throw StateError('账号已切换');
       return await _withPendingHistory(id, rows);
     } catch (error) {
       if (ApiFailure.from(error).code != 'network') rethrow;
@@ -364,6 +457,9 @@ final personalMeasureRepositoryProvider = Provider<PersonalMeasureRepository>((
 ) {
   final accountId = ref.watch(authProvider).value?.id;
   if (accountId == null) throw StateError('个人量具需要登录');
+  final session = ref.read(sessionStoreProvider);
+  final identity = session.identity;
+  if (identity == null) throw StateError('个人量具需要登录');
   return PersonalMeasureRepository(
     api: ref.watch(apiClientProvider).getPersonalMeasuresApi(),
     store: ref.watch(localStoreProvider),
@@ -371,7 +467,9 @@ final personalMeasureRepositoryProvider = Provider<PersonalMeasureRepository>((
     queue: ref.watch(eventQueueProvider),
     upload: () => ref.read(eventUploaderProvider).triggerUpload(),
     isCurrentAccount: () =>
-        ref.mounted && ref.read(authProvider).value?.id == accountId,
+        ref.mounted &&
+        session.matches(identity) &&
+        ref.read(authProvider).value?.id == accountId,
   );
 });
 

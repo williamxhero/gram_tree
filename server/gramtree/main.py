@@ -60,7 +60,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         allow_origin_regex=settings.cors_origin_regex,
         allow_methods=["*"],
         allow_headers=["*"],
-        expose_headers=["X-Request-ID"],
+        expose_headers=["X-Request-ID", "X-Measure-Observed-Writes", "X-Measure-Snapshot-Version"],
     )
     app.add_middleware(RequestContextMiddleware)
 

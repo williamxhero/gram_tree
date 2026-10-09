@@ -41,6 +41,164 @@ def change(tokens, resource, action, fields, time="2026-10-08T10:00:00Z", **kwar
     )
 
 
+def test_causal_measure_snapshot_evidence_survives_old_receipt_and_deletion(api: Api):
+    tokens = api.login("causal-measures@example.com")
+    resource = new_uuid()
+    creation = change(
+        tokens, resource, "create", {"name": "勺", "kind": "spoon", "capacity_ml": 15}
+    )
+    receipt = submit(api, tokens, creation)[0]
+    newer = change(tokens, resource, "update", {"name": "新勺"}, "2026-10-08T12:00:00Z")
+    assert submit(api, tokens, newer)[0]["status"] == "confirmed"
+    unknown = new_uuid()
+    headers = {
+        **bearer(tokens),
+        "X-Measure-Known-Writes": f"{creation['write_id']},{unknown}",
+        "Origin": "http://localhost:5173",
+    }
+    response = api.client.get("/v1/me/measures", headers=headers)
+    assert response.status_code == 200, response.text
+    assert response.headers["X-Measure-Observed-Writes"] == creation["write_id"]
+    assert response.json()["items"][0]["name"] == "新勺"
+    assert response.headers["X-Measure-Snapshot-Version"] == "4"
+    exposed = response.headers["access-control-expose-headers"]
+    assert "X-Measure-Observed-Writes" in exposed
+    assert "X-Measure-Snapshot-Version" in exposed
+    # Duplicate receipts cannot change the collection version; both no-ops and
+    # losers do retain history and therefore advance the causal version.
+    unchanged = change(tokens, resource, "update", {"name": "新勺"}, "2026-10-08T12:30:00Z")
+    assert submit(api, tokens, unchanged)[0]["result"]["values"]["applied"] is False
+    losing = change(tokens, resource, "update", {"name": "迟到勺"}, "2026-10-08T11:00:00Z")
+    assert submit(api, tokens, losing)[0]["result"]["values"]["applied"] is False
+    response = api.client.get("/v1/me/measures", headers=headers)
+    assert response.headers["X-Measure-Snapshot-Version"] == "6"
+    replay = submit(api, tokens, creation)[0]
+    assert replay["status"] == "already_processed"
+    assert replay["result"] == receipt["result"]
+    assert replay["result"]["values"]["name"] == "勺"
+    assert (
+        api.client.get("/v1/me/measures", headers=headers).headers["X-Measure-Snapshot-Version"]
+        == "6"
+    )
+    # Online compatibility mutations use the same history/version seam.
+    online = api.client.patch(
+        f"/v1/me/measures/{resource}", headers=bearer(tokens), json={"capacity_ml": 18}
+    )
+    assert online.status_code == 200, online.text
+    assert (
+        api.client.get("/v1/me/measures", headers=headers).headers["X-Measure-Snapshot-Version"]
+        == "7"
+    )
+    deletion = change(tokens, resource, "delete", {"deleted": True}, "2026-10-08T13:00:00Z")
+    assert submit(api, tokens, deletion)[0]["status"] == "confirmed"
+    response = api.client.get("/v1/me/measures", headers=headers)
+    assert response.json()["items"] == []
+    assert response.headers["X-Measure-Observed-Writes"] == creation["write_id"]
+    other = api.login("causal-other@example.com")
+    isolated = api.client.get(
+        "/v1/me/measures", headers={**bearer(other), "X-Measure-Known-Writes": creation["write_id"]}
+    )
+    assert isolated.status_code == 200
+    assert isolated.headers["X-Measure-Observed-Writes"] == ""
+
+
+@pytest.mark.parametrize(
+    "known",
+    [
+        "invalid",
+        "00000000-0000-1000-8000-000000000001",
+        ",".join(["00000000-0000-4000-8000-000000000001"] * 101),
+    ],
+)
+def test_causal_measure_snapshot_header_is_bounded_and_uuid_v4(api: Api, known: str):
+    tokens = api.login("causal-header@example.com")
+    response = api.client.get(
+        "/v1/me/measures", headers={**bearer(tokens), "X-Measure-Known-Writes": known}
+    )
+    assert response.status_code == 422, response.text
+    assert response.json()["error"]["code"] == "invalid_request"
+
+
+def test_causal_snapshot_accepts_100_ids_and_has_stable_version_across_pages(api: Api):
+    tokens = api.login("causal-page-bound@example.com")
+    writes = []
+    for name in ("第一勺", "第二勺"):
+        write = change(
+            tokens, new_uuid(), "create", {"name": name, "kind": "spoon", "capacity_ml": 15}
+        )
+        assert submit(api, tokens, write)[0]["status"] == "confirmed"
+        writes.append(write["write_id"])
+    requested = [*writes, *[new_uuid() for _ in range(98)]]
+    headers = {**bearer(tokens), "X-Measure-Known-Writes": ",".join(requested)}
+    first = api.client.get("/v1/me/measures?limit=1", headers=headers)
+    assert first.status_code == 200, first.text
+    cursor = first.json()["next_cursor"]
+    assert cursor is not None
+    second = api.client.get(
+        "/v1/me/measures", params={"limit": 1, "cursor": cursor}, headers=headers
+    )
+    assert second.status_code == 200, second.text
+    assert second.json()["next_cursor"] is None
+    assert {first.json()["items"][0]["name"], second.json()["items"][0]["name"]} == {
+        "第一勺",
+        "第二勺",
+    }
+    assert (
+        first.headers["X-Measure-Snapshot-Version"]
+        == second.headers["X-Measure-Snapshot-Version"]
+        == "6"
+    )
+    assert set(first.headers["X-Measure-Observed-Writes"].split(",")) == set(writes)
+    assert first.headers["X-Measure-Observed-Writes"] == second.headers["X-Measure-Observed-Writes"]
+
+
+def test_causal_measure_snapshot_waits_for_mutation_commit(api: Api, monkeypatch):
+    from concurrent.futures import ThreadPoolExecutor, TimeoutError
+    from dataclasses import replace
+    from threading import Event
+
+    tokens = api.login("causal-lock@example.com")
+    resource = new_uuid()
+    original = REGISTERED_WRITES["personal_measure.change"]
+    applied, release, read_started = Event(), Event(), Event()
+
+    def held_apply(*args):
+        application = original.apply(*args)
+        applied.set()
+        assert release.wait(10), "test mutation release timed out"
+        return application
+
+    monkeypatch.setitem(
+        REGISTERED_WRITES, "personal_measure.change", replace(original, apply=held_apply)
+    )
+    creation = change(
+        tokens, resource, "create", {"name": "提交后可见勺", "kind": "spoon", "capacity_ml": 15}
+    )
+
+    def read_snapshot():
+        read_started.set()
+        return api.client.get(
+            "/v1/me/measures",
+            headers={**bearer(tokens), "X-Measure-Known-Writes": creation["write_id"]},
+        )
+
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        mutation = executor.submit(submit, api, tokens, creation)
+        try:
+            assert applied.wait(10), "test mutation did not reach its commit barrier"
+            read = executor.submit(read_snapshot)
+            assert read_started.wait(10)
+            with pytest.raises(TimeoutError):
+                read.result(timeout=0.5)
+        finally:
+            release.set()
+        assert mutation.result(timeout=10)[0]["status"] == "confirmed"
+        response = read.result(timeout=10)
+    assert response.status_code == 200, response.text
+    assert response.json()["items"][0]["name"] == "提交后可见勺"
+    assert response.headers["X-Measure-Observed-Writes"] == creation["write_id"]
+
+
 def test_measure_fields_converge_and_losing_write_has_owner_history(api: Api):
     tokens = api.login("fields@example.com")
     resource = new_uuid()

@@ -3,9 +3,9 @@
 import uuid
 from typing import Annotated, Any, Literal
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, Request, Response, status
 from pydantic import BaseModel, ConfigDict, Field, field_validator
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 
 from gramtree.accounts.deps import CurrentAuth
@@ -174,8 +174,53 @@ def display_personal_measure(
 
 @router.get("", response_model=Page[PersonalMeasureOut], responses=_ERRORS)
 def list_personal_measures(
-    auth: CurrentAuth, session: SessionDep, page: PageDep
+    auth: CurrentAuth, session: SessionDep, page: PageDep, request: Request, response: Response
 ) -> Page[PersonalMeasureOut]:
+    from gramtree.events.field_adjudication import FieldHistory
+    from gramtree.recipes.measure_sync import RESOURCE_TYPE, lock_owner
+
+    raw = request.headers.get("X-Measure-Known-Writes", "")
+    parts = raw.split(",") if raw else []
+    try:
+        if len(parts) > 100 or len(raw) > 3699:
+            raise ValueError("too many writes")
+        known = {uuid.UUID(part) for part in parts}
+        if any(value.version != 4 for value in known) or any(
+            str(uuid.UUID(part)) != part.lower() for part in parts
+        ):
+            raise ValueError("expected canonical UUID v4")
+    except ValueError as exc:
+        raise ApiError(422, "invalid_request", "量具写入标识有误") from exc
+    # READ COMMITTED alone cannot make the row query and observed-history query
+    # coherent. Mutations hold this same owner lock until their transaction ends.
+    lock_owner(session, auth.user.id)
+    observed = (
+        set(
+            session.scalars(
+                select(FieldHistory.write_id).where(
+                    FieldHistory.owner_id == auth.user.id,
+                    FieldHistory.resource_type == RESOURCE_TYPE,
+                    FieldHistory.write_id.in_(known),
+                )
+            )
+        )
+        if known
+        else set()
+    )
+    response.headers["X-Measure-Observed-Writes"] = ",".join(sorted(map(str, observed)))
+    # Every accepted edit retains history, even losses/unchanged values. Its
+    # monotone count detects mutations between separate pages/ID chunks, so a
+    # client can reject a mixed collection snapshot without trusting timestamps.
+    response.headers["X-Measure-Snapshot-Version"] = str(
+        session.scalar(
+            select(func.count())
+            .select_from(FieldHistory)
+            .where(
+                FieldHistory.owner_id == auth.user.id,
+                FieldHistory.resource_type == RESOURCE_TYPE,
+            )
+        )
+    )
     check_limit(page.limit, config.get(session, "api.page_size_max"))
     query = select(PersonalMeasure).where(
         PersonalMeasure.owner_id == auth.user.id, PersonalMeasure.deleted_at.is_(None)
