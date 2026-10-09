@@ -46,6 +46,7 @@ final allergyIntentSpecs = [
         final scope = context
             .getInheritedWidgetOfExactType<AllergyActionScope>();
         if (scope?.intent == 'allergies_$name') await scope!.run();
+        return null;
       },
     ),
 ];

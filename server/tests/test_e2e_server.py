@@ -12,7 +12,7 @@ from sqlalchemy import create_engine, make_url, text
 from tests.conftest import TEST_DATABASE_URL, TEST_REDIS_URL
 
 
-def test_e2e_bootstrap_supports_more_than_ten_logins(tmp_path: Path) -> None:
+def test_e2e_bootstrap_supports_more_than_one_hundred_logins(tmp_path: Path) -> None:
     root = Path(__file__).resolve().parents[2]
     database = f"gramtree_e2e_auth_{uuid.uuid4().hex}"
     target = make_url(TEST_DATABASE_URL).set(database=database)
@@ -36,7 +36,7 @@ def test_e2e_bootstrap_supports_more_than_ten_logins(tmp_path: Path) -> None:
     try:
         subprocess.run([*command, "start"], cwd=root, env=env, check=True, timeout=300)
         with httpx.Client(base_url=f"http://127.0.0.1:{port}") as client:
-            for index in range(11):
+            for index in range(101):
                 response = client.post(
                     "/v1/auth/email/code",
                     json={"email": f"acceptance-{index}@example.com", "purpose": "login"},

@@ -313,6 +313,261 @@ class AppLocalizationsZh extends AppLocalizations {
   String get appTitle => '味谱';
 
   @override
+  String get measureInputAction => '用自家量具录入';
+
+  @override
+  String get measureInputTitle => '量具用量换算';
+
+  @override
+  String get measureInputTool => '自家量具';
+
+  @override
+  String get measureInputCount => '几勺、几碗或几杯';
+
+  @override
+  String get measureInputBaseUnit => '采用的基础单位';
+
+  @override
+  String get measureInputPreview => '查看换算';
+
+  @override
+  String get measureInputConfirm => '确认采用基础量';
+
+  @override
+  String get measureInputEstimate => '我了解这是估算，继续换算';
+
+  @override
+  String get measureInputFallback => '返回填写基础量';
+
+  @override
+  String get measureInputNoTools => '还没有登记量具，请先在个人中心登记，或直接填写克、毫升。';
+
+  @override
+  String get measureInputOffline => '离线或缺少转换数据，不能可靠换算；请返回填写基础量。草稿不会改变。';
+
+  @override
+  String get measureInputInvalid => '请输入有限、非负且不超过 10000000 的数量。';
+
+  @override
+  String get measureInputUnchanged => '尚未确认，当前食材用量不会改变。';
+
+  @override
+  String get measureInputEvidence => '量具输入依据';
+
+  @override
+  String get recipeFlavorUnknown => '味型贡献未填写';
+
+  @override
+  String get recipeFlavorFunctionalOff => '不作功能性用料';
+
+  @override
+  String get recipeFlavorAuthorBasis => '作者按这道菜的实际作用填写';
+
+  @override
+  String get recipeFlavorEditorTitle => '这道菜的味型贡献';
+
+  @override
+  String get recipeFlavorEditorHint => '强度 0–3；未填写不代表零贡献';
+
+  @override
+  String recipeFlavorAxisLabel(Object axis) {
+    return '$axis味贡献';
+  }
+
+  @override
+  String recipeFlavorAxisUnknown(Object axis) {
+    return '$axis 未填写';
+  }
+
+  @override
+  String recipeFlavorStrength(String axis, int strength) {
+    return '$axis $strength';
+  }
+
+  @override
+  String get recipeFlavorSalty => '咸';
+
+  @override
+  String get recipeFlavorSweet => '甜';
+
+  @override
+  String get recipeFlavorSour => '酸';
+
+  @override
+  String get recipeFlavorSpicy => '辣';
+
+  @override
+  String get recipeFlavorUmami => '鲜';
+
+  @override
+  String get recipeFlavorNumbing => '麻';
+
+  @override
+  String get recipeFlavorOily => '油';
+
+  @override
+  String get recipeComparisonTitle => '食材版本对比';
+
+  @override
+  String get recipeComparisonError => '无法比较这些版本，请确认两版仍可查看';
+
+  @override
+  String get recipeComparisonFrom => '从 A';
+
+  @override
+  String get recipeComparisonTo => '到 B';
+
+  @override
+  String get recipeComparisonScope => '仅比较食材，尚未比较步骤';
+
+  @override
+  String recipeComparisonServings(int servings) {
+    return '已按 $servings 人份对比';
+  }
+
+  @override
+  String recipeComparisonServingValue(int servings) {
+    return '$servings 人份';
+  }
+
+  @override
+  String get recipeComparisonServingBasis =>
+      'B 的基础量按线性、固定或阶梯规则归一到 A 的份数；原版本未修改。';
+
+  @override
+  String get recipeComparisonShowAll => '展开全部食材';
+
+  @override
+  String get recipeComparisonEmpty => '没有食材配方变化';
+
+  @override
+  String get recipeComparisonSnapshotFields => '菜谱字段变化';
+
+  @override
+  String recipeComparisonVersion(String author, int version, int servings) {
+    return '$author · 第 $version 版 · $servings 人份';
+  }
+
+  @override
+  String get recipeComparisonDetails => '查看版本详情';
+
+  @override
+  String get recipeComparisonUnchangedBasis => '基础量按相同份数比较，食材与执行字段均未改变';
+
+  @override
+  String get recipeComparisonUnchanged => '无食材变化';
+
+  @override
+  String recipeComparisonBefore(Object value) {
+    return 'A：$value';
+  }
+
+  @override
+  String recipeComparisonAfter(Object value) {
+    return 'B：$value';
+  }
+
+  @override
+  String get recipeComparisonIngredientDetails => '食材明细';
+
+  @override
+  String get recipeComparisonNone => '无';
+
+  @override
+  String get recipeComparisonYes => '是';
+
+  @override
+  String get recipeComparisonNo => '否';
+
+  @override
+  String get recipeComparisonAdded => '新增';
+
+  @override
+  String get recipeComparisonRemoved => '删除';
+
+  @override
+  String get recipeComparisonReplacement => '替换';
+
+  @override
+  String get recipeComparisonQuantity => '用量变化';
+
+  @override
+  String get recipeComparisonUnit => '单位不同';
+
+  @override
+  String get recipeComparisonField => '执行字段变化';
+
+  @override
+  String get recipeComparisonText => '文字修改';
+
+  @override
+  String get recipeComparisonBaseQuantity => '基础量';
+
+  @override
+  String get recipeComparisonBaseUnit => '基础单位';
+
+  @override
+  String get recipeComparisonDisplayName => '显示名';
+
+  @override
+  String get recipeComparisonPreparation => '处理方式';
+
+  @override
+  String get recipeComparisonOptional => '可选性';
+
+  @override
+  String get recipeComparisonFlavor => '味型贡献';
+
+  @override
+  String get recipeComparisonTags => '标签';
+
+  @override
+  String get recipeDescription => '描述';
+
+  @override
+  String get recipeBaseMold => '基准模具';
+
+  @override
+  String get recipeCuisine => '菜系';
+
+  @override
+  String get recipeDesignRationale => '设计理由';
+
+  @override
+  String get whyTitle => '为什么';
+
+  @override
+  String get recipeComparisonTotalTime => '总时长';
+
+  @override
+  String get recipeComparisonActiveTime => '需守着的时长';
+
+  @override
+  String recipeComparisonDetailField(Object label, Object value) {
+    return '$label：$value';
+  }
+
+  @override
+  String get recipeComparisonCancelSelection => '取消选择';
+
+  @override
+  String get recipeComparisonSelect => '选两版对比';
+
+  @override
+  String get recipeComparisonSelectionHint => '先选 A，再选 B；方向为 A 到 B，仅比较食材';
+
+  @override
+  String get recipeComparisonAction => '比较食材';
+
+  @override
+  String get recipeComparisonPrevious => '和上一版比食材';
+
+  @override
+  String recipeComparisonCandidate(String author, String recipe, int version) {
+    return '$author · 菜谱 $recipe · 第 $version 版';
+  }
+
+  @override
   String get tabToday => '今天';
 
   @override
@@ -1561,7 +1816,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get personalMeasuresIntro =>
-      '把空量具放在厨房秤上归零，装满水后的克数就是容量（毫升）。只影响显示，不会修改菜谱。';
+      '把空量具放在厨房秤上归零，装满水后的克数就是容量（毫升）。可用于显示或确认录入；重新校准不会修改已保存菜谱。';
 
   @override
   String get personalMeasuresOffline => '离线：正在使用已缓存的量具；登记、修改和删除需要联网。';

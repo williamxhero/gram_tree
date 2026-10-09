@@ -47,7 +47,7 @@ def erase_sensitive(session: Session, owner_id: uuid.UUID, *, include_family: bo
     """Erase sensitive current/history/events keylessly in the owner's transaction.
 
     Withdrawal, account deletion/purge and restore all use this extension point.
-    include_family=False is only for sanitizing pre-0024 backup schemas;
+    include_family=False is only for sanitizing pre-0026 backup schemas;
     those may also predate the sync delivery tables introduced in 0023.
     """
     erase_sensitive_history(

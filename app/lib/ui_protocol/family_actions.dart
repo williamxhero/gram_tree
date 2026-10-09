@@ -54,6 +54,7 @@ final familyIntentSpecs = [
         final scope = context
             .getInheritedWidgetOfExactType<FamilyActionScope>();
         if (scope?.intent == 'family_$name') await scope!.run();
+        return null;
       },
     ),
 ];

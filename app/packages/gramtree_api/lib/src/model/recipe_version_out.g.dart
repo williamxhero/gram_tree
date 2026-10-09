@@ -9,7 +9,11 @@ part of 'recipe_version_out.dart';
 abstract class _$RecipeVersionOutCWProxy {
   RecipeVersionOut aiAssisted(bool aiAssisted);
 
+  RecipeVersionOut baseVersionId(String? baseVersionId);
+
   RecipeVersionOut changeNote(String changeNote);
+
+  RecipeVersionOut conclusion(RecipeVersionOutConclusionEnum? conclusion);
 
   RecipeVersionOut createdAt(String createdAt);
 
@@ -27,6 +31,8 @@ abstract class _$RecipeVersionOutCWProxy {
     RecipeReproducibilityResult? reproducibility,
   );
 
+  RecipeVersionOut rulesVersion(String? rulesVersion);
+
   RecipeVersionOut safety(RecipeSafetyResult? safety);
 
   RecipeVersionOut safetyAtSave(RecipeSafetyResult? safetyAtSave);
@@ -43,7 +49,9 @@ abstract class _$RecipeVersionOutCWProxy {
   /// ````
   RecipeVersionOut call({
     bool aiAssisted,
+    String? baseVersionId,
     String changeNote,
+    RecipeVersionOutConclusionEnum? conclusion,
     String createdAt,
     RecipeDerived derived,
     List<Object> editOperations,
@@ -51,6 +59,7 @@ abstract class _$RecipeVersionOutCWProxy {
     List<RecipeImageOut>? images,
     String? previousVersionId,
     RecipeReproducibilityResult? reproducibility,
+    String? rulesVersion,
     RecipeSafetyResult? safety,
     RecipeSafetyResult? safetyAtSave,
     RecipeSnapshot snapshot,
@@ -68,8 +77,16 @@ class _$RecipeVersionOutCWProxyImpl implements _$RecipeVersionOutCWProxy {
   RecipeVersionOut aiAssisted(bool aiAssisted) => this(aiAssisted: aiAssisted);
 
   @override
+  RecipeVersionOut baseVersionId(String? baseVersionId) =>
+      this(baseVersionId: baseVersionId);
+
+  @override
   RecipeVersionOut changeNote(String changeNote) =>
       this(changeNote: changeNote);
+
+  @override
+  RecipeVersionOut conclusion(RecipeVersionOutConclusionEnum? conclusion) =>
+      this(conclusion: conclusion);
 
   @override
   RecipeVersionOut createdAt(String createdAt) => this(createdAt: createdAt);
@@ -97,6 +114,10 @@ class _$RecipeVersionOutCWProxyImpl implements _$RecipeVersionOutCWProxy {
   ) => this(reproducibility: reproducibility);
 
   @override
+  RecipeVersionOut rulesVersion(String? rulesVersion) =>
+      this(rulesVersion: rulesVersion);
+
+  @override
   RecipeVersionOut safety(RecipeSafetyResult? safety) => this(safety: safety);
 
   @override
@@ -120,7 +141,9 @@ class _$RecipeVersionOutCWProxyImpl implements _$RecipeVersionOutCWProxy {
   /// ````
   RecipeVersionOut call({
     Object? aiAssisted = const $CopyWithPlaceholder(),
+    Object? baseVersionId = const $CopyWithPlaceholder(),
     Object? changeNote = const $CopyWithPlaceholder(),
+    Object? conclusion = const $CopyWithPlaceholder(),
     Object? createdAt = const $CopyWithPlaceholder(),
     Object? derived = const $CopyWithPlaceholder(),
     Object? editOperations = const $CopyWithPlaceholder(),
@@ -128,6 +151,7 @@ class _$RecipeVersionOutCWProxyImpl implements _$RecipeVersionOutCWProxy {
     Object? images = const $CopyWithPlaceholder(),
     Object? previousVersionId = const $CopyWithPlaceholder(),
     Object? reproducibility = const $CopyWithPlaceholder(),
+    Object? rulesVersion = const $CopyWithPlaceholder(),
     Object? safety = const $CopyWithPlaceholder(),
     Object? safetyAtSave = const $CopyWithPlaceholder(),
     Object? snapshot = const $CopyWithPlaceholder(),
@@ -138,10 +162,18 @@ class _$RecipeVersionOutCWProxyImpl implements _$RecipeVersionOutCWProxy {
           ? _value.aiAssisted
           // ignore: cast_nullable_to_non_nullable
           : aiAssisted as bool,
+      baseVersionId: baseVersionId == const $CopyWithPlaceholder()
+          ? _value.baseVersionId
+          // ignore: cast_nullable_to_non_nullable
+          : baseVersionId as String?,
       changeNote: changeNote == const $CopyWithPlaceholder()
           ? _value.changeNote
           // ignore: cast_nullable_to_non_nullable
           : changeNote as String,
+      conclusion: conclusion == const $CopyWithPlaceholder()
+          ? _value.conclusion
+          // ignore: cast_nullable_to_non_nullable
+          : conclusion as RecipeVersionOutConclusionEnum?,
       createdAt: createdAt == const $CopyWithPlaceholder()
           ? _value.createdAt
           // ignore: cast_nullable_to_non_nullable
@@ -170,6 +202,10 @@ class _$RecipeVersionOutCWProxyImpl implements _$RecipeVersionOutCWProxy {
           ? _value.reproducibility
           // ignore: cast_nullable_to_non_nullable
           : reproducibility as RecipeReproducibilityResult?,
+      rulesVersion: rulesVersion == const $CopyWithPlaceholder()
+          ? _value.rulesVersion
+          // ignore: cast_nullable_to_non_nullable
+          : rulesVersion as String?,
       safety: safety == const $CopyWithPlaceholder()
           ? _value.safety
           // ignore: cast_nullable_to_non_nullable
@@ -200,102 +236,120 @@ extension $RecipeVersionOutCopyWith on RecipeVersionOut {
 // JsonSerializableGenerator
 // **************************************************************************
 
-RecipeVersionOut _$RecipeVersionOutFromJson(Map<String, dynamic> json) =>
-    $checkedCreate(
-      'RecipeVersionOut',
+RecipeVersionOut _$RecipeVersionOutFromJson(
+  Map<String, dynamic> json,
+) => $checkedCreate(
+  'RecipeVersionOut',
+  json,
+  ($checkedConvert) {
+    $checkKeys(
       json,
-      ($checkedConvert) {
-        $checkKeys(
-          json,
-          requiredKeys: const [
-            'ai_assisted',
-            'change_note',
-            'created_at',
-            'derived',
-            'edit_operations',
-            'id',
-            'snapshot',
-            'version_number',
-          ],
-        );
-        final val = RecipeVersionOut(
-          aiAssisted: $checkedConvert('ai_assisted', (v) => v as bool),
-          changeNote: $checkedConvert('change_note', (v) => v as String),
-          createdAt: $checkedConvert('created_at', (v) => v as String),
-          derived: $checkedConvert(
-            'derived',
-            (v) => RecipeDerived.fromJson(v as Map<String, dynamic>),
-          ),
-          editOperations: $checkedConvert(
-            'edit_operations',
-            (v) => (v as List<dynamic>).map((e) => e as Object).toList(),
-          ),
-          id: $checkedConvert('id', (v) => v as String),
-          images: $checkedConvert(
-            'images',
-            (v) => (v as List<dynamic>?)
-                ?.map((e) => RecipeImageOut.fromJson(e as Map<String, dynamic>))
-                .toList(),
-          ),
-          previousVersionId: $checkedConvert(
-            'previous_version_id',
-            (v) => v as String?,
-          ),
-          reproducibility: $checkedConvert(
-            'reproducibility',
-            (v) => v == null
-                ? null
-                : RecipeReproducibilityResult.fromJson(
-                    v as Map<String, dynamic>,
-                  ),
-          ),
-          safety: $checkedConvert(
-            'safety',
-            (v) => v == null
-                ? null
-                : RecipeSafetyResult.fromJson(v as Map<String, dynamic>),
-          ),
-          safetyAtSave: $checkedConvert(
-            'safety_at_save',
-            (v) => v == null
-                ? null
-                : RecipeSafetyResult.fromJson(v as Map<String, dynamic>),
-          ),
-          snapshot: $checkedConvert(
-            'snapshot',
-            (v) => RecipeSnapshot.fromJson(v as Map<String, dynamic>),
-          ),
-          versionNumber: $checkedConvert(
-            'version_number',
-            (v) => (v as num).toInt(),
-          ),
-        );
-        return val;
-      },
-      fieldKeyMap: const {
-        'aiAssisted': 'ai_assisted',
-        'changeNote': 'change_note',
-        'createdAt': 'created_at',
-        'editOperations': 'edit_operations',
-        'previousVersionId': 'previous_version_id',
-        'safetyAtSave': 'safety_at_save',
-        'versionNumber': 'version_number',
-      },
+      requiredKeys: const [
+        'ai_assisted',
+        'change_note',
+        'created_at',
+        'derived',
+        'edit_operations',
+        'id',
+        'snapshot',
+        'version_number',
+      ],
     );
+    final val = RecipeVersionOut(
+      aiAssisted: $checkedConvert('ai_assisted', (v) => v as bool),
+      baseVersionId: $checkedConvert('base_version_id', (v) => v as String?),
+      changeNote: $checkedConvert('change_note', (v) => v as String),
+      conclusion: $checkedConvert(
+        'conclusion',
+        (v) => $enumDecodeNullable(_$RecipeVersionOutConclusionEnumEnumMap, v),
+      ),
+      createdAt: $checkedConvert('created_at', (v) => v as String),
+      derived: $checkedConvert(
+        'derived',
+        (v) => RecipeDerived.fromJson(v as Map<String, dynamic>),
+      ),
+      editOperations: $checkedConvert(
+        'edit_operations',
+        (v) => (v as List<dynamic>).map((e) => e as Object).toList(),
+      ),
+      id: $checkedConvert('id', (v) => v as String),
+      images: $checkedConvert(
+        'images',
+        (v) => (v as List<dynamic>?)
+            ?.map((e) => RecipeImageOut.fromJson(e as Map<String, dynamic>))
+            .toList(),
+      ),
+      previousVersionId: $checkedConvert(
+        'previous_version_id',
+        (v) => v as String?,
+      ),
+      reproducibility: $checkedConvert(
+        'reproducibility',
+        (v) => v == null
+            ? null
+            : RecipeReproducibilityResult.fromJson(v as Map<String, dynamic>),
+      ),
+      rulesVersion: $checkedConvert('rules_version', (v) => v as String?),
+      safety: $checkedConvert(
+        'safety',
+        (v) => v == null
+            ? null
+            : RecipeSafetyResult.fromJson(v as Map<String, dynamic>),
+      ),
+      safetyAtSave: $checkedConvert(
+        'safety_at_save',
+        (v) => v == null
+            ? null
+            : RecipeSafetyResult.fromJson(v as Map<String, dynamic>),
+      ),
+      snapshot: $checkedConvert(
+        'snapshot',
+        (v) => RecipeSnapshot.fromJson(v as Map<String, dynamic>),
+      ),
+      versionNumber: $checkedConvert(
+        'version_number',
+        (v) => (v as num).toInt(),
+      ),
+    );
+    return val;
+  },
+  fieldKeyMap: const {
+    'aiAssisted': 'ai_assisted',
+    'baseVersionId': 'base_version_id',
+    'changeNote': 'change_note',
+    'createdAt': 'created_at',
+    'editOperations': 'edit_operations',
+    'previousVersionId': 'previous_version_id',
+    'rulesVersion': 'rules_version',
+    'safetyAtSave': 'safety_at_save',
+    'versionNumber': 'version_number',
+  },
+);
 
-Map<String, dynamic> _$RecipeVersionOutToJson(RecipeVersionOut instance) =>
-    <String, dynamic>{
-      'ai_assisted': instance.aiAssisted,
-      'change_note': instance.changeNote,
-      'created_at': instance.createdAt,
-      'derived': instance.derived.toJson(),
-      'edit_operations': instance.editOperations,
-      'id': instance.id,
-      'images': ?instance.images?.map((e) => e.toJson()).toList(),
-      'previous_version_id': ?instance.previousVersionId,
-      'reproducibility': ?instance.reproducibility?.toJson(),
-      'safety': ?instance.safety?.toJson(),
-      'safety_at_save': ?instance.safetyAtSave?.toJson(),
-      'snapshot': instance.snapshot.toJson(),
-      'version_number': instance.versionNumber,
-    };
+Map<String, dynamic> _$RecipeVersionOutToJson(
+  RecipeVersionOut instance,
+) => <String, dynamic>{
+  'ai_assisted': instance.aiAssisted,
+  'base_version_id': ?instance.baseVersionId,
+  'change_note': instance.changeNote,
+  'conclusion': ?_$RecipeVersionOutConclusionEnumEnumMap[instance.conclusion],
+  'created_at': instance.createdAt,
+  'derived': instance.derived.toJson(),
+  'edit_operations': instance.editOperations,
+  'id': instance.id,
+  'images': ?instance.images?.map((e) => e.toJson()).toList(),
+  'previous_version_id': ?instance.previousVersionId,
+  'reproducibility': ?instance.reproducibility?.toJson(),
+  'rules_version': ?instance.rulesVersion,
+  'safety': ?instance.safety?.toJson(),
+  'safety_at_save': ?instance.safetyAtSave?.toJson(),
+  'snapshot': instance.snapshot.toJson(),
+  'version_number': instance.versionNumber,
+};
+
+const _$RecipeVersionOutConclusionEnumEnumMap = {
+  RecipeVersionOutConclusionEnum.noChange: 'no_change',
+  RecipeVersionOutConclusionEnum.minorOnly: 'minor_only',
+  RecipeVersionOutConclusionEnum.general: 'general',
+  RecipeVersionOutConclusionEnum.significant: 'significant',
+};

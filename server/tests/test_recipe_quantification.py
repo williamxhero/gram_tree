@@ -357,6 +357,146 @@ def test_accept_creates_immutable_ai_version_and_durable_decision(quantification
     assert retry.status_code == 201 and retry.json()["version"]["id"] == saved["version"]["id"]
 
 
+@pytest.mark.parametrize(
+    ("decision", "quantity", "unit"),
+    [("accept", 3, "g"), ("modify", 4, "ml"), ("ignore", 0, "ml")],
+)
+def test_quantification_decisions_handle_zero_measure_receipt_without_rewriting_history(
+    quantification_api, decision, quantity, unit
+):
+    api, directory = quantification_api
+    headers = bearer(api.login("quantification-zero-measure@example.com"))
+    measure_response = api.client.post(
+        "/v1/me/measures",
+        headers=headers,
+        json={"name": "量杯", "kind": "cup", "capacity_ml": 200},
+    )
+    assert measure_response.status_code == 201, measure_response.text
+    preview_response = api.client.post(
+        "/v1/me/measures/input",
+        headers=headers,
+        json={
+            "measure_id": measure_response.json()["id"],
+            "quantity": 0,
+            "base_unit": "ml",
+        },
+    )
+    assert preview_response.status_code == 200, preview_response.text
+    confirmed = preview_response.json()
+    assert confirmed["base_quantity"] == 0
+    assert confirmed["measure_input_token"]
+    body = draft()
+    body["snapshot"]["ingredients"] = [
+        {
+            "id": "salt",
+            "display_name": "水",
+            "quantity": 0,
+            "unit": "ml",
+            "measure_input_token": confirmed["measure_input_token"],
+        }
+    ]
+    created_response = api.client.post("/v1/recipes", headers=headers, json=body)
+    assert created_response.status_code == 201, created_response.text
+    created = created_response.json()
+    original = created["version"]["snapshot"]["ingredients"][0]
+    assert original["quantity_source"] == confirmed["quantity_source"]
+    assert original["measure_input_token"] == confirmed["measure_input_token"]
+    proposal = suggest(api, directory, headers, created)
+    assert len(proposal["suggestions"]) == 1
+    suggestion = proposal["suggestions"][0]
+    choice = {"problem_id": suggestion["problem_id"], "decision": decision}
+    if decision == "modify":
+        choice.update(value="4", unit="ml")
+    response = api.client.post(
+        f"/v1/recipes/{created['id']}/quantification/{proposal['id']}/decisions",
+        headers=headers,
+        json={"decisions": [choice]},
+    )
+    assert response.status_code == 201, response.text
+    saved = response.json()["version"]
+    item = saved["snapshot"]["ingredients"][0]
+    assert (item["quantity"], item["unit"], item["base_quantity"], item["base_unit"]) == (
+        quantity,
+        unit,
+        quantity,
+        unit,
+    )
+    if decision == "ignore":
+        assert item == original
+        assert saved["reproducibility"]["problems"][0]["status"] == "ignored"
+    else:
+        assert item["measure_input_token"] is None
+        assert saved["reproducibility"]["state"] == "reproducible"
+        if decision == "accept":
+            assert item["quantity_source"] == {
+                "source": "ai_estimated",
+                "original": "0 ml",
+                "confidence": 0.7,
+                "confidence_level": "medium",
+                "basis": suggestion["basis"],
+                "baseline": suggestion["baseline"],
+                "adjustment": suggestion["adjustment"],
+            }
+        else:
+            assert item["quantity_source"]["source"] == "author_filled"
+            assert item["quantity_source"]["basis"] is None
+    assert saved["ai_assisted"] is (decision == "accept")
+    history = api.client.get(
+        f"/v1/recipes/{created['id']}/versions/{created['version']['id']}", headers=headers
+    )
+    assert history.status_code == 200, history.text
+    assert history.json()["version"] == created["version"]
+
+
+def test_quantification_preserves_untouched_confirmed_measure_receipt(quantification_api):
+    api, directory = quantification_api
+    headers = bearer(api.login("quantification-untouched-measure@example.com"))
+    measure_response = api.client.post(
+        "/v1/me/measures",
+        headers=headers,
+        json={"name": "白瓷勺", "kind": "spoon", "capacity_ml": 12},
+    )
+    assert measure_response.status_code == 201, measure_response.text
+    preview_response = api.client.post(
+        "/v1/me/measures/input",
+        headers=headers,
+        json={
+            "measure_id": measure_response.json()["id"],
+            "quantity": 2,
+            "base_unit": "ml",
+        },
+    )
+    assert preview_response.status_code == 200, preview_response.text
+    confirmed = preview_response.json()
+    body = draft()
+    body["snapshot"]["ingredients"][1].update(
+        quantity=24, unit="ml", measure_input_token=confirmed["measure_input_token"]
+    )
+    created_response = api.client.post("/v1/recipes", headers=headers, json=body)
+    assert created_response.status_code == 201, created_response.text
+    created = created_response.json()
+    original = created["version"]["snapshot"]["ingredients"][1]
+    assert original["quantity_source"] == confirmed["quantity_source"]
+    proposal = suggest(api, directory, headers, created)
+    response = api.client.post(
+        f"/v1/recipes/{created['id']}/quantification/{proposal['id']}/decisions",
+        headers=headers,
+        json={"accept_all": True},
+    )
+    assert response.status_code == 201, response.text
+    saved = response.json()["version"]
+    salt, water = saved["snapshot"]["ingredients"]
+    assert (salt["quantity"], salt["unit"]) == (3, "g")
+    assert salt["quantity_source"]["source"] == "ai_estimated"
+    assert water == original
+    assert saved["reproducibility"]["state"] == "reproducible"
+    history = api.client.get(
+        f"/v1/recipes/{created['id']}/versions/{created['version']['id']}", headers=headers
+    )
+    assert history.status_code == 200, history.text
+    assert history.json()["version"] == created["version"]
+
+
 def test_modify_ignore_and_accept_all_preserve_honest_sources(quantification_api):
     api, directory = quantification_api
     headers = bearer(api.login("quantification-decisions@example.com"))
@@ -548,11 +688,24 @@ def test_new_manual_nodes_cannot_manufacture_ai_sources(quantification_api):
     )
     assert response.status_code == 201, response.text
     saved = response.json()["version"]["snapshot"]
-    for node in (saved["ingredients"][-1], saved["steps"][-1]):
-        for key, source in node.items():
-            if key.endswith("_source"):
-                assert source["source"] == "author_filled"
-                assert source["basis"] is None
+    for node, source_fields in (
+        (saved["ingredients"][-1], ("quantity_source", "preparation_source")),
+        (
+            saved["steps"][-1],
+            (
+                "instruction_source",
+                "duration_source",
+                "heat_source",
+                "temperature_source",
+                "doneness_source",
+            ),
+        ),
+    ):
+        for key in source_fields:
+            assert node[key]["source"] == "author_filled"
+            assert node[key]["basis"] is None
+    assert saved["ingredients"][-1]["flavor_source"] is None
+    assert saved["ingredients"][-1]["functional_source"] is None
 
 
 def test_same_field_fragments_compose_without_overwrite(quantification_api):

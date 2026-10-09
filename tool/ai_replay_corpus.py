@@ -7,6 +7,7 @@ Record mode can refresh the same files using ONLY these synthetic requests.
 import argparse
 import hashlib
 import json
+from copy import deepcopy
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -38,7 +39,7 @@ def main() -> None:
     # The browser journey saves the synthetic draft after confirming 320 g.
     # Use the public snapshot contract's defaults, never a production recording.
     from gramtree.ai.answers import cooking_context
-    from gramtree.recipes.schemas import RecipeSnapshot
+    from gramtree.recipes.schemas import RecipeSnapshot, ValueSource
 
     snapshot = RecipeSnapshot.model_validate(corpus["valid"]["recipe"]["snapshot"])
     snapshot.ingredients[0].quantity = 320
@@ -111,6 +112,18 @@ def main() -> None:
             batch["valid"],
         )
     )
+    assistance = json.loads(
+        (ROOT / "server/tests/fixtures/ai/comparison_assistance_corpus.json").read_text("utf-8")
+    )
+    records.append(("comparison", assistance["input"], assistance["outputs"]["high_a"]))
+    for scenario in assistance["scenarios"].values():
+        # A missing replay is intentional for the unavailable browser flow.
+        if scenario["output"] is None:
+            continue
+        payload = deepcopy(assistance["input"])
+        for version in payload["versions"].values():
+            version["dish_name"] = scenario["dish_name"]
+        records.append(("comparison", payload, assistance["outputs"][scenario["output"]]))
     from gramtree.ai.schemas import GeneratedDraft
     from gramtree.ai.service import _mark_sources
 
@@ -130,6 +143,12 @@ def main() -> None:
     saved_modification_snapshot = normalize_sources(draft.recipe.snapshot)
     editor_modification_snapshot = saved_modification_snapshot.model_copy(deep=True)
     editor_modification_snapshot.difficulty = ""
+    # dart-dio omits null functional_source but sends functional=False. The
+    # recipe save consequently stamps author provenance in this editor baseline.
+    for ingredient in editor_modification_snapshot.ingredients:
+        ingredient.functional_source = ValueSource(
+            source="author_filled", basis="作者按这道菜的实际作用填写"
+        )
     modification_snapshots = [
         draft.recipe.snapshot,
         saved_modification_snapshot,

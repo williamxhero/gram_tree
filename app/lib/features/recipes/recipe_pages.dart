@@ -28,6 +28,9 @@ import '../../recipes/serving_conversion.dart';
 import 'batch_advice_section.dart';
 import 'personal_measures_page.dart';
 import 'recipe_photo_panel.dart';
+import 'recipe_flavor_panel.dart';
+import 'comparison_cards.dart';
+import 'measure_input_dialog.dart';
 import 'recipe_answer_section.dart';
 import 'reproducibility_card.dart';
 import 'quantification_panel.dart';
@@ -547,7 +550,11 @@ class _RecipeEditorPageState extends ConsumerState<RecipeEditorPage> {
     try {
       final result = await ref
           .read(recipeRepositoryProvider)
-          .checkSafety(_form);
+          .checkSafety(
+            _form,
+            recipeId: widget.recipeId,
+            baseVersionId: _loaded?.version.id,
+          );
       if (!mounted || revision != _safetyRevision) return;
       setState(() {
         _safetyResult = result;
@@ -663,7 +670,11 @@ class _RecipeEditorPageState extends ConsumerState<RecipeEditorPage> {
       // Always re-check immediately before saving. A result obtained while the
       // form was unchanged is valid; a failed/stale check must never become a
       // way around the server's immutable safety gate.
-      final safety = await repo.checkSafety(_form);
+      final safety = await repo.checkSafety(
+        _form,
+        recipeId: widget.recipeId,
+        baseVersionId: _loaded?.version.id,
+      );
       if (!mounted) return;
       setState(() {
         _safetyResult = safety;
@@ -720,7 +731,12 @@ class _RecipeEditorPageState extends ConsumerState<RecipeEditorPage> {
     }
     if (_form.servings < 1 ||
         _form.ingredients.any(
-          (item) => item.quantity < 0 || item.baseQuantity < 0,
+          (item) =>
+              !item.quantity.isFinite ||
+              !item.baseQuantity.isFinite ||
+              item.quantity < 0 ||
+              item.baseQuantity < 0 ||
+              item.quantity > 10000000,
         ) ||
         _form.steps.any((item) => item.durationSeconds < 0)) {
       _showEditorError(l10n.recipeInvalidNumber);
@@ -795,7 +811,10 @@ class _RecipeEditorPageState extends ConsumerState<RecipeEditorPage> {
   void _selectIngredient(String id, IngredientDetail value) {
     final item = _form.ingredients.firstWhere((item) => item.id == id);
     item.ingredientId = value.id;
+    item.measureInputToken = null;
+    item.quantitySource = null;
     item.displayName = value.standardName;
+    item.adoptIngredientDefaults(value);
     _libraryScaling[id] = scalingRuleForLibraryAttribute(
       value.attributes.scaling?.value,
     );
@@ -813,6 +832,23 @@ class _RecipeEditorPageState extends ConsumerState<RecipeEditorPage> {
       ..ingredientId = value.id
       ..displayName = value.standardName;
     _replacementResults.remove(id);
+    _changed();
+  }
+
+  Future<void> _useMeasure(RecipeIngredientDraft item) async {
+    final result = await showMeasureInputDialog(
+      context,
+      ingredientId: item.ingredientId,
+    );
+    if (!mounted || result == null || !_form.ingredients.contains(item)) return;
+    item
+      ..quantity = result.baseQuantity!.toDouble()
+      ..unit = result.baseUnit.value
+      ..baseQuantity = result.baseQuantity!.toDouble()
+      ..baseUnit = result.baseUnit.value
+      ..quantitySource = result.quantitySource
+      ..measureInputToken = result.measureInputToken;
+    _editorRevision++;
     _changed();
   }
 
@@ -1127,6 +1163,7 @@ class _RecipeEditorPageState extends ConsumerState<RecipeEditorPage> {
                   onSelect: (value) => _selectIngredient(entry.$2.id, value),
                   onSelectReplacement: (value) =>
                       _selectReplacement(entry.$2.id, value),
+                  onUseMeasure: () => _useMeasure(entry.$2),
                   onDelete: () => _deleteIngredient(entry.$1),
                   onMoveUp: () => _moveIngredient(entry.$1, -1),
                   onMoveDown: () => _moveIngredient(entry.$1, 1),
@@ -1477,6 +1514,7 @@ class _IngredientEditorCard extends StatefulWidget {
     required this.onReplacementSearch,
     required this.onSelect,
     required this.onSelectReplacement,
+    required this.onUseMeasure,
     required this.onDelete,
     required this.onMoveUp,
     required this.onMoveDown,
@@ -1495,6 +1533,7 @@ class _IngredientEditorCard extends StatefulWidget {
   final VoidCallback onReplacementSearch;
   final ValueChanged<IngredientDetail> onSelect;
   final ValueChanged<IngredientDetail> onSelectReplacement;
+  final VoidCallback onUseMeasure;
   final VoidCallback onDelete;
   final VoidCallback onMoveUp;
   final VoidCallback onMoveDown;
@@ -1624,6 +1663,7 @@ class _IngredientEditorCardState extends State<_IngredientEditorCard> {
                       // A typed amount is the author's own value, whatever
                       // estimated or verified it before.
                       item.quantitySource = null;
+                      item.measureInputToken = null;
                       onChanged();
                     },
                   ),
@@ -1637,6 +1677,7 @@ class _IngredientEditorCardState extends State<_IngredientEditorCard> {
                     onChanged: (value) {
                       item.unit = value;
                       item.quantitySource = null;
+                      item.measureInputToken = null;
                       onChanged();
                     },
                   ),
@@ -1644,6 +1685,28 @@ class _IngredientEditorCardState extends State<_IngredientEditorCard> {
               ],
             ),
             const SizedBox(height: 8),
+            TextButton(
+              key: ValueKey('recipe-measure-input-$id'),
+              onPressed: widget.onUseMeasure,
+              child: Text(l10n.measureInputAction),
+            ),
+            if (item.measureInputToken != null &&
+                item.quantitySource != null) ...[
+              Text(item.quantitySource!.original ?? ''),
+              SourceMark(
+                sourceType: item.quantitySource!.source_.value,
+                componentId: 'measure-input-$id',
+                value: '${item.quantity} ${item.unit}',
+                originalValue: item.quantitySource!.original,
+                basisText: item.quantitySource!.basis ?? '',
+                required: false,
+                feedbackEnabled: false,
+                neutral: true,
+                showWhenAuthorFilled: true,
+                onAction: null,
+                labelOverride: l10n.measureInputEvidence,
+              ),
+            ],
             _text(
               key: _ingredientKey(id, 'preparation'),
               label: l10n.recipePreparationGroup,
@@ -1654,6 +1717,7 @@ class _IngredientEditorCardState extends State<_IngredientEditorCard> {
                 onChanged();
               },
             ),
+            RecipeFlavorEditor(item: item, onChanged: onChanged),
             ExpansionTile(
               key: ValueKey('recipe-ingredient-advanced-$id'),
               title: Text(l10n.recipeStandardIngredient),
@@ -1668,6 +1732,7 @@ class _IngredientEditorCardState extends State<_IngredientEditorCard> {
                         onChanged: (value) {
                           item.baseQuantity = double.tryParse(value) ?? 0;
                           item.quantitySource = null;
+                          item.measureInputToken = null;
                           onChanged();
                         },
                       ),
@@ -1681,6 +1746,7 @@ class _IngredientEditorCardState extends State<_IngredientEditorCard> {
                         onChanged: (value) {
                           item.baseUnit = value;
                           item.quantitySource = null;
+                          item.measureInputToken = null;
                           onChanged();
                         },
                       ),
@@ -1700,6 +1766,7 @@ class _IngredientEditorCardState extends State<_IngredientEditorCard> {
                 const SizedBox(height: 8),
                 DropdownButtonFormField<String>(
                   key: ValueKey('recipe-ingredient-scaling-$id'),
+                  isExpanded: true,
                   initialValue:
                       item.scalingMode?.value ?? _scalingLibraryDefaultValue,
                   decoration: InputDecoration(
@@ -1754,6 +1821,10 @@ class _IngredientEditorCardState extends State<_IngredientEditorCard> {
                   title: Text(l10n.recipeFunctionalToggle),
                   onChanged: (value) {
                     item.functional = value == true;
+                    item.functionalSource = ValueSource(
+                      source_: ValueSourceSource_Enum.authorFilled,
+                      basis: '作者按这道菜的实际作用填写；不是做菜验证',
+                    );
                     onChanged();
                   },
                 ),
@@ -2846,6 +2917,16 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
                   ),
                 ),
               ),
+              if (detail.version.conclusion != null)
+                ActionChip(
+                  key: const ValueKey('recipe-version-conclusion'),
+                  label: Text(
+                    '${comparisonConclusionLabel(detail.version.conclusion!.value)} · 确定规则',
+                  ),
+                  tooltip: '相对上一当前版本；规则版本 ${detail.version.rulesVersion ?? ""}',
+                  onPressed: () =>
+                      context.push('/recipes/${widget.recipeId}/history'),
+                ),
               Chip(
                 key: const ValueKey('recipe-duration'),
                 label: Text(
@@ -3679,6 +3760,7 @@ class _IngredientDetailRow extends StatelessWidget {
         (sourceType == sourceTypeAuthorFilled ||
             sourceType == sourceTypeScenarioAdjusted);
     final showSource =
+        ingredient.measureInputToken != null ||
         displayOnly ||
         (serverSource != null
             ? serverSource.sourceType.value != sourceTypeAuthorFilled ||
@@ -3717,6 +3799,8 @@ class _IngredientDetailRow extends StatelessWidget {
     }
     final originalSourceValue = serverSource?.originalValue ?? source?.original;
     final subtitleDetails = [
+      if (ingredient.measureInputToken != null && source?.original != null)
+        source!.original!,
       if (noDensity) noDensityBasis,
       // Unchanged conversion results keep the author's value, so they get
       // no adjustment mark; the applied rule stays visible as text.
@@ -3764,6 +3848,7 @@ class _IngredientDetailRow extends StatelessWidget {
                       : originalSourceValue),
               basisText: {
                 sourceBasis,
+                if (ingredient.measureInputToken != null) source?.basis ?? '',
                 if (source?.source_.value == sourceTypeAiEstimated)
                   recipeSourceBasis(source),
               }.join('\n'),
@@ -3774,8 +3859,11 @@ class _IngredientDetailRow extends StatelessWidget {
                   (sourceType == sourceTypeScenarioAdjusted && !systemChanged),
               valueChanged: valueChanged,
               showWhenAuthorFilled:
-                  displayNeutralLabel && sourceType == sourceTypeAuthorFilled,
-              labelOverride: displayNeutralLabel
+                  ingredient.measureInputToken != null ||
+                  (displayNeutralLabel && sourceType == sourceTypeAuthorFilled),
+              labelOverride: ingredient.measureInputToken != null
+                  ? l10n.measureInputEvidence
+                  : displayNeutralLabel
                   ? l10n.recipeMeasureDisplaySource
                   : null,
               whyTitleOverride: displayNeutralLabel
@@ -3788,20 +3876,34 @@ class _IngredientDetailRow extends StatelessWidget {
             ),
         ],
       ),
-      subtitle: Text.rich(
-        TextSpan(
-          children: [
+      subtitle: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text.rich(
             TextSpan(
-              text: quantity,
-              style: valueChanged
-                  ? TextStyle(color: GramTreeColors.of(context).accent)
-                  : null,
+              children: [
+                TextSpan(
+                  text: quantity,
+                  style: valueChanged
+                      ? TextStyle(color: GramTreeColors.of(context).accent)
+                      : null,
+                ),
+                for (final detail in subtitleDetails)
+                  TextSpan(text: ' · $detail'),
+              ],
             ),
-            for (final detail in subtitleDetails) TextSpan(text: ' · $detail'),
-          ],
-        ),
-        key: ValueKey('recipe-ingredient-amount-${ingredient.id}'),
-        style: subtitleStyle,
+            key: ValueKey('recipe-ingredient-amount-${ingredient.id}'),
+            style: subtitleStyle,
+          ),
+          RecipeFlavorSummary(
+            key: ValueKey('recipe-flavor-detail-${ingredient.id}'),
+            id: ingredient.id,
+            contribution: ingredient.flavorContribution,
+            flavorSource: ingredient.flavorSource,
+            functional: ingredient.functional == true,
+            functionalSource: ingredient.functionalSource,
+          ),
+        ],
       ),
     );
   }
@@ -4100,6 +4202,61 @@ class RecipeHistoryPage extends ConsumerStatefulWidget {
 }
 
 class _RecipeHistoryPageState extends ConsumerState<RecipeHistoryPage> {
+  final List<String> _selected = [];
+  bool _selecting = false;
+
+  void _compare(String from, String to) {
+    unawaited(
+      ref
+          .read(intentDispatcherProvider)
+          .dispatch(
+            context,
+            compositionId: CompositionIdScope.of(context),
+            componentId: 'recipe-history-comparison',
+            action: ActionDescriptor(
+              intent: 'open_page',
+              params: {
+                'page': 'ingredient_comparison',
+                'recipe_id': widget.recipeId,
+                'from_version_id': from,
+                'to_version_id': to,
+              },
+            ),
+          ),
+    );
+  }
+
+  void _compareFull(String from, String to) {
+    unawaited(
+      ref
+          .read(intentDispatcherProvider)
+          .dispatch(
+            context,
+            compositionId: CompositionIdScope.of(context),
+            componentId: 'recipe-history-full-comparison',
+            action: ActionDescriptor(
+              intent: 'open_page',
+              params: {
+                'page': 'full_comparison',
+                'recipe_id': widget.recipeId,
+                'from_version_id': from,
+                'to_version_id': to,
+              },
+            ),
+          ),
+    );
+  }
+
+  Future<void> _toggleSelection() async {
+    setState(() {
+      _selecting = !_selecting;
+      _selected.clear();
+      _candidates = const [];
+    });
+    await _loadFirst();
+  }
+
+  List<RecipeComparisonCandidate> _candidates = const [];
   List<RecipeVersionSummary> _items = const [];
   String? _nextCursor;
   Object? _error;
@@ -4118,15 +4275,24 @@ class _RecipeHistoryPageState extends ConsumerState<RecipeHistoryPage> {
       _error = null;
     });
     try {
-      final page = await ref
-          .read(recipeRepositoryProvider)
-          .historyPage(widget.recipeId);
-      if (!mounted) return;
-      setState(() {
-        _items = page.items;
-        _nextCursor = page.nextCursor;
-        _loading = false;
-      });
+      final repository = ref.read(recipeRepositoryProvider);
+      if (_selecting) {
+        final page = await repository.comparisonCandidatesPage(widget.recipeId);
+        if (!mounted) return;
+        setState(() {
+          _candidates = page.items;
+          _nextCursor = page.nextCursor;
+          _loading = false;
+        });
+      } else {
+        final page = await repository.historyPage(widget.recipeId);
+        if (!mounted) return;
+        setState(() {
+          _items = page.items;
+          _nextCursor = page.nextCursor;
+          _loading = false;
+        });
+      }
     } catch (error) {
       if (mounted) {
         setState(() {
@@ -4142,15 +4308,30 @@ class _RecipeHistoryPageState extends ConsumerState<RecipeHistoryPage> {
     if (_loadingMore || cursor == null) return;
     setState(() => _loadingMore = true);
     try {
-      final page = await ref
-          .read(recipeRepositoryProvider)
-          .historyPage(widget.recipeId, cursor: cursor);
-      if (!mounted) return;
-      setState(() {
-        _items = [..._items, ...page.items];
-        _nextCursor = page.nextCursor;
-        _error = null;
-      });
+      final repository = ref.read(recipeRepositoryProvider);
+      if (_selecting) {
+        final page = await repository.comparisonCandidatesPage(
+          widget.recipeId,
+          cursor: cursor,
+        );
+        if (!mounted) return;
+        setState(() {
+          _candidates = [..._candidates, ...page.items];
+          _nextCursor = page.nextCursor;
+          _error = null;
+        });
+      } else {
+        final page = await repository.historyPage(
+          widget.recipeId,
+          cursor: cursor,
+        );
+        if (!mounted) return;
+        setState(() {
+          _items = [..._items, ...page.items];
+          _nextCursor = page.nextCursor;
+          _error = null;
+        });
+      }
     } catch (error) {
       if (mounted) setState(() => _error = error);
     } finally {
@@ -4164,34 +4345,132 @@ class _RecipeHistoryPageState extends ConsumerState<RecipeHistoryPage> {
     Widget body;
     if (_loading) {
       body = const Center(child: CircularProgressIndicator());
-    } else if (_error != null && _items.isEmpty) {
+    } else if (_error != null &&
+        (_selecting ? _candidates.isEmpty : _items.isEmpty)) {
       body = _RecipeError(message: l10n.recipeLoadError, onRetry: _loadFirst);
-    } else if (_items.isEmpty) {
+    } else if ((_selecting ? _candidates.isEmpty : _items.isEmpty)) {
       body = Center(child: Text(l10n.recipeNoHistory));
     } else {
       body = ListView(
         children: [
-          for (final item in _items)
-            ListTile(
-              key: ValueKey('recipe-version-${item.versionNumber}'),
-              title: Text(
-                l10n.recipeVersionTitle(
-                  item.versionNumber,
-                  item.aiAssisted ? l10n.recipeAiAssisted : '',
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                OutlinedButton(
+                  key: const ValueKey('recipe-select-comparison'),
+                  onPressed: _loadingMore ? null : _toggleSelection,
+                  child: Text(
+                    _selecting
+                        ? l10n.recipeComparisonCancelSelection
+                        : l10n.recipeComparisonSelect,
+                  ),
                 ),
-              ),
-              subtitle: Text(
-                '${item.changeNote.isEmpty ? l10n.recipeNoChangeNote : item.changeNote}\n${l10n.recipeVersionDate(_formatDate(context, item.createdAt))}',
-                style: GramTreeColors.of(context).numberStyle(
-                  Theme.of(context).textTheme.bodyMedium ?? const TextStyle(),
-                ),
-              ),
-              isThreeLine: true,
-              trailing: const Icon(Icons.chevron_right),
-              onTap: () => context.push(
-                '/recipes/${widget.recipeId}/versions/${item.id}',
-              ),
+                if (_selecting) ...[
+                  Text(l10n.recipeComparisonSelectionHint),
+                  FilledButton(
+                    key: const ValueKey('recipe-compare-selected'),
+                    onPressed: _selected.length == 2
+                        ? () => _compare(_selected[0], _selected[1])
+                        : null,
+                    child: Text(l10n.recipeComparisonAction),
+                  ),
+                  OutlinedButton(
+                    key: const ValueKey('recipe-full-compare-selected'),
+                    onPressed: _selected.length == 2
+                        ? () => _compareFull(_selected[0], _selected[1])
+                        : null,
+                    child: const Text('完整版本对比'),
+                  ),
+                ],
+              ],
             ),
+          ),
+          if (_selecting)
+            for (final item in _candidates)
+              CheckboxListTile(
+                key: ValueKey('recipe-candidate-select-${item.id}'),
+                title: Text(
+                  l10n.recipeComparisonCandidate(
+                    item.author,
+                    item.recipeId.substring(0, 8),
+                    item.versionNumber,
+                  ),
+                ),
+                subtitle: Text(
+                  '${item.changeNote.isEmpty ? l10n.recipeNoChangeNote : item.changeNote}\n${l10n.recipeVersionDate(_formatDate(context, item.createdAt))}',
+                ),
+                value: _selected.contains(item.id),
+                onChanged: _selected.length < 2 || _selected.contains(item.id)
+                    ? (selected) => setState(() {
+                        if (selected == true) {
+                          _selected.add(item.id);
+                        } else {
+                          _selected.remove(item.id);
+                        }
+                      })
+                    : null,
+                controlAffinity: ListTileControlAffinity.leading,
+              ),
+          if (!_selecting)
+            for (final item in _items)
+              ListTile(
+                key: ValueKey('recipe-version-${item.versionNumber}'),
+                title: Text(
+                  l10n.recipeVersionTitle(
+                    item.versionNumber,
+                    item.aiAssisted ? l10n.recipeAiAssisted : '',
+                  ),
+                ),
+                subtitle: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '${item.changeNote.isEmpty ? l10n.recipeNoChangeNote : item.changeNote}\n${l10n.recipeVersionDate(_formatDate(context, item.createdAt))}',
+                      style: GramTreeColors.of(context).numberStyle(
+                        Theme.of(context).textTheme.bodyMedium ??
+                            const TextStyle(),
+                      ),
+                    ),
+                    if (item.previousVersionId != null)
+                      TextButton(
+                        key: ValueKey(
+                          'recipe-full-compare-previous-${item.versionNumber}',
+                        ),
+                        onPressed: () =>
+                            _compareFull(item.previousVersionId!, item.id),
+                        child: Text(
+                          item.conclusion == null
+                              ? '完整对比上一版本'
+                              : '${comparisonConclusionLabel(item.conclusion!.value)} · 对比上一版本',
+                        ),
+                      ),
+                    if (item.previousVersionId != null &&
+                        item.rulesVersion != null)
+                      Text('确定规则 · ${item.rulesVersion}'),
+                    if (item.previousVersionId != null &&
+                        item.baseVersionId != null &&
+                        item.baseVersionId != item.previousVersionId)
+                      const Text('编辑基线不同于上一当前版本；变化结论相对上一当前版本。'),
+                  ],
+                ),
+                isThreeLine: true,
+                trailing: item.previousVersionId != null
+                    ? IconButton(
+                        key: ValueKey(
+                          'recipe-compare-previous-${item.versionNumber}',
+                        ),
+                        tooltip: l10n.recipeComparisonPrevious,
+                        icon: const Icon(Icons.compare_arrows),
+                        onPressed: () =>
+                            _compare(item.previousVersionId!, item.id),
+                      )
+                    : const Icon(Icons.chevron_right),
+                onTap: () => context.push(
+                  '/recipes/${widget.recipeId}/versions/${item.id}',
+                ),
+              ),
           if (_nextCursor != null)
             Padding(
               padding: const EdgeInsets.all(16),

@@ -23,7 +23,8 @@
       "id": "chicken", "ingredient_id": null, "display_name": "鸡腿肉",
       "quantity": 300.0, "unit": "g", "base_quantity": 300.0, "base_unit": "g",
       "preparation": null, "group": null, "optional": false, "replacement": null,
-      "functional": false, "scaling_mode": "proportional",
+      "functional": false, "flavor_contribution": null, "flavor_source": null,
+      "functional_source": null, "scaling_mode": "proportional", "measure_input_token": null,
       "quantity_source": {"source": "author_filled", "original": null, "confidence": null, "basis": null, "confidence_level": null, "baseline": null, "adjustment": null},
       "preparation_source": {"source": "author_filled", "original": null, "confidence": null, "basis": null, "confidence_level": null, "baseline": null, "adjustment": null}
     }],

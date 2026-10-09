@@ -19,6 +19,8 @@ part 'recipe_safety_check_request.g.dart';
 class RecipeSafetyCheckRequest {
   /// Returns a new [RecipeSafetyCheckRequest] instance.
   RecipeSafetyCheckRequest({
+    this.baseVersionId,
+
     this.changeNote = '',
 
     this.description,
@@ -27,8 +29,13 @@ class RecipeSafetyCheckRequest {
 
     this.dishName = '',
 
+    this.recipeId,
+
     required this.snapshot,
   });
+
+  @JsonKey(name: r'base_version_id', required: false, includeIfNull: false)
+  final String? baseVersionId;
 
   @JsonKey(
     defaultValue: '',
@@ -52,6 +59,9 @@ class RecipeSafetyCheckRequest {
   )
   final String? dishName;
 
+  @JsonKey(name: r'recipe_id', required: false, includeIfNull: false)
+  final String? recipeId;
+
   @JsonKey(name: r'snapshot', required: true, includeIfNull: false)
   final RecipeSnapshot snapshot;
 
@@ -59,18 +69,22 @@ class RecipeSafetyCheckRequest {
   bool operator ==(Object other) =>
       identical(this, other) ||
       other is RecipeSafetyCheckRequest &&
+          other.baseVersionId == baseVersionId &&
           other.changeNote == changeNote &&
           other.description == description &&
           other.dishAliases == dishAliases &&
           other.dishName == dishName &&
+          other.recipeId == recipeId &&
           other.snapshot == snapshot;
 
   @override
   int get hashCode =>
+      (baseVersionId == null ? 0 : baseVersionId.hashCode) +
       changeNote.hashCode +
       (description == null ? 0 : description.hashCode) +
       dishAliases.hashCode +
       dishName.hashCode +
+      (recipeId == null ? 0 : recipeId.hashCode) +
       snapshot.hashCode;
 
   factory RecipeSafetyCheckRequest.fromJson(Map<String, dynamic> json) =>
