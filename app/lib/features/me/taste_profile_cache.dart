@@ -197,13 +197,11 @@ class TasteProfileCache {
   }) => _write(
     accountId,
     stillCurrent,
-    (old) => old == null
-        ? null
-        : old.copyWith(
-            cachedAt: DateTime.now().toUtc(),
-            clearAllergies: true,
-            clearFamily: true,
-          ),
+    (old) => old?.copyWith(
+      cachedAt: DateTime.now().toUtc(),
+      clearAllergies: true,
+      clearFamily: true,
+    ),
   );
 
   Future<void> clear(String accountId) {

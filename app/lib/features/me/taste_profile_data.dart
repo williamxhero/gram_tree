@@ -36,8 +36,9 @@ class TasteProfileRepository {
     }
     try {
       final profile = (await api.getTasteProfile()).data!;
-      if (!session.matches(identity))
+      if (!session.matches(identity)) {
         throw StateError('stale_profile_response');
+      }
       await cache.writeProfile(
         accountId,
         profile,
