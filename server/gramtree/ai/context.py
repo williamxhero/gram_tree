@@ -21,7 +21,7 @@ from gramtree.accounts.models import User
 from gramtree.recipes import food_safety
 from gramtree.recipes.schemas import RecipeSnapshot
 from gramtree.settings import Settings
-from gramtree.taste_profiles import allergies, family
+from gramtree.taste_profiles import allergies, family, service
 from gramtree.taste_profiles.models import FamilyMember, TasteProfile
 
 
@@ -111,6 +111,15 @@ def _read_restrictions(
         "avoided_categories": set(),
         "avoided_ingredient_ids": set(),
     }
+    for item in profile.ingredient_preferences:
+        if not isinstance(item, dict) or item.get("preference") != "avoided":
+            continue
+        if isinstance(item.get("category"), str):
+            values["avoided_categories"].add(item["category"])
+        raw_id = item.get("ingredient_id")
+        if raw_id:
+            with suppress(ValueError, TypeError, AttributeError):
+                values["avoided_ingredient_ids"].add(uuid.UUID(str(raw_id)))
     _merge_sensitive(values, allergies.read_sensitive(session, profile, settings))
     members = session.scalars(select(FamilyMember).where(FamilyMember.owner_id == profile.owner_id))
     for member in members:
@@ -134,7 +143,9 @@ def _read_restrictions(
 
 
 def build(session: Session, owner: User, settings: Settings) -> AuthorizedContext:
-    profile = session.scalar(select(TasteProfile).where(TasteProfile.owner_id == owner.id))
+    # Serialize with the same owner lock used by consent and profile mutations;
+    # otherwise a withdrawal can race this read and expose a revoked snapshot.
+    profile = service.locked_profile(session, owner.id, service.scale_for(session))
     if profile is None:
         return AuthorizedContext(
             model_payload={"profile": None, "family": None, "cookware_profile": None},
