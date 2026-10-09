@@ -218,6 +218,25 @@ class RecipeReplacementAllergens(BaseModel):
     incomplete: bool = False
 
 
+class RecipePersonalSafetyAlert(BaseModel):
+    """A transient owner/family match; never stored with a recipe version."""
+
+    person: str = Field(min_length=1, max_length=40)
+    kind: Literal["allergy", "avoidance"]
+    target: str = Field(min_length=1, max_length=200)
+    ingredient: str = Field(min_length=1, max_length=200)
+    replacement: bool = False
+
+
+class RecipePersonalSafety(BaseModel):
+    """Private cross-check result for the authorized viewer only."""
+
+    status: Literal["available", "not_authorized"]
+    alerts: list[RecipePersonalSafetyAlert] = Field(default_factory=list)
+    unknown_ingredients: list[str] = Field(default_factory=list)
+    incomplete: bool = False
+
+
 class RecipeSafetyResult(BaseModel):
     rules_version: str
     checked_at: Timestamp
