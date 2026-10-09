@@ -223,8 +223,11 @@ class AuthInterceptor extends QueuedInterceptor {
     final epoch =
         options.extra['sync_identity_epoch'] ??
         options.extra['auth_identity_epoch'];
+    final identity = session.identity;
     return (owner == null || owner == session.current?.user.id) &&
-        (epoch == null || epoch == session.identityEpoch);
+        (epoch == null || epoch == session.identityEpoch) &&
+        (options.extra['sync_owner_id'] == null ||
+            (identity != null && session.canUpload(identity)));
   }
 
   @override

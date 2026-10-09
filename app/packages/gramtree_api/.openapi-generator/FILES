@@ -93,6 +93,7 @@ lib/src/model/ingredient_preference_out.dart
 lib/src/model/local_cuisine_out.dart
 lib/src/model/measure_display_out.dart
 lib/src/model/measure_display_request.dart
+lib/src/model/measure_history_out.dart
 lib/src/model/merge_relation.dart
 lib/src/model/modification_confirm_input.dart
 lib/src/model/modification_decision.dart
@@ -117,6 +118,7 @@ lib/src/model/nutrition_attribute.dart
 lib/src/model/nutrition_estimate.dart
 lib/src/model/one_line_input.dart
 lib/src/model/page_description.dart
+lib/src/model/page_measure_history_out.dart
 lib/src/model/page_personal_measure_out.dart
 lib/src/model/page_taste_profile_change_out.dart
 lib/src/model/page_unrecorded_ingredient_item.dart

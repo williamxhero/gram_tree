@@ -133,12 +133,6 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get syncResolveConflict => '查看并选择';
-
-  @override
-  String get syncConflictAdapterMissing => '此类型的选择入口暂不可用，内容已保留，请稍后再试。';
-
-  @override
   String syncPendingCount(int count) {
     return '待同步 $count 条';
   }

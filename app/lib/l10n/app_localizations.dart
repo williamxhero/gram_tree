@@ -316,18 +316,6 @@ abstract class AppLocalizations {
   /// **'{type} · 条目 {sequence}'**
   String syncItemIdentity(String type, int sequence);
 
-  /// No description provided for @syncResolveConflict.
-  ///
-  /// In zh, this message translates to:
-  /// **'查看并选择'**
-  String get syncResolveConflict;
-
-  /// No description provided for @syncConflictAdapterMissing.
-  ///
-  /// In zh, this message translates to:
-  /// **'此类型的选择入口暂不可用，内容已保留，请稍后再试。'**
-  String get syncConflictAdapterMissing;
-
   /// Current account's writes awaiting synchronization.
   ///
   /// In zh, this message translates to:

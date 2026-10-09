@@ -11,6 +11,7 @@ class RecipeDraft {
     required this.payload,
     this.accountId = '',
     this.formatVersion = 1,
+    this.baselineDetail,
   });
 
   final int formatVersion;
@@ -18,6 +19,7 @@ class RecipeDraft {
   final String recipeKey;
   final String? baselineVersionId;
   final Map<String, dynamic> payload;
+  final Map<String, dynamic>? baselineDetail;
 
   Map<String, dynamic> toJson() => {
     'format_version': formatVersion,
@@ -25,6 +27,7 @@ class RecipeDraft {
     'recipe_key': recipeKey,
     'baseline_version_id': baselineVersionId,
     'payload': payload,
+    if (baselineDetail != null) 'baseline_detail': baselineDetail,
   };
 
   static RecipeDraft? fromJson(Object? value) {
@@ -45,6 +48,9 @@ class RecipeDraft {
         recipeKey: key,
         baselineVersionId: baseline as String?,
         payload: Map<String, dynamic>.from(payload),
+        baselineDetail: value['baseline_detail'] is Map
+            ? Map<String, dynamic>.from(value['baseline_detail'] as Map)
+            : null,
       );
     } catch (_) {
       return null;
@@ -59,24 +65,62 @@ class RecipeDraftStore {
   final LocalStore _store;
   Future<void> _writeTail = Future<void>.value();
 
-  String keyFor(String recipeKey, {String accountId = ''}) =>
-      '$keyPrefix$accountId:$recipeKey';
+  String keyFor(
+    String recipeKey, {
+    String accountId = '',
+    String? baselineVersionId,
+  }) =>
+      '$keyPrefix$accountId:$recipeKey${baselineVersionId == null ? '' : ':$baselineVersionId'}';
+
+  RecipeDraft? readLatest({required String recipeKey, String accountId = ''}) {
+    final raw = _store.getString(keyFor(recipeKey, accountId: accountId));
+    if (raw == null) return null;
+    try {
+      final draft = RecipeDraft.fromJson(jsonDecode(raw));
+      return draft?.recipeKey == recipeKey && draft?.accountId == accountId
+          ? draft
+          : null;
+    } catch (_) {
+      return null;
+    }
+  }
 
   /// Writes are serialized so a delayed platform write cannot reorder a newer
   /// draft behind an older one.
-  Future<void> save(RecipeDraft draft) => _enqueue(
-    () => _store.setString(
-      keyFor(draft.recipeKey, accountId: draft.accountId),
-      jsonEncode(draft.toJson()),
-    ),
-  );
+  Future<void> save(RecipeDraft draft) => _enqueue(() async {
+    final encoded = jsonEncode(draft.toJson());
+    await _store.setString(
+      keyFor(
+        draft.recipeKey,
+        accountId: draft.accountId,
+        baselineVersionId: draft.baselineVersionId,
+      ),
+      encoded,
+    );
+    // The recipe pointer permits local-first recovery without a remote lookup;
+    // baseline-specific copies remain separate when a newer version is edited.
+    if (draft.baselineVersionId != null) {
+      await _store.setString(
+        keyFor(draft.recipeKey, accountId: draft.accountId),
+        encoded,
+      );
+    }
+  });
 
   RecipeDraft? read({
     required String recipeKey,
     String? baselineVersionId,
     String accountId = '',
   }) {
-    final raw = _store.getString(keyFor(recipeKey, accountId: accountId));
+    final raw =
+        _store.getString(
+          keyFor(
+            recipeKey,
+            accountId: accountId,
+            baselineVersionId: baselineVersionId,
+          ),
+        ) ??
+        _store.getString(keyFor(recipeKey, accountId: accountId));
     if (raw == null) return null;
     try {
       final draft = RecipeDraft.fromJson(jsonDecode(raw));
@@ -92,8 +136,20 @@ class RecipeDraftStore {
     }
   }
 
-  Future<void> discard(String recipeKey, {String accountId = ''}) =>
-      _enqueue(() => _store.remove(keyFor(recipeKey, accountId: accountId)));
+  Future<void> discard(
+    String recipeKey, {
+    String accountId = '',
+    String? baselineVersionId,
+  }) => _enqueue(() async {
+    final latest = readLatest(recipeKey: recipeKey, accountId: accountId);
+    final baseline = baselineVersionId ?? latest?.baselineVersionId;
+    await _store.remove(
+      keyFor(recipeKey, accountId: accountId, baselineVersionId: baseline),
+    );
+    if (latest?.baselineVersionId == baseline) {
+      await _store.remove(keyFor(recipeKey, accountId: accountId));
+    }
+  });
 
   Future<void> _enqueue(Future<void> Function() operation) {
     final result = _writeTail.then((_) => operation());

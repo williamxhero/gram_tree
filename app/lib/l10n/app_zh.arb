@@ -42,8 +42,6 @@
   "syncOtherType": "离线写入",
   "syncItemIdentity": "{type} · 条目 {sequence}",
   "@syncItemIdentity": { "placeholders": { "type": { "type": "String" }, "sequence": { "type": "int" } } },
-  "syncResolveConflict": "查看并选择",
-  "syncConflictAdapterMissing": "此类型的选择入口暂不可用，内容已保留，请稍后再试。",
   "syncPendingCount": "待同步 {count} 条",
   "@syncPendingCount": {
     "description": "Current account's writes awaiting synchronization.",

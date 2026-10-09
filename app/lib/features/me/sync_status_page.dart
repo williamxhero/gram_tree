@@ -131,11 +131,8 @@ class _SyncStatusPageState extends ConsumerState<SyncStatusPage> {
 String _typeLabel(QueueEntry entry, AppLocalizations l10n) =>
     switch (entry.write.writeType) {
       'experience.event' => l10n.syncEventType,
-      'recipe.save' ||
-      'recipe.version' ||
-      'recipe.draft' => l10n.syncRecipeType,
-      'personal_measure.fields' ||
-      'personal_measure.update' => l10n.syncMeasureType,
+      'recipe_version.save' => l10n.syncRecipeType,
+      'personal_measure.change' => l10n.syncMeasureType,
       _ => l10n.syncOtherType,
     };
 
@@ -154,6 +151,20 @@ String _diagnosis(QueueEntry entry, AppLocalizations l10n) {
     'dependency_not_arrived' ||
     'dependency_not_confirmed' => l10n.syncDependencyReason,
     'forbidden' ||
+    'reference_forbidden' ||
+    'recipe_not_writable' ||
+    'reference_dependency_required' ||
+    'reference_dependency_type' ||
+    'reference_dependency_mismatch' ||
+    'baseline_dependency_required' ||
+    'baseline_dependency_type' ||
+    'candidate_version_id_reused' ||
+    'resource_already_exists' ||
+    'measure_name_taken' ||
+    'dependency_resource_mismatch' ||
+    'server_fact_only' ||
+    'unknown_event_type' ||
+    'unsupported_type_version' ||
     'invalid_content' ||
     'owner_mismatch' ||
     'dependency_unavailable' ||

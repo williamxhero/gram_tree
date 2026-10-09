@@ -7,12 +7,14 @@ from typing import Literal, cast
 
 from fastapi import APIRouter, Request
 from pydantic import BaseModel, Field, ValidationError
+from redis import Redis
 from sqlalchemy import select, text
 
 from gramtree.accounts.deps import CurrentAuth
 from gramtree.core.errors import ERROR_RESPONSES, ApiError
 from gramtree.core.time import utcnow
-from gramtree.deps import SessionDep
+from gramtree.deps import RedisDep, SessionDep, SettingsDep
+from gramtree.events import sync_metrics
 from gramtree.events.sync_contract import (
     WriteConflict,
     WriteDeferred,
@@ -20,9 +22,12 @@ from gramtree.events.sync_contract import (
     WriteFailure,
     WriteResourceResult,
     WriteResult,
+    WriteTypeSpec,
 )
 from gramtree.events.sync_models import WriteFactOutbox, WriteReceipt
 from gramtree.events.sync_registry import REGISTERED_WRITES
+from gramtree.recipes import service as recipe_service
+from gramtree.recipes.sync_adapter import recipe_version_write_spec
 from gramtree.runtime_config import service as config_service
 
 router = APIRouter(prefix="/sync", tags=["sync"])
@@ -41,7 +46,12 @@ def _fingerprint(write: WriteEnvelope) -> str:
     return hashlib.sha256(raw.encode()).hexdigest()
 
 
-def _result(receipt: WriteReceipt, *, replay: bool = False) -> WriteResult:
+def _result(session: SessionDep, receipt: WriteReceipt, *, replay: bool = False) -> WriteResult:
+    # The fact bundle commits with the mutation. Replays report that original
+    # confirmation time, never the current request time or client device clock.
+    outbox = (
+        session.get(WriteFactOutbox, receipt.write_id) if receipt.status == "confirmed" else None
+    )
     return WriteResult(
         write_id=receipt.write_id,
         status=cast(
@@ -49,6 +59,7 @@ def _result(receipt: WriteReceipt, *, replay: bool = False) -> WriteResult:
             "already_processed" if replay and receipt.status == "confirmed" else receipt.status,
         ),
         reason_code=receipt.reason_code,
+        confirmed_at=outbox.created_at if outbox is not None else None,
         result=WriteResourceResult.model_validate(receipt.result)
         if receipt.status == "confirmed"
         else None,
@@ -56,12 +67,18 @@ def _result(receipt: WriteReceipt, *, replay: bool = False) -> WriteResult:
     )
 
 
-def _process(session: SessionDep, owner: uuid.UUID, write: WriteEnvelope) -> WriteResult:
+def _process(
+    session: SessionDep,
+    owner: uuid.UUID,
+    write: WriteEnvelope,
+    registrations: dict[str, WriteTypeSpec] | None = None,
+    redis: Redis | None = None,
+) -> WriteResult:
     # No identity-controlled receipt lookup, business lookup or content disclosure
     # happens before this check. Another account gets no result or existence hint.
     if write.owner_id != owner:
         return WriteResult(write_id=write.write_id, status="failed", reason_code="owner_mismatch")
-    spec = REGISTERED_WRITES.get(write.write_type)
+    spec = (registrations if registrations is not None else REGISTERED_WRITES).get(write.write_type)
     parsed = None
     validation_code = "unknown_write_type" if spec is None else None
     authorization_code = None
@@ -110,7 +127,7 @@ def _process(session: SessionDep, owner: uuid.UUID, write: WriteEnvelope) -> Wri
                 write_id=write.write_id, status="failed", reason_code="write_id_reused"
             )
         if receipt.status != "deferred":
-            result = _result(receipt, replay=True)
+            result = _result(session, receipt, replay=True)
             session.rollback()
             return result
     else:
@@ -132,7 +149,14 @@ def _process(session: SessionDep, owner: uuid.UUID, write: WriteEnvelope) -> Wri
         # receipt so dependents see failure, not an endless 'not arrived' wait.
         receipt.status, receipt.reason_code = "failed", validation_code
         session.commit()
-        return _result(receipt)
+        if redis is not None:
+            sync_metrics.record_outcome(
+                redis,
+                write_type=write.write_type,
+                status=receipt.status,
+                reason_code=receipt.reason_code,
+            )
+        return _result(session, receipt)
     assert spec is not None and parsed is not None
     try:
         dependencies = _dependencies(session, owner, write)
@@ -165,7 +189,14 @@ def _process(session: SessionDep, owner: uuid.UUID, write: WriteEnvelope) -> Wri
     # This is the only commit point. Any infrastructure failure rolls back the
     # business write, receipt AND outbox; response loss can safely replay all three.
     session.commit()
-    return _result(receipt)
+    if redis is not None:
+        sync_metrics.record_outcome(
+            redis,
+            write_type=write.write_type,
+            status=receipt.status,
+            reason_code=receipt.reason_code,
+        )
+    return _result(session, receipt)
 
 
 def _dependencies(
@@ -225,6 +256,8 @@ def upload_writes(
     body: WriteBatch,
     auth: CurrentAuth,
     session: SessionDep,
+    redis: RedisDep,
+    settings: SettingsDep,
 ) -> WriteBatchResponse:
     limit = config_service.get(session, "events.upload_max_items")
     if len(body.writes) > limit:
@@ -232,7 +265,26 @@ def upload_writes(
     max_bytes = config_service.get(session, "events.upload_max_bytes")
     if int(request.headers.get("content-length", "0")) > max_bytes:
         raise ApiError(422, "payload_too_large", "写入请求超过上限")
+    # Request-local dependencies must not be captured in the global registry:
+    # concurrent app instances may have different safety settings or Redis clients.
+    registrations = {
+        **REGISTERED_WRITES,
+        "recipe_version.save": recipe_version_write_spec(settings, redis),
+    }
     results = []
     for write in body.writes:
-        results.append(_process(session, auth.user.id, write))
+        result = _process(session, auth.user.id, write, registrations, redis)
+        results.append(result)
+        sync_metrics.record_attempt(
+            redis,
+            write_type=write.write_type,
+            status=result.status,
+            reason_code=result.reason_code,
+        )
+    if any(
+        write.write_type == "recipe_version.save"
+        and result.status in ("confirmed", "already_processed")
+        for write, result in zip(body.writes, results, strict=True)
+    ):
+        recipe_service._drain_save_events(session, redis, auth.user)
     return WriteBatchResponse(results=results)

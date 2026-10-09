@@ -19,6 +19,8 @@ import '../../recipes/decimal_rounding.dart';
 import '../../recipes/measure_display.dart';
 import '../../recipes/personal_measure_repository.dart';
 import '../../recipes/recipe_draft.dart';
+import '../../recipes/offline_recipe_repository.dart';
+import '../../events/event_uploader.dart';
 import '../../recipes/recipe_repository.dart';
 import '../../recipes/recipe_snapshot.dart';
 import '../../recipes/recipe_snapshot_provider.dart';
@@ -45,7 +47,39 @@ import '../../widgets/empty_state.dart';
 import '../../util/ids.dart';
 
 final myRecipesProvider = FutureProvider.autoDispose<RecipeList>((ref) async {
-  return ref.watch(recipeRepositoryProvider).listPage();
+  // Wait for the initial projection before subscribing to subsequent changes;
+  // otherwise its loading-to-data transition issues the first HTTP page twice.
+  await ref.watch(localRecipeVersionsProvider.future);
+  final local =
+      ref.watch(localRecipeVersionsProvider).value ??
+      const <LocalRecipeVersion>[];
+  RecipeList page;
+  try {
+    page = await ref.watch(recipeRepositoryProvider).listPage();
+  } catch (_) {
+    if (local.isEmpty) rethrow;
+    page = RecipeList(items: const []);
+  }
+  final byRecipe = {for (final item in page.items) item.id: item};
+  for (final version in local) {
+    if (!version.pending && byRecipe.containsKey(version.detail.id)) continue;
+    final detail = version.detail;
+    byRecipe[detail.id] = RecipeListItem(
+      id: detail.id,
+      dish: detail.dish,
+      visibility: RecipeListItemVisibilityEnum.private,
+      versionNumber: detail.version.versionNumber,
+      servings: detail.version.snapshot.servings,
+      difficulty: detail.version.snapshot.difficulty,
+      totalTimeSeconds: detail.version.derived.totalTimeSeconds,
+      activeTimeSeconds: detail.version.derived.activeTimeSeconds,
+      updatedAt: detail.updatedAt,
+    );
+  }
+  return RecipeList(
+    items: byRecipe.values.toList(),
+    nextCursor: page.nextCursor,
+  );
 });
 
 class RecipeListPage extends ConsumerStatefulWidget {
@@ -91,6 +125,13 @@ class _RecipeListPageState extends ConsumerState<RecipeListPage> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final recipes = ref.watch(myRecipesProvider);
+    final localVersions =
+        ref.watch(localRecipeVersionsProvider).value ??
+        const <LocalRecipeVersion>[];
+    final statuses = {
+      for (final version in localVersions)
+        if (version.pending) version.detail.id: version.status,
+    };
     return Scaffold(
       appBar: AppBar(title: Text(l10n.myRecipes)),
       body: recipes.when(
@@ -127,11 +168,8 @@ class _RecipeListPageState extends ConsumerState<RecipeListPage> {
                       key: ValueKey('recipe-card-${item.id}'),
                       title: Text(item.dish.name),
                       subtitle: Text(
-                        l10n.recipeListSummary(
-                          item.versionNumber,
-                          item.servings,
-                          _minutes(item.totalTimeSeconds),
-                        ),
+                        '${l10n.recipeListSummary(item.versionNumber, item.servings, _minutes(item.totalTimeSeconds))}'
+                        '${statuses[item.id] == null ? '' : '\n${statuses[item.id]}'}',
                       ),
                       trailing: const Icon(Icons.chevron_right),
                       onTap: () => context.push('/recipes/${item.id}'),
@@ -198,6 +236,7 @@ class RecipeEditorPage extends ConsumerStatefulWidget {
 class _RecipeEditorPageState extends ConsumerState<RecipeEditorPage> {
   late RecipeForm _form;
   late final RecipeDraftStore _draftStore;
+  late final String _editorAccountId;
   RecipeDetail? _loaded;
   RecipeDraft? _draft;
   String? _error;
@@ -236,11 +275,14 @@ class _RecipeEditorPageState extends ConsumerState<RecipeEditorPage> {
       (widget.generation == null
           ? 'new'
           : 'ai-${widget.generation!.requestId}');
-  String get _accountId => ref.read(authProvider).value?.id ?? 'anonymous';
+  String get _accountId => _editorAccountId;
+  bool get _sameEditorAccount =>
+      (ref.read(authProvider).value?.id ?? 'anonymous') == _editorAccountId;
 
   @override
   void initState() {
     super.initState();
+    _editorAccountId = ref.read(authProvider).value?.id ?? 'anonymous';
     _draftStore = RecipeDraftStore(ref.read(localStoreProvider));
     final generated = widget.generation?.draft?.recipe;
     _form = RecipeForm(dishName: '');
@@ -260,10 +302,44 @@ class _RecipeEditorPageState extends ConsumerState<RecipeEditorPage> {
   Future<void> _load() async {
     try {
       if (widget.recipeId != null) {
-        final repo = ref.read(recipeRepositoryProvider);
-        _loaded = widget.versionId == null
-            ? await repo.get(widget.recipeId!)
-            : await repo.getVersion(widget.recipeId!, widget.versionId!);
+        // Resolve retained saves and the immutable editing baseline locally
+        // before any HTTP. A recovery draft keeps its original baseline even
+        // when the server or the last-viewed execution snapshot has moved on.
+        final account = _accountId;
+        final local = await ref
+            .read(offlineRecipeRepositoryProvider)
+            ?.read(widget.recipeId!, versionId: widget.versionId);
+        final recovery = widget.versionId == null
+            ? _draftStore.readLatest(recipeKey: _recipeKey, accountId: account)
+            : _draftStore.read(
+                recipeKey: _recipeKey,
+                accountId: account,
+                baselineVersionId: widget.versionId,
+              );
+        final recoveredBaseline = recovery?.baselineDetail == null
+            ? null
+            : RecipeDetail.fromJson(recovery!.baselineDetail!);
+        if (recoveredBaseline != null &&
+            recoveredBaseline.id == widget.recipeId &&
+            recoveredBaseline.author.id == account &&
+            recoveredBaseline.version.id == recovery?.baselineVersionId) {
+          _loaded = recoveredBaseline;
+        } else if (local != null) {
+          _loaded = local.detail;
+        } else {
+          _loaded =
+              (await ref
+                      .read(recipeSnapshotStoreProvider)
+                      ?.read(widget.recipeId!, versionId: widget.versionId))
+                  ?.detail;
+        }
+        if (_loaded == null) {
+          final repo = ref.read(recipeRepositoryProvider);
+          _loaded = widget.versionId == null
+              ? await repo.get(widget.recipeId!)
+              : await repo.getVersion(widget.recipeId!, widget.versionId!);
+        }
+        if (!mounted || !_sameEditorAccount) return;
         _form = RecipeForm.fromSnapshot(
           _loaded!.version.snapshot,
           _loaded!.dish.name,
@@ -282,7 +358,13 @@ class _RecipeEditorPageState extends ConsumerState<RecipeEditorPage> {
       if (_draft != null && mounted) {
         WidgetsBinding.instance.addPostFrameCallback((_) => _askRestore());
       }
-    } catch (_) {
+    } catch (error, stack) {
+      developer.log(
+        'recipe editor baseline load failed',
+        name: 'recipe_editor',
+        error: error,
+        stackTrace: stack,
+      );
       _loadFailed = true;
     } finally {
       if (mounted) setState(() => _loading = false);
@@ -346,6 +428,7 @@ class _RecipeEditorPageState extends ConsumerState<RecipeEditorPage> {
         accountId: _accountId,
         recipeKey: _recipeKey,
         baselineVersionId: _loaded?.version.id,
+        baselineDetail: _loaded?.toJson(),
         payload: _form.toDraft(),
       );
       _draftWrite = _draftStore.save(draft);
@@ -360,6 +443,7 @@ class _RecipeEditorPageState extends ConsumerState<RecipeEditorPage> {
       accountId: _accountId,
       recipeKey: _recipeKey,
       baselineVersionId: _loaded?.version.id,
+      baselineDetail: _loaded?.toJson(),
       payload: _form.toDraft(),
     );
     final write = _draftStore.save(draft);
@@ -377,7 +461,11 @@ class _RecipeEditorPageState extends ConsumerState<RecipeEditorPage> {
     } catch (_) {
       // A failed local write must not prevent leaving the editor.
     }
-    await _draftStore.discard(_recipeKey, accountId: _accountId);
+    await _draftStore.discard(
+      _recipeKey,
+      accountId: _accountId,
+      baselineVersionId: _loaded?.version.id,
+    );
     _draftWrite = null;
     _draft = null;
   }
@@ -652,7 +740,7 @@ class _RecipeEditorPageState extends ConsumerState<RecipeEditorPage> {
 
   Future<void> _save() async {
     final l10n = AppLocalizations.of(context);
-    if (!_validate()) return;
+    if (_saving || !_sameEditorAccount || !_validate()) return;
     setState(() {
       _saving = true;
       _error = null;
@@ -660,10 +748,38 @@ class _RecipeEditorPageState extends ConsumerState<RecipeEditorPage> {
     try {
       await _flushDraft();
       final repo = ref.read(recipeRepositoryProvider);
-      // Always re-check immediately before saving. A result obtained while the
-      // form was unchanged is valid; a failed/stale check must never become a
-      // way around the server's immutable safety gate.
-      final safety = await repo.checkSafety(_form);
+      final localRepository = ref.read(offlineRecipeRepositoryProvider);
+      final localBaseline = _loaded == null
+          ? null
+          : await localRepository?.read(
+              _loaded!.id,
+              versionId: _loaded!.version.id,
+            );
+      if (_loaded != null &&
+          widget.generation == null &&
+          (ref.read(offlineSimulationProvider) ||
+              ref.read(apiReachabilityProvider) ==
+                  ApiReachability.unavailable ||
+              localBaseline != null)) {
+        await _saveLocalVersion();
+        return;
+      }
+      // Offline candidates are retained without asserting a safety result. The
+      // sync mutation uses the same authoritative safety gate before confirming.
+      // A failed safety probe is safe to queue; an ambiguous online mutation
+      // response is not, since it might already have created a version.
+      late final RecipeSafetyResult safety;
+      try {
+        safety = await repo.checkSafety(_form);
+      } catch (error) {
+        if (_loaded != null &&
+            widget.generation == null &&
+            ApiFailure.from(error).code == 'network') {
+          await _saveLocalVersion();
+          return;
+        }
+        rethrow;
+      }
       if (!mounted) return;
       setState(() {
         _safetyResult = safety;
@@ -706,6 +822,25 @@ class _RecipeEditorPageState extends ConsumerState<RecipeEditorPage> {
     } finally {
       if (mounted) setState(() => _saving = false);
     }
+  }
+
+  Future<void> _saveLocalVersion() async {
+    final repository = ref.read(offlineRecipeRepositoryProvider);
+    final baseline = _loaded;
+    if (!_sameEditorAccount ||
+        repository == null ||
+        baseline == null ||
+        repository.ownerId != _editorAccountId) {
+      throw StateError('请重新登录后保存，本机修改仍然保留');
+    }
+    final saved = await repository.save(baseline, _form);
+    await _discardDraft();
+    if (!mounted || !_sameEditorAccount) return;
+    ref.invalidate(myRecipesProvider);
+    unawaited(ref.read(eventUploaderProvider).triggerUpload());
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(saved.status)));
+    context.pushReplacement('/recipes/${saved.detail.id}');
   }
 
   bool _validate() {
@@ -872,6 +1007,10 @@ class _RecipeEditorPageState extends ConsumerState<RecipeEditorPage> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
+    final account = ref.watch(authProvider).value?.id ?? 'anonymous';
+    if (account != _editorAccountId) {
+      return const Scaffold(body: Center(child: Text('账号已切换，修改保留在原账号中。')));
+    }
     if (_loading) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
@@ -2123,6 +2262,7 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
   String? _lastCapture;
   String? _capacityMessage;
   bool _offline = false;
+  LocalRecipeVersion? _localVersion;
   int _loadGeneration = 0;
   String? _viewAccountId;
 
@@ -2130,6 +2270,13 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
   void initState() {
     super.initState();
     _viewAccountId = ref.read(authProvider).value?.id;
+    ref.listenManual(localRecipeVersionsProvider, (_, next) {
+      if (mounted &&
+          next.hasValue &&
+          next.value!.any((version) => version.detail.id == widget.recipeId)) {
+        unawaited(_load());
+      }
+    });
     ref.listenManual(authProvider, (_, next) {
       if (next.isLoading) return;
       final accountId = next.value?.id;
@@ -2146,6 +2293,7 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
         _lastCapture = null;
         _capacityMessage = null;
         _offline = false;
+        _localVersion = null;
         _targetServings = null;
         _targetMold = null;
         _measures = const [];
@@ -2200,6 +2348,7 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
         _frozenRender = null;
         _frozenSnapshot = null;
         _offline = false;
+        _localVersion = null;
         _capacityMessage = null;
         _measures = const [];
         _densities = const {};
@@ -2210,6 +2359,22 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
       });
     }
     try {
+      final local = await ref
+          .read(offlineRecipeRepositoryProvider)
+          ?.read(
+            widget.recipeId,
+            versionId: widget.versionId,
+            pendingOnly: true,
+          );
+      if (!current()) return;
+      if (local != null) {
+        setState(() {
+          _localVersion = local;
+          _detail = local.detail;
+          _loadedAccountId = accountId;
+        });
+        return;
+      }
       if (ref.read(apiReachabilityProvider) == ApiReachability.unavailable &&
           !await ref.read(apiReachabilityProvider.notifier).check()) {
         throw const OnlineFeatureUnavailable(ApiReachability.unavailable);
@@ -2249,6 +2414,19 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
             () => _error = code == 'not_found' ? 'not_found' : 'load_error',
           );
         }
+        return;
+      }
+      final local = await ref
+          .read(offlineRecipeRepositoryProvider)
+          ?.read(widget.recipeId, versionId: widget.versionId);
+      if (!current()) return;
+      if (local != null) {
+        setState(() {
+          _localVersion = local;
+          _detail = local.detail;
+          _loadedAccountId = accountId;
+          _offline = true;
+        });
         return;
       }
       final frozen = await cache?.read(
@@ -2541,6 +2719,44 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
     final snapshot = detail.version.snapshot;
+    final localVersion = _localVersion;
+    if (localVersion != null) {
+      // A local candidate is a private business version, not a frozen execution
+      // snapshot. Show author amounts without inventing newer conversion or
+      // policy evidence; server-confirmed values replace it atomically.
+      return Scaffold(
+        appBar: AppBar(title: Text(detail.dish.name)),
+        body: ListView(
+          padding: const EdgeInsets.all(20),
+          children: [
+            Text(
+              localVersion.status,
+              key: const ValueKey('offline-recipe-status'),
+            ),
+            Text(
+              '第 ${detail.version.versionNumber} 版 · ${snapshot.servings} 份 · 仅自己可见',
+            ),
+            if (localVersion.pending)
+              const Text('修改已保存在本机；安全检查与派生信息将在联网确认后更新。'),
+            if (snapshot.description != null) Text(snapshot.description!),
+            for (final ingredient
+                in snapshot.ingredients ?? const <RecipeIngredient>[])
+              Text(
+                '${ingredient.displayName} ${ingredient.quantity} ${ingredient.unit}',
+              ),
+            for (final step in snapshot.steps ?? const <RecipeStep>[])
+              Text(step.instruction),
+            FilledButton(
+              key: const ValueKey('offline-recipe-edit'),
+              onPressed: () => context.push(
+                '/recipes/${detail.id}/edit?versionId=${detail.version.id}',
+              ),
+              child: const Text('继续手工编辑'),
+            ),
+          ],
+        ),
+      );
+    }
     if (offline && _frozenRender == null) {
       return Scaffold(
         appBar: AppBar(title: Text(detail.dish.name)),

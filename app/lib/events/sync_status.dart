@@ -76,7 +76,11 @@ final _syncStatusStreamProvider = StreamProvider<SyncStatus>((ref) async* {
   Future<SyncStatus> snapshot() async {
     final entries = await queue.entries(ownerId: owner);
     final successes =
-        entries.map((e) => e.confirmedAt).whereType<DateTime>().toList()
+        entries
+            .where((entry) => entry.state == WriteState.confirmed)
+            .map((entry) => entry.confirmedAt)
+            .whereType<DateTime>()
+            .toList()
           ..sort();
     return SyncStatus(
       ownerId: owner,

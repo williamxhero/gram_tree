@@ -7,6 +7,7 @@ from typing import Any
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy.orm import Session
 
+from gramtree.core.ids import IdV4
 from gramtree.events import service, validation
 from gramtree.events.models import Event
 from gramtree.events.sync_contract import (
@@ -17,6 +18,7 @@ from gramtree.events.sync_contract import (
     WriteResourceResult,
     WriteTypeSpec,
 )
+from gramtree.recipes.measure_sync import measure_write_spec
 from gramtree.recipes.models import Recipe, RecipeVersion
 from gramtree.runtime_config import service as config_service
 
@@ -30,6 +32,7 @@ class ExperiencePayload(BaseModel):
     app_version: str = Field(min_length=1, max_length=32)
     correlation: dict[str, str] = Field(default_factory=dict)
     content: dict[str, Any] = Field(default_factory=dict)
+    recipe_version_write_id: IdV4 | None = None
 
 
 def _validate(payload: dict[str, Any]) -> BaseModel:
@@ -63,12 +66,30 @@ def _resolve(
     payload: BaseModel,
     dependencies: dict[uuid.UUID, WriteResourceResult],
 ) -> BaseModel:
-    # Existing business correlations are resource IDs. Dependency IDs identify
-    # writes only: they must never be silently substituted into correlations.
     parsed = ExperiencePayload.model_validate(payload)
+    if parsed.recipe_version_write_id is not None:
+        producer = dependencies.get(parsed.recipe_version_write_id)
+        if producer is None:
+            raise WriteFailure("reference_dependency_required")
+        if producer.resource_type != "recipe.version":
+            raise WriteFailure("reference_dependency_type")
+        explicit = parsed.correlation.get("recipe_version_id")
+        if explicit is not None and uuid.UUID(explicit) != producer.resource_id:
+            raise WriteFailure("reference_dependency_mismatch")
+        parsed = parsed.model_copy(
+            update={
+                "correlation": {
+                    **parsed.correlation,
+                    "recipe_version_id": str(producer.resource_id),
+                }
+            }
+        )
     version_id = parsed.correlation.get("recipe_version_id")
     if version_id and session.get(RecipeVersion, uuid.UUID(version_id)) is None:
         raise WriteDeferred("reference_not_arrived")
+    # Resolution must reauthorize the exact mapped resource, not the current
+    # recipe version or an arbitrary client-declared identity.
+    _authorize(session, owner, parsed)
     return parsed
 
 
@@ -126,7 +147,13 @@ def _apply(
                 device_time_suspicious=abs((item.device_time - now).total_seconds()) > threshold,
             )
         )
-    result = WriteResourceResult(resource_type="experience.event", resource_id=item.id)
+    result = WriteResourceResult(
+        resource_type="experience.event",
+        resource_id=item.id,
+        values={"correlation": parsed.correlation}
+        if parsed.recipe_version_write_id is not None
+        else {},
+    )
     return WriteApplication(result=result, facts=[result.model_dump(mode="json")])
 
 
@@ -139,6 +166,8 @@ def register_write_type(spec: WriteTypeSpec) -> None:
         raise ValueError(f"write type already registered: {spec.write_type}")
     REGISTERED_WRITES[spec.write_type] = spec
 
+
+register_write_type(measure_write_spec)
 
 register_write_type(
     WriteTypeSpec(

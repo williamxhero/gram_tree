@@ -324,9 +324,7 @@ class EventUploader {
                 entry.write.id,
                 owner,
                 result.result!.toJson(),
-                confirmedAt: DateTime.tryParse(
-                  result.toJson()['confirmed_at'] as String? ?? '',
-                ),
+                confirmedAt: DateTime.tryParse(result.confirmedAt ?? ''),
               );
               byId[entry.write.id] = entry.change(state: WriteState.confirmed);
               progressed = true;

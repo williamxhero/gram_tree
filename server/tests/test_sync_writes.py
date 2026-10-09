@@ -79,14 +79,10 @@ def test_expired_owner_can_refresh_and_replay_without_transferring_old_write(api
     first = submit(api, alice, original)[0]
     assert first["status"] == "confirmed"
     api.clock.advance(minutes=31)
-    expired = api.client.post(
-        "/v1/sync/writes", headers=bearer(alice), json={"writes": [original]}
-    )
+    expired = api.client.post("/v1/sync/writes", headers=bearer(alice), json={"writes": [original]})
     assert expired.status_code == 401
     assert expired.json()["error"]["code"] == "token_expired"
-    refreshed = api.client.post(
-        "/v1/auth/refresh", json={"refresh_token": alice["refresh_token"]}
-    )
+    refreshed = api.client.post("/v1/auth/refresh", json={"refresh_token": alice["refresh_token"]})
     assert refreshed.status_code == 200
     renewed = refreshed.json()
     assert renewed["refresh_token"] != alice["refresh_token"]

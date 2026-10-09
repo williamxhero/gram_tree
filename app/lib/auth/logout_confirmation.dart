@@ -39,19 +39,18 @@ Future<void> confirmLogout(BuildContext context, WidgetRef ref) async {
           );
         }
         return AlertDialog(
+          scrollable: true,
           title: count == 0 ? null : Text(l10n.logoutUnfinishedCount(count)),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(l10n.signOutConfirm),
-                if (count != 0) ...[
-                  const SizedBox(height: 12),
-                  Text(l10n.logoutRetainedExplanation),
-                ],
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(l10n.signOutConfirm),
+              if (count != 0) ...[
+                const SizedBox(height: 12),
+                Text(l10n.logoutRetainedExplanation),
               ],
-            ),
+            ],
           ),
           actions: [
             if (count != 0)

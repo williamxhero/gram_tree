@@ -49,9 +49,7 @@ class PersonalMeasuresPage extends ConsumerWidget {
                 Text(l10n.personalMeasuresOffline),
               FilledButton.icon(
                 key: const ValueKey('measure-add'),
-                onPressed: ref.read(personalMeasureRepositoryProvider).offline
-                    ? null
-                    : () => _edit(context, ref),
+                onPressed: () => _edit(context, ref),
                 icon: const Icon(Icons.add),
                 label: Text(l10n.personalMeasuresAdd),
               ),
@@ -67,10 +65,7 @@ class PersonalMeasuresPage extends ConsumerWidget {
                   conclusion: Text(item.name),
                   conclusionSemanticsText:
                       '${item.name}，${_kindLabel(item.kind.value, l10n)}',
-                  onTapConclusion:
-                      ref.read(personalMeasureRepositoryProvider).offline
-                      ? null
-                      : () => _edit(context, ref, item),
+                  onTapConclusion: () => _edit(context, ref, item),
                   standardExtra: Row(
                     children: [
                       Expanded(
@@ -82,21 +77,94 @@ class PersonalMeasuresPage extends ConsumerWidget {
                           ),
                         ),
                       ),
+                      if (ref
+                          .read(personalMeasureRepositoryProvider)
+                          .pendingIds
+                          .contains(item.id))
+                        const Text('待同步'),
+                      IconButton(
+                        key: ValueKey('measure-history-${item.id}'),
+                        tooltip: '修改历史',
+                        icon: const Icon(Icons.history),
+                        onPressed: () => _history(context, ref, item),
+                      ),
                       IconButton(
                         key: ValueKey('measure-delete-${item.id}'),
                         tooltip: l10n.personalMeasuresDeleteTooltip,
                         icon: const Icon(Icons.delete_outline),
-                        onPressed:
-                            ref.read(personalMeasureRepositoryProvider).offline
-                            ? null
-                            : () => _delete(context, ref, item),
+                        onPressed: () => _delete(context, ref, item),
                       ),
                     ],
+                  ),
+                ),
+              for (final item
+                  in ref
+                      .read(personalMeasureRepositoryProvider)
+                      .deletedMeasures
+                      .values)
+                TextButton.icon(
+                  key: ValueKey('measure-history-${item.id}'),
+                  onPressed: () => _history(context, ref, item),
+                  icon: const Icon(Icons.history),
+                  label: Text(
+                    '${item.name} · 已删除${ref.read(personalMeasureRepositoryProvider).pendingIds.contains(item.id) ? '（待同步）' : ''} · 修改历史',
                   ),
                 ),
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  Future<void> _history(
+    BuildContext context,
+    WidgetRef ref,
+    PersonalMeasureOut item,
+  ) async {
+    final future = ref.read(personalMeasureRepositoryProvider).history(item.id);
+    await showDialog<void>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('${item.name} · 修改历史'),
+        content: SizedBox(
+          width: 440,
+          child: FutureBuilder<List<Map<String, dynamic>>>(
+            future: future,
+            builder: (context, snapshot) {
+              if (snapshot.hasError) {
+                return Text(ApiFailure.from(snapshot.error!).message);
+              }
+              if (!snapshot.hasData) {
+                return const Center(child: CircularProgressIndicator());
+              }
+              final rows = snapshot.data!;
+              if (rows.isEmpty) return const Text('暂无修改记录');
+              return SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    for (final row in rows)
+                      ListTile(
+                        title: Text(
+                          '${_historyField(row['field'] as String)}：${row['old_value'] ?? '未设置'} → ${row['new_value'] ?? '清空'}',
+                        ),
+                        subtitle: Text(
+                          '${_historyOutcome(row['outcome'] as String)} · ${row['device_time']}',
+                        ),
+                      ),
+                  ],
+                ),
+              );
+            },
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('关闭'),
+          ),
+        ],
       ),
     );
   }
@@ -149,6 +217,23 @@ class PersonalMeasuresPage extends ConsumerWidget {
     }
   }
 }
+
+String _historyField(String field) => switch (field) {
+  'name' => '名称',
+  'kind' => '类型',
+  'capacity_ml' => '容量（毫升）',
+  'deleted' => '删除',
+  _ => field,
+};
+
+String _historyOutcome(String outcome) => switch (outcome) {
+  'won' => '已生效',
+  'lost' => '未生效：另一设备的较新修改优先',
+  'unchanged' => '值未改变',
+  'tombstoned' => '未生效：量具已删除',
+  'pending' => '待同步',
+  _ => outcome,
+};
 
 String _kindLabel(String kind, AppLocalizations l10n) => switch (kind) {
   'bowl' => l10n.personalMeasuresBowl,

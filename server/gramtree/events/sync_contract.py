@@ -36,12 +36,15 @@ class WriteEnvelope(BaseModel):
 class WriteResourceResult(BaseModel):
     resource_type: str
     resource_id: IdV4
+    # Authoritative business projection; omit empty values for legacy adapters.
+    values: dict[str, Any] = Field(default_factory=dict, exclude_if=lambda value: not value)
 
 
 class WriteResult(BaseModel):
     write_id: IdV4
     status: Literal["confirmed", "already_processed", "deferred", "conflict", "failed"]
     reason_code: str | None = None
+    confirmed_at: Timestamp | None = None
     result: WriteResourceResult | None = None
     # preserve_both handlers supply both copies here; never overwrite on conflict.
     conflict: dict[str, Any] | None = None

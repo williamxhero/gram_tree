@@ -192,9 +192,7 @@ class AuthController extends AsyncNotifier<UserOut?> {
     if (captured == null || !_session.matches(captured)) return;
     try {
       await _api.getAuthApi().logout(
-        headers: {
-          'Authorization': 'Bearer ${_session.current!.accessToken}',
-        },
+        headers: {'Authorization': 'Bearer ${_session.current!.accessToken}'},
         extra: {
           'auth_owner_id': captured.ownerId,
           'auth_identity_epoch': captured.epoch,

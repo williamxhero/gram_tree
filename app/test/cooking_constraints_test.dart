@@ -216,11 +216,47 @@ void main() {
         },
       ),
     );
-    server.on('PATCH', '/v1/me/measures/55555555-5555-4555-8555-555555555555', (
-      request,
-    ) {
-      measure = {...measure, ...Map<String, dynamic>.from(request.body as Map)};
-      return (200, measure);
+    server.on('POST', '/v1/sync/writes', (request) {
+      return (
+        200,
+        {
+          'results': [
+            for (final write in (request.body as Map)['writes'] as List)
+              (() {
+                if (write['write_type'] == 'personal_measure.change') {
+                  final fields = write['payload']['fields'] as Map;
+                  measure = {
+                    ...measure,
+                    for (final field in fields.entries)
+                      field.key as String: (field.value as Map)['value'],
+                  };
+                  return {
+                    'write_id': write['write_id'],
+                    'status': 'confirmed',
+                    'result': {
+                      'resource_type': 'personal_measure',
+                      'resource_id': measure['id'],
+                      'values': {
+                        ...measure,
+                        'deleted': false,
+                        'applied': true,
+                        'field_outcomes': {'capacity_ml': 'won'},
+                      },
+                    },
+                  };
+                }
+                return {
+                  'write_id': write['write_id'],
+                  'status': 'confirmed',
+                  'result': {
+                    'resource_type': 'experience.event',
+                    'resource_id': write['write_id'],
+                  },
+                };
+              })(),
+          ],
+        },
+      );
     });
     await pumpApp(tester, env: TestEnv.signedIn(server: server));
     await openTaste(tester);
@@ -237,12 +273,30 @@ void main() {
       '15',
     );
     await tapVisible(tester, find.byKey(const ValueKey('measure-save')));
+    final measureWrites = server
+        .calls('POST', '/v1/sync/writes')
+        .expand(
+          (request) => ((request.body as Map)['writes'] as List).cast<Map>(),
+        )
+        .where((write) => write['write_type'] == 'personal_measure.change')
+        .toList();
+    expect(measureWrites, hasLength(1));
+    expect(measureWrites.single['owner_id'], server.user.id);
+    expect(measureWrites.single['payload']['resource_id'], measure['id']);
+    expect(measureWrites.single['payload']['action'], 'update');
+    expect((measureWrites.single['payload']['fields'] as Map).keys, [
+      'capacity_ml',
+    ]);
     expect(
-      server.calls(
-        'PATCH',
-        '/v1/me/measures/55555555-5555-4555-8555-555555555555',
-      ),
-      hasLength(1),
+      measureWrites.single['payload']['fields']['capacity_ml']['value'],
+      15.0,
+    );
+    expect(
+      DateTime.parse(
+        measureWrites.single['payload']['fields']['capacity_ml']['device_time']
+            as String,
+      ).isUtc,
+      isTrue,
     );
     await goBack(tester);
     await tester.pumpAndSettle();
@@ -254,6 +308,7 @@ void main() {
         .expand(
           (request) => ((request.body as Map)['writes'] as List).cast<Map>(),
         )
+        .where((write) => write['write_type'] == 'experience.event')
         .map((write) {
           expect(write['write_type'], 'experience.event');
           expect(write['owner_id'], server.user.id);

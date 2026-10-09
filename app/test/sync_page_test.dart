@@ -15,6 +15,7 @@ import 'package:gram_tree/events/event_queue_mobile.dart' as mobile;
 import 'package:gram_tree/events/event_uploader.dart';
 import 'package:gram_tree/events/sync_status.dart';
 import 'package:gram_tree/l10n/app_localizations.dart';
+import 'package:gram_tree/network/reachability.dart';
 import 'package:gram_tree/ui_protocol/source_mark.dart';
 
 import 'event_queue_test_executor.dart';
@@ -905,8 +906,16 @@ void main() {
       await tester.tap(find.text('已验证'));
       await tester.pumpAndSettle();
       expect(find.text('待同步 1 条'), findsOneWidget);
+      // Restoring the simulated transport also restores the shared API probe;
+      // otherwise the auth boundary correctly refuses to refresh while offline.
+      env.reachability.reachable = true;
       container.read(offlineSimulationProvider.notifier).set(false);
+      await container.read(apiReachabilityProvider.notifier).check();
       await tester.pumpAndSettle();
+      expect(
+        server.calls('POST', '/v1/auth/refresh'),
+        hasLength(delayedKind == 'confirmation' ? 0 : 1),
+      );
       final original = server.calls('POST', '/v1/sync/writes').single;
       final write = ((original.body as Map)['writes'] as List).single as Map;
       server.user = UserOut.fromJson({

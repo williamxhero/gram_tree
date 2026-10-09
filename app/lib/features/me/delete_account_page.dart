@@ -8,6 +8,7 @@ import '../../auth/session.dart';
 import '../../l10n/app_localizations.dart';
 import '../../platform/apple_sign_in.dart';
 import '../../recipes/recipe_snapshot_provider.dart';
+import '../../recipes/personal_measure_repository.dart';
 import '../../widgets/page_frame.dart';
 import '../auth/code_page.dart';
 import 'account_data.dart';
@@ -89,6 +90,7 @@ class _DeleteAccountPageState extends ConsumerState<DeleteAccountPage> {
     session.pauseAccountUploads(identity);
     final auth = ref.read(authProvider.notifier);
     final snapshots = ref.read(recipeSnapshotStoreProvider);
+    final measures = ref.read(personalMeasureRepositoryProvider);
     await ref
         .read(apiClientProvider)
         .getAccountApi()
@@ -101,6 +103,7 @@ class _DeleteAccountPageState extends ConsumerState<DeleteAccountPage> {
     // Capture before auth reset; clear invalidates any late owner cache writes.
     // Kept at the page boundary to avoid auth -> snapshot -> auth dependency.
     await snapshots?.clear();
+    await measures.clearAccount();
     final showResult = session.matches(identity);
     await auth.clearLocalSession(deleteAccountData: true, identity: identity);
     if (showResult && messenger.mounted) {
