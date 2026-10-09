@@ -61,12 +61,6 @@ EOF
   uv run gramtree config set auth.email_code_daily_limit 1000 \
     --by e2e --reason 'Shared-IP acceptance suite' >/dev/null
   uv run gramtree ingredients import tests/data/ingredients >/dev/null
-  # The replay seed and independent browser actors share one loopback IP.
-  # Provision only this disposable test database for the full suite's logins;
-  # production defaults and the default-limit API tests remain unchanged.
-  uv run gramtree config set auth.email_code_daily_limit 100 \
-    --by e2e-runner --reason 'Shared-IP capacity for isolated full-suite acceptance' >/dev/null
-
   # 单进程运行：验证码存在进程内存里，多进程时读不到
   nohup uv run uvicorn gramtree.asgi:app --host 0.0.0.0 --port "$PORT" >"$LOG_FILE" 2>&1 &
   echo $! >"$PID_FILE"
