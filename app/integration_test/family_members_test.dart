@@ -25,9 +25,15 @@ enum _FamilyStep {
   firstMemberSave,
   firstMemberDetail,
   firstMemberEdit,
+  firstMemberEditOpened,
+  firstMemberEditNicknameReady,
   firstMemberEditLoaded,
   firstMemberEditAge,
   firstMemberEditFlavor,
+  firstMemberEditAvoidanceOpened,
+  firstMemberEditAvoidancePickerReady,
+  firstMemberEditAvoidanceCategoryOpened,
+  firstMemberEditAvoidanceCategorySelected,
   firstMemberEditAvoidance,
   firstMemberEditSave,
   firstMemberEditReopen,
@@ -375,7 +381,9 @@ void main() {
     await tap(tester, key('family-detail-close'));
     markStep(_FamilyStep.firstMemberEdit);
     await tap(tester, key('family-edit-$firstId'));
+    markStep(_FamilyStep.firstMemberEditOpened);
     await waitFor(tester, key('family-nickname'));
+    markStep(_FamilyStep.firstMemberEditNicknameReady);
     expect(find.text('家庭成员信息单独同意'), findsNothing);
     expect(
       tester.widget<TextField>(key('family-nickname')).controller!.text == '孩子',
@@ -389,9 +397,13 @@ void main() {
     await tap(tester, find.text('淡一点').last);
     markStep(_FamilyStep.firstMemberEditFlavor);
     await tap(tester, key('family-avoidance-add'));
+    markStep(_FamilyStep.firstMemberEditAvoidanceOpened);
     await waitFor(tester, key('taste-preference-category'));
+    markStep(_FamilyStep.firstMemberEditAvoidancePickerReady);
     await tap(tester, key('taste-preference-category'));
-    await tap(tester, find.text('肉类').last);
+    markStep(_FamilyStep.firstMemberEditAvoidanceCategoryOpened);
+    await tap(tester, find.text('肉禽').last);
+    markStep(_FamilyStep.firstMemberEditAvoidanceCategorySelected);
     await tap(tester, key('taste-preference-save'));
     markStep(_FamilyStep.firstMemberEditAvoidance);
     await waitFor(tester, key('family-nickname'));
@@ -412,7 +424,7 @@ void main() {
       ),
     );
     expect(detailText('辣 · 淡一点'), findsOneWidget);
-    expect(detailText('忌口 · 肉类'), findsOneWidget);
+    expect(detailText('忌口 · 肉禽'), findsOneWidget);
     expect(detailText('手动过敏（不会自动推断） · 花生'), findsOneWidget);
     await tap(tester, key('family-detail-close'));
     final edited = (await familyApi.getFamilyMember(
@@ -635,7 +647,7 @@ void main() {
       '6_to_12',
       '花生',
       '蔬菜',
-      '肉类',
+      '肉禽',
       '测试酱油',
       '00000000-0000-4000-8000-000000000001',
     ];
