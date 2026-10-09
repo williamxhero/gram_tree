@@ -41,34 +41,77 @@ class _Journey {
   }
 
   Future<void> reveal(String value) async {
+    final finder = key(value);
     tester.testTextInput.hide();
     await tester.pump();
+    // An already-mounted child may have been scrolled out by a prior action.
+    // Reusing it directly avoids unloading an expanded lazy row while finding
+    // one of its controls.
+    if (finder.evaluate().isNotEmpty) {
+      await tester.ensureVisible(finder);
+      await tester.pumpAndSettle();
+      expect(finder.hitTestable(), findsOneWidget, reason: phase);
+      return;
+    }
+    final detail = key('recipe-detail-content');
+    final comparison = key('full-comparison-content');
+    final body = comparison.evaluate().isNotEmpty
+        ? comparison
+        : detail.evaluate().isNotEmpty
+        ? detail
+        : key('recipe-editor-content');
     final scrollable = find
-        .byWidgetPredicate(
-          (widget) =>
-              widget is Scrollable &&
-              widget.axisDirection == AxisDirection.down,
+        .descendant(
+          of: body,
+          matching: find.byWidgetPredicate(
+            (widget) =>
+                widget is Scrollable &&
+                widget.axisDirection == AxisDirection.down,
+          ),
         )
         .first;
-    // Lazy lists must be sought from the top, including historical versions.
-    for (var i = 0; i < 12; i++) {
-      await tester.drag(scrollable, const Offset(0, 500));
+    final position = tester.state<ScrollableState>(scrollable).position;
+    // Use bounded position changes instead of native drags. This reliably
+    // mounts lazy editor rows without entering a text field's gesture arena.
+    position.jumpTo(position.minScrollExtent);
+    await tester.pumpAndSettle();
+    for (var i = 0; i < 40 && finder.evaluate().isEmpty; i++) {
+      position.jumpTo(
+        (position.pixels + 300).clamp(
+          position.minScrollExtent,
+          position.maxScrollExtent,
+        ),
+      );
       await tester.pump(const Duration(milliseconds: 100));
     }
-    await tester.scrollUntilVisible(
-      key(value),
-      250,
-      scrollable: scrollable,
-      maxScrolls: 60,
-    );
-    await Scrollable.ensureVisible(tester.element(key(value)), alignment: 0.5);
+    expect(finder, findsOneWidget, reason: phase);
+    await tester.ensureVisible(finder);
     await tester.pumpAndSettle();
-    expect(key(value).hitTestable(), findsOneWidget, reason: phase);
+    for (var i = 0; i < 8 && finder.hitTestable().evaluate().isEmpty; i++) {
+      position.jumpTo(
+        (position.pixels + 100).clamp(
+          position.minScrollExtent,
+          position.maxScrollExtent,
+        ),
+      );
+      await tester.pumpAndSettle();
+    }
+    expect(finder.hitTestable(), findsOneWidget, reason: phase);
   }
 
   Future<void> tap(String value) async {
     await reveal(value);
-    await tester.tap(key(value));
+    final finder = key(value);
+    final widget = tester.widget(finder);
+    // History rows contain separate comparison actions in their subtitle. The
+    // row center can hit one of those instead of opening the requested version.
+    final target = widget is ListTile && widget.title != null
+        ? find.descendant(of: finder, matching: find.byWidget(widget.title!))
+        : finder;
+    await Scrollable.ensureVisible(tester.element(target), alignment: 0.5);
+    await tester.pumpAndSettle();
+    expect(target.hitTestable(), findsOneWidget, reason: phase);
+    await tester.tap(target);
     await tester.pumpAndSettle();
   }
 
@@ -160,6 +203,8 @@ class _Journey {
     await tap('save-recipe-button');
     await waitFor(key('recipe-detail-content'));
     await tap('edit-recipe-button');
+    await waitFor(key('recipe-editor-content'));
+    await reveal('text-edit-input');
     await waitFor(key('text-edit-input'));
   }
 
