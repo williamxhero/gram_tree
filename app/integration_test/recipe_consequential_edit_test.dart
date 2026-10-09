@@ -60,16 +60,24 @@ class _Journey {
         : detail.evaluate().isNotEmpty
         ? detail
         : key('recipe-editor-content');
-    final scrollable = find
-        .descendant(
-          of: body,
-          matching: find.byWidgetPredicate(
-            (widget) =>
-                widget is Scrollable &&
-                widget.axisDirection == AxisDirection.down,
-          ),
-        )
-        .first;
+    final scrollable = body.evaluate().isNotEmpty
+        ? find
+              .descendant(
+                of: body,
+                matching: find.byWidgetPredicate(
+                  (widget) =>
+                      widget is Scrollable &&
+                      widget.axisDirection == AxisDirection.down,
+                ),
+              )
+              .first
+        : find
+              .byWidgetPredicate(
+                (widget) =>
+                    widget is Scrollable &&
+                    widget.axisDirection == AxisDirection.down,
+              )
+              .first;
     final position = tester.state<ScrollableState>(scrollable).position;
     // Use bounded position changes instead of native drags. This reliably
     // mounts lazy editor rows without entering a text field's gesture arena.
