@@ -7,6 +7,7 @@ Record mode can refresh the same files using ONLY these synthetic requests.
 import argparse
 import hashlib
 import json
+from copy import deepcopy
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -37,6 +38,8 @@ def main() -> None:
     ]
     # The browser journey saves the synthetic draft after confirming 320 g.
     # Use the public snapshot contract's defaults, never a production recording.
+    from sqlalchemy.orm import Session
+
     from gramtree.ai.answers import cooking_context
     from gramtree.recipes.schemas import RecipeSnapshot
 
@@ -111,8 +114,30 @@ def main() -> None:
             batch["valid"],
         )
     )
+    assistance = json.loads(
+        (ROOT / "server/tests/fixtures/ai/comparison_assistance_corpus.json").read_text("utf-8")
+    )
+    records.append(("comparison", assistance["input"], assistance["outputs"]["high_a"]))
+    for scenario in assistance["scenarios"].values():
+        # A missing replay is intentional for the unavailable browser flow.
+        if scenario["output"] is None:
+            continue
+        payload = deepcopy(assistance["input"])
+        for version in payload["versions"].values():
+            version["dish_name"] = scenario["dish_name"]
+        records.append(("comparison", payload, assistance["outputs"][scenario["output"]]))
     from gramtree.ai.schemas import GeneratedDraft
     from gramtree.ai.service import _mark_sources
+    from gramtree.recipes.service import _operations, _validate_snapshot
+
+    def editor_snapshot(snapshot: RecipeSnapshot) -> RecipeSnapshot:
+        # dart-dio omits null sources but sends functional=False. Derive the
+        # saved provenance through the same validation as the public save path.
+        incoming = snapshot.model_dump(mode="json", exclude_none=True)
+        incoming["difficulty"] = ""
+        # Synthetic ingredients have no library IDs, so no database is needed.
+        with Session() as session:
+            return _validate_snapshot(session, RecipeSnapshot.model_validate(incoming))
 
     modification = json.loads(
         (ROOT / "server/tests/fixtures/ai/modification_corpus.json").read_text("utf-8")
@@ -128,8 +153,7 @@ def main() -> None:
     # missing author sources. The editor serializes unset difficulty as "",
     # so register that exact saved input without weakening semantic replay keys.
     saved_modification_snapshot = normalize_sources(draft.recipe.snapshot)
-    editor_modification_snapshot = saved_modification_snapshot.model_copy(deep=True)
-    editor_modification_snapshot.difficulty = ""
+    editor_modification_snapshot = editor_snapshot(saved_modification_snapshot)
     modification_snapshots = [
         draft.recipe.snapshot,
         saved_modification_snapshot,
@@ -165,7 +189,6 @@ def main() -> None:
         ModificationOperation,
     )
     from gramtree.ai.modifications import _apply
-    from gramtree.recipes.service import _operations
 
     for modification_snapshot in modification_snapshots:
         step = next(s for s in modification_snapshot.steps if s.id == "cook")
@@ -267,8 +290,7 @@ def main() -> None:
         ingredient.scaling_mode = "proportional"
         ingredient.ingredient_id = None
     method_saved = normalize_sources(method_raw.recipe.snapshot)
-    method_editor = method_saved.model_copy(deep=True)
-    method_editor.difficulty = ""
+    method_editor = editor_snapshot(method_saved)
     scenarios = [
         (method["time"], modification_snapshots),
         (method["difficulty"], [method_raw.recipe.snapshot, method_saved, method_editor]),

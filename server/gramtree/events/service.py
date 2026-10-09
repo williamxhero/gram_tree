@@ -208,6 +208,9 @@ def record_recipe_version_saved(
     ai_assisted: bool,
     *,
     now: datetime,
+    base_version_id: uuid.UUID | None = None,
+    conclusion: str | None = None,
+    rules_version: str | None = None,
 ) -> None:
     """Write one idempotent experience event for a saved recipe version.
 
@@ -240,6 +243,9 @@ def record_recipe_version_saved(
         content={
             "recipe_version_id": str(version_id),
             "previous_version_id": str(previous_version_id) if previous_version_id else None,
+            "base_version_id": str(base_version_id) if base_version_id else None,
+            "conclusion": conclusion,
+            "rules_version": rules_version,
             "edit_operations": edit_operations,
             "ai_assisted": ai_assisted,
         },

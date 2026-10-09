@@ -1,8 +1,12 @@
 """Natural-language edits at the owned HTTP boundary, using recorded answers only."""
 
 import copy
+import json
+import subprocess
+import sys
 import uuid
 from concurrent.futures import ThreadPoolExecutor
+from pathlib import Path
 from threading import Barrier
 
 import pytest
@@ -71,6 +75,110 @@ def propose(api, directory, headers, detail, *, operations=None, extra=None):
     )
     assert response.status_code == 200, response.text
     return response.json()
+
+
+def test_materialized_corpus_previews_a_recipe_saved_through_the_editor(modification_api):
+    api, directory = modification_api
+    root = Path(__file__).resolve().parents[2]
+    subprocess.run(
+        [sys.executable, str(root / "tool/ai_replay_corpus.py"), "--out", str(directory)],
+        check=True,
+    )
+    headers = bearer(api.login("text-editor-corpus@example.com"))
+    found = begin(api, headers)
+    generated = generate(api, headers, found["request_id"])
+    assert generated["error"] is None, generated
+    recipe = copy.deepcopy(generated["draft"]["recipe"])
+    # RecipeForm uses an empty difficulty and dart-dio omits null sources,
+    # but still sends functional=False. Exercise that public save payload.
+    recipe["snapshot"]["difficulty"] = ""
+    for ingredient in recipe["snapshot"]["ingredients"]:
+        ingredient["base_quantity"] = ingredient["quantity"]
+        ingredient["base_unit"] = "g"
+        ingredient["scaling_mode"] = "proportional"
+        ingredient["flavor_contribution"] = {}
+        for field in ("ingredient_id", "functional_source", "flavor_source"):
+            if ingredient.get(field) is None:
+                ingredient.pop(field, None)
+    created = api.client.post("/v1/recipes", headers=headers, json=recipe)
+    assert created.status_code == 201, created.text
+    detail = created.json()
+    assert all(
+        ingredient["functional_source"]["source"] == "author_filled"
+        for ingredient in detail["version"]["snapshot"]["ingredients"]
+    )
+    corpus = json.loads(
+        (root / "server/tests/fixtures/ai/modification_corpus.json").read_text("utf-8")
+    )
+    response = api.client.post(
+        "/v1/ai/recipes/modifications",
+        headers=headers,
+        json={
+            "text": corpus["text"],
+            "recipe_id": detail["id"],
+            "base_version_id": detail["version"]["id"],
+        },
+    )
+    assert response.status_code == 200, response.text
+    preview = response.json()
+    assert preview["error"] is None, preview
+    assert [item["operation_id"] for item in preview["operations"]] == [
+        "clarify-cook",
+        "explain-cook",
+        "remind-cook",
+    ]
+    assert preview["snapshot"] == detail["version"]["snapshot"]
+
+
+def test_materialized_method_corpus_previews_a_recipe_saved_through_the_editor(modification_api):
+    api, directory = modification_api
+    root = Path(__file__).resolve().parents[2]
+    subprocess.run(
+        [sys.executable, str(root / "tool/ai_replay_corpus.py"), "--out", str(directory)],
+        check=True,
+    )
+    headers = bearer(api.login("method-editor-corpus@example.com"))
+    found_response = api.client.post(
+        "/v1/ai/recipes/requests",
+        headers=headers,
+        json={"text": "合成测试：做一道先腌肉再炒的宫保鸡丁"},
+    )
+    assert found_response.status_code == 200, found_response.text
+    generated = generate(api, headers, found_response.json()["request_id"])
+    assert generated["error"] is None, generated
+    recipe = copy.deepcopy(generated["draft"]["recipe"])
+    recipe["snapshot"]["difficulty"] = ""
+    for ingredient in recipe["snapshot"]["ingredients"]:
+        ingredient["flavor_contribution"] = {}
+        for field in ("ingredient_id", "functional_source", "flavor_source"):
+            if ingredient.get(field) is None:
+                ingredient.pop(field, None)
+    created_response = api.client.post("/v1/recipes", headers=headers, json=recipe)
+    assert created_response.status_code == 201, created_response.text
+    created = created_response.json()
+    assert all(
+        ingredient["functional_source"]["source"] == "author_filled"
+        for ingredient in created["version"]["snapshot"]["ingredients"]
+    )
+    corpus = json.loads(
+        (root / "server/tests/fixtures/ai/method_modification_corpus.json").read_text("utf-8")
+    )
+    response = api.client.post(
+        "/v1/ai/recipes/modifications",
+        headers=headers,
+        json={
+            "text": corpus["difficulty"]["text"],
+            "recipe_id": created["id"],
+            "base_version_id": created["version"]["id"],
+        },
+    )
+    assert response.status_code == 200, response.text
+    preview = response.json()
+    assert preview["error"] is None, preview
+    assert preview["snapshot"] == created["version"]["snapshot"]
+    assert [operation["operation_id"] for operation in preview["operations"]] == [
+        change["operation_id"] for change in corpus["difficulty"]["changes"]
+    ]
 
 
 def test_text_preview_confirm_keeps_old_version_and_operation_intent(modification_api):

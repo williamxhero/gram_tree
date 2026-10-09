@@ -71,6 +71,9 @@ class PersonalMeasureRepository {
     }
   }
 
+  Future<MeasureInputOut> previewInput(MeasureInputRequest input) async =>
+      (await api.previewPersonalMeasureInput(measureInputRequest: input)).data!;
+
   Future<PersonalMeasureOut> create(PersonalMeasureInput input) async {
     final response = await api.createPersonalMeasure(
       personalMeasureInput: input,

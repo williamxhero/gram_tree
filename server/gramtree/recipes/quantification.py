@@ -155,7 +155,7 @@ def propose(
             for p in remaining
         ):
             raise ValueError("建议没有具体化问题字段")
-        service._validate_snapshot(session, applied)
+        service._validate_snapshot(session, applied, owner.id, settings=settings, baseline=snapshot)
     except gateway.Unavailable as exc:
         raise ApiError(
             503, "quantification_unavailable", "暂时无法量化，可手动填写", exc.reason
@@ -250,6 +250,9 @@ def _apply(
                     raise ValueError("用量必须为正数和具体单位")
                 node.quantity = number
                 node.unit = unit
+                # This owned decision replaces the confirmed measure amount and
+                # its provenance; the old signed receipt cannot attest to either.
+                node.measure_input_token = None
             elif field in ("duration_seconds", "temperature_celsius"):
                 number = float(value)
                 if not math.isfinite(number) or number <= 0:

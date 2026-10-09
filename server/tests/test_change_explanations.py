@@ -34,6 +34,141 @@ def replay_explanation_api(explanation_recordings, api):
     return api, explanation_recordings
 
 
+@pytest.mark.parametrize("entry_point", ["manual", "generation"])
+def test_explanation_and_save_preserve_owned_measure_input(replay_explanation_api, entry_point):
+    api, directory = replay_explanation_api
+    headers = bearer(api.login(f"explanation-measure-{entry_point}@example.com"))
+    measure_response = api.client.post(
+        "/v1/me/measures",
+        headers=headers,
+        json={"name": "白瓷勺", "kind": "spoon", "capacity_ml": 12},
+    )
+    assert measure_response.status_code == 201, measure_response.text
+    confirmed_response = api.client.post(
+        "/v1/me/measures/input",
+        headers=headers,
+        json={"measure_id": measure_response.json()["id"], "quantity": 2, "base_unit": "ml"},
+    )
+    assert confirmed_response.status_code == 200, confirmed_response.text
+    confirmed = confirmed_response.json()
+    if entry_point == "generation":
+        request_id, recipe = unsaved_generation(api, directory, headers)
+        target = {"generation_request_id": request_id}
+        save_route = f"/v1/ai/recipes/requests/{request_id}/save"
+    else:
+        created_response = api.client.post("/v1/recipes", headers=headers, json=recipe_input())
+        assert created_response.status_code == 201, created_response.text
+        created = created_response.json()
+        recipe = {"snapshot": created["version"]["snapshot"]}
+        target = {"recipe_id": created["id"], "base_version_id": created["version"]["id"]}
+        save_route = f"/v1/recipes/{created['id']}/versions"
+    changed = copy.deepcopy(recipe)
+    before = recipe["snapshot"]["ingredients"][0]
+    after = changed["snapshot"]["ingredients"][0]
+    after.update(
+        quantity=confirmed["base_quantity"],
+        unit="ml",
+        measure_input_token=confirmed["measure_input_token"],
+    )
+    operations = [
+        {
+            "type": "change_quantity",
+            "id": before["id"],
+            "field": field,
+            "before": before[field],
+            "after": after[field],
+            "intent": "作者手动修改",
+        }
+        for field in ("quantity", "unit")
+    ]
+    operations.sort(key=lambda value: json.dumps(value, ensure_ascii=False, sort_keys=True))
+    recording(
+        directory,
+        "change_explanation",
+        {"operations": operations},
+        {"change_note": "按个人量具确认用量", "tags": ["用量调整"]},
+    )
+    response = api.client.post(
+        "/v1/ai/recipes/change-explanation",
+        headers=headers,
+        json={**target, "snapshot": changed["snapshot"]},
+    )
+    assert response.status_code == 200, response.text
+    explanation = response.json()
+    assert explanation["error"] is None, explanation
+    changed["explanation_fingerprint"] = explanation["changes_fingerprint"]
+    changed["change_note"] = explanation["change_note"]
+    if entry_point == "manual":
+        changed["base_version_id"] = target["base_version_id"]
+    saved_response = api.client.post(save_route, headers=headers, json=changed)
+    assert saved_response.status_code == 201, saved_response.text
+    saved = saved_response.json()["version"]["snapshot"]["ingredients"][0]
+    assert saved["quantity_source"] == confirmed["quantity_source"]
+    assert saved["measure_input_token"] == confirmed["measure_input_token"]
+    assert saved["base_quantity"] == 24 and saved["base_unit"] == "ml"
+
+
+def test_manual_explanation_inherits_omitted_functional_fields_like_final_save(
+    replay_explanation_api,
+):
+    api, directory = replay_explanation_api
+    headers = bearer(api.login("explanation-legacy-functional@example.com"))
+    recipe = recipe_input()
+    recipe["snapshot"]["ingredients"][0]["functional"] = True
+    created_response = api.client.post("/v1/recipes", headers=headers, json=recipe)
+    assert created_response.status_code == 201, created_response.text
+    created = created_response.json()
+    baseline = created["version"]["snapshot"]
+    changed = copy.deepcopy(baseline)
+    changed["steps"][0]["instruction"] = "鸡腿肉切成 2 厘米块后加盐腌制"
+    for ingredient in changed["ingredients"]:
+        ingredient.pop("functional")
+        ingredient.pop("functional_source")
+    recording(
+        directory,
+        "change_explanation",
+        {
+            "operations": [
+                {
+                    "type": "change_step_field",
+                    "id": "marinate",
+                    "field": "instruction",
+                    "before": "鸡腿肉加盐腌制",
+                    "after": changed["steps"][0]["instruction"],
+                    "intent": "作者手动修改",
+                }
+            ]
+        },
+        EXPLANATIONS["manual"],
+    )
+    response = api.client.post(
+        "/v1/ai/recipes/change-explanation",
+        headers=headers,
+        json={
+            "recipe_id": created["id"],
+            "base_version_id": created["version"]["id"],
+            "snapshot": changed,
+        },
+    )
+    assert response.status_code == 200, response.text
+    explanation = response.json()
+    assert explanation["error"] is None, explanation
+    saved_response = api.client.post(
+        f"/v1/recipes/{created['id']}/versions",
+        headers=headers,
+        json={
+            "snapshot": changed,
+            "base_version_id": created["version"]["id"],
+            "change_note": explanation["change_note"],
+            "explanation_fingerprint": explanation["changes_fingerprint"],
+        },
+    )
+    assert saved_response.status_code == 201, saved_response.text
+    saved = saved_response.json()["version"]
+    assert saved["snapshot"]["ingredients"] == baseline["ingredients"]
+    assert [operation["field"] for operation in saved["edit_operations"]] == ["instruction"]
+
+
 def test_manual_explanation_can_be_edited_saved_and_read_without_ai_recipe_provenance(
     replay_explanation_api,
 ):

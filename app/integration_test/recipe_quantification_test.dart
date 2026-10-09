@@ -5,7 +5,7 @@ import 'package:gram_tree/config/app_config.dart';
 import 'package:gram_tree/main.dart' as app;
 import 'package:integration_test/integration_test.dart';
 
-import 'event_pipeline_support.dart' show resetLocalAppState;
+import 'event_pipeline_support.dart' show resetLocalAppState, waitUntil;
 
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
@@ -30,18 +30,29 @@ void main() {
           (w) => w is Scrollable && w.axisDirection == AxisDirection.down,
         )
         .first;
-    // Reset upward before looking for lazy rows, including controls above the
-    // current position after the proposal panel changes the page height.
-    for (var i = 0; i < 12; i++) {
-      await tester.drag(scrollable, const Offset(0, 500));
+    final position = tester.state<ScrollableState>(scrollable).position;
+    // Mounted controls need no reset. Position the lazy viewport in bounded
+    // steps, then use the same ensureVisible path as a mounted control.
+    if (finder.evaluate().isEmpty) {
+      position.jumpTo(position.minScrollExtent);
+      await tester.pump(const Duration(milliseconds: 200));
+    }
+    for (var i = 0; i < 60 && finder.evaluate().isEmpty; i++) {
+      position.jumpTo(
+        (position.pixels + 250).clamp(
+          position.minScrollExtent,
+          position.maxScrollExtent,
+        ),
+      );
       await tester.pump(const Duration(milliseconds: 100));
     }
-    await tester.scrollUntilVisible(
-      finder,
-      250,
-      scrollable: scrollable,
-      maxScrolls: 60,
-    );
+    if (finder.evaluate().isEmpty) {
+      throw StateError(
+        'E2E reveal failed: $key; offset=${position.pixels}, '
+        'range=${position.minScrollExtent}..${position.maxScrollExtent}, '
+        'viewport=${position.viewportDimension}',
+      );
+    }
     await Scrollable.ensureVisible(tester.element(finder), alignment: 0.5);
     await tester.pumpAndSettle();
     expect(finder.hitTestable(), findsOneWidget);
@@ -54,8 +65,9 @@ void main() {
   }
 
   testWidgets('量化确认创建新版本并在统一为什么面板保留依据', (tester) async {
-    tester.view.physicalSize = const Size(320, 640);
-    tester.view.devicePixelRatio = 1;
+    // Keep native physical safe-area insets consistent with the real DPR.
+    tester.view.physicalSize =
+        const Size(320, 640) * tester.view.devicePixelRatio;
     addTearDown(tester.view.reset);
     tester.testTextInput.register();
     addTearDown(tester.testTextInput.unregister);
@@ -106,6 +118,7 @@ void main() {
         ('recipe-ingredient-unit', '少许'),
         ('recipe-step-instruction', '搅拌均匀'),
       ]) {
+        step = 'fill_$key';
         await reveal(tester, key);
         await tester.enterText(find.byKey(ValueKey(key)), value);
         await tester.pumpAndSettle();
@@ -166,6 +179,20 @@ void main() {
       await tester.tapAt(const Offset(10, 10));
       await tester.pumpAndSettle();
       await tap(tester, 'recipe-history-button');
+      await waitFor(
+        tester,
+        find.byKey(const ValueKey('recipe-select-comparison')),
+      );
+      // The save notification survives navigation and can cover the last row
+      // at maximum scroll extent. Wait for its real dwell timer, not just frames.
+      await waitUntil(
+        tester,
+        () => find.byType(SnackBar).evaluate().isEmpty,
+        tries: 40,
+      );
+      // Comparison conclusions make history rows taller on a small phone;
+      // scroll to the lazy older version before asserting or tapping it.
+      await reveal(tester, 'recipe-version-1');
       await waitFor(tester, find.byKey(const ValueKey('recipe-version-1')));
       await tester.tap(find.byKey(const ValueKey('recipe-version-1')));
       await tester.pumpAndSettle();

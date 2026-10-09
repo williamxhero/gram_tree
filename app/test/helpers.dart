@@ -60,7 +60,15 @@ UserOut testUser({String nickname = '味友0001', String tz = 'Asia/Shanghai'}) 
 
 /// 记录的一次请求。
 class Recorded {
-  Recorded(this.method, this.path, this.body, this.headers);
+  Recorded(
+    this.method,
+    this.path,
+    this.body,
+    this.headers, [
+    this.query = const {},
+  ]);
+
+  final Map<String, dynamic> query;
 
   final String method;
   final String path;
@@ -379,6 +387,7 @@ class FakeServer extends Interceptor {
       options.uri.path,
       body,
       Map.of(options.headers),
+      Map.of(options.queryParameters),
     );
     requests.add(rec);
     final handle = _routes['${options.method} ${options.uri.path}'];

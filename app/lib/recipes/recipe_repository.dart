@@ -129,6 +129,44 @@ class RecipeRepository {
     return response.data!;
   }
 
+  Future<RecipeIngredientComparison> compareIngredients(
+    String recipeId,
+    String fromVersionId,
+    String toVersionId,
+  ) async => (await _recipes.compareRecipeIngredients(
+    recipeId: recipeId,
+    fromVersionId: fromVersionId,
+    toVersionId: toVersionId,
+  )).data!;
+
+  Future<RecipeFullComparison> compareFull(
+    String recipeId,
+    String fromVersionId,
+    String toVersionId,
+  ) async => (await _recipes.compareRecipeFull(
+    recipeId: recipeId,
+    fromVersionId: fromVersionId,
+    toVersionId: toVersionId,
+  )).data!;
+
+  Future<RecipeComparisonAssistance> compareAssistance(
+    String recipeId,
+    String fromVersionId,
+    String toVersionId,
+  ) async => (await _recipes.compareRecipeAssistance(
+    recipeId: recipeId,
+    fromVersionId: fromVersionId,
+    toVersionId: toVersionId,
+  )).data!;
+
+  Future<RecipeComparisonCandidates> comparisonCandidatesPage(
+    String recipeId, {
+    String? cursor,
+  }) async => (await _recipes.listRecipeComparisonCandidates(
+    recipeId: recipeId,
+    cursor: cursor,
+  )).data!;
+
   /// Fetch a server conversion when the caller needs a shareable/public result.
   /// Recipe details use the same pure kernel locally so this is not required for
   /// the offline serving control.
@@ -217,9 +255,15 @@ class RecipeRepository {
   /// The server owns all rule thresholds; the client only presents the
   /// returned result. This is deliberately a separate call from save so an
   /// author can correct a finding before committing a new immutable version.
-  Future<RecipeSafetyResult> checkSafety(RecipeForm form) async {
+  Future<RecipeSafetyResult> checkSafety(
+    RecipeForm form, {
+    String? recipeId,
+    String? baseVersionId,
+  }) async {
     final response = await _recipes.checkRecipeSafety(
       recipeSafetyCheckRequest: RecipeSafetyCheckRequest(
+        recipeId: recipeId,
+        baseVersionId: baseVersionId,
         dishName: form.dishName,
         dishAliases: [...form.aliases],
         changeNote: form.changeNote,
@@ -388,9 +432,13 @@ class RecipeIngredientDraft {
     this.group = '',
     this.scalingMode,
     this.quantitySource,
+    this.measureInputToken,
     this.preparationSource,
     this.optional = false,
     this.functional = false,
+    this.flavorContribution,
+    this.flavorSource,
+    this.functionalSource,
     this.replacement,
   });
 
@@ -410,9 +458,13 @@ class RecipeIngredientDraft {
         scalingMode:
             value.scalingMode ?? RecipeIngredientScalingModeEnum.proportional,
         quantitySource: value.quantitySource,
+        measureInputToken: value.measureInputToken,
         preparationSource: value.preparationSource,
         optional: value.optional == true,
         functional: value.functional == true,
+        flavorContribution: value.flavorContribution,
+        flavorSource: value.flavorSource,
+        functionalSource: value.functionalSource,
         replacement: value.replacement is String
             ? RecipeReplacementDraft(
                 ingredientId: null,
@@ -439,9 +491,17 @@ class RecipeIngredientDraft {
       group: _string(value['group']) ?? '',
       scalingMode: _scalingMode(value['scaling_mode']),
       quantitySource: _valueSource(value['quantity_source']),
+      measureInputToken: _nonEmpty(value['measure_input_token']),
       preparationSource: _valueSource(value['preparation_source']),
       optional: value['optional'] == true,
       functional: value['functional'] == true,
+      flavorContribution: value['flavor_contribution'] is Map
+          ? RecipeFlavorContribution.fromJson(
+              Map<String, dynamic>.from(value['flavor_contribution'] as Map),
+            )
+          : null,
+      flavorSource: _valueSource(value['flavor_source']),
+      functionalSource: _valueSource(value['functional_source']),
       replacement: replacement is String
           ? RecipeReplacementDraft(ingredientId: null, displayName: replacement)
           : replacement is Map
@@ -467,16 +527,58 @@ class RecipeIngredientDraft {
   /// historical behavior cannot drift with later library updates.
   RecipeIngredientScalingModeEnum? scalingMode;
   ValueSource? quantitySource;
+  String? measureInputToken;
   ValueSource? preparationSource;
   bool optional;
   bool functional;
+  RecipeFlavorContribution? flavorContribution;
+  ValueSource? flavorSource;
+  ValueSource? functionalSource;
   RecipeReplacementDraft? replacement;
+
+  void adoptIngredientDefaults(IngredientDetail ingredient) {
+    final flavor = ingredient.attributes.flavor;
+    flavorContribution = flavor == null
+        ? null
+        : RecipeFlavorContribution.fromJson(flavor.value.toJson());
+    flavorSource = flavor == null
+        ? null
+        : _librarySource(flavor.estimate, ingredient.version, flavor.source_);
+    final functionalDefault = ingredient.attributes.functional;
+    functional = functionalDefault?.value ?? false;
+    functionalSource = functionalDefault == null
+        ? null
+        : _librarySource(
+            functionalDefault.estimate,
+            ingredient.version,
+            functionalDefault.source_,
+          );
+  }
+
+  void setFlavor(String axis, int? strength) {
+    final values = flavorContribution?.toJson() ?? <String, dynamic>{};
+    values[axis] = strength;
+    flavorContribution = values.values.every((value) => value == null)
+        ? null
+        : RecipeFlavorContribution.fromJson(values);
+    flavorSource = flavorContribution == null
+        ? null
+        : ValueSource(
+            source_: ValueSourceSource_Enum.authorFilled,
+            basis: '作者按这道菜的实际作用填写；未填写不代表零贡献',
+          );
+  }
 
   RecipeIngredient toModel({bool writable = true}) => RecipeIngredient(
     baseQuantity: baseQuantity,
     baseUnit: _baseUnit(baseUnit),
     displayName: displayName.trim(),
     functional: functional,
+    // dart-dio omits null properties. Send an empty, unknown profile so clearing
+    // a contribution is explicit and cannot re-adopt a mutable library default.
+    flavorContribution: flavorContribution ?? RecipeFlavorContribution(),
+    flavorSource: flavorSource,
+    functionalSource: functionalSource,
     group: _optionalText(group),
     id: id,
     ingredientId: ingredientId,
@@ -486,6 +588,7 @@ class RecipeIngredientDraft {
     quantitySource: writable
         ? _writableSource(quantitySource ?? _authorSource(quantity.toString()))
         : quantitySource,
+    measureInputToken: measureInputToken,
     preparationSource: writable
         ? _writableSource(preparationSource)
         : preparationSource,
@@ -506,9 +609,13 @@ class RecipeIngredientDraft {
     'group': group,
     'scaling_mode': scalingMode?.value,
     'quantity_source': quantitySource?.toJson(),
+    'measure_input_token': measureInputToken,
     'preparation_source': preparationSource?.toJson(),
     'optional': optional,
     'functional': functional,
+    'flavor_contribution': flavorContribution?.toJson(),
+    'flavor_source': flavorSource?.toJson(),
+    'functional_source': functionalSource?.toJson(),
     'replacement': replacement?.toJson(),
   };
 }
@@ -833,6 +940,16 @@ class RecipeForm {
     'snapshot': _snapshot(writable: false).toJson(),
   };
 }
+
+ValueSource _librarySource(bool estimate, String version, String source) =>
+    ValueSource(
+      source_: estimate
+          ? ValueSourceSource_Enum.aiEstimated
+          : ValueSourceSource_Enum.authorFilled,
+      basis:
+          '采用食材库 $version 默认参考；$source；'
+          '${estimate ? 'AI 起草、待核对' : '人工校对'}；不是做菜验证',
+    );
 
 // Verification belongs to the server. An unchanged baseline restores its
 // source there; sending it back would be an unauthorized client write.

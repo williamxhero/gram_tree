@@ -16,6 +16,9 @@ from gramtree.core.ids import IdV4
 from gramtree.core.pagination import PageParams, page_params
 from gramtree.deps import RedisDep, SessionDep, SettingsDep
 from gramtree.recipes import batch_advice, quantification, reproducibility, service
+from gramtree.recipes.comparison import RecipeIngredientComparison, compare_ingredients
+from gramtree.recipes.comparison_assistance import RecipeComparisonAssistance, request_assistance
+from gramtree.recipes.full_comparison import RecipeFullComparison, compare_full
 from gramtree.recipes.quantification_schemas import (
     QuantificationDecisionsInput,
     QuantificationInput,
@@ -23,6 +26,7 @@ from gramtree.recipes.quantification_schemas import (
 )
 from gramtree.recipes.schemas import (
     MoldSpec,
+    RecipeComparisonCandidates,
     RecipeCreate,
     RecipeDetail,
     RecipeImageOut,
@@ -67,9 +71,10 @@ def check_recipe_safety(
     body: RecipeSafetyCheckRequest,
     auth: CurrentAuth,
     session: SessionDep,
+    settings: SettingsDep,
 ) -> RecipeSafetyCheckOut:
     # Draft checks use the same validation as saving, without creating a version.
-    result = service.check_safety(session, auth.user, body)
+    result = service.check_safety(session, auth.user, body, settings)
     return RecipeSafetyCheckOut(result=result)
 
 
@@ -243,6 +248,75 @@ def display_recipe_version_ingredients(
         version_id=version_id,
         target_servings=target_servings,
         target_mold=_parse_target_mold(target_mold),
+    )
+
+
+@router.get(
+    "/{recipe_id}/comparison-candidates",
+    response_model=RecipeComparisonCandidates,
+    responses=_errors(401, 404, 422),
+)
+def list_recipe_comparison_candidates(
+    recipe_id: IdV4, auth: CurrentAuth, session: SessionDep, page: PageDep
+) -> RecipeComparisonCandidates:
+    return service.list_comparison_candidates(
+        session,
+        auth.user,
+        recipe_id,
+        cursor=page.cursor,
+        limit=page.limit,
+        maximum=int(config.get(session, "api.page_size_max")),
+    )
+
+
+@router.get(
+    "/{recipe_id}/compare",
+    response_model=RecipeIngredientComparison,
+    responses=_errors(401, 404, 422),
+)
+def compare_recipe_ingredients(
+    recipe_id: IdV4,
+    auth: CurrentAuth,
+    session: SessionDep,
+    from_version_id: Annotated[IdV4, Query()],
+    to_version_id: Annotated[IdV4, Query()],
+) -> RecipeIngredientComparison:
+    return compare_ingredients(session, auth.user, recipe_id, from_version_id, to_version_id)
+
+
+@router.get(
+    "/{recipe_id}/full-comparison",
+    response_model=RecipeFullComparison,
+    operation_id="compare_recipe_full",
+    responses=_errors(401, 404, 422),
+)
+def compare_recipe_full(
+    recipe_id: IdV4,
+    auth: CurrentAuth,
+    session: SessionDep,
+    from_version_id: Annotated[IdV4, Query()],
+    to_version_id: Annotated[IdV4, Query()],
+) -> RecipeFullComparison:
+    return compare_full(session, auth.user, recipe_id, from_version_id, to_version_id)
+
+
+@router.get(
+    "/{recipe_id}/comparison-assistance",
+    response_model=RecipeComparisonAssistance,
+    operation_id="compare_recipe_assistance",
+    responses=_errors(401, 404, 422),
+)
+def compare_recipe_assistance(
+    recipe_id: IdV4,
+    auth: CurrentAuth,
+    session: SessionDep,
+    settings: SettingsDep,
+    redis: RedisDep,
+    from_version_id: Annotated[IdV4, Query()],
+    to_version_id: Annotated[IdV4, Query()],
+) -> RecipeComparisonAssistance:
+    return request_assistance(
+        session, settings, auth.user, recipe_id, from_version_id, to_version_id, redis=redis
     )
 
 

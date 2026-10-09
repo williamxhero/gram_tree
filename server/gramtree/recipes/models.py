@@ -76,6 +76,11 @@ class RecipeVersion(Base):
     previous_version_id: Mapped[uuid.UUID | None] = mapped_column(
         ForeignKey("recipe_versions.id"), default=None
     )
+    base_version_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("recipe_versions.id"), default=None
+    )
+    conclusion: Mapped[str | None] = mapped_column(String(16), default=None)
+    rules_version: Mapped[str | None] = mapped_column(String(64), default=None)
     snapshot: Mapped[dict[str, Any]] = mapped_column(JSONB)
     derived: Mapped[dict[str, Any]] = mapped_column(JSONB, default=dict)
     reproducibility: Mapped[dict[str, Any] | None] = mapped_column(JSONB, default=None)
@@ -89,6 +94,37 @@ class RecipeVersion(Base):
     change_note: Mapped[str] = mapped_column(Text, default="")
     ai_assisted: Mapped[bool] = mapped_column(default=False)
     created_at: Mapped[datetime] = mapped_column(default=utcnow)
+
+
+class RecipeComparisonCache(Base):
+    """Immutable directional result keyed by the effective rule-content digest."""
+
+    __tablename__ = "recipe_comparison_cache"
+
+    from_version_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("recipe_versions.id", ondelete="CASCADE"), primary_key=True
+    )
+    to_version_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("recipe_versions.id", ondelete="CASCADE"), primary_key=True
+    )
+    rules_version: Mapped[str] = mapped_column(String(64), primary_key=True)
+    result: Mapped[dict[str, Any]] = mapped_column(JSONB)
+
+
+class RecipeComparisonAssistanceCache(Base):
+    """Separate shared overlay; confidence/prompt revision never changes rule evidence."""
+
+    __tablename__ = "recipe_comparison_assistance_cache"
+
+    from_version_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("recipe_versions.id", ondelete="CASCADE"), primary_key=True
+    )
+    to_version_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("recipe_versions.id", ondelete="CASCADE"), primary_key=True
+    )
+    rules_version: Mapped[str] = mapped_column(String(64), primary_key=True)
+    assistance_version: Mapped[str] = mapped_column(String(64), primary_key=True)
+    result: Mapped[dict[str, Any]] = mapped_column(JSONB)
 
 
 class RecipeQuantification(Base):
@@ -163,6 +199,9 @@ class RecipeSaveOutbox(Base):
     version_id: Mapped[uuid.UUID] = mapped_column()
     owner_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
     previous_version_id: Mapped[uuid.UUID | None] = mapped_column(default=None)
+    base_version_id: Mapped[uuid.UUID | None] = mapped_column(default=None)
+    conclusion: Mapped[str | None] = mapped_column(String(16), default=None)
+    rules_version: Mapped[str | None] = mapped_column(String(64), default=None)
     edit_operations: Mapped[list[dict[str, Any]]] = mapped_column(JSONB, default=list)
     ai_assisted: Mapped[bool] = mapped_column(default=False)
     created_at: Mapped[datetime] = mapped_column(default=utcnow)

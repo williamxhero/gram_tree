@@ -13,9 +13,11 @@
 | [`recipe-scaling/`](recipe-scaling/) | 份数、模具、个人量具换算详情页样稿：统一高亮、原值/规则明细、模式互斥和浅色/深色交互 | #21 SPEC-002.3 | Artifact 服务暂不可用；本地 HTML 样稿（浏览器可直接打开） |
 | [`food-safety/`](food-safety/) | 食品安全与过敏原提示样稿：必显过敏原、菜谱/步骤提醒、高风险、估算营养与疗效措辞改写 | #22 SPEC-011.1 | Artifact 服务实际返回 503；本地 HTML 样稿（浏览器可直接打开） |
 | [`one-line-recipe/`](one-line-recipe/) | 一句话生成：先检索、选择已有或新设计、可跳过问题、依据与校验、编辑保存及降级 | #23 SPEC-003.1 | 本会话无 Artifact 发布工具；本地交互 HTML 样稿 |
+| [`recipe-frontier/`](recipe-frontier/) | 菜谱内味型与功能性、个人量具确认录入、按同份数的食材版本比较；浅色/深色与共用为什么面板 | #2 SPEC-002，#137、#139、#141 | 本会话无 Artifact 发布工具；实现前发布到开发分支的交互 HTML 样稿 |
 | [`recipe-answer.html`](recipe-answer.html) | 版本详情厨房问题：共用为什么面板、一般经验来源、四种状态、必显风险及保留输入重试 | #135 SPEC-003 | 本会话无 Artifact 发布工具；本地交互 HTML 样稿 |
 | [`taste-profile.html`](taste-profile.html) | 我的口味样稿：七味型五档、修改原因、食材偏好、做菜约束、单独敏感同意、家庭成员、撤回及离线只读；浅色/深色交互 | #30 SPEC-005.1 | 本会话无 Artifact 发布工具；本地交互 HTML 样稿 |
 | [`recipe-quantification/`](recipe-quantification/) | 可复刻量化：剩余问题定位、逐条接受/修改/忽略、全部接受、来源追溯和基准调整；浅色/深色交互样稿 | #24 SPEC-002.4 | 本会话无 Artifact 发布工具；本地交互 HTML 样稿 |
+| [`version-comparison/`](version-comparison/) | 完整版本比较：确定性幅度、步骤原文、历史结论、筛选布局与 AI 辅助/失败降级；#140 证据等级明确未实现 | #2 SPEC-002，#142、#143 | 本会话无 Artifact 发布工具；实现前发布到开发分支的交互 HTML 样稿 |
 | [`large-batch-advice/`](large-batch-advice/) | 大份量只读时间建议：主动请求、原时长对照、分批与成熟提醒、切换清除及失败降级 | #25 SPEC-003.2 / #175 | 本会话无 Artifact 发布工具；本地交互 HTML 样稿 |
 | [`recipe-text-edit/`](recipe-text-edit/) | 改文字：本人编辑与生成结果共用入口、逐条接受/拒绝/修改、依赖拒绝、检查与确认保存；浅色/深色交互样稿 | #25 SPEC-003.2 / #167 | 本会话无 Artifact 发布工具；本地交互 HTML 样稿 |
 | [`recipe-consequential-edit/`](recipe-consequential-edit/) | 连带修改与恢复：本地决定、同请求重试、换厨具关联条件、实际后值检查及最终改动说明 | #25 SPEC-003.2 / #168 #170 #173 #174 | 本会话无 Artifact 发布工具；本地交互 HTML 样稿 |

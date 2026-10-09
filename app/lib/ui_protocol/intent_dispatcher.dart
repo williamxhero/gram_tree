@@ -44,7 +44,7 @@ class IntentDispatcher {
 
   final Ref _ref;
 
-  Future<void> dispatch(
+  Future<Object?> dispatch(
     BuildContext context, {
     String? compositionId,
     required String componentId,
@@ -58,7 +58,7 @@ class IntentDispatcher {
     // 给"测试直接构造 ComponentDescriptor、绕开协议 Schema 校验"这种情况兜底
     // （component_scaffold.dart 顶部注释提到过这个口子）——不合法就安静地什么都
     // 不做，不抛异常、不影响界面。
-    if (spec == null || !spec.validateParams(params)) return;
+    if (spec == null || !spec.validateParams(params)) return null;
 
     if (OnlineFeatures.forIntent(action.intent, params) != null) {
       final status = _ref.read(apiReachabilityProvider);
@@ -71,7 +71,7 @@ class IntentDispatcher {
             SnackBar(content: Text(_ref.read(apiReachabilityProvider).message)),
           );
         }
-        return;
+        return null;
       }
     }
 
@@ -99,8 +99,9 @@ class IntentDispatcher {
 
     final handler = spec.handler;
     if (handler != null && context.mounted) {
-      await handler(context, _ref, params);
+      return await handler(context, _ref, params);
     }
+    return null;
   }
 }
 

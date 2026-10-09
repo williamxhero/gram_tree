@@ -117,7 +117,9 @@ class ChangeFacts:
     content_id: uuid.UUID
 
 
-def _changes(session: Session, owner: User, body: ChangeExplanationInput) -> ChangeFacts:
+def _changes(
+    session: Session, settings: Settings, owner: User, body: ChangeExplanationInput
+) -> ChangeFacts:
     if body.modification_id is not None:
         row = modifications._owned(session, owner, body.modification_id)
         if row.saved_version_id:
@@ -138,8 +140,8 @@ def _changes(session: Session, owner: User, body: ChangeExplanationInput) -> Cha
         )
     if body.snapshot is None:
         raise ValueError("需要新快照")
-    snapshot = recipes._validate_snapshot(session, body.snapshot)
     if body.generation_request_id is not None:
+        snapshot = recipes._validate_snapshot(session, body.snapshot, owner.id, settings=settings)
         row = generation.owned_request(session, owner, body.generation_request_id)
         if row.saved_recipe_id:
             raise ApiError(409, "generation_already_saved", "这份生成结果已经保存")
@@ -153,6 +155,9 @@ def _changes(session: Session, owner: User, body: ChangeExplanationInput) -> Cha
         raise ValueError("需要菜谱基准")
     _, version = recipes._owned_version(session, owner, body.recipe_id, body.base_version_id)
     previous = RecipeSnapshot.model_validate(version.snapshot)
+    snapshot = recipes._prepare_version_snapshot(
+        session, body.snapshot, previous, owner.id, settings=settings
+    )
     return ChangeFacts(
         manual_target(body.recipe_id, version.id),
         snapshot,
@@ -184,7 +189,7 @@ def _validate_output(session: Session, changes: ChangeFacts, value: Any) -> Chan
 def explain(
     session: Session, settings: Settings, owner: User, body: ChangeExplanationInput
 ) -> ChangeExplanationResult:
-    changes = _changes(session, owner, body)
+    changes = _changes(session, settings, owner, body)
     binding = fingerprint(owner.id, changes.target, changes.operations)
     operations = facts(changes.operations)
     status = AIStatus.model_validate(
@@ -222,7 +227,7 @@ def explain(
         # Gateway accounting commits release locks. Re-resolve the canonical
         # decisions/baseline so a late response cannot be adopted for newer edits.
         session.expire_all()
-        fresh = _changes(session, owner, body)
+        fresh = _changes(session, settings, owner, body)
         validate_fingerprint(owner.id, fresh.target, fresh.operations, binding)
         return ChangeExplanationResult(
             status=AIStatus.model_validate(

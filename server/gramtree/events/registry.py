@@ -58,6 +58,9 @@ class RecipeVersionSavedContentV1(BaseModel):
 
     recipe_version_id: str
     previous_version_id: str | None = None
+    base_version_id: str | None = None
+    conclusion: Literal["no_change", "minor_only", "general", "significant"] | None = None
+    rules_version: str | None = None
     edit_operations: list[dict[str, object]] = Field(default_factory=list)
     ai_assisted: bool = False
 

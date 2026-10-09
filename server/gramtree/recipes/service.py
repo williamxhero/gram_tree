@@ -28,6 +28,7 @@ from gramtree.ingredients.attributes import IngredientAttributes
 from gramtree.ingredients.models import Ingredient, IngredientAttribute
 from gramtree.recipes import food_safety, reproducibility
 from gramtree.recipes.measure_display import display_amount, quantity_text
+from gramtree.recipes.measure_input import confirmed_source
 from gramtree.recipes.measure_models import PersonalMeasure
 from gramtree.recipes.models import (
     Dish,
@@ -51,15 +52,19 @@ from gramtree.recipes.mold_conversion import (
 )
 from gramtree.recipes.provenance import normalize_sources
 from gramtree.recipes.schemas import (
+    ChangeConclusion,
     DishInput,
     DishOut,
     MoldSpec,
     NutritionEstimate,
     RecipeAuthor,
+    RecipeComparisonCandidate,
+    RecipeComparisonCandidates,
     RecipeCreate,
     RecipeDerived,
     RecipeDetail,
     RecipeDisplayedIngredient,
+    RecipeFlavorContribution,
     RecipeImageOut,
     RecipeImageStagedOut,
     RecipeIngredient,
@@ -77,6 +82,7 @@ from gramtree.recipes.schemas import (
     RecipeVersionHistory,
     RecipeVersionOut,
     RecipeVersionSummary,
+    ValueSource,
 )
 from gramtree.recipes.schemas import MoldConversion as MoldConversionSchema
 from gramtree.recipes.schemas import (
@@ -92,7 +98,7 @@ from gramtree.recipes.serving_conversion import (
 )
 from gramtree.recipes.storage import make_recipe_storage
 from gramtree.runtime_config import service as config
-from gramtree.settings import Settings
+from gramtree.settings import Settings, get_settings
 from gramtree.ui_protocol.protocol import SourceBasis, SourcedValue
 
 logger = logging.getLogger("gramtree.recipes")
@@ -224,6 +230,47 @@ def _base_quantity(
     return None, None
 
 
+def _recipe_flavor_defaults(session: Session, ingredient: RecipeIngredient) -> dict[str, Any]:
+    """Adopt library data once; an explicit null retains unknown contribution."""
+    result: dict[str, Any] = {}
+    standard = (
+        session.get(Ingredient, ingredient.ingredient_id) if ingredient.ingredient_id else None
+    )
+    attributes = _ingredient_attributes(session, standard.id) if standard else None
+    for field, source_field, attribute_name in (
+        ("flavor_contribution", "flavor_source", "flavor"),
+        ("functional", "functional_source", "functional"),
+    ):
+        value = getattr(ingredient, field)
+        source = getattr(ingredient, source_field)
+        attribute = getattr(attributes, attribute_name) if attributes else None
+        if field not in ingredient.model_fields_set and attribute is not None:
+            value = (
+                RecipeFlavorContribution.model_validate(attribute.value.model_dump())
+                if field == "flavor_contribution"
+                else attribute.value
+            )
+            source = ValueSource(
+                source="ai_estimated" if attribute.estimate else "author_filled",
+                basis=(
+                    f"采用食材库 {standard.version if standard else ''} 默认参考；"
+                    f"{attribute.source}；"
+                    f"{'AI 起草、待核对' if attribute.estimate else '人工校对'}；不是做菜验证"
+                ),
+            )
+        elif (
+            value is not None
+            and source is None
+            and field in ingredient.model_fields_set
+            and source_field not in ingredient.model_fields_set
+        ):
+            # An explicit null from an unchanged snapshot retains unknown provenance.
+            source = ValueSource(source="author_filled", basis="作者按这道菜的实际作用填写")
+        result[field] = value
+        result[source_field] = source if value is not None else None
+    return result
+
+
 def _normalize_ingredient(session: Session, ingredient: RecipeIngredient) -> RecipeIngredient:
     base_quantity, base_unit = _base_quantity(session, ingredient)
     return ingredient.model_copy(
@@ -231,11 +278,19 @@ def _normalize_ingredient(session: Session, ingredient: RecipeIngredient) -> Rec
             "base_quantity": base_quantity,
             "base_unit": base_unit,
             "scaling_mode": _effective_scaling_mode(session, ingredient),
+            **_recipe_flavor_defaults(session, ingredient),
         }
     )
 
 
-def _validate_snapshot(session: Session, snapshot: RecipeSnapshot) -> RecipeSnapshot:
+def _validate_snapshot(
+    session: Session,
+    snapshot: RecipeSnapshot,
+    owner_id: uuid.UUID | None = None,
+    *,
+    settings: Settings | None = None,
+    baseline: RecipeSnapshot | None = None,
+) -> RecipeSnapshot:
     ingredient_ids = [ingredient.id for ingredient in snapshot.ingredients]
     if len(set(ingredient_ids)) != len(ingredient_ids):
         raise ApiError(422, "invalid_recipe", "菜谱结构有误", "ingredients.id 不能重复")
@@ -255,9 +310,20 @@ def _validate_snapshot(session: Session, snapshot: RecipeSnapshot) -> RecipeSnap
             f"ingredients.ingredient_id 不存在：{', '.join(missing)}",
         )
 
-    normalized_ingredients = [
-        _normalize_ingredient(session, ingredient) for ingredient in snapshot.ingredients
-    ]
+    normalized_ingredients = []
+    for ingredient in snapshot.ingredients:
+        source = confirmed_source(
+            ingredient,
+            owner_id,
+            (settings or get_settings()).auth_secret,
+            next((item for item in baseline.ingredients if item.id == ingredient.id), None)
+            if baseline is not None
+            else None,
+        )
+        normalized = _normalize_ingredient(session, ingredient)
+        if source is not None:
+            normalized = normalized.model_copy(update={"quantity_source": source})
+        normalized_ingredients.append(normalized)
     replacement_ids = {
         ingredient.replacement.ingredient_id
         for ingredient in snapshot.ingredients
@@ -535,6 +601,9 @@ def _version_out(
         id=row.id,
         version_number=row.version_number,
         previous_version_id=row.previous_version_id,
+        base_version_id=row.base_version_id,
+        conclusion=cast("ChangeConclusion | None", row.conclusion),
+        rules_version=row.rules_version,
         snapshot=RecipeSnapshot.model_validate(row.snapshot),
         derived=RecipeDerived.model_validate(row.derived),
         reproducibility=(
@@ -666,6 +735,9 @@ def _enqueue_save_event(
             version_id=version.id,
             owner_id=owner.id,
             previous_version_id=version.previous_version_id,
+            base_version_id=version.base_version_id,
+            conclusion=version.conclusion,
+            rules_version=version.rules_version,
             edit_operations=version.edit_operations,
             ai_assisted=version.ai_assisted,
         )
@@ -693,6 +765,9 @@ def _drain_save_events(session: Session, redis: Redis, owner: User) -> int:
                 outbox.edit_operations,
                 outbox.ai_assisted,
                 now=outbox.created_at,
+                base_version_id=outbox.base_version_id,
+                conclusion=outbox.conclusion,
+                rules_version=outbox.rules_version,
             )
             outbox.delivered_at = utcnow()
             session.commit()
@@ -705,9 +780,17 @@ def _drain_save_events(session: Session, redis: Redis, owner: User) -> int:
 
 
 def check_safety(
-    session: Session, owner: User, body: RecipeSafetyCheckRequest
+    session: Session, owner: User, body: RecipeSafetyCheckRequest, settings: Settings
 ) -> RecipeSafetyResult:
-    snapshot = _validate_snapshot(session, body.snapshot)
+    baseline = None
+    if body.recipe_id is not None:
+        _, version = _owned_version(session, owner, body.recipe_id, body.base_version_id)
+        baseline = RecipeSnapshot.model_validate(version.snapshot)
+    elif body.base_version_id is not None:
+        raise ApiError(422, "invalid_request", "编辑基准需要关联菜谱")
+    snapshot = _validate_snapshot(
+        session, body.snapshot, owner.id, settings=settings, baseline=baseline
+    )
     return food_safety.check(
         session,
         snapshot,
@@ -774,7 +857,8 @@ def create_recipe(
     before_commit: Callable[[RecipeVersion], None] | None = None,
 ) -> RecipeDetail:
     snapshot = normalize_sources(
-        _validate_snapshot(session, body.snapshot), trusted_sources=confirmed_operations is not None
+        _validate_snapshot(session, body.snapshot, owner.id, settings=settings),
+        trusted_sources=confirmed_operations is not None,
     )
     staged = _staged_rows(session, owner, body.image_ids)
     dish_input = body.dish_input()
@@ -1009,6 +1093,46 @@ def _copy_version_images(
         )
 
 
+def _prepare_version_snapshot(
+    session: Session,
+    snapshot: RecipeSnapshot,
+    baseline: RecipeSnapshot,
+    owner_id: uuid.UUID,
+    *,
+    settings: Settings,
+    trusted_sources: bool = False,
+) -> RecipeSnapshot:
+    # An old client cannot send the new fields. Preserve its selected baseline,
+    # including legacy unknown values, rather than adopting today's library.
+    old_ingredients = {item.id: item for item in baseline.ingredients}
+    compatible = []
+    for item in snapshot.ingredients:
+        old = old_ingredients.get(item.id)
+        inherited: dict[str, Any] = {}
+        if old is not None and old.ingredient_id == item.ingredient_id:
+            for field, source_field in (
+                ("flavor_contribution", "flavor_source"),
+                ("functional", "functional_source"),
+            ):
+                if field not in item.model_fields_set:
+                    inherited[field] = getattr(old, field)
+                    if source_field not in item.model_fields_set:
+                        inherited[source_field] = getattr(old, source_field)
+                elif source_field not in item.model_fields_set and getattr(item, field) == getattr(
+                    old, field
+                ):
+                    inherited[source_field] = getattr(old, source_field)
+        compatible.append(item.model_copy(update=inherited))
+    snapshot = _validate_snapshot(
+        session,
+        snapshot.model_copy(update={"ingredients": compatible}),
+        owner_id,
+        settings=settings,
+        baseline=baseline,
+    )
+    return normalize_sources(snapshot, baseline, trusted_sources=trusted_sources)
+
+
 def save_version(
     session: Session,
     redis: Redis,
@@ -1037,8 +1161,6 @@ def save_version(
         and body.expected_current_version_id != recipe.current_version_id
     ):
         raise ApiError(409, "stale_recipe_version", "菜谱已有新版本，请重新载入后保存")
-    snapshot = _validate_snapshot(session, body.snapshot)
-    staged = _staged_rows(session, owner, body.image_ids)
     previous = session.get(RecipeVersion, recipe.current_version_id)
     if previous is None:
         raise NotFound("菜谱当前版本不存在")
@@ -1046,7 +1168,14 @@ def save_version(
     if baseline is None or baseline.recipe_id != recipe.id:
         raise NotFound("菜谱基准版本不存在")
     previous_snapshot = RecipeSnapshot.model_validate(baseline.snapshot)
-    snapshot = normalize_sources(snapshot, previous_snapshot, trusted_sources=trusted_sources)
+    snapshot = _prepare_version_snapshot(
+        session,
+        body.snapshot,
+        previous_snapshot,
+        owner.id,
+        settings=settings,
+        trusted_sources=trusted_sources,
+    )
     if body.explanation_fingerprint is not None:
         from gramtree.ai import explanations
 
@@ -1056,6 +1185,7 @@ def save_version(
             _operations(previous_snapshot, snapshot),
             body.explanation_fingerprint,
         )
+    staged = _staged_rows(session, owner, body.image_ids)
     dish = session.get(Dish, recipe.dish_id)
     if dish is None:
         raise NotFound("菜谱关联数据不存在")
@@ -1068,6 +1198,7 @@ def save_version(
         recipe_id=recipe.id,
         version_number=previous.version_number + 1,
         previous_version_id=previous.id,
+        base_version_id=baseline.id,
         snapshot=_snapshot_json(snapshot),
         derived=_derived(session, snapshot).model_dump(mode="json"),
         reproducibility=reproducibility.check(snapshot).model_dump(mode="json"),
@@ -1083,6 +1214,13 @@ def save_version(
     )
     session.add(version)
     session.flush()
+    from gramtree.recipes.full_comparison import compare_full
+
+    # Edit operations remain relative to the chosen baseline; magnitude is
+    # always relative to the actual prior current version, in this transaction.
+    comparison = compare_full(session, owner, recipe.id, previous.id, version.id, commit=False)
+    version.conclusion = comparison.conclusion
+    version.rules_version = comparison.rules_version
     if quantification_record is not None:
         # Proposals, decision receipt and experience events share the version
         # transaction. An event failure cannot leave a saved version without evidence.
@@ -1738,6 +1876,66 @@ def list_versions(
                 id=row.id,
                 version_number=row.version_number,
                 previous_version_id=row.previous_version_id,
+                base_version_id=row.base_version_id,
+                conclusion=cast("ChangeConclusion | None", row.conclusion),
+                rules_version=row.rules_version,
+                change_note=row.change_note,
+                ai_assisted=row.ai_assisted,
+                created_at=row.created_at,
+            )
+            for row in rows
+        ],
+        next_cursor=encode_cursor(rows[-1].created_at, rows[-1].id) if has_more and rows else None,
+    )
+
+
+def list_comparison_candidates(
+    session: Session,
+    owner: User,
+    recipe_id: uuid.UUID,
+    *,
+    cursor: str | None,
+    limit: int,
+    maximum: int,
+) -> RecipeComparisonCandidates:
+    anchor = _owned_recipe(session, owner, recipe_id)
+    if limit > maximum:
+        raise ApiError(422, "invalid_request", "请求参数有误", f"limit 不能超过 {maximum}")
+    query = (
+        select(RecipeVersion)
+        .join(Recipe, RecipeVersion.recipe_id == Recipe.id)
+        .where(Recipe.dish_id == anchor.dish_id, Recipe.owner_id == owner.id)
+    )
+    # Current visibility is owned-only, exactly like compare_ingredients; public
+    # versions are a later capability and must not leak through this picker.
+    if cursor:
+        timestamp, row_id = decode_cursor(cursor)
+        query = query.where(
+            or_(
+                RecipeVersion.created_at < timestamp,
+                (RecipeVersion.created_at == timestamp) & (RecipeVersion.id < row_id),
+            )
+        )
+    rows = list(
+        session.scalars(
+            query.order_by(RecipeVersion.created_at.desc(), RecipeVersion.id.desc()).limit(
+                limit + 1
+            )
+        )
+    )
+    has_more = len(rows) > limit
+    rows = rows[:limit]
+    return RecipeComparisonCandidates(
+        items=[
+            RecipeComparisonCandidate(
+                id=row.id,
+                recipe_id=row.recipe_id,
+                author=owner.nickname,
+                version_number=row.version_number,
+                previous_version_id=row.previous_version_id,
+                base_version_id=row.base_version_id,
+                conclusion=cast("ChangeConclusion | None", row.conclusion),
+                rules_version=row.rules_version,
                 change_note=row.change_note,
                 ai_assisted=row.ai_assisted,
                 created_at=row.created_at,

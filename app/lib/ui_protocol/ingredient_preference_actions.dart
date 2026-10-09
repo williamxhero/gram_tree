@@ -45,6 +45,7 @@ final ingredientPreferenceIntentSpecs = [
         final scope = context
             .getInheritedWidgetOfExactType<IngredientPreferenceActionScope>();
         if (scope?.intent == 'ingredient_preferences_$name') await scope!.run();
+        return null;
       },
     ),
 ];

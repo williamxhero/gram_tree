@@ -549,7 +549,8 @@ def save(
             owner.id,
             explanations.generation_target(request_id),
             recipes._operations(
-                original.recipe.snapshot, recipes._validate_snapshot(session, body.snapshot)
+                original.recipe.snapshot,
+                recipes._validate_snapshot(session, body.snapshot, owner.id, settings=settings),
             ),
             body.explanation_fingerprint,
         )
