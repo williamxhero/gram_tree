@@ -103,6 +103,7 @@ void main() {
         return key is ValueKey<String> &&
             key.value.startsWith('taste-history-why-');
       });
+      await waitFor(tester, historyWhy);
       await reveal(tester, historyWhy, 350);
       expect(historyWhy, findsOneWidget);
       expect(find.text('咸：标准 → 淡一点'), findsOneWidget);
