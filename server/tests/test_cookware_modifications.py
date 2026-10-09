@@ -2,12 +2,14 @@
 
 import copy
 import json
+import subprocess
+import sys
 from pathlib import Path
 
 import pytest
 
 from tests.accounts_support import bearer
-from tests.test_ai_recipes import cli, recording
+from tests.test_ai_recipes import begin, cli, generate, recording
 from tests.test_recipe_modifications import choice
 from tests.test_recipes import recipe_input
 
@@ -90,6 +92,68 @@ def create_recipe(api, email):
     response = api.client.post("/v1/recipes", headers=headers, json=recipe_input())
     assert response.status_code == 201, response.text
     return response.json(), headers
+
+
+def test_materialized_cookware_corpus_explains_canonical_selected_values(modification_api):
+    api, directory = modification_api
+    root = Path(__file__).resolve().parents[2]
+    subprocess.run(
+        [sys.executable, str(root / "tool/ai_replay_corpus.py"), "--out", str(directory)],
+        check=True,
+    )
+    headers = bearer(api.login("cookware-materialized-corpus@example.com"))
+    found = begin(api, headers)
+    generated = generate(api, headers, found["request_id"])
+    assert generated["error"] is None, generated
+    saved_response = api.client.post(
+        f"/v1/ai/recipes/requests/{found['request_id']}/save",
+        headers=headers,
+        json=generated["draft"]["recipe"],
+    )
+    assert saved_response.status_code == 201, saved_response.text
+    saved = saved_response.json()
+    proposal_response = api.client.post(
+        "/v1/ai/recipes/modifications",
+        headers=headers,
+        json={
+            "text": CORPUS["text"],
+            "recipe_id": saved["id"],
+            "base_version_id": saved["version"]["id"],
+        },
+    )
+    assert proposal_response.status_code == 200, proposal_response.text
+    proposal = proposal_response.json()
+    assert proposal["error"] is None, proposal
+    values = {
+        "instruction": "空气炸锅180°C加热鸡肉10分钟，用食品温度计确认鸡肉中心温度达到74°C后盛出",
+        "duration_seconds": 600,
+        "doneness": "用食品温度计确认鸡肉中心温度达到74°C",
+    }
+    selected = choice(
+        api,
+        headers,
+        proposal,
+        [
+            {
+                "operation_id": operation["operation_id"],
+                "decision": "modify" if operation["field"] in values else "accept",
+                **({"after": values[operation["field"]]} if operation["field"] in values else {}),
+            }
+            for operation in proposal["operations"]
+        ],
+    )
+    explained = api.client.post(
+        "/v1/ai/recipes/change-explanation",
+        headers=headers,
+        json={"modification_id": selected["id"], "revision": selected["revision"]},
+    )
+    assert explained.status_code == 200, explained.text
+    explanation = explained.json()
+    assert explanation["error"] is None, explanation
+    assert explanation["change_note"] == "改用空气炸锅，调整温度、时长、容器和中心温度判断。"
+    assert explanation["tags"] == ["换厨具"]
+    assert explanation["source"] == "ai_estimated"
+    assert explanation["changes_fingerprint"]
 
 
 def test_air_fryer_conditions_save_new_version_without_rewriting_old_steps(modification_api):
