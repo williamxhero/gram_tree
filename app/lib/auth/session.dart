@@ -60,6 +60,7 @@ class SessionStore extends ChangeNotifier {
   AuthSession? _current;
   bool _loaded = false;
   int _identityEpoch = 0;
+  int? _uploadsPausedEpoch;
   Future<void> _persistence = Future<void>.value();
 
   Future<void> _persist(Future<void> Function() operation) {
@@ -80,6 +81,17 @@ class SessionStore extends ChangeNotifier {
       : SessionIdentity(ownerId: _current!.user.id, epoch: _identityEpoch);
   bool matches(SessionIdentity identity) =>
       _current?.user.id == identity.ownerId && _identityEpoch == identity.epoch;
+
+  bool canUpload(SessionIdentity identity) =>
+      matches(identity) && _uploadsPausedEpoch != identity.epoch;
+
+  /// Fence private writes at confirmation, while allowing the captured login to
+  /// send consent withdrawal/account deletion. Refresh cannot remove this fence.
+  void pauseAccountUploads(SessionIdentity identity) {
+    if (!matches(identity)) return;
+    _uploadsPausedEpoch = identity.epoch;
+    notifyListeners();
+  }
 
   /// 为什么变成了未登录（续期失败、撤回同意等），给登录页显示提示用。
   String? lastExpiryReason;
@@ -107,15 +119,31 @@ class SessionStore extends ChangeNotifier {
     return _current;
   }
 
-  Future<void> save(TokenPair tokens) => _set(AuthSession.fromTokens(tokens));
+  /// Every explicit login is a new generation, even for the same owner.
+  Future<void> save(TokenPair tokens) =>
+      _set(AuthSession.fromTokens(tokens), newLogin: true);
+
+  /// Refresh rotates credentials without invalidating that login's queue drain.
+  Future<void> saveRefreshed(
+    TokenPair tokens, {
+    required SessionIdentity identity,
+  }) {
+    if (!matches(identity) || tokens.user.id != identity.ownerId) {
+      throw StateError('account_changed');
+    }
+    return _set(AuthSession.fromTokens(tokens));
+  }
 
   Future<void> updateUser(UserOut user) async {
     final s = _current;
     if (s != null && s.user.id == user.id) await _set(s.withUser(user));
   }
 
-  Future<void> _set(AuthSession session) async {
-    if (_current?.user.id != session.user.id) _identityEpoch++;
+  Future<void> _set(AuthSession session, {bool newLogin = false}) async {
+    if (newLogin || _current?.user.id != session.user.id) {
+      _identityEpoch++;
+      _uploadsPausedEpoch = null;
+    }
     _current = session;
     _loaded = true;
     lastExpiryReason = null;

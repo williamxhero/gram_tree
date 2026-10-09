@@ -8,7 +8,17 @@ import '../l10n/app_localizations.dart';
 import 'event_queue.dart';
 
 class SyncStatus {
-  const SyncStatus({required this.entries, this.ownerId, this.lastSuccess});
+  SyncStatus({
+    required List<QueueEntry> entries,
+    this.ownerId,
+    this.lastSuccess,
+  }) : entries = List.unmodifiable(
+         {
+           for (final entry in entries)
+             if (ownerId == null || entry.write.ownerId == ownerId)
+               entry.write.id: entry,
+         }.values,
+       );
   final String? ownerId;
   final List<QueueEntry> entries;
   final DateTime? lastSuccess;
@@ -17,6 +27,21 @@ class SyncStatus {
       entries.where((entry) => entry.state == WriteState.failed).toList();
   List<QueueEntry> get conflicts =>
       entries.where((entry) => entry.state == WriteState.conflict).toList();
+
+  List<QueueEntry> get unfinished =>
+      entries.where((entry) => entry.needsSync).toList();
+  int get waitingCount => entries
+      .where(
+        (entry) =>
+            entry.state == WriteState.pending ||
+            entry.state == WriteState.uploading,
+      )
+      .length;
+  int get deferredCount =>
+      entries.where((entry) => entry.state == WriteState.deferred).length;
+  int get loginPausedCount =>
+      entries.where((entry) => entry.state == WriteState.loginPaused).length;
+  bool get canRetry => manualRetryEntries(entries).isNotEmpty;
 
   int reasonCount(String code) => entries
       .where(
@@ -44,7 +69,7 @@ final syncStatusProvider = Provider<AsyncValue<SyncStatus>>((ref) {
 final _syncStatusStreamProvider = StreamProvider<SyncStatus>((ref) async* {
   final owner = ref.watch(authProvider).value?.id;
   if (owner == null) {
-    yield const SyncStatus(entries: []);
+    yield SyncStatus(entries: []);
     return;
   }
   final queue = ref.watch(eventQueueProvider);

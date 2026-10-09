@@ -19,8 +19,11 @@ final eventUploaderProvider = Provider<EventUploader>((ref) {
     final next = session.identity;
     final previous = previousIdentity;
     previousIdentity = next;
-    if (previous != null && previous.epoch != next?.epoch) {
-      unawaited(uploader.pauseOwner(previous));
+    if (previous != null && !session.canUpload(previous)) {
+      uploader.cancelAccountRetry();
+      if (previous.epoch != next?.epoch) {
+        unawaited(uploader.pauseOwner(previous));
+      }
     }
   }
 
@@ -53,6 +56,8 @@ class EventUploader {
   bool _rerunRequested = false;
   bool _rerunAttemptedOnly = true;
   bool _disposed = false;
+  bool _manualRetryInProgress = false;
+  SessionIdentity? _manualRetryIdentity;
 
   // Compatibility diagnostic thresholds; no content is discarded on backlog.
   static const backlogCountThreshold = 500;
@@ -108,14 +113,16 @@ class EventUploader {
   }
 
   Future<void> retryCurrentAccount() async {
-    if (_disposed || !_ref.mounted) return;
+    if (_disposed || !_ref.mounted || _manualRetryInProgress) return;
     final identity = _session.identity;
     if (identity == null || !_sameAccount(identity.ownerId, identity.epoch)) {
       return;
     }
-    final queue = _queue;
-    await queue.retryAccount(identity.ownerId);
-    if (_sameAccount(identity.ownerId, identity.epoch)) await triggerUpload();
+    // Budget mutation is admitted by the same single-flight drain as HTTP.
+    // A retry during active upload is coalesced, never demotes an in-flight row.
+    _manualRetryInProgress = true;
+    _manualRetryIdentity = identity;
+    await triggerUpload();
   }
 
   bool _sameAccount(String owner, int epoch) =>
@@ -123,6 +130,7 @@ class EventUploader {
       _ref.mounted &&
       _session.current?.user.id == owner &&
       _session.identityEpoch == epoch &&
+      _session.canUpload(SessionIdentity(ownerId: owner, epoch: epoch)) &&
       _ref.read(privacyConsentProvider);
 
   Future<void> triggerUpload() => _triggerUpload();
@@ -143,12 +151,20 @@ class EventUploader {
       do {
         _rerunRequested = false;
         _rerunAttemptedOnly = true;
+        final retryIdentity = _manualRetryIdentity;
+        _manualRetryIdentity = null;
+        if (retryIdentity != null &&
+            _sameAccount(retryIdentity.ownerId, retryIdentity.epoch)) {
+          await _queue.retryAccount(retryIdentity.ownerId);
+          attemptedOnly = false;
+        }
         await _drain(attemptedOnly: attemptedOnly);
         attemptedOnly = _rerunAttemptedOnly;
       } while (_rerunRequested && !_disposed && _ref.mounted);
       if (!_disposed && _ref.mounted) await _checkBacklog();
     } finally {
       _uploading = false;
+      _manualRetryInProgress = false;
     }
     // An overdue retry can fire during the asynchronous backlog read too.
     if (_rerunRequested) {
@@ -308,6 +324,9 @@ class EventUploader {
                 entry.write.id,
                 owner,
                 result.result!.toJson(),
+                confirmedAt: DateTime.tryParse(
+                  result.toJson()['confirmed_at'] as String? ?? '',
+                ),
               );
               byId[entry.write.id] = entry.change(state: WriteState.confirmed);
               progressed = true;
@@ -558,6 +577,12 @@ class EventUploader {
         unawaited(_triggerUpload(attemptedOnly: attemptedOnly));
       }
     });
+  }
+
+  void cancelAccountRetry() {
+    _retryTimer?.cancel();
+    _retryTimer = null;
+    _manualRetryIdentity = null;
   }
 
   void dispose() {

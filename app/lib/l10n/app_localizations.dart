@@ -112,6 +112,222 @@ abstract class AppLocalizations {
   /// **'服务已连接'**
   String get networkConnected;
 
+  /// No description provided for @logoutUnfinishedCount.
+  ///
+  /// In zh, this message translates to:
+  /// **'还有 {count} 条内容未同步'**
+  String logoutUnfinishedCount(int count);
+
+  /// No description provided for @logoutRetainedExplanation.
+  ///
+  /// In zh, this message translates to:
+  /// **'包括待同步、失败和冲突内容。退出后仍保留在这台设备，再次登录同一账号后可继续同步；其他账号无法查看或上传。'**
+  String get logoutRetainedExplanation;
+
+  /// No description provided for @logoutIdentityChanged.
+  ///
+  /// In zh, this message translates to:
+  /// **'登录状态已改变，请重新操作'**
+  String get logoutIdentityChanged;
+
+  /// No description provided for @logoutViewSync.
+  ///
+  /// In zh, this message translates to:
+  /// **'查看同步状态'**
+  String get logoutViewSync;
+
+  /// No description provided for @syncStatusTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'同步状态'**
+  String get syncStatusTitle;
+
+  /// No description provided for @syncUnfinishedCount.
+  ///
+  /// In zh, this message translates to:
+  /// **'未完成 {count} 条'**
+  String syncUnfinishedCount(int count);
+
+  /// No description provided for @syncCategoryCount.
+  ///
+  /// In zh, this message translates to:
+  /// **'{category} {count} 条'**
+  String syncCategoryCount(String category, int count);
+
+  /// No description provided for @syncWaiting.
+  ///
+  /// In zh, this message translates to:
+  /// **'待上传'**
+  String get syncWaiting;
+
+  /// No description provided for @syncDeferred.
+  ///
+  /// In zh, this message translates to:
+  /// **'暂缓'**
+  String get syncDeferred;
+
+  /// No description provided for @syncLoginPaused.
+  ///
+  /// In zh, this message translates to:
+  /// **'登录暂停'**
+  String get syncLoginPaused;
+
+  /// No description provided for @syncConflict.
+  ///
+  /// In zh, this message translates to:
+  /// **'等待冲突选择'**
+  String get syncConflict;
+
+  /// No description provided for @syncFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'失败'**
+  String get syncFailed;
+
+  /// No description provided for @syncNever.
+  ///
+  /// In zh, this message translates to:
+  /// **'尚未同步'**
+  String get syncNever;
+
+  /// No description provided for @syncLastSuccess.
+  ///
+  /// In zh, this message translates to:
+  /// **'上次服务端确认：{time}'**
+  String syncLastSuccess(String time);
+
+  /// No description provided for @syncBasis.
+  ///
+  /// In zh, this message translates to:
+  /// **'来自当前账号的本机持久队列；每条写入只计一次。上次成功只记录服务端确认的写入，不表示其余内容已全部同步。网页测试使用内存替身。'**
+  String get syncBasis;
+
+  /// No description provided for @syncQueueSource.
+  ///
+  /// In zh, this message translates to:
+  /// **'本机队列记录'**
+  String get syncQueueSource;
+
+  /// No description provided for @syncRetryAction.
+  ///
+  /// In zh, this message translates to:
+  /// **'重试可恢复项'**
+  String get syncRetryAction;
+
+  /// No description provided for @syncRetryError.
+  ///
+  /// In zh, this message translates to:
+  /// **'暂时无法重试，内容仍在本机，请稍后再试。'**
+  String get syncRetryError;
+
+  /// No description provided for @syncLoadingError.
+  ///
+  /// In zh, this message translates to:
+  /// **'暂时无法读取本机同步状态，请稍后重试。'**
+  String get syncLoadingError;
+
+  /// No description provided for @syncNetworkReason.
+  ///
+  /// In zh, this message translates to:
+  /// **'网络或服务暂不可用；请恢复连接后重试。'**
+  String get syncNetworkReason;
+
+  /// No description provided for @syncDependencyReason.
+  ///
+  /// In zh, this message translates to:
+  /// **'前置内容尚未确认；请先恢复前置内容的同步。'**
+  String get syncDependencyReason;
+
+  /// No description provided for @syncDependencyCycleReason.
+  ///
+  /// In zh, this message translates to:
+  /// **'前置内容互相依赖；已保留内容，请联系支持处理。'**
+  String get syncDependencyCycleReason;
+
+  /// No description provided for @syncPermissionReason.
+  ///
+  /// In zh, this message translates to:
+  /// **'权限或内容校验未通过；已保留内容，请检查权限或修改内容后另存，不会盲目重试。'**
+  String get syncPermissionReason;
+
+  /// No description provided for @syncExhaustedReason.
+  ///
+  /// In zh, this message translates to:
+  /// **'重试次数已达上限；内容已保留，可恢复连接后手动重试。'**
+  String get syncExhaustedReason;
+
+  /// No description provided for @syncLoginReason.
+  ///
+  /// In zh, this message translates to:
+  /// **'需要恢复当前账号登录，内容保留且不会上传给其他账号。'**
+  String get syncLoginReason;
+
+  /// No description provided for @syncConflictReason.
+  ///
+  /// In zh, this message translates to:
+  /// **'需要先比较两份内容并选择；重试不会代替你的选择。'**
+  String get syncConflictReason;
+
+  /// No description provided for @syncUnknownReason.
+  ///
+  /// In zh, this message translates to:
+  /// **'服务未接收这条内容；已保留，请检查内容或联系支持。'**
+  String get syncUnknownReason;
+
+  /// No description provided for @syncUploadingReason.
+  ///
+  /// In zh, this message translates to:
+  /// **'写入正在上传；关闭后保留原 ID，重新打开会恢复确认，不会重复保存。'**
+  String get syncUploadingReason;
+
+  /// No description provided for @syncPendingReason.
+  ///
+  /// In zh, this message translates to:
+  /// **'已保存在本机，等待上传确认。'**
+  String get syncPendingReason;
+
+  /// No description provided for @syncEventType.
+  ///
+  /// In zh, this message translates to:
+  /// **'操作记录'**
+  String get syncEventType;
+
+  /// No description provided for @syncRecipeType.
+  ///
+  /// In zh, this message translates to:
+  /// **'菜谱修改'**
+  String get syncRecipeType;
+
+  /// No description provided for @syncMeasureType.
+  ///
+  /// In zh, this message translates to:
+  /// **'个人量具'**
+  String get syncMeasureType;
+
+  /// No description provided for @syncOtherType.
+  ///
+  /// In zh, this message translates to:
+  /// **'离线写入'**
+  String get syncOtherType;
+
+  /// No description provided for @syncItemIdentity.
+  ///
+  /// In zh, this message translates to:
+  /// **'{type} · 条目 {sequence}'**
+  String syncItemIdentity(String type, int sequence);
+
+  /// No description provided for @syncResolveConflict.
+  ///
+  /// In zh, this message translates to:
+  /// **'查看并选择'**
+  String get syncResolveConflict;
+
+  /// No description provided for @syncConflictAdapterMissing.
+  ///
+  /// In zh, this message translates to:
+  /// **'此类型的选择入口暂不可用，内容已保留，请稍后再试。'**
+  String get syncConflictAdapterMissing;
+
   /// Current account's writes awaiting synchronization.
   ///
   /// In zh, this message translates to:

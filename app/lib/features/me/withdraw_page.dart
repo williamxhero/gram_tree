@@ -23,7 +23,9 @@ class _WithdrawConsentPageState extends ConsumerState<WithdrawConsentPage> {
   Future<void> _withdraw() async {
     setState(() => _busy = true);
     final auth = ref.read(authProvider.notifier);
-    final identity = ref.read(sessionStoreProvider).identity;
+    final session = ref.read(sessionStoreProvider);
+    final identity = session.identity;
+    if (identity != null) session.pauseAccountUploads(identity);
     // Consent removal makes the provider nullable; retain the current-owner
     // handle so cleanup is awaited, not only a best-effort provider listener.
     final snapshots = ref.read(recipeSnapshotStoreProvider);

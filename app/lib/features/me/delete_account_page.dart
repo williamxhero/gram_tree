@@ -86,6 +86,7 @@ class _DeleteAccountPageState extends ConsumerState<DeleteAccountPage> {
     final session = ref.read(sessionStoreProvider);
     final identity = session.identity;
     if (identity == null) return;
+    session.pauseAccountUploads(identity);
     final auth = ref.read(authProvider.notifier);
     final snapshots = ref.read(recipeSnapshotStoreProvider);
     await ref

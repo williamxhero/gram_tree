@@ -174,15 +174,16 @@ class AuthController extends AsyncNotifier<UserOut?> {
   }
 
   /// 退出当前设备的登录。服务端没连上也照样清掉本机的登录状态。
-  Future<void> signOut() async {
-    // 普通登出保留账号绑定的内容。下一个账号的上传器只取自己的队列；
-    // 完整待同步提醒由同步状态界面提供，绝不能以清空代替隔离。
-    final identity = _session.identity;
-    if (identity == null) return;
-    await ref.read(eventUploaderProvider).triggerUpload();
-    if (!ref.mounted || !_session.matches(identity)) return;
-    await signOutOnServer(identity: identity);
-    if (ref.mounted && _session.matches(identity)) await _session.clear();
+  Future<void> signOut({SessionIdentity? identity}) async {
+    // Explicit confirmation must not wait behind an upload or unreachable API.
+    // The captured token can only revoke its old device login; all private queue
+    // work is fenced immediately by clearing the local generation.
+    final session = _session;
+    identity ??= session.identity;
+    if (identity == null || !session.matches(identity)) return;
+    final revoking = signOutOnServer(identity: identity);
+    await session.clear();
+    await revoking;
   }
 
   /// 只通知服务端吊销这台设备的令牌，本机状态留给调用方清。
@@ -191,9 +192,13 @@ class AuthController extends AsyncNotifier<UserOut?> {
     if (captured == null || !_session.matches(captured)) return;
     try {
       await _api.getAuthApi().logout(
+        headers: {
+          'Authorization': 'Bearer ${_session.current!.accessToken}',
+        },
         extra: {
           'auth_owner_id': captured.ownerId,
           'auth_identity_epoch': captured.epoch,
+          'auth_revocation': true,
         },
       );
     } catch (_) {}

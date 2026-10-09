@@ -109,6 +109,50 @@ void main() {
     expect(find.text('登录味谱'), findsNothing);
   });
 
+  testWidgets('确认退出立即隔离账号，不等待服务端退出或在途上传', (tester) async {
+    final env = await _fixture();
+    await pumpApp(tester, env: env);
+    final delayed = Completer<(int, Object?)>();
+    env.server.on('POST', '/v1/auth/logout', (_) => delayed.future);
+    await openSettings(tester);
+    await tapVisible(tester, find.text('退出登录'));
+    await tester.tap(find.widgetWithText(FilledButton, '退出登录'));
+    await tester.pumpAndSettle();
+    expect(find.text('登录味谱'), findsOneWidget);
+    expect(env.server.calls('POST', '/v1/auth/logout'), hasLength(1));
+    delayed.complete((204, null));
+    await tester.pumpAndSettle();
+    await restartApp(tester, env);
+    expect(find.text('登录味谱'), findsOneWidget);
+    await _login(tester);
+    expect(find.text('待同步 1 条'), findsOneWidget);
+  });
+
+  testWidgets('旧退出响应不能退出刚重新登录的同一账号，重启仍保持新登录', (tester) async {
+    final env = await _fixture();
+    await pumpApp(tester, env: env);
+    final session = ProviderScope.containerOf(
+      tester.element(find.byType(Scaffold).first),
+    ).read(sessionStoreProvider);
+    final delayed = Completer<(int, Object?)>();
+    env.server.on('POST', '/v1/auth/logout', (_) => delayed.future);
+    await openSettings(tester);
+    await tapVisible(tester, find.text('退出登录'));
+    await tester.tap(find.widgetWithText(FilledButton, '退出登录'));
+    for (var i = 0; i < 5; i++) {
+      await tester.pump(const Duration(milliseconds: 50));
+    }
+    expect(env.server.calls('POST', '/v1/auth/logout'), hasLength(1));
+    await session.save(TokenPair.fromJson(env.server.tokens()));
+    delayed.complete((204, null));
+    await tester.pumpAndSettle();
+    await restartApp(tester, env);
+    expect(find.text('登录味谱'), findsNothing);
+    expect(find.text('待同步 1 条'), findsOneWidget);
+    await tapTab(tester, 4);
+    expect(find.text('味友0001'), findsOneWidget);
+  });
+
   for (final operation in ['logout', 'deletion', 'withdrawal']) {
     testWidgets('Alice 的延迟 $operation 不退出 Bob、不删除 Bob 内容，重启仍隔离', (
       tester,
@@ -305,6 +349,72 @@ void main() {
     }
   });
 
+  testWidgets('退出提醒包含当前账号失败条数及保留说明，取消不退出也不删除', (tester) async {
+    final env = await _fixture();
+    await pumpApp(tester, env: env);
+    await openSettings(tester);
+    await tapVisible(tester, find.text('退出登录'));
+    expect(find.text('还有 1 条内容未同步'), findsOneWidget);
+    expect(find.textContaining('保留在这台设备'), findsOneWidget);
+    expect(find.textContaining('同一账号'), findsOneWidget);
+    await tester.tap(find.text('取消'));
+    await tester.pumpAndSettle();
+    expect(find.text('设置'), findsOneWidget);
+    expect(env.server.calls('POST', '/v1/auth/logout'), isEmpty);
+    await restartApp(tester, env);
+    expect(find.text('待同步 1 条'), findsOneWidget);
+    expect(find.text('登录味谱'), findsNothing);
+  });
+
+  testWidgets('离线退出提醒同时统计待同步、失败及冲突，明确确认后保留到同账号恢复', (tester) async {
+    final base = await _fixture();
+    const pendingId = '99999999-9999-4999-8999-000000000001';
+    const conflictId = '99999999-9999-4999-8999-000000000002';
+    for (final id in [pendingId, conflictId]) {
+      await base.eventQueue.enqueue(QueuedEvent(
+        id: id,
+        ownerId: base.server.user.id,
+        eventType: 'pipeline.self_check',
+        typeVersion: 1,
+        deviceId: 'device-1',
+        deviceTime: DateTime.utc(2026, 10, 8),
+        appVersion: 'test',
+        content: {'ping': 'retained'},
+      ));
+    }
+    final candidate = (await base.eventQueue.entries()).singleWhere((e) => e.write.id == conflictId);
+    await base.eventQueue.update(candidate.change(state: WriteState.conflict,
+      reasonCode: 'recipe_version_changed',
+      result: {'local': {'title': '我的候选'}, 'server': {'title': '另一份候选'}},
+    ));
+    final env = TestEnv(server: base.server, local: base.local, secure: base.secure,
+      eventQueue: base.eventQueue, offline: true);
+    await pumpApp(tester, env: env, textScale: 3.0, size: const Size(320, 568));
+    await openSettings(tester);
+    await tapVisible(tester, find.text('退出登录'));
+    expect(find.text('还有 3 条内容未同步'), findsOneWidget);
+    expect(find.textContaining('包括待同步、失败和冲突'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+    await tester.tap(find.widgetWithText(FilledButton, '退出登录'));
+    await tester.pumpAndSettle();
+    expect(find.text('登录味谱'), findsOneWidget);
+    expect(env.server.calls('POST', '/v1/sync/writes'), isEmpty);
+    expect(env.server.calls('POST', '/v1/auth/refresh'), isEmpty);
+    final resumed = TestEnv(server: env.server, local: env.local, secure: env.secure,
+      eventQueue: env.eventQueue);
+    await restartApp(tester, resumed);
+    await _login(tester);
+    expect(find.text('待同步 2 条'), findsOneWidget);
+    await openSettings(tester);
+    await tapVisible(tester, find.text('退出登录'));
+    expect(find.text('还有 2 条内容未同步'), findsOneWidget);
+    await tester.tap(find.text('取消'));
+    await tester.pumpAndSettle();
+    final sent = env.server.calls('POST', '/v1/sync/writes').where((r) =>
+      (((r.body as Map)['writes'] as List).single as Map)['write_id'] == pendingId);
+    expect(sent, hasLength(1));
+  });
+
   testWidgets('普通退出保留拒收内容，新账号只显示自己的数量，原账号回来仍可见', (tester) async {
     final env = await _fixture();
     final alice = env.server.user;
@@ -324,6 +434,78 @@ void main() {
     await _login(tester);
     expect(find.text('待同步 1 条'), findsOneWidget);
   });
+
+  for (final operation in ['withdrawal', 'deletion']) {
+  testWidgets('确认 $operation 后等待远端回执期间不继续上传，迟到同步不复活已清理内容', (tester) async {
+    final env = await _fixture();
+    final delayedUpload = Completer<(int, Object?)>();
+    env.server.on('POST', '/v1/sync/writes', (_) => delayedUpload.future);
+    for (final id in [
+      '88888888-8888-4888-8888-000000000001',
+      '88888888-8888-4888-8888-000000000002',
+    ]) {
+      await env.eventQueue.enqueue(
+        QueuedEvent(
+          id: id,
+          ownerId: env.server.user.id,
+          eventType: 'pipeline.self_check',
+          typeVersion: 1,
+          deviceId: 'device-1',
+          deviceTime: DateTime.utc(2026, 10, 8),
+          appVersion: 'test',
+          content: {'ping': 'withdrawn'},
+        ),
+      );
+    }
+    await pumpApp(tester, env: env);
+    final delayedConsent = Completer<(int, Object?)>();
+    final endpoint = operation == 'withdrawal' ? '/v1/me/consents' : '/v1/me/deletion';
+    env.server.on('POST', endpoint, (_) => delayedConsent.future);
+    await openSettings(tester);
+    if (operation == 'withdrawal') {
+      await tapVisible(tester, find.text('撤回同意'));
+      await tester.tap(find.text('撤回并退出'));
+    } else {
+      await tapVisible(tester, find.text('注销账号'));
+      await tapVisible(tester, find.text('发送验证码'));
+      await tester.enterText(find.byKey(const ValueKey('code-input')), goodCode);
+      await tester.pumpAndSettle();
+      await tapVisible(tester, find.byKey(const ValueKey('delete-check')));
+      await tester.tap(find.byKey(const ValueKey('delete-confirm')));
+    }
+    for (var i = 0; i < 10; i++) {
+      await tester.pump(const Duration(milliseconds: 50));
+    }
+    expect(env.server.calls('POST', endpoint), hasLength(1));
+    final original = env.server.calls('POST', '/v1/sync/writes').single;
+    final write = ((original.body as Map)['writes'] as List).single as Map;
+    delayedUpload.complete((200, {
+      'results': [{
+        'write_id': write['write_id'],
+        'status': 'confirmed',
+        'result': {'resource_type': 'experience.event', 'resource_id': write['write_id']},
+      }],
+    }));
+    for (var i = 0; i < 10; i++) {
+      await tester.pump(const Duration(milliseconds: 50));
+    }
+    expect(env.server.calls('POST', '/v1/sync/writes'), hasLength(1));
+    delayedConsent.complete(operation == 'withdrawal' ? (204, null) : (202, {
+      'status': 'deleting',
+      'deletion_due_at': '2026-11-01T00:00:00Z',
+      'recovery_available': true,
+    }));
+    await tester.pumpAndSettle();
+    if (operation == 'withdrawal') {
+      expect(find.byKey(const ValueKey('consent-agree')), findsOneWidget);
+      await tapVisible(tester, find.byKey(const ValueKey('consent-agree')));
+    }
+    // The fake identity boundary permits reentering the deleted owner's fixture
+    // solely to observe cleanup. Production server rejects that identity.
+    await _login(tester);
+    expect(find.byKey(const ValueKey('sync-pending')), findsNothing);
+  });
+  }
 
   testWidgets('确认注销删除当前账号待同步内容，不清除另一个账号的拒收内容', (tester) async {
     final env = await _fixture();

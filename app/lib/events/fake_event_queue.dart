@@ -82,8 +82,9 @@ class FakeEventQueue implements EventQueue {
   Future<void> confirm(
     String id,
     String ownerId,
-    Map<String, dynamic> result,
-  ) async {
+    Map<String, dynamic> result, {
+    DateTime? confirmedAt,
+  }) async {
     final entry = _entries[id];
     if (entry == null || entry.write.ownerId != ownerId) return;
     final business = registry
@@ -94,18 +95,16 @@ class FakeEventQueue implements EventQueue {
         state: WriteState.confirmed,
         result: result,
         businessRecord: business,
-        confirmedAt: DateTime.now().toUtc(),
+        confirmedAt: confirmedAt?.toUtc() ?? DateTime.now().toUtc(),
       ),
     );
   }
 
   @override
   Future<void> retryAccount(String ownerId) async {
-    for (final entry in await entries(ownerId: ownerId)) {
-      if (entry.state != WriteState.confirmed &&
-          entry.state != WriteState.conflict) {
-        await update(entry.change(state: WriteState.pending, attempts: 0));
-      }
+    final snapshot = await entries(ownerId: ownerId);
+    for (final entry in manualRetryEntries(snapshot)) {
+      await update(entry.change(state: WriteState.pending, attempts: 0));
     }
   }
 
