@@ -56,6 +56,11 @@ def erase_sensitive(session: Session, owner_id: uuid.UUID, *, include_family: bo
         include_sync=include_family or inspect(session.connection()).has_table("write_receipts"),
     )
     session.execute(delete(OwnerAllergies).where(OwnerAllergies.owner_id == owner_id))
+    # AI request/response bodies may have been derived while this authorization
+    # was active; retain accounting rows but erase private content.
+    from gramtree.ai.privacy import clear_user_content
+
+    clear_user_content(session, owner_id)
     if include_family:
         session.execute(delete(FamilyMember).where(FamilyMember.owner_id == owner_id))
 

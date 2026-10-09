@@ -12,7 +12,7 @@ from sqlalchemy import String, cast, or_, select, text
 from sqlalchemy.orm import Session
 
 from gramtree.accounts.models import User
-from gramtree.ai import gateway
+from gramtree.ai import context, gateway
 from gramtree.ai.models import GenerationRequest
 from gramtree.ai.schemas import (
     AIStatus,
@@ -102,7 +102,11 @@ def local_intent(session: Session, owner: User, request: str) -> RecipeIntent:
 
 
 def _similar(
-    session: Session, settings: Settings, owner: User, intent: RecipeIntent
+    session: Session,
+    settings: Settings,
+    owner: User,
+    intent: RecipeIntent,
+    restrictions: context.AllergyConstraints | None = None,
 ) -> list[SimilarRecipe]:
     keyword_ids = set(
         session.scalars(
@@ -161,6 +165,10 @@ def _similar(
         version = session.get(RecipeVersion, recipe.current_version_id)
         if dish is None or version is None:
             continue
+        if restrictions is not None:
+            snapshot = RecipeSnapshot.model_validate(version.snapshot)
+            if context.violates(session, snapshot, restrictions):
+                continue
         result.append(
             SimilarRecipe(
                 recipe_id=recipe.id,
@@ -212,8 +220,12 @@ def begin(
         questions=[q.model_dump() for q in questions],
     )
     session.add(row)
+    # Context is resolved again at generation time; this receipt makes a request's
+    # dependency visible to cache/replay consumers without storing its values.
+    authorized = context.build(session, owner, settings)
+    row.context_dependency = authorized.dependency
     session.commit()
-    results = _similar(session, settings, owner, intent)
+    results = _similar(session, settings, owner, intent, authorized.restrictions)
     constraints = intent.model_dump(mode="json")
     if fallback and intent.dish_name == request[:200]:
         constraints["dish_name"] = "未识别菜名"
@@ -337,7 +349,12 @@ def _normalize(
     return confirmations
 
 
-def _validate_draft(session: Session, draft: GeneratedDraft, intent: RecipeIntent):
+def _validate_draft(
+    session: Session,
+    draft: GeneratedDraft,
+    intent: RecipeIntent,
+    restrictions: context.AllergyConstraints | None = None,
+):
     dish = draft.recipe.dish_input()
     draft.recipe.dish_name = dish.name
     draft.recipe.dish_aliases = dish.aliases
@@ -372,6 +389,10 @@ def _validate_draft(session: Session, draft: GeneratedDraft, intent: RecipeInten
     )
     if result.high_risk:
         raise ApiError(422, "unsafe_ai_output", "AI 不能生成高风险菜谱")
+    if restrictions is not None and context.violates(session, snapshot, restrictions):
+        # Do not include the allergy category/ingredient in model repair prompts,
+        # logs, or HTTP errors. The caller receives no unsafe draft.
+        raise ApiError(422, "unsafe_ai_output", "AI 生成结果触发了家庭安全限制")
     if not result.can_save:
         raise ValueError("禁止疗效措辞：" + "、".join(result.prohibited_claims))
     if ("不辣" in intent.taste or "不辣" in intent.restrictions) and any(
@@ -445,17 +466,22 @@ def generate(
     if row.saved_recipe_id:
         raise ApiError(409, "generation_already_saved", "这份生成结果已经保存")
     intent = RecipeIntent.model_validate(row.intent)
-    intent.servings = answers.servings or intent.servings or 2
+    authorized = context.build(session, owner, settings)
+    cooking_defaults = authorized.model_payload.get("cookware_profile") or {}
+    intent.servings = (
+        answers.servings or intent.servings or cooking_defaults.get("household_servings") or 2
+    )
     if answers.cookware:
         intent.cookware = [answers.cookware]
+    elif cooking_defaults.get("equipment"):
+        intent.cookware = list(cooking_defaults["equipment"])
     _risk(session, row.text)
     _risk(session, intent.dish_name)
+    row.context_dependency = authorized.dependency
     payload = {
         "text": row.text,
         "intent": intent.model_dump(mode="json"),
-        "profile": None,
-        "family": None,
-        "cookware_profile": None,
+        **authorized.model_payload,
     }
     record_event(session, redis, owner, request_id, "choice", {"choice": "new"})
     record_event(
@@ -478,7 +504,7 @@ def generate(
                 draft = _json_model(raw)
                 confirmations = _normalize(session, settings, owner, draft, operation_id)
                 _mark_sources(draft)
-                safety = _validate_draft(session, draft, intent)
+                safety = _validate_draft(session, draft, intent, authorized.restrictions)
                 break
             except (ValueError, ApiError) as exc:
                 if isinstance(exc, ApiError) and exc.code == "unsafe_ai_output":
@@ -494,6 +520,11 @@ def generate(
                 payload = {**payload, "repair": {"errors": errors, "previous": raw}}
         else:
             raise gateway.Unavailable("invalid_output")
+        # Consent, allergy, or profile changes while the provider was running
+        # invalidate that response. Never deliver a draft based on stale authority.
+        current = context.build(session, owner, settings)
+        if current.dependency != authorized.dependency:
+            raise gateway.Unavailable("model_unavailable")
         row.draft = draft.model_dump(mode="json")
         session.commit()
         record_event(session, redis, owner, request_id, "result", {"saved": False})
