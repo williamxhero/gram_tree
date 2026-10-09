@@ -25,6 +25,8 @@ class RecipeDetail {
 
     required this.createdAt,
 
+    this.defaultServings,
+
     required this.dish,
 
     required this.id,
@@ -32,6 +34,8 @@ class RecipeDetail {
     this.rootRecipeId,
 
     this.sourceVersionId,
+
+    this.tasteProfileVersion,
 
     required this.updatedAt,
 
@@ -46,6 +50,9 @@ class RecipeDetail {
   @JsonKey(name: r'created_at', required: true, includeIfNull: false)
   final String createdAt;
 
+  @JsonKey(name: r'default_servings', required: false, includeIfNull: false)
+  final int? defaultServings;
+
   @JsonKey(name: r'dish', required: true, includeIfNull: false)
   final DishOut dish;
 
@@ -57,6 +64,13 @@ class RecipeDetail {
 
   @JsonKey(name: r'source_version_id', required: false, includeIfNull: false)
   final String? sourceVersionId;
+
+  @JsonKey(
+    name: r'taste_profile_version',
+    required: false,
+    includeIfNull: false,
+  )
+  final int? tasteProfileVersion;
 
   @JsonKey(name: r'updated_at', required: true, includeIfNull: false)
   final String updatedAt;
@@ -73,10 +87,12 @@ class RecipeDetail {
       other is RecipeDetail &&
           other.author == author &&
           other.createdAt == createdAt &&
+          other.defaultServings == defaultServings &&
           other.dish == dish &&
           other.id == id &&
           other.rootRecipeId == rootRecipeId &&
           other.sourceVersionId == sourceVersionId &&
+          other.tasteProfileVersion == tasteProfileVersion &&
           other.updatedAt == updatedAt &&
           other.version == version &&
           other.visibility == visibility;
@@ -85,10 +101,12 @@ class RecipeDetail {
   int get hashCode =>
       author.hashCode +
       createdAt.hashCode +
+      (defaultServings == null ? 0 : defaultServings.hashCode) +
       dish.hashCode +
       id.hashCode +
       (rootRecipeId == null ? 0 : rootRecipeId.hashCode) +
       (sourceVersionId == null ? 0 : sourceVersionId.hashCode) +
+      (tasteProfileVersion == null ? 0 : tasteProfileVersion.hashCode) +
       updatedAt.hashCode +
       version.hashCode +
       visibility.hashCode;

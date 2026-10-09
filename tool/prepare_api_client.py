@@ -44,7 +44,8 @@ def client_schema(value: Any) -> Any:
             result.update(item)
             result["nullable"] = True
     elif len(non_null) > 1 and all(
-        item.get("type") in {"string", "number", "integer", "boolean"} for item in non_null
+        item.get("type") in {"string", "number", "integer", "boolean"}
+        for item in non_null
     ):
         # Scalar parameter unions have no Dart class representation. Keep their
         # exact JSON values as Object?; the canonical server schema still limits
@@ -91,13 +92,21 @@ def main() -> None:
     source, target = (Path(arg) for arg in sys.argv[1:])
     document = json.loads(source.read_text(encoding="utf-8"))
     for name, schema in document["components"]["schemas"].items():
-        if name.startswith(("Recipe", "Modification", "ChangeExplanation")) or name in {
-            "NutritionEstimate",
-            "ValueSource",
-        }:
+        if name.startswith(
+            (
+                "Recipe",
+                "Modification",
+                "ChangeExplanation",
+                "Cooking",
+                "IngredientPreference",
+                "Allerg",
+            )
+        ) or name in {"NutritionEstimate", "ValueSource", "TasteProfilePatch"}:
             document["components"]["schemas"][name] = project_schema(schema)
     document["components"]["schemas"].pop("JsonValue", None)
-    target.write_text(json.dumps(document, ensure_ascii=False, sort_keys=True), encoding="utf-8")
+    target.write_text(
+        json.dumps(document, ensure_ascii=False, sort_keys=True), encoding="utf-8"
+    )
 
 
 if __name__ == "__main__":

@@ -27,6 +27,10 @@ start() {
   export GRAMTREE_DATABASE_URL="$PG/$DATABASE_NAME"
   export GRAMTREE_REDIS_URL="${GRAMTREE_E2E_REDIS:-redis://localhost:6379/14}"
   export GRAMTREE_MAIL_BACKEND=memory
+  # Ephemeral test-only key; honor an explicitly supplied key and never print it.
+  if [[ -z "${GRAMTREE_SENSITIVE_DATA_KEY:-}" ]]; then
+    export GRAMTREE_SENSITIVE_DATA_KEY="$(uv run python -c 'import base64,secrets; print(base64.urlsafe_b64encode(secrets.token_bytes(32)).decode())')"
+  fi
   # Browser acceptance is deterministic and never calls an external model.
   export GRAMTREE_AI_MODE="${GRAMTREE_AI_MODE:-replay}"
   export GRAMTREE_AI_REPLAY_DIR="${GRAMTREE_AI_REPLAY_DIR:-.data/ai-e2e}"
@@ -51,6 +55,10 @@ with psycopg.connect(url, autocommit=True) as conn:
 redis.Redis.from_url(Settings().redis_url).flushdb()
 EOF
   uv run alembic upgrade head >/dev/null
+  # All acceptance files share one server/IP. Keep production limits unchanged,
+  # but allow the isolated test database enough codes for the complete suite.
+  uv run gramtree config set auth.email_code_daily_limit 1000 \
+    --by e2e --reason 'Shared-IP acceptance suite' >/dev/null
   uv run gramtree ingredients import tests/data/ingredients >/dev/null
 
   # 单进程运行：验证码存在进程内存里，多进程时读不到

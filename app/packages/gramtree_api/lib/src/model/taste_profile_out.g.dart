@@ -11,6 +11,12 @@ abstract class _$TasteProfileOutCWProxy {
 
   TasteProfileOut id(String id);
 
+  TasteProfileOut ingredientCategories(List<String> ingredientCategories);
+
+  TasteProfileOut ingredientPreferences(
+    List<IngredientPreferenceOut> ingredientPreferences,
+  );
+
   TasteProfileOut localCuisines(List<LocalCuisineOut> localCuisines);
 
   TasteProfileOut scale(TasteScale scale);
@@ -26,6 +32,8 @@ abstract class _$TasteProfileOutCWProxy {
   TasteProfileOut call({
     Map<String, TasteFlavorOut> flavors,
     String id,
+    List<String> ingredientCategories,
+    List<IngredientPreferenceOut> ingredientPreferences,
     List<LocalCuisineOut> localCuisines,
     TasteScale scale,
     int version,
@@ -44,6 +52,15 @@ class _$TasteProfileOutCWProxyImpl implements _$TasteProfileOutCWProxy {
 
   @override
   TasteProfileOut id(String id) => this(id: id);
+
+  @override
+  TasteProfileOut ingredientCategories(List<String> ingredientCategories) =>
+      this(ingredientCategories: ingredientCategories);
+
+  @override
+  TasteProfileOut ingredientPreferences(
+    List<IngredientPreferenceOut> ingredientPreferences,
+  ) => this(ingredientPreferences: ingredientPreferences);
 
   @override
   TasteProfileOut localCuisines(List<LocalCuisineOut> localCuisines) =>
@@ -65,6 +82,8 @@ class _$TasteProfileOutCWProxyImpl implements _$TasteProfileOutCWProxy {
   TasteProfileOut call({
     Object? flavors = const $CopyWithPlaceholder(),
     Object? id = const $CopyWithPlaceholder(),
+    Object? ingredientCategories = const $CopyWithPlaceholder(),
+    Object? ingredientPreferences = const $CopyWithPlaceholder(),
     Object? localCuisines = const $CopyWithPlaceholder(),
     Object? scale = const $CopyWithPlaceholder(),
     Object? version = const $CopyWithPlaceholder(),
@@ -78,6 +97,15 @@ class _$TasteProfileOutCWProxyImpl implements _$TasteProfileOutCWProxy {
           ? _value.id
           // ignore: cast_nullable_to_non_nullable
           : id as String,
+      ingredientCategories: ingredientCategories == const $CopyWithPlaceholder()
+          ? _value.ingredientCategories
+          // ignore: cast_nullable_to_non_nullable
+          : ingredientCategories as List<String>,
+      ingredientPreferences:
+          ingredientPreferences == const $CopyWithPlaceholder()
+          ? _value.ingredientPreferences
+          // ignore: cast_nullable_to_non_nullable
+          : ingredientPreferences as List<IngredientPreferenceOut>,
       localCuisines: localCuisines == const $CopyWithPlaceholder()
           ? _value.localCuisines
           // ignore: cast_nullable_to_non_nullable
@@ -104,46 +132,75 @@ extension $TasteProfileOutCopyWith on TasteProfileOut {
 // JsonSerializableGenerator
 // **************************************************************************
 
-TasteProfileOut _$TasteProfileOutFromJson(Map<String, dynamic> json) =>
-    $checkedCreate('TasteProfileOut', json, ($checkedConvert) {
-      $checkKeys(
-        json,
-        requiredKeys: const [
-          'flavors',
-          'id',
-          'local_cuisines',
-          'scale',
-          'version',
-        ],
-      );
-      final val = TasteProfileOut(
-        flavors: $checkedConvert(
-          'flavors',
-          (v) => (v as Map<String, dynamic>).map(
-            (k, e) =>
-                MapEntry(k, TasteFlavorOut.fromJson(e as Map<String, dynamic>)),
-          ),
+TasteProfileOut _$TasteProfileOutFromJson(
+  Map<String, dynamic> json,
+) => $checkedCreate(
+  'TasteProfileOut',
+  json,
+  ($checkedConvert) {
+    $checkKeys(
+      json,
+      requiredKeys: const [
+        'flavors',
+        'id',
+        'ingredient_categories',
+        'ingredient_preferences',
+        'local_cuisines',
+        'scale',
+        'version',
+      ],
+    );
+    final val = TasteProfileOut(
+      flavors: $checkedConvert(
+        'flavors',
+        (v) => (v as Map<String, dynamic>).map(
+          (k, e) =>
+              MapEntry(k, TasteFlavorOut.fromJson(e as Map<String, dynamic>)),
         ),
-        id: $checkedConvert('id', (v) => v as String),
-        localCuisines: $checkedConvert(
-          'local_cuisines',
-          (v) => (v as List<dynamic>)
-              .map((e) => LocalCuisineOut.fromJson(e as Map<String, dynamic>))
-              .toList(),
-        ),
-        scale: $checkedConvert(
-          'scale',
-          (v) => TasteScale.fromJson(v as Map<String, dynamic>),
-        ),
-        version: $checkedConvert('version', (v) => (v as num).toInt()),
-      );
-      return val;
-    }, fieldKeyMap: const {'localCuisines': 'local_cuisines'});
+      ),
+      id: $checkedConvert('id', (v) => v as String),
+      ingredientCategories: $checkedConvert(
+        'ingredient_categories',
+        (v) => (v as List<dynamic>).map((e) => e as String).toList(),
+      ),
+      ingredientPreferences: $checkedConvert(
+        'ingredient_preferences',
+        (v) => (v as List<dynamic>)
+            .map(
+              (e) =>
+                  IngredientPreferenceOut.fromJson(e as Map<String, dynamic>),
+            )
+            .toList(),
+      ),
+      localCuisines: $checkedConvert(
+        'local_cuisines',
+        (v) => (v as List<dynamic>)
+            .map((e) => LocalCuisineOut.fromJson(e as Map<String, dynamic>))
+            .toList(),
+      ),
+      scale: $checkedConvert(
+        'scale',
+        (v) => TasteScale.fromJson(v as Map<String, dynamic>),
+      ),
+      version: $checkedConvert('version', (v) => (v as num).toInt()),
+    );
+    return val;
+  },
+  fieldKeyMap: const {
+    'ingredientCategories': 'ingredient_categories',
+    'ingredientPreferences': 'ingredient_preferences',
+    'localCuisines': 'local_cuisines',
+  },
+);
 
 Map<String, dynamic> _$TasteProfileOutToJson(TasteProfileOut instance) =>
     <String, dynamic>{
       'flavors': instance.flavors.map((k, e) => MapEntry(k, e.toJson())),
       'id': instance.id,
+      'ingredient_categories': instance.ingredientCategories,
+      'ingredient_preferences': instance.ingredientPreferences
+          .map((e) => e.toJson())
+          .toList(),
       'local_cuisines': instance.localCuisines.map((e) => e.toJson()).toList(),
       'scale': instance.scale.toJson(),
       'version': instance.version,

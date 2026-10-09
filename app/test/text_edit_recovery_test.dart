@@ -419,9 +419,12 @@ Future<void> _signInAs(
 class _SlowEvents extends FakeEventQueue {
   Completer<void>? gate;
   @override
-  Future<void> enqueue(QueuedEvent event) async {
+  Future<void> enqueue(
+    QueuedEvent event, {
+    Map<String, dynamic>? businessRecord,
+  }) async {
     await gate?.future;
-    await super.enqueue(event);
+    await super.enqueue(event, businessRecord: businessRecord);
   }
 }
 

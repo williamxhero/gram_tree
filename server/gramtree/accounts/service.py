@@ -45,6 +45,7 @@ from gramtree.accounts.models import (
     UserStatus,
 )
 from gramtree.events.models import Event
+from gramtree.events.sync_models import WriteFactOutbox, WriteReceipt
 from gramtree.recipes.measure_models import PersonalMeasure
 from gramtree.runtime_config import service as config
 from gramtree.settings import Settings
@@ -559,10 +560,29 @@ class ConsentInput:
 def record_consents(
     session: Session, user: User, records: list[ConsentInput], now: datetime
 ) -> None:
+    from gramtree.taste_profiles import allergies
+    from gramtree.taste_profiles import service as taste_service
+
+    taste_service.lock_owner(session, user.id)
+    sensitive = any(r.kind == "sensitive_personal_info" for r in records)
+    profile = None
+    if sensitive:
+        profile = session.scalar(select(TasteProfile).where(TasteProfile.owner_id == user.id))
+        if profile is None:
+            profile = taste_service.locked_profile(
+                session, user.id, taste_service.scale_for(session)
+            )
     for r in records:
         existing = session.get(Consent, r.id)
         if existing is not None:
-            continue  # 同一条重复上传，按 ID 去重
+            if existing.user_id != user.id or any(
+                getattr(existing, field) != getattr(r, field)
+                for field in ("kind", "version", "action", "occurred_at", "device_id")
+            ):
+                from gramtree.core.errors import ApiError
+
+                raise ApiError(409, "consent_record_conflict", "同意记录冲突，请刷新后重试")
+            continue  # Only identical owner/payload retries are idempotent.
         session.add(
             Consent(
                 id=r.id,
@@ -575,6 +595,9 @@ def record_consents(
                 received_at=now,
             )
         )
+    session.flush()
+    if profile is not None:
+        allergies.refresh_authorization(session, profile, now)
     session.commit()
 
 
@@ -595,6 +618,17 @@ def request_deletion(
     session: Session, apple: AppleClient, user: User, ds: DeviceSession, now: datetime
 ) -> User:
     require_recent_reauth(session, ds, now)
+    from gramtree.taste_profiles import allergies
+    from gramtree.taste_profiles import service as taste_service
+
+    taste_service.lock_owner(session, user.id)
+    profile = session.scalar(select(TasteProfile).where(TasteProfile.owner_id == user.id))
+    allergies.erase_sensitive(session, user.id)
+    if profile is not None:
+        profile.sensitive_consent_id = None
+        profile.sensitive_authorization_version += 1
+        profile.version += 1
+        profile.updated_at = now
     days = int(config.get(session, "account.deletion_business_days"))
     user.status = UserStatus.deleting
     user.deletion_requested_at = now
@@ -618,7 +652,9 @@ def purge_due_accounts(session: Session, apple: AppleClient, now: datetime) -> i
     """删除到期的注销中账号的个人数据。账号行保留为“已注销”，ID 不复用。"""
     due = list(
         session.scalars(
-            select(User).where(User.status == UserStatus.deleting, User.deletion_due_at <= now)
+            select(User)
+            .where(User.status == UserStatus.deleting, User.deletion_due_at <= now)
+            .with_for_update()
         )
     )
     for user in due:
@@ -631,8 +667,16 @@ def purge_due_accounts(session: Session, apple: AppleClient, now: datetime) -> i
         if emails:
             session.execute(delete(EmailCode).where(EmailCode.email.in_(emails)))
         session.execute(delete(Identity).where(Identity.user_id == user.id))
+        from gramtree.taste_profiles.allergies import erase_sensitive
+
+        erase_sensitive(session, user.id)
         session.execute(delete(Consent).where(Consent.user_id == user.id))
         session.execute(delete(PersonalMeasure).where(PersonalMeasure.owner_id == user.id))
+        # User IDs are retained, so FK cascade cannot remove delivery payloads.
+        # Delete dependent fact bundles before their immutable receipts; other
+        # accounts' confirmations and retry dependencies remain untouched.
+        session.execute(delete(WriteFactOutbox).where(WriteFactOutbox.owner_id == user.id))
+        session.execute(delete(WriteReceipt).where(WriteReceipt.owner_id == user.id))
         session.execute(
             delete(Event).where(
                 Event.user_id == user.id, Event.correlation.has_key("taste_profile_change_id")

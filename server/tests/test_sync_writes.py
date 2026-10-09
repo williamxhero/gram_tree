@@ -1,0 +1,454 @@
+"""Account-scoped durable writes, observed only through HTTP on PostgreSQL."""
+
+import uuid
+from dataclasses import replace
+from datetime import datetime
+
+import pytest
+from pydantic import BaseModel
+from sqlalchemy.orm import Session
+
+from gramtree.events.sync_contract import (
+    WriteApplication,
+    WriteConflict,
+    WriteEnvelope,
+    WriteFailure,
+)
+from gramtree.events.sync_registry import REGISTERED_WRITES
+from tests.accounts_support import Api, bearer, new_uuid
+
+
+def envelope(owner_id: str, **overrides: object) -> dict:
+    item = {
+        "format_version": 1,
+        "write_type": "experience.event",
+        "write_id": new_uuid(),
+        "owner_id": owner_id,
+        "device_time": "2026-10-08T10:00:00Z",
+        "dependencies": [],
+        "payload": {
+            "event_type": "pipeline.self_check",
+            "type_version": 1,
+            "device_id": "offline-device",
+            "app_version": "test",
+            "correlation": {},
+            "content": {"ping": "offline"},
+        },
+    }
+    item.update(overrides)
+    return item
+
+
+def submit(api: Api, tokens: dict, *writes: dict):
+    response = api.client.post(
+        "/v1/sync/writes", headers=bearer(tokens), json={"writes": list(writes)}
+    )
+    assert response.status_code == 200, response.text
+    return response.json()["results"]
+
+
+def count(api: Api, tokens: dict) -> int:
+    response = api.client.get(
+        "/v1/dev/events/count",
+        headers=bearer(tokens),
+        params={"event_type": "pipeline.self_check"},
+    )
+    assert response.status_code == 200
+    return response.json()["count"]
+
+
+def test_committed_write_replays_same_confirmation_without_another_fact(api: Api) -> None:
+    tokens = api.login("queue@example.com")
+    write = envelope(tokens["user"]["id"])
+    first = submit(api, tokens, write)[0]
+    assert first["status"] == "confirmed"
+    assert first["result"] == {
+        "resource_type": "experience.event",
+        "resource_id": write["write_id"],
+    }
+    # Ignore the first response, as if it was lost after the server committed.
+    replay = submit(api, tokens, write)[0]
+    assert replay["status"] == "already_processed"
+    assert replay["result"] == first["result"]
+    assert count(api, tokens) == 1
+
+
+def test_same_id_cannot_change_content_or_transfer_to_another_account(api: Api) -> None:
+    alice = api.login("alice@example.com")
+    bob = api.login("bob@example.com")
+    original = envelope(alice["user"]["id"])
+    confirmation = submit(api, alice, original)[0]
+    changed = {**original, "payload": {**original["payload"], "content": {"ping": "changed"}}}
+    assert submit(api, alice, changed)[0]["reason_code"] == "write_id_reused"
+    wrong_owner = submit(api, bob, original)[0]
+    assert wrong_owner["reason_code"] == "owner_mismatch"
+    assert wrong_owner["result"] is None
+    disguised = {**original, "owner_id": bob["user"]["id"]}
+    result = submit(api, bob, disguised)[0]
+    assert result["status"] == "failed"
+    assert result["result"] is None
+    assert count(api, alice) == 1
+    assert count(api, bob) == 0
+    assert submit(api, alice, original)[0]["result"] == confirmation["result"]
+
+
+def test_child_first_defers_then_parent_arrives_and_child_resumes(api: Api) -> None:
+    tokens = api.login("dependencies@example.com")
+    parent = envelope(tokens["user"]["id"])
+    child = envelope(tokens["user"]["id"], dependencies=[parent["write_id"]])
+    first = submit(api, tokens, child, parent)
+    assert first[0]["status"] == "deferred"
+    assert first[0]["reason_code"] == "dependency_not_arrived"
+    assert first[1]["status"] == "confirmed"
+    assert count(api, tokens) == 1
+    assert submit(api, tokens, child)[0]["status"] == "confirmed"
+    assert count(api, tokens) == 2
+
+
+def test_dependency_cycle_and_unknown_dependency_never_pretend_success(api: Api) -> None:
+    tokens = api.login("cycle@example.com")
+    a, b = new_uuid(), new_uuid()
+    first = envelope(tokens["user"]["id"], write_id=a, dependencies=[b])
+    second = envelope(tokens["user"]["id"], write_id=b, dependencies=[a])
+    assert submit(api, tokens, first)[0]["status"] == "deferred"
+    assert submit(api, tokens, second)[0]["reason_code"] == "dependency_cycle"
+    assert submit(api, tokens, first)[0]["status"] == "failed"
+    assert count(api, tokens) == 0
+
+
+def test_unregistered_or_invalid_business_content_and_analytics_are_rejected(api: Api) -> None:
+    tokens = api.login("validation@example.com")
+    unknown = envelope(tokens["user"]["id"], write_type="arbitrary.upload")
+    analytics = envelope(tokens["user"]["id"])
+    analytics["payload"]["event_type"] = "analytics.click"
+    bad = envelope(tokens["user"]["id"])
+    bad["payload"]["content"] = {"no_ping": "invalid"}
+    results = submit(api, tokens, unknown, analytics, bad)
+    assert [r["reason_code"] for r in results] == [
+        "unknown_write_type",
+        "unknown_event_type",
+        "invalid_content",
+    ]
+    assert count(api, tokens) == 0
+
+
+def test_client_composition_observation_replays_but_cannot_forge_recipe_fact(api: Api) -> None:
+    tokens = api.login("composition-observation@example.com")
+    observation = envelope(tokens["user"]["id"])
+    observation["payload"].update(
+        event_type="ui.composition_shown",
+        content={"page_type": "today", "components": [], "is_fallback": True},
+    )
+    first = submit(api, tokens, observation)[0]
+    assert first["status"] == "confirmed"
+    replay = submit(api, tokens, observation)[0]
+    assert replay["status"] == "already_processed"
+    assert replay["result"] == first["result"]
+    facts = api.client.get(
+        "/v1/dev/events/count",
+        headers=bearer(tokens),
+        params={"event_type": "ui.composition_shown"},
+    )
+    assert facts.status_code == 200
+    assert facts.json()["count"] == 1
+    forged = envelope(tokens["user"]["id"])
+    forged["payload"].update(
+        event_type="recipe.version_saved",
+        correlation={"recipe_version_id": new_uuid()},
+        content={"recipe_version_id": new_uuid()},
+    )
+    assert submit(api, tokens, forged)[0]["reason_code"] == "server_fact_only"
+
+
+def test_different_devices_append_distinct_facts_even_with_same_time(api: Api) -> None:
+    tokens = api.login("append@example.com")
+    first = envelope(tokens["user"]["id"])
+    second = envelope(tokens["user"]["id"])
+    second["payload"]["device_id"] = "other-device"
+    assert [r["status"] for r in submit(api, tokens, first, second)] == ["confirmed", "confirmed"]
+    assert count(api, tokens) == 2
+
+
+def test_legacy_http_delivery_is_migrated_without_double_fact(api: Api) -> None:
+    tokens = api.login("legacy@example.com")
+    write = envelope(tokens["user"]["id"])
+    old = {**write["payload"], "id": write["write_id"], "device_time": "2026-10-08T18:00:00+08:00"}
+    response = api.client.post("/v1/events/upload", headers=bearer(tokens), json={"events": [old]})
+    assert response.status_code == 200
+    assert submit(api, tokens, write)[0]["status"] == "confirmed"
+    assert count(api, tokens) == 1
+
+
+def test_invalid_parent_is_terminal_and_child_reports_failed_dependency(api: Api) -> None:
+    tokens = api.login("invalid-parent@example.com")
+    parent = envelope(tokens["user"]["id"])
+    parent["payload"]["content"] = {"no_ping": "invalid"}
+    child = envelope(tokens["user"]["id"], dependencies=[parent["write_id"]])
+    assert submit(api, tokens, child)[0]["status"] == "deferred"
+    assert submit(api, tokens, parent)[0]["reason_code"] == "invalid_content"
+    assert submit(api, tokens, child)[0]["reason_code"] == "dependency_failed"
+    repaired = {**parent, "payload": {**parent["payload"], "content": {"ping": "fixed"}}}
+    assert submit(api, tokens, repaired)[0]["reason_code"] == "write_id_reused"
+    assert count(api, tokens) == 0
+
+
+def test_permission_rejected_parent_is_terminal_and_child_cannot_resume(api: Api) -> None:
+    from tests.test_recipes import recipe_input
+
+    author = api.login("private-recipe@example.com")
+    saved = api.client.post("/v1/recipes", headers=bearer(author), json=recipe_input())
+    assert saved.status_code == 201, saved.text
+    tokens = api.login("forbidden-parent@example.com")
+    parent = envelope(tokens["user"]["id"])
+    parent["payload"]["correlation"] = {"recipe_version_id": saved.json()["version"]["id"]}
+    child = envelope(tokens["user"]["id"], dependencies=[parent["write_id"]])
+    waiting = submit(api, tokens, child)[0]
+    assert waiting["status"] == "deferred"
+    assert waiting["reason_code"] == "dependency_not_arrived"
+    rejected = submit(api, tokens, parent)[0]
+    assert rejected["status"] == "failed"
+    assert rejected["reason_code"] == "reference_forbidden"
+    assert rejected["result"] is None
+    failed = submit(api, tokens, child)[0]
+    assert failed["status"] == "failed"
+    assert failed["reason_code"] == "dependency_failed"
+    assert submit(api, tokens, parent)[0] == rejected
+    assert submit(api, tokens, child)[0] == failed
+    repaired = {**parent, "payload": {**parent["payload"], "correlation": {}}}
+    assert submit(api, tokens, repaired)[0]["reason_code"] == "write_id_reused"
+    assert count(api, tokens) == 0
+    assert count(api, author) == 0
+
+
+def test_permission_rejection_cannot_disclose_or_demote_another_owners_receipt(api: Api) -> None:
+    from tests.test_recipes import recipe_input
+
+    alice = api.login("receipt-author@example.com")
+    saved = api.client.post("/v1/recipes", headers=bearer(alice), json=recipe_input())
+    assert saved.status_code == 201, saved.text
+    original = envelope(alice["user"]["id"])
+    original["payload"]["correlation"] = {"recipe_version_id": saved.json()["version"]["id"]}
+    confirmation = submit(api, alice, original)[0]
+    assert confirmation["status"] == "confirmed"
+    bob = api.login("receipt-intruder@example.com")
+    disguised = {**original, "owner_id": bob["user"]["id"]}
+    rejected = submit(api, bob, disguised)[0]
+    assert rejected["status"] == "failed"
+    assert rejected["reason_code"] == "reference_forbidden"
+    assert rejected["result"] is None
+    assert rejected["conflict"] is None
+    unknown = {**disguised, "write_id": new_uuid()}
+    assert submit(api, bob, unknown)[0] == {**rejected, "write_id": unknown["write_id"]}
+    intruder_child = envelope(bob["user"]["id"], dependencies=[original["write_id"]])
+    assert submit(api, bob, intruder_child)[0]["reason_code"] == "dependency_unavailable"
+    replay = submit(api, alice, original)[0]
+    assert replay["status"] == "already_processed"
+    assert replay["result"] == confirmation["result"]
+    child = envelope(alice["user"]["id"], dependencies=[original["write_id"]])
+    assert submit(api, alice, child)[0]["status"] == "confirmed"
+    assert count(api, alice) == 2
+    assert count(api, bob) == 0
+
+
+def test_revoked_reauthorization_hides_and_preserves_confirmation(
+    api: Api, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    spec = REGISTERED_WRITES["experience.event"]
+    revoked = False
+
+    def authorize(session: Session, owner: uuid.UUID, payload: BaseModel) -> None:
+        spec.authorize(session, owner, payload)
+        if revoked:
+            raise WriteFailure("reference_forbidden")
+
+    # No public operation transfers a private recipe's ownership. A test-only
+    # append-only registration exercises the contract's revoked-access boundary.
+    write_type = "test.revocable_experience"
+    monkeypatch.setitem(
+        REGISTERED_WRITES, write_type, replace(spec, write_type=write_type, authorize=authorize)
+    )
+    tokens = api.login("revoked-replay@example.com")
+    parent = envelope(tokens["user"]["id"], write_type=write_type)
+    confirmation = submit(api, tokens, parent)[0]
+    assert confirmation["status"] == "confirmed"
+    revoked = True
+    rejected = submit(api, tokens, parent)[0]
+    assert rejected["status"] == "failed"
+    assert rejected["reason_code"] == "reference_forbidden"
+    assert rejected["result"] is None
+    assert rejected["conflict"] is None
+    assert submit(api, tokens, parent)[0] == rejected
+    # The rejection cannot turn the already committed prerequisite into failure.
+    child = envelope(tokens["user"]["id"], dependencies=[parent["write_id"]])
+    assert submit(api, tokens, child)[0]["status"] == "confirmed"
+    revoked = False
+    replay = submit(api, tokens, parent)[0]
+    assert replay["status"] == "already_processed"
+    assert replay["result"] == confirmation["result"]
+    assert count(api, tokens) == 2
+
+
+def test_revoked_deferred_prerequisite_is_terminal_only_for_matching_owner_and_content(
+    api: Api, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    spec = REGISTERED_WRITES["experience.event"]
+    revoked = False
+
+    def authorize(session: Session, owner: uuid.UUID, payload: BaseModel) -> None:
+        spec.authorize(session, owner, payload)
+        if revoked:
+            raise WriteFailure("reference_forbidden")
+
+    write_type = "test.revocable_deferred_experience"
+    monkeypatch.setitem(
+        REGISTERED_WRITES, write_type, replace(spec, write_type=write_type, authorize=authorize)
+    )
+    tokens = api.login("revoked-deferred@example.com")
+    other = api.login("revoked-deferred-other@example.com")
+    prerequisite = envelope(tokens["user"]["id"])
+    parent = envelope(
+        tokens["user"]["id"], write_type=write_type, dependencies=[prerequisite["write_id"]]
+    )
+    waiting = submit(api, tokens, parent)[0]
+    assert waiting["status"] == "deferred"
+    assert waiting["reason_code"] == "dependency_not_arrived"
+    child = envelope(tokens["user"]["id"], dependencies=[parent["write_id"]])
+    child_waiting = submit(api, tokens, child)[0]
+    assert child_waiting["status"] == "deferred"
+    assert child_waiting["reason_code"] == "dependency_not_confirmed"
+    revoked = True
+    changed = {**parent, "payload": {**parent["payload"], "content": {"ping": "changed"}}}
+    disguised = {**parent, "owner_id": other["user"]["id"]}
+    for account, write in [(tokens, changed), (other, disguised)]:
+        rejected = submit(api, account, write)[0]
+        assert rejected["status"] == "failed"
+        assert rejected["reason_code"] == "reference_forbidden"
+        assert rejected["result"] is None
+        assert rejected["conflict"] is None
+        assert submit(api, tokens, child)[0] == child_waiting
+    rejected = submit(api, tokens, parent)[0]
+    assert rejected["status"] == "failed"
+    assert rejected["reason_code"] == "reference_forbidden"
+    assert rejected["result"] is None
+    failed = submit(api, tokens, child)[0]
+    assert failed["status"] == "failed"
+    assert failed["reason_code"] == "dependency_failed"
+    assert submit(api, tokens, parent)[0] == rejected
+    revoked = False
+    assert submit(api, tokens, prerequisite)[0]["status"] == "confirmed"
+    assert submit(api, tokens, parent)[0] == rejected
+    assert submit(api, tokens, child)[0] == failed
+    assert count(api, tokens) == 1
+    assert count(api, other) == 0
+
+
+@pytest.mark.parametrize("outcome", ["failed", "conflict"])
+def test_partial_application_rolls_back_and_retains_terminal_result(
+    api: Api, monkeypatch: pytest.MonkeyPatch, outcome: str
+) -> None:
+    spec = REGISTERED_WRITES["experience.event"]
+    copies = {"local": {"ping": "offline"}, "remote": {"ping": "other"}}
+    revoked = False
+
+    def authorize(session: Session, owner: uuid.UUID, payload: BaseModel) -> None:
+        spec.authorize(session, owner, payload)
+        if revoked:
+            raise WriteFailure("reference_forbidden")
+
+    def apply(
+        session: Session,
+        owner: uuid.UUID,
+        write: WriteEnvelope,
+        payload: BaseModel,
+        now: datetime,
+    ) -> WriteApplication:
+        spec.apply(session, owner, write, payload, now)
+        session.flush()
+        if outcome == "conflict":
+            raise WriteConflict(copies)
+        raise WriteFailure("test_application_failed")
+
+    # Inject a rejection after a real append has reached PostgreSQL. Only HTTP
+    # results and event counts are observed, never receipt or outbox table rows.
+    write_type = "test.rejected_experience"
+    monkeypatch.setitem(
+        REGISTERED_WRITES,
+        write_type,
+        replace(spec, write_type=write_type, authorize=authorize, apply=apply),
+    )
+    tokens = api.login("partial-application@example.com")
+    parent = envelope(tokens["user"]["id"], write_type=write_type)
+    independent = envelope(tokens["user"]["id"])
+    rejected, confirmed = submit(api, tokens, parent, independent)
+    assert rejected["status"] == outcome
+    assert rejected["reason_code"] == (
+        "conflict_choice_required" if outcome == "conflict" else "test_application_failed"
+    )
+    assert rejected["result"] is None
+    assert rejected["conflict"] == (copies if outcome == "conflict" else None)
+    assert confirmed["status"] == "confirmed"
+    assert count(api, tokens) == 1
+    assert submit(api, tokens, parent)[0] == rejected
+    changed = {**parent, "payload": {**parent["payload"], "content": {"ping": "changed"}}}
+    assert submit(api, tokens, changed)[0]["reason_code"] == "write_id_reused"
+    revoked = True
+    denied = submit(api, tokens, parent)[0]
+    assert denied["status"] == "failed"
+    assert denied["reason_code"] == "reference_forbidden"
+    assert denied["result"] is None
+    assert denied["conflict"] is None
+    revoked = False
+    assert submit(api, tokens, parent)[0] == rejected
+    child = envelope(tokens["user"]["id"], dependencies=[parent["write_id"]])
+    dependent = submit(api, tokens, child)[0]
+    assert dependent["status"] == ("deferred" if outcome == "conflict" else "failed")
+    assert dependent["reason_code"] == (
+        "dependency_conflict" if outcome == "conflict" else "dependency_failed"
+    )
+    assert dependent["result"] is None
+    assert count(api, tokens) == 1
+
+
+def test_due_deletion_purges_only_owners_delivery_receipts_and_outbox(api: Api) -> None:
+    from tests.test_account_deletion import _purge, _reauth_email
+
+    alice = api.login("purge-queue@example.com")
+    bob = api.login("keep-queue@example.com")
+    rejected = envelope(alice["user"]["id"], write_type="unregistered.old_type")
+    assert submit(api, alice, rejected)[0]["status"] == "failed"
+    committed = envelope(alice["user"]["id"])
+    assert submit(api, alice, committed)[0]["status"] == "confirmed"
+    kept = envelope(bob["user"]["id"])
+    stable = submit(api, bob, kept)[0]["result"]
+    claimed = envelope(bob["user"]["id"], write_id=rejected["write_id"])
+    assert submit(api, bob, claimed)[0]["reason_code"] == "write_id_unavailable"
+    assert _reauth_email(api, alice, "purge-queue@example.com") == 204
+    deletion = api.client.post("/v1/me/deletion", headers=bearer(alice))
+    assert deletion.status_code == 202
+    assert "已删除 0 个" in _purge(api.clock.now.isoformat())
+    assert submit(api, bob, claimed)[0]["reason_code"] == "write_id_unavailable"
+    # A committed receipt has an outbox FK: administrative purge must remove
+    # the fact bundle first, then delivery receipts, while retaining the User ID.
+    assert "已删除 1 个" in _purge(deletion.json()["deletion_due_at"])
+    assert submit(api, bob, claimed)[0]["status"] == "confirmed"
+    assert submit(api, bob, kept)[0]["result"] == stable
+    assert count(api, bob) == 2
+    assert (
+        api.client.post(
+            "/v1/sync/writes", headers=bearer(alice), json={"writes": [committed]}
+        ).status_code
+        == 401
+    )
+
+
+def test_concurrent_replays_produce_one_confirmation_and_one_fact(api: Api) -> None:
+    from concurrent.futures import ThreadPoolExecutor
+
+    tokens = api.login("concurrent@example.com")
+    write = envelope(tokens["user"]["id"])
+    with ThreadPoolExecutor(max_workers=4) as pool:
+        results = list(pool.map(lambda _: submit(api, tokens, write)[0], range(4)))
+    assert sum(r["status"] == "confirmed" for r in results) == 1
+    assert sum(r["status"] == "already_processed" for r in results) == 3
+    assert all(r["result"] == results[0]["result"] for r in results)
+    assert count(api, tokens) == 1

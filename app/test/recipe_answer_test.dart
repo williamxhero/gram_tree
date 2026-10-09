@@ -305,8 +305,13 @@ void main() {
     await tester.tap(find.text('为什么 · 明细'));
     await tester.pumpAndSettle();
     final events = environment.server
-        .calls('POST', '/v1/events/upload')
-        .expand((r) => ((r.body as Map)['events'] as List).cast<Map>())
+        .calls('POST', '/v1/sync/writes')
+        .expand((r) => ((r.body as Map)['writes'] as List).cast<Map>())
+        .map((write) {
+          expect(write['write_type'], 'experience.event');
+          expect(write['owner_id'], environment.server.user.id);
+          return write['payload'] as Map;
+        })
         .toList();
     final actions = events
         .where(

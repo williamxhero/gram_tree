@@ -15,5 +15,6 @@ import '../features/tab_paths.dart';
 const Map<String, String> registeredPages = {
   'create': TabPaths.create,
   'my_recipes': RecipeListPage.path,
+  'one_line_recipe': '/recipes/one-line',
   'taste_profile': TasteProfilePage.path,
 };

@@ -54,8 +54,13 @@ void main() {
 
   List<Map<String, dynamic>> uploadedEvents(TestEnv env, String eventType) =>
       env.server
-          .calls('POST', '/v1/events/upload')
-          .expand((r) => ((r.body as Map)['events'] as List).cast<Map>())
+          .calls('POST', '/v1/sync/writes')
+          .expand((r) => ((r.body as Map)['writes'] as List).cast<Map>())
+          .map((write) {
+            expect(write['write_type'], 'experience.event');
+            expect(write['owner_id'], env.server.user.id);
+            return write['payload'] as Map;
+          })
           .where((e) => e['event_type'] == eventType)
           .cast<Map<String, dynamic>>()
           .toList();

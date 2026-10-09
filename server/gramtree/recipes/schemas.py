@@ -483,6 +483,9 @@ class RecipeVersionOut(BaseModel):
 
 
 class RecipeDetail(BaseModel):
+    # Viewer defaults live outside the immutable author snapshot.
+    default_servings: int | None = None
+    taste_profile_version: int | None = None
     id: IdV4
     dish: DishOut
     author: RecipeAuthor

@@ -94,6 +94,90 @@ abstract class AppLocalizations {
   /// A list of this localizations delegate's supported locales.
   static const List<Locale> supportedLocales = <Locale>[Locale('zh')];
 
+  /// No description provided for @networkConsentRequired.
+  ///
+  /// In zh, this message translates to:
+  /// **'需要先同意隐私政策'**
+  String get networkConsentRequired;
+
+  /// No description provided for @networkChecking.
+  ///
+  /// In zh, this message translates to:
+  /// **'正在检查连接，在线功能需要联网'**
+  String get networkChecking;
+
+  /// No description provided for @networkConnected.
+  ///
+  /// In zh, this message translates to:
+  /// **'服务已连接'**
+  String get networkConnected;
+
+  /// Current account's writes awaiting synchronization.
+  ///
+  /// In zh, this message translates to:
+  /// **'待同步 {count} 条'**
+  String syncPendingCount(int count);
+
+  /// No description provided for @syncRetryExhaustedCount.
+  ///
+  /// In zh, this message translates to:
+  /// **'重试次数已达上限，已保留 {count} 条内容'**
+  String syncRetryExhaustedCount(int count);
+
+  /// No description provided for @syncDependencyFailedCount.
+  ///
+  /// In zh, this message translates to:
+  /// **'前置写入失败，已保留 {count} 条内容'**
+  String syncDependencyFailedCount(int count);
+
+  /// No description provided for @syncDependencyConflictCount.
+  ///
+  /// In zh, this message translates to:
+  /// **'前置写入存在冲突，{count} 条暂缓同步'**
+  String syncDependencyConflictCount(int count);
+
+  /// No description provided for @syncDependencyMissingCount.
+  ///
+  /// In zh, this message translates to:
+  /// **'依赖写入尚未到达，{count} 条暂缓同步'**
+  String syncDependencyMissingCount(int count);
+
+  /// No description provided for @syncDependencyCycleCount.
+  ///
+  /// In zh, this message translates to:
+  /// **'依赖写入存在循环，已保留 {count} 条内容'**
+  String syncDependencyCycleCount(int count);
+
+  /// No description provided for @syncLegacyOwnerUnknownCount.
+  ///
+  /// In zh, this message translates to:
+  /// **'本机有 {count} 条旧写入无法确定原账号，已隔离保留，不会上传'**
+  String syncLegacyOwnerUnknownCount(int count);
+
+  /// No description provided for @syncLegacyRejectedCount.
+  ///
+  /// In zh, this message translates to:
+  /// **'本机保留 {count} 条旧拒收记录，仅有拒收凭据，无法恢复原内容'**
+  String syncLegacyRejectedCount(int count);
+
+  /// No description provided for @networkUnavailable.
+  ///
+  /// In zh, this message translates to:
+  /// **'需要联网：暂时连接不到服务，请检查网络；本机内容仍可使用。'**
+  String get networkUnavailable;
+
+  /// No description provided for @snapshotCapacityRejected.
+  ///
+  /// In zh, this message translates to:
+  /// **'本机缓存空间不足，此版本未离线保存；菜单和正在做的内容已保留。'**
+  String get snapshotCapacityRejected;
+
+  /// No description provided for @snapshotProtectedOverLimit.
+  ///
+  /// In zh, this message translates to:
+  /// **'受保护的菜谱超出缓存容量，内容已保留；请释放不再需要的保护。'**
+  String get snapshotProtectedOverLimit;
+
   /// No description provided for @recipeAnswerBasis.
   ///
   /// In zh, this message translates to:
@@ -2349,6 +2433,96 @@ abstract class AppLocalizations {
   /// **'AI 协助'**
   String get recipeAiAssisted;
 
+  /// No description provided for @tasteCategory.
+  ///
+  /// In zh, this message translates to:
+  /// **'或选择食材分类'**
+  String get tasteCategory;
+
+  /// No description provided for @tastePreference.
+  ///
+  /// In zh, this message translates to:
+  /// **'偏好'**
+  String get tastePreference;
+
+  /// No description provided for @tastePreferenceDelete.
+  ///
+  /// In zh, this message translates to:
+  /// **'删除偏好'**
+  String get tastePreferenceDelete;
+
+  /// No description provided for @tastePreferenceDeleteBody.
+  ///
+  /// In zh, this message translates to:
+  /// **'只删除这项明确选择，不改动其他口味和过敏设置；修改历史保留。'**
+  String get tastePreferenceDeleteBody;
+
+  /// No description provided for @tasteIngredients.
+  ///
+  /// In zh, this message translates to:
+  /// **'食材偏好'**
+  String get tasteIngredients;
+
+  /// No description provided for @tasteIngredientsIntro.
+  ///
+  /// In zh, this message translates to:
+  /// **'喜欢、不喜欢和忌口由你明确选择，不等于过敏。'**
+  String get tasteIngredientsIntro;
+
+  /// No description provided for @tasteIngredientsEmpty.
+  ///
+  /// In zh, this message translates to:
+  /// **'还没有食材偏好'**
+  String get tasteIngredientsEmpty;
+
+  /// No description provided for @tastePreferenceAdd.
+  ///
+  /// In zh, this message translates to:
+  /// **'添加食材偏好'**
+  String get tastePreferenceAdd;
+
+  /// No description provided for @tasteIngredientSearch.
+  ///
+  /// In zh, this message translates to:
+  /// **'搜索标准食材'**
+  String get tasteIngredientSearch;
+
+  /// No description provided for @tasteSearch.
+  ///
+  /// In zh, this message translates to:
+  /// **'搜索'**
+  String get tasteSearch;
+
+  /// No description provided for @tasteSearchEmpty.
+  ///
+  /// In zh, this message translates to:
+  /// **'没有找到标准食材，请换一个名称搜索；不能保存自由文字。'**
+  String get tasteSearchEmpty;
+
+  /// No description provided for @tasteLiked.
+  ///
+  /// In zh, this message translates to:
+  /// **'喜欢'**
+  String get tasteLiked;
+
+  /// No description provided for @tasteDisliked.
+  ///
+  /// In zh, this message translates to:
+  /// **'不喜欢'**
+  String get tasteDisliked;
+
+  /// No description provided for @tasteAvoided.
+  ///
+  /// In zh, this message translates to:
+  /// **'忌口'**
+  String get tasteAvoided;
+
+  /// No description provided for @tasteUnset.
+  ///
+  /// In zh, this message translates to:
+  /// **'未设置'**
+  String get tasteUnset;
+
   /// No description provided for @tasteTitle.
   ///
   /// In zh, this message translates to:
@@ -2684,6 +2858,466 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'约'**
   String get recipeMeasureApproximate;
+
+  /// No description provided for @cookingConstraintsTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'做菜约束'**
+  String get cookingConstraintsTitle;
+
+  /// No description provided for @cookingConstraintsUnset.
+  ///
+  /// In zh, this message translates to:
+  /// **'未设置'**
+  String get cookingConstraintsUnset;
+
+  /// No description provided for @cookingConstraintsLoadError.
+  ///
+  /// In zh, this message translates to:
+  /// **'做菜约束暂时无法读取'**
+  String get cookingConstraintsLoadError;
+
+  /// No description provided for @cookingConstraintsIntro.
+  ///
+  /// In zh, this message translates to:
+  /// **'做菜约束 · 仅作为家庭默认，不修改作者菜谱'**
+  String get cookingConstraintsIntro;
+
+  /// No description provided for @cookingConstraintsSourceValue.
+  ///
+  /// In zh, this message translates to:
+  /// **'家庭做菜约束'**
+  String get cookingConstraintsSourceValue;
+
+  /// No description provided for @cookingConstraintsBasis.
+  ///
+  /// In zh, this message translates to:
+  /// **'来自你手动填写；未设置的项目为空。人数只用于新一次查看的默认份数，本次手动选择优先，作者配方和原始版本不变。厨具、时间与餐型仅保存，不在这里推荐或改写菜谱。'**
+  String get cookingConstraintsBasis;
+
+  /// No description provided for @cookingConstraintsManual.
+  ///
+  /// In zh, this message translates to:
+  /// **'你手动设置'**
+  String get cookingConstraintsManual;
+
+  /// No description provided for @cookingConstraintsEdit.
+  ///
+  /// In zh, this message translates to:
+  /// **'设置做菜约束'**
+  String get cookingConstraintsEdit;
+
+  /// No description provided for @cookingConstraintsClear.
+  ///
+  /// In zh, this message translates to:
+  /// **'清除做菜约束'**
+  String get cookingConstraintsClear;
+
+  /// No description provided for @cookingConstraintsClearTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'清除做菜约束？'**
+  String get cookingConstraintsClearTitle;
+
+  /// No description provided for @cookingConstraintsClearBody.
+  ///
+  /// In zh, this message translates to:
+  /// **'人数、厨具、时间和餐型恢复为空。菜谱原始版本不会改变。'**
+  String get cookingConstraintsClearBody;
+
+  /// No description provided for @cookingConstraintsClearConfirm.
+  ///
+  /// In zh, this message translates to:
+  /// **'清除'**
+  String get cookingConstraintsClearConfirm;
+
+  /// No description provided for @cookingHouseholdEmpty.
+  ///
+  /// In zh, this message translates to:
+  /// **'人数未设置，菜谱沿用作者份数'**
+  String get cookingHouseholdEmpty;
+
+  /// No description provided for @cookingHouseholdDefault.
+  ///
+  /// In zh, this message translates to:
+  /// **'家庭默认：{count} 人'**
+  String cookingHouseholdDefault(String count);
+
+  /// No description provided for @cookingHouseholdHistory.
+  ///
+  /// In zh, this message translates to:
+  /// **'{count} 人'**
+  String cookingHouseholdHistory(String count);
+
+  /// No description provided for @cookingHouseholdInput.
+  ///
+  /// In zh, this message translates to:
+  /// **'家庭人数（留空沿用作者份数）'**
+  String get cookingHouseholdInput;
+
+  /// No description provided for @cookingEquipmentInput.
+  ///
+  /// In zh, this message translates to:
+  /// **'家里有哪些厨具'**
+  String get cookingEquipmentInput;
+
+  /// No description provided for @cookingEquipmentEmpty.
+  ///
+  /// In zh, this message translates to:
+  /// **'厨具未设置'**
+  String get cookingEquipmentEmpty;
+
+  /// No description provided for @cookingEquipmentSummary.
+  ///
+  /// In zh, this message translates to:
+  /// **'厨具：{names}'**
+  String cookingEquipmentSummary(String names);
+
+  /// No description provided for @cookingMealTimesEmpty.
+  ///
+  /// In zh, this message translates to:
+  /// **'各餐可用时间未设置'**
+  String get cookingMealTimesEmpty;
+
+  /// No description provided for @cookingMealTemplatesEmpty.
+  ///
+  /// In zh, this message translates to:
+  /// **'餐型未设置'**
+  String get cookingMealTemplatesEmpty;
+
+  /// No description provided for @cookingMealInput.
+  ///
+  /// In zh, this message translates to:
+  /// **'每餐时间与餐型（留空清除）'**
+  String get cookingMealInput;
+
+  /// No description provided for @cookingMealTemplateHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'菜型用逗号分隔：{types}。每项代表一道，可重复。'**
+  String cookingMealTemplateHint(String types);
+
+  /// No description provided for @cookingMealMinutesInput.
+  ///
+  /// In zh, this message translates to:
+  /// **'可用分钟'**
+  String get cookingMealMinutesInput;
+
+  /// No description provided for @cookingMealTemplateInput.
+  ///
+  /// In zh, this message translates to:
+  /// **'菜型组合，例如 {example}'**
+  String cookingMealTemplateInput(String example);
+
+  /// No description provided for @cookingIntegerValidation.
+  ///
+  /// In zh, this message translates to:
+  /// **'请输入 {minimum}～{maximum} 的整数；留空清除'**
+  String cookingIntegerValidation(int minimum, int maximum);
+
+  /// No description provided for @cookingTemplateValidation.
+  ///
+  /// In zh, this message translates to:
+  /// **'请用上述菜型组合，最多 {maximum} 道'**
+  String cookingTemplateValidation(int maximum);
+
+  /// No description provided for @cookingWeekday.
+  ///
+  /// In zh, this message translates to:
+  /// **'工作日'**
+  String get cookingWeekday;
+
+  /// No description provided for @cookingWeekend.
+  ///
+  /// In zh, this message translates to:
+  /// **'周末'**
+  String get cookingWeekend;
+
+  /// No description provided for @cookingBreakfast.
+  ///
+  /// In zh, this message translates to:
+  /// **'早餐'**
+  String get cookingBreakfast;
+
+  /// No description provided for @cookingLunch.
+  ///
+  /// In zh, this message translates to:
+  /// **'午餐'**
+  String get cookingLunch;
+
+  /// No description provided for @cookingDinner.
+  ///
+  /// In zh, this message translates to:
+  /// **'晚餐'**
+  String get cookingDinner;
+
+  /// No description provided for @cookingDishMeat.
+  ///
+  /// In zh, this message translates to:
+  /// **'荤菜'**
+  String get cookingDishMeat;
+
+  /// No description provided for @cookingDishVegetable.
+  ///
+  /// In zh, this message translates to:
+  /// **'素菜'**
+  String get cookingDishVegetable;
+
+  /// No description provided for @cookingDishSoup.
+  ///
+  /// In zh, this message translates to:
+  /// **'汤'**
+  String get cookingDishSoup;
+
+  /// No description provided for @cookingDishStaple.
+  ///
+  /// In zh, this message translates to:
+  /// **'主食'**
+  String get cookingDishStaple;
+
+  /// No description provided for @cookingDishOther.
+  ///
+  /// In zh, this message translates to:
+  /// **'其他'**
+  String get cookingDishOther;
+
+  /// No description provided for @cookingListSeparator.
+  ///
+  /// In zh, this message translates to:
+  /// **'、'**
+  String get cookingListSeparator;
+
+  /// No description provided for @cookingMealSlot.
+  ///
+  /// In zh, this message translates to:
+  /// **'{day}{meal}'**
+  String cookingMealSlot(String day, String meal);
+
+  /// No description provided for @cookingMealTimeSummary.
+  ///
+  /// In zh, this message translates to:
+  /// **'{slot}：{minutes} 分钟'**
+  String cookingMealTimeSummary(String slot, String minutes);
+
+  /// No description provided for @cookingMealTemplateSummary.
+  ///
+  /// In zh, this message translates to:
+  /// **'{slot}：{count} 道（{composition}）'**
+  String cookingMealTemplateSummary(
+    String slot,
+    String count,
+    String composition,
+  );
+
+  /// No description provided for @personalMeasuresSummaryIntro.
+  ///
+  /// In zh, this message translates to:
+  /// **'你登记的量具，仅用于显示，不改变配方。'**
+  String get personalMeasuresSummaryIntro;
+
+  /// No description provided for @personalMeasuresManage.
+  ///
+  /// In zh, this message translates to:
+  /// **'管理个人量具'**
+  String get personalMeasuresManage;
+
+  /// No description provided for @personalMeasuresSummaryValue.
+  ///
+  /// In zh, this message translates to:
+  /// **'{name} · {capacity} 毫升'**
+  String personalMeasuresSummaryValue(String name, String capacity);
+
+  /// No description provided for @allergyTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'本人过敏'**
+  String get allergyTitle;
+
+  /// No description provided for @allergyIntro.
+  ///
+  /// In zh, this message translates to:
+  /// **'仅本人手动填写 · 单独同意 · 加密保存。拒绝不影响普通口味。'**
+  String get allergyIntro;
+
+  /// No description provided for @allergyNotFilled.
+  ///
+  /// In zh, this message translates to:
+  /// **'未填写'**
+  String get allergyNotFilled;
+
+  /// No description provided for @allergyEmpty.
+  ///
+  /// In zh, this message translates to:
+  /// **'尚未填写本人过敏'**
+  String get allergyEmpty;
+
+  /// No description provided for @allergyEdit.
+  ///
+  /// In zh, this message translates to:
+  /// **'设置本人过敏'**
+  String get allergyEdit;
+
+  /// No description provided for @allergyConsentTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'过敏信息单独同意'**
+  String get allergyConsentTitle;
+
+  /// No description provided for @allergyConsentBody.
+  ///
+  /// In zh, this message translates to:
+  /// **'只收集你手动选择的八类过敏原和标准食材，用于保存本人过敏设置及修改历史。当前值和历史加密保存，仅本人可见，不从行为或模型推断。可在设置的隐私入口撤回，删除当前值、私密历史及关联副本；重新同意从空状态开始。拒绝不影响普通口味，不代表同意外部 AI 共享。'**
+  String get allergyConsentBody;
+
+  /// No description provided for @allergyRefuse.
+  ///
+  /// In zh, this message translates to:
+  /// **'暂不同意'**
+  String get allergyRefuse;
+
+  /// No description provided for @allergyAgree.
+  ///
+  /// In zh, this message translates to:
+  /// **'单独同意'**
+  String get allergyAgree;
+
+  /// No description provided for @allergyUnavailable.
+  ///
+  /// In zh, this message translates to:
+  /// **'过敏设置暂不可用，授权或保存未确认，请重试'**
+  String get allergyUnavailable;
+
+  /// No description provided for @allergyPrivateUnavailable.
+  ///
+  /// In zh, this message translates to:
+  /// **'私密信息暂不可用；仍可在设置撤回同意'**
+  String get allergyPrivateUnavailable;
+
+  /// No description provided for @allergyHidden.
+  ///
+  /// In zh, this message translates to:
+  /// **'本机私密信息已隐藏，撤回尚未确认时请在设置重试'**
+  String get allergyHidden;
+
+  /// No description provided for @allergyHistory.
+  ///
+  /// In zh, this message translates to:
+  /// **'私密修改历史'**
+  String get allergyHistory;
+
+  /// No description provided for @allergyHistoryEmpty.
+  ///
+  /// In zh, this message translates to:
+  /// **'没有私密修改历史'**
+  String get allergyHistoryEmpty;
+
+  /// No description provided for @allergyHistoryUnavailable.
+  ///
+  /// In zh, this message translates to:
+  /// **'私密历史暂不可用'**
+  String get allergyHistoryUnavailable;
+
+  /// No description provided for @allergyWhy.
+  ///
+  /// In zh, this message translates to:
+  /// **'为什么'**
+  String get allergyWhy;
+
+  /// No description provided for @allergyManual.
+  ///
+  /// In zh, this message translates to:
+  /// **'本人手动填写'**
+  String get allergyManual;
+
+  /// No description provided for @allergyEditorTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'手动设置本人过敏'**
+  String get allergyEditorTitle;
+
+  /// No description provided for @allergyDeleteIngredient.
+  ///
+  /// In zh, this message translates to:
+  /// **'删除食材'**
+  String get allergyDeleteIngredient;
+
+  /// No description provided for @allergySearchLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'搜索标准食材（不保存自由文字）'**
+  String get allergySearchLabel;
+
+  /// No description provided for @allergySearch.
+  ///
+  /// In zh, this message translates to:
+  /// **'搜索食材'**
+  String get allergySearch;
+
+  /// No description provided for @allergySearchUnavailable.
+  ///
+  /// In zh, this message translates to:
+  /// **'食材搜索暂不可用，请重试'**
+  String get allergySearchUnavailable;
+
+  /// No description provided for @allergySave.
+  ///
+  /// In zh, this message translates to:
+  /// **'保存过敏设置'**
+  String get allergySave;
+
+  /// No description provided for @allergySaveUnconfirmed.
+  ///
+  /// In zh, this message translates to:
+  /// **'保存未确认，请重新打开过敏设置后重试'**
+  String get allergySaveUnconfirmed;
+
+  /// No description provided for @allergyWithdrawEntry.
+  ///
+  /// In zh, this message translates to:
+  /// **'撤回敏感信息同意'**
+  String get allergyWithdrawEntry;
+
+  /// No description provided for @allergyWithdrawDetail.
+  ///
+  /// In zh, this message translates to:
+  /// **'仅删除本人过敏和私密历史，不退出普通口味'**
+  String get allergyWithdrawDetail;
+
+  /// No description provided for @allergyWithdrawTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'撤回敏感信息同意？'**
+  String get allergyWithdrawTitle;
+
+  /// No description provided for @allergyWithdrawBody.
+  ///
+  /// In zh, this message translates to:
+  /// **'删除本人过敏、私密修改历史及关联副本。普通口味、食材偏好和做菜约束保留；重新同意后从空状态开始。'**
+  String get allergyWithdrawBody;
+
+  /// No description provided for @allergyWithdrawConfirm.
+  ///
+  /// In zh, this message translates to:
+  /// **'撤回并删除'**
+  String get allergyWithdrawConfirm;
+
+  /// No description provided for @allergyWithdrawing.
+  ///
+  /// In zh, this message translates to:
+  /// **'撤回处理中，本机私密信息已隐藏'**
+  String get allergyWithdrawing;
+
+  /// No description provided for @allergyWithdrawn.
+  ///
+  /// In zh, this message translates to:
+  /// **'敏感同意已撤回，过敏及私密历史已删除'**
+  String get allergyWithdrawn;
+
+  /// No description provided for @allergyWithdrawUnconfirmed.
+  ///
+  /// In zh, this message translates to:
+  /// **'撤回尚未确认，请联网后重试；普通口味不受影响'**
+  String get allergyWithdrawUnconfirmed;
 }
 
 class _AppLocalizationsDelegate

@@ -20,6 +20,8 @@
 | [`recipe-text-edit/`](recipe-text-edit/) | 改文字：本人编辑与生成结果共用入口、逐条接受/拒绝/修改、依赖拒绝、检查与确认保存；浅色/深色交互样稿 | #25 SPEC-003.2 / #167 | 本会话无 Artifact 发布工具；本地交互 HTML 样稿 |
 | [`recipe-consequential-edit/`](recipe-consequential-edit/) | 连带修改与恢复：本地决定、同请求重试、换厨具关联条件、实际后值检查及最终改动说明 | #25 SPEC-003.2 / #168 #170 #173 #174 | 本会话无 Artifact 发布工具；本地交互 HTML 样稿 |
 
+| [`offline-online.html`](offline-online.html) | 在线入口降级：需要联网说明、原话保留、本机能力可用，浅色/深色 | #27 SPEC-013.3 / #215 | 本会话无 Artifact 发布工具；本地 HTML 样稿 |
+
 ## 说明
 
 - `recipe-detail/` 是画布的**源文件**：`index.html` 引用平台运行时 `artifact-type/app.js`，`Pro.dc.html` 引用 `support.js`，这两个运行时文件属于 claude.ai 平台，没有导出，所以这份不能在本地直接打开渲染；要看效果请去 claude.ai 的原 Artifact，这里保存的是设计内容的备份。

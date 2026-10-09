@@ -87,6 +87,125 @@
         "title": "AllergensAttribute",
         "type": "object"
       },
+      "AllergiesOut": {
+        "properties": {
+          "authorization_version": {
+            "title": "Authorization Version",
+            "type": "integer"
+          },
+          "available_categories": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Available Categories",
+            "type": "array"
+          },
+          "categories": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Categories",
+            "type": "array"
+          },
+          "consent_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Consent Id"
+          },
+          "consent_version": {
+            "title": "Consent Version",
+            "type": "string"
+          },
+          "ingredients": {
+            "items": {
+              "$ref": "#/components/schemas/AllergyIngredientOut"
+            },
+            "title": "Ingredients",
+            "type": "array"
+          },
+          "profile_version": {
+            "title": "Profile Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "consent_id",
+          "consent_version",
+          "authorization_version",
+          "profile_version",
+          "available_categories",
+          "categories",
+          "ingredients"
+        ],
+        "title": "AllergiesOut",
+        "type": "object"
+      },
+      "AllergiesWrite": {
+        "additionalProperties": false,
+        "properties": {
+          "authorization_version": {
+            "minimum": 0.0,
+            "title": "Authorization Version",
+            "type": "integer"
+          },
+          "categories": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 8,
+            "title": "Categories",
+            "type": "array"
+          },
+          "consent_id": {
+            "format": "uuid",
+            "title": "Consent Id",
+            "type": "string"
+          },
+          "ingredient_ids": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "maxItems": 100,
+            "title": "Ingredient Ids",
+            "type": "array"
+          }
+        },
+        "required": [
+          "consent_id",
+          "authorization_version",
+          "categories",
+          "ingredient_ids"
+        ],
+        "title": "AllergiesWrite",
+        "type": "object"
+      },
+      "AllergyIngredientOut": {
+        "properties": {
+          "ingredient_id": {
+            "format": "uuid",
+            "title": "Ingredient Id",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "ingredient_id",
+          "name"
+        ],
+        "title": "AllergyIngredientOut",
+        "type": "object"
+      },
       "AnalyticsEventIn": {
         "additionalProperties": false,
         "description": "只允许这些字段：事件类型、页面/入口标识、可选耗时、发生时间、设备 ID。\n\n不含菜谱内容、口味档案、过敏和健康信息；也不接受用户 ID（服务端按登录状态填入）。",
@@ -990,6 +1109,218 @@
           "records"
         ],
         "title": "ConsentUpload",
+        "type": "object"
+      },
+      "CookingConstraints": {
+        "additionalProperties": false,
+        "properties": {
+          "equipment": {
+            "items": {
+              "pattern": "^[a-z][a-z0-9_]{0,39}$",
+              "type": "string"
+            },
+            "maxItems": 100,
+            "title": "Equipment",
+            "type": "array"
+          },
+          "household_servings": {
+            "anyOf": [
+              {
+                "maximum": 1000.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Household Servings"
+          },
+          "meal_templates": {
+            "items": {
+              "$ref": "#/components/schemas/CookingMealTemplate"
+            },
+            "maxItems": 6,
+            "title": "Meal Templates",
+            "type": "array"
+          },
+          "meal_times": {
+            "items": {
+              "$ref": "#/components/schemas/CookingMealTime"
+            },
+            "maxItems": 6,
+            "title": "Meal Times",
+            "type": "array"
+          }
+        },
+        "title": "CookingConstraints",
+        "type": "object"
+      },
+      "CookingConstraintsOut": {
+        "properties": {
+          "constraints": {
+            "$ref": "#/components/schemas/CookingConstraints"
+          },
+          "dish_types": {
+            "items": {
+              "enum": [
+                "meat",
+                "vegetable",
+                "soup",
+                "staple",
+                "other"
+              ],
+              "type": "string"
+            },
+            "title": "Dish Types",
+            "type": "array"
+          },
+          "equipment_vocabulary": {
+            "items": {
+              "$ref": "#/components/schemas/CookingEquipment"
+            },
+            "title": "Equipment Vocabulary",
+            "type": "array"
+          },
+          "profile_version": {
+            "title": "Profile Version",
+            "type": "integer"
+          },
+          "servings_max": {
+            "title": "Servings Max",
+            "type": "integer"
+          },
+          "servings_min": {
+            "title": "Servings Min",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "profile_version",
+          "constraints",
+          "equipment_vocabulary",
+          "dish_types",
+          "servings_min",
+          "servings_max"
+        ],
+        "title": "CookingConstraintsOut",
+        "type": "object"
+      },
+      "CookingEquipment": {
+        "additionalProperties": false,
+        "properties": {
+          "aliases": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 20,
+            "title": "Aliases",
+            "type": "array"
+          },
+          "id": {
+            "pattern": "^[a-z][a-z0-9_]{0,39}$",
+            "title": "Id",
+            "type": "string"
+          },
+          "label": {
+            "maxLength": 40,
+            "minLength": 1,
+            "title": "Label",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "label"
+        ],
+        "title": "CookingEquipment",
+        "type": "object"
+      },
+      "CookingMealTemplate": {
+        "additionalProperties": false,
+        "properties": {
+          "composition": {
+            "items": {
+              "enum": [
+                "meat",
+                "vegetable",
+                "soup",
+                "staple",
+                "other"
+              ],
+              "type": "string"
+            },
+            "maxItems": 20,
+            "minItems": 1,
+            "title": "Composition",
+            "type": "array"
+          },
+          "day_type": {
+            "enum": [
+              "weekday",
+              "weekend"
+            ],
+            "title": "Day Type",
+            "type": "string"
+          },
+          "dish_count": {
+            "maximum": 20.0,
+            "minimum": 1.0,
+            "title": "Dish Count",
+            "type": "integer"
+          },
+          "meal": {
+            "enum": [
+              "breakfast",
+              "lunch",
+              "dinner"
+            ],
+            "title": "Meal",
+            "type": "string"
+          }
+        },
+        "required": [
+          "day_type",
+          "meal",
+          "dish_count",
+          "composition"
+        ],
+        "title": "CookingMealTemplate",
+        "type": "object"
+      },
+      "CookingMealTime": {
+        "additionalProperties": false,
+        "properties": {
+          "day_type": {
+            "enum": [
+              "weekday",
+              "weekend"
+            ],
+            "title": "Day Type",
+            "type": "string"
+          },
+          "meal": {
+            "enum": [
+              "breakfast",
+              "lunch",
+              "dinner"
+            ],
+            "title": "Meal",
+            "type": "string"
+          },
+          "minutes": {
+            "maximum": 1440.0,
+            "minimum": 1.0,
+            "title": "Minutes",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "day_type",
+          "meal",
+          "minutes"
+        ],
+        "title": "CookingMealTime",
         "type": "object"
       },
       "CountUnit": {
@@ -2088,6 +2419,99 @@
           "attributes"
         ],
         "title": "IngredientDetail",
+        "type": "object"
+      },
+      "IngredientPreference": {
+        "additionalProperties": false,
+        "properties": {
+          "category": {
+            "anyOf": [
+              {
+                "maxLength": 20,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Category"
+          },
+          "ingredient_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ingredient Id"
+          },
+          "preference": {
+            "enum": [
+              "liked",
+              "disliked",
+              "avoided"
+            ],
+            "title": "Preference",
+            "type": "string"
+          }
+        },
+        "required": [
+          "preference"
+        ],
+        "title": "IngredientPreference",
+        "type": "object"
+      },
+      "IngredientPreferenceOut": {
+        "additionalProperties": false,
+        "properties": {
+          "category": {
+            "anyOf": [
+              {
+                "maxLength": 20,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Category"
+          },
+          "ingredient_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ingredient Id"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "preference": {
+            "enum": [
+              "liked",
+              "disliked",
+              "avoided"
+            ],
+            "title": "Preference",
+            "type": "string"
+          }
+        },
+        "required": [
+          "preference",
+          "name"
+        ],
+        "title": "IngredientPreferenceOut",
         "type": "object"
       },
       "JsonValue": {},
@@ -4249,6 +4673,17 @@
             "title": "Created At",
             "type": "string"
           },
+          "default_servings": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Default Servings"
+          },
           "dish": {
             "$ref": "#/components/schemas/DishOut"
           },
@@ -4280,6 +4715,17 @@
               }
             ],
             "title": "Source Version Id"
+          },
+          "taste_profile_version": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Taste Profile Version"
           },
           "updated_at": {
             "title": "Updated At",
@@ -6848,6 +7294,20 @@
             "title": "Id",
             "type": "string"
           },
+          "ingredient_categories": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Ingredient Categories",
+            "type": "array"
+          },
+          "ingredient_preferences": {
+            "items": {
+              "$ref": "#/components/schemas/IngredientPreferenceOut"
+            },
+            "title": "Ingredient Preferences",
+            "type": "array"
+          },
           "local_cuisines": {
             "items": {
               "$ref": "#/components/schemas/LocalCuisineOut"
@@ -6868,7 +7328,9 @@
           "version",
           "flavors",
           "scale",
-          "local_cuisines"
+          "local_cuisines",
+          "ingredient_preferences",
+          "ingredient_categories"
         ],
         "title": "TasteProfileOut",
         "type": "object"
@@ -6877,29 +7339,48 @@
         "additionalProperties": false,
         "properties": {
           "flavors": {
-            "additionalProperties": {
-              "type": "number"
-            },
-            "maxProperties": 7,
-            "minProperties": 1,
-            "propertyNames": {
-              "enum": [
-                "salty",
-                "sweet",
-                "sour",
-                "spicy",
-                "numbing",
-                "umami",
-                "oily"
-              ]
-            },
-            "title": "Flavors",
-            "type": "object"
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "type": "number"
+                },
+                "maxProperties": 7,
+                "minProperties": 1,
+                "propertyNames": {
+                  "enum": [
+                    "salty",
+                    "sweet",
+                    "sour",
+                    "spicy",
+                    "numbing",
+                    "umami",
+                    "oily"
+                  ]
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Flavors"
+          },
+          "ingredient_preferences": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/IngredientPreference"
+                },
+                "maxItems": 100,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ingredient Preferences"
           }
         },
-        "required": [
-          "flavors"
-        ],
         "title": "TasteProfilePatch",
         "type": "object"
       },
@@ -7182,6 +7663,175 @@
           "source"
         ],
         "title": "ValueSource",
+        "type": "object"
+      },
+      "WriteBatch": {
+        "properties": {
+          "writes": {
+            "items": {
+              "$ref": "#/components/schemas/WriteEnvelope"
+            },
+            "minItems": 1,
+            "title": "Writes",
+            "type": "array"
+          }
+        },
+        "required": [
+          "writes"
+        ],
+        "title": "WriteBatch",
+        "type": "object"
+      },
+      "WriteBatchResponse": {
+        "properties": {
+          "results": {
+            "items": {
+              "$ref": "#/components/schemas/WriteResult"
+            },
+            "title": "Results",
+            "type": "array"
+          }
+        },
+        "required": [
+          "results"
+        ],
+        "title": "WriteBatchResponse",
+        "type": "object"
+      },
+      "WriteEnvelope": {
+        "additionalProperties": false,
+        "properties": {
+          "dependencies": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "maxItems": 100,
+            "title": "Dependencies",
+            "type": "array"
+          },
+          "device_time": {
+            "format": "date-time",
+            "title": "Device Time",
+            "type": "string"
+          },
+          "format_version": {
+            "const": 1,
+            "description": "Immutable envelope format, independent of business version",
+            "title": "Format Version",
+            "type": "integer"
+          },
+          "owner_id": {
+            "description": "Bound at local creation; must equal the authenticated account",
+            "format": "uuid",
+            "title": "Owner Id",
+            "type": "string"
+          },
+          "payload": {
+            "additionalProperties": true,
+            "title": "Payload",
+            "type": "object"
+          },
+          "write_id": {
+            "description": "UUID v4 delivery ID, not the referenced business resource ID",
+            "format": "uuid",
+            "title": "Write Id",
+            "type": "string"
+          },
+          "write_type": {
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Write Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "format_version",
+          "write_type",
+          "write_id",
+          "owner_id",
+          "device_time",
+          "payload"
+        ],
+        "title": "WriteEnvelope",
+        "type": "object"
+      },
+      "WriteResourceResult": {
+        "properties": {
+          "resource_id": {
+            "format": "uuid",
+            "title": "Resource Id",
+            "type": "string"
+          },
+          "resource_type": {
+            "title": "Resource Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "resource_type",
+          "resource_id"
+        ],
+        "title": "WriteResourceResult",
+        "type": "object"
+      },
+      "WriteResult": {
+        "properties": {
+          "conflict": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Conflict"
+          },
+          "reason_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason Code"
+          },
+          "result": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/WriteResourceResult"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "status": {
+            "enum": [
+              "confirmed",
+              "already_processed",
+              "deferred",
+              "conflict",
+              "failed"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "write_id": {
+            "format": "uuid",
+            "title": "Write Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "write_id",
+          "status"
+        ],
+        "title": "WriteResult",
         "type": "object"
       }
     },
@@ -10386,6 +11036,443 @@
         ]
       }
     },
+    "/v1/me/taste-profile/allergies": {
+      "get": {
+        "operationId": "get_allergies",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AllergiesOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "参数错误"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "服务端错误"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Allergies",
+        "tags": [
+          "allergies"
+        ]
+      },
+      "put": {
+        "operationId": "set_allergies",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AllergiesWrite"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AllergiesOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "参数错误"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "服务端错误"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Set Allergies",
+        "tags": [
+          "allergies"
+        ]
+      }
+    },
+    "/v1/me/taste-profile/allergies/changes": {
+      "get": {
+        "operationId": "list_allergy_changes",
+        "parameters": [
+          {
+            "description": "上一页返回的 next_cursor",
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "上一页返回的 next_cursor",
+              "title": "Cursor"
+            }
+          },
+          {
+            "description": "每页条数，上限见配置项 api.page_size_max",
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "description": "每页条数，上限见配置项 api.page_size_max",
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page_TasteProfileChangeOut_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "参数错误"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "服务端错误"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Allergy Changes",
+        "tags": [
+          "allergies"
+        ]
+      }
+    },
+    "/v1/me/taste-profile/allergies/changes/{change_id}": {
+      "get": {
+        "operationId": "get_allergy_change",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "change_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Change Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TasteProfileChangeOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "参数错误"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "服务端错误"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Allergy Change",
+        "tags": [
+          "allergies"
+        ]
+      }
+    },
     "/v1/me/taste-profile/changes": {
       "get": {
         "operationId": "list_taste_profile_changes",
@@ -10578,6 +11665,147 @@
           }
         ],
         "summary": "Get Taste Profile Change",
+        "tags": [
+          "taste-profile"
+        ]
+      }
+    },
+    "/v1/me/taste-profile/cooking-constraints": {
+      "get": {
+        "operationId": "get_cooking_constraints",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CookingConstraintsOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "参数错误"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "服务端错误"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Cooking Constraints",
+        "tags": [
+          "taste-profile"
+        ]
+      },
+      "put": {
+        "description": "Replace cooking settings; an empty object clears them.\n\nOmitted fields use empty defaults.",
+        "operationId": "replace_cooking_constraints",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CookingConstraints"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CookingConstraintsOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "参数错误"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "服务端错误"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Replace Cooking Constraints",
         "tags": [
           "taste-profile"
         ]
@@ -12703,6 +13931,62 @@
         "summary": "Convert Recipe Version Servings",
         "tags": [
           "recipes"
+        ]
+      }
+    },
+    "/v1/sync/writes": {
+      "post": {
+        "operationId": "upload_writes",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WriteBatch"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WriteBatchResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "参数错误"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "服务端错误"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "按账号上传登记式离线写入；原子幂等处理，未知依赖暂缓",
+        "tags": [
+          "sync"
         ]
       }
     },

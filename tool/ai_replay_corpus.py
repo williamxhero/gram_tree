@@ -160,6 +160,8 @@ def main() -> None:
         "doneness": "用食品温度计确认鸡肉中心温度达到74°C",
     }
     from gramtree.ai.explanations import facts
+    from gramtree.ai.modification_schemas import ModificationDecision, ModificationOperation
+    from gramtree.ai.modifications import _apply
     from gramtree.recipes.service import _operations
 
     for modification_snapshot in modification_snapshots:
@@ -188,10 +190,24 @@ def main() -> None:
                 {"operations": operations},
             )
         )
-        corrected = [
-            {**operation, "after": safe_cookware_values.get(operation["field"], operation["after"])}
-            for operation in operations
-        ]
+        # Explanation keys use canonical selected values, not raw model values
+        # (for example the snapshot validates temperature 180 as float 180.0).
+        _, _, corrected = _apply(
+            modification_snapshot,
+            [ModificationOperation.model_validate(operation) for operation in operations],
+            [
+                ModificationDecision(
+                    operation_id=operation["operation_id"],
+                    decision="modify" if operation["field"] in safe_cookware_values else "accept",
+                    **(
+                        {"after": safe_cookware_values[operation["field"]]}
+                        if operation["field"] in safe_cookware_values
+                        else {}
+                    ),
+                )
+                for operation in operations
+            ],
+        )
         records.append(
             (
                 "change_explanation",

@@ -18,6 +18,7 @@ import 'package:gram_tree/ingredients/ingredient_api_client.dart';
 import 'package:gram_tree/ingredients/ingredient_provider.dart';
 import 'package:gram_tree/ingredients/ingredient_repository.dart';
 import 'package:gram_tree/observability/crash_reporting.dart';
+import 'package:gram_tree/network/reachability.dart';
 import 'package:gram_tree/platform/app_exit.dart';
 import 'package:gram_tree/platform/apple_sign_in.dart';
 import 'package:gram_tree/platform/device_capabilities.dart';
@@ -196,6 +197,36 @@ class FakeServer extends Interceptor {
       return (200, [for (final i in identities) i.toJson()]);
     });
     on('POST', '/v1/me/consents', (_) => (204, null));
+    on(
+      'GET',
+      '/v1/me/taste-profile/allergies',
+      (_) => (
+        200,
+        AllergiesOut(
+          consentId: null,
+          consentVersion: 'allergies-v1',
+          authorizationVersion: 0,
+          profileVersion: 1,
+          availableCategories: const [
+            '含麸质的谷物',
+            '甲壳纲类动物',
+            '鱼类',
+            '蛋类',
+            '花生',
+            '大豆',
+            '乳及乳制品',
+            '坚果及其果仁',
+          ],
+          categories: const [],
+          ingredients: const [],
+        ).toJson(),
+      ),
+    );
+    on(
+      'GET',
+      '/v1/me/taste-profile/allergies/changes',
+      (_) => (200, PageTasteProfileChangeOut(items: const []).toJson()),
+    );
     final personalMeasures = <Map<String, dynamic>>[];
     on(
       'GET',
@@ -243,15 +274,25 @@ class FakeServer extends Interceptor {
           : (200, item);
     });
     on('POST', '/v1/analytics/events', (_) => (204, null));
-    on('POST', '/v1/events/upload', (r) {
-      final events = ((r.body as Map)['events'] as List).cast<Map>();
+    on('POST', '/v1/sync/writes', (r) {
+      final batch = WriteBatch.fromJson(
+        Map<String, dynamic>.from(r.body as Map),
+      );
       return (
         200,
-        {
-          'results': [
-            for (final e in events) {'id': e['id'], 'status': 'accepted'},
+        WriteBatchResponse(
+          results: [
+            for (final write in batch.writes)
+              WriteResult(
+                writeId: write.writeId,
+                status: WriteResultStatusEnum.confirmed,
+                result: WriteResourceResult(
+                  resourceType: 'experience.event',
+                  resourceId: write.writeId,
+                ),
+              ),
           ],
-        },
+        ).toJson(),
       );
     });
     on('POST', '/v1/ui/compositions', (r) {
@@ -480,6 +521,15 @@ Map<String, String> signedInSecure(UserOut user) => {
   ),
 };
 
+class TestReachabilityProbe implements ApiReachabilityProbe {
+  TestReachabilityProbe(this.reachable);
+  bool reachable;
+  @override
+  Future<bool> check() async => reachable;
+  @override
+  void dispose() {}
+}
+
 /// 一次测试用到的替身，测试里可以检查它们记录了什么。
 class TestEnv {
   TestEnv({
@@ -497,6 +547,7 @@ class TestEnv {
     this.requiredComponentTypes,
     this.localDependencyVersions,
     this.offline = false,
+    this.probe,
   }) : server = server ?? FakeServer(),
        local = local ?? MemoryLocalStore(),
        secure = secure ?? MemorySecureStore(),
@@ -515,6 +566,7 @@ class TestEnv {
     Map<String, String>? localDependencyVersions,
     MemoryLocalStore? local,
     bool offline = false,
+    ApiReachabilityProbe? probe,
   }) {
     final s = server ?? FakeServer();
     return TestEnv(
@@ -526,9 +578,12 @@ class TestEnv {
       requiredComponentTypes: requiredComponentTypes,
       localDependencyVersions: localDependencyVersions,
       offline: offline,
+      probe: probe,
     );
   }
 
+  final ApiReachabilityProbe? probe;
+  late final reachability = TestReachabilityProbe(!offline);
   final FakeServer server;
   final MemoryLocalStore local;
   final MemorySecureStore secure;
@@ -565,6 +620,7 @@ class TestEnv {
     localStoreProvider.overrideWithValue(local),
     secureStoreProvider.overrideWithValue(secure),
     fakeServerProvider.overrideWithValue(server),
+    apiReachabilityProbeProvider.overrideWithValue(probe ?? reachability),
     // Page tests use the same cache interface with a fake-clock-safe store;
     // native drift persistence is exercised by installed integration tests.
     ingredientRepositoryProvider.overrideWith(

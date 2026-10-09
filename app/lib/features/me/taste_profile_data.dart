@@ -18,6 +18,12 @@ class TasteProfileRepository {
         tasteProfilePatch: TasteProfilePatch(flavors: {flavor: coefficient}),
       )).data!;
 
+  Future<TasteProfileOut> setPreferences(
+    List<IngredientPreference> preferences,
+  ) async => (await api.updateTasteProfile(
+    tasteProfilePatch: TasteProfilePatch(ingredientPreferences: preferences),
+  )).data!;
+
   Future<TasteProfileOut> reset() async =>
       (await api.resetTasteProfile()).data!;
 
