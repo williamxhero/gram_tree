@@ -84,7 +84,7 @@ class AuthController extends AsyncNotifier<UserOut?> {
     await Future.wait([
       uploadPendingConsents(),
       _syncTimezone(),
-      ref.read(eventUploaderProvider).triggerUpload(),
+      ref.read(eventUploaderProvider).networkRestored(),
     ]);
   }
 
@@ -99,10 +99,20 @@ class AuthController extends AsyncNotifier<UserOut?> {
   }
 
   /// 把同意记录传到账号。返回是否成功；失败的下次启动或登录时再传。
-  Future<bool> uploadConsentRecords(List<ConsentEntry> records) async {
-    if (records.isEmpty || _session.current == null) return false;
+  Future<bool> uploadConsentRecords(
+    List<ConsentEntry> records, {
+    SessionIdentity? identity,
+  }) async {
+    final captured = identity ?? _session.identity;
+    if (records.isEmpty || captured == null || !_session.matches(captured)) {
+      return false;
+    }
     try {
       await _api.getAccountApi().uploadConsents(
+        extra: {
+          'auth_owner_id': captured.ownerId,
+          'auth_identity_epoch': captured.epoch,
+        },
         consentUpload: ConsentUpload(
           records: [
             for (final e in records)
@@ -128,52 +138,82 @@ class AuthController extends AsyncNotifier<UserOut?> {
   }
 
   Future<void> _syncTimezone() async {
-    final user = _session.current?.user;
-    if (user == null) return;
+    final session = _session;
+    final identity = session.identity;
+    final user = session.current?.user;
+    if (identity == null || user == null) return;
     final tz = await ref.read(timezoneSourceProvider).current();
-    if (tz == null || tz == user.timezone) return;
+    if (!ref.mounted ||
+        !session.matches(identity) ||
+        tz == null ||
+        tz == user.timezone) {
+      return;
+    }
     try {
       await updateProfile(timezone: tz);
     } catch (_) {}
   }
 
   Future<UserOut> updateProfile({String? nickname, String? timezone}) async {
+    final session = _session;
+    final identity = session.identity;
+    if (identity == null) throw StateError('Login required');
     final resp = await _api.getAccountApi().updateMe(
+      extra: {
+        'auth_owner_id': identity.ownerId,
+        'auth_identity_epoch': identity.epoch,
+      },
       profileUpdate: ProfileUpdate(nickname: nickname, timezone: timezone),
     );
-    await _session.updateUser(resp.data!);
+    if (ref.mounted &&
+        session.matches(identity) &&
+        resp.data!.id == identity.ownerId) {
+      await session.updateUser(resp.data!);
+    }
     return resp.data!;
   }
 
   /// 退出当前设备的登录。服务端没连上也照样清掉本机的登录状态。
   Future<void> signOut() async {
-    // 先尽力把这个账号还没传完的事件传掉；传不掉的（网络不通、服务端拒绝）
-    // 会在下面 _clearLocalEventQueue() 里被丢弃，不能留到下一个登录的账号名下。
+    // 普通登出保留账号绑定的内容。下一个账号的上传器只取自己的队列；
+    // 完整待同步提醒由同步状态界面提供，绝不能以清空代替隔离。
+    final identity = _session.identity;
+    if (identity == null) return;
     await ref.read(eventUploaderProvider).triggerUpload();
-    await signOutOnServer();
-    await _clearLocalEventQueue();
-    await _session.clear();
+    if (!ref.mounted || !_session.matches(identity)) return;
+    await signOutOnServer(identity: identity);
+    if (ref.mounted && _session.matches(identity)) await _session.clear();
   }
 
   /// 只通知服务端吊销这台设备的令牌，本机状态留给调用方清。
-  Future<void> signOutOnServer() async {
-    if (_session.current == null) return;
+  Future<void> signOutOnServer({SessionIdentity? identity}) async {
+    final captured = identity ?? _session.identity;
+    if (captured == null || !_session.matches(captured)) return;
     try {
-      await _api.getAuthApi().logout();
+      await _api.getAuthApi().logout(
+        extra: {
+          'auth_owner_id': captured.ownerId,
+          'auth_identity_epoch': captured.epoch,
+        },
+      );
     } catch (_) {}
   }
 
   /// 清掉本机的登录状态（注销账号后服务端已经吊销了令牌）。
-  Future<void> clearLocalSession() async {
-    await _clearLocalEventQueue();
-    await _session.clear();
-  }
-
-  /// 丢弃本机队列里还没传完的事件（含拒收区）：这台设备接下来可能换别的账号
-  /// 登录，留着的事件会被当成新账号的事件传上去，造成经验数据归错人。
-  Future<void> _clearLocalEventQueue() async {
-    try {
-      await ref.read(eventQueueProvider).clear();
-    } catch (_) {}
+  Future<void> clearLocalSession({
+    bool deleteAccountData = false,
+    SessionIdentity? identity,
+  }) async {
+    final session = _session;
+    final captured = identity ?? session.identity;
+    if (captured == null) return;
+    final queue = ref.read(eventQueueProvider);
+    // Capture dependencies before awaiting; provider disposal must not silently
+    // skip a confirmed deletion, nor turn Alice's cleanup into Bob's cleanup.
+    if (session.matches(captured)) await session.clear();
+    await queue.clearAccount(
+      captured.ownerId,
+      experienceOnly: !deleteAccountData,
+    );
   }
 }

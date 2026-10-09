@@ -279,10 +279,15 @@ void main() {
       await tester.tap(find.widgetWithText(TextButton, '取消').last);
       await tester.pumpAndSettle();
       final actions = server
-          .calls('POST', '/v1/events/upload')
+          .calls('POST', '/v1/sync/writes')
           .expand(
-            (request) => ((request.body as Map)['events'] as List).cast<Map>(),
+            (request) => ((request.body as Map)['writes'] as List).cast<Map>(),
           )
+          .map((write) {
+            expect(write['write_type'], 'experience.event');
+            expect(write['owner_id'], server.user.id);
+            return write['payload'] as Map;
+          })
           .where(
             (event) =>
                 event['event_type'] == 'ui.component_action' &&
@@ -304,7 +309,7 @@ void main() {
         'ingredient_preferences_cancel',
       ]);
       for (final event in actions) {
-        expect(event['correlation'], isNull);
+        expect(event['correlation'], <String, dynamic>{});
         expect(event['content'], {
           'component_id': 'ingredient-preferences',
           'intent': (event['content'] as Map)['intent'],
@@ -421,10 +426,15 @@ void main() {
       expect(find.text(ingredient.id), findsNothing);
       await tester.pumpAndSettle();
       final actions = server
-          .calls('POST', '/v1/events/upload')
+          .calls('POST', '/v1/sync/writes')
           .expand(
-            (request) => ((request.body as Map)['events'] as List).cast<Map>(),
+            (request) => ((request.body as Map)['writes'] as List).cast<Map>(),
           )
+          .map((write) {
+            expect(write['write_type'], 'experience.event');
+            expect(write['owner_id'], server.user.id);
+            return write['payload'] as Map;
+          })
           .where(
             (event) =>
                 event['event_type'] == 'ui.component_action' &&
@@ -441,7 +451,7 @@ void main() {
         'ingredient_preferences_save',
       ]);
       for (final event in actions) {
-        expect(event['correlation'], isNull);
+        expect(event['correlation'], <String, dynamic>{});
         expect(event['content'], {
           'component_id': 'ingredient-preferences',
           'intent': (event['content'] as Map)['intent'],
@@ -467,10 +477,15 @@ void main() {
       await openTaste(tester);
       await openHistoryWhy(tester);
       final opened = server
-          .calls('POST', '/v1/events/upload')
+          .calls('POST', '/v1/sync/writes')
           .expand(
-            (request) => ((request.body as Map)['events'] as List).cast<Map>(),
+            (request) => ((request.body as Map)['writes'] as List).cast<Map>(),
           )
+          .map((write) {
+            expect(write['write_type'], 'experience.event');
+            expect(write['owner_id'], server.user.id);
+            return write['payload'] as Map;
+          })
           .where((event) => event['event_type'] == 'ui.why_panel_opened')
           .toList();
       expect(opened, hasLength(1));
@@ -478,7 +493,8 @@ void main() {
         'component_id': 'taste-history',
         'source_type': 'author_filled',
       });
-      expect(opened.single['correlation'], isNull);
+      // The durable experience-event schema represents no linked IDs as {}.
+      expect(opened.single['correlation'], <String, dynamic>{});
       final telemetry = jsonEncode(opened.single['content']);
       for (final privateId in [
         profileFixture().id,

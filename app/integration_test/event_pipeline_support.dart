@@ -16,8 +16,10 @@ import 'package:gram_tree/auth/session.dart';
 import 'package:gram_tree/config/app_config.dart';
 import 'package:gram_tree/events/event_queue.dart';
 import 'package:gram_tree/events/event_recorder.dart';
+import 'package:gram_tree/features_flags/features.dart';
 import 'package:gram_tree/main.dart' as app;
 import 'package:gram_tree/storage/device_id.dart';
+import 'package:gram_tree/ui_protocol/composition_provider.dart';
 import 'package:gramtree_api/gramtree_api.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -147,6 +149,25 @@ Future<({String email, String deviceId})> signInFreshUser(
   // 存储，清不到它——保险起见把上一次可能留下的未上传事件先清空，避免它们
   // 混进这次测试的事件计数里（网页版是内存队列，本来就是空的，这里不会有影响）。
   final queue = container.read(eventQueueProvider);
+  final ownerId = container.read(sessionStoreProvider).current!.user.id;
+  // The Today placeholder also renders during loading. Config completion can
+  // restart composition, which records a real event before returning. Fence the
+  // current results and let root-driven upload confirm those setup events while
+  // still online, instead of racing cleanup against their durable enqueue.
+  await waitUntil(tester, () async {
+    final config = container.read(clientConfigProvider);
+    final composition = container.read(compositionProvider('today'));
+    if (config.isLoading ||
+        !config.hasValue ||
+        composition.isLoading ||
+        !composition.hasValue) {
+      return false;
+    }
+    final entries = await queue.entries(ownerId: ownerId);
+    return entries.every((entry) => entry.state == WriteState.confirmed) &&
+        identical(config, container.read(clientConfigProvider)) &&
+        identical(composition, container.read(compositionProvider('today')));
+  });
   await queue.removeAll((await queue.pending()).map((e) => e.id));
   return (email: email, deviceId: deviceId);
 }

@@ -8,70 +8,96 @@ import 'package:gramtree_api/gramtree_api.dart';
 
 import 'helpers.dart';
 
-/// 给各功能用的“记一条事件”简单调用（SPEC-010.1 票 4）。
-
+// Preserve the existing recorder regressions using valid registered payloads;
+// new anonymous work is suppressed rather than adopted by the next login.
 void main() {
-  test('离线（未登录）时记事件立即返回、写进本机队列，不发请求', () async {
-    final server = FakeServer();
-    final container = ProviderContainer(
-      overrides: TestEnv(server: server).overrides,
-    );
+  test('未登录不创建新的无归属内容，不发请求', () async {
+    final env = TestEnv();
+    final container = ProviderContainer(overrides: env.overrides);
     addTearDown(container.dispose);
-
     await container
         .read(eventRecorderProvider)
         .record(
           eventType: 'pipeline.self_check',
           typeVersion: 1,
-          correlation: EventCorrelationIds(recipeVersionId: 'recipe-1'),
-          content: {'ok': true},
+          content: {'ping': 'anonymous'},
         );
+    expect(env.eventQueue.items, isEmpty);
+    expect(env.server.calls('POST', '/v1/sync/writes'), isEmpty);
+  });
 
+  test('已归属离线记录立即落本机，保留关联、内容及UTC时间', () async {
+    final env = TestEnv.signedIn(offline: true);
+    final container = ProviderContainer(overrides: env.overrides);
+    addTearDown(container.dispose);
+    await container.read(sessionStoreProvider).load();
+    const version = '11111111-1111-4111-8111-111111111111';
+    await container
+        .read(eventRecorderProvider)
+        .record(
+          eventType: 'pipeline.self_check',
+          typeVersion: 1,
+          correlation: EventCorrelationIds(recipeVersionId: version),
+          content: {'ping': 'offline'},
+        );
     final queue = container.read(eventQueueProvider) as FakeEventQueue;
     expect(queue.items, hasLength(1));
     final saved = queue.items.single;
+    expect(saved.ownerId, env.server.user.id);
     expect(saved.eventType, 'pipeline.self_check');
     expect(saved.typeVersion, 1);
-    expect(saved.correlation?.recipeVersionId, 'recipe-1');
-    expect(saved.content, {'ok': true});
+    expect(saved.correlation?.recipeVersionId, version);
+    expect(saved.content, {'ping': 'offline'});
     expect(saved.appVersion, isNotEmpty);
     expect(saved.deviceId, isNotEmpty);
     expect(saved.deviceTime.isUtc, isTrue);
-
-    // 未登录：不应该真的发出上传请求
     await Future<void>.delayed(const Duration(milliseconds: 20));
-    expect(server.calls('POST', '/v1/events/upload'), isEmpty);
+    expect(env.server.calls('POST', '/v1/sync/writes'), isEmpty);
   });
 
-  test('每次记事件都生成不同的事件 ID', () async {
-    final container = ProviderContainer(overrides: TestEnv().overrides);
-    addTearDown(container.dispose);
-    final recorder = container.read(eventRecorderProvider);
-
-    await recorder.record(eventType: 'pipeline.self_check', typeVersion: 1);
-    await recorder.record(eventType: 'pipeline.self_check', typeVersion: 1);
-
-    final queue = container.read(eventQueueProvider) as FakeEventQueue;
-    expect(queue.items.map((e) => e.id).toSet(), hasLength(2));
-  });
-
-  test('已登录联网时记事件后，后台会自动把它传上去', () async {
-    final server = FakeServer();
-    final container = ProviderContainer(
-      overrides: TestEnv.signedIn(server: server).overrides,
-    );
+  test('每次记事件生成不同的UUIDv4', () async {
+    final env = TestEnv.signedIn(offline: true);
+    final container = ProviderContainer(overrides: env.overrides);
     addTearDown(container.dispose);
     await container.read(sessionStoreProvider).load();
+    final recorder = container.read(eventRecorderProvider);
+    await recorder.record(
+      eventType: 'pipeline.self_check',
+      typeVersion: 1,
+      content: {'ping': 'first'},
+    );
+    await recorder.record(
+      eventType: 'pipeline.self_check',
+      typeVersion: 1,
+      content: {'ping': 'second'},
+    );
+    expect(env.eventQueue.items.map((e) => e.id).toSet(), hasLength(2));
+    expect(
+      env.eventQueue.items.every(
+        (e) => RegExp(
+          r'^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$',
+        ).hasMatch(e.id),
+      ),
+      isTrue,
+    );
+  });
 
+  test('已登录联网记录后自动发送，确认后不再待同步', () async {
+    final env = TestEnv.signedIn();
+    final container = ProviderContainer(overrides: env.overrides);
+    addTearDown(container.dispose);
+    await container.read(sessionStoreProvider).load();
     await container
         .read(eventRecorderProvider)
-        .record(eventType: 'pipeline.self_check', typeVersion: 1);
-
+        .record(
+          eventType: 'pipeline.self_check',
+          typeVersion: 1,
+          content: {'ping': 'online'},
+        );
     await _waitUntil(
-      () => server.calls('POST', '/v1/events/upload').isNotEmpty,
+      () => env.server.calls('POST', '/v1/sync/writes').isNotEmpty,
     );
-    final queue = container.read(eventQueueProvider) as FakeEventQueue;
-    await _waitUntil(() => queue.items.isEmpty);
+    await _waitUntil(() => env.eventQueue.items.isEmpty);
   });
 }
 
@@ -81,9 +107,7 @@ Future<void> _waitUntil(
 }) async {
   final deadline = DateTime.now().add(timeout);
   while (!condition()) {
-    if (DateTime.now().isAfter(deadline)) {
-      fail('等待超时：条件一直没有成立');
-    }
+    if (DateTime.now().isAfter(deadline)) fail('等待超时：条件一直没有成立');
     await Future<void>.delayed(const Duration(milliseconds: 5));
   }
 }

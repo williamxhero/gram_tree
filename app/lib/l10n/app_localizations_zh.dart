@@ -155,6 +155,64 @@ class AppLocalizationsZh extends AppLocalizations {
   String get familyRemove => '移除';
 
   @override
+  String get networkConsentRequired => '需要先同意隐私政策';
+
+  @override
+  String get networkChecking => '正在检查连接，在线功能需要联网';
+
+  @override
+  String get networkConnected => '服务已连接';
+
+  @override
+  String syncPendingCount(int count) {
+    return '待同步 $count 条';
+  }
+
+  @override
+  String syncRetryExhaustedCount(int count) {
+    return '重试次数已达上限，已保留 $count 条内容';
+  }
+
+  @override
+  String syncDependencyFailedCount(int count) {
+    return '前置写入失败，已保留 $count 条内容';
+  }
+
+  @override
+  String syncDependencyConflictCount(int count) {
+    return '前置写入存在冲突，$count 条暂缓同步';
+  }
+
+  @override
+  String syncDependencyMissingCount(int count) {
+    return '依赖写入尚未到达，$count 条暂缓同步';
+  }
+
+  @override
+  String syncDependencyCycleCount(int count) {
+    return '依赖写入存在循环，已保留 $count 条内容';
+  }
+
+  @override
+  String syncLegacyOwnerUnknownCount(int count) {
+    return '本机有 $count 条旧写入无法确定原账号，已隔离保留，不会上传';
+  }
+
+  @override
+  String syncLegacyRejectedCount(int count) {
+    return '本机保留 $count 条旧拒收记录，仅有拒收凭据，无法恢复原内容';
+  }
+
+  @override
+  String get networkUnavailable => '需要联网：暂时连接不到服务，请检查网络；本机内容仍可使用。';
+
+  @override
+  String get snapshotCapacityRejected => '本机缓存空间不足，此版本未离线保存；菜单和正在做的内容已保留。';
+
+  @override
+  String get snapshotProtectedOverLimit => '受保护的菜谱超出缓存容量，内容已保留；请释放不再需要的保护。';
+
+  @override
   String get recipeAnswerBasis => '这是一般经验，还没有足够记录验证';
 
   @override

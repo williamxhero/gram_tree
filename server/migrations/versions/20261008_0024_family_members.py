@@ -1,15 +1,15 @@
 """Encrypted simplified family members.
 
-Revision ID: 0023
-Revises: 0022
+Revision ID: 0024
+Revises: 0023
 """
 
 import sqlalchemy as sa
 from alembic import op
 from sqlalchemy.dialects import postgresql
 
-revision = "0023"
-down_revision = "0022"
+revision = "0024"
+down_revision = "0023"
 branch_labels = None
 depends_on = None
 
