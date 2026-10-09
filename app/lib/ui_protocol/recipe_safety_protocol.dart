@@ -103,7 +103,9 @@ Widget buildAllergenNoticeProtocolComponent(
     result: result,
     statusMessage: status == 'available' ? null : data['conclusion'] as String?,
     awaitingCheck: status == 'unknown',
-    personalSafety: personal is Map ? Map<String, dynamic>.from(personal) : null,
+    personalSafety: personal is Map
+        ? Map<String, dynamic>.from(personal)
+        : null,
   );
 }
 

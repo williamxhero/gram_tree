@@ -176,7 +176,8 @@ class AllergenCard extends StatelessWidget {
             ),
           for (final replacement in replacements)
             _ReplacementAllergenView(replacement: replacement),
-          if (personalSafety != null) _PersonalSafetyNotices(data: personalSafety!),
+          if (personalSafety != null)
+            _PersonalSafetyNotices(data: personalSafety!),
         ],
       ),
       basisText: incomplete ? l10n.recipeAllergenIncompleteBasis : null,
@@ -191,9 +192,9 @@ class _PersonalSafetyNotices extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final alerts = (data['alerts'] as List? ?? const [])
-        .whereType<Map>()
-        .map((item) => Map<String, dynamic>.from(item));
+    final alerts = (data['alerts'] as List? ?? const []).whereType<Map>().map(
+      (item) => Map<String, dynamic>.from(item),
+    );
     final unknown = (data['unknown_ingredients'] as List? ?? const [])
         .whereType<String>()
         .toList();
@@ -202,9 +203,14 @@ class _PersonalSafetyNotices extends StatelessWidget {
       children: [
         for (final alert in alerts)
           _SafetyNotice(
-            key: ValueKey('personal-safety-${alert['person']}-${alert['kind']}-${alert['ingredient']}'),
-            icon: alert['kind'] == 'allergy' ? Icons.warning_amber_rounded : Icons.info_outline,
-            text: '${alert['kind'] == 'allergy' ? '过敏提醒' : '忌口提醒'}：${alert['person']}，${alert['target']}（${alert['ingredient']}${alert['replacement'] == true ? '，替代食材' : ''}）',
+            key: ValueKey(
+              'personal-safety-${alert['person']}-${alert['kind']}-${alert['ingredient']}',
+            ),
+            icon: alert['kind'] == 'allergy'
+                ? Icons.warning_amber_rounded
+                : Icons.info_outline,
+            text:
+                '${alert['kind'] == 'allergy' ? '过敏提醒' : '忌口提醒'}：${alert['person']}，${alert['target']}（${alert['ingredient']}${alert['replacement'] == true ? '，替代食材' : ''}）',
             emphasis: alert['kind'] == 'allergy',
           ),
         if (unknown.isNotEmpty)
