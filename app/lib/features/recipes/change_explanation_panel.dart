@@ -164,7 +164,7 @@ class _ChangeExplanationPanelState extends State<ChangeExplanationPanel> {
       _busy = false;
       _fingerprint = null;
       _source = null;
-      _message = '改动已变化，请重新生成说明或手写。';
+      _message = AppLocalizations.of(context).changeExplanationChanged;
       if (!_noteAuthored) _note.clear();
       if (!_tagsAuthored) {
         _tags.clear();
@@ -246,21 +246,27 @@ class _ChangeExplanationPanelState extends State<ChangeExplanationPanel> {
     _notify();
   }
 
-  String _failureMessage(String? reason) => switch (reason) {
-    'model_unavailable' => '模型暂不可用，可手写说明和标签。',
-    'daily_quota' => '今日 AI 额度已用完，可手写说明和标签。',
-    'monthly_budget' => 'AI 预算暂不可用，可手写说明和标签。',
-    'no_changes' => '本次没有可说明的实际改动，可手写说明和标签。',
-    _ => '说明生成失败，请重试或手写说明和标签。',
-  };
+  String _failureMessage(String? reason) {
+    final l10n = AppLocalizations.of(context);
+    return switch (reason) {
+      'model_unavailable' => l10n.changeExplanationModelUnavailable,
+      'daily_quota' => l10n.changeExplanationDailyQuota,
+      'monthly_budget' => l10n.changeExplanationMonthlyBudget,
+      'no_changes' => l10n.changeExplanationNoChanges,
+      _ => l10n.changeExplanationFailed,
+    };
+  }
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     return ComponentCard(
       detail: ComponentDescriptorDetailEnum.standard,
-      conclusion: Text('改动说明', style: Theme.of(context).textTheme.titleMedium),
-      conclusionSemanticsText: '改动说明',
+      conclusion: Text(
+        l10n.changeExplanationTitle,
+        style: Theme.of(context).textTheme.titleMedium,
+      ),
+      conclusionSemanticsText: l10n.changeExplanationTitle,
       standardExtra: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -276,7 +282,7 @@ class _ChangeExplanationPanelState extends State<ChangeExplanationPanel> {
                   if (!_noteAuthored) _note.text,
                   if (!_tagsAuthored) ..._tagValues,
                 ].join('；'),
-                basisText: '仅依据本次最终改动生成，不代表已做过验证。作者可以修改说明和标签。',
+                basisText: l10n.changeExplanationBasis,
                 required: false,
                 valueChanged: false,
                 feedbackEnabled: false,
@@ -318,11 +324,19 @@ class _ChangeExplanationPanelState extends State<ChangeExplanationPanel> {
                       widget.unavailableReason != null
                   ? null
                   : _generate,
-              child: Text(_busy ? '正在生成说明…' : '生成改动说明'),
+              child: Text(
+                _busy
+                    ? l10n.changeExplanationGenerating
+                    : l10n.changeExplanationGenerate,
+              ),
             ),
           ),
           Text(
-            '${widget.unavailableReason ?? _message ?? '可手写说明和标签'} 手动保存不受影响。',
+            l10n.changeExplanationSaveAvailable(
+              widget.unavailableReason ??
+                  _message ??
+                  l10n.changeExplanationHandwritten,
+            ),
           ),
         ],
       ),

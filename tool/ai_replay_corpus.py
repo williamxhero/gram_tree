@@ -160,7 +160,10 @@ def main() -> None:
         "doneness": "用食品温度计确认鸡肉中心温度达到74°C",
     }
     from gramtree.ai.explanations import facts
-    from gramtree.ai.modification_schemas import ModificationDecision, ModificationOperation
+    from gramtree.ai.modification_schemas import (
+        ModificationDecision,
+        ModificationOperation,
+    )
     from gramtree.ai.modifications import _apply
     from gramtree.recipes.service import _operations
 

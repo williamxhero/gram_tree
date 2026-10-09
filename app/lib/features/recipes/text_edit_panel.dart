@@ -1,12 +1,14 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gramtree_api/gramtree_api.dart';
 
 import '../../api/api_client.dart';
 import '../../auth/auth_controller.dart';
+import '../../l10n/app_localizations.dart';
 import '../../recipes/recipe_draft.dart';
 import '../../recipes/recipe_repository.dart';
 import '../../storage/local_store.dart';
@@ -195,7 +197,9 @@ class _TextEditPanelState extends ConsumerState<TextEditPanel>
     unawaited(
       _persist().catchError((Object error) {
         if (mounted) {
-          setState(() => _error = '本机草稿保存失败，请保留当前页面并重试。');
+          setState(
+            () => _error = AppLocalizations.of(context).textEditDraftSaveFailed,
+          );
         }
       }),
     );
@@ -276,7 +280,13 @@ class _TextEditPanelState extends ConsumerState<TextEditPanel>
       if (!mounted || targetRevision != _targetRevision) return;
       setState(() {
         _status = preview.status;
-        _error = preview.error == null ? null : _reason(preview.error);
+        _error =
+            preview.error == 'cannot_modify' &&
+                preview.warnings?.isNotEmpty == true
+            ? preview.warnings!.join('\n')
+            : preview.error == null
+            ? null
+            : _reason(preview.error, AppLocalizations.of(context));
         _failedRequest = preview.error != null;
         // A failed later request must not erase the last usable checked result.
         if (preview.error == null) {
@@ -450,6 +460,34 @@ class _TextEditPanelState extends ConsumerState<TextEditPanel>
       await _discard();
       await onSaved(detail);
     } catch (error) {
+      final failure = ApiFailure.from(error);
+      final status = error is DioException ? error.response?.statusCode : null;
+      // A rejected save is editable; a lost response may already have committed.
+      // In particular, already-saved or unknown conflicts must keep their exact
+      // receipt rather than accidentally issuing a different confirmation.
+      final rejectedConflict = const {
+        'stale_modification',
+        'stale_modification_decisions',
+        'stale_change_explanation',
+        'stale_recipe_version',
+        'modification_not_ready',
+        'modification_decisions_required',
+        'no_modifications',
+      }.contains(failure.code);
+      if (_savedDetail == null &&
+          status != null &&
+          status >= 400 &&
+          status < 500 &&
+          status != 408 &&
+          (status != 409 || rejectedConflict)) {
+        _pendingConfirmation = null;
+        if (status == 409) {
+          _checksDirty = true;
+          _explanationFingerprint = null;
+          _selectionRevision++;
+        }
+        _persistLater();
+      }
       if (_savedDetail != null) {
         // Parent cleanup may have removed our scope before another removal
         // failed. Retain the committed receipt so reopen can finish cleanup.
@@ -460,7 +498,7 @@ class _TextEditPanelState extends ConsumerState<TextEditPanel>
         );
         _persistLater();
       }
-      if (mounted) setState(() => _error = ApiFailure.from(error).message);
+      if (mounted) setState(() => _error = failure.message);
     }
   }
 
@@ -515,7 +553,7 @@ class _TextEditPanelState extends ConsumerState<TextEditPanel>
       if (mounted) {
         setState(() {
           _checksDirty = _preview != null;
-          _error = '本机草稿清理失败，已保留修改，请重试。';
+          _error = AppLocalizations.of(context).textEditDraftCleanupFailed;
         });
       }
     } finally {
@@ -661,9 +699,10 @@ class _TextEditPanelState extends ConsumerState<TextEditPanel>
     } catch (_) {
       setState(() {
         _afterInputs[operation.operationId] = input;
+        final l10n = AppLocalizations.of(context);
         _invalidAfter[operation.operationId] = expected is num
-            ? '请输入有效的 JSON 数值。'
-            : '请输入与原值类型一致的有效 JSON（最多 4000 字符）。';
+            ? l10n.textEditInvalidJsonNumber
+            : l10n.textEditInvalidJsonValue;
         _selectionRevision++;
         _checksDirty = true;
         _explanationFingerprint = null;
@@ -788,7 +827,7 @@ class _TextEditPanelState extends ConsumerState<TextEditPanel>
               decoration: InputDecoration(
                 labelText: (operation.after ?? operation.before) is String
                     ? '修改后的文字'
-                    : '修改后的 JSON 值',
+                    : AppLocalizations.of(context).textEditAfterJsonLabel,
                 errorText: _invalidAfter[operation.operationId],
               ),
               onChanged: (after) => _editAfter(context, operation, after),
@@ -808,6 +847,7 @@ class _TextEditPanelState extends ConsumerState<TextEditPanel>
   @override
   Widget build(BuildContext context) {
     super.build(context);
+    final l10n = AppLocalizations.of(context);
     return RecipeOperationScope(
       handlers: {
         'text_preview': (params) => _propose(params['text'] as String),
@@ -826,8 +866,11 @@ class _TextEditPanelState extends ConsumerState<TextEditPanel>
         builder: (context) => Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text('一句话修改菜谱', style: Theme.of(context).textTheme.titleMedium),
-            const Text('支持改文字、换厨具、调整时间或难度、调整做法；口味和缺料替代暂未支持。确认前不会保存。'),
+            Text(
+              l10n.textEditTitle,
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+            Text(l10n.textEditSupportedChanges),
             const Text('请勿输入个人敏感信息。手动编辑和保存始终可用。'),
             if (widget.manualEdits) const Text('当前有未保存的表单修改，请先手动保存，再请求文字修改。'),
             Text(
@@ -836,7 +879,8 @@ class _TextEditPanelState extends ConsumerState<TextEditPanel>
                   : '今日修改剩余 ${_status!.remaining} 次',
               key: const ValueKey('text-edit-quota'),
             ),
-            if (_status?.available == false) Text(_reason(_status?.reason)),
+            if (_status?.available == false)
+              Text(_reason(_status?.reason, l10n)),
             TextField(
               key: const ValueKey('text-edit-input'),
               controller: _text,
@@ -848,7 +892,7 @@ class _TextEditPanelState extends ConsumerState<TextEditPanel>
               maxLength: 1000,
               minLines: 1,
               maxLines: 4,
-              decoration: const InputDecoration(labelText: '想怎样修改菜谱？'),
+              decoration: InputDecoration(labelText: l10n.textEditRequestLabel),
               onChanged: (_) {
                 setState(() {
                   _requestId = null;
@@ -881,7 +925,7 @@ class _TextEditPanelState extends ConsumerState<TextEditPanel>
                       'operation': 'text_preview',
                       'text': _text.text,
                     }),
-              child: const Text('预览菜谱修改'),
+              child: Text(l10n.textEditPreview),
             ),
             if (_busy || _checking) const LinearProgressIndicator(),
             if (_error != null) ...[
@@ -967,7 +1011,9 @@ class _TextEditPanelState extends ConsumerState<TextEditPanel>
                     ? () => _dispatch(context, {'operation': 'text_confirm'})
                     : null,
                 child: Text(
-                  _pendingConfirmation == null ? '确认并保存所选修改' : '重试保存与本机清理',
+                  _pendingConfirmation == null
+                      ? '确认并保存所选修改'
+                      : l10n.textEditRetrySaveCleanup,
                 ),
               ),
               TextButton(
@@ -988,12 +1034,12 @@ class _TextEditPanelState extends ConsumerState<TextEditPanel>
 String _displayValue(Object? value) => value == null ? '无' : _editValue(value);
 String _editValue(Object? value) => value is String ? value : jsonEncode(value);
 
-String _reason(String? reason) => switch (reason) {
+String _reason(String? reason, AppLocalizations l10n) => switch (reason) {
   'daily_quota' => '今日修改额度已用完。手动编辑和保存不受影响。',
   'monthly_budget' => '平台月预算已达到上限，AI 暂停。手动编辑和保存不受影响。',
   'configuration' => '模型配置暂不可用。手动编辑和保存不受影响。',
   'invalid_output' => 'AI 修改校验未通过，已纠正一次仍失败。原话保留，可重试或手动编辑。',
-  'unsupported_intent' => '这类修改暂未支持，不会应用。支持改文字、换厨具、调整时间或难度、调整做法；口味和缺料替代请手动编辑。',
+  'unsupported_intent' => l10n.textEditUnsupportedIntent,
   'uncertain_intent' => '没把握理解这次修改。请换个说法，或手动编辑，不会硬改。',
   _ => '模型暂不可用。原话保留，可重试或手动编辑。',
 };

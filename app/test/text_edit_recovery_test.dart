@@ -1385,4 +1385,306 @@ void main() {
       );
     },
   );
+
+  testWidgets(
+    'unattainable follow-up shows its reason without losing selected operations',
+    (tester) async {
+      final fixture = _Fixture();
+      await _selected(tester, fixture);
+      const reason = '缺少鸡肉厚度和装载量，无法安全估算转换条件，请补充信息';
+      fixture.env.server.on(
+        'POST',
+        '/v1/ai/recipes/modifications',
+        (_) => (
+          200,
+          fixture.preview()
+            ..['id'] = '44444444-4444-4444-8444-444444444444'
+            ..['operations'] = []
+            ..['decisions'] = []
+            ..['error'] = 'cannot_modify'
+            ..['warnings'] = [reason],
+        ),
+      );
+      await _reveal(tester, 'text-edit-input');
+      await tester.enterText(
+        find.byKey(const ValueKey('text-edit-input')),
+        '改成空气炸锅',
+      );
+      await _tap(tester, 'text-edit-preview');
+      await _reveal(tester, 'text-edit-error');
+      expect(find.text(reason), findsOneWidget);
+      await _reveal(tester, 'text-edit-after-clarify');
+      expect(find.text('我确认的文字：中心达到 74°C。'), findsOneWidget);
+      expect(find.text('本条处理：拒绝'), findsOneWidget);
+      await _tap(tester, 'text-edit-confirm');
+      expect(
+        fixture.env.server
+            .calls(
+              'POST',
+              '/v1/ai/recipes/modifications/$_modification/confirm',
+            )
+            .length,
+        1,
+      );
+      expect(
+        fixture.env.server.calls(
+          'POST',
+          '/v1/ai/recipes/modifications/44444444-4444-4444-8444-444444444444/confirm',
+        ),
+        isEmpty,
+      );
+    },
+  );
+
+  testWidgets(
+    'definitive confirmation rejection permits correction after reopen without losing decisions',
+    (tester) async {
+      final fixture = _Fixture();
+      await _selected(tester, fixture);
+      const rejectedNote = '吃这道菜可以降血糖';
+      const correctedNote = '作者确认：只澄清步骤';
+      fixture.env.server.on(
+        'POST',
+        '/v1/ai/recipes/modifications/$_modification/confirm',
+        (request) {
+          if ((request.body as Map)['change_note'] == rejectedNote) {
+            return FakeServer.error(
+              422,
+              'prohibited_health_claim',
+              '请改写疗效类措辞后再保存',
+            );
+          }
+          fixture.saved = true;
+          return (201, _detail(version: 'saved').toJson());
+        },
+      );
+      fixture.env.server.on(
+        'GET',
+        '/v1/recipes/$_recipe',
+        (_) => (
+          200,
+          fixture.saved
+              ? _detail(version: 'saved')
+                    .copyWith(
+                      version: _detail(version: 'saved').version.copyWith(
+                        changeNote: correctedNote,
+                        snapshot: _snapshot('我确认的文字：中心达到 74°C。'),
+                      ),
+                    )
+                    .toJson()
+              : _detail().toJson(),
+        ),
+      );
+      await _reveal(tester, 'change-explanation-note');
+      await tester.enterText(
+        find.byKey(const ValueKey('change-explanation-note')),
+        rejectedNote,
+      );
+      await _tap(tester, 'text-edit-confirm');
+      await _reveal(tester, 'text-edit-error');
+      expect(find.text('请改写疗效类措辞后再保存'), findsOneWidget);
+      await restartApp(tester, fixture.env);
+      await _route(tester, '/recipes/$_recipe/edit');
+      expect(
+        fixture.env.server
+            .calls(
+              'POST',
+              '/v1/ai/recipes/modifications/$_modification/confirm',
+            )
+            .length,
+        1,
+      );
+      await _reveal(tester, 'text-edit-after-clarify');
+      expect(find.text('我确认的文字：中心达到 74°C。'), findsOneWidget);
+      expect(find.text('本条处理：拒绝'), findsOneWidget);
+      expect(
+        tester
+            .widget<TextFormField>(
+              find.byKey(const ValueKey('text-edit-after-clarify')),
+            )
+            .enabled,
+        isTrue,
+      );
+      await _reveal(tester, 'change-explanation-note');
+      expect(find.text(rejectedNote), findsOneWidget);
+      expect(
+        find.byKey(const ValueKey('change-explanation-note')).hitTestable(),
+        findsOneWidget,
+      );
+      await tester.enterText(
+        find.byKey(const ValueKey('change-explanation-note')),
+        correctedNote,
+      );
+      await _tap(tester, 'text-edit-confirm');
+      final confirmations = fixture.env.server.calls(
+        'POST',
+        '/v1/ai/recipes/modifications/$_modification/confirm',
+      );
+      expect(confirmations.length, 2);
+      expect((confirmations.first.body as Map)['change_note'], rejectedNote);
+      expect((confirmations.last.body as Map)['change_note'], correctedNote);
+      await _reveal(tester, 'recipe-detail-content');
+      await tester.scrollUntilVisible(
+        find.textContaining('我确认的文字：中心达到 74°C。'),
+        250,
+        scrollable: find.byType(Scrollable).first,
+        maxScrolls: 60,
+      );
+      expect(find.textContaining('我确认的文字：中心达到 74°C。'), findsOneWidget);
+    },
+  );
+
+  for (final code in [
+    'stale_modification_decisions',
+    'stale_change_explanation',
+  ]) {
+    testWidgets(
+      '$code rejection rechecks retained selections before corrected confirmation',
+      (tester) async {
+        final fixture = _Fixture();
+        await _selected(tester, fixture);
+        await _reveal(tester, 'change-explanation-note');
+        await tester.enterText(
+          find.byKey(const ValueKey('change-explanation-note')),
+          '作者保留的说明',
+        );
+        var attempts = 0;
+        fixture.env.server.on(
+          'POST',
+          '/v1/ai/recipes/modifications/$_modification/confirm',
+          (_) {
+            if (attempts++ == 0) {
+              return FakeServer.error(409, code, '请核对最新选择后再保存');
+            }
+            fixture.saved = true;
+            return (201, _detail(version: 'saved').toJson());
+          },
+        );
+        final checksBefore = fixture.env.server
+            .calls(
+              'POST',
+              '/v1/ai/recipes/modifications/$_modification/decisions',
+            )
+            .length;
+        await _tap(tester, 'text-edit-confirm');
+        await _reveal(tester, 'text-edit-confirm');
+        expect(
+          tester
+              .widget<FilledButton>(
+                find.byKey(const ValueKey('text-edit-confirm')),
+              )
+              .onPressed,
+          isNull,
+        );
+        await _tap(tester, 'text-edit-retry-checks');
+        expect(
+          fixture.env.server
+              .calls(
+                'POST',
+                '/v1/ai/recipes/modifications/$_modification/decisions',
+              )
+              .length,
+          checksBefore + 1,
+        );
+        await _reveal(tester, 'text-edit-after-clarify');
+        expect(find.text('我确认的文字：中心达到 74°C。'), findsOneWidget);
+        expect(find.text('本条处理：拒绝'), findsOneWidget);
+        expect(
+          tester
+              .widget<TextFormField>(
+                find.byKey(const ValueKey('text-edit-after-clarify')),
+              )
+              .enabled,
+          isTrue,
+        );
+        await _reveal(tester, 'change-explanation-note');
+        expect(find.text('作者保留的说明'), findsOneWidget);
+        expect(
+          find.byKey(const ValueKey('change-explanation-note')).hitTestable(),
+          findsOneWidget,
+        );
+        await _tap(tester, 'text-edit-confirm');
+        final confirmations = fixture.env.server.calls(
+          'POST',
+          '/v1/ai/recipes/modifications/$_modification/confirm',
+        );
+        expect(confirmations, hasLength(2));
+        expect(
+          (confirmations.last.body as Map)['revision'],
+          greaterThan((confirmations.first.body as Map)['revision'] as int),
+        );
+        expect((confirmations.last.body as Map)['change_note'], '作者保留的说明');
+      },
+    );
+  }
+
+  for (final (status, code) in [
+    (408, 'request_timeout'),
+    (409, 'modification_already_saved'),
+    (409, 'unknown_save_conflict'),
+  ]) {
+    testWidgets('$code retains the exact confirmation receipt through reopen', (
+      tester,
+    ) async {
+      final fixture = _Fixture();
+      await _selected(tester, fixture, generated: true);
+      await _reveal(tester, 'change-explanation-note');
+      await tester.enterText(
+        find.byKey(const ValueKey('change-explanation-note')),
+        '原始确认说明',
+      );
+      var attempts = 0;
+      fixture.env.server.on(
+        'POST',
+        '/v1/ai/recipes/modifications/$_modification/confirm',
+        (_) {
+          if (attempts++ == 0) {
+            return FakeServer.error(status, code, '确认结果尚待核对');
+          }
+          fixture.saved = true;
+          return (201, _detail(version: 'saved').toJson());
+        },
+      );
+      final checksBefore = fixture.env.server
+          .calls(
+            'POST',
+            '/v1/ai/recipes/modifications/$_modification/decisions',
+          )
+          .length;
+      await _tap(tester, 'text-edit-confirm');
+      await _reveal(tester, 'text-edit-after-clarify');
+      expect(
+        tester
+            .widget<TextFormField>(
+              find.byKey(const ValueKey('text-edit-after-clarify')),
+            )
+            .enabled,
+        isFalse,
+      );
+      await restartApp(tester, fixture.env);
+      await _route(tester, '/recipes/one-line');
+      expect(
+        GoRouter.of(tester.element(find.byType(Scaffold).first))
+            .routeInformationProvider
+            .value
+            .uri
+            .path,
+        '/recipes/$_recipe',
+      );
+      final confirmations = fixture.env.server.calls(
+        'POST',
+        '/v1/ai/recipes/modifications/$_modification/confirm',
+      );
+      expect(confirmations, hasLength(2));
+      expect(confirmations.last.body, confirmations.first.body);
+      expect((confirmations.last.body as Map)['change_note'], '原始确认说明');
+      expect(
+        fixture.env.server.calls(
+          'POST',
+          '/v1/ai/recipes/modifications/$_modification/decisions',
+        ),
+        hasLength(checksBefore),
+      );
+    });
+  }
 }
