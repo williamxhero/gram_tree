@@ -13,13 +13,23 @@ abstract class _$RecipeIngredientCWProxy {
 
   RecipeIngredient displayName(String displayName);
 
+  RecipeIngredient flavorContribution(
+    RecipeFlavorContribution? flavorContribution,
+  );
+
+  RecipeIngredient flavorSource(ValueSource? flavorSource);
+
   RecipeIngredient functional(bool? functional);
+
+  RecipeIngredient functionalSource(ValueSource? functionalSource);
 
   RecipeIngredient group(String? group);
 
   RecipeIngredient id(String id);
 
   RecipeIngredient ingredientId(String? ingredientId);
+
+  RecipeIngredient measureInputToken(String? measureInputToken);
 
   RecipeIngredient optional(bool? optional);
 
@@ -47,10 +57,14 @@ abstract class _$RecipeIngredientCWProxy {
     num? baseQuantity,
     RecipeIngredientBaseUnitEnum? baseUnit,
     String displayName,
+    RecipeFlavorContribution? flavorContribution,
+    ValueSource? flavorSource,
     bool? functional,
+    ValueSource? functionalSource,
     String? group,
     String id,
     String? ingredientId,
+    String? measureInputToken,
     bool? optional,
     String? preparation,
     ValueSource? preparationSource,
@@ -81,7 +95,20 @@ class _$RecipeIngredientCWProxyImpl implements _$RecipeIngredientCWProxy {
       this(displayName: displayName);
 
   @override
+  RecipeIngredient flavorContribution(
+    RecipeFlavorContribution? flavorContribution,
+  ) => this(flavorContribution: flavorContribution);
+
+  @override
+  RecipeIngredient flavorSource(ValueSource? flavorSource) =>
+      this(flavorSource: flavorSource);
+
+  @override
   RecipeIngredient functional(bool? functional) => this(functional: functional);
+
+  @override
+  RecipeIngredient functionalSource(ValueSource? functionalSource) =>
+      this(functionalSource: functionalSource);
 
   @override
   RecipeIngredient group(String? group) => this(group: group);
@@ -92,6 +119,10 @@ class _$RecipeIngredientCWProxyImpl implements _$RecipeIngredientCWProxy {
   @override
   RecipeIngredient ingredientId(String? ingredientId) =>
       this(ingredientId: ingredientId);
+
+  @override
+  RecipeIngredient measureInputToken(String? measureInputToken) =>
+      this(measureInputToken: measureInputToken);
 
   @override
   RecipeIngredient optional(bool? optional) => this(optional: optional);
@@ -133,10 +164,14 @@ class _$RecipeIngredientCWProxyImpl implements _$RecipeIngredientCWProxy {
     Object? baseQuantity = const $CopyWithPlaceholder(),
     Object? baseUnit = const $CopyWithPlaceholder(),
     Object? displayName = const $CopyWithPlaceholder(),
+    Object? flavorContribution = const $CopyWithPlaceholder(),
+    Object? flavorSource = const $CopyWithPlaceholder(),
     Object? functional = const $CopyWithPlaceholder(),
+    Object? functionalSource = const $CopyWithPlaceholder(),
     Object? group = const $CopyWithPlaceholder(),
     Object? id = const $CopyWithPlaceholder(),
     Object? ingredientId = const $CopyWithPlaceholder(),
+    Object? measureInputToken = const $CopyWithPlaceholder(),
     Object? optional = const $CopyWithPlaceholder(),
     Object? preparation = const $CopyWithPlaceholder(),
     Object? preparationSource = const $CopyWithPlaceholder(),
@@ -159,10 +194,22 @@ class _$RecipeIngredientCWProxyImpl implements _$RecipeIngredientCWProxy {
           ? _value.displayName
           // ignore: cast_nullable_to_non_nullable
           : displayName as String,
+      flavorContribution: flavorContribution == const $CopyWithPlaceholder()
+          ? _value.flavorContribution
+          // ignore: cast_nullable_to_non_nullable
+          : flavorContribution as RecipeFlavorContribution?,
+      flavorSource: flavorSource == const $CopyWithPlaceholder()
+          ? _value.flavorSource
+          // ignore: cast_nullable_to_non_nullable
+          : flavorSource as ValueSource?,
       functional: functional == const $CopyWithPlaceholder()
           ? _value.functional
           // ignore: cast_nullable_to_non_nullable
           : functional as bool?,
+      functionalSource: functionalSource == const $CopyWithPlaceholder()
+          ? _value.functionalSource
+          // ignore: cast_nullable_to_non_nullable
+          : functionalSource as ValueSource?,
       group: group == const $CopyWithPlaceholder()
           ? _value.group
           // ignore: cast_nullable_to_non_nullable
@@ -175,6 +222,10 @@ class _$RecipeIngredientCWProxyImpl implements _$RecipeIngredientCWProxy {
           ? _value.ingredientId
           // ignore: cast_nullable_to_non_nullable
           : ingredientId as String?,
+      measureInputToken: measureInputToken == const $CopyWithPlaceholder()
+          ? _value.measureInputToken
+          // ignore: cast_nullable_to_non_nullable
+          : measureInputToken as String?,
       optional: optional == const $CopyWithPlaceholder()
           ? _value.optional
           // ignore: cast_nullable_to_non_nullable
@@ -238,10 +289,30 @@ RecipeIngredient _$RecipeIngredientFromJson(
         (v) => $enumDecodeNullable(_$RecipeIngredientBaseUnitEnumEnumMap, v),
       ),
       displayName: $checkedConvert('display_name', (v) => v as String),
+      flavorContribution: $checkedConvert(
+        'flavor_contribution',
+        (v) => v == null
+            ? null
+            : RecipeFlavorContribution.fromJson(v as Map<String, dynamic>),
+      ),
+      flavorSource: $checkedConvert(
+        'flavor_source',
+        (v) =>
+            v == null ? null : ValueSource.fromJson(v as Map<String, dynamic>),
+      ),
       functional: $checkedConvert('functional', (v) => v as bool? ?? false),
+      functionalSource: $checkedConvert(
+        'functional_source',
+        (v) =>
+            v == null ? null : ValueSource.fromJson(v as Map<String, dynamic>),
+      ),
       group: $checkedConvert('group', (v) => v as String?),
       id: $checkedConvert('id', (v) => v as String),
       ingredientId: $checkedConvert('ingredient_id', (v) => v as String?),
+      measureInputToken: $checkedConvert(
+        'measure_input_token',
+        (v) => v as String?,
+      ),
       optional: $checkedConvert('optional', (v) => v as bool? ?? false),
       preparation: $checkedConvert('preparation', (v) => v as String?),
       preparationSource: $checkedConvert(
@@ -268,7 +339,11 @@ RecipeIngredient _$RecipeIngredientFromJson(
     'baseQuantity': 'base_quantity',
     'baseUnit': 'base_unit',
     'displayName': 'display_name',
+    'flavorContribution': 'flavor_contribution',
+    'flavorSource': 'flavor_source',
+    'functionalSource': 'functional_source',
     'ingredientId': 'ingredient_id',
+    'measureInputToken': 'measure_input_token',
     'preparationSource': 'preparation_source',
     'quantitySource': 'quantity_source',
     'scalingMode': 'scaling_mode',
@@ -280,10 +355,14 @@ Map<String, dynamic> _$RecipeIngredientToJson(RecipeIngredient instance) =>
       'base_quantity': ?instance.baseQuantity,
       'base_unit': ?_$RecipeIngredientBaseUnitEnumEnumMap[instance.baseUnit],
       'display_name': instance.displayName,
+      'flavor_contribution': ?instance.flavorContribution?.toJson(),
+      'flavor_source': ?instance.flavorSource?.toJson(),
       'functional': ?instance.functional,
+      'functional_source': ?instance.functionalSource?.toJson(),
       'group': ?instance.group,
       'id': instance.id,
       'ingredient_id': ?instance.ingredientId,
+      'measure_input_token': ?instance.measureInputToken,
       'optional': ?instance.optional,
       'preparation': ?instance.preparation,
       'preparation_source': ?instance.preparationSource?.toJson(),

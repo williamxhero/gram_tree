@@ -6,12 +6,13 @@
 
 from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+from pydantic import BaseModel, ConfigDict, Field, ValidationInfo, field_validator, model_validator
 
 from gramtree.core.ids import IdV4
 from gramtree.core.time import Timestamp
 from gramtree.ui_protocol.protocol import SourcedValue
 
+ChangeConclusion = Literal["no_change", "minor_only", "general", "significant"]
 SourceType = Literal["author_filled", "ai_estimated", "verified"]
 MoldShape = Literal["round", "square", "rectangular", "custom"]
 MoldUnit = Literal["cm", "in", "inch"]
@@ -68,6 +69,20 @@ class RecipeReplacement(BaseModel):
     note: str | None = None
 
 
+class RecipeFlavorContribution(BaseModel):
+    """This recipe's relative strengths; null means unknown, not zero."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    salty: int | None = Field(None, ge=0, le=3, strict=True, description="咸")
+    sweet: int | None = Field(None, ge=0, le=3, strict=True, description="甜")
+    sour: int | None = Field(None, ge=0, le=3, strict=True, description="酸")
+    spicy: int | None = Field(None, ge=0, le=3, strict=True, description="辣")
+    umami: int | None = Field(None, ge=0, le=3, strict=True, description="鲜")
+    numbing: int | None = Field(None, ge=0, le=3, strict=True, description="麻")
+    oily: int | None = Field(None, ge=0, le=3, strict=True, description="油")
+
+
 class RecipeIngredient(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -86,6 +101,11 @@ class RecipeIngredient(BaseModel):
     optional: bool = False
     replacement: RecipeReplacement | str | None = None
     functional: bool = False
+    flavor_contribution: RecipeFlavorContribution | None = Field(
+        default=None, description="本菜谱实际采用的味型贡献；未填写不代表零贡献"
+    )
+    flavor_source: ValueSource | None = None
+    functional_source: ValueSource | None = None
     # 不填（或 null）表示作者没有设置：保存时用标准食材库的默认值，未收录的食材按比例。
     # 保存下来的版本快照里总是具体的缩放方式。
     scaling_mode: Literal["proportional", "unchanged", "round"] | None = Field(
@@ -93,6 +113,33 @@ class RecipeIngredient(BaseModel):
     )
     quantity_source: ValueSource | None = None
     preparation_source: ValueSource | None = None
+    measure_input_token: str | None = Field(
+        default=None,
+        max_length=8192,
+        description="本人确认的量具换算凭据；基础量与来源不随量具校准改变",
+    )
+
+    @field_validator("flavor_contribution")
+    @classmethod
+    def canonical_unknown_flavor(
+        cls, value: RecipeFlavorContribution | None
+    ) -> RecipeFlavorContribution | None:
+        # Empty/all-null profiles are explicit unknowns (including generated
+        # clients' clear action), never known zero or a request for defaults.
+        if value is not None and all(axis is None for axis in value.model_dump().values()):
+            return None
+        return value
+
+    @field_validator("flavor_source", "functional_source")
+    @classmethod
+    def contribution_not_verified(
+        cls, value: ValueSource | None, info: ValidationInfo
+    ) -> ValueSource | None:
+        if value is not None and value.source == "verified":
+            raise ValueError("食材库校对和作者填写不是做菜验证，不能标为已验证")
+        if info.field_name == "flavor_source" and info.data.get("flavor_contribution") is None:
+            return None
+        return value
 
     @field_validator("display_name", "unit")
     @classmethod
@@ -403,6 +450,9 @@ class RecipeVersionCreate(RecipeSnapshotInput):
 class RecipeSafetyCheckRequest(RecipeSnapshotInput):
     model_config = ConfigDict(extra="forbid")
 
+    recipe_id: IdV4 | None = None
+    base_version_id: IdV4 | None = None
+
     dish_name: str = Field(default="", max_length=200)
     dish_aliases: list[str] = Field(default_factory=list, max_length=20)
     description: str | None = Field(default=None, max_length=4000)
@@ -464,6 +514,9 @@ class RecipeVersionOut(BaseModel):
     id: IdV4
     version_number: int
     previous_version_id: IdV4 | None = None
+    base_version_id: IdV4 | None = None
+    conclusion: ChangeConclusion | None = None
+    rules_version: str | None = None
     snapshot: RecipeSnapshot
     derived: RecipeDerived
     safety: RecipeSafetyResult | None = None
@@ -495,9 +548,22 @@ class RecipeVersionSummary(BaseModel):
     id: IdV4
     version_number: int
     previous_version_id: IdV4 | None = None
+    base_version_id: IdV4 | None = None
+    conclusion: ChangeConclusion | None = None
+    rules_version: str | None = None
     change_note: str
     ai_assisted: bool
     created_at: Timestamp
+
+
+class RecipeComparisonCandidate(RecipeVersionSummary):
+    recipe_id: IdV4
+    author: str
+
+
+class RecipeComparisonCandidates(BaseModel):
+    items: list[RecipeComparisonCandidate]
+    next_cursor: str | None = None
 
 
 class RecipeVersionHistory(BaseModel):

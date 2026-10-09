@@ -358,6 +358,474 @@ abstract class AppLocalizations {
   /// **'味谱'**
   String get appTitle;
 
+  /// No description provided for @measureInputAction.
+  ///
+  /// In zh, this message translates to:
+  /// **'用自家量具录入'**
+  String get measureInputAction;
+
+  /// No description provided for @measureInputTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'量具用量换算'**
+  String get measureInputTitle;
+
+  /// No description provided for @measureInputTool.
+  ///
+  /// In zh, this message translates to:
+  /// **'自家量具'**
+  String get measureInputTool;
+
+  /// No description provided for @measureInputCount.
+  ///
+  /// In zh, this message translates to:
+  /// **'几勺、几碗或几杯'**
+  String get measureInputCount;
+
+  /// No description provided for @measureInputBaseUnit.
+  ///
+  /// In zh, this message translates to:
+  /// **'采用的基础单位'**
+  String get measureInputBaseUnit;
+
+  /// No description provided for @measureInputPreview.
+  ///
+  /// In zh, this message translates to:
+  /// **'查看换算'**
+  String get measureInputPreview;
+
+  /// No description provided for @measureInputConfirm.
+  ///
+  /// In zh, this message translates to:
+  /// **'确认采用基础量'**
+  String get measureInputConfirm;
+
+  /// No description provided for @measureInputEstimate.
+  ///
+  /// In zh, this message translates to:
+  /// **'我了解这是估算，继续换算'**
+  String get measureInputEstimate;
+
+  /// No description provided for @measureInputFallback.
+  ///
+  /// In zh, this message translates to:
+  /// **'返回填写基础量'**
+  String get measureInputFallback;
+
+  /// No description provided for @measureInputNoTools.
+  ///
+  /// In zh, this message translates to:
+  /// **'还没有登记量具，请先在个人中心登记，或直接填写克、毫升。'**
+  String get measureInputNoTools;
+
+  /// No description provided for @measureInputOffline.
+  ///
+  /// In zh, this message translates to:
+  /// **'离线或缺少转换数据，不能可靠换算；请返回填写基础量。草稿不会改变。'**
+  String get measureInputOffline;
+
+  /// No description provided for @measureInputInvalid.
+  ///
+  /// In zh, this message translates to:
+  /// **'请输入有限、非负且不超过 10000000 的数量。'**
+  String get measureInputInvalid;
+
+  /// No description provided for @measureInputUnchanged.
+  ///
+  /// In zh, this message translates to:
+  /// **'尚未确认，当前食材用量不会改变。'**
+  String get measureInputUnchanged;
+
+  /// No description provided for @measureInputEvidence.
+  ///
+  /// In zh, this message translates to:
+  /// **'量具输入依据'**
+  String get measureInputEvidence;
+
+  /// No description provided for @recipeFlavorUnknown.
+  ///
+  /// In zh, this message translates to:
+  /// **'味型贡献未填写'**
+  String get recipeFlavorUnknown;
+
+  /// No description provided for @recipeFlavorFunctionalOff.
+  ///
+  /// In zh, this message translates to:
+  /// **'不作功能性用料'**
+  String get recipeFlavorFunctionalOff;
+
+  /// No description provided for @recipeFlavorAuthorBasis.
+  ///
+  /// In zh, this message translates to:
+  /// **'作者按这道菜的实际作用填写'**
+  String get recipeFlavorAuthorBasis;
+
+  /// No description provided for @recipeFlavorEditorTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'这道菜的味型贡献'**
+  String get recipeFlavorEditorTitle;
+
+  /// No description provided for @recipeFlavorEditorHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'强度 0–3；未填写不代表零贡献'**
+  String get recipeFlavorEditorHint;
+
+  /// No description provided for @recipeFlavorAxisLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'{axis}味贡献'**
+  String recipeFlavorAxisLabel(Object axis);
+
+  /// No description provided for @recipeFlavorAxisUnknown.
+  ///
+  /// In zh, this message translates to:
+  /// **'{axis} 未填写'**
+  String recipeFlavorAxisUnknown(Object axis);
+
+  /// No description provided for @recipeFlavorStrength.
+  ///
+  /// In zh, this message translates to:
+  /// **'{axis} {strength}'**
+  String recipeFlavorStrength(String axis, int strength);
+
+  /// No description provided for @recipeFlavorSalty.
+  ///
+  /// In zh, this message translates to:
+  /// **'咸'**
+  String get recipeFlavorSalty;
+
+  /// No description provided for @recipeFlavorSweet.
+  ///
+  /// In zh, this message translates to:
+  /// **'甜'**
+  String get recipeFlavorSweet;
+
+  /// No description provided for @recipeFlavorSour.
+  ///
+  /// In zh, this message translates to:
+  /// **'酸'**
+  String get recipeFlavorSour;
+
+  /// No description provided for @recipeFlavorSpicy.
+  ///
+  /// In zh, this message translates to:
+  /// **'辣'**
+  String get recipeFlavorSpicy;
+
+  /// No description provided for @recipeFlavorUmami.
+  ///
+  /// In zh, this message translates to:
+  /// **'鲜'**
+  String get recipeFlavorUmami;
+
+  /// No description provided for @recipeFlavorNumbing.
+  ///
+  /// In zh, this message translates to:
+  /// **'麻'**
+  String get recipeFlavorNumbing;
+
+  /// No description provided for @recipeFlavorOily.
+  ///
+  /// In zh, this message translates to:
+  /// **'油'**
+  String get recipeFlavorOily;
+
+  /// No description provided for @recipeComparisonTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'食材版本对比'**
+  String get recipeComparisonTitle;
+
+  /// No description provided for @recipeComparisonError.
+  ///
+  /// In zh, this message translates to:
+  /// **'无法比较这些版本，请确认两版仍可查看'**
+  String get recipeComparisonError;
+
+  /// No description provided for @recipeComparisonFrom.
+  ///
+  /// In zh, this message translates to:
+  /// **'从 A'**
+  String get recipeComparisonFrom;
+
+  /// No description provided for @recipeComparisonTo.
+  ///
+  /// In zh, this message translates to:
+  /// **'到 B'**
+  String get recipeComparisonTo;
+
+  /// No description provided for @recipeComparisonScope.
+  ///
+  /// In zh, this message translates to:
+  /// **'仅比较食材，尚未比较步骤'**
+  String get recipeComparisonScope;
+
+  /// No description provided for @recipeComparisonServings.
+  ///
+  /// In zh, this message translates to:
+  /// **'已按 {servings} 人份对比'**
+  String recipeComparisonServings(int servings);
+
+  /// No description provided for @recipeComparisonServingValue.
+  ///
+  /// In zh, this message translates to:
+  /// **'{servings} 人份'**
+  String recipeComparisonServingValue(int servings);
+
+  /// No description provided for @recipeComparisonServingBasis.
+  ///
+  /// In zh, this message translates to:
+  /// **'B 的基础量按线性、固定或阶梯规则归一到 A 的份数；原版本未修改。'**
+  String get recipeComparisonServingBasis;
+
+  /// No description provided for @recipeComparisonShowAll.
+  ///
+  /// In zh, this message translates to:
+  /// **'展开全部食材'**
+  String get recipeComparisonShowAll;
+
+  /// No description provided for @recipeComparisonEmpty.
+  ///
+  /// In zh, this message translates to:
+  /// **'没有食材配方变化'**
+  String get recipeComparisonEmpty;
+
+  /// No description provided for @recipeComparisonSnapshotFields.
+  ///
+  /// In zh, this message translates to:
+  /// **'菜谱字段变化'**
+  String get recipeComparisonSnapshotFields;
+
+  /// No description provided for @recipeComparisonVersion.
+  ///
+  /// In zh, this message translates to:
+  /// **'{author} · 第 {version} 版 · {servings} 人份'**
+  String recipeComparisonVersion(String author, int version, int servings);
+
+  /// No description provided for @recipeComparisonDetails.
+  ///
+  /// In zh, this message translates to:
+  /// **'查看版本详情'**
+  String get recipeComparisonDetails;
+
+  /// No description provided for @recipeComparisonUnchangedBasis.
+  ///
+  /// In zh, this message translates to:
+  /// **'基础量按相同份数比较，食材与执行字段均未改变'**
+  String get recipeComparisonUnchangedBasis;
+
+  /// No description provided for @recipeComparisonUnchanged.
+  ///
+  /// In zh, this message translates to:
+  /// **'无食材变化'**
+  String get recipeComparisonUnchanged;
+
+  /// No description provided for @recipeComparisonBefore.
+  ///
+  /// In zh, this message translates to:
+  /// **'A：{value}'**
+  String recipeComparisonBefore(Object value);
+
+  /// No description provided for @recipeComparisonAfter.
+  ///
+  /// In zh, this message translates to:
+  /// **'B：{value}'**
+  String recipeComparisonAfter(Object value);
+
+  /// No description provided for @recipeComparisonIngredientDetails.
+  ///
+  /// In zh, this message translates to:
+  /// **'食材明细'**
+  String get recipeComparisonIngredientDetails;
+
+  /// No description provided for @recipeComparisonNone.
+  ///
+  /// In zh, this message translates to:
+  /// **'无'**
+  String get recipeComparisonNone;
+
+  /// No description provided for @recipeComparisonYes.
+  ///
+  /// In zh, this message translates to:
+  /// **'是'**
+  String get recipeComparisonYes;
+
+  /// No description provided for @recipeComparisonNo.
+  ///
+  /// In zh, this message translates to:
+  /// **'否'**
+  String get recipeComparisonNo;
+
+  /// No description provided for @recipeComparisonAdded.
+  ///
+  /// In zh, this message translates to:
+  /// **'新增'**
+  String get recipeComparisonAdded;
+
+  /// No description provided for @recipeComparisonRemoved.
+  ///
+  /// In zh, this message translates to:
+  /// **'删除'**
+  String get recipeComparisonRemoved;
+
+  /// No description provided for @recipeComparisonReplacement.
+  ///
+  /// In zh, this message translates to:
+  /// **'替换'**
+  String get recipeComparisonReplacement;
+
+  /// No description provided for @recipeComparisonQuantity.
+  ///
+  /// In zh, this message translates to:
+  /// **'用量变化'**
+  String get recipeComparisonQuantity;
+
+  /// No description provided for @recipeComparisonUnit.
+  ///
+  /// In zh, this message translates to:
+  /// **'单位不同'**
+  String get recipeComparisonUnit;
+
+  /// No description provided for @recipeComparisonField.
+  ///
+  /// In zh, this message translates to:
+  /// **'执行字段变化'**
+  String get recipeComparisonField;
+
+  /// No description provided for @recipeComparisonText.
+  ///
+  /// In zh, this message translates to:
+  /// **'文字修改'**
+  String get recipeComparisonText;
+
+  /// No description provided for @recipeComparisonBaseQuantity.
+  ///
+  /// In zh, this message translates to:
+  /// **'基础量'**
+  String get recipeComparisonBaseQuantity;
+
+  /// No description provided for @recipeComparisonBaseUnit.
+  ///
+  /// In zh, this message translates to:
+  /// **'基础单位'**
+  String get recipeComparisonBaseUnit;
+
+  /// No description provided for @recipeComparisonDisplayName.
+  ///
+  /// In zh, this message translates to:
+  /// **'显示名'**
+  String get recipeComparisonDisplayName;
+
+  /// No description provided for @recipeComparisonPreparation.
+  ///
+  /// In zh, this message translates to:
+  /// **'处理方式'**
+  String get recipeComparisonPreparation;
+
+  /// No description provided for @recipeComparisonOptional.
+  ///
+  /// In zh, this message translates to:
+  /// **'可选性'**
+  String get recipeComparisonOptional;
+
+  /// No description provided for @recipeComparisonFlavor.
+  ///
+  /// In zh, this message translates to:
+  /// **'味型贡献'**
+  String get recipeComparisonFlavor;
+
+  /// No description provided for @recipeComparisonTags.
+  ///
+  /// In zh, this message translates to:
+  /// **'标签'**
+  String get recipeComparisonTags;
+
+  /// No description provided for @recipeDescription.
+  ///
+  /// In zh, this message translates to:
+  /// **'描述'**
+  String get recipeDescription;
+
+  /// No description provided for @recipeBaseMold.
+  ///
+  /// In zh, this message translates to:
+  /// **'基准模具'**
+  String get recipeBaseMold;
+
+  /// No description provided for @recipeCuisine.
+  ///
+  /// In zh, this message translates to:
+  /// **'菜系'**
+  String get recipeCuisine;
+
+  /// No description provided for @recipeDesignRationale.
+  ///
+  /// In zh, this message translates to:
+  /// **'设计理由'**
+  String get recipeDesignRationale;
+
+  /// No description provided for @whyTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'为什么'**
+  String get whyTitle;
+
+  /// No description provided for @recipeComparisonTotalTime.
+  ///
+  /// In zh, this message translates to:
+  /// **'总时长'**
+  String get recipeComparisonTotalTime;
+
+  /// No description provided for @recipeComparisonActiveTime.
+  ///
+  /// In zh, this message translates to:
+  /// **'需守着的时长'**
+  String get recipeComparisonActiveTime;
+
+  /// No description provided for @recipeComparisonDetailField.
+  ///
+  /// In zh, this message translates to:
+  /// **'{label}：{value}'**
+  String recipeComparisonDetailField(Object label, Object value);
+
+  /// No description provided for @recipeComparisonCancelSelection.
+  ///
+  /// In zh, this message translates to:
+  /// **'取消选择'**
+  String get recipeComparisonCancelSelection;
+
+  /// No description provided for @recipeComparisonSelect.
+  ///
+  /// In zh, this message translates to:
+  /// **'选两版对比'**
+  String get recipeComparisonSelect;
+
+  /// No description provided for @recipeComparisonSelectionHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'先选 A，再选 B；方向为 A 到 B，仅比较食材'**
+  String get recipeComparisonSelectionHint;
+
+  /// No description provided for @recipeComparisonAction.
+  ///
+  /// In zh, this message translates to:
+  /// **'比较食材'**
+  String get recipeComparisonAction;
+
+  /// No description provided for @recipeComparisonPrevious.
+  ///
+  /// In zh, this message translates to:
+  /// **'和上一版比食材'**
+  String get recipeComparisonPrevious;
+
+  /// No description provided for @recipeComparisonCandidate.
+  ///
+  /// In zh, this message translates to:
+  /// **'{author} · 菜谱 {recipe} · 第 {version} 版'**
+  String recipeComparisonCandidate(String author, String recipe, int version);
+
   /// No description provided for @tabToday.
   ///
   /// In zh, this message translates to:
@@ -2664,7 +3132,7 @@ abstract class AppLocalizations {
   /// No description provided for @personalMeasuresIntro.
   ///
   /// In zh, this message translates to:
-  /// **'把空量具放在厨房秤上归零，装满水后的克数就是容量（毫升）。只影响显示，不会修改菜谱。'**
+  /// **'把空量具放在厨房秤上归零，装满水后的克数就是容量（毫升）。可用于显示或确认录入；重新校准不会修改已保存菜谱。'**
   String get personalMeasuresIntro;
 
   /// No description provided for @personalMeasuresOffline.

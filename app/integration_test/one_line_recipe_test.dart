@@ -5,7 +5,7 @@ import 'package:gram_tree/config/app_config.dart';
 import 'package:gram_tree/main.dart' as app;
 import 'package:integration_test/integration_test.dart';
 
-import 'event_pipeline_support.dart' as support;
+import 'event_pipeline_support.dart' show resetLocalAppState;
 
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
@@ -79,9 +79,11 @@ void main() {
       tester.testTextInput.register();
       addTearDown(tester.testTextInput.unregister);
       // iOS Keychain survives app uninstall; start this fixture signed out.
-      await support.resetLocalAppState();
+      await resetLocalAppState();
       await app.main();
       await waitFor(tester, find.byKey(const ValueKey('consent-agree')));
+      await tester.ensureVisible(find.byKey(const ValueKey('consent-agree')));
+      await tester.pumpAndSettle();
       await tester.tap(find.byKey(const ValueKey('consent-agree')));
       await waitFor(tester, find.byKey(const ValueKey('login-email')));
       final email =

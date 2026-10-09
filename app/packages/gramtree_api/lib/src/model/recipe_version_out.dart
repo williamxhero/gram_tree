@@ -25,7 +25,11 @@ class RecipeVersionOut {
   RecipeVersionOut({
     required this.aiAssisted,
 
+    this.baseVersionId,
+
     required this.changeNote,
+
+    this.conclusion,
 
     required this.createdAt,
 
@@ -41,6 +45,8 @@ class RecipeVersionOut {
 
     this.reproducibility,
 
+    this.rulesVersion,
+
     this.safety,
 
     this.safetyAtSave,
@@ -53,8 +59,14 @@ class RecipeVersionOut {
   @JsonKey(name: r'ai_assisted', required: true, includeIfNull: false)
   final bool aiAssisted;
 
+  @JsonKey(name: r'base_version_id', required: false, includeIfNull: false)
+  final String? baseVersionId;
+
   @JsonKey(name: r'change_note', required: true, includeIfNull: false)
   final String changeNote;
+
+  @JsonKey(name: r'conclusion', required: false, includeIfNull: false)
+  final RecipeVersionOutConclusionEnum? conclusion;
 
   @JsonKey(name: r'created_at', required: true, includeIfNull: false)
   final String createdAt;
@@ -77,6 +89,9 @@ class RecipeVersionOut {
   @JsonKey(name: r'reproducibility', required: false, includeIfNull: false)
   final RecipeReproducibilityResult? reproducibility;
 
+  @JsonKey(name: r'rules_version', required: false, includeIfNull: false)
+  final String? rulesVersion;
+
   @JsonKey(name: r'safety', required: false, includeIfNull: false)
   final RecipeSafetyResult? safety;
 
@@ -94,7 +109,9 @@ class RecipeVersionOut {
       identical(this, other) ||
       other is RecipeVersionOut &&
           other.aiAssisted == aiAssisted &&
+          other.baseVersionId == baseVersionId &&
           other.changeNote == changeNote &&
+          other.conclusion == conclusion &&
           other.createdAt == createdAt &&
           other.derived == derived &&
           other.editOperations == editOperations &&
@@ -102,6 +119,7 @@ class RecipeVersionOut {
           other.images == images &&
           other.previousVersionId == previousVersionId &&
           other.reproducibility == reproducibility &&
+          other.rulesVersion == rulesVersion &&
           other.safety == safety &&
           other.safetyAtSave == safetyAtSave &&
           other.snapshot == snapshot &&
@@ -110,7 +128,9 @@ class RecipeVersionOut {
   @override
   int get hashCode =>
       aiAssisted.hashCode +
+      (baseVersionId == null ? 0 : baseVersionId.hashCode) +
       changeNote.hashCode +
+      (conclusion == null ? 0 : conclusion.hashCode) +
       createdAt.hashCode +
       derived.hashCode +
       editOperations.hashCode +
@@ -118,6 +138,7 @@ class RecipeVersionOut {
       images.hashCode +
       (previousVersionId == null ? 0 : previousVersionId.hashCode) +
       reproducibility.hashCode +
+      (rulesVersion == null ? 0 : rulesVersion.hashCode) +
       safety.hashCode +
       safetyAtSave.hashCode +
       snapshot.hashCode +
@@ -132,4 +153,22 @@ class RecipeVersionOut {
   String toString() {
     return toJson().toString();
   }
+}
+
+enum RecipeVersionOutConclusionEnum {
+  @JsonValue(r'no_change')
+  noChange(r'no_change'),
+  @JsonValue(r'minor_only')
+  minorOnly(r'minor_only'),
+  @JsonValue(r'general')
+  general(r'general'),
+  @JsonValue(r'significant')
+  significant(r'significant');
+
+  const RecipeVersionOutConclusionEnum(this.value);
+
+  final String value;
+
+  @override
+  String toString() => value;
 }

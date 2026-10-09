@@ -52,7 +52,13 @@ def normalize_sources(
             item,
             old_items.get(item.id),
             {
-                "quantity_source": ("quantity", "unit", "display_name", "ingredient_id"),
+                # Snapshot validation has already authenticated this receipt and
+                # its frozen quantity evidence; manual attribution must not replace it.
+                **(
+                    {"quantity_source": ("quantity", "unit", "display_name", "ingredient_id")}
+                    if item.measure_input_token is None
+                    else {}
+                ),
                 "preparation_source": ("preparation",),
             },
         )

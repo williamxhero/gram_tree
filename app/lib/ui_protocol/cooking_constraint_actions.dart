@@ -46,6 +46,7 @@ final cookingConstraintIntentSpecs = [
         final scope = context
             .getInheritedWidgetOfExactType<CookingConstraintActionScope>();
         if (scope?.intent == intent) await scope!.run();
+        return null;
       },
     ),
 ];
