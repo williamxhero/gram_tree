@@ -127,10 +127,15 @@ void main() {
       expect(find.text('这次不用'), findsNothing);
       expect(find.text('以后别这样'), findsNothing);
       final events = server
-          .calls('POST', '/v1/events/upload')
+          .calls('POST', '/v1/sync/writes')
           .expand(
-            (request) => ((request.body as Map)['events'] as List).cast<Map>(),
+            (request) => ((request.body as Map)['writes'] as List).cast<Map>(),
           )
+          .map((write) {
+            expect(write['write_type'], 'experience.event');
+            expect(write['owner_id'], server.user.id);
+            return write['payload'] as Map;
+          })
           .where((event) => event['event_type'] == 'ui.why_panel_opened')
           .toList();
       expect(events, hasLength(1));
@@ -138,7 +143,7 @@ void main() {
         'component_id': 'cooking-constraints',
         'source_type': 'author_filled',
       });
-      expect(events.single['correlation'], isNull);
+      expect(events.single['correlation'], <String, dynamic>{});
     },
   );
 
@@ -245,10 +250,15 @@ void main() {
     expect(find.text('我的勺 · 15.0 毫升'), findsOneWidget);
     expect(server.calls('POST', '/v1/recipes'), isEmpty);
     final actions = server
-        .calls('POST', '/v1/events/upload')
+        .calls('POST', '/v1/sync/writes')
         .expand(
-          (request) => ((request.body as Map)['events'] as List).cast<Map>(),
+          (request) => ((request.body as Map)['writes'] as List).cast<Map>(),
         )
+        .map((write) {
+          expect(write['write_type'], 'experience.event');
+          expect(write['owner_id'], server.user.id);
+          return write['payload'] as Map;
+        })
         .where((event) => event['event_type'] == 'ui.component_action')
         .toList();
     expect(actions.map((event) => event['content']).toList(), [
@@ -259,7 +269,7 @@ void main() {
     ]);
     // Native settings are not rendered from a server composition. Do not invent
     // a non-UUID correlation ID or carry private account/measure identifiers.
-    expect(actions.single['correlation'], isNull);
+    expect(actions.single['correlation'], <String, dynamic>{});
   });
 
   testWidgets(
@@ -328,10 +338,15 @@ void main() {
       expect(jsonEncode(server.calls('PUT', constraintsPath).last.body), '{}');
       expect(find.text('人数未设置，菜谱沿用作者份数'), findsOneWidget);
       final actions = server
-          .calls('POST', '/v1/events/upload')
+          .calls('POST', '/v1/sync/writes')
           .expand(
-            (request) => ((request.body as Map)['events'] as List).cast<Map>(),
+            (request) => ((request.body as Map)['writes'] as List).cast<Map>(),
           )
+          .map((write) {
+            expect(write['write_type'], 'experience.event');
+            expect(write['owner_id'], server.user.id);
+            return write['payload'] as Map;
+          })
           .where((event) => event['event_type'] == 'ui.component_action')
           .toList();
       expect(actions.map((event) => event['content']).toList(), [
@@ -353,7 +368,7 @@ void main() {
         },
       ]);
       for (final action in actions) {
-        expect(action['correlation'], isNull);
+        expect(action['correlation'], <String, dynamic>{});
       }
     },
   );

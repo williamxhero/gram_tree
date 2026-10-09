@@ -60,11 +60,9 @@ Widget buildListComponent(
         : null,
     basisText: basisText,
     primaryActionLabel: labelForAction(data, 'action_label', actions.primary),
-    onPrimaryAction: actions.primary == null
-        ? null
-        : () => onAction(actions.primary!),
+    onPrimaryAction: callbackForAction(context, actions.primary, onAction),
     detailLabel: detailLabel,
-    onDetail: actions.detail == null ? null : () => onAction(actions.detail!),
+    onDetail: callbackForAction(context, actions.detail, onAction),
   );
 }
 

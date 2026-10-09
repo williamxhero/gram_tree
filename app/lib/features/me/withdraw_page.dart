@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../auth/auth_controller.dart';
+import '../../auth/session.dart';
 import '../../l10n/app_localizations.dart';
 import '../../privacy/consent.dart';
+import '../../recipes/recipe_snapshot_provider.dart';
 import '../../widgets/page_frame.dart';
 
 /// 撤回同意：说明已存数据怎么处理 → 确认后停止采集、退出登录、回到同意页。
@@ -21,16 +23,25 @@ class _WithdrawConsentPageState extends ConsumerState<WithdrawConsentPage> {
   Future<void> _withdraw() async {
     setState(() => _busy = true);
     final auth = ref.read(authProvider.notifier);
+    final identity = ref.read(sessionStoreProvider).identity;
+    // Consent removal makes the provider nullable; retain the current-owner
+    // handle so cleanup is awaited, not only a best-effort provider listener.
+    final snapshots = ref.read(recipeSnapshotStoreProvider);
     await ref
         .read(consentProvider.notifier)
         .withdraw(
           beforeEffective: (records) async {
-            final uploaded = await auth.uploadConsentRecords(records);
-            await auth.signOutOnServer();
+            final uploaded = identity == null
+                ? false
+                : await auth.uploadConsentRecords(records, identity: identity);
+            if (identity != null) {
+              await auth.signOutOnServer(identity: identity);
+            }
             return uploaded;
           },
         );
-    await auth.clearLocalSession();
+    await snapshots?.clear();
+    if (identity != null) await auth.clearLocalSession(identity: identity);
   }
 
   @override

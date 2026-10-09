@@ -7,6 +7,8 @@ import 'package:gramtree_api/gramtree_api.dart';
 import '../auth/session.dart';
 import '../config/app_config.dart';
 import '../privacy/consent.dart';
+import '../network/reachability.dart';
+import '../network/online_features.dart';
 import '../storage/device_id.dart';
 
 /// 由服务端 OpenAPI 描述生成的接口客户端（packages/gramtree_api，不要手改）。
@@ -75,6 +77,46 @@ Dio _baseDio(Ref ref) {
     ),
   );
   dio.interceptors.add(ConsentGate(() => ref.read(privacyConsentProvider)));
+  dio.interceptors.add(
+    InterceptorsWrapper(
+      onRequest: (options, handler) async {
+        final feature =
+            options.extra[OnlineFeatures.requestFeatureKey] ??
+            OnlineFeatures.forRequest(options.method, options.uri.path);
+        if (feature == null) {
+          handler.next(options);
+          return;
+        }
+        final monitor = ref.read(apiReachabilityProvider.notifier);
+        // Recheck at the execution boundary; no recipe text or conversion input
+        // is sent until this small consent-gated health request succeeds.
+        if (!await monitor.check()) {
+          handler.reject(
+            DioException(
+              requestOptions: options,
+              type: DioExceptionType.connectionError,
+              error: OnlineFeatureUnavailable(
+                ref.read(apiReachabilityProvider),
+              ),
+            ),
+          );
+          return;
+        }
+        handler.next(options);
+      },
+      onError: (error, handler) {
+        if (error.error is! OnlineFeatureUnavailable &&
+            (error.type == DioExceptionType.connectionError ||
+                error.type == DioExceptionType.connectionTimeout ||
+                error.type == DioExceptionType.receiveTimeout ||
+                error.type == DioExceptionType.sendTimeout ||
+                (error.response?.statusCode ?? 0) >= 500)) {
+          ref.read(apiReachabilityProvider.notifier).markUnavailable();
+        }
+        handler.next(error);
+      },
+    ),
+  );
   dio.interceptors.add(
     InterceptorsWrapper(
       onRequest: (options, handler) {
@@ -170,18 +212,32 @@ class AuthInterceptor extends QueuedInterceptor {
         identical(options.extra['sensitive_session'], session.current);
   }
 
+  bool _matchesIdentity(RequestOptions options) {
+    final owner =
+        options.extra['sync_owner_id'] ?? options.extra['auth_owner_id'];
+    final epoch =
+        options.extra['sync_identity_epoch'] ??
+        options.extra['auth_identity_epoch'];
+    return (owner == null || owner == session.current?.user.id) &&
+        (epoch == null || epoch == session.identityEpoch);
+  }
+
   @override
   void onRequest(RequestOptions options, RequestInterceptorHandler handler) {
-    if (!_sensitiveOriginMatches(options)) {
+    if (!_matchesIdentity(options) || !_sensitiveOriginMatches(options)) {
       handler.reject(
         DioException(
           requestOptions: options,
           type: DioExceptionType.cancel,
-          error: 'account_unavailable',
+          error: !_matchesIdentity(options)
+              ? 'account_changed'
+              : 'account_unavailable',
         ),
       );
       return;
     }
+    options.extra['auth_owner_id'] = session.current?.user.id;
+    options.extra['auth_identity_epoch'] = session.identityEpoch;
     final token = session.current?.accessToken;
     if (token != null && !options.headers.containsKey('Authorization')) {
       options.headers['Authorization'] = 'Bearer $token';
@@ -199,7 +255,9 @@ class AuthInterceptor extends QueuedInterceptor {
   ) async {
     final code = ApiFailure.from(err).code;
     final current = session.current;
-    if (code != 'token_expired' ||
+    final epoch = session.identityEpoch;
+    if (!_matchesIdentity(err.requestOptions) ||
+        code != 'token_expired' ||
         current == null ||
         err.requestOptions.extra[_retried] == true ||
         err.requestOptions.extra[_originOwner] != current.user.id ||
@@ -215,7 +273,9 @@ class AuthInterceptor extends QueuedInterceptor {
         final tokens = await refresh(current.refreshToken);
         // A stale refresh must neither replace a new login nor replay an old
         // owner-private mutation under that login (sensitive or ordinary).
-        if (!identical(session.current, current) ||
+        if (!_matchesIdentity(err.requestOptions) ||
+            session.identityEpoch != epoch ||
+            !identical(session.current, current) ||
             tokens.user.id != current.user.id) {
           handler.next(err);
           return;
@@ -225,11 +285,18 @@ class AuthInterceptor extends QueuedInterceptor {
         await saving;
       }
     } catch (_) {
-      if (identical(session.current, expected)) await onSessionExpired();
+      // A failed old refresh must not sign out a newly selected account.
+      if (_matchesIdentity(err.requestOptions) &&
+          session.identityEpoch == epoch &&
+          identical(session.current, expected)) {
+        await onSessionExpired();
+      }
       handler.next(err);
       return;
     }
-    if (!identical(session.current, expected)) {
+    if (!_matchesIdentity(err.requestOptions) ||
+        session.identityEpoch != epoch ||
+        !identical(session.current, expected)) {
       handler.next(err);
       return;
     }
@@ -249,6 +316,9 @@ class ApiFailure {
   const ApiFailure(this.code, this.message);
 
   factory ApiFailure.from(Object error) {
+    if (error is OnlineFeatureUnavailable) {
+      return ApiFailure('network', error.toString());
+    }
     if (error is DioException) {
       final data = error.response?.data;
       if (data is Map && data['error'] is Map) {
@@ -260,6 +330,9 @@ class ApiFailure {
       }
       if (error.error is ConsentRequired) {
         return const ApiFailure('consent_required', '需要先同意隐私政策');
+      }
+      if (error.error is OnlineFeatureUnavailable) {
+        return ApiFailure('network', error.error.toString());
       }
       if (error.response == null) {
         return const ApiFailure('network', '网络连接不上，请检查网络后再试');

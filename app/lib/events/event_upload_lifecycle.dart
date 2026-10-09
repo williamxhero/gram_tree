@@ -3,6 +3,8 @@ import 'dart:async';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../api/api_client.dart';
+import '../network/reachability.dart';
 import 'event_uploader.dart';
 
 /// 挂在 App 根部：冷启动、回到前台时各触发一次事件上传尝试
@@ -40,5 +42,17 @@ class _EventUploadTriggerState extends ConsumerState<EventUploadTrigger>
   }
 
   @override
-  Widget build(BuildContext context) => widget.child;
+  Widget build(BuildContext context) {
+    ref.listen(offlineSimulationProvider, (before, now) {
+      if (before == true && !now) {
+        unawaited(ref.read(eventUploaderProvider).networkRestored());
+      }
+    });
+    ref.listen(apiReachabilityProvider, (before, now) {
+      if (before != ApiReachability.online && now == ApiReachability.online) {
+        unawaited(ref.read(eventUploaderProvider).networkRestored());
+      }
+    });
+    return widget.child;
+  }
 }

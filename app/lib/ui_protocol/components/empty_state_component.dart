@@ -42,12 +42,12 @@ Widget buildEmptyStateComponent(
     actionLabel: actions.primary == null
         ? null
         : labelForAction(data, 'action_label', actions.primary),
-    onAction: actions.primary == null ? null : () => onAction(actions.primary!),
+    onAction: callbackForAction(context, actions.primary, onAction),
     footer: showDetail && actions.detail != null
         ? Padding(
             padding: const EdgeInsets.only(top: 16),
             child: TextButton(
-              onPressed: () => onAction(actions.detail!),
+              onPressed: callbackForAction(context, actions.detail, onAction),
               child: Text(detailLabel ?? ''),
             ),
           )

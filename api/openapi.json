@@ -7483,6 +7483,175 @@
         ],
         "title": "ValueSource",
         "type": "object"
+      },
+      "WriteBatch": {
+        "properties": {
+          "writes": {
+            "items": {
+              "$ref": "#/components/schemas/WriteEnvelope"
+            },
+            "minItems": 1,
+            "title": "Writes",
+            "type": "array"
+          }
+        },
+        "required": [
+          "writes"
+        ],
+        "title": "WriteBatch",
+        "type": "object"
+      },
+      "WriteBatchResponse": {
+        "properties": {
+          "results": {
+            "items": {
+              "$ref": "#/components/schemas/WriteResult"
+            },
+            "title": "Results",
+            "type": "array"
+          }
+        },
+        "required": [
+          "results"
+        ],
+        "title": "WriteBatchResponse",
+        "type": "object"
+      },
+      "WriteEnvelope": {
+        "additionalProperties": false,
+        "properties": {
+          "dependencies": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "maxItems": 100,
+            "title": "Dependencies",
+            "type": "array"
+          },
+          "device_time": {
+            "format": "date-time",
+            "title": "Device Time",
+            "type": "string"
+          },
+          "format_version": {
+            "const": 1,
+            "description": "Immutable envelope format, independent of business version",
+            "title": "Format Version",
+            "type": "integer"
+          },
+          "owner_id": {
+            "description": "Bound at local creation; must equal the authenticated account",
+            "format": "uuid",
+            "title": "Owner Id",
+            "type": "string"
+          },
+          "payload": {
+            "additionalProperties": true,
+            "title": "Payload",
+            "type": "object"
+          },
+          "write_id": {
+            "description": "UUID v4 delivery ID, not the referenced business resource ID",
+            "format": "uuid",
+            "title": "Write Id",
+            "type": "string"
+          },
+          "write_type": {
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Write Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "format_version",
+          "write_type",
+          "write_id",
+          "owner_id",
+          "device_time",
+          "payload"
+        ],
+        "title": "WriteEnvelope",
+        "type": "object"
+      },
+      "WriteResourceResult": {
+        "properties": {
+          "resource_id": {
+            "format": "uuid",
+            "title": "Resource Id",
+            "type": "string"
+          },
+          "resource_type": {
+            "title": "Resource Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "resource_type",
+          "resource_id"
+        ],
+        "title": "WriteResourceResult",
+        "type": "object"
+      },
+      "WriteResult": {
+        "properties": {
+          "conflict": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Conflict"
+          },
+          "reason_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason Code"
+          },
+          "result": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/WriteResourceResult"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "status": {
+            "enum": [
+              "confirmed",
+              "already_processed",
+              "deferred",
+              "conflict",
+              "failed"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "write_id": {
+            "format": "uuid",
+            "title": "Write Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "write_id",
+          "status"
+        ],
+        "title": "WriteResult",
+        "type": "object"
       }
     },
     "securitySchemes": {
@@ -13525,6 +13694,62 @@
         "summary": "Convert Recipe Version Servings",
         "tags": [
           "recipes"
+        ]
+      }
+    },
+    "/v1/sync/writes": {
+      "post": {
+        "operationId": "upload_writes",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WriteBatch"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WriteBatchResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "参数错误"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "服务端错误"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "按账号上传登记式离线写入；原子幂等处理，未知依赖暂缓",
+        "tags": [
+          "sync"
         ]
       }
     },

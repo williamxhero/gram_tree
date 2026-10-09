@@ -104,13 +104,16 @@ class _DelayedSecureStore extends MemorySecureStore {
 
 class _UnavailableTelemetry extends FakeEventQueue {
   @override
-  Future<void> enqueue(QueuedEvent event) async {
+  Future<void> enqueue(
+    QueuedEvent event, {
+    Map<String, dynamic>? businessRecord,
+  }) async {
     if ((event.content?['intent'] as String?)?.startsWith('allergies_') ==
             true ||
         event.eventType == 'ui.why_panel_opened') {
       throw StateError('private-telemetry-failure');
     }
-    return super.enqueue(event);
+    return super.enqueue(event, businessRecord: businessRecord);
   }
 }
 
@@ -651,13 +654,18 @@ void main() {
       expect(find.text('标准酱油 → 未填写'), findsOneWidget);
       expect(jsonEncode(env.local.values), isNot(contains('标准酱油')));
       final uploads = jsonEncode(
-        server.calls('POST', '/v1/events/upload').map((r) => r.body).toList(),
+        server.calls('POST', '/v1/sync/writes').map((r) => r.body).toList(),
       );
       expect(uploads, isNot(contains('标准酱油')));
       expect(uploads, isNot(contains('自由文字不保存')));
       final events = server
-          .calls('POST', '/v1/events/upload')
-          .expand((r) => ((r.body as Map)['events'] as List).cast<Map>())
+          .calls('POST', '/v1/sync/writes')
+          .expand((r) => ((r.body as Map)['writes'] as List).cast<Map>())
+          .map((write) {
+            expect(write['write_type'], 'experience.event');
+            expect(write['owner_id'], server.user.id);
+            return write['payload'] as Map;
+          })
           .toList();
       final whyEvents = events.where(
         (e) => e['event_type'] == 'ui.why_panel_opened',

@@ -75,11 +75,11 @@ Widget _buildRecipeTextComponent(
     primaryActionLabel: primary == null
         ? null
         : labelForAction(data, 'action_label', primary),
-    onPrimaryAction: primary == null ? null : () => onAction(primary),
+    onPrimaryAction: callbackForAction(context, primary, onAction),
     detailLabel: detail == null
         ? null
         : labelForAction(data, 'detail_label', detail),
-    onDetail: detail == null ? null : () => onAction(detail),
+    onDetail: callbackForAction(context, detail, onAction),
   );
 }
 

@@ -1,6 +1,10 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import 'package:gram_tree/api/api_client.dart';
+import 'package:gram_tree/app/router.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gram_tree/config/app_config.dart';
 import 'package:gram_tree/main.dart' as app;
@@ -114,6 +118,10 @@ void main() {
         ...?binding.reportData,
         'e2e_error': error.toString(),
         'e2e_stack': stack.toString(),
+        'visible_text': [
+          for (final text in tester.widgetList<Text>(find.byType(Text)))
+            if (text.data != null) text.data,
+        ],
       };
       debugPrint('E2E failure: $error');
       debugDumpApp();
@@ -350,6 +358,47 @@ void main() {
       // Selecting the measure keeps grams because the flour has no density.
       await waitFor(tester, find.textContaining('177.78 克 · 没有密度数据，保留克'));
       _markE2eStep('after_personal_measure_selection');
+
+      // SPEC-013.3: leave the page and re-enter with no API transport. Neither
+      // the ingredient catalogue nor the saved mold/measure result is rebuilt.
+      final container = ProviderScope.containerOf(
+        tester.element(find.byType(Scaffold).first),
+      );
+      final router = container.read(routerProvider);
+      // Imperative pushes retain the underlying tab's browser URL. Capture the
+      // actual recipe route from its visible page, not that tab's URI.
+      final recipePath = GoRouterState.of(
+        tester.element(find.byKey(const ValueKey('recipe-detail-content'))),
+      ).matchedLocation;
+      container.read(offlineSimulationProvider.notifier).set(true);
+      router.go('/today');
+      await settle(tester);
+      router.go(recipePath);
+      await waitFor(
+        tester,
+        find.byKey(const ValueKey('recipe-detail-content')),
+      );
+      await reveal(tester, find.textContaining('离线快照'));
+      await reveal(tester, find.textContaining('177.78 克 · 没有密度数据，保留克'));
+      expect(
+        find.byKey(const ValueKey('recipe-serving-control')),
+        findsNothing,
+      );
+      expect(find.byKey(const ValueKey('recipe-measure-picker')), findsNothing);
+      await reveal(
+        tester,
+        flourSource,
+        tapAfterReveal: true,
+        resetToTop: false,
+      );
+      await waitFor(tester, find.text('原来：100 g'));
+      await waitFor(tester, find.text('现在：177.78 克'));
+      await tester.tapAt(const Offset(10, 10));
+      await settle(tester);
+      _markE2eStep('after_offline_frozen_mold_measure');
+      router.go('$recipePath/versions/aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa');
+      await waitFor(tester, find.text('此菜谱版本尚未缓存，需要联网后打开。'));
+      _markE2eStep('after_offline_uncached_version');
     }),
     timeout: const Timeout(Duration(minutes: 5)),
   );

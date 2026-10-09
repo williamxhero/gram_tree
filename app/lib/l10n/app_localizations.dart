@@ -94,6 +94,90 @@ abstract class AppLocalizations {
   /// A list of this localizations delegate's supported locales.
   static const List<Locale> supportedLocales = <Locale>[Locale('zh')];
 
+  /// No description provided for @networkConsentRequired.
+  ///
+  /// In zh, this message translates to:
+  /// **'需要先同意隐私政策'**
+  String get networkConsentRequired;
+
+  /// No description provided for @networkChecking.
+  ///
+  /// In zh, this message translates to:
+  /// **'正在检查连接，在线功能需要联网'**
+  String get networkChecking;
+
+  /// No description provided for @networkConnected.
+  ///
+  /// In zh, this message translates to:
+  /// **'服务已连接'**
+  String get networkConnected;
+
+  /// Current account's writes awaiting synchronization.
+  ///
+  /// In zh, this message translates to:
+  /// **'待同步 {count} 条'**
+  String syncPendingCount(int count);
+
+  /// No description provided for @syncRetryExhaustedCount.
+  ///
+  /// In zh, this message translates to:
+  /// **'重试次数已达上限，已保留 {count} 条内容'**
+  String syncRetryExhaustedCount(int count);
+
+  /// No description provided for @syncDependencyFailedCount.
+  ///
+  /// In zh, this message translates to:
+  /// **'前置写入失败，已保留 {count} 条内容'**
+  String syncDependencyFailedCount(int count);
+
+  /// No description provided for @syncDependencyConflictCount.
+  ///
+  /// In zh, this message translates to:
+  /// **'前置写入存在冲突，{count} 条暂缓同步'**
+  String syncDependencyConflictCount(int count);
+
+  /// No description provided for @syncDependencyMissingCount.
+  ///
+  /// In zh, this message translates to:
+  /// **'依赖写入尚未到达，{count} 条暂缓同步'**
+  String syncDependencyMissingCount(int count);
+
+  /// No description provided for @syncDependencyCycleCount.
+  ///
+  /// In zh, this message translates to:
+  /// **'依赖写入存在循环，已保留 {count} 条内容'**
+  String syncDependencyCycleCount(int count);
+
+  /// No description provided for @syncLegacyOwnerUnknownCount.
+  ///
+  /// In zh, this message translates to:
+  /// **'本机有 {count} 条旧写入无法确定原账号，已隔离保留，不会上传'**
+  String syncLegacyOwnerUnknownCount(int count);
+
+  /// No description provided for @syncLegacyRejectedCount.
+  ///
+  /// In zh, this message translates to:
+  /// **'本机保留 {count} 条旧拒收记录，仅有拒收凭据，无法恢复原内容'**
+  String syncLegacyRejectedCount(int count);
+
+  /// No description provided for @networkUnavailable.
+  ///
+  /// In zh, this message translates to:
+  /// **'需要联网：暂时连接不到服务，请检查网络；本机内容仍可使用。'**
+  String get networkUnavailable;
+
+  /// No description provided for @snapshotCapacityRejected.
+  ///
+  /// In zh, this message translates to:
+  /// **'本机缓存空间不足，此版本未离线保存；菜单和正在做的内容已保留。'**
+  String get snapshotCapacityRejected;
+
+  /// No description provided for @snapshotProtectedOverLimit.
+  ///
+  /// In zh, this message translates to:
+  /// **'受保护的菜谱超出缓存容量，内容已保留；请释放不再需要的保护。'**
+  String get snapshotProtectedOverLimit;
+
   /// No description provided for @recipeAnswerBasis.
   ///
   /// In zh, this message translates to:

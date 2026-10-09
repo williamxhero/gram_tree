@@ -170,6 +170,11 @@ import 'package:gramtree_api/src/model/token_pair.dart';
 import 'package:gramtree_api/src/model/unrecorded_ingredient_item.dart';
 import 'package:gramtree_api/src/model/user_out.dart';
 import 'package:gramtree_api/src/model/value_source.dart';
+import 'package:gramtree_api/src/model/write_batch.dart';
+import 'package:gramtree_api/src/model/write_batch_response.dart';
+import 'package:gramtree_api/src/model/write_envelope.dart';
+import 'package:gramtree_api/src/model/write_resource_result.dart';
+import 'package:gramtree_api/src/model/write_result.dart';
 
 final _regList = RegExp(r'^List<(.*)>$');
 final _regSet = RegExp(r'^Set<(.*)>$');
@@ -682,6 +687,19 @@ ReturnType deserialize<ReturnType, BaseType>(
       return UserOut.fromJson(value as Map<String, dynamic>) as ReturnType;
     case 'ValueSource':
       return ValueSource.fromJson(value as Map<String, dynamic>) as ReturnType;
+    case 'WriteBatch':
+      return WriteBatch.fromJson(value as Map<String, dynamic>) as ReturnType;
+    case 'WriteBatchResponse':
+      return WriteBatchResponse.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'WriteEnvelope':
+      return WriteEnvelope.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'WriteResourceResult':
+      return WriteResourceResult.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'WriteResult':
+      return WriteResult.fromJson(value as Map<String, dynamic>) as ReturnType;
     default:
       RegExpMatch? match;
 
