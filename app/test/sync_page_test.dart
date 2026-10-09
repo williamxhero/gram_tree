@@ -446,9 +446,15 @@ void main() {
 
   testWidgets('页面两次为什么遇到503，后写入按已有期限重试且原封包保留', (tester) async {
     var available = false;
+    var attempts = 0;
+    final firstRetryReply = Completer<(int, Object?)>();
     final server = FakeServer()
       ..on('POST', '/v1/sync/writes', (request) {
+        attempts++;
         if (!available) {
+          // Hold the first retry at the HTTP boundary so a slow wall-clock poll
+          // cannot miss the three-request observation before the next write.
+          if (attempts == 3) return firstRetryReply.future;
           return FakeServer.error(503, 'unavailable', '暂不可用');
         }
         final write = ((request.body as Map)['writes'] as List).single as Map;
@@ -564,6 +570,8 @@ void main() {
 
       await waitForWrites(3);
       expect(sent()[2], originals[0]);
+      firstRetryReply.complete(FakeServer.error(503, 'unavailable', '暂不可用'));
+      await tester.pumpAndSettle();
       final retained = await env.eventQueue.entries();
       expect(retained[1].nextAttemptAt, isNotNull);
       expect(
@@ -589,6 +597,9 @@ void main() {
       expect(sent(), [...originals, ...originals, ...originals]);
       expect(tester.takeException(), isNull);
     } finally {
+      if (!firstRetryReply.isCompleted) {
+        firstRetryReply.complete(FakeServer.error(503, 'unavailable', '暂不可用'));
+      }
       container.dispose();
       await tester.pumpWidget(const SizedBox.shrink());
     }

@@ -31,6 +31,7 @@ import 'package:integration_test/integration_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'event_pipeline_support.dart' show resetLocalAppState;
+import 'offline_writes_support.dart' as acceptance;
 
 const _runId = String.fromEnvironment('PROCESS_DEATH_RUN_ID');
 const _manifestKey = 'process_death_harness:$_runId';
@@ -694,6 +695,106 @@ Future<void> _restore(
   expect(tester.takeException(), isNull);
 }
 
+Future<void> _seedBusinessRestart(
+  WidgetTester tester,
+  ProviderContainer container,
+  Dio server,
+  Map<String, dynamic> original,
+) async {
+  final parts = (original['path'] as String).split('/');
+  final business = await acceptance.seedOfflineBusinessWrites(
+    tester,
+    container,
+    server,
+    recipeId: parts[2],
+    versionId: parts[4],
+    stepId: 'mix',
+    email: 'process-death-$_runId@example.com',
+  );
+  // The first restart's original frozen snapshot is still a separate immutable
+  // execution cache. Business candidates must not mutate that prior snapshot.
+  final snapshots = container.read(recipeSnapshotStoreProvider)!;
+  expect(
+    (await snapshots.read(parts[2], versionId: parts[4]))!.toJson(),
+    original['snapshot'],
+  );
+  await container
+      .read(localStoreProvider)
+      .setString(
+        _manifestKey,
+        jsonEncode({
+          ...original,
+          'phase': 'business',
+          'business_seed_pid': pid,
+          'business': business,
+        }),
+      );
+  _marker('WRITES_SEED_READY');
+  while (true) {
+    await tester.pump(const Duration(milliseconds: 100));
+  }
+}
+
+Future<void> _restoreBusinessRestart(
+  WidgetTester tester,
+  ProviderContainer container,
+  Dio server,
+  Map<String, dynamic> manifest,
+) async {
+  expect(manifest['run_id'], _runId);
+  expect(pid, isNot(manifest['seed_pid']));
+  expect(pid, isNot(manifest['business_seed_pid']));
+  final session = await container.read(sessionStoreProvider).load();
+  expect(session!.user.id, manifest['owner']);
+  expect(container.read(deviceIdProvider), manifest['device']);
+  final business = Map<String, dynamic>.from(manifest['business'] as Map);
+  final entries = await container
+      .read(eventQueueProvider)
+      .entries(ownerId: session.user.id);
+  // No auth/root widget exists yet: observe disk before any upload can repair it.
+  for (final before in (business['entries'] as List).cast<Map>()) {
+    final now = entries.singleWhere(
+      (entry) => entry.write.id == (before['write'] as Map)['write_id'],
+    );
+    expect(acceptance.retainedEntry(now), before);
+    expect(now.state, WriteState.pending);
+    expect(now.businessRecord, isNotNull);
+    expect(now.attempts, greaterThan(0));
+    expect(now.reasonCode, 'network_or_server_failure');
+    expect(now.nextAttemptAt, isNotNull);
+  }
+  final parts = (manifest['path'] as String).split('/');
+  final snapshots = RecipeSnapshotStore(
+    container.read(localStoreProvider),
+    accountId: session.user.id,
+  );
+  expect(
+    (await snapshots.read(parts[2], versionId: parts[4]))!.toJson(),
+    manifest['snapshot'],
+  );
+  await acceptance.assertBusinessServerState(
+    server,
+    session.accessToken,
+    business,
+    confirmed: false,
+  );
+  _marker('WRITES_DURABLE');
+  container.read(offlineSimulationProvider.notifier).set(true);
+  await container.read(authProvider.future);
+  await tester.pumpWidget(
+    UncontrolledProviderScope(container: container, child: const GramTreeApp()),
+  );
+  await acceptance.showRestoredOfflineBusiness(tester, container, business);
+  _marker('WRITES_OFFLINE');
+  await acceptance.retryAndSwitchAccounts(tester, container, business);
+  await acceptance.replayAndVerifyBusiness(tester, container, server, business);
+  expect(
+    (await snapshots.read(parts[2], versionId: parts[4]))!.toJson(),
+    manifest['snapshot'],
+  );
+  _marker('WRITES_REPLAY');
+}
+
 void main() {
   final binding = IntegrationTestWidgetsFlutterBinding.ensureInitialized();
   var restoredSuccessfully = false;
@@ -763,13 +864,17 @@ void main() {
         binding.reportData = {'run_id': _runId, 'phase': 'seed'};
         await _seed(tester, container, server);
       } else {
-        binding.reportData = {'run_id': _runId, 'phase': 'restore'};
-        await _restore(
-          tester,
-          container,
-          server,
-          jsonDecode(raw) as Map<String, dynamic>,
-        );
+        final manifest = jsonDecode(raw) as Map<String, dynamic>;
+        if (manifest['phase'] == 'business') {
+          binding.reportData = {'run_id': _runId, 'phase': 'business_restore'};
+          await _restoreBusinessRestart(tester, container, server, manifest);
+        } else {
+          binding.reportData = {'run_id': _runId, 'phase': 'restore'};
+          // Preserve every original assertion/wait in its original order before
+          // adding a second independently fenced actual process-death cycle.
+          await _restore(tester, container, server, manifest);
+          await _seedBusinessRestart(tester, container, server, manifest);
+        }
         await tester.pumpWidget(const SizedBox.shrink());
         restoredSuccessfully = true;
         binding.reportData = {...?binding.reportData, 'verified': true};

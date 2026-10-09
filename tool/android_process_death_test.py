@@ -131,7 +131,19 @@ class LogWatch:
         next_pid_check = 0.0
         stages = {
             "SEED_READY": ["BOOT", "SEED_READY"],
-            "PASSED": ["BOOT", "RESTORE_DURABLE", "RESTORE_OFFLINE", "PASSED"],
+            "WRITES_SEED_READY": [
+                "BOOT",
+                "RESTORE_DURABLE",
+                "RESTORE_OFFLINE",
+                "WRITES_SEED_READY",
+            ],
+            "PASSED": [
+                "BOOT",
+                "WRITES_DURABLE",
+                "WRITES_OFFLINE",
+                "WRITES_REPLAY",
+                "PASSED",
+            ],
         }[target]
         seen: list[str] = []
         while time.monotonic() < deadline:
@@ -278,7 +290,19 @@ def main() -> int:
         if restore_pid == seed_pid:
             raise RuntimeError("Restore reused the seed PID instead of restarting")
         print(f"OS relaunch verified: {seed_pid} -> {restore_pid}", flush=True)
-        watch.wait("PASSED", restore_pid, args.phase_timeout)
+        watch.wait("WRITES_SEED_READY", restore_pid, args.phase_timeout)
+        # Original snapshot/experience assertions completed before this second
+        # durable seed. Stop and launch the same APK again without clearing data.
+        android.stop_and_check(restore_pid)
+        watch.close()
+        watch = None
+        android.run("logcat", "-c")
+        watch = LogWatch(android, run_id)
+        writes_pid = android.launch()
+        if writes_pid in (seed_pid, restore_pid):
+            raise RuntimeError("Business restore reused an earlier PID")
+        print(f"OS business relaunch verified: {restore_pid} -> {writes_pid}", flush=True)
+        watch.wait("PASSED", writes_pid, args.phase_timeout)
         print(
             "Android process-death acceptance PASSED (binding test future passed)",
             flush=True,
