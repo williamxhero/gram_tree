@@ -45,13 +45,15 @@ class _Journey {
     tester.testTextInput.hide();
     await tester.pump();
     // An already-mounted child may have been scrolled out by a prior action.
-    // Reusing it directly avoids unloading an expanded lazy row while finding
-    // one of its controls.
+    // Try it directly first, then use the page position below if its center is
+    // still outside the viewport (for example, a tall suggestion card).
     if (finder.evaluate().isNotEmpty) {
       await tester.ensureVisible(finder);
       await tester.pumpAndSettle();
-      expect(finder.hitTestable(), findsOneWidget, reason: phase);
-      return;
+      if (finder.hitTestable().evaluate().isNotEmpty) {
+        expect(finder.hitTestable(), findsOneWidget, reason: phase);
+        return;
+      }
     }
     final detail = key('recipe-detail-content');
     final comparison = key('full-comparison-content');
