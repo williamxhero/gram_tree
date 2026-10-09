@@ -41,6 +41,16 @@ class OwnerAllergies(Base):
     ciphertext: Mapped[bytes] = mapped_column(LargeBinary)
 
 
+class FamilyMember(Base):
+    __tablename__ = "family_members"
+    __table_args__ = (Index("ix_family_members_owner_created", "owner_id", "created_at", "id"),)
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=new_id)
+    owner_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
+    ciphertext: Mapped[bytes] = mapped_column(LargeBinary)
+    created_at: Mapped[datetime] = mapped_column(default=utcnow)
+
+
 class TasteProfileChange(Base):
     __tablename__ = "taste_profile_changes"
     __table_args__ = (

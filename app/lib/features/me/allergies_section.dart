@@ -571,9 +571,26 @@ class _SensitiveWithdrawalTileState
                   ))
               .data!;
       if (!current()) return;
+      final family =
+          (await ref
+                  .read(apiClientProvider)
+                  .getFamilyMembersApi()
+                  .listFamilyMembers(
+                    headers: sensitiveAccountHeaders(
+                      ref.read(sessionStoreProvider),
+                    ),
+                    extra: sensitiveAccountExtra(
+                      ref.read(sessionStoreProvider),
+                    ),
+                  ))
+              .data!;
+      if (!current()) return;
       if (result.consentId != null ||
           result.categories.isNotEmpty ||
-          result.ingredients.isNotEmpty) {
+          result.ingredients.isNotEmpty ||
+          family.consentId != null ||
+          family.items.isNotEmpty ||
+          family.nextCursor != null) {
         throw StateError('withdrawal_unconfirmed');
       }
       setState(() => _message = l10n.allergyWithdrawn);

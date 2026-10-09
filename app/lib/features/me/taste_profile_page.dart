@@ -11,6 +11,7 @@ import '../../ui_protocol/source_mark.dart';
 import '../../ui_protocol/source_types.dart';
 import 'allergies_section.dart';
 import 'cooking_constraints_section.dart';
+import 'family_members_section.dart';
 import 'ingredient_preferences_section.dart';
 import 'personal_measures_summary.dart';
 import 'taste_profile_data.dart';
@@ -186,6 +187,7 @@ class _TasteBodyState extends ConsumerState<_TasteBody> {
               ),
             ),
             AllergiesSection(key: ValueKey('allergies-${widget.accountId}')),
+            FamilyMembersSection(key: ValueKey('family-${widget.accountId}')),
             OutlinedButton(
               key: const ValueKey('taste-reset'),
               onPressed: _busy ? null : _reset,

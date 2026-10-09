@@ -100,6 +100,7 @@ def main() -> None:
                 "Cooking",
                 "IngredientPreference",
                 "Allerg",
+                "Family",
             )
         ) or name in {"NutritionEstimate", "ValueSource", "TasteProfilePatch"}:
             document["components"]["schemas"][name] = project_schema(schema)

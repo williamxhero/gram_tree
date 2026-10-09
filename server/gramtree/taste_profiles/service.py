@@ -16,6 +16,7 @@ from sqlalchemy.orm import Session
 from gramtree.accounts.errors import AccountUnavailable
 from gramtree.accounts.models import User, UserStatus
 from gramtree.core.errors import ApiError
+from gramtree.core.ids import new_id
 from gramtree.core.time import utcnow
 from gramtree.events.service import record_taste_profile_changed
 from gramtree.ingredients.importer import CATEGORIES
@@ -74,6 +75,7 @@ class FieldChange:
     field: str
     old_value: dict[str, Any]
     new_value: dict[str, Any]
+    id: uuid.UUID | None = None
 
 
 def record_changes(
@@ -91,6 +93,7 @@ def record_changes(
     profile.updated_at = utcnow()
     rows = [
         TasteProfileChange(
+            id=change.id or new_id(),
             profile_id=profile.id,
             owner_id=profile.owner_id,
             version=profile.version,

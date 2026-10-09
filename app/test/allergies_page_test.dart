@@ -509,7 +509,7 @@ void main() {
       await openSettings(tester);
       await _withdraw(tester);
       expect(withdrawn, isTrue);
-      expect(find.text('敏感同意已撤回，过敏及私密历史已删除'), findsOneWidget);
+      expect(find.text('敏感同意已撤回，过敏、家庭成员及私密历史已删除'), findsOneWidget);
       expect(find.textContaining('private-telemetry-failure'), findsNothing);
       expect(tester.takeException(), isNull);
     },
@@ -770,10 +770,10 @@ void main() {
       await openSettings(tester);
       await _withdraw(tester);
       expect(find.text('撤回尚未确认，请联网后重试；普通口味不受影响'), findsOneWidget);
-      expect(find.text('敏感同意已撤回，过敏及私密历史已删除'), findsNothing);
+      expect(find.text('敏感同意已撤回，过敏、家庭成员及私密历史已删除'), findsNothing);
       fail = false;
       await _withdraw(tester);
-      expect(find.text('敏感同意已撤回，过敏及私密历史已删除'), findsOneWidget);
+      expect(find.text('敏感同意已撤回，过敏、家庭成员及私密历史已删除'), findsOneWidget);
       await goBack(tester);
       await openTaste(tester);
       expect(find.text('咸 · 淡一点'), findsOneWidget);

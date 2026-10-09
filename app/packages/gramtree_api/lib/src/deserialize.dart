@@ -55,6 +55,13 @@ import 'package:gramtree_api/src/model/event_upload_result_item.dart';
 import 'package:gramtree_api/src/model/existing_choice.dart';
 import 'package:gramtree_api/src/model/experiment_info.dart';
 import 'package:gramtree_api/src/model/fallback_info.dart';
+import 'package:gramtree_api/src/model/family_allergies_out.dart';
+import 'package:gramtree_api/src/model/family_allergies_write.dart';
+import 'package:gramtree_api/src/model/family_avoidance.dart';
+import 'package:gramtree_api/src/model/family_avoidance_out.dart';
+import 'package:gramtree_api/src/model/family_member_out.dart';
+import 'package:gramtree_api/src/model/family_member_write.dart';
+import 'package:gramtree_api/src/model/family_members_out.dart';
 import 'package:gramtree_api/src/model/flavor_attribute.dart';
 import 'package:gramtree_api/src/model/flavor_profile.dart';
 import 'package:gramtree_api/src/model/generate_input.dart';
@@ -376,6 +383,27 @@ ReturnType deserialize<ReturnType, BaseType>(
           as ReturnType;
     case 'FallbackInfo':
       return FallbackInfo.fromJson(value as Map<String, dynamic>) as ReturnType;
+    case 'FamilyAllergiesOut':
+      return FamilyAllergiesOut.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'FamilyAllergiesWrite':
+      return FamilyAllergiesWrite.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'FamilyAvoidance':
+      return FamilyAvoidance.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'FamilyAvoidanceOut':
+      return FamilyAvoidanceOut.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'FamilyMemberOut':
+      return FamilyMemberOut.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'FamilyMemberWrite':
+      return FamilyMemberWrite.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'FamilyMembersOut':
+      return FamilyMembersOut.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
     case 'FlavorAttribute':
       return FlavorAttribute.fromJson(value as Map<String, dynamic>)
           as ReturnType;
