@@ -6,6 +6,7 @@
 from functools import lru_cache
 from typing import Literal
 
+from pydantic import SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -30,6 +31,10 @@ class Settings(BaseSettings):
     smtp_username: str = ""
     smtp_password: str = ""
     smtp_starttls: bool = False
+
+    # URL-safe base64 encoded random 32-byte AES-GCM key, from deployment secrets.
+    # Missing/invalid keys disable sensitive reads/writes, never withdrawal/deletion.
+    sensitive_data_key: SecretStr | None = None
 
     # —— 账号与登录（SPEC-013.2） ——
     # 签发访问令牌的密钥。正式环境必须设置成足够长的随机串

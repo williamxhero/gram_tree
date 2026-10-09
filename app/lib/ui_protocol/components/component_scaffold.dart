@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:gramtree_api/gramtree_api.dart';
 
 import '../../app/theme.dart';
+import '../../network/online_features.dart';
 import '../component_registry.dart';
 import '../intent_registry.dart';
 
@@ -270,6 +271,20 @@ ResolvedComponentActions resolveComponentActions(
     primary: list.isEmpty ? null : list.first,
     detail: list.length > 1 ? list[1] : null,
   );
+}
+
+VoidCallback? callbackForAction(
+  BuildContext context,
+  ActionDescriptor? action,
+  void Function(ActionDescriptor) onAction,
+) {
+  if (action == null) return null;
+  final params = action.params is Map
+      ? Map<String, dynamic>.from(action.params as Map)
+      : <String, dynamic>{};
+  return OnlineActionAvailability.allows(context, action.intent, params)
+      ? () => onAction(action)
+      : null;
 }
 
 /// 依据层：`data.basis.text`（和 empty_state 现有的形状一致，SPEC-009.1 #77）。

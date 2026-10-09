@@ -79,9 +79,9 @@ void main() {
       await resetLocalAppState();
       await app.main();
       await waitFor(tester, find.byKey(const ValueKey('consent-agree')));
-      // iOS safe-area insets can place this action below the small viewport.
-      await reveal(tester, 'consent-agree');
-      await tester.tap(find.byKey(const ValueKey('consent-agree')));
+      // Consent actions, including iOS safe-area insets, are below the fold
+      // in the intended 320x640 viewport.
+      await tap(tester, 'consent-agree');
       await waitFor(tester, find.byKey(const ValueKey('login-email')));
       await tester.enterText(find.byKey(const ValueKey('login-email')), email);
       await tester.tap(find.text('发送验证码'));
@@ -101,6 +101,10 @@ void main() {
       await tester.tap(find.byKey(const ValueKey('primary-create-button')));
       await tester.pumpAndSettle();
       await tap(tester, 'create-recipe-entry');
+      await waitFor(
+        tester,
+        find.byKey(const ValueKey('recipe-editor-content')),
+      );
       // Build the lazy form row before waiting for it on a small iOS viewport.
       await reveal(tester, 'recipe-dish-name');
       await waitFor(tester, find.byKey(const ValueKey('recipe-dish-name')));

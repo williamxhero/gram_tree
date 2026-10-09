@@ -99,35 +99,90 @@ class CrashReporting extends Notifier<bool> {
   }
 }
 
-/// 字段名里带这些词的内容一律不上报。
-final _sensitiveKey = RegExp(
-  r'recipe|ingredient|step|taste|flavor|preference|family|health|allerg|diet|note|菜谱|口味|健康|过敏',
-  caseSensitive: false,
-);
-
-/// 去掉可能带有菜谱内容、口味档案、健康信息的字段，只留定位问题需要的信息。
+/// Allowlist, not a key-name blacklist: framework/layout/parser errors may
+/// embed decrypted values in messages, arbitrary nested keys or local variables.
+/// Rebuilding also drops the original throwable, unknown SDK fields and threads.
 SentryEvent scrubEvent(SentryEvent event) {
-  event
-    ..request = null
-    ..user = event.user == null ? null : SentryUser(id: event.user!.id)
-    ..serverName = null;
-  // extra 已不推荐使用，但第三方代码仍可能往里写，照样要清理
+  const screens = {'today', 'discover', 'create', 'records', 'me'};
+  const categories = {'navigation', 'http', 'ui.click', 'app.lifecycle'};
+  const types = {
+    'Error',
+    'StateError',
+    'ArgumentError',
+    'TypeError',
+    'FormatException',
+    'DioException',
+    'FlutterError',
+    'Exception',
+  };
   // ignore: deprecated_member_use
-  event.extra?.removeWhere((key, _) => _sensitiveKey.hasMatch(key));
-  event.tags?.removeWhere((key, _) => _sensitiveKey.hasMatch(key));
-  event.contexts.removeWhere((key, _) => _sensitiveKey.hasMatch(key));
-  // 面包屑只留类别、级别和时间，不留文字和附带数据
-  event.breadcrumbs = event.breadcrumbs
-      ?.map(
-        (b) => Breadcrumb(
-          category: b.category,
-          type: b.type,
-          level: b.level,
-          timestamp: b.timestamp,
-        ),
-      )
-      .toList();
-  return event;
+  final screen = event.extra?['screen'];
+  final build = event.tags?['build'];
+  return SentryEvent(
+    eventId: event.eventId,
+    timestamp: event.timestamp,
+    level: event.level,
+    platform: {'dart', 'javascript', 'native'}.contains(event.platform)
+        ? event.platform
+        : null,
+    environment:
+        {
+          'dev',
+          'test',
+          'staging',
+          'prod',
+          'production',
+        }.contains(event.environment)
+        ? event.environment
+        : null,
+    release:
+        event.release != null &&
+            RegExp(r'^(gram_tree@)?[0-9]+\.[0-9]+\.[0-9]+([+][0-9]+)?$')
+                .hasMatch(event.release!)
+        ? event.release
+        : null,
+    user: event.user == null ? null : SentryUser(id: event.user!.id),
+    // ignore: deprecated_member_use
+    extra: screens.contains(screen) ? {'screen': screen} : null,
+    tags: build != null && RegExp(r'^[0-9]+$').hasMatch(build)
+        ? {'build': build}
+        : null,
+    exceptions: event.exceptions
+        ?.map(
+          (e) => SentryException(
+            type: types.contains(e.type) ? e.type : 'Error',
+            value: null,
+            stackTrace: e.stackTrace == null
+                ? null
+                : SentryStackTrace(
+                    frames: [
+                      for (final frame in e.stackTrace!.frames)
+                        SentryStackFrame(
+                          fileName:
+                              frame.fileName != null &&
+                                  RegExp(r'^package:[a-z0-9_/]+\.dart$')
+                                      .hasMatch(frame.fileName!)
+                              ? frame.fileName
+                              : null,
+                          lineNo: frame.lineNo,
+                          colNo: frame.colNo,
+                          inApp: frame.inApp,
+                        ),
+                    ],
+                  ),
+          ),
+        )
+        .toList(),
+    breadcrumbs: event.breadcrumbs
+        ?.map(
+          (b) => Breadcrumb(
+            category: categories.contains(b.category) ? b.category : null,
+            level: b.level,
+            timestamp: b.timestamp,
+          ),
+        )
+        .toList(),
+  );
 }
 
 /// 拒收原因、积压告警这类"需要关注但不是崩溃"的情况，走同一条上报通道（同样

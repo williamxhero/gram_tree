@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:gramtree_api/gramtree_api.dart' show GenerationResult;
 
 import '../auth/auth_controller.dart';
+import '../events/sync_status.dart';
 import '../features/auth/code_page.dart';
 import '../features/auth/login_page.dart';
 import '../features/create/create_page.dart';
@@ -211,10 +212,18 @@ class AppShell extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Scaffold(
     body: shell,
-    bottomNavigationBar: AppBottomNav(
-      currentIndex: shell.currentIndex,
-      onSelected: (index) =>
-          shell.goBranch(index, initialLocation: index == shell.currentIndex),
+    bottomNavigationBar: Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        const SyncPendingBadge(),
+        AppBottomNav(
+          currentIndex: shell.currentIndex,
+          onSelected: (index) => shell.goBranch(
+            index,
+            initialLocation: index == shell.currentIndex,
+          ),
+        ),
+      ],
     ),
   );
 }

@@ -28,7 +28,19 @@ fi
 driver_pid=$!
 fixtures_created=0
 fixture_file="${GRAMTREE_E2E_ASSISTANCE_DEFINES:-${TMPDIR:-/tmp}/gramtree_e2e_server_${GRAMTREE_E2E_PORT:-8000}.assistance.json}"
+reachability_pid=""
+REACHABILITY_TEST_URL="${REACHABILITY_TEST_URL:-http://127.0.0.1:${REACHABILITY_TEST_PORT:-8766}}"
+if [[ " ${targets[*]} " == *api_reachability_test.dart* ]]; then
+  reachability_fixture="$ROOT/tool/reachability_test_server.py"
+  # Native Windows Python needs a drive-letter path, as in gen_api_client.sh.
+  if command -v cygpath >/dev/null 2>&1; then
+    reachability_fixture="$(cygpath -m "$reachability_fixture")"
+  fi
+  python3 "$reachability_fixture" --port="${REACHABILITY_TEST_PORT:-8766}" >/tmp/reachability-test.log 2>&1 &
+  reachability_pid=$!
+fi
 cleanup() {
+  [[ -z "$reachability_pid" ]] || kill "$reachability_pid" 2>/dev/null || true
   kill $driver_pid 2>/dev/null || true
   if [[ "${GRAMTREE_E2E_SERVER:-}" != external ]]; then
     "$ROOT/tool/e2e_server.sh" stop
@@ -62,7 +74,8 @@ for target in "${targets[@]}"; do
     -d web-server --browser-name=chrome --headless --driver-port="$PORT" \
     ${CHROME_EXECUTABLE:+--chrome-binary="$CHROME_EXECUTABLE"} \
     --dart-define=APP_ENV=dev \
-    --dart-define=API_BASE_URL="$API_BASE_URL" "${fixture_args[@]}" || status=1
+    --dart-define=API_BASE_URL="$API_BASE_URL" \
+    --dart-define=REACHABILITY_TEST_URL="$REACHABILITY_TEST_URL" "${fixture_args[@]}" || status=1
 done
 if [[ "$status" != 0 ]]; then
   cat "${GRAMTREE_E2E_LOG_FILE:-${TMPDIR:-/tmp}/gramtree_e2e_server_${GRAMTREE_E2E_PORT:-8000}.log}" || true

@@ -4,6 +4,8 @@ import 'package:gramtree_api/gramtree_api.dart';
 import 'package:intl/intl.dart' as intl;
 
 import '../l10n/app_localizations.dart';
+import '../network/reachability.dart';
+import '../network/online_features.dart';
 import 'component_registry.dart';
 import 'composition_provider.dart';
 import 'intent_dispatcher.dart';
@@ -116,7 +118,7 @@ class _LastUpdatedBanner extends StatelessWidget {
   }
 }
 
-class _CompositionBody extends StatelessWidget {
+class _CompositionBody extends ConsumerWidget {
   const _CompositionBody({
     required this.description,
     required this.registry,
@@ -128,7 +130,8 @@ class _CompositionBody extends StatelessWidget {
   final IntentDispatcher dispatcher;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final status = ref.watch(apiReachabilityProvider);
     final components = description.components ?? const [];
     final hasFiller = components.any(
       (c) => registry[c.type]?.fillsRemainingSpace ?? false,
@@ -155,7 +158,7 @@ class _CompositionBody extends StatelessWidget {
     // 标记打开"为什么"面板时要用它记事件，见 `source_mark.dart` 顶部的说明。
     return CompositionIdScope(
       compositionId: description.compositionId,
-      child: body,
+      child: OnlineActionAvailability(status: status, child: body),
     );
   }
 
@@ -164,16 +167,48 @@ class _CompositionBody extends StatelessWidget {
     ComponentDescriptor component,
     ComponentSpec spec,
   ) {
-    final child = spec.builder(
-      context,
-      component,
-      spec.emptyState,
-      (action) => dispatcher.dispatch(
-        context,
-        compositionId: description.compositionId,
-        componentId: component.id,
-        action: action,
-      ),
+    final child = Builder(
+      builder: (context) {
+        final scope = context
+            .dependOnInheritedWidgetOfExactType<OnlineActionAvailability>();
+        final offlineAction =
+            !(scope?.status.canRequest ?? true) &&
+            (component.actions ?? const <ActionDescriptor>[]).any(
+              (action) =>
+                  OnlineFeatures.forIntent(
+                    action.intent,
+                    action.params is Map
+                        ? Map<String, dynamic>.from(action.params as Map)
+                        : const {},
+                  ) !=
+                  null,
+            );
+        final content = spec.builder(
+          context,
+          component,
+          spec.emptyState,
+          (action) => dispatcher.dispatch(
+            context,
+            compositionId: description.compositionId,
+            componentId: component.id,
+            action: action,
+          ),
+        );
+        if (!offlineAction) return content;
+        return Column(
+          mainAxisSize: spec.fillsRemainingSpace
+              ? MainAxisSize.max
+              : MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            if (spec.fillsRemainingSpace) Expanded(child: content) else content,
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Text(scope!.status.message),
+            ),
+          ],
+        );
+      },
     );
     return spec.fillsRemainingSpace ? Expanded(child: child) : child;
   }

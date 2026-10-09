@@ -640,7 +640,15 @@ def _detail(
     version = version or session.get(RecipeVersion, recipe.current_version_id)
     if dish is None or author is None or version is None:
         raise NotFound("菜谱关联数据不存在")
+    # Recipes are private to their owner today. Do not copy these personal
+    # defaults into snapshots or derived author data.
+    from gramtree.taste_profiles.models import TasteProfile
+
+    profile = session.scalar(select(TasteProfile).where(TasteProfile.owner_id == recipe.owner_id))
+    household = profile.cooking_constraints.get("household_servings") if profile else None
     return RecipeDetail(
+        default_servings=household,
+        taste_profile_version=profile.version if profile else None,
         id=recipe.id,
         dish=_dish_out(session, dish),
         author=RecipeAuthor(id=author.id, nickname=author.nickname),

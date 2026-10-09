@@ -4,6 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gramtree_api/gramtree_api.dart' show EventCorrelationIds;
 import 'package:package_info_plus/package_info_plus.dart';
 
+import '../auth/session.dart';
+import '../privacy/consent.dart';
 import '../storage/device_id.dart';
 import '../util/ids.dart';
 import 'event_queue.dart';
@@ -41,8 +43,23 @@ class EventRecorder {
     EventCorrelationIds? correlation,
     Map<String, dynamic>? content,
   }) async {
+    if (!_ref.read(privacyConsentProvider)) return;
+    // Capture identity BEFORE any await. Account changes while reading version
+    // metadata cannot bind an old page action to the next signed-in account.
+    final session = _ref.read(sessionStoreProvider);
+    final owner = session.current?.user.id;
+    // Only migration may retain unowned legacy rows. New actions require a
+    // concrete account; never create fresh ownerless work for the next login.
+    if (owner == null) return;
+    final epoch = session.identityEpoch;
     final appVersion = await _ref.read(appVersionProvider.future);
+    if (!_ref.mounted ||
+        !_ref.read(privacyConsentProvider) ||
+        session.identityEpoch != epoch) {
+      return;
+    }
     final event = QueuedEvent(
+      ownerId: owner,
       id: newUuidV4(),
       eventType: eventType,
       typeVersion: typeVersion,
@@ -53,6 +70,11 @@ class EventRecorder {
       content: content,
     );
     await _ref.read(eventQueueProvider).enqueue(event);
+    if (!_ref.mounted ||
+        !_ref.read(privacyConsentProvider) ||
+        session.identityEpoch != epoch) {
+      return;
+    }
     // 已登录且联网时后台尝试上传；未登录或离线时这次调用直接跳过，
     // 不阻塞、不抛错，事件留在队列里等下次触发。
     unawaited(_ref.read(eventUploaderProvider).triggerUpload());

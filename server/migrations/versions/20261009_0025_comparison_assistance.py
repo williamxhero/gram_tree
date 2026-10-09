@@ -1,15 +1,15 @@
 """Shared display-only comparison assistance.
 
-Revision ID: 0021
-Revises: 0020
+Revision ID: 0025
+Revises: 0024
 """
 
 import sqlalchemy as sa
 from alembic import op
 from sqlalchemy.dialects import postgresql
 
-revision = "0021"
-down_revision = "0020"
+revision = "0025"
+down_revision = "0024"
 branch_labels = None
 depends_on = None
 

@@ -1,15 +1,15 @@
 """Directional comparison cache and immutable save-time conclusions.
 
-Revision ID: 0020
-Revises: 0019
+Revision ID: 0024
+Revises: 0023
 """
 
 import sqlalchemy as sa
 from alembic import op
 from sqlalchemy.dialects import postgresql
 
-revision = "0020"
-down_revision = "0019"
+revision = "0024"
+down_revision = "0023"
 branch_labels = None
 depends_on = None
 

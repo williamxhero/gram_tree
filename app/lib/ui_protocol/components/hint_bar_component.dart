@@ -48,10 +48,8 @@ Widget buildHintBarComponent(
     // 读屏，方便用户知道点了会发生什么。
     primaryActionLabel: labelForAction(data, 'action_label', actions.primary),
     showPrimaryButton: false,
-    onTapConclusion: actions.primary == null
-        ? null
-        : () => onAction(actions.primary!),
+    onTapConclusion: callbackForAction(context, actions.primary, onAction),
     detailLabel: detailLabel,
-    onDetail: actions.detail == null ? null : () => onAction(actions.detail!),
+    onDetail: callbackForAction(context, actions.detail, onAction),
   );
 }

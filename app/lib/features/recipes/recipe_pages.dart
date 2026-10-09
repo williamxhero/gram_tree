@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:developer' as developer;
 
 import 'package:flutter/material.dart';
@@ -12,11 +13,16 @@ import '../../auth/auth_controller.dart';
 import '../../features_flags/features.dart';
 import '../../ingredients/ingredient_provider.dart';
 import '../../l10n/app_localizations.dart';
+import '../../network/online_features.dart';
+import '../../network/reachability.dart';
 import '../../recipes/decimal_rounding.dart';
 import '../../recipes/measure_display.dart';
 import '../../recipes/personal_measure_repository.dart';
 import '../../recipes/recipe_draft.dart';
 import '../../recipes/recipe_repository.dart';
+import '../../recipes/recipe_snapshot.dart';
+import '../../recipes/recipe_snapshot_provider.dart';
+import '../../recipes/recipe_snapshot_render.dart';
 import '../../recipes/mold_conversion.dart';
 import '../../recipes/serving_conversion.dart';
 import 'batch_advice_section.dart';
@@ -2180,11 +2186,49 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
   String? _selectedMeasureId;
   RecipeIngredientDisplayOut? _displayContract;
   String? _displayContractKey;
-  int _loadSerial = 0;
+  RecipeSnapshotStore? _snapshotStore;
+  RecipeSnapshotRender? _frozenRender;
+  FrozenRecipeSnapshot? _frozenSnapshot;
+  String? _loadedAccountId;
+  String? _catalogueVersion;
+  String? _lastCapture;
+  String? _capacityMessage;
+  bool _offline = false;
+  int _loadGeneration = 0;
+  String? _viewAccountId;
 
   @override
   void initState() {
     super.initState();
+    _viewAccountId = ref.read(authProvider).value?.id;
+    ref.listenManual(authProvider, (_, next) {
+      if (next.isLoading) return;
+      final accountId = next.value?.id;
+      if (accountId == _viewAccountId) return;
+      _viewAccountId = accountId;
+      _loadGeneration++;
+      setState(() {
+        _detail = null;
+        _error = null;
+        _snapshotStore = null;
+        _loadedAccountId = null;
+        _frozenRender = null;
+        _frozenSnapshot = null;
+        _lastCapture = null;
+        _capacityMessage = null;
+        _offline = false;
+        _targetServings = null;
+        _targetMold = null;
+        _measures = const [];
+        _densities = const {};
+        _selectedMeasureId = null;
+        _displayContract = null;
+        _displayContractKey = null;
+        _scaleMode = _RecipeScaleMode.servings;
+        _displayMode = MeasureDisplayMode.base;
+      });
+      if (accountId != null) unawaited(_load());
+    });
     unawaited(_load());
   }
 
@@ -2197,23 +2241,64 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
       _displayContract = null;
       _displayContractKey = null;
       _scaleMode = _RecipeScaleMode.servings;
+      _targetServings = null;
+      _targetMold = null;
       unawaited(_load());
     }
   }
 
+  bool get _networkUnavailable =>
+      _offline ||
+      ref.read(offlineSimulationProvider) ||
+      ref.read(apiReachabilityProvider) == ApiReachability.unavailable;
+
   Future<void> _load() async {
-    final serial = ++_loadSerial;
-    if (mounted) setState(() => _error = null);
+    final generation = ++_loadGeneration;
+    final accountId = ref.read(authProvider).value?.id;
+    final cache = ref.read(recipeSnapshotStoreProvider);
+    _snapshotStore = cache;
+    bool current() =>
+        mounted &&
+        generation == _loadGeneration &&
+        accountId == ref.read(authProvider).value?.id;
+    if (mounted) {
+      setState(() {
+        _error = null;
+        _detail = null;
+        _lastCapture = null;
+        _displayContract = null;
+        _displayContractKey = null;
+        _frozenRender = null;
+        _frozenSnapshot = null;
+        _offline = false;
+        _capacityMessage = null;
+        _measures = const [];
+        _densities = const {};
+        _selectedMeasureId = null;
+        _displayMode = MeasureDisplayMode.base;
+        _scaleMode = _RecipeScaleMode.servings;
+        _catalogueVersion = null;
+      });
+    }
     try {
+      if (ref.read(apiReachabilityProvider) == ApiReachability.unavailable &&
+          !await ref.read(apiReachabilityProvider.notifier).check()) {
+        throw const OnlineFeatureUnavailable(ApiReachability.unavailable);
+      }
+      if (!current()) return;
       final repo = ref.read(recipeRepositoryProvider);
       final detail = widget.versionId == null
           ? await repo.get(widget.recipeId)
           : await repo.getVersion(widget.recipeId, widget.versionId!);
-      if (!mounted || serial != _loadSerial) return;
+      if (!current()) return;
       setState(() {
         _detail = detail;
-        _targetServings = detail.version.snapshot.servings;
-        _targetMold = detail.version.snapshot.baseMold;
+        _loadedAccountId = accountId;
+        // Personal defaults initialize a new view only. Explicit choices (and
+        // resetting to author servings) survive recipe/measure refreshes.
+        _targetServings ??=
+            detail.defaultServings ?? detail.version.snapshot.servings;
+        _targetMold ??= detail.version.snapshot.baseMold;
       });
       unawaited(_loadDisplayMetadata(detail));
     } catch (error, stack) {
@@ -2223,16 +2308,131 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
         error: error,
         stackTrace: stack,
       );
-      if (mounted && serial == _loadSerial) {
-        final code = ApiFailure.from(error).code;
-        setState(
-          () => _error = code == 'not_found' ? 'not_found' : 'load_error',
-        );
+      if (!current()) return;
+      final code = ApiFailure.from(error).code;
+      // A denied/deleted version must not be resurrected from a local cache.
+      if (code != 'network') {
+        if (code == 'not_found' || code == 'forbidden') {
+          await cache?.removeRecipe(widget.recipeId);
+        }
+        if (current()) {
+          setState(
+            () => _error = code == 'not_found' ? 'not_found' : 'load_error',
+          );
+        }
+        return;
+      }
+      final frozen = await cache?.read(
+        widget.recipeId,
+        versionId: widget.versionId,
+      );
+      if (!current()) return;
+      if (frozen == null) {
+        setState(() => _error = 'offline_uncached');
+        return;
+      }
+      setState(() {
+        _offline = true;
+        _loadedAccountId = accountId;
+        _detail = frozen.detail;
+        _frozenSnapshot = frozen;
+        _frozenRender = RecipeSnapshotRender.fromJson(frozen.render);
+        _targetServings = frozen.inputs['target_servings'] as int?;
+        _targetMold = frozen.inputs['target_mold'] == null
+            ? null
+            : MoldSpec.fromJson(frozen.inputs['target_mold']);
+        _scaleMode = frozen.inputs['scale_mode'] == 'mold'
+            ? _RecipeScaleMode.mold
+            : _RecipeScaleMode.servings;
+        _displayMode =
+            MeasureDisplayMode.values
+                .where((mode) => mode.name == frozen.inputs['display_mode'])
+                .firstOrNull ??
+            MeasureDisplayMode.base;
+        _displayContract = _frozenRender?.contract;
+        final measure = frozen.inputs['personal_measure'];
+        _measures = measure == null
+            ? const []
+            : [PersonalMeasureOut.fromJson(measure)];
+        _selectedMeasureId = _measures.firstOrNull?.id;
+      });
+    }
+  }
+
+  Future<void> _persistDisplayed(
+    RecipeDetail detail,
+    RecipeSnapshotRender render,
+    PersonalMeasureOut? measure,
+    RecipeConversionConfig config,
+  ) async {
+    final cache = _snapshotStore;
+    if (cache == null || _networkUnavailable) {
+      return;
+    }
+    final inputs = <String, dynamic>{
+      'scale_mode': _scaleMode.name,
+      'target_servings': _targetServings,
+      'target_mold': _targetMold?.toJson(),
+      'display_mode': _displayMode.name,
+      'personal_measure': measure?.toJson(),
+    };
+    final dependencies = <String, String?>{
+      'recipe_version': detail.version.id,
+      'ingredient_catalogue': _catalogueVersion,
+      'serving_rules': 'v1',
+      'mold_rules': detail.version.snapshot.baseMold == null ? null : 'v1',
+      'measure_rules': 'v1',
+      'personal_measure_version': measure?.updatedAt,
+      'rule_parameters': jsonEncode({
+        'min_servings': config.minServings,
+        'max_servings': config.maxServings,
+        'round_deviation_threshold': config.roundDeviationThreshold,
+        'batch_multiplier': config.batchMultiplier,
+      }),
+      'taste_profile': null,
+      'taste_rules': null,
+      'safety_rules':
+          (detail.version.safety ?? detail.version.safetyAtSave)?.rulesVersion,
+    };
+    final complete =
+        render.serving.ingredients.length ==
+            (detail.version.snapshot.ingredients?.length ?? 0) &&
+        (_scaleMode != _RecipeScaleMode.mold || render.mold != null);
+    final encodedRender = complete ? render.toJson() : null;
+    final fingerprint = jsonEncode([
+      detail.toJson(),
+      inputs,
+      encodedRender,
+      dependencies,
+    ]);
+    if (fingerprint == _lastCapture) return;
+    _lastCapture = fingerprint;
+    final frozen = FrozenRecipeSnapshot(
+      detail: detail,
+      capturedAt: DateTime.now(),
+      inputs: inputs,
+      render: encodedRender,
+      dependencies: dependencies,
+    );
+    // This exact render is also kept while a currently visible page loses network.
+    _frozenSnapshot = frozen;
+    _frozenRender = complete ? render : null;
+    try {
+      final capacity = await cache.save(frozen);
+      if (mounted &&
+          cache == _snapshotStore &&
+          _capacityMessage != capacity.message) {
+        setState(() => _capacityMessage = capacity.message);
+      }
+    } catch (_) {
+      if (mounted && cache == _snapshotStore) {
+        setState(() => _capacityMessage = '本机快照保存失败，此版本可能无法离线查看。');
       }
     }
   }
 
   Future<void> _loadDisplayMetadata(RecipeDetail detail) async {
+    final accountId = _viewAccountId;
     final List<String> ids = [
       for (final item in detail.version.snapshot.ingredients ?? const [])
         if (item.ingredientId?.isNotEmpty == true) item.ingredientId!,
@@ -2242,6 +2442,12 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
       final ingredientRepository = ref.read(ingredientRepositoryProvider);
       await ingredientRepository.sync();
       final ingredients = await ingredientRepository.getMany(ids);
+      if (!mounted ||
+          !identical(_detail, detail) ||
+          _loadedAccountId != ref.read(authProvider).value?.id) {
+        return;
+      }
+      _catalogueVersion = ingredientRepository.version;
       densities.addAll({
         for (final item in ingredients)
           if (item.attributes.density != null)
@@ -2256,7 +2462,13 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
     } catch (_) {
       // Detail pages remain useful offline with base g/ml values and cached data.
     }
-    if (!mounted || _detail?.version.id != detail.version.id) return;
+    if (!mounted ||
+        !identical(_detail, detail) ||
+        _networkUnavailable ||
+        accountId != _viewAccountId ||
+        _loadedAccountId != ref.read(authProvider).value?.id) {
+      return;
+    }
     setState(() {
       _densities = densities;
       _measures = measures;
@@ -2288,11 +2500,14 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
     required String? measureId,
     required String? measureFingerprint,
   }) {
+    if (_networkUnavailable) return;
     final activeMold = _scaleMode == _RecipeScaleMode.mold ? targetMold : null;
     final activeServings = _scaleMode == _RecipeScaleMode.servings
         ? targetServings
         : null;
     final key = [
+      _loadedAccountId,
+      _loadGeneration,
       widget.recipeId,
       _detail?.version.id ?? widget.versionId,
       displayMode.name,
@@ -2335,7 +2550,7 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
             // endpoint could already serve a newer version saved elsewhere.
             versionId: _detail?.version.id ?? widget.versionId,
           );
-      if (!mounted || _displayContractKey != key) return;
+      if (!mounted || _displayContractKey != key || _networkUnavailable) return;
       setState(() => _displayContract = result);
     } catch (_) {
       // The local kernel remains the offline and transient-error fallback.
@@ -2374,20 +2589,53 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
+    final accountId = ref.watch(authProvider).value?.id;
+    final offline =
+        _offline ||
+        ref.watch(offlineSimulationProvider) ||
+        ref.watch(apiReachabilityProvider) == ApiReachability.unavailable;
     if (_error != null) {
       final notFound = _error == 'not_found';
       return Scaffold(
         body: _RecipeError(
-          message: notFound ? l10n.recipeNotFound : l10n.recipeLoadError,
+          message: _error == 'offline_uncached'
+              ? '此菜谱版本尚未缓存，需要联网后打开。'
+              : notFound
+              ? l10n.recipeNotFound
+              : l10n.recipeLoadError,
           onRetry: notFound ? null : _load,
         ),
       );
     }
     final detail = _detail;
-    if (detail == null) {
+    if (detail == null || accountId != _loadedAccountId) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
     final snapshot = detail.version.snapshot;
+    if (offline && _frozenRender == null) {
+      return Scaffold(
+        appBar: AppBar(title: Text(detail.dish.name)),
+        body: ListView(
+          padding: const EdgeInsets.all(20),
+          children: [
+            const Text('此版本缺少已保存的换算结果，需要联网查看用量。'),
+            ReproducibilityCard(result: detail.version.reproducibility),
+            RecipeSafetyProtocolSection(
+              result: detail.version.safety ?? detail.version.safetyAtSave,
+              legacyDerived: detail.version.derived,
+              dishName: detail.dish.name,
+              snapshot: snapshot,
+              recipeId: widget.recipeId,
+              versionId: detail.version.id,
+              authoring: false,
+              loading: false,
+            ),
+            for (final step in snapshot.steps ?? const <RecipeStep>[])
+              Text(step.instruction),
+          ],
+        ),
+      );
+    }
     final derived = detail.version.derived;
     final conversionConfig = ref.watch(recipeConversionConfigProvider);
     final groups = <String, List<RecipeIngredient>>{};
@@ -2408,12 +2656,14 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
     final targetServings = _targetServings ?? snapshot.servings;
     late final ServingConversionResult servingConversion;
     try {
-      servingConversion = _recipeServingConversion(
-        snapshot,
-        derived,
-        targetServings,
-        config: conversionConfig,
-      );
+      servingConversion = offline
+          ? _frozenRender!.serving
+          : _recipeServingConversion(
+              snapshot,
+              derived,
+              targetServings,
+              config: conversionConfig,
+            );
     } catch (error, stack) {
       developer.log(
         'recipe serving conversion failed',
@@ -2435,7 +2685,10 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
     }
     MoldConversionResult? moldConversion;
     String? moldConversionError;
-    if (snapshot.baseMold != null && _targetMold != null) {
+    if (offline) {
+      moldConversion = _frozenRender!.mold;
+      moldConversionError = _frozenRender!.moldError;
+    } else if (snapshot.baseMold != null && _targetMold != null) {
       try {
         moldConversion = _recipeMoldConversion(
           snapshot,
@@ -2508,45 +2761,66 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
     );
     // Only a contract computed from the version on screen may replace the
     // local kernel's values.
-    final contract = _displayContract?.display.versionId == detail.version.id
-        ? _displayContract
+    final displayedContract = offline
+        ? _frozenRender!.contract
+        : _displayContract;
+    final contract = displayedContract?.display.versionId == detail.version.id
+        ? displayedContract
         : null;
     final contractById = {
       for (final item in contract?.display.ingredients ?? const [])
         item.id: item,
     };
-    final displayedById = {
-      for (final ingredient in snapshot.ingredients ?? const [])
-        ingredient.id: _displayedAmount(
-          ingredient,
-          _scaleMode == _RecipeScaleMode.servings
-              ? convertedServingById[ingredient.id]
-              : null,
-          convertedMold: _scaleMode == _RecipeScaleMode.mold
-              ? convertedMoldById[ingredient.id]
-              : null,
-          contract: contractById[ingredient.id],
-          displayMode: _displayMode,
-          densities: _densities,
-          measure: selectedMeasure,
-          // Scale in decimal form, like the server's exact Decimal product;
-          // a binary product such as 0.024999999999999997 * 0.2 is already
-          // 0.005 and would show a tiny amount as 0.01.
-          scaleExactly: _scaleMode == _RecipeScaleMode.servings
-              ? (quantity) => scaleByIntegerRatio(
-                  quantity,
-                  targetServings,
-                  snapshot.servings,
-                  fractionDigits: _exactScaleDigits,
-                )
-              : moldConversion == null
-              ? null
-              : (quantity) => moldConversion!.scaleQuantity(
-                  quantity,
-                  fractionDigits: _exactScaleDigits,
-                ),
+    final displayedById = offline
+        ? _frozenRender!.amounts
+        : <String, DisplayedAmount?>{
+            for (final ingredient in snapshot.ingredients ?? const [])
+              ingredient.id: _displayedAmount(
+                ingredient,
+                _scaleMode == _RecipeScaleMode.servings
+                    ? convertedServingById[ingredient.id]
+                    : null,
+                convertedMold: _scaleMode == _RecipeScaleMode.mold
+                    ? convertedMoldById[ingredient.id]
+                    : null,
+                contract: contractById[ingredient.id],
+                displayMode: _displayMode,
+                densities: _densities,
+                measure: selectedMeasure,
+                // Scale in decimal form, like the server's exact Decimal product;
+                // a binary product such as 0.024999999999999997 * 0.2 is already
+                // 0.005 and would show a tiny amount as 0.01.
+                scaleExactly: _scaleMode == _RecipeScaleMode.servings
+                    ? (quantity) => scaleByIntegerRatio(
+                        quantity,
+                        targetServings,
+                        snapshot.servings,
+                        fractionDigits: _exactScaleDigits,
+                      )
+                    : moldConversion == null
+                    ? null
+                    : (quantity) => moldConversion!.scaleQuantity(
+                        quantity,
+                        fractionDigits: _exactScaleDigits,
+                      ),
+              ),
+          };
+    if (!offline) {
+      unawaited(
+        _persistDisplayed(
+          detail,
+          RecipeSnapshotRender(
+            serving: servingConversion,
+            mold: moldConversion,
+            moldError: moldConversionError,
+            amounts: displayedById,
+            contract: contract,
+          ),
+          selectedMeasure,
+          conversionConfig,
         ),
-    };
+      );
+    }
     return Scaffold(
       appBar: AppBar(
         title: Text(detail.dish.name),
@@ -2586,6 +2860,12 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
         key: const ValueKey('recipe-detail-content'),
         padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
         children: [
+          if (offline)
+            _SmallHint(
+              text:
+                  '离线快照 · 第 ${detail.version.versionNumber} 版 · ${_frozenSnapshot?.capturedAt.toLocal().toIso8601String() ?? ''}',
+            ),
+          if (_capacityMessage != null) _SmallHint(text: _capacityMessage!),
           if (detail.version.aiAssisted) ...[
             const Text('AI 辅助 · 尚未做过验证'),
             SourceMark(
@@ -2610,7 +2890,7 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
             loading: false,
           ),
           _RecipePhotoDisplay(images: detail.version.images),
-          if (widget.versionId == null)
+          if (widget.versionId == null && !offline)
             RecipePhotoPanel(
               recipeId: widget.recipeId,
               onUploaded: (_) => _load(),
@@ -2672,64 +2952,67 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
               text: durationNote,
             ),
           const SizedBox(height: 12),
-          if (snapshot.baseMold != null) ...[
-            _ScaleModeControl(
-              mode: _scaleMode,
-              onServing: () => setState(() {
-                _scaleMode = _RecipeScaleMode.servings;
-                _targetServings = snapshot.servings;
-              }),
-              onMold: () => setState(() {
-                _scaleMode = _RecipeScaleMode.mold;
-                _targetMold ??= snapshot.baseMold;
-              }),
-            ),
+          if (!offline) ...[
+            if (snapshot.baseMold != null) ...[
+              _ScaleModeControl(
+                mode: _scaleMode,
+                onServing: () => setState(() {
+                  _scaleMode = _RecipeScaleMode.servings;
+                  _targetServings = snapshot.servings;
+                }),
+                onMold: () => setState(() {
+                  _scaleMode = _RecipeScaleMode.mold;
+                  _targetMold ??= snapshot.baseMold;
+                }),
+              ),
+              const SizedBox(height: 8),
+            ] else
+              _SmallHint(
+                key: const ValueKey('recipe-mold-unavailable'),
+                text: l10n.recipeMoldUnavailable,
+              ),
+            if (_scaleMode == _RecipeScaleMode.servings) ...[
+              _ServingControl(
+                conversion: servingConversion,
+                ingredientNames: ingredientNames,
+                onChanged: (value) => setState(() => _targetServings = value),
+                onReset: () =>
+                    setState(() => _targetServings = snapshot.servings),
+              ),
+              const SizedBox(height: 8),
+            ] else
+              _MoldControl(
+                original: snapshot.baseMold!,
+                target: _targetMold!,
+                conversion: moldConversion,
+                errorText: moldConversionError,
+                ingredientNames: ingredientNames,
+                onTargetChanged: (value) => setState(() => _targetMold = value),
+                onReset: () => setState(() => _targetMold = snapshot.baseMold),
+              ),
+            if (_scaleMode == _RecipeScaleMode.servings &&
+                targetServings >=
+                    snapshot.servings * conversionConfig.batchMultiplier)
+              BatchAdviceSection(
+                key: ValueKey('batch-${detail.version.id}-$targetServings'),
+                recipeId: widget.recipeId,
+                versionId: detail.version.id,
+                targetServings: targetServings,
+                snapshot: snapshot,
+              ),
             const SizedBox(height: 8),
+            _DisplayModeControl(
+              mode: _displayMode,
+              hasHomeMeasures: _measures.isNotEmpty,
+              measures: _measures,
+              selectedMeasureId: _selectedMeasureId,
+              onMeasureChanged: (id) => setState(() => _selectedMeasureId = id),
+              onReload: () => unawaited(_refreshDisplayMetadata()),
+              onManageMeasures: () => context.push(PersonalMeasuresPage.path),
+              onChanged: (mode) => setState(() => _displayMode = mode),
+            ),
           ] else
-            _SmallHint(
-              key: const ValueKey('recipe-mold-unavailable'),
-              text: l10n.recipeMoldUnavailable,
-            ),
-          if (_scaleMode == _RecipeScaleMode.servings) ...[
-            _ServingControl(
-              conversion: servingConversion,
-              ingredientNames: ingredientNames,
-              onChanged: (value) => setState(() => _targetServings = value),
-              onReset: () =>
-                  setState(() => _targetServings = snapshot.servings),
-            ),
-            const SizedBox(height: 8),
-          ] else
-            _MoldControl(
-              original: snapshot.baseMold!,
-              target: _targetMold!,
-              conversion: moldConversion,
-              errorText: moldConversionError,
-              ingredientNames: ingredientNames,
-              onTargetChanged: (value) => setState(() => _targetMold = value),
-              onReset: () => setState(() => _targetMold = snapshot.baseMold),
-            ),
-          if (_scaleMode == _RecipeScaleMode.servings &&
-              targetServings >=
-                  snapshot.servings * conversionConfig.batchMultiplier)
-            BatchAdviceSection(
-              key: ValueKey('batch-${detail.version.id}-$targetServings'),
-              recipeId: widget.recipeId,
-              versionId: detail.version.id,
-              targetServings: targetServings,
-              snapshot: snapshot,
-            ),
-          const SizedBox(height: 8),
-          _DisplayModeControl(
-            mode: _displayMode,
-            hasHomeMeasures: _measures.isNotEmpty,
-            measures: _measures,
-            selectedMeasureId: _selectedMeasureId,
-            onMeasureChanged: (id) => setState(() => _selectedMeasureId = id),
-            onReload: () => unawaited(_refreshDisplayMetadata()),
-            onManageMeasures: () => context.push(PersonalMeasuresPage.path),
-            onChanged: (mode) => setState(() => _displayMode = mode),
-          ),
+            _SmallHint(text: '已保存 $targetServings 份的用量与换算结果；离线只读，修改换算需要联网。'),
           const SizedBox(height: 16),
           _NutritionSection(nutrition: derived.nutritionPerServing),
           if ((derived.cookware ?? const []).isNotEmpty)

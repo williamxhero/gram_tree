@@ -4,8 +4,10 @@ import 'package:gramtree_api/gramtree_api.dart';
 
 import '../../api/api_client.dart';
 import '../../auth/auth_controller.dart';
+import '../../auth/session.dart';
 import '../../l10n/app_localizations.dart';
 import '../../platform/apple_sign_in.dart';
+import '../../recipes/recipe_snapshot_provider.dart';
 import '../../widgets/page_frame.dart';
 import '../auth/code_page.dart';
 import 'account_data.dart';
@@ -81,9 +83,28 @@ class _DeleteAccountPageState extends ConsumerState<DeleteAccountPage> {
   Future<void> _delete() => _run(() async {
     final messenger = ScaffoldMessenger.of(context);
     final done = AppLocalizations.of(context).deleteDone;
-    await ref.read(apiClientProvider).getAccountApi().requestDeletion();
-    await ref.read(authProvider.notifier).clearLocalSession();
-    messenger.showSnackBar(SnackBar(content: Text(done)));
+    final session = ref.read(sessionStoreProvider);
+    final identity = session.identity;
+    if (identity == null) return;
+    final auth = ref.read(authProvider.notifier);
+    final snapshots = ref.read(recipeSnapshotStoreProvider);
+    await ref
+        .read(apiClientProvider)
+        .getAccountApi()
+        .requestDeletion(
+          extra: {
+            'auth_owner_id': identity.ownerId,
+            'auth_identity_epoch': identity.epoch,
+          },
+        );
+    // Capture before auth reset; clear invalidates any late owner cache writes.
+    // Kept at the page boundary to avoid auth -> snapshot -> auth dependency.
+    await snapshots?.clear();
+    final showResult = session.matches(identity);
+    await auth.clearLocalSession(deleteAccountData: true, identity: identity);
+    if (showResult && messenger.mounted) {
+      messenger.showSnackBar(SnackBar(content: Text(done)));
+    }
   });
 
   @override

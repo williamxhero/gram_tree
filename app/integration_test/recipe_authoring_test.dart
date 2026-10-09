@@ -372,11 +372,17 @@ void main() {
       await settle(tester);
       await reveal(tester, find.byKey(const ValueKey('recipe-allergen-card')));
       expect(find.textContaining('可能不完整'), findsWidgets);
-      await reveal(
-        tester,
-        find.byKey(const ValueKey('recipe-food-safety-card')),
+      final foodSafetyCard = find.byKey(
+        const ValueKey('recipe-food-safety-card'),
       );
-      expect(find.textContaining('74'), findsWidgets);
+      await reveal(tester, foodSafetyCard);
+      expect(
+        find.descendant(
+          of: foodSafetyCard,
+          matching: find.textContaining('74'),
+        ),
+        findsWidgets,
+      );
       expect(find.byTooltip('关闭安全提醒'), findsNothing);
 
       await tester.tap(find.byKey(const ValueKey('recipe-history-button')));
@@ -420,12 +426,21 @@ void main() {
         tester,
         find.byKey(const ValueKey('recipe-history-button')),
       );
-      await reveal(
-        tester,
-        find.byKey(const ValueKey('recipe-food-safety-card')),
+      await reveal(tester, foodSafetyCard);
+      expect(
+        find.descendant(
+          of: foodSafetyCard,
+          matching: find.textContaining('未发现'),
+        ),
+        findsWidgets,
       );
-      expect(find.textContaining('未发现'), findsWidgets);
-      expect(find.textContaining('74'), findsNothing);
+      expect(
+        find.descendant(
+          of: foodSafetyCard,
+          matching: find.textContaining('74'),
+        ),
+        findsNothing,
+      );
       await tester.tap(find.byKey(const ValueKey('recipe-history-button')));
       await waitFor(tester, find.byKey(const ValueKey('recipe-version-2')));
       expect(find.byKey(const ValueKey('recipe-version-1')), findsOneWidget);

@@ -1,4 +1,8 @@
-import 'package:flutter/widgets.dart';
+import 'package:flutter/material.dart';
+
+import '../network/reachability.dart';
+import '../network/online_features.dart';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gramtree_api/gramtree_api.dart'
     show ActionDescriptor, EventCorrelationIds;
@@ -20,7 +24,7 @@ class SourceCompositionId extends Notifier<String?> {
   @override
   String? build() => null;
 
-  void set(String compositionId) => state = compositionId;
+  void set(String? compositionId) => state = compositionId;
 }
 
 final sourceCompositionIdProvider =
@@ -56,21 +60,42 @@ class IntentDispatcher {
     // 不做，不抛异常、不影响界面。
     if (spec == null || !spec.validateParams(params)) return null;
 
+    if (OnlineFeatures.forIntent(action.intent, params) != null) {
+      final status = _ref.read(apiReachabilityProvider);
+      final allowed =
+          status.canRequest &&
+          await _ref.read(apiReachabilityProvider.notifier).check();
+      if (!allowed) {
+        if (context.mounted) {
+          ScaffoldMessenger.maybeOf(context)?.showSnackBar(
+            SnackBar(content: Text(_ref.read(apiReachabilityProvider).message)),
+          );
+        }
+        return null;
+      }
+    }
+
     // Fixed business pages have no server composition; never invent its ID.
     if (compositionId != null) {
       _ref.read(sourceCompositionIdProvider.notifier).set(compositionId);
     }
 
-    await _ref
-        .read(eventRecorderProvider)
-        .record(
-          eventType: 'ui.component_action',
-          typeVersion: 1,
-          correlation: compositionId == null
-              ? null
-              : EventCorrelationIds(uiCompositionId: compositionId),
-          content: {'component_id': componentId, 'intent': action.intent},
-        );
+    try {
+      await _ref
+          .read(eventRecorderProvider)
+          .record(
+            eventType: 'ui.component_action',
+            typeVersion: 1,
+            correlation: compositionId == null
+                ? null
+                : EventCorrelationIds(uiCompositionId: compositionId),
+            content: {'component_id': componentId, 'intent': action.intent},
+          );
+    } catch (_) {
+      // Optional telemetry must never block privacy controls. Keep ordinary
+      // intent behavior unchanged and never log queue errors/private payloads.
+      if (!action.intent.startsWith('allergies_')) rethrow;
+    }
 
     final handler = spec.handler;
     if (handler != null && context.mounted) {

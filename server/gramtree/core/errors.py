@@ -81,15 +81,26 @@ def error_response(
     return JSONResponse(body.model_dump(), status_code=status, headers=all_headers or None)
 
 
+def private_profile_boundary(path: str) -> bool:
+    # Include ordinary profile rejection: injected sensitive fields/unknown keys
+    # must not be echoed even though the ordinary route cannot store them.
+    return path.startswith("/v1/me/taste-profile") or path == "/v1/me/consents"
+
+
 def install_error_handlers(app: FastAPI) -> None:
     @app.exception_handler(ApiError)
-    async def _api_error(_: Request, exc: ApiError) -> JSONResponse:
+    async def _api_error(request: Request, exc: ApiError) -> JSONResponse:
+        if private_profile_boundary(request.url.path):
+            return error_response(exc.status, exc.code, "私密设置请求未完成，请刷新后重试", None)
         retry_after = getattr(exc, "retry_after", None)
         headers = {"Retry-After": str(retry_after)} if retry_after is not None else None
         return error_response(exc.status, exc.code, exc.message, exc.detail, headers=headers)
 
     @app.exception_handler(RequestValidationError)
-    async def _validation(_: Request, exc: RequestValidationError) -> JSONResponse:
+    async def _validation(request: Request, exc: RequestValidationError) -> JSONResponse:
+        if private_profile_boundary(request.url.path):
+            logger.info("private request validation failed")
+            return error_response(422, "invalid_request", "请求参数有误", None)
         parts = []
         for err in exc.errors():
             loc = ".".join(str(p) for p in err.get("loc", ()))
@@ -99,9 +110,13 @@ def install_error_handlers(app: FastAPI) -> None:
         return error_response(422, "invalid_request", "请求参数有误", detail)
 
     @app.exception_handler(StarletteHTTPException)
-    async def _http(_: Request, exc: StarletteHTTPException) -> JSONResponse:
+    async def _http(request: Request, exc: StarletteHTTPException) -> JSONResponse:
         code, message = _HTTP_CODES.get(exc.status_code, ("http_error", "请求失败"))
-        detail = exc.detail if isinstance(exc.detail, str) else None
+        detail = (
+            exc.detail
+            if isinstance(exc.detail, str) and not private_profile_boundary(request.url.path)
+            else None
+        )
         return error_response(exc.status_code, code, message, detail)
 
     # 未处理的异常由 RequestContextMiddleware 转成统一错误格式

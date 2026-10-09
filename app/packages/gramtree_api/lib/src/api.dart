@@ -8,6 +8,7 @@ import 'package:gramtree_api/src/auth/basic_auth.dart';
 import 'package:gramtree_api/src/auth/bearer_auth.dart';
 import 'package:gramtree_api/src/auth/oauth.dart';
 import 'package:gramtree_api/src/api/account_api.dart';
+import 'package:gramtree_api/src/api/allergies_api.dart';
 import 'package:gramtree_api/src/api/analytics_api.dart';
 import 'package:gramtree_api/src/api/auth_api.dart';
 import 'package:gramtree_api/src/api/config_api.dart';
@@ -17,6 +18,7 @@ import 'package:gramtree_api/src/api/ingredients_api.dart';
 import 'package:gramtree_api/src/api/personal_measures_api.dart';
 import 'package:gramtree_api/src/api/recipe_ai_api.dart';
 import 'package:gramtree_api/src/api/recipes_api.dart';
+import 'package:gramtree_api/src/api/sync_api.dart';
 import 'package:gramtree_api/src/api/taste_profile_api.dart';
 import 'package:gramtree_api/src/api/ui_protocol_api.dart';
 
@@ -95,6 +97,12 @@ class GramtreeApi {
     return AccountApi(dio);
   }
 
+  /// Get AllergiesApi instance, base route and serializer can be overridden by a given but be careful,
+  /// by doing that all interceptors will not be executed
+  AllergiesApi getAllergiesApi() {
+    return AllergiesApi(dio);
+  }
+
   /// Get AnalyticsApi instance, base route and serializer can be overridden by a given but be careful,
   /// by doing that all interceptors will not be executed
   AnalyticsApi getAnalyticsApi() {
@@ -147,6 +155,12 @@ class GramtreeApi {
   /// by doing that all interceptors will not be executed
   RecipesApi getRecipesApi() {
     return RecipesApi(dio);
+  }
+
+  /// Get SyncApi instance, base route and serializer can be overridden by a given but be careful,
+  /// by doing that all interceptors will not be executed
+  SyncApi getSyncApi() {
+    return SyncApi(dio);
   }
 
   /// Get TasteProfileApi instance, base route and serializer can be overridden by a given but be careful,

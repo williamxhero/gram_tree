@@ -385,11 +385,14 @@ class _SlowLocalEvents extends FakeEventQueue {
   bool delayOnlyNext = false;
 
   @override
-  Future<void> enqueue(QueuedEvent event) async {
+  Future<void> enqueue(
+    QueuedEvent event, {
+    Map<String, dynamic>? businessRecord,
+  }) async {
     final pending = write;
     if (delayOnlyNext) write = null;
     await pending?.future;
-    await super.enqueue(event);
+    await super.enqueue(event, businessRecord: businessRecord);
   }
 }
 

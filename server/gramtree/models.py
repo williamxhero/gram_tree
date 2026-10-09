@@ -5,6 +5,7 @@ from gramtree.ai import models as _ai  # noqa: F401
 from gramtree.analytics import models as _analytics  # noqa: F401
 from gramtree.db import Base
 from gramtree.events import models as _events  # noqa: F401
+from gramtree.events import sync_models as _sync  # noqa: F401
 from gramtree.examples import models as _examples  # noqa: F401
 from gramtree.ingredients import models as _ingredients  # noqa: F401
 from gramtree.recipes import measure_models as _measure_models  # noqa: F401

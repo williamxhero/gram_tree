@@ -7,7 +7,11 @@ part of 'taste_profile_patch.dart';
 // **************************************************************************
 
 abstract class _$TasteProfilePatchCWProxy {
-  TasteProfilePatch flavors(Map<String, num> flavors);
+  TasteProfilePatch flavors(Map<String, num>? flavors);
+
+  TasteProfilePatch ingredientPreferences(
+    List<IngredientPreference>? ingredientPreferences,
+  );
 
   /// This function **does support** nullification of nullable fields. All `null` values passed to `non-nullable` fields will be ignored. You can also use `TasteProfilePatch(...).copyWith.fieldName(...)` to override fields one at a time with nullification support.
   ///
@@ -15,7 +19,10 @@ abstract class _$TasteProfilePatchCWProxy {
   /// ```dart
   /// TasteProfilePatch(...).copyWith(id: 12, name: "My name")
   /// ````
-  TasteProfilePatch call({Map<String, num> flavors});
+  TasteProfilePatch call({
+    Map<String, num>? flavors,
+    List<IngredientPreference>? ingredientPreferences,
+  });
 }
 
 /// Proxy class for `copyWith` functionality. This is a callable class and can be used as follows: `instanceOfTasteProfilePatch.copyWith(...)`. Additionally contains functions for specific fields e.g. `instanceOfTasteProfilePatch.copyWith.fieldName(...)`
@@ -25,7 +32,13 @@ class _$TasteProfilePatchCWProxyImpl implements _$TasteProfilePatchCWProxy {
   final TasteProfilePatch _value;
 
   @override
-  TasteProfilePatch flavors(Map<String, num> flavors) => this(flavors: flavors);
+  TasteProfilePatch flavors(Map<String, num>? flavors) =>
+      this(flavors: flavors);
+
+  @override
+  TasteProfilePatch ingredientPreferences(
+    List<IngredientPreference>? ingredientPreferences,
+  ) => this(ingredientPreferences: ingredientPreferences);
 
   @override
   /// This function **does support** nullification of nullable fields. All `null` values passed to `non-nullable` fields will be ignored. You can also use `TasteProfilePatch(...).copyWith.fieldName(...)` to override fields one at a time with nullification support.
@@ -34,12 +47,20 @@ class _$TasteProfilePatchCWProxyImpl implements _$TasteProfilePatchCWProxy {
   /// ```dart
   /// TasteProfilePatch(...).copyWith(id: 12, name: "My name")
   /// ````
-  TasteProfilePatch call({Object? flavors = const $CopyWithPlaceholder()}) {
+  TasteProfilePatch call({
+    Object? flavors = const $CopyWithPlaceholder(),
+    Object? ingredientPreferences = const $CopyWithPlaceholder(),
+  }) {
     return TasteProfilePatch(
       flavors: flavors == const $CopyWithPlaceholder()
           ? _value.flavors
           // ignore: cast_nullable_to_non_nullable
-          : flavors as Map<String, num>,
+          : flavors as Map<String, num>?,
+      ingredientPreferences:
+          ingredientPreferences == const $CopyWithPlaceholder()
+          ? _value.ingredientPreferences
+          // ignore: cast_nullable_to_non_nullable
+          : ingredientPreferences as List<IngredientPreference>?,
     );
   }
 }
@@ -55,17 +76,28 @@ extension $TasteProfilePatchCopyWith on TasteProfilePatch {
 // JsonSerializableGenerator
 // **************************************************************************
 
-TasteProfilePatch _$TasteProfilePatchFromJson(Map<String, dynamic> json) =>
-    $checkedCreate('TasteProfilePatch', json, ($checkedConvert) {
-      $checkKeys(json, requiredKeys: const ['flavors']);
-      final val = TasteProfilePatch(
-        flavors: $checkedConvert(
-          'flavors',
-          (v) => Map<String, num>.from(v as Map),
-        ),
-      );
-      return val;
-    });
+TasteProfilePatch _$TasteProfilePatchFromJson(
+  Map<String, dynamic> json,
+) => $checkedCreate('TasteProfilePatch', json, ($checkedConvert) {
+  final val = TasteProfilePatch(
+    flavors: $checkedConvert(
+      'flavors',
+      (v) => (v as Map<String, dynamic>?)?.map((k, e) => MapEntry(k, e as num)),
+    ),
+    ingredientPreferences: $checkedConvert(
+      'ingredient_preferences',
+      (v) => (v as List<dynamic>?)
+          ?.map((e) => IngredientPreference.fromJson(e as Map<String, dynamic>))
+          .toList(),
+    ),
+  );
+  return val;
+}, fieldKeyMap: const {'ingredientPreferences': 'ingredient_preferences'});
 
 Map<String, dynamic> _$TasteProfilePatchToJson(TasteProfilePatch instance) =>
-    <String, dynamic>{'flavors': instance.flavors};
+    <String, dynamic>{
+      'flavors': ?instance.flavors,
+      'ingredient_preferences': ?instance.ingredientPreferences
+          ?.map((e) => e.toJson())
+          .toList(),
+    };

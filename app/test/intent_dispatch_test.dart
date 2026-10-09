@@ -146,7 +146,7 @@ void main() {
       // "今天"页的默认组合（helpers.dart 的 FakeServer）：hint_bar 是整条可点
       // （没有单独按钮），empty_state 有一个显式按钮——两个不同的组件、两种不同的
       // 触发方式，触发的是同一个意图 open_page/page=create。
-      final env = await pumpApp(tester);
+      final env = await pumpApp(tester, env: TestEnv.signedIn());
 
       await tester.tap(find.text('先添加一道你常做的菜'));
       await tester.pumpAndSettle();
@@ -158,8 +158,13 @@ void main() {
       expect(find.text('想做点什么？'), findsOneWidget);
 
       final events = env.server
-          .calls('POST', '/v1/events/upload')
-          .expand((r) => ((r.body as Map)['events'] as List).cast<Map>())
+          .calls('POST', '/v1/sync/writes')
+          .expand((r) => ((r.body as Map)['writes'] as List).cast<Map>())
+          .map((write) {
+            expect(write['write_type'], 'experience.event');
+            expect(write['owner_id'], env.server.user.id);
+            return write['payload'] as Map;
+          })
           .where((e) => e['event_type'] == 'ui.component_action')
           .toList();
       expect(events, hasLength(2));
