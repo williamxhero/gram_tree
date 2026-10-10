@@ -679,6 +679,141 @@
         "title": "CacheInfo",
         "type": "object"
       },
+      "ChangeExplanationInput": {
+        "additionalProperties": false,
+        "properties": {
+          "base_version_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Base Version Id"
+          },
+          "generation_request_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Generation Request Id"
+          },
+          "modification_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Modification Id"
+          },
+          "recipe_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Recipe Id"
+          },
+          "revision": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Revision"
+          },
+          "snapshot": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RecipeSnapshot"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "title": "ChangeExplanationInput",
+        "type": "object"
+      },
+      "ChangeExplanationResult": {
+        "properties": {
+          "change_note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Change Note"
+          },
+          "changes_fingerprint": {
+            "title": "Changes Fingerprint",
+            "type": "string"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "source": {
+            "anyOf": [
+              {
+                "const": "ai_estimated",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source"
+          },
+          "status": {
+            "$ref": "#/components/schemas/AIStatus"
+          },
+          "tags": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Tags",
+            "type": "array"
+          }
+        },
+        "required": [
+          "status",
+          "changes_fingerprint"
+        ],
+        "title": "ChangeExplanationResult",
+        "type": "object"
+      },
       "ChangesResponse": {
         "description": "某个版本之后的食材变化（#101），App 用它增量更新本机缓存。",
         "properties": {
@@ -3034,6 +3169,7 @@
         "title": "IngredientPreferenceOut",
         "type": "object"
       },
+      "JsonValue": {},
       "LocalCuisineOut": {
         "properties": {
           "adjustments": {
@@ -3333,10 +3469,39 @@
             "title": "Change Note",
             "type": "string"
           },
+          "explanation_fingerprint": {
+            "anyOf": [
+              {
+                "maxLength": 64,
+                "minLength": 64,
+                "pattern": "^[0-9a-f]{64}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Explanation Fingerprint"
+          },
           "revision": {
             "minimum": 0.0,
             "title": "Revision",
             "type": "integer"
+          },
+          "tags": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "maxItems": 50,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tags"
           }
         },
         "required": [
@@ -3349,16 +3514,7 @@
         "additionalProperties": false,
         "properties": {
           "after": {
-            "anyOf": [
-              {
-                "maxLength": 4000,
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "After"
+            "$ref": "#/components/schemas/JsonValue"
           },
           "decision": {
             "enum": [
@@ -3386,15 +3542,7 @@
       "ModificationDecisionOut": {
         "properties": {
           "after": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "After"
+            "$ref": "#/components/schemas/JsonValue"
           },
           "blocked_by": {
             "items": {
@@ -3491,6 +3639,11 @@
             ],
             "title": "Request Id"
           },
+          "retry_failed": {
+            "default": false,
+            "title": "Retry Failed",
+            "type": "boolean"
+          },
           "text": {
             "maxLength": 1000,
             "minLength": 1,
@@ -3559,26 +3712,10 @@
         "additionalProperties": false,
         "properties": {
           "after": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "After"
+            "$ref": "#/components/schemas/JsonValue"
           },
           "before": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Before"
+            "$ref": "#/components/schemas/JsonValue"
           },
           "confidence": {
             "maximum": 1.0,
@@ -3652,9 +3789,25 @@
           "type": {
             "enum": [
               "change_step_field",
+              "change_step_duration",
+              "change_step_heat",
               "change_preparation",
               "change_display_name",
-              "change_recipe_info"
+              "change_recipe_info",
+              "change_step_ingredients",
+              "change_step_dependencies",
+              "replace_ingredient",
+              "change_quantity",
+              "change_group_or_optional",
+              "change_functional",
+              "change_scaling",
+              "change_replacement",
+              "add_ingredient",
+              "remove_ingredient",
+              "add_step",
+              "remove_step",
+              "reorder_ingredients",
+              "reorder_steps"
             ],
             "title": "Type",
             "type": "string"
@@ -5388,6 +5541,20 @@
               }
             ],
             "title": "Dish Name"
+          },
+          "explanation_fingerprint": {
+            "anyOf": [
+              {
+                "maxLength": 64,
+                "minLength": 64,
+                "pattern": "^[0-9a-f]{64}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Explanation Fingerprint"
           },
           "image_ids": {
             "items": {
@@ -7317,6 +7484,20 @@
             "description": "可选并发保护；不改变显式从历史版分支的行为",
             "title": "Expected Current Version Id"
           },
+          "explanation_fingerprint": {
+            "anyOf": [
+              {
+                "maxLength": 64,
+                "minLength": 64,
+                "pattern": "^[0-9a-f]{64}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Explanation Fingerprint"
+          },
           "image_ids": {
             "items": {
               "format": "uuid",
@@ -9164,6 +9345,62 @@
   },
   "openapi": "3.1.0",
   "paths": {
+    "/v1/ai/recipes/change-explanation": {
+      "post": {
+        "operationId": "explain_recipe_changes",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChangeExplanationInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChangeExplanationResult"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "参数错误"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "服务端错误"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Explain Recipe Changes",
+        "tags": [
+          "recipe-ai"
+        ]
+      }
+    },
     "/v1/ai/recipes/modifications": {
       "post": {
         "operationId": "propose_recipe_modification",

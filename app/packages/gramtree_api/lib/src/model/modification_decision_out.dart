@@ -28,7 +28,7 @@ class ModificationDecisionOut {
   });
 
   @JsonKey(name: r'after', required: false, includeIfNull: false)
-  final String? after;
+  final Object? after;
 
   @JsonKey(name: r'blocked_by', required: false, includeIfNull: false)
   final List<String>? blockedBy;

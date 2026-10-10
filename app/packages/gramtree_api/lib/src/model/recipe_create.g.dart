@@ -17,6 +17,8 @@ abstract class _$RecipeCreateCWProxy {
 
   RecipeCreate dishName(String? dishName);
 
+  RecipeCreate explanationFingerprint(String? explanationFingerprint);
+
   RecipeCreate imageIds(List<String>? imageIds);
 
   RecipeCreate snapshot(RecipeSnapshot snapshot);
@@ -33,6 +35,7 @@ abstract class _$RecipeCreateCWProxy {
     DishInput? dish,
     List<String>? dishAliases,
     String? dishName,
+    String? explanationFingerprint,
     List<String>? imageIds,
     RecipeSnapshot snapshot,
   });
@@ -61,6 +64,10 @@ class _$RecipeCreateCWProxyImpl implements _$RecipeCreateCWProxy {
   RecipeCreate dishName(String? dishName) => this(dishName: dishName);
 
   @override
+  RecipeCreate explanationFingerprint(String? explanationFingerprint) =>
+      this(explanationFingerprint: explanationFingerprint);
+
+  @override
   RecipeCreate imageIds(List<String>? imageIds) => this(imageIds: imageIds);
 
   @override
@@ -79,6 +86,7 @@ class _$RecipeCreateCWProxyImpl implements _$RecipeCreateCWProxy {
     Object? dish = const $CopyWithPlaceholder(),
     Object? dishAliases = const $CopyWithPlaceholder(),
     Object? dishName = const $CopyWithPlaceholder(),
+    Object? explanationFingerprint = const $CopyWithPlaceholder(),
     Object? imageIds = const $CopyWithPlaceholder(),
     Object? snapshot = const $CopyWithPlaceholder(),
   }) {
@@ -103,6 +111,11 @@ class _$RecipeCreateCWProxyImpl implements _$RecipeCreateCWProxy {
           ? _value.dishName
           // ignore: cast_nullable_to_non_nullable
           : dishName as String?,
+      explanationFingerprint:
+          explanationFingerprint == const $CopyWithPlaceholder()
+          ? _value.explanationFingerprint
+          // ignore: cast_nullable_to_non_nullable
+          : explanationFingerprint as String?,
       imageIds: imageIds == const $CopyWithPlaceholder()
           ? _value.imageIds
           // ignore: cast_nullable_to_non_nullable
@@ -144,6 +157,10 @@ RecipeCreate _$RecipeCreateFromJson(
         (v) => (v as List<dynamic>?)?.map((e) => e as String).toList(),
       ),
       dishName: $checkedConvert('dish_name', (v) => v as String?),
+      explanationFingerprint: $checkedConvert(
+        'explanation_fingerprint',
+        (v) => v as String?,
+      ),
       imageIds: $checkedConvert(
         'image_ids',
         (v) => (v as List<dynamic>?)?.map((e) => e as String).toList(),
@@ -160,6 +177,7 @@ RecipeCreate _$RecipeCreateFromJson(
     'changeNote': 'change_note',
     'dishAliases': 'dish_aliases',
     'dishName': 'dish_name',
+    'explanationFingerprint': 'explanation_fingerprint',
     'imageIds': 'image_ids',
   },
 );
@@ -171,6 +189,7 @@ Map<String, dynamic> _$RecipeCreateToJson(RecipeCreate instance) =>
       'dish': ?instance.dish?.toJson(),
       'dish_aliases': ?instance.dishAliases,
       'dish_name': ?instance.dishName,
+      'explanation_fingerprint': ?instance.explanationFingerprint,
       'image_ids': ?instance.imageIds,
       'snapshot': instance.snapshot.toJson(),
     };

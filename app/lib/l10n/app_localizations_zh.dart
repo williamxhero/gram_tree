@@ -982,6 +982,79 @@ class AppLocalizationsZh extends AppLocalizations {
   String get recipeChangeNote => '这次改了什么';
 
   @override
+  String get changeExplanationTitle => '改动说明';
+
+  @override
+  String get changeExplanationChanged => '改动已变化，请重新生成说明或手写。';
+
+  @override
+  String get changeExplanationModelUnavailable => '模型暂不可用，可手写说明和标签。';
+
+  @override
+  String get changeExplanationDailyQuota => '今日 AI 额度已用完，可手写说明和标签。';
+
+  @override
+  String get changeExplanationMonthlyBudget => 'AI 预算暂不可用，可手写说明和标签。';
+
+  @override
+  String get changeExplanationNoChanges => '本次没有可说明的实际改动，可手写说明和标签。';
+
+  @override
+  String get changeExplanationFailed => '说明生成失败，请重试或手写说明和标签。';
+
+  @override
+  String get changeExplanationBasis => '仅依据本次最终改动生成，不代表已做过验证。作者可以修改说明和标签。';
+
+  @override
+  String get changeExplanationGenerating => '正在生成说明…';
+
+  @override
+  String get changeExplanationGenerate => '生成改动说明';
+
+  @override
+  String get changeExplanationHandwritten => '可手写说明和标签';
+
+  @override
+  String changeExplanationSaveAvailable(String message) {
+    return '$message 手动保存不受影响。';
+  }
+
+  @override
+  String get textEditDraftSaveFailed => '本机草稿保存失败，请保留当前页面并重试。';
+
+  @override
+  String get textEditDraftCleanupFailed => '本机草稿清理失败，已保留修改，请重试。';
+
+  @override
+  String get textEditInvalidJsonNumber => '请输入有效的 JSON 数值。';
+
+  @override
+  String get textEditInvalidJsonValue => '请输入与原值类型一致的有效 JSON（最多 4000 字符）。';
+
+  @override
+  String get textEditAfterJsonLabel => '修改后的 JSON 值';
+
+  @override
+  String get textEditTitle => '一句话修改菜谱';
+
+  @override
+  String get textEditSupportedChanges =>
+      '支持改文字、换厨具、调整时间或难度、调整做法；口味和缺料替代暂未支持。确认前不会保存。';
+
+  @override
+  String get textEditRequestLabel => '想怎样修改菜谱？';
+
+  @override
+  String get textEditPreview => '预览菜谱修改';
+
+  @override
+  String get textEditRetrySaveCleanup => '重试保存与本机清理';
+
+  @override
+  String get textEditUnsupportedIntent =>
+      '这类修改暂未支持，不会应用。支持改文字、换厨具、调整时间或难度、调整做法；口味和缺料替代请手动编辑。';
+
+  @override
   String get recipeSaveVersion => '保存为新版本';
 
   @override

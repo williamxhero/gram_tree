@@ -7,7 +7,7 @@ part of 'modification_decision_out.dart';
 // **************************************************************************
 
 abstract class _$ModificationDecisionOutCWProxy {
-  ModificationDecisionOut after(String? after);
+  ModificationDecisionOut after(Object? after);
 
   ModificationDecisionOut blockedBy(List<String>? blockedBy);
 
@@ -24,7 +24,7 @@ abstract class _$ModificationDecisionOutCWProxy {
   /// ModificationDecisionOut(...).copyWith(id: 12, name: "My name")
   /// ````
   ModificationDecisionOut call({
-    String? after,
+    Object? after,
     List<String>? blockedBy,
     ModificationDecisionOutDecisionEnum decision,
     String operationId,
@@ -39,7 +39,7 @@ class _$ModificationDecisionOutCWProxyImpl
   final ModificationDecisionOut _value;
 
   @override
-  ModificationDecisionOut after(String? after) => this(after: after);
+  ModificationDecisionOut after(Object? after) => this(after: after);
 
   @override
   ModificationDecisionOut blockedBy(List<String>? blockedBy) =>
@@ -71,7 +71,7 @@ class _$ModificationDecisionOutCWProxyImpl
       after: after == const $CopyWithPlaceholder()
           ? _value.after
           // ignore: cast_nullable_to_non_nullable
-          : after as String?,
+          : after as Object?,
       blockedBy: blockedBy == const $CopyWithPlaceholder()
           ? _value.blockedBy
           // ignore: cast_nullable_to_non_nullable
@@ -107,7 +107,7 @@ ModificationDecisionOut _$ModificationDecisionOutFromJson(
   ($checkedConvert) {
     $checkKeys(json, requiredKeys: const ['decision', 'operation_id']);
     final val = ModificationDecisionOut(
-      after: $checkedConvert('after', (v) => v as String?),
+      after: $checkedConvert('after', (v) => v),
       blockedBy: $checkedConvert(
         'blocked_by',
         (v) => (v as List<dynamic>?)?.map((e) => e as String).toList(),

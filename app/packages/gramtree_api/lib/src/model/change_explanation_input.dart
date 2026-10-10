@@ -3,10 +3,11 @@
 //
 
 // ignore_for_file: unused_element
+import 'package:gramtree_api/src/model/recipe_snapshot.dart';
 import 'package:copy_with_extension/copy_with_extension.dart';
 import 'package:json_annotation/json_annotation.dart';
 
-part 'modification_input.g.dart';
+part 'change_explanation_input.g.dart';
 
 @CopyWith()
 @JsonSerializable(
@@ -15,20 +16,20 @@ part 'modification_input.g.dart';
   disallowUnrecognizedKeys: false,
   explicitToJson: true,
 )
-class ModificationInput {
-  /// Returns a new [ModificationInput] instance.
-  ModificationInput({
+class ChangeExplanationInput {
+  /// Returns a new [ChangeExplanationInput] instance.
+  ChangeExplanationInput({
     this.baseVersionId,
 
     this.generationRequestId,
 
+    this.modificationId,
+
     this.recipeId,
 
-    this.requestId,
+    this.revision,
 
-    this.retryFailed = false,
-
-    required this.text,
+    this.snapshot,
   });
 
   @JsonKey(name: r'base_version_id', required: false, includeIfNull: false)
@@ -41,47 +42,43 @@ class ModificationInput {
   )
   final String? generationRequestId;
 
+  @JsonKey(name: r'modification_id', required: false, includeIfNull: false)
+  final String? modificationId;
+
   @JsonKey(name: r'recipe_id', required: false, includeIfNull: false)
   final String? recipeId;
 
-  @JsonKey(name: r'request_id', required: false, includeIfNull: false)
-  final String? requestId;
+  // minimum: 0
+  @JsonKey(name: r'revision', required: false, includeIfNull: false)
+  final int? revision;
 
-  @JsonKey(
-    defaultValue: false,
-    name: r'retry_failed',
-    required: false,
-    includeIfNull: false,
-  )
-  final bool? retryFailed;
-
-  @JsonKey(name: r'text', required: true, includeIfNull: false)
-  final String text;
+  @JsonKey(name: r'snapshot', required: false, includeIfNull: false)
+  final RecipeSnapshot? snapshot;
 
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
-      other is ModificationInput &&
+      other is ChangeExplanationInput &&
           other.baseVersionId == baseVersionId &&
           other.generationRequestId == generationRequestId &&
+          other.modificationId == modificationId &&
           other.recipeId == recipeId &&
-          other.requestId == requestId &&
-          other.retryFailed == retryFailed &&
-          other.text == text;
+          other.revision == revision &&
+          other.snapshot == snapshot;
 
   @override
   int get hashCode =>
       (baseVersionId == null ? 0 : baseVersionId.hashCode) +
       (generationRequestId == null ? 0 : generationRequestId.hashCode) +
+      (modificationId == null ? 0 : modificationId.hashCode) +
       (recipeId == null ? 0 : recipeId.hashCode) +
-      (requestId == null ? 0 : requestId.hashCode) +
-      retryFailed.hashCode +
-      text.hashCode;
+      (revision == null ? 0 : revision.hashCode) +
+      snapshot.hashCode;
 
-  factory ModificationInput.fromJson(Map<String, dynamic> json) =>
-      _$ModificationInputFromJson(json);
+  factory ChangeExplanationInput.fromJson(Map<String, dynamic> json) =>
+      _$ChangeExplanationInputFromJson(json);
 
-  Map<String, dynamic> toJson() => _$ModificationInputToJson(this);
+  Map<String, dynamic> toJson() => _$ChangeExplanationInputToJson(this);
 
   @override
   String toString() {

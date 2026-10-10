@@ -7,7 +7,7 @@ part of 'modification_decision.dart';
 // **************************************************************************
 
 abstract class _$ModificationDecisionCWProxy {
-  ModificationDecision after(String? after);
+  ModificationDecision after(Object? after);
 
   ModificationDecision decision(ModificationDecisionDecisionEnum decision);
 
@@ -20,7 +20,7 @@ abstract class _$ModificationDecisionCWProxy {
   /// ModificationDecision(...).copyWith(id: 12, name: "My name")
   /// ````
   ModificationDecision call({
-    String? after,
+    Object? after,
     ModificationDecisionDecisionEnum decision,
     String operationId,
   });
@@ -34,7 +34,7 @@ class _$ModificationDecisionCWProxyImpl
   final ModificationDecision _value;
 
   @override
-  ModificationDecision after(String? after) => this(after: after);
+  ModificationDecision after(Object? after) => this(after: after);
 
   @override
   ModificationDecision decision(ModificationDecisionDecisionEnum decision) =>
@@ -60,7 +60,7 @@ class _$ModificationDecisionCWProxyImpl
       after: after == const $CopyWithPlaceholder()
           ? _value.after
           // ignore: cast_nullable_to_non_nullable
-          : after as String?,
+          : after as Object?,
       decision: decision == const $CopyWithPlaceholder()
           ? _value.decision
           // ignore: cast_nullable_to_non_nullable
@@ -89,7 +89,7 @@ ModificationDecision _$ModificationDecisionFromJson(
 ) => $checkedCreate('ModificationDecision', json, ($checkedConvert) {
   $checkKeys(json, requiredKeys: const ['decision', 'operation_id']);
   final val = ModificationDecision(
-    after: $checkedConvert('after', (v) => v as String?),
+    after: $checkedConvert('after', (v) => v),
     decision: $checkedConvert(
       'decision',
       (v) => $enumDecode(_$ModificationDecisionDecisionEnumEnumMap, v),

@@ -20,6 +20,11 @@ class RecipeRepository {
   Future<AIStatus> modificationStatus() async =>
       (await _ai.recipeModificationStatus()).data!;
 
+  Future<ChangeExplanationResult> explainChanges(
+    ChangeExplanationInput input,
+  ) async =>
+      (await _ai.explainRecipeChanges(changeExplanationInput: input)).data!;
+
   Future<ModificationPreview> proposeModification(
     ModificationInput input,
   ) async =>
@@ -37,10 +42,18 @@ class RecipeRepository {
 
   Future<RecipeDetail> confirmModification(
     String modificationId,
-    int revision,
-  ) async => (await _ai.confirmRecipeModification(
+    int revision, {
+    String changeNote = '',
+    List<String>? tags,
+    String? explanationFingerprint,
+  }) async => (await _ai.confirmRecipeModification(
     modificationId: modificationId,
-    modificationConfirmInput: ModificationConfirmInput(revision: revision),
+    modificationConfirmInput: ModificationConfirmInput(
+      revision: revision,
+      changeNote: changeNote,
+      tags: tags,
+      explanationFingerprint: explanationFingerprint,
+    ),
   )).data!;
 
   Future<RecipeAnswer> answerQuestion(
@@ -81,6 +94,7 @@ class RecipeRepository {
           dishAliases: form.aliases,
           snapshot: form.snapshot,
           changeNote: form.changeNote,
+          explanationFingerprint: form.explanationFingerprint,
           imageIds: form.imageIds,
           aiAssisted: true,
         ),
@@ -301,6 +315,7 @@ class RecipeRepository {
         dishAliases: form.aliases,
         snapshot: form.snapshot,
         changeNote: form.changeNote,
+        explanationFingerprint: form.explanationFingerprint,
         imageIds: form.imageIds,
       ),
     );
@@ -322,6 +337,7 @@ class RecipeRepository {
         aiAssisted: form.aiAssisted,
         snapshot: form.snapshot,
         changeNote: form.changeNote,
+        explanationFingerprint: form.explanationFingerprint,
         imageIds: form.imageIds,
       ),
     );
@@ -785,6 +801,7 @@ class RecipeForm {
     this.totalTimeSeconds = 0,
     this.activeTimeSeconds = 0,
     this.changeNote = '',
+    this.explanationFingerprint,
     this.description = '',
     this.baseMold,
     this.cuisine,
@@ -852,6 +869,11 @@ class RecipeForm {
           )
           ..aliases = _strings(value['aliases'])
           ..changeNote = _string(value['change_note']) ?? ''
+          ..explanationFingerprint = _string(value['explanation_fingerprint'])
+          ..explanationNoteAuthored =
+              value['explanation_note_authored'] as bool?
+          ..explanationTagsAuthored =
+              value['explanation_tags_authored'] as bool?
           ..aiAssisted = value['ai_assisted'] == true
           ..imageIds = _strings(value['image_ids']);
       } catch (_) {
@@ -870,6 +892,9 @@ class RecipeForm {
   int totalTimeSeconds;
   int activeTimeSeconds;
   String changeNote;
+  String? explanationFingerprint;
+  bool? explanationNoteAuthored;
+  bool? explanationTagsAuthored;
   String description;
   MoldSpec? baseMold;
   String? cuisine;
@@ -908,6 +933,9 @@ class RecipeForm {
     'ai_assisted': aiAssisted,
     'aliases': [...aliases],
     'change_note': changeNote,
+    'explanation_fingerprint': explanationFingerprint,
+    'explanation_note_authored': explanationNoteAuthored,
+    'explanation_tags_authored': explanationTagsAuthored,
     'image_ids': [...imageIds],
     'snapshot': _snapshot(writable: false).toJson(),
   };

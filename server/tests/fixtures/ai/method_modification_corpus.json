@@ -1,0 +1,26 @@
+{
+  "note": "Synthetic time/difficulty/method edits, no user data. Exact before values materialized from owned baseline.",
+  "time": {
+    "text": "想快一点",
+    "intent": {"category": "time_difficulty", "parameters": {"goal": "faster", "step_ids": "cook"}, "confidence": 0.95},
+    "changes": [
+      {"operation_id": "quick-instruction", "type": "change_step_field", "id": "cook", "field": "instruction", "after": "大火快速炒鸡肉 30 秒，表面变白后盛出。", "depends_on": []},
+      {"operation_id": "quick-duration", "type": "change_step_duration", "id": "cook", "field": "duration_seconds", "after": 30, "depends_on": ["quick-instruction"]},
+      {"operation_id": "quick-doneness", "type": "change_step_field", "id": "cook", "field": "doneness", "after": "表面变白就盛出（未经实做验证）", "depends_on": ["quick-instruction"]}
+    ]
+  },
+  "difficulty": {
+    "text": "简单一点，不腌肉，改成直接炒，增加装盘步骤",
+    "intent": {"category": "method", "parameters": {"goal": "simpler", "remove_step": "marinate", "add_step": "serve"}, "confidence": 0.95},
+    "changes": [
+      {"operation_id": "direct-cook", "type": "change_step_field", "id": "cook", "field": "instruction", "after": "鸡肉直接入炒锅，中火炒 120 秒后检查中心达到 74°C，再盛出。", "depends_on": []},
+      {"operation_id": "direct-dependencies", "type": "change_step_dependencies", "id": "cook", "field": "depends_on", "after": [], "depends_on": ["direct-cook"]},
+      {"operation_id": "remove-marinate", "type": "remove_step", "id": "marinate", "field": "steps", "after": null, "depends_on": ["direct-dependencies"]},
+      {"operation_id": "serve", "type": "add_step", "id": "serve", "field": "steps", "after": {"id": "serve", "action": "装盘", "instruction": "将炒好的鸡肉装入干净餐盘", "ingredient_ids": ["chicken"], "duration_seconds": 30, "unattended": false, "cookware": "餐盘", "doneness": "装盘完成", "depends_on": ["cook"]}, "depends_on": ["direct-cook"]},
+      {"operation_id": "order", "type": "reorder_steps", "id": null, "field": "steps", "after": ["cook", "serve"], "depends_on": ["remove-marinate", "serve"]},
+      {"operation_id": "easy", "type": "change_recipe_info", "id": null, "field": "difficulty", "after": "简单", "depends_on": ["remove-marinate"]}
+    ]
+  },
+  "reason": "只改变指定做法；时间为估算，真实熟透以中心温度检查为准",
+  "risk": "未实做验证；缩短加热可能不熟，不能以表面颜色判断安全"
+}

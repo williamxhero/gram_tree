@@ -47,6 +47,8 @@ lib/src/model/bind_apple_request.dart
 lib/src/model/bind_email_request.dart
 lib/src/model/bool_attribute.dart
 lib/src/model/cache_info.dart
+lib/src/model/change_explanation_input.dart
+lib/src/model/change_explanation_result.dart
 lib/src/model/changes_response.dart
 lib/src/model/client_config.dart
 lib/src/model/comparison_change.dart

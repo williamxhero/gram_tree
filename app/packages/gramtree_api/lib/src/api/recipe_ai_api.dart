@@ -10,6 +10,8 @@ import 'package:gramtree_api/src/deserialize.dart';
 import 'package:dio/dio.dart';
 
 import 'package:gramtree_api/src/model/ai_status.dart';
+import 'package:gramtree_api/src/model/change_explanation_input.dart';
+import 'package:gramtree_api/src/model/change_explanation_result.dart';
 import 'package:gramtree_api/src/model/error_response.dart';
 import 'package:gramtree_api/src/model/existing_choice.dart';
 import 'package:gramtree_api/src/model/generate_input.dart';
@@ -426,6 +428,98 @@ class RecipeAiApi {
     }
 
     return Response<ModificationPreview>(
+      data: _responseData,
+      headers: _response.headers,
+      isRedirect: _response.isRedirect,
+      requestOptions: _response.requestOptions,
+      redirects: _response.redirects,
+      statusCode: _response.statusCode,
+      statusMessage: _response.statusMessage,
+      extra: _response.extra,
+    );
+  }
+
+  /// Explain Recipe Changes
+  ///
+  ///
+  /// Parameters:
+  /// * [changeExplanationInput]
+  /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
+  /// * [headers] - Can be used to add additional headers to the request
+  /// * [extras] - Can be used to add flags to the request
+  /// * [validateStatus] - A [ValidateStatus] callback that can be used to determine request success based on the HTTP status of the response
+  /// * [onSendProgress] - A [ProgressCallback] that can be used to get the send progress
+  /// * [onReceiveProgress] - A [ProgressCallback] that can be used to get the receive progress
+  ///
+  /// Returns a [Future] containing a [Response] with a [ChangeExplanationResult] as data
+  /// Throws [DioException] if API call or serialization fails
+  Future<Response<ChangeExplanationResult>> explainRecipeChanges({
+    required ChangeExplanationInput changeExplanationInput,
+    CancelToken? cancelToken,
+    Map<String, dynamic>? headers,
+    Map<String, dynamic>? extra,
+    ValidateStatus? validateStatus,
+    ProgressCallback? onSendProgress,
+    ProgressCallback? onReceiveProgress,
+  }) async {
+    final _path = r'/v1/ai/recipes/change-explanation';
+    final _options = Options(
+      method: r'POST',
+      headers: <String, dynamic>{...?headers},
+      extra: <String, dynamic>{
+        'secure': <Map<String, String>>[
+          {'type': 'http', 'scheme': 'bearer', 'name': 'HTTPBearer'},
+        ],
+        ...?extra,
+      },
+      contentType: 'application/json',
+      validateStatus: validateStatus,
+    );
+
+    dynamic _bodyData;
+
+    try {
+      _bodyData = jsonEncode(changeExplanationInput);
+    } catch (error, stackTrace) {
+      throw DioException(
+        requestOptions: _options.compose(_dio.options, _path),
+        type: DioExceptionType.unknown,
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+
+    final _response = await _dio.request<Object>(
+      _path,
+      data: _bodyData,
+      options: _options,
+      cancelToken: cancelToken,
+      onSendProgress: onSendProgress,
+      onReceiveProgress: onReceiveProgress,
+    );
+
+    ChangeExplanationResult? _responseData;
+
+    try {
+      final rawData = _response.data;
+      _responseData = rawData == null
+          ? null
+          : deserialize<ChangeExplanationResult, ChangeExplanationResult>(
+              rawData,
+              'ChangeExplanationResult',
+              growable: true,
+            );
+    } catch (error, stackTrace) {
+      throw DioException(
+        requestOptions: _response.requestOptions,
+        response: _response,
+        type: DioExceptionType.unknown,
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+
+    return Response<ChangeExplanationResult>(
       data: _responseData,
       headers: _response.headers,
       isRedirect: _response.isRedirect,

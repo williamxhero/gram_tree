@@ -45,6 +45,8 @@ export 'package:gramtree_api/src/model/bind_apple_request.dart';
 export 'package:gramtree_api/src/model/bind_email_request.dart';
 export 'package:gramtree_api/src/model/bool_attribute.dart';
 export 'package:gramtree_api/src/model/cache_info.dart';
+export 'package:gramtree_api/src/model/change_explanation_input.dart';
+export 'package:gramtree_api/src/model/change_explanation_result.dart';
 export 'package:gramtree_api/src/model/changes_response.dart';
 export 'package:gramtree_api/src/model/client_config.dart';
 export 'package:gramtree_api/src/model/comparison_change.dart';

@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="zh-CN">
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>味谱 · 连带修改与恢复 · #168 #170 #173 #174</title>
+<style>
+:root{--paper:#F7F4EE;--card:#FFFDF9;--ink:#1B1813;--line:#D8D0C2;--changed:#B0441E;color-scheme:light}
+:root.dark{--paper:#171511;--card:#221F1A;--ink:#F1ECE3;--line:#544C40;--changed:#E07A52;color-scheme:dark}
+*{box-sizing:border-box}body{margin:0;background:var(--paper);color:var(--ink);font:16px/1.7 'Noto Sans SC',sans-serif}main{max-width:760px;margin:auto;padding:24px}h1,h2{font-family:'Noto Serif SC',serif}section{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:20px;margin:16px 0}button,input,textarea{font:inherit;border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:8px;padding:10px;min-height:44px}input,textarea{width:100%}button{cursor:pointer}.primary{background:var(--ink);color:var(--paper)}.changed{color:var(--changed)}.why{border-style:dashed}.number{font-family:'DM Mono',monospace}.actions{display:flex;gap:8px;flex-wrap:wrap}.operation{border-top:1px solid var(--line);padding:12px 0}dialog{background:var(--card);color:var(--ink);border:1px solid var(--line);border-radius:16px;max-width:460px;padding:24px}button:disabled{opacity:.45}
+</style>
+<main><header><p>味谱 / SPEC-003.2 / 连带修改交互样稿</p><h1>只保存你确认的改动</h1><button id="theme" aria-pressed="false">切换深色</button></header>
+<section><h2>想怎么改？</h2><input aria-label="一句话修改" value="改成空气炸锅"><p>支持文字、厨具、时间、难度和做法调整。调味和缺料规则尚未接入；不会硬改。</p><p>今日修改剩余 <span class="number">0</span> 次。已扣额度的失败请求可重试；新请求不可用，手动修改仍可保存。</p><p>已恢复本机逐条决定和作者后值。恢复后须重新检查，旧检查不能用于保存。</p><div class="actions"><button id="retry">重试同一修改请求</button><button id="manual">继续手动编辑</button></div><p id="error" aria-live="polite"></p></section>
+<section><h2>步骤 2 · 换厨具</h2><p>前值：炒锅</p><p class="changed">建议后值：空气炸锅</p><button class="why" data-field="cookware">AI 估算 · 为什么</button><details><summary>明细</summary><p>意图：换空气炸锅；影响：仅步骤 2，不能代表家中已具备此厨具。</p><p>估算条件不保证成功。温度、时长、容器、说明、火候和成熟判断均依赖本条。</p></details><div class="actions"><button id="accept">接受</button><button id="reject">拒绝</button></div><p id="decision">待处理</p></section>
+<section><h2>步骤 2 · 连带条件</h2><p id="dependency">依赖：先确认厨具变更。拒绝厨具时，本组默认拒绝，不改其他步骤。</p><div id="conditions"></div></section>
+<section><h2>实际待确认结果</h2><p>只应用已接受或修改的操作。缩短禽肉加热时长的熟透风险会显示，不会被 AI 理由覆盖。</p><p id="check" aria-live="polite">待逐条处理并重新检查。不可保存的安全问题会阻断确认；可复刻缺项按既有规则提示。</p><button id="recheck">重新检查所选改动</button></section>
+<section><h2>改动说明</h2><p>说明和标签仅根据本次真实最终操作生成；拒绝项不进入说明。表单修改也由服务端比较基准与新快照。</p><button id="explain">生成改动说明</button><label>这次改了什么<textarea id="note"></textarea></label><label>标签<input id="tags"></label><p>作者可修改；模型失败仍可手写保存，不把说明当作已验证证据。</p><button id="save" class="primary" disabled>确认并保存所选修改</button><p id="saved" aria-live="polite"></p></section></main>
+<dialog id="why"><h2>为什么</h2><p id="why-values"></p><p>来源：AI 估算。依据：当前不可变基准步骤。把握程度：中。</p><p>换热源需要同时核对温度、时长、容器和成熟判断。预览中的实际后值会重新跑安全与可复刻检查。估算没有实际验证记录。</p><button id="close">关闭</button></dialog>
+<script>
+const byId = id => document.getElementById(id);
+const fields = {
+  cookware: {label:'厨具', before:'炒锅', after:'空气炸锅'},
+  instruction: {label:'说明', before:'中火翻炒鸡肉', after:'将鸡肉单层平铺，用空气炸锅加热并检查中心温度'},
+  temperature: {label:'温度（°C）', before:null, after:180},
+  duration: {label:'时长（秒）', before:600, after:120},
+  heat: {label:'火候', before:'中火', after:null},
+  container: {label:'容器要求', before:null, after:'耐热浅盘，单层平铺'},
+  doneness: {label:'成熟判断', before:null, after:'食品温度计确认中心达到 74°C'}
+};
+const choices = Object.fromEntries(Object.keys(fields).map(key => [key, 'pending']));
+let revision = 0, checkedRevision = -1, checkedSnapshot = null, explanationRevision = -1;
+let noteAuthored = false, tagsAuthored = false;
+const valueText = value => value === null ? '无' : String(value);
+const durationValue = () => Number(byId('duration').value);
+const validDuration = () => byId('duration').value.trim() !== '' && Number.isSafeInteger(durationValue()) && durationValue() > 0;
+const selectedValue = key => choices[key] === 'accept' ? fields[key].after : choices[key] === 'modify' && key === 'duration' ? durationValue() : fields[key].before;
+const snapshot = () => Object.fromEntries(Object.keys(fields).map(key => [key, selectedValue(key)]));
+const ready = () => Object.values(choices).every(value => value !== 'pending') && (choices.duration !== 'modify' || validDuration());
+const hasChanges = () => Object.keys(fields).some(key => selectedValue(key) !== fields[key].before);
+const canSave = () => ready() && hasChanges() && checkedRevision === revision && JSON.stringify(checkedSnapshot) === JSON.stringify(snapshot());
+function invalidate() {
+  revision++;
+  checkedRevision = -1;
+  checkedSnapshot = null;
+  explanationRevision = -1;
+  if (!noteAuthored) byId('note').value = '';
+  if (!tagsAuthored) byId('tags').value = '';
+  byId('check').textContent = '所选改动已变化，必须重新检查当前后值。';
+  byId('saved').textContent = '';
+  render();
+}
+function render() {
+  const labels = {pending:'待处理', accept:'已接受', reject:'已拒绝', modify:'作者已修改'};
+  byId('decision').textContent = labels[choices.cookware];
+  for (const key of Object.keys(fields).filter(key => key !== 'cookware')) {
+    byId('state-' + key).textContent = labels[choices[key]] + '；实际后值：' + valueText(selectedValue(key));
+    document.querySelector('[data-accept="' + key + '"]').disabled = choices.cookware !== 'accept';
+    document.querySelector('[data-reject="' + key + '"]').disabled = choices.cookware === 'reject';
+  }
+  byId('duration').disabled = choices.cookware !== 'accept';
+  byId('save').disabled = !canSave();
+  byId('explain').disabled = !canSave();
+}
+for (const [key, field] of Object.entries(fields).filter(([key]) => key !== 'cookware')) {
+  const node = document.createElement('div');
+  node.className = 'operation';
+  node.innerHTML = '<h3>' + field.label + '</h3><p>前值：' + valueText(field.before) + ' → <span class="changed">建议后值：' + valueText(field.after) + '</span></p><button class="why" data-field="' + key + '">AI 估算 · 为什么</button><div class="actions"><button data-accept="' + key + '">接受</button><button data-reject="' + key + '">拒绝</button></div><p id="state-' + key + '"></p>' + (key === 'duration' ? '<label>作者修改后的时长（秒）<input id="duration" type="number" min="1" step="1" value="600"></label>' : '');
+  byId('conditions').append(node);
+}
+document.querySelectorAll('.why').forEach(button => button.onclick = () => {
+  const key = button.dataset.field;
+  byId('why-values').textContent = fields[key].label + '；原值：' + valueText(fields[key].before) + '；当前所选：' + valueText(selectedValue(key)) + '；建议后值：' + valueText(fields[key].after);
+  byId('why').showModal();
+});
+byId('close').onclick = () => byId('why').close();
+byId('accept').onclick = () => {
+  if (choices.cookware === 'reject') for (const key of Object.keys(fields).filter(key => key !== 'cookware')) choices[key] = 'pending';
+  choices.cookware = 'accept';
+  byId('dependency').textContent = '厨具已接受；每条连带条件仍须接受、拒绝或修改。';
+  invalidate();
+};
+byId('reject').onclick = () => {
+  for (const key of Object.keys(fields)) choices[key] = 'reject';
+  byId('dependency').textContent = '上游被拒绝，依赖项已默认拒绝；原步骤保持不变。';
+  invalidate();
+};
+document.querySelectorAll('[data-accept]').forEach(button => button.onclick = () => {
+  if (choices.cookware !== 'accept') return;
+  choices[button.dataset.accept] = 'accept';
+  if (button.dataset.accept === 'duration') byId('duration').value = fields.duration.after;
+  invalidate();
+});
+document.querySelectorAll('[data-reject]').forEach(button => button.onclick = () => {
+  if (choices.cookware === 'reject') return;
+  choices[button.dataset.reject] = 'reject';
+  invalidate();
+});
+byId('duration').oninput = () => { choices.duration = 'modify'; invalidate(); };
+byId('retry').onclick = () => { byId('error').textContent = '样稿：请求超时，原已确认结果和作者后值仍保留。没有新操作替换当前选择，可重新检查或手动保存。'; };
+byId('manual').onclick = () => { byId('error').textContent = '样稿：手动编辑入口始终可用；本页演示逐条确认，不会自动保存。'; };
+byId('recheck').onclick = () => {
+  if (!ready()) {
+    byId('check').textContent = choices.duration === 'modify' && !validDuration() ? '作者时长须为有效的正整数秒，不能用旧后值代替无效输入。' : '仍有未处理的操作，不能确认。';
+    byId('save').disabled = true;
+    return;
+  }
+  checkedSnapshot = snapshot();
+  checkedRevision = revision;
+  byId('check').textContent = '样稿检查（非服务端证据）：修订 ' + revision + '；厨具 ' + valueText(checkedSnapshot.cookware) + '，温度 ' + valueText(checkedSnapshot.temperature) + '°C，时长 ' + checkedSnapshot.duration + ' 秒；成熟判断：' + valueText(checkedSnapshot.doneness) + '。' + (checkedSnapshot.duration < fields.duration.before ? '缩短禽肉加热时长有熟透风险，请核对中心温度。' : '') + '实际 App 必须通过服务端安全与可复刻检查，不可保存的风险会阻断确认。';
+  render();
+};
+byId('explain').onclick = () => {
+  if (!canSave()) return;
+  const changed = Object.keys(fields).filter(key => selectedValue(key) !== fields[key].before).map(key => fields[key].label);
+  if (!noteAuthored) byId('note').value = '样稿：调整第二步的' + changed.join('、') + '。';
+  if (!tagsAuthored) byId('tags').value = choices.cookware === 'accept' ? '换厨具' : '步骤调整';
+  explanationRevision = revision;
+};
+byId('note').oninput = () => { noteAuthored = true; };
+byId('tags').oninput = () => { tagsAuthored = true; };
+byId('save').onclick = () => {
+  if (!canSave()) { byId('saved').textContent = '不能保存：先处理全部操作并检查当前修订。'; return; }
+  byId('saved').textContent = '样稿：仅保存修订 ' + checkedRevision + ' 的最终选中操作、意图及' + (explanationRevision === revision ? '本次生成后可编辑的说明和标签' : '作者手写说明和标签') + '；旧版本未改变。';
+};
+byId('theme').onclick = () => {
+  const dark = document.documentElement.classList.toggle('dark');
+  byId('theme').setAttribute('aria-pressed', String(dark));
+  byId('theme').textContent = dark ? '切换浅色' : '切换深色';
+};
+render();
+</script></html>

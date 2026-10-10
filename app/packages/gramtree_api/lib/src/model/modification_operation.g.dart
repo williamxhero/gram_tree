@@ -7,9 +7,9 @@ part of 'modification_operation.dart';
 // **************************************************************************
 
 abstract class _$ModificationOperationCWProxy {
-  ModificationOperation after(String? after);
+  ModificationOperation after(Object? after);
 
-  ModificationOperation before(String? before);
+  ModificationOperation before(Object? before);
 
   ModificationOperation confidence(num confidence);
 
@@ -38,8 +38,8 @@ abstract class _$ModificationOperationCWProxy {
   /// ModificationOperation(...).copyWith(id: 12, name: "My name")
   /// ````
   ModificationOperation call({
-    String? after,
-    String? before,
+    Object? after,
+    Object? before,
     num confidence,
     List<String>? dependsOn,
     String field,
@@ -61,10 +61,10 @@ class _$ModificationOperationCWProxyImpl
   final ModificationOperation _value;
 
   @override
-  ModificationOperation after(String? after) => this(after: after);
+  ModificationOperation after(Object? after) => this(after: after);
 
   @override
-  ModificationOperation before(String? before) => this(before: before);
+  ModificationOperation before(Object? before) => this(before: before);
 
   @override
   ModificationOperation confidence(num confidence) =>
@@ -125,11 +125,11 @@ class _$ModificationOperationCWProxyImpl
       after: after == const $CopyWithPlaceholder()
           ? _value.after
           // ignore: cast_nullable_to_non_nullable
-          : after as String?,
+          : after as Object?,
       before: before == const $CopyWithPlaceholder()
           ? _value.before
           // ignore: cast_nullable_to_non_nullable
-          : before as String?,
+          : before as Object?,
       confidence: confidence == const $CopyWithPlaceholder()
           ? _value.confidence
           // ignore: cast_nullable_to_non_nullable
@@ -207,8 +207,8 @@ ModificationOperation _$ModificationOperationFromJson(
       ],
     );
     final val = ModificationOperation(
-      after: $checkedConvert('after', (v) => v as String?),
-      before: $checkedConvert('before', (v) => v as String?),
+      after: $checkedConvert('after', (v) => v),
+      before: $checkedConvert('before', (v) => v),
       confidence: $checkedConvert('confidence', (v) => v as num),
       dependsOn: $checkedConvert(
         'depends_on',
@@ -253,7 +253,26 @@ Map<String, dynamic> _$ModificationOperationToJson(
 
 const _$ModificationOperationTypeEnumEnumMap = {
   ModificationOperationTypeEnum.changeStepField: 'change_step_field',
+  ModificationOperationTypeEnum.changeStepDuration: 'change_step_duration',
+  ModificationOperationTypeEnum.changeStepHeat: 'change_step_heat',
   ModificationOperationTypeEnum.changePreparation: 'change_preparation',
   ModificationOperationTypeEnum.changeDisplayName: 'change_display_name',
   ModificationOperationTypeEnum.changeRecipeInfo: 'change_recipe_info',
+  ModificationOperationTypeEnum.changeStepIngredients:
+      'change_step_ingredients',
+  ModificationOperationTypeEnum.changeStepDependencies:
+      'change_step_dependencies',
+  ModificationOperationTypeEnum.replaceIngredient: 'replace_ingredient',
+  ModificationOperationTypeEnum.changeQuantity: 'change_quantity',
+  ModificationOperationTypeEnum.changeGroupOrOptional:
+      'change_group_or_optional',
+  ModificationOperationTypeEnum.changeFunctional: 'change_functional',
+  ModificationOperationTypeEnum.changeScaling: 'change_scaling',
+  ModificationOperationTypeEnum.changeReplacement: 'change_replacement',
+  ModificationOperationTypeEnum.addIngredient: 'add_ingredient',
+  ModificationOperationTypeEnum.removeIngredient: 'remove_ingredient',
+  ModificationOperationTypeEnum.addStep: 'add_step',
+  ModificationOperationTypeEnum.removeStep: 'remove_step',
+  ModificationOperationTypeEnum.reorderIngredients: 'reorder_ingredients',
+  ModificationOperationTypeEnum.reorderSteps: 'reorder_steps',
 };

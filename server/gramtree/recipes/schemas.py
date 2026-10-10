@@ -427,6 +427,9 @@ class RecipeCreate(RecipeSnapshotInput):
     snapshot: RecipeSnapshot
     change_note: str = Field(default="", max_length=2000)
     ai_assisted: bool = False
+    explanation_fingerprint: str | None = Field(
+        default=None, min_length=64, max_length=64, pattern=r"^[0-9a-f]{64}$"
+    )
     image_ids: list[IdV4] = Field(default_factory=list, max_length=10)
 
     @field_validator("dish_name")
@@ -459,6 +462,9 @@ class RecipeVersionCreate(RecipeSnapshotInput):
     snapshot: RecipeSnapshot
     change_note: str = Field(default="", max_length=2000)
     ai_assisted: bool = False
+    explanation_fingerprint: str | None = Field(
+        default=None, min_length=64, max_length=64, pattern=r"^[0-9a-f]{64}$"
+    )
     base_version_id: IdV4 | None = None
     expected_current_version_id: IdV4 | None = Field(
         default=None, description="可选并发保护；不改变显式从历史版分支的行为"
