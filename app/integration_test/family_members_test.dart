@@ -349,6 +349,7 @@ void main() {
     await waitFor(tester, key('family-nickname'));
     markStep(_FamilyStep.firstMemberSave);
     await tap(tester, key('family-save'));
+    await waitFor(tester, key('taste-profile-content'));
     await reveal(tester, find.text('孩子 · 1～3 岁'));
     await waitFor(tester, find.text('孩子 · 1～3 岁'));
     await reopen(tester);
@@ -433,6 +434,7 @@ void main() {
     markStep(_FamilyStep.firstMemberEditAvoidance);
     await waitFor(tester, key('family-nickname'));
     await tap(tester, key('family-save'));
+    await waitFor(tester, key('taste-profile-content'));
     markStep(_FamilyStep.firstMemberEditSave);
     await reveal(tester, find.text('孩子 · 6～12 岁'));
     await waitFor(tester, find.text('孩子 · 6～12 岁'));
@@ -599,6 +601,7 @@ void main() {
     await tap(tester, find.text('不吃辣').last);
     await tap(tester, key('family-allergy-category-蛋类'));
     await tap(tester, key('family-save'));
+    await waitFor(tester, key('taste-profile-content'));
     await reveal(tester, find.text('小家人 · 3～6 岁'));
     await waitFor(tester, find.text('小家人 · 3～6 岁'));
     await reopen(tester);

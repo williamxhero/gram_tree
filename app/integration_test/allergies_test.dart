@@ -148,6 +148,10 @@ void main() {
     await waitFor(tester, keyed('allergy-result-'));
     await tap(tester, keyed('allergy-result-').first);
     await tester.tap(find.byKey(const ValueKey('allergies-save')));
+    await waitFor(
+      tester,
+      find.byKey(const ValueKey('taste-profile-content')),
+    );
     await reveal(tester, find.text('花生、测试酱油'));
     await waitFor(tester, find.text('花生、测试酱油'));
     await reopen(tester);
@@ -170,6 +174,10 @@ void main() {
     await tap(tester, find.byKey(const ValueKey('allergy-category-蛋类')));
     await tap(tester, keyed('allergy-delete-').first);
     await tester.tap(find.byKey(const ValueKey('allergies-save')));
+    await waitFor(
+      tester,
+      find.byKey(const ValueKey('taste-profile-content')),
+    );
     await reveal(tester, find.text('蛋类'));
     await waitFor(tester, find.text('蛋类'));
     await reopen(tester);
