@@ -140,18 +140,41 @@ void main() {
     Finder finder, [
     double delta = 300,
   ]) async {
-    await tester.scrollUntilVisible(
-      finder,
-      delta,
-      scrollable: find
-          .byWidgetPredicate(
-            (widget) =>
-                widget is Scrollable &&
-                widget.axisDirection == AxisDirection.down,
-          )
-          .first,
+    final scrollables = find.byWidgetPredicate(
+      (widget) =>
+          widget is Scrollable && widget.axisDirection == AxisDirection.down,
     );
-    await Scrollable.ensureVisible(tester.element(finder), alignment: 0.5);
+    await waitFor(tester, scrollables);
+    final profile = find.byKey(const ValueKey('taste-profile-content'));
+    final profileScrollables = find.descendant(
+      of: profile,
+      matching: scrollables,
+    );
+    final scrollable = profile.evaluate().isNotEmpty &&
+            profileScrollables.evaluate().isNotEmpty
+        ? profileScrollables.first
+        : scrollables.first;
+    final position = tester.state<ScrollableState>(scrollable).position;
+    final step = delta.abs().clamp(100.0, 500.0).toDouble();
+    // Reset the lazy profile list before each bounded forward search so a
+    // target cannot be stranded above the previous viewport.
+    position.jumpTo(position.minScrollExtent);
+    await tester.pumpAndSettle();
+    for (var i = 0; i < 300 && finder.evaluate().isEmpty; i++) {
+      position.jumpTo(
+        (position.pixels + step).clamp(
+          position.minScrollExtent,
+          position.maxScrollExtent,
+        ),
+      );
+      await tester.pump(const Duration(milliseconds: 100));
+    }
+    expect(finder, findsOneWidget);
+    await Scrollable.ensureVisible(
+      tester.element(finder),
+      alignment: 0.5,
+      alignmentPolicy: ScrollPositionAlignmentPolicy.explicit,
+    );
     await tester.pumpAndSettle();
   }
 
@@ -326,8 +349,10 @@ void main() {
     await waitFor(tester, key('family-nickname'));
     markStep(_FamilyStep.firstMemberSave);
     await tap(tester, key('family-save'));
+    await reveal(tester, find.text('孩子 · 1～3 岁'));
     await waitFor(tester, find.text('孩子 · 1～3 岁'));
     await reopen(tester);
+    await reveal(tester, find.text('孩子 · 1～3 岁'));
     await waitFor(tester, find.text('孩子 · 1～3 岁'));
     expect(find.text('孩子 · 1～3 岁'), findsOneWidget);
     final firstView = keyed('family-view-');
@@ -409,9 +434,11 @@ void main() {
     await waitFor(tester, key('family-nickname'));
     await tap(tester, key('family-save'));
     markStep(_FamilyStep.firstMemberEditSave);
+    await reveal(tester, find.text('孩子 · 6～12 岁'));
     await waitFor(tester, find.text('孩子 · 6～12 岁'));
     await reopen(tester);
     markStep(_FamilyStep.firstMemberEditReopen);
+    await reveal(tester, find.text('孩子 · 6～12 岁'));
     await waitFor(tester, find.text('孩子 · 6～12 岁'));
     expect(find.text('孩子 · 6～12 岁'), findsOneWidget);
     await tap(tester, key('family-view-$firstId'));
@@ -572,9 +599,13 @@ void main() {
     await tap(tester, find.text('不吃辣').last);
     await tap(tester, key('family-allergy-category-蛋类'));
     await tap(tester, key('family-save'));
+    await reveal(tester, find.text('小家人 · 3～6 岁'));
     await waitFor(tester, find.text('小家人 · 3～6 岁'));
     await reopen(tester);
+    await reveal(tester, find.text('孩子 · 6～12 岁'));
     await waitFor(tester, find.text('孩子 · 6～12 岁'));
+    await reveal(tester, find.text('小家人 · 3～6 岁'));
+    await waitFor(tester, find.text('小家人 · 3～6 岁'));
     expect(find.text('孩子 · 6～12 岁'), findsOneWidget);
     expect(find.text('小家人 · 3～6 岁'), findsOneWidget);
     final secondView = find.byWidgetPredicate(

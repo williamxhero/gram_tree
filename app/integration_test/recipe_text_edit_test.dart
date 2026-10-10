@@ -36,23 +36,40 @@ void main() {
           widget is Scrollable && widget.axisDirection == AxisDirection.down,
     );
     // Route bodies can briefly be loading/error widgets with no Scrollable.
-    // Wait for the route to mount before resolving the lazy Finder.first.
+    // Wait for the route to mount before resolving the page body.
     await waitFor(tester, scrollables);
-    // scrollUntilVisible resolves the target internally after scrolling, so
-    // wait for asynchronous rows before calling it.
-    await waitFor(tester, finder);
-    final scrollable = scrollables.first;
-    // Reset the visible scroll position before seeking a historical row.
-    for (var i = 0; i < 12; i++) {
-      await tester.drag(scrollable, const Offset(0, 500));
+    final body = find.byKey(const ValueKey('recipe-editor-content'));
+    final bodyScrollables = find.descendant(
+      of: body,
+      matching: scrollables,
+    );
+    final oneLine = find.byKey(const ValueKey('one-line-search'));
+    final oneLineScrollables = find.ancestor(
+      of: oneLine,
+      matching: scrollables,
+    );
+    final scrollable = body.evaluate().isNotEmpty &&
+            tester.widget(body) is Scrollable
+        ? body
+        : bodyScrollables.evaluate().isNotEmpty
+        ? bodyScrollables.first
+        : oneLineScrollables.evaluate().isNotEmpty
+        ? oneLineScrollables.first
+        : scrollables.first;
+    final position = tester.state<ScrollableState>(scrollable).position;
+    // Reset before each search so lazy editor rows are mounted through a
+    // bounded forward scan, regardless of the previous viewport position.
+    position.jumpTo(position.minScrollExtent);
+    await tester.pumpAndSettle();
+    for (var i = 0; i < 300 && finder.evaluate().isEmpty; i++) {
+      position.jumpTo(
+        (position.pixels + 250).clamp(
+          position.minScrollExtent,
+          position.maxScrollExtent,
+        ),
+      );
       await tester.pump(const Duration(milliseconds: 100));
     }
-    await tester.scrollUntilVisible(
-      finder,
-      250,
-      scrollable: scrollable,
-      maxScrolls: 60,
-    );
     expect(finder, findsOneWidget);
     await Scrollable.ensureVisible(
       tester.element(finder),
@@ -106,6 +123,9 @@ void main() {
     await tap(tester, 'one-line-search');
     // The search is asynchronous; the design action is not mounted until its
     // result arrives, so wait for the actual enabled action before revealing it.
+    // These actions live below the initially mounted portion of a lazy
+    // one-line page. Mount them before waiting for the enabled state.
+    await reveal(tester, 'ai-design-new');
     await waitFor(
       tester,
       find.byWidgetPredicate(
@@ -116,6 +136,7 @@ void main() {
       ),
     );
     await tap(tester, 'ai-design-new');
+    await reveal(tester, 'ai-skip-questions');
     await waitFor(
       tester,
       find.byWidgetPredicate(
@@ -226,6 +247,7 @@ void main() {
         find.byKey(const ValueKey('recipe-detail-content')),
       );
       await tap(tester, 'edit-recipe-button');
+      await reveal(tester, 'text-edit-input');
       await waitFor(tester, find.byKey(const ValueKey('text-edit-input')));
 
       phase = 'owned-editor-preview';

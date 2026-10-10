@@ -24,30 +24,34 @@ void main() {
 
   Future<void> reveal(WidgetTester tester, Finder finder) async {
     final profileScroll = find.byKey(const ValueKey('taste-profile-content'));
-    final genericScroll = find.byWidgetPredicate(
+    final verticalScroll = find.byWidgetPredicate(
       (w) => w is Scrollable && w.axisDirection == AxisDirection.down,
     );
-    // The profile page is allowed to show a loading/error state while its
-    // provider refreshes, so do not resolve .first until a scrollable exists.
-    final scroll = profileScroll.evaluate().isNotEmpty
-        ? profileScroll
-        : genericScroll;
-    await waitFor(tester, scroll);
-    // scrollUntilVisible resolves the target internally after scrolling, so
-    // wait for asynchronous rows before calling it.
-    await waitFor(tester, finder);
-    final resolvedScroll = scroll.first;
-    // Rows may be either above or below the current viewport after a save.
-    for (var i = 0; i < 12; i++) {
-      await tester.drag(resolvedScroll, const Offset(0, 500));
-      await tester.pump(const Duration(milliseconds: 50));
-    }
-    await tester.scrollUntilVisible(
-      finder,
-      250,
-      scrollable: resolvedScroll,
-      maxScrolls: 60,
+    final profileScrollables = find.descendant(
+      of: profileScroll,
+      matching: verticalScroll,
     );
+    // The profile key is on the ListView/ScrollView wrapper, so resolve the
+    // actual Scrollable state before reading its position.
+    final scroll = profileScroll.evaluate().isNotEmpty &&
+            profileScrollables.evaluate().isNotEmpty
+        ? profileScrollables
+        : verticalScroll;
+    await waitFor(tester, scroll);
+    final position = tester.state<ScrollableState>(scroll.first).position;
+    // Reset before each search so rows above and below the current viewport
+    // are mounted through the same bounded forward scan.
+    position.jumpTo(position.minScrollExtent);
+    await tester.pumpAndSettle();
+    for (var i = 0; i < 300 && finder.evaluate().isEmpty; i++) {
+      position.jumpTo(
+        (position.pixels + 250).clamp(
+          position.minScrollExtent,
+          position.maxScrollExtent,
+        ),
+      );
+      await tester.pump(const Duration(milliseconds: 100));
+    }
     expect(finder, findsOneWidget);
     await Scrollable.ensureVisible(
       tester.element(finder),
