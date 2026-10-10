@@ -374,7 +374,7 @@ class _AllergyEditorState extends ConsumerState<_AllergyEditor> {
       if (!mounted || !_current) return;
       ref.invalidate(allergiesProvider);
       ref.invalidate(allergyChangesProvider);
-      ref.invalidate(tasteProfileSnapshotProvider);
+      ref.invalidate(tasteProfileProvider);
       Navigator.pop(context);
     } catch (_) {
       if (_current) setState(() => _error = l10n.allergySaveUnconfirmed);
@@ -611,7 +611,7 @@ class _SensitiveWithdrawalTileState
       }
       setState(() => _message = l10n.allergyWithdrawn);
       ref.read(sensitiveMemoryProvider.notifier).reload();
-      ref.invalidate(tasteProfileSnapshotProvider);
+      ref.invalidate(tasteProfileProvider);
     } catch (_) {
       if (current()) setState(() => _message = l10n.allergyWithdrawUnconfirmed);
     } finally {

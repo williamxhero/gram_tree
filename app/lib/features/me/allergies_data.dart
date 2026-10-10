@@ -1,4 +1,3 @@
-import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gramtree_api/gramtree_api.dart';
 
@@ -111,6 +110,11 @@ final allergiesProvider = FutureProvider.autoDispose<AllergiesOut?>((
       return null;
     }
     final snapshot = await cache.read(account);
+    if (!ref.mounted ||
+        !store.matches(identity) ||
+        ref.read(sensitiveMemoryProvider).suppressed) {
+      return null;
+    }
     if (snapshot?.profile == null ||
         snapshot?.allergies == null ||
         !snapshot!.hasCurrentProfile ||

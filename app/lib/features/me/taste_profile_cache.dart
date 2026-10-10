@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:cryptography/cryptography.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gramtree_api/gramtree_api.dart';
 
@@ -98,6 +99,10 @@ class TasteProfileCache {
   final SecureStore _secure;
   Future<void> _persistence = Future<void>.value();
 
+  static final _encryption = AesGcm.with256bits();
+  static const _encryptedPrefix = 'v2:';
+  static const _keyPrefix = 'taste_profile_cache_key_v1:';
+
   static String keyFor(String accountId) => 'taste_profile_cache_v1:$accountId';
 
   Future<TasteProfileCacheSnapshot?> read(String accountId) async {
@@ -105,10 +110,7 @@ class TasteProfileCache {
     final raw = await _secure.read(keyFor(accountId));
     if (raw == null) return null;
     try {
-      final value = TasteProfileCacheSnapshot.fromJson(
-        jsonDecode(raw) as Map<String, dynamic>,
-      );
-      return value.accountId == accountId ? value : null;
+      return await _decrypt(accountId, raw);
     } catch (_) {
       // A corrupt snapshot is not a reason to block login or leak stale data.
       await clear(accountId);
@@ -205,9 +207,10 @@ class TasteProfileCache {
   );
 
   Future<void> clear(String accountId) {
-    final operation = _persistence.then(
-      (_) => _secure.delete(keyFor(accountId)),
-    );
+    final operation = _persistence.then((_) async {
+      await _secure.delete(keyFor(accountId));
+      await _secure.delete(_keyFor(accountId));
+    });
     _persistence = operation.then<void>(
       (_) {},
       onError: (Object _, StackTrace _) {},
@@ -228,7 +231,10 @@ class TasteProfileCache {
       if (value == null) {
         await _secure.delete(keyFor(accountId));
       } else {
-        await _secure.write(keyFor(accountId), jsonEncode(value.toJson()));
+        await _secure.write(
+          keyFor(accountId),
+          await _encrypt(value, accountId),
+        );
       }
     });
     _persistence = operation.then<void>(
@@ -242,14 +248,69 @@ class TasteProfileCache {
     final raw = await _secure.read(keyFor(accountId));
     if (raw == null) return null;
     try {
-      final value = TasteProfileCacheSnapshot.fromJson(
-        jsonDecode(raw) as Map<String, dynamic>,
-      );
-      return value.accountId == accountId ? value : null;
+      return await _decrypt(accountId, raw);
     } catch (_) {
       return null;
     }
   }
+
+  Future<String> _encrypt(
+    TasteProfileCacheSnapshot value,
+    String accountId,
+  ) async {
+    final key = await _secretKey(accountId);
+    final box = await _encryption.encrypt(
+      utf8.encode(jsonEncode(value.toJson())),
+      secretKey: key,
+      aad: utf8.encode(accountId),
+    );
+    return '$_encryptedPrefix${base64UrlEncode(box.concatenation())}';
+  }
+
+  Future<TasteProfileCacheSnapshot> _decrypt(
+    String accountId,
+    String raw,
+  ) async {
+    if (!raw.startsWith(_encryptedPrefix)) {
+      throw const FormatException('Unsupported cache format');
+    }
+    final box = SecretBox.fromConcatenation(
+      base64Url.decode(raw.substring(_encryptedPrefix.length)),
+      nonceLength: _encryption.nonceLength,
+      macLength: _encryption.macAlgorithm.macLength,
+    );
+    final clearText = await _encryption.decrypt(
+      box,
+      secretKey: await _secretKey(accountId, create: false),
+      aad: utf8.encode(accountId),
+    );
+    final value = TasteProfileCacheSnapshot.fromJson(
+      jsonDecode(utf8.decode(clearText)) as Map<String, dynamic>,
+    );
+    if (value.accountId != accountId) {
+      throw const FormatException('Mismatched cache account');
+    }
+    return value;
+  }
+
+  Future<SecretKey> _secretKey(String accountId, {bool create = true}) async {
+    final stored = await _secure.read(_keyFor(accountId));
+    if (stored != null) {
+      final bytes = base64Url.decode(stored);
+      if (bytes.length != _encryption.secretKeyLength) {
+        throw const FormatException('Invalid cache key');
+      }
+      return SecretKey(bytes);
+    }
+    if (!create) throw const FormatException('Missing cache key');
+
+    final key = await _encryption.newSecretKey();
+    final bytes = await key.extractBytes();
+    await _secure.write(_keyFor(accountId), base64UrlEncode(bytes));
+    return key;
+  }
+
+  static String _keyFor(String accountId) => '$_keyPrefix$accountId';
 
   static TasteProfileCacheSnapshot _empty(String accountId) =>
       TasteProfileCacheSnapshot(

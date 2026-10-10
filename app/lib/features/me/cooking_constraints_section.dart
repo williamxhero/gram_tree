@@ -1,4 +1,3 @@
-import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gramtree_api/gramtree_api.dart';
@@ -47,6 +46,9 @@ final cookingConstraintsProvider =
       } catch (error) {
         if (!isNetworkFailure(error) || !session.matches(identity)) rethrow;
         final snapshot = await cache.read(account);
+        if (!ref.mounted || !session.matches(identity)) {
+          throw StateError('stale_profile_response');
+        }
         if (snapshot?.profile == null ||
             snapshot?.constraints == null ||
             !snapshot!.hasCurrentProfile) {
@@ -168,7 +170,7 @@ class _CookingConstraintsSectionState
           .replaceCookingConstraints(cookingConstraints: values);
       if (!mounted || ref.read(authProvider).value?.id != account) return;
       ref.invalidate(cookingConstraintsProvider);
-      ref.invalidate(tasteProfileSnapshotProvider);
+      ref.invalidate(tasteProfileProvider);
       ref.invalidate(tasteProfileChangesProvider);
     } catch (error) {
       if (mounted && ref.read(authProvider).value?.id == account) {

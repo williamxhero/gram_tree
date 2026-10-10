@@ -1,4 +1,3 @@
-import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gramtree_api/gramtree_api.dart';
 
@@ -65,6 +64,9 @@ class TasteProfileRepository {
     } catch (error) {
       if (!isNetworkFailure(error) || !session.matches(identity)) rethrow;
       final response = await cache.read(accountId);
+      if (!session.matches(identity)) {
+        throw StateError('stale_profile_response');
+      }
       if (response?.profile == null) rethrow;
       return TasteProfileSnapshot(
         profile: response!.profile!,
@@ -100,9 +102,8 @@ class TasteProfileRepository {
 
   Future<TasteProfileOut> reset() async {
     final identity = _identity();
-    final value = (await api.resetTasteProfile(
-      extra: _identityExtra(identity),
-    )).data!;
+    final value = (await api.resetTasteProfile(extra: _identityExtra(identity)))
+        .data!;
     if (!session.matches(identity)) throw StateError('stale_profile_response');
     return value;
   }
@@ -116,7 +117,9 @@ class TasteProfileRepository {
         cursor: cursor,
         extra: _identityExtra(identity),
       )).data!;
-      if (!session.matches(identity)) throw StateError('stale_profile_response');
+      if (!session.matches(identity)) {
+        throw StateError('stale_profile_response');
+      }
       items.addAll(page.items);
       cursor = page.nextCursor;
     } while (cursor != null);

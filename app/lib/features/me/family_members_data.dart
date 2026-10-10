@@ -108,6 +108,11 @@ final familyMembersProvider = FutureProvider.autoDispose<FamilyMembersOut?>((
       return null;
     }
     final snapshot = await cache.read(account);
+    if (!ref.mounted ||
+        !store.matches(identity) ||
+        ref.read(sensitiveMemoryProvider).suppressed) {
+      return null;
+    }
     if (snapshot?.family == null ||
         !snapshot!.hasCurrentProfile ||
         !snapshot.hasAuthorizedSensitive) {

@@ -288,7 +288,9 @@ class DriftEventQueue implements EventQueue {
           final ids = (await _entries(ownerId: ownerId))
               .where(
                 (e) =>
-                    !experienceOnly || e.write.writeType == 'experience.event',
+                    !experienceOnly ||
+                    (e.write.writeType == 'experience.event' &&
+                        e.state != WriteState.failed),
               )
               .map((e) => e.write.id);
           await _removeAll(ids);
