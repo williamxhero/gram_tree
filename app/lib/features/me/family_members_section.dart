@@ -307,7 +307,7 @@ class _FamilyMembersSectionState extends ConsumerState<FamilyMembersSection> {
           );
       ref.invalidate(familyMembersProvider);
       ref.invalidate(familyChangesProvider);
-      ref.invalidate(tasteProfileProvider);
+      ref.invalidate(tasteProfileSnapshotProvider);
       ref.read(familyMemoryProvider.notifier).confirmDeletion(id);
     } catch (_) {
       // Retain the ID-only retry until server deletion is confirmed, including
@@ -715,7 +715,7 @@ class _FamilyEditorState extends ConsumerState<_FamilyEditor> {
       if (!mounted || !_current) return;
       ref.invalidate(familyMembersProvider);
       ref.invalidate(familyChangesProvider);
-      ref.invalidate(tasteProfileProvider);
+      ref.invalidate(tasteProfileSnapshotProvider);
       if (widget.memberId != null) {
         ref.invalidate(familyMemberProvider(widget.memberId!));
       }

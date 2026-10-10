@@ -170,7 +170,7 @@ class _CookingConstraintsSectionState
           .replaceCookingConstraints(cookingConstraints: values);
       if (!mounted || ref.read(authProvider).value?.id != account) return;
       ref.invalidate(cookingConstraintsProvider);
-      ref.invalidate(tasteProfileProvider);
+      ref.invalidate(tasteProfileSnapshotProvider);
       ref.invalidate(tasteProfileChangesProvider);
     } catch (error) {
       if (mounted && ref.read(authProvider).value?.id == account) {

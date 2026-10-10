@@ -5,6 +5,8 @@ import 'package:gram_tree/config/app_config.dart';
 import 'package:gram_tree/main.dart' as app;
 import 'package:integration_test/integration_test.dart';
 
+import 'event_pipeline_support.dart' show resetLocalAppState;
+
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
   final server = Dio(
@@ -21,23 +23,37 @@ void main() {
   }
 
   Future<void> reveal(WidgetTester tester, Finder finder) async {
-    final scroll = find
-        .byWidgetPredicate(
-          (w) => w is Scrollable && w.axisDirection == AxisDirection.down,
-        )
-        .first;
-    // Lazy rows may be either above or below the current viewport after a save.
+    final profileScroll = find.byKey(const ValueKey('taste-profile-content'));
+    final genericScroll = find.byWidgetPredicate(
+      (w) => w is Scrollable && w.axisDirection == AxisDirection.down,
+    );
+    // The profile page is allowed to show a loading/error state while its
+    // provider refreshes, so do not resolve .first until a scrollable exists.
+    final scroll = profileScroll.evaluate().isNotEmpty
+        ? profileScroll
+        : genericScroll;
+    await waitFor(tester, scroll);
+    // scrollUntilVisible resolves the target internally after scrolling, so
+    // wait for asynchronous rows before calling it.
+    await waitFor(tester, finder);
+    final resolvedScroll = scroll.first;
+    // Rows may be either above or below the current viewport after a save.
     for (var i = 0; i < 12; i++) {
-      await tester.drag(scroll, const Offset(0, 500));
+      await tester.drag(resolvedScroll, const Offset(0, 500));
       await tester.pump(const Duration(milliseconds: 50));
     }
     await tester.scrollUntilVisible(
       finder,
       250,
-      scrollable: scroll,
+      scrollable: resolvedScroll,
       maxScrolls: 60,
     );
-    await Scrollable.ensureVisible(tester.element(finder), alignment: 0.5);
+    expect(finder, findsOneWidget);
+    await Scrollable.ensureVisible(
+      tester.element(finder),
+      alignment: 0.5,
+      alignmentPolicy: ScrollPositionAlignmentPolicy.explicit,
+    );
     await tester.pumpAndSettle();
   }
 
@@ -158,6 +174,7 @@ void main() {
       );
 
       step = 'UI login';
+      await resetLocalAppState();
       await app.main();
       await waitFor(tester, find.byKey(const ValueKey('consent-agree')));
       await tester.tap(find.byKey(const ValueKey('consent-agree')));

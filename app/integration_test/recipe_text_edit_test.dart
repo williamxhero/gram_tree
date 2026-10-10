@@ -31,14 +31,18 @@ void main() {
     tester.testTextInput.hide();
     await tester.pump();
     final finder = find.byKey(ValueKey(key));
-    final scrollable = find
-        .byWidgetPredicate(
-          (widget) =>
-              widget is Scrollable &&
-              widget.axisDirection == AxisDirection.down,
-        )
-        .first;
-    // Reset the visible scroll position before seeking a lazy historical row.
+    final scrollables = find.byWidgetPredicate(
+      (widget) =>
+          widget is Scrollable && widget.axisDirection == AxisDirection.down,
+    );
+    // Route bodies can briefly be loading/error widgets with no Scrollable.
+    // Wait for the route to mount before resolving the lazy Finder.first.
+    await waitFor(tester, scrollables);
+    // scrollUntilVisible resolves the target internally after scrolling, so
+    // wait for asynchronous rows before calling it.
+    await waitFor(tester, finder);
+    final scrollable = scrollables.first;
+    // Reset the visible scroll position before seeking a historical row.
     for (var i = 0; i < 12; i++) {
       await tester.drag(scrollable, const Offset(0, 500));
       await tester.pump(const Duration(milliseconds: 100));
@@ -49,7 +53,12 @@ void main() {
       scrollable: scrollable,
       maxScrolls: 60,
     );
-    await Scrollable.ensureVisible(tester.element(finder), alignment: 0.5);
+    expect(finder, findsOneWidget);
+    await Scrollable.ensureVisible(
+      tester.element(finder),
+      alignment: 0.5,
+      alignmentPolicy: ScrollPositionAlignmentPolicy.explicit,
+    );
     await tester.pumpAndSettle();
     expect(finder.hitTestable(), findsOneWidget);
   }
@@ -95,10 +104,27 @@ void main() {
       _request,
     );
     await tap(tester, 'one-line-search');
-    // Existing-recipe matches can put this lazy action below the iOS viewport.
-    await reveal(tester, 'ai-design-new');
-    await waitFor(tester, find.byKey(const ValueKey('ai-design-new')));
+    // The search is asynchronous; the design action is not mounted until its
+    // result arrives, so wait for the actual enabled action before revealing it.
+    await waitFor(
+      tester,
+      find.byWidgetPredicate(
+        (widget) =>
+            widget is OutlinedButton &&
+            widget.key == const ValueKey('ai-design-new') &&
+            widget.onPressed != null,
+      ),
+    );
     await tap(tester, 'ai-design-new');
+    await waitFor(
+      tester,
+      find.byWidgetPredicate(
+        (widget) =>
+            widget is TextButton &&
+            widget.key == const ValueKey('ai-skip-questions') &&
+            widget.onPressed != null,
+      ),
+    );
     await tap(tester, 'ai-skip-questions');
     // Existing-recipe cards can scroll this lazy row out on a narrow phone.
     // Reveal it before checking completion; keep the same enabled-state guard.
