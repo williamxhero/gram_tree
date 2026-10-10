@@ -99,7 +99,10 @@ class TasteProfileCache {
   final SecureStore _secure;
   Future<void> _persistence = Future<void>.value();
 
-  static final _encryption = AesGcm.with256bits();
+  // Keep the implementation identical on VM, mobile, and browser tests. The
+  // pure-Dart implementation avoids depending on the browser test runner's
+  // Web Crypto context while retaining AES-GCM authenticated encryption.
+  static final _encryption = AesGcm.with256bits().toSync();
   static const _encryptedPrefix = 'v2:';
   static const _keyPrefix = 'taste_profile_cache_key_v1:';
 
