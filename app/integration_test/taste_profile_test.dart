@@ -31,7 +31,8 @@ void main() {
       of: profile,
       matching: scrollables,
     );
-    final scrollable = profile.evaluate().isNotEmpty &&
+    final scrollable =
+        profile.evaluate().isNotEmpty &&
             profileScrollables.evaluate().isNotEmpty
         ? profileScrollables.first
         : scrollables.first;

@@ -34,7 +34,8 @@ void main() {
       of: profile,
       matching: scrollables,
     );
-    final scrollable = profile.evaluate().isNotEmpty &&
+    final scrollable =
+        profile.evaluate().isNotEmpty &&
             profileScrollables.evaluate().isNotEmpty
         ? profileScrollables.first
         : scrollables.first;
@@ -148,17 +149,14 @@ void main() {
     await waitFor(tester, keyed('allergy-result-'));
     await tap(tester, keyed('allergy-result-').first);
     await tester.tap(find.byKey(const ValueKey('allergies-save')));
-    await waitFor(
-      tester,
-      find.byKey(const ValueKey('taste-profile-content')),
-    );
+    await waitFor(tester, find.byKey(const ValueKey('taste-profile-content')));
     await reveal(tester, find.text('花生、测试酱油'));
     await waitFor(tester, find.text('花生、测试酱油'));
     await reopen(tester);
     await reveal(tester, find.text('花生、测试酱油'));
     expect(find.text('花生、测试酱油'), findsOneWidget);
     final why = keyed('allergy-why-');
-    await reveal(tester, why.first);
+    await reveal(tester, why);
     await tester.tap(why.first);
     await waitFor(tester, find.byKey(const ValueKey('why-panel')));
     expect(find.text('本人手动填写'), findsOneWidget);
@@ -174,10 +172,7 @@ void main() {
     await tap(tester, find.byKey(const ValueKey('allergy-category-蛋类')));
     await tap(tester, keyed('allergy-delete-').first);
     await tester.tap(find.byKey(const ValueKey('allergies-save')));
-    await waitFor(
-      tester,
-      find.byKey(const ValueKey('taste-profile-content')),
-    );
+    await waitFor(tester, find.byKey(const ValueKey('taste-profile-content')));
     await reveal(tester, find.text('蛋类'));
     await waitFor(tester, find.text('蛋类'));
     await reopen(tester);

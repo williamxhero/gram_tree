@@ -39,17 +39,14 @@ void main() {
     // Wait for the route to mount before resolving the page body.
     await waitFor(tester, scrollables);
     final body = find.byKey(const ValueKey('recipe-editor-content'));
-    final bodyScrollables = find.descendant(
-      of: body,
-      matching: scrollables,
-    );
+    final bodyScrollables = find.descendant(of: body, matching: scrollables);
     final oneLine = find.byKey(const ValueKey('one-line-search'));
     final oneLineScrollables = find.ancestor(
       of: oneLine,
       matching: scrollables,
     );
-    final scrollable = body.evaluate().isNotEmpty &&
-            tester.widget(body) is Scrollable
+    final scrollable =
+        body.evaluate().isNotEmpty && tester.widget(body) is Scrollable
         ? body
         : bodyScrollables.evaluate().isNotEmpty
         ? bodyScrollables.first

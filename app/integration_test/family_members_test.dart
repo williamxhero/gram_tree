@@ -150,7 +150,8 @@ void main() {
       of: profile,
       matching: scrollables,
     );
-    final scrollable = profile.evaluate().isNotEmpty &&
+    final scrollable =
+        profile.evaluate().isNotEmpty &&
             profileScrollables.evaluate().isNotEmpty
         ? profileScrollables.first
         : scrollables.first;
@@ -658,8 +659,9 @@ void main() {
     expect(find.textContaining('测试酱油'), findsNothing);
     expect(find.textContaining('花生'), findsNothing);
     expect(find.text('小家人 · 3～6 岁'), findsOneWidget);
-    final afterDelete = (await familyApi.listFamilyMembers(headers: owner))
-        .data!;
+    final afterDelete = (await familyApi.listFamilyMembers(
+      headers: owner,
+    )).data!;
     expect(afterDelete.items.length, 1);
     expect(afterDelete.items.single.id == secondId, isTrue);
     expect(
@@ -720,7 +722,7 @@ void main() {
     expect(find.text('过敏信息单独同意'), findsNothing);
     await tap(tester, key('allergy-category-花生'));
     await tap(tester, key('allergies-save'));
-    await waitFor(tester, find.text('花生'));
+    await reveal(tester, find.text('花生'));
     await reopen(tester);
     await reveal(tester, allergyEdit, -300);
     await waitFor(tester, find.text('花生'));
@@ -792,11 +794,9 @@ void main() {
       403,
     );
     expect(
-      (await api.getTasteProfileApi().listTasteProfileChanges(headers: owner))
-          .data!
-          .items
-          .map((entry) => entry.id)
-          .toList(),
+      (await api.getTasteProfileApi().listTasteProfileChanges(
+        headers: owner,
+      )).data!.items.map((entry) => entry.id).toList(),
       ordinaryHistoryIds,
     );
     await reopen(tester);
@@ -847,9 +847,9 @@ void main() {
       isEmpty,
     );
     expect(
-      (await api.getAllergiesApi().listAllergyChanges(headers: owner))
-          .data!
-          .items,
+      (await api.getAllergiesApi().listAllergyChanges(
+        headers: owner,
+      )).data!.items,
       isEmpty,
     );
     for (final id in [...firstHistoryIds, ...secondHistoryIds]) {
@@ -875,11 +875,9 @@ void main() {
     await reveal(tester, key('taste-level-salty'), -300);
     expect(find.text('咸 · 淡一点'), findsOneWidget);
     expect(
-      (await api.getTasteProfileApi().listTasteProfileChanges(headers: owner))
-          .data!
-          .items
-          .map((entry) => entry.id)
-          .toList(),
+      (await api.getTasteProfileApi().listTasteProfileChanges(
+        headers: owner,
+      )).data!.items.map((entry) => entry.id).toList(),
       ordinaryHistoryIds,
     );
     expect(tester.takeException(), isNull);

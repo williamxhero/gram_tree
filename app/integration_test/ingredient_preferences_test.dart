@@ -33,7 +33,8 @@ void main() {
     );
     // The profile key is on the ListView/ScrollView wrapper, so resolve the
     // actual Scrollable state before reading its position.
-    final scroll = profileScroll.evaluate().isNotEmpty &&
+    final scroll =
+        profileScroll.evaluate().isNotEmpty &&
             profileScrollables.evaluate().isNotEmpty
         ? profileScrollables
         : verticalScroll;
