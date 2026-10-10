@@ -44,6 +44,10 @@ enum _FamilyStep {
   whyPanel,
   secondMember,
   memberDeletion,
+  memberDeletionReveal,
+  memberDeletionTap,
+  memberDeletionConfirm,
+  memberDeletionReceipt,
   memberDeletionVerification,
   ownerAllergies,
   withdrawal,
@@ -648,10 +652,14 @@ void main() {
     // The add button is rendered even when the lazy family list is positioned
     // at its end, so the first member's controls may not be built yet.
     await reveal(tester, key('family-delete-$firstId'));
+    markStep(_FamilyStep.memberDeletionReveal);
     await tap(tester, key('family-delete-$firstId'));
+    markStep(_FamilyStep.memberDeletionTap);
     await waitFor(tester, key('family-delete-confirm'));
+    markStep(_FamilyStep.memberDeletionConfirm);
     await tap(tester, key('family-delete-confirm'));
     await waitFor(tester, find.textContaining('家庭成员已删除（不保留身份）'));
+    markStep(_FamilyStep.memberDeletionReceipt);
     markStep(_FamilyStep.memberDeletionVerification);
     await reopen(tester);
     await waitFor(tester, key('family-view-$secondId'));
