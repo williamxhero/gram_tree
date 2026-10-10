@@ -645,6 +645,9 @@ void main() {
         .toList();
     expect(secondHistoryIds, hasLength(1));
     markStep(_FamilyStep.memberDeletion);
+    // The add button is rendered while the family list is still loading. Wait
+    // for the member row itself before asking tap() to reveal its controls.
+    await waitFor(tester, key('family-delete-$firstId'));
     await tap(tester, key('family-delete-$firstId'));
     await waitFor(tester, key('family-delete-confirm'));
     await tap(tester, key('family-delete-confirm'));
