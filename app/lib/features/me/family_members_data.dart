@@ -176,8 +176,12 @@ final familyChangesProvider =
         }
         items.addAll(
           page.items.where(
-            (row) =>
-                !memory.deleted.any((id) => row.field == 'family_members.$id'),
+            (row) => !memory.deleted.any(
+              (id) =>
+                  row.field == 'family_members.$id' &&
+                  (row.newValue is! Map ||
+                      (row.newValue as Map)['present'] != false),
+            ),
           ),
         );
         cursor = page.nextCursor;
