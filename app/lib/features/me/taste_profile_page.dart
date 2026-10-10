@@ -58,7 +58,7 @@ class _TasteBodyState extends ConsumerState<_TasteBody> {
     try {
       await action(ref.read(tasteProfileRepositoryProvider));
       if (!_isCurrentAccount) return;
-      ref.invalidate(tasteProfileProvider);
+      ref.invalidate(tasteProfileSnapshotProvider);
       ref.invalidate(tasteProfileChangesProvider);
     } catch (error) {
       if (mounted && _isCurrentAccount) {
@@ -108,12 +108,12 @@ class _TasteBodyState extends ConsumerState<_TasteBody> {
       error: (error, _) => Center(
         child: _Retry(
           error: error,
-          retry: () => ref.invalidate(tasteProfileProvider),
+          retry: () => ref.invalidate(tasteProfileSnapshotProvider),
         ),
       ),
       data: (value) => RefreshIndicator(
         onRefresh: () async {
-          ref.invalidate(tasteProfileProvider);
+          ref.invalidate(tasteProfileSnapshotProvider);
           ref.invalidate(tasteProfileChangesProvider);
           await ref.read(tasteProfileProvider.future);
         },

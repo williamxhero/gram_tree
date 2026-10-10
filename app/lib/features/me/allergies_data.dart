@@ -102,9 +102,10 @@ final allergiesProvider = FutureProvider.autoDispose<AllergiesOut?>((
           store.matches(identity) &&
           !ref.read(sensitiveMemoryProvider).suppressed,
     );
+    if (!ref.mounted || !store.matches(identity)) return null;
     return value;
   } catch (error) {
-    if (error is DioException && error.response?.statusCode != null) rethrow;
+    if (!isNetworkFailure(error)) rethrow;
     if (!store.matches(identity) ||
         ref.read(sensitiveMemoryProvider).suppressed) {
       return null;

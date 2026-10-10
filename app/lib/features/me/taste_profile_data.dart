@@ -29,11 +29,21 @@ class TasteProfileRepository {
   final SessionStore session;
   final TasteProfileCache cache;
 
-  Future<TasteProfileSnapshot> readSnapshot() async {
+  SessionIdentity _identity() {
     final identity = session.identity;
     if (identity == null || identity.ownerId != accountId) {
       throw StateError('account_unavailable');
     }
+    return identity;
+  }
+
+  Map<String, dynamic> _identityExtra(SessionIdentity identity) => {
+    'auth_owner_id': identity.ownerId,
+    'auth_identity_epoch': identity.epoch,
+  };
+
+  Future<TasteProfileSnapshot> readSnapshot() async {
+    final identity = _identity();
     try {
       final profile = (await api.getTasteProfile()).data!;
       if (!session.matches(identity)) {
@@ -44,14 +54,16 @@ class TasteProfileRepository {
         profile,
         stillCurrent: () => session.matches(identity),
       );
+      if (!session.matches(identity)) {
+        throw StateError('stale_profile_response');
+      }
       return TasteProfileSnapshot(
         profile: profile,
         cachedAt: DateTime.now().toUtc(),
         fromCache: false,
       );
     } catch (error) {
-      if (error is DioException && error.response?.statusCode != null) rethrow;
-      if (error is StateError || !session.matches(identity)) rethrow;
+      if (!isNetworkFailure(error) || !session.matches(identity)) rethrow;
       final response = await cache.read(accountId);
       if (response?.profile == null) rethrow;
       return TasteProfileSnapshot(
@@ -64,25 +76,47 @@ class TasteProfileRepository {
 
   Future<TasteProfileOut> read() async => (await readSnapshot()).profile;
 
-  Future<TasteProfileOut> setLevel(String flavor, num coefficient) async =>
-      (await api.updateTasteProfile(
-        tasteProfilePatch: TasteProfilePatch(flavors: {flavor: coefficient}),
-      )).data!;
+  Future<TasteProfileOut> setLevel(String flavor, num coefficient) async {
+    final identity = _identity();
+    final value = (await api.updateTasteProfile(
+      extra: _identityExtra(identity),
+      tasteProfilePatch: TasteProfilePatch(flavors: {flavor: coefficient}),
+    )).data!;
+    if (!session.matches(identity)) throw StateError('stale_profile_response');
+    return value;
+  }
 
   Future<TasteProfileOut> setPreferences(
     List<IngredientPreference> preferences,
-  ) async => (await api.updateTasteProfile(
-    tasteProfilePatch: TasteProfilePatch(ingredientPreferences: preferences),
-  )).data!;
+  ) async {
+    final identity = _identity();
+    final value = (await api.updateTasteProfile(
+      extra: _identityExtra(identity),
+      tasteProfilePatch: TasteProfilePatch(ingredientPreferences: preferences),
+    )).data!;
+    if (!session.matches(identity)) throw StateError('stale_profile_response');
+    return value;
+  }
 
-  Future<TasteProfileOut> reset() async =>
-      (await api.resetTasteProfile()).data!;
+  Future<TasteProfileOut> reset() async {
+    final identity = _identity();
+    final value = (await api.resetTasteProfile(
+      extra: _identityExtra(identity),
+    )).data!;
+    if (!session.matches(identity)) throw StateError('stale_profile_response');
+    return value;
+  }
 
   Future<List<TasteProfileChangeOut>> changes() async {
+    final identity = _identity();
     final items = <TasteProfileChangeOut>[];
     String? cursor;
     do {
-      final page = (await api.listTasteProfileChanges(cursor: cursor)).data!;
+      final page = (await api.listTasteProfileChanges(
+        cursor: cursor,
+        extra: _identityExtra(identity),
+      )).data!;
+      if (!session.matches(identity)) throw StateError('stale_profile_response');
       items.addAll(page.items);
       cursor = page.nextCursor;
     } while (cursor != null);

@@ -40,13 +40,12 @@ final cookingConstraintsProvider =
           value,
           stillCurrent: () => ref.mounted && session.matches(identity),
         );
+        if (!ref.mounted || !session.matches(identity)) {
+          throw StateError('stale_profile_response');
+        }
         return value;
       } catch (error) {
-        if (error is DioException && error.response?.statusCode != null) {
-          rethrow;
-        }
-        if (error is StateError) rethrow;
-        if (!session.matches(identity)) rethrow;
+        if (!isNetworkFailure(error) || !session.matches(identity)) rethrow;
         final snapshot = await cache.read(account);
         if (snapshot?.profile == null ||
             snapshot?.constraints == null ||
@@ -169,7 +168,7 @@ class _CookingConstraintsSectionState
           .replaceCookingConstraints(cookingConstraints: values);
       if (!mounted || ref.read(authProvider).value?.id != account) return;
       ref.invalidate(cookingConstraintsProvider);
-      ref.invalidate(tasteProfileProvider);
+      ref.invalidate(tasteProfileSnapshotProvider);
       ref.invalidate(tasteProfileChangesProvider);
     } catch (error) {
       if (mounted && ref.read(authProvider).value?.id == account) {

@@ -145,7 +145,12 @@ def _read_restrictions(
 def build(session: Session, owner: User, settings: Settings) -> AuthorizedContext:
     # Serialize with the same owner lock used by consent and profile mutations;
     # otherwise a withdrawal can race this read and expose a revoked snapshot.
-    profile = service.locked_profile(session, owner.id, service.scale_for(session))
+    service.lock_owner(session, owner.id)
+    profile = session.scalar(
+        select(TasteProfile)
+        .where(TasteProfile.owner_id == owner.id)
+        .execution_options(populate_existing=True)
+    )
     if profile is None:
         return AuthorizedContext(
             model_payload={"profile": None, "family": None, "cookware_profile": None},
