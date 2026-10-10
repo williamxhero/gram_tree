@@ -328,16 +328,7 @@ def call(
             # Batch advice is untrusted until its schema/step references are checked.
             # Preserve raw output as text: JSONB rejects NaN in structured replay
             # objects before the caller can reject it and request one repair.
-<<<<<<< HEAD
             log.output = _audit_output(result)
-=======
-            log.output = (
-                json.dumps(result, ensure_ascii=False)
-                if capability
-                in {"batch_advice", "comparison", "modify", "modify_intent", "change_explanation"}
-                else result
-            )
->>>>>>> origin/main
             # Semantic rejection is a failed actual attempt, not a free success.
             # Usage/cost already recorded above still belongs to that attempt.
             if validate_output is not None:
