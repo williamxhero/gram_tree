@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:flutter/widgets.dart';
 import 'package:gramtree_api/gramtree_api.dart';
@@ -18,6 +19,7 @@ const recipeOperations = {
   'text_cancel',
   'text_retry_status',
   'text_retry_checks',
+  'explain_changes',
 };
 
 bool validateRecipeOperation(Map<String, dynamic> params) {
@@ -37,8 +39,8 @@ bool validateRecipeOperation(Map<String, dynamic> params) {
         (params['operation_id'] as String).isNotEmpty &&
         {'accept', 'reject', 'modify'}.contains(params['decision']) &&
         (params['decision'] == 'modify'
-            ? params['after'] is String &&
-                  (params['after'] as String).length <= 4000
+            ? params.containsKey('after') &&
+                  _boundedModificationValue(params['after'])
             : !params.containsKey('after'));
   }
   if (operation == 'choose') {
@@ -88,6 +90,32 @@ bool validateRecipeOperation(Map<String, dynamic> params) {
     }
   }
   return true;
+}
+
+bool _boundedModificationValue(Object? value) {
+  bool valid(Object? value, int depth) {
+    if (depth > 8) return false;
+    if (value == null || value is bool) return true;
+    if (value is num) return value.isFinite;
+    if (value is String) return value.length <= 4000;
+    if (value is List) {
+      return value.length <= 100 &&
+          value.every((item) => valid(item, depth + 1));
+    }
+    if (value is Map) {
+      return value.length <= 100 &&
+          value.entries.every(
+            (entry) =>
+                entry.key is String &&
+                valid(entry.key, depth + 1) &&
+                valid(entry.value, depth + 1),
+          );
+    }
+    return false;
+  }
+
+  if (!valid(value, 0)) return false;
+  return value is String || jsonEncode(value).length <= 4000;
 }
 
 Map<String, dynamic> recipeDecisionParams(

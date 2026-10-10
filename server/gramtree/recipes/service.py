@@ -1093,6 +1093,46 @@ def _copy_version_images(
         )
 
 
+def _prepare_version_snapshot(
+    session: Session,
+    snapshot: RecipeSnapshot,
+    baseline: RecipeSnapshot,
+    owner_id: uuid.UUID,
+    *,
+    settings: Settings,
+    trusted_sources: bool = False,
+) -> RecipeSnapshot:
+    # An old client cannot send the new fields. Preserve its selected baseline,
+    # including legacy unknown values, rather than adopting today's library.
+    old_ingredients = {item.id: item for item in baseline.ingredients}
+    compatible = []
+    for item in snapshot.ingredients:
+        old = old_ingredients.get(item.id)
+        inherited: dict[str, Any] = {}
+        if old is not None and old.ingredient_id == item.ingredient_id:
+            for field, source_field in (
+                ("flavor_contribution", "flavor_source"),
+                ("functional", "functional_source"),
+            ):
+                if field not in item.model_fields_set:
+                    inherited[field] = getattr(old, field)
+                    if source_field not in item.model_fields_set:
+                        inherited[source_field] = getattr(old, source_field)
+                elif source_field not in item.model_fields_set and getattr(item, field) == getattr(
+                    old, field
+                ):
+                    inherited[source_field] = getattr(old, source_field)
+        compatible.append(item.model_copy(update=inherited))
+    snapshot = _validate_snapshot(
+        session,
+        snapshot.model_copy(update={"ingredients": compatible}),
+        owner_id,
+        settings=settings,
+        baseline=baseline,
+    )
+    return normalize_sources(snapshot, baseline, trusted_sources=trusted_sources)
+
+
 def save_version(
     session: Session,
     redis: Redis,
@@ -1128,35 +1168,23 @@ def save_version(
     if baseline is None or baseline.recipe_id != recipe.id:
         raise NotFound("菜谱基准版本不存在")
     previous_snapshot = RecipeSnapshot.model_validate(baseline.snapshot)
-    # An old client cannot send the new fields. Preserve its selected baseline,
-    # including legacy unknown values, rather than adopting today's library.
-    old_ingredients = {item.id: item for item in previous_snapshot.ingredients}
-    compatible = []
-    for item in body.snapshot.ingredients:
-        old = old_ingredients.get(item.id)
-        inherited: dict[str, Any] = {}
-        if old is not None and old.ingredient_id == item.ingredient_id:
-            for field, source_field in (
-                ("flavor_contribution", "flavor_source"),
-                ("functional", "functional_source"),
-            ):
-                if field not in item.model_fields_set:
-                    inherited[field] = getattr(old, field)
-                    if source_field not in item.model_fields_set:
-                        inherited[source_field] = getattr(old, source_field)
-                elif source_field not in item.model_fields_set and getattr(item, field) == getattr(
-                    old, field
-                ):
-                    inherited[source_field] = getattr(old, source_field)
-        compatible.append(item.model_copy(update=inherited))
-    snapshot = _validate_snapshot(
+    snapshot = _prepare_version_snapshot(
         session,
-        body.snapshot.model_copy(update={"ingredients": compatible}),
+        body.snapshot,
+        previous_snapshot,
         owner.id,
         settings=settings,
-        baseline=previous_snapshot,
+        trusted_sources=trusted_sources,
     )
-    snapshot = normalize_sources(snapshot, previous_snapshot, trusted_sources=trusted_sources)
+    if body.explanation_fingerprint is not None:
+        from gramtree.ai import explanations
+
+        explanations.validate_fingerprint(
+            owner.id,
+            explanations.manual_target(recipe.id, baseline.id),
+            _operations(previous_snapshot, snapshot),
+            body.explanation_fingerprint,
+        )
     staged = _staged_rows(session, owner, body.image_ids)
     dish = session.get(Dish, recipe.dish_id)
     if dish is None:

@@ -20,6 +20,7 @@
 | [`version-comparison/`](version-comparison/) | 完整版本比较：确定性幅度、步骤原文、历史结论、筛选布局与 AI 辅助/失败降级；#140 证据等级明确未实现 | #2 SPEC-002，#142、#143 | 本会话无 Artifact 发布工具；实现前发布到开发分支的交互 HTML 样稿 |
 | [`large-batch-advice/`](large-batch-advice/) | 大份量只读时间建议：主动请求、原时长对照、分批与成熟提醒、切换清除及失败降级 | #25 SPEC-003.2 / #175 | 本会话无 Artifact 发布工具；本地交互 HTML 样稿 |
 | [`recipe-text-edit/`](recipe-text-edit/) | 改文字：本人编辑与生成结果共用入口、逐条接受/拒绝/修改、依赖拒绝、检查与确认保存；浅色/深色交互样稿 | #25 SPEC-003.2 / #167 | 本会话无 Artifact 发布工具；本地交互 HTML 样稿 |
+| [`recipe-consequential-edit/`](recipe-consequential-edit/) | 连带修改与恢复：本地决定、同请求重试、换厨具关联条件、实际后值检查及最终改动说明 | #25 SPEC-003.2 / #168 #170 #173 #174 | 本会话无 Artifact 发布工具；本地交互 HTML 样稿 |
 
 | [`offline-online.html`](offline-online.html) | 在线入口降级：需要联网说明、原话保留、本机能力可用，浅色/深色 | #27 SPEC-013.3 / #215 | 本会话无 Artifact 发布工具；本地 HTML 样稿 |
 

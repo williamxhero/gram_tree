@@ -17,7 +17,15 @@ part 'modification_confirm_input.g.dart';
 )
 class ModificationConfirmInput {
   /// Returns a new [ModificationConfirmInput] instance.
-  ModificationConfirmInput({this.changeNote = '', required this.revision});
+  ModificationConfirmInput({
+    this.changeNote = '',
+
+    this.explanationFingerprint,
+
+    required this.revision,
+
+    this.tags,
+  });
 
   @JsonKey(
     defaultValue: '',
@@ -27,19 +35,35 @@ class ModificationConfirmInput {
   )
   final String? changeNote;
 
+  @JsonKey(
+    name: r'explanation_fingerprint',
+    required: false,
+    includeIfNull: false,
+  )
+  final String? explanationFingerprint;
+
   // minimum: 0
   @JsonKey(name: r'revision', required: true, includeIfNull: false)
   final int revision;
+
+  @JsonKey(name: r'tags', required: false, includeIfNull: false)
+  final List<String>? tags;
 
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
       other is ModificationConfirmInput &&
           other.changeNote == changeNote &&
-          other.revision == revision;
+          other.explanationFingerprint == explanationFingerprint &&
+          other.revision == revision &&
+          other.tags == tags;
 
   @override
-  int get hashCode => changeNote.hashCode + revision.hashCode;
+  int get hashCode =>
+      changeNote.hashCode +
+      (explanationFingerprint == null ? 0 : explanationFingerprint.hashCode) +
+      revision.hashCode +
+      (tags == null ? 0 : tags.hashCode);
 
   factory ModificationConfirmInput.fromJson(Map<String, dynamic> json) =>
       _$ModificationConfirmInputFromJson(json);

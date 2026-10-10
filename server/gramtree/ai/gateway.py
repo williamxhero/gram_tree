@@ -175,6 +175,12 @@ def _invoke(
 
             schema = ModificationOutput if capability == "modify" else ModificationIntent
             prompt += "\nJSON schema: " + json.dumps(schema.model_json_schema(), ensure_ascii=False)
+        if capability == "change_explanation":
+            from gramtree.ai.explanation_schemas import ChangeExplanationOutput
+
+            prompt += "\nJSON schema: " + json.dumps(
+                ChangeExplanationOutput.model_json_schema(), ensure_ascii=False
+            )
         if capability == "quantify":
             from gramtree.recipes.quantification_schemas import QuantificationOutput
 
@@ -302,7 +308,8 @@ def call(
             # objects before the caller can reject it and request one repair.
             log.output = (
                 json.dumps(result, ensure_ascii=False)
-                if capability in {"batch_advice", "comparison", "modify", "modify_intent"}
+                if capability
+                in {"batch_advice", "comparison", "modify", "modify_intent", "change_explanation"}
                 else result
             )
             # Semantic rejection is a failed actual attempt, not a free success.

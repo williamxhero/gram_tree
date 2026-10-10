@@ -38,8 +38,10 @@ def main() -> None:
     ]
     # The browser journey saves the synthetic draft after confirming 320 g.
     # Use the public snapshot contract's defaults, never a production recording.
+    from sqlalchemy.orm import Session
+
     from gramtree.ai.answers import cooking_context
-    from gramtree.recipes.schemas import RecipeSnapshot, ValueSource
+    from gramtree.recipes.schemas import RecipeSnapshot
 
     snapshot = RecipeSnapshot.model_validate(corpus["valid"]["recipe"]["snapshot"])
     snapshot.ingredients[0].quantity = 320
@@ -126,6 +128,16 @@ def main() -> None:
         records.append(("comparison", payload, assistance["outputs"][scenario["output"]]))
     from gramtree.ai.schemas import GeneratedDraft
     from gramtree.ai.service import _mark_sources
+    from gramtree.recipes.service import _operations, _validate_snapshot
+
+    def editor_snapshot(snapshot: RecipeSnapshot) -> RecipeSnapshot:
+        # dart-dio omits null sources but sends functional=False. Derive the
+        # saved provenance through the same validation as the public save path.
+        incoming = snapshot.model_dump(mode="json", exclude_none=True)
+        incoming["difficulty"] = ""
+        # Synthetic ingredients have no library IDs, so no database is needed.
+        with Session() as session:
+            return _validate_snapshot(session, RecipeSnapshot.model_validate(incoming))
 
     modification = json.loads(
         (ROOT / "server/tests/fixtures/ai/modification_corpus.json").read_text("utf-8")
@@ -141,14 +153,7 @@ def main() -> None:
     # missing author sources. The editor serializes unset difficulty as "",
     # so register that exact saved input without weakening semantic replay keys.
     saved_modification_snapshot = normalize_sources(draft.recipe.snapshot)
-    editor_modification_snapshot = saved_modification_snapshot.model_copy(deep=True)
-    editor_modification_snapshot.difficulty = ""
-    # dart-dio omits null functional_source but sends functional=False. The
-    # recipe save consequently stamps author provenance in this editor baseline.
-    for ingredient in editor_modification_snapshot.ingredients:
-        ingredient.functional_source = ValueSource(
-            source="author_filled", basis="作者按这道菜的实际作用填写"
-        )
+    editor_modification_snapshot = editor_snapshot(saved_modification_snapshot)
     modification_snapshots = [
         draft.recipe.snapshot,
         saved_modification_snapshot,
@@ -167,6 +172,168 @@ def main() -> None:
                 modification["output"],
             )
         )
+    # Consequential-edit browser journeys use the same synthetic first draft.
+    # Materialize exact semantic inputs at both generation and saved-editor seams.
+    cookware = json.loads(
+        (ROOT / "server/tests/fixtures/ai/cookware_modification_corpus.json").read_text("utf-8")
+    )
+    records.append(("modify_intent", {"text": cookware["text"]}, cookware["intent"]))
+    safe_cookware_values = {
+        "instruction": "空气炸锅180°C加热鸡肉10分钟，用食品温度计确认鸡肉中心温度达到74°C后盛出",
+        "duration_seconds": 600,
+        "doneness": "用食品温度计确认鸡肉中心温度达到74°C",
+    }
+    from gramtree.ai.explanations import facts
+    from gramtree.ai.modification_schemas import (
+        ModificationDecision,
+        ModificationOperation,
+    )
+    from gramtree.ai.modifications import _apply
+
+    for modification_snapshot in modification_snapshots:
+        step = next(s for s in modification_snapshot.steps if s.id == "cook")
+        operations = [
+            {
+                "id": step.id,
+                "before": getattr(step, change["field"]),
+                "scope": [f"steps:{step.id}:{change['field']}"],
+                "intent": "换空气炸锅",
+                "reason": cookware["reason"],
+                "risk": cookware["risk"],
+                "confidence": 0.8,
+                **change,
+            }
+            for change in cookware["changes"]
+        ]
+        records.append(
+            (
+                "modify",
+                {
+                    "text": cookware["text"],
+                    "snapshot": modification_snapshot.model_dump(mode="json"),
+                    "intent": cookware["intent"],
+                },
+                {"operations": operations},
+            )
+        )
+        # Explanation keys use canonical selected values, not raw model values
+        # (for example the snapshot validates temperature 180 as float 180.0).
+        _, _, corrected = _apply(
+            modification_snapshot,
+            [ModificationOperation.model_validate(operation) for operation in operations],
+            [
+                ModificationDecision(
+                    operation_id=operation["operation_id"],
+                    decision="modify" if operation["field"] in safe_cookware_values else "accept",
+                    **(
+                        {"after": safe_cookware_values[operation["field"]]}
+                        if operation["field"] in safe_cookware_values
+                        else {}
+                    ),
+                )
+                for operation in operations
+            ],
+        )
+        records.append(
+            (
+                "change_explanation",
+                {"operations": facts(corrected)},
+                {
+                    "change_note": "改用空气炸锅，调整温度、时长、容器和中心温度判断。",
+                    "tags": ["换厨具"],
+                },
+            )
+        )
+        manual = modification_snapshot.model_copy(deep=True)
+        manual.steps[0].instruction = "鸡腿肉切成大小一致的两厘米丁"
+        # Editing the existing form serializes an unset difficulty as empty text.
+        manual.difficulty = ""
+        for baseline in [saved_modification_snapshot, editor_modification_snapshot]:
+            records.append(
+                (
+                    "change_explanation",
+                    {"operations": facts(_operations(baseline, manual))},
+                    {"change_note": "写清鸡肉切丁大小。", "tags": ["步骤更清楚"]},
+                )
+            )
+    method = json.loads(
+        (ROOT / "server/tests/fixtures/ai/method_modification_corpus.json").read_text("utf-8")
+    )
+    method_text = "合成测试：做一道先腌肉再炒的宫保鸡丁"
+    method_raw = GeneratedDraft.model_validate(corpus["valid"])
+    method_raw.recipe.snapshot.steps[0].id = "marinate"
+    method_raw.recipe.snapshot.steps[0].action = "腌"
+    method_raw.recipe.snapshot.steps[0].instruction = "鸡腿肉切丁后腌3分钟"
+    method_raw.recipe.snapshot.steps[1].depends_on = ["marinate"]
+    records.extend(
+        [
+            ("intent", {"text": method_text}, corpus["intent"]),
+            ("embedding", {"text": "宫保鸡丁 鸡腿肉 盐 腌 炒"}, corpus["embedding"]),
+            ("embedding", {"text": "宫保鸡丁 鸡腿肉 盐 炒 装盘"}, corpus["embedding"]),
+            (
+                "generate",
+                {
+                    "text": method_text,
+                    "intent": {**corpus["intent"], "servings": 2},
+                    "profile": None,
+                    "family": None,
+                    "cookware_profile": None,
+                },
+                method_raw.model_dump(mode="json"),
+            ),
+        ]
+    )
+    _mark_sources(method_raw)
+    for ingredient in method_raw.recipe.snapshot.ingredients:
+        ingredient.base_quantity = ingredient.quantity
+        ingredient.base_unit = "g"
+        ingredient.scaling_mode = "proportional"
+        ingredient.ingredient_id = None
+    method_saved = normalize_sources(method_raw.recipe.snapshot)
+    method_editor = editor_snapshot(method_saved)
+    scenarios = [
+        (method["time"], modification_snapshots),
+        (method["difficulty"], [method_raw.recipe.snapshot, method_saved, method_editor]),
+    ]
+    for scenario, scenario_snapshots in scenarios:
+        records.append(("modify_intent", {"text": scenario["text"]}, scenario["intent"]))
+        for scenario_snapshot in scenario_snapshots:
+            steps = {s.id: s.model_dump(mode="json") for s in scenario_snapshot.steps}
+            operations = []
+            for change in scenario["changes"]:
+                kind = change["type"]
+                if kind == "remove_step":
+                    before = steps[change["id"]]
+                elif kind == "add_step":
+                    before = None
+                elif kind == "reorder_steps":
+                    before = [s.id for s in scenario_snapshot.steps]
+                elif kind == "change_recipe_info":
+                    before = getattr(scenario_snapshot, change["field"])
+                else:
+                    before = steps[change["id"]][change["field"]]
+                operations.append(
+                    {
+                        "before": before,
+                        "scope": [f"{change['id'] or 'recipe'}:{change['field']}"],
+                        "intent": "调整时间" if scenario is method["time"] else "简化做法",
+                        "reason": method["reason"],
+                        "risk": method["risk"],
+                        "confidence": 0.85,
+                        **change,
+                    }
+                )
+            records.append(
+                (
+                    "modify",
+                    {
+                        "text": scenario["text"],
+                        "snapshot": scenario_snapshot.model_dump(mode="json"),
+                        "intent": scenario["intent"],
+                    },
+                    {"operations": operations},
+                )
+            )
     args.out.mkdir(parents=True, exist_ok=True)
     for capability, payload, output in records:
         canonical = json.dumps(

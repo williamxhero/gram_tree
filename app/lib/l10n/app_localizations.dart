@@ -1894,6 +1894,144 @@ abstract class AppLocalizations {
   /// **'这次改了什么'**
   String get recipeChangeNote;
 
+  /// No description provided for @changeExplanationTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'改动说明'**
+  String get changeExplanationTitle;
+
+  /// No description provided for @changeExplanationChanged.
+  ///
+  /// In zh, this message translates to:
+  /// **'改动已变化，请重新生成说明或手写。'**
+  String get changeExplanationChanged;
+
+  /// No description provided for @changeExplanationModelUnavailable.
+  ///
+  /// In zh, this message translates to:
+  /// **'模型暂不可用，可手写说明和标签。'**
+  String get changeExplanationModelUnavailable;
+
+  /// No description provided for @changeExplanationDailyQuota.
+  ///
+  /// In zh, this message translates to:
+  /// **'今日 AI 额度已用完，可手写说明和标签。'**
+  String get changeExplanationDailyQuota;
+
+  /// No description provided for @changeExplanationMonthlyBudget.
+  ///
+  /// In zh, this message translates to:
+  /// **'AI 预算暂不可用，可手写说明和标签。'**
+  String get changeExplanationMonthlyBudget;
+
+  /// No description provided for @changeExplanationNoChanges.
+  ///
+  /// In zh, this message translates to:
+  /// **'本次没有可说明的实际改动，可手写说明和标签。'**
+  String get changeExplanationNoChanges;
+
+  /// No description provided for @changeExplanationFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'说明生成失败，请重试或手写说明和标签。'**
+  String get changeExplanationFailed;
+
+  /// No description provided for @changeExplanationBasis.
+  ///
+  /// In zh, this message translates to:
+  /// **'仅依据本次最终改动生成，不代表已做过验证。作者可以修改说明和标签。'**
+  String get changeExplanationBasis;
+
+  /// No description provided for @changeExplanationGenerating.
+  ///
+  /// In zh, this message translates to:
+  /// **'正在生成说明…'**
+  String get changeExplanationGenerating;
+
+  /// No description provided for @changeExplanationGenerate.
+  ///
+  /// In zh, this message translates to:
+  /// **'生成改动说明'**
+  String get changeExplanationGenerate;
+
+  /// No description provided for @changeExplanationHandwritten.
+  ///
+  /// In zh, this message translates to:
+  /// **'可手写说明和标签'**
+  String get changeExplanationHandwritten;
+
+  /// No description provided for @changeExplanationSaveAvailable.
+  ///
+  /// In zh, this message translates to:
+  /// **'{message} 手动保存不受影响。'**
+  String changeExplanationSaveAvailable(String message);
+
+  /// No description provided for @textEditDraftSaveFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'本机草稿保存失败，请保留当前页面并重试。'**
+  String get textEditDraftSaveFailed;
+
+  /// No description provided for @textEditDraftCleanupFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'本机草稿清理失败，已保留修改，请重试。'**
+  String get textEditDraftCleanupFailed;
+
+  /// No description provided for @textEditInvalidJsonNumber.
+  ///
+  /// In zh, this message translates to:
+  /// **'请输入有效的 JSON 数值。'**
+  String get textEditInvalidJsonNumber;
+
+  /// No description provided for @textEditInvalidJsonValue.
+  ///
+  /// In zh, this message translates to:
+  /// **'请输入与原值类型一致的有效 JSON（最多 4000 字符）。'**
+  String get textEditInvalidJsonValue;
+
+  /// No description provided for @textEditAfterJsonLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'修改后的 JSON 值'**
+  String get textEditAfterJsonLabel;
+
+  /// No description provided for @textEditTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'一句话修改菜谱'**
+  String get textEditTitle;
+
+  /// No description provided for @textEditSupportedChanges.
+  ///
+  /// In zh, this message translates to:
+  /// **'支持改文字、换厨具、调整时间或难度、调整做法；口味和缺料替代暂未支持。确认前不会保存。'**
+  String get textEditSupportedChanges;
+
+  /// No description provided for @textEditRequestLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'想怎样修改菜谱？'**
+  String get textEditRequestLabel;
+
+  /// No description provided for @textEditPreview.
+  ///
+  /// In zh, this message translates to:
+  /// **'预览菜谱修改'**
+  String get textEditPreview;
+
+  /// No description provided for @textEditRetrySaveCleanup.
+  ///
+  /// In zh, this message translates to:
+  /// **'重试保存与本机清理'**
+  String get textEditRetrySaveCleanup;
+
+  /// No description provided for @textEditUnsupportedIntent.
+  ///
+  /// In zh, this message translates to:
+  /// **'这类修改暂未支持，不会应用。支持改文字、换厨具、调整时间或难度、调整做法；口味和缺料替代请手动编辑。'**
+  String get textEditUnsupportedIntent;
+
   /// No description provided for @recipeSaveVersion.
   ///
   /// In zh, this message translates to:

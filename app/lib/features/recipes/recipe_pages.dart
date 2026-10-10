@@ -36,6 +36,7 @@ import 'reproducibility_card.dart';
 import 'quantification_panel.dart';
 import 'recipe_source_badge.dart';
 import 'text_edit_panel.dart';
+import 'change_explanation_panel.dart';
 import '../../storage/local_store.dart';
 import '../../ui_protocol/components/component_scaffold.dart';
 import '../../ui_protocol/intent_dispatcher.dart';
@@ -208,6 +209,7 @@ class _RecipeEditorPageState extends ConsumerState<RecipeEditorPage> {
   bool _loadFailed = false;
   bool _saving = false;
   bool _hasManualEdits = false;
+  ChangeExplanationSuggestion? _manualExplanationResult;
   RecipeQuantificationOut? _quantification;
   RecipeReproducibilityResult? _reproducibility;
   String? _reproducibilityError;
@@ -224,6 +226,7 @@ class _RecipeEditorPageState extends ConsumerState<RecipeEditorPage> {
   bool _safetyAwaitingCheck = true;
   int _safetyRevision = 0;
   int _editorRevision = 0;
+  int _textEditEpoch = 0;
   Timer? _draftTimer;
   Future<void>? _draftWrite;
   int _draftGeneration = 0;
@@ -322,11 +325,13 @@ class _RecipeEditorPageState extends ConsumerState<RecipeEditorPage> {
       setState(() {});
     } else {
       await _discardDraft();
+      if (mounted) setState(() => _textEditEpoch++);
     }
   }
 
   void _changed() {
     if (!mounted) return;
+    _form.explanationFingerprint = null;
     setState(() {
       _hasManualEdits = true;
       _quantification = null;
@@ -371,7 +376,21 @@ class _RecipeEditorPageState extends ConsumerState<RecipeEditorPage> {
     if (generation != _draftGeneration) return;
   }
 
-  Future<void> _discardDraft() async {
+  Future<void> _discardDraft() => _discardDraftForScope(
+    accountId: _accountId,
+    recipeKey: _recipeKey,
+    baselineVersionId: _loaded?.version.id,
+    generationRequestId: widget.generation?.requestId,
+  );
+
+  Future<void> _discardDraftForScope({
+    required String accountId,
+    required String recipeKey,
+    required String? baselineVersionId,
+    required String? generationRequestId,
+    bool preserveNewerForm = false,
+    RecipeDraft? expectedFormDraft,
+  }) async {
     ++_draftGeneration;
     _draftTimer?.cancel();
     _draftTimer = null;
@@ -380,7 +399,22 @@ class _RecipeEditorPageState extends ConsumerState<RecipeEditorPage> {
     } catch (_) {
       // A failed local write must not prevent leaving the editor.
     }
-    await _draftStore.discard(_recipeKey, accountId: _accountId);
+    if (preserveNewerForm) {
+      await _draftStore.discardMatching(expectedFormDraft);
+    } else {
+      await _draftStore.discard(recipeKey, accountId: accountId);
+    }
+    await _draftStore.discardModification(
+      recipeKey: recipeKey,
+      accountId: accountId,
+      baselineVersionId: baselineVersionId,
+    );
+    if (generationRequestId != null) {
+      await _draftStore.discardGeneratedResult(
+        generationRequestId,
+        accountId: accountId,
+      );
+    }
     _draftWrite = null;
     _draft = null;
   }
@@ -905,6 +939,54 @@ class _RecipeEditorPageState extends ConsumerState<RecipeEditorPage> {
     _changed();
   }
 
+  bool get _canExplainChanges => _loaded != null || widget.generation != null;
+
+  String get _explanationBinding {
+    final snapshot = _form.snapshot.toJson()..remove('tags');
+    return jsonEncode([
+      _accountId,
+      _loaded?.id,
+      _loaded?.version.id,
+      widget.generation?.requestId,
+      snapshot,
+    ]);
+  }
+
+  Future<ChangeExplanationSuggestion> _dispatchExplanation(
+    BuildContext context,
+  ) async {
+    _manualExplanationResult = null;
+    await ref
+        .read(intentDispatcherProvider)
+        .dispatch(
+          context,
+          compositionId: _operationCompositionId,
+          componentId: 'recipe-change-explanation',
+          action: ActionDescriptor(
+            intent: 'recipe_operation',
+            params: {'operation': 'explain_changes'},
+          ),
+        );
+    return _manualExplanationResult ??
+        const ChangeExplanationSuggestion(available: false);
+  }
+
+  Future<ChangeExplanationSuggestion> _explainChanges() async {
+    final result = await ref
+        .read(recipeRepositoryProvider)
+        .explainChanges(
+          ChangeExplanationInput(
+            recipeId: _loaded?.id,
+            baseVersionId: _loaded?.version.id,
+            generationRequestId: _loaded == null
+                ? widget.generation?.requestId
+                : null,
+            snapshot: _form.snapshot,
+          ),
+        );
+    return ChangeExplanationSuggestion.fromResult(result);
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
@@ -923,6 +1005,17 @@ class _RecipeEditorPageState extends ConsumerState<RecipeEditorPage> {
         ),
       );
     }
+    // Cleanup can finish after this page is disposed or another account signs
+    // in. Bind storage work now; only navigation consults the live account.
+    final accountId = ref.watch(authProvider).value?.id ?? 'anonymous';
+    final recipeKey = _recipeKey;
+    final baselineVersionId = _loaded?.version.id;
+    final generationRequestId = widget.generation?.requestId;
+    final expectedFormDraft = _draftStore.read(
+      recipeKey: recipeKey,
+      accountId: accountId,
+      baselineVersionId: baselineVersionId,
+    );
     return Scaffold(
       appBar: AppBar(
         title: Text(_loaded == null ? l10n.newRecipe : l10n.recipeContinueEdit),
@@ -934,10 +1027,11 @@ class _RecipeEditorPageState extends ConsumerState<RecipeEditorPage> {
           controller: _editorScroll,
           padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
           children: [
-            if (_loaded != null &&
-                _loaded!.author.id == ref.watch(authProvider).value?.id)
+            if (_loaded != null && _loaded!.author.id == accountId)
               TextEditPanel(
-                key: ValueKey('text-edit-recipe-${_loaded!.version.id}'),
+                key: ValueKey(
+                  'text-edit-recipe-$accountId-${_loaded!.version.id}-$_textEditEpoch',
+                ),
                 recipeId: _loaded!.id,
                 baseVersionId: _loaded!.version.id,
                 manualEdits: _hasManualEdits,
@@ -945,8 +1039,15 @@ class _RecipeEditorPageState extends ConsumerState<RecipeEditorPage> {
                   if (mounted) setState(() => _saving = saving);
                 },
                 onSaved: (detail) async {
-                  await _discardDraft();
-                  if (context.mounted) {
+                  await _discardDraftForScope(
+                    accountId: accountId,
+                    recipeKey: recipeKey,
+                    baselineVersionId: baselineVersionId,
+                    generationRequestId: generationRequestId,
+                    preserveNewerForm: true,
+                    expectedFormDraft: expectedFormDraft,
+                  );
+                  if (context.mounted && accountId == _accountId) {
                     context.pushReplacement('/recipes/${detail.id}');
                   }
                 },
@@ -1080,7 +1181,42 @@ class _RecipeEditorPageState extends ConsumerState<RecipeEditorPage> {
             const SizedBox(height: 12),
             KeyedSubtree(
               key: ValueKey('recipe-info-$_editorRevision'),
-              child: _RecipeInfoFields(form: _form, onChanged: _changed),
+              child: _RecipeInfoFields(
+                form: _form,
+                onChanged: _changed,
+                showExplanationFields: !_canExplainChanges || !_hasManualEdits,
+                explanationPanel: _canExplainChanges && _hasManualEdits
+                    ? RecipeOperationScope(
+                        handlers: {
+                          'explain_changes': (_) async {
+                            _manualExplanationResult = await _explainChanges();
+                          },
+                        },
+                        child: Builder(
+                          builder: (context) => ChangeExplanationPanel(
+                            bindingKey: _explanationBinding,
+                            changeNote: _form.changeNote,
+                            tags: _form.tags,
+                            noteAuthored: _form.explanationNoteAuthored,
+                            tagsAuthored: _form.explanationTagsAuthored,
+                            changesFingerprint: _form.explanationFingerprint,
+                            explain: () => _dispatchExplanation(context),
+                            onChanged: (draft) {
+                              _form.changeNote = draft.changeNote;
+                              _form.tags = draft.tags;
+                              _form.explanationNoteAuthored =
+                                  draft.noteAuthored;
+                              _form.explanationTagsAuthored =
+                                  draft.tagsAuthored;
+                              _changed();
+                              _form.explanationFingerprint =
+                                  draft.changesFingerprint;
+                            },
+                          ),
+                        ),
+                      )
+                    : null,
+              ),
             ),
             const SizedBox(height: 8),
             OutlinedButton.icon(
@@ -1210,9 +1346,16 @@ class _RecipeEditorPageState extends ConsumerState<RecipeEditorPage> {
 }
 
 class _RecipeInfoFields extends StatelessWidget {
-  const _RecipeInfoFields({required this.form, required this.onChanged});
+  const _RecipeInfoFields({
+    required this.form,
+    required this.onChanged,
+    this.showExplanationFields = true,
+    this.explanationPanel,
+  });
   final RecipeForm form;
   final VoidCallback onChanged;
+  final bool showExplanationFields;
+  final Widget? explanationPanel;
 
   @override
   Widget build(BuildContext context) {
@@ -1267,14 +1410,16 @@ class _RecipeInfoFields extends StatelessWidget {
           },
         ),
         const SizedBox(height: 8),
-        _text(
-          label: l10n.recipeTags,
-          value: form.tags.join('，'),
-          onChanged: (value) {
-            form.tags = _split(value);
-            onChanged();
-          },
-        ),
+        if (showExplanationFields)
+          _text(
+            label: l10n.recipeTags,
+            value: form.tags.join('，'),
+            onChanged: (value) {
+              form.tags = _split(value);
+              form.explanationTagsAuthored = true;
+              onChanged();
+            },
+          ),
         const SizedBox(height: 8),
         _number(
           label: l10n.recipeTotalTime,
@@ -1294,14 +1439,17 @@ class _RecipeInfoFields extends StatelessWidget {
           },
         ),
         const SizedBox(height: 8),
-        _text(
-          label: l10n.recipeChangeNote,
-          value: form.changeNote,
-          onChanged: (value) {
-            form.changeNote = value.trim();
-            onChanged();
-          },
-        ),
+        if (showExplanationFields)
+          _text(
+            label: l10n.recipeChangeNote,
+            value: form.changeNote,
+            onChanged: (value) {
+              form.changeNote = value.trim();
+              form.explanationNoteAuthored = true;
+              onChanged();
+            },
+          ),
+        ?explanationPanel,
       ],
     );
   }
@@ -2749,16 +2897,20 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
     final selectedMeasure = _measures
         .where((item) => item.id == _selectedMeasureId)
         .firstOrNull;
-    _scheduleDisplayContract(
-      snapshot: snapshot,
-      targetServings: targetServings,
-      targetMold: _targetMold,
-      displayMode: _displayMode,
-      measureId: selectedMeasure?.id,
-      measureFingerprint: selectedMeasure == null
-          ? null
-          : '${selectedMeasure.id}:${selectedMeasure.name}:${selectedMeasure.capacityMl}:${selectedMeasure.updatedAt}',
-    );
+    // Nested edit routes retain this detail page underneath them. Do not start
+    // hidden display requests while the user is editing or restoring drafts.
+    if (ModalRoute.of(context)?.isCurrent == true) {
+      _scheduleDisplayContract(
+        snapshot: snapshot,
+        targetServings: targetServings,
+        targetMold: _targetMold,
+        displayMode: _displayMode,
+        measureId: selectedMeasure?.id,
+        measureFingerprint: selectedMeasure == null
+            ? null
+            : '${selectedMeasure.id}:${selectedMeasure.name}:${selectedMeasure.capacityMl}:${selectedMeasure.updatedAt}',
+      );
+    }
     // Only a contract computed from the version on screen may replace the
     // local kernel's values.
     final displayedContract = offline
@@ -2878,6 +3030,35 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
               onAction: null,
             ),
           ],
+          // Keep the saved rule conclusion, explanation and tags above long
+          // checks so the primary comparison action stays reachable on phones.
+          if (detail.version.conclusion != null)
+            Wrap(
+              children: [
+                ActionChip(
+                  key: const ValueKey('recipe-version-conclusion'),
+                  label: Text(
+                    '${comparisonConclusionLabel(detail.version.conclusion!.value)} · 确定规则',
+                  ),
+                  tooltip: '相对上一当前版本；规则版本 ${detail.version.rulesVersion ?? ""}',
+                  onPressed: () =>
+                      context.push('/recipes/${widget.recipeId}/history'),
+                ),
+              ],
+            ),
+          if (detail.version.changeNote.trim().isNotEmpty)
+            Text(
+              '${l10n.recipeChangeNote}：${detail.version.changeNote}',
+              key: const ValueKey('recipe-change-note'),
+            ),
+          if (snapshot.tags?.isNotEmpty == true)
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                for (final tag in snapshot.tags!) Chip(label: Text(tag)),
+              ],
+            ),
           ReproducibilityCard(result: detail.version.reproducibility),
           RecipeSafetyProtocolSection(
             result: detail.version.safety ?? detail.version.safetyAtSave,
@@ -2917,16 +3098,6 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
                   ),
                 ),
               ),
-              if (detail.version.conclusion != null)
-                ActionChip(
-                  key: const ValueKey('recipe-version-conclusion'),
-                  label: Text(
-                    '${comparisonConclusionLabel(detail.version.conclusion!.value)} · 确定规则',
-                  ),
-                  tooltip: '相对上一当前版本；规则版本 ${detail.version.rulesVersion ?? ""}',
-                  onPressed: () =>
-                      context.push('/recipes/${widget.recipeId}/history'),
-                ),
               Chip(
                 key: const ValueKey('recipe-duration'),
                 label: Text(
@@ -2942,8 +3113,6 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
                 ),
               if (snapshot.dishType?.isNotEmpty == true)
                 Chip(label: Text(l10n.recipeDishTypeValue(snapshot.dishType!))),
-              for (final tag in snapshot.tags ?? const [])
-                Chip(label: Text(tag)),
             ],
           ),
           if (durationNote != null)
@@ -3058,6 +3227,9 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
           if ((snapshot.steps ?? const []).isEmpty) Text(l10n.recipeNoSteps),
           for (final (index, step) in (snapshot.steps ?? const []).indexed)
             _StepDetailTile(
+              // Lazy scrolling recreates tiles; retain expanded requirements
+              // only for this immutable version and stable step identity.
+              key: PageStorageKey('step-${detail.version.id}-${step.id}'),
               index: index,
               step: step,
               converted: _scaleMode == _RecipeScaleMode.servings
@@ -3911,6 +4083,7 @@ class _IngredientDetailRow extends StatelessWidget {
 
 class _StepDetailTile extends StatelessWidget {
   const _StepDetailTile({
+    super.key,
     required this.index,
     required this.step,
     this.converted,
@@ -4083,6 +4256,9 @@ class _StepDetailTile extends StatelessWidget {
               ),
             if (step.why?.isNotEmpty == true)
               Padding(
+                // The nested WhyPanel scroll offset must not read the tile's
+                // boolean expansion receipt from the same PageStorage entry.
+                key: PageStorageKey('step-why-${step.id}'),
                 padding: const EdgeInsets.symmetric(horizontal: 8),
                 child: WhyPanel(
                   sourceType: sourceTypeAuthorFilled,

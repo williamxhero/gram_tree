@@ -15,6 +15,8 @@ abstract class _$ModificationInputCWProxy {
 
   ModificationInput requestId(String? requestId);
 
+  ModificationInput retryFailed(bool? retryFailed);
+
   ModificationInput text(String text);
 
   /// This function **does support** nullification of nullable fields. All `null` values passed to `non-nullable` fields will be ignored. You can also use `ModificationInput(...).copyWith.fieldName(...)` to override fields one at a time with nullification support.
@@ -28,6 +30,7 @@ abstract class _$ModificationInputCWProxy {
     String? generationRequestId,
     String? recipeId,
     String? requestId,
+    bool? retryFailed,
     String text,
   });
 }
@@ -53,6 +56,10 @@ class _$ModificationInputCWProxyImpl implements _$ModificationInputCWProxy {
   ModificationInput requestId(String? requestId) => this(requestId: requestId);
 
   @override
+  ModificationInput retryFailed(bool? retryFailed) =>
+      this(retryFailed: retryFailed);
+
+  @override
   ModificationInput text(String text) => this(text: text);
 
   @override
@@ -67,6 +74,7 @@ class _$ModificationInputCWProxyImpl implements _$ModificationInputCWProxy {
     Object? generationRequestId = const $CopyWithPlaceholder(),
     Object? recipeId = const $CopyWithPlaceholder(),
     Object? requestId = const $CopyWithPlaceholder(),
+    Object? retryFailed = const $CopyWithPlaceholder(),
     Object? text = const $CopyWithPlaceholder(),
   }) {
     return ModificationInput(
@@ -86,6 +94,10 @@ class _$ModificationInputCWProxyImpl implements _$ModificationInputCWProxy {
           ? _value.requestId
           // ignore: cast_nullable_to_non_nullable
           : requestId as String?,
+      retryFailed: retryFailed == const $CopyWithPlaceholder()
+          ? _value.retryFailed
+          // ignore: cast_nullable_to_non_nullable
+          : retryFailed as bool?,
       text: text == const $CopyWithPlaceholder()
           ? _value.text
           // ignore: cast_nullable_to_non_nullable
@@ -105,34 +117,34 @@ extension $ModificationInputCopyWith on ModificationInput {
 // JsonSerializableGenerator
 // **************************************************************************
 
-ModificationInput _$ModificationInputFromJson(Map<String, dynamic> json) =>
-    $checkedCreate(
-      'ModificationInput',
-      json,
-      ($checkedConvert) {
-        $checkKeys(json, requiredKeys: const ['text']);
-        final val = ModificationInput(
-          baseVersionId: $checkedConvert(
-            'base_version_id',
-            (v) => v as String?,
-          ),
-          generationRequestId: $checkedConvert(
-            'generation_request_id',
-            (v) => v as String?,
-          ),
-          recipeId: $checkedConvert('recipe_id', (v) => v as String?),
-          requestId: $checkedConvert('request_id', (v) => v as String?),
-          text: $checkedConvert('text', (v) => v as String),
-        );
-        return val;
-      },
-      fieldKeyMap: const {
-        'baseVersionId': 'base_version_id',
-        'generationRequestId': 'generation_request_id',
-        'recipeId': 'recipe_id',
-        'requestId': 'request_id',
-      },
+ModificationInput _$ModificationInputFromJson(
+  Map<String, dynamic> json,
+) => $checkedCreate(
+  'ModificationInput',
+  json,
+  ($checkedConvert) {
+    $checkKeys(json, requiredKeys: const ['text']);
+    final val = ModificationInput(
+      baseVersionId: $checkedConvert('base_version_id', (v) => v as String?),
+      generationRequestId: $checkedConvert(
+        'generation_request_id',
+        (v) => v as String?,
+      ),
+      recipeId: $checkedConvert('recipe_id', (v) => v as String?),
+      requestId: $checkedConvert('request_id', (v) => v as String?),
+      retryFailed: $checkedConvert('retry_failed', (v) => v as bool? ?? false),
+      text: $checkedConvert('text', (v) => v as String),
     );
+    return val;
+  },
+  fieldKeyMap: const {
+    'baseVersionId': 'base_version_id',
+    'generationRequestId': 'generation_request_id',
+    'recipeId': 'recipe_id',
+    'requestId': 'request_id',
+    'retryFailed': 'retry_failed',
+  },
+);
 
 Map<String, dynamic> _$ModificationInputToJson(ModificationInput instance) =>
     <String, dynamic>{
@@ -140,5 +152,6 @@ Map<String, dynamic> _$ModificationInputToJson(ModificationInput instance) =>
       'generation_request_id': ?instance.generationRequestId,
       'recipe_id': ?instance.recipeId,
       'request_id': ?instance.requestId,
+      'retry_failed': ?instance.retryFailed,
       'text': instance.text,
     };

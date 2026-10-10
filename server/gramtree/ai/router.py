@@ -1,7 +1,8 @@
 from fastapi import APIRouter
 
 from gramtree.accounts.deps import CurrentAuth
-from gramtree.ai import answers, gateway, modifications, service
+from gramtree.ai import answers, explanations, gateway, modifications, service
+from gramtree.ai.explanation_schemas import ChangeExplanationInput, ChangeExplanationResult
 from gramtree.ai.modification_schemas import (
     ModificationConfirmInput,
     ModificationDecisionsInput,
@@ -24,6 +25,20 @@ from gramtree.deps import RedisDep, SessionDep, SettingsDep
 from gramtree.recipes.schemas import RecipeCreate, RecipeDetail
 
 router = APIRouter(prefix="/ai/recipes", tags=["recipe-ai"], responses=ERROR_RESPONSES)
+
+
+@router.post(
+    "/change-explanation",
+    response_model=ChangeExplanationResult,
+    operation_id="explain_recipe_changes",
+)
+def explain_recipe_changes(
+    body: ChangeExplanationInput,
+    auth: CurrentAuth,
+    session: SessionDep,
+    settings: SettingsDep,
+) -> ChangeExplanationResult:
+    return explanations.explain(session, settings, auth.user, body)
 
 
 @router.get(
