@@ -4,6 +4,9 @@ import 'package:gramtree_api/gramtree_api.dart';
 
 import '../../api/api_client.dart';
 import '../../auth/auth_controller.dart';
+import '../../auth/session.dart';
+import 'allergies_data.dart';
+import 'family_members_data.dart';
 import '../../l10n/app_localizations.dart';
 import '../../ui_protocol/components/component_scaffold.dart';
 import '../../ui_protocol/ingredient_preference_actions.dart';
@@ -183,10 +186,40 @@ class IngredientPreferencesSection extends ConsumerWidget {
   }
 }
 
+typedef CanonicalIngredientChoice = ({
+  String? ingredientId,
+  String? category,
+  String name,
+});
+
+/// Reuse the canonical picker, without collecting free-form sensitive values.
+Future<CanonicalIngredientChoice?> showFamilyIngredientChooser(
+  BuildContext context, {
+  required String accountId,
+  required int sensitiveEpoch,
+  required int familyEpoch,
+  required List<String> categories,
+}) => showDialog<CanonicalIngredientChoice>(
+  context: context,
+  builder: (_) => _PreferenceDialog(
+    accountId: accountId,
+    categories: categories,
+    sensitiveEpoch: sensitiveEpoch,
+    familyEpoch: familyEpoch,
+  ),
+);
+
 class _PreferenceDialog extends ConsumerStatefulWidget {
-  const _PreferenceDialog({required this.accountId, required this.categories});
+  const _PreferenceDialog({
+    required this.accountId,
+    required this.categories,
+    this.sensitiveEpoch,
+    this.familyEpoch,
+  });
   final String accountId;
   final List<String> categories;
+  final int? sensitiveEpoch;
+  final int? familyEpoch;
 
   @override
   ConsumerState<_PreferenceDialog> createState() => _PreferenceDialogState();
@@ -204,10 +237,22 @@ class _PreferenceDialogState extends ConsumerState<_PreferenceDialog> {
   int _request = 0;
 
   bool get _current =>
-      mounted && ref.read(authProvider).value?.id == widget.accountId;
+      mounted &&
+      ref.read(authProvider).value?.id == widget.accountId &&
+      (widget.sensitiveEpoch == null ||
+          (ref.read(sensitiveMemoryProvider).epoch == widget.sensitiveEpoch &&
+              ref.read(familyMemoryProvider).epoch == widget.familyEpoch));
+
+  void _erase() {
+    _results.clear();
+    _selected = null;
+    _category = null;
+    _error = null;
+  }
 
   @override
   void dispose() {
+    _erase();
     _query.dispose();
     super.dispose();
   }
@@ -226,7 +271,17 @@ class _PreferenceDialogState extends ConsumerState<_PreferenceDialog> {
           (await ref
                   .read(apiClientProvider)
                   .getIngredientsApi()
-                  .searchIngredients(searchQuery: SearchQuery(query: query)))
+                  .searchIngredients(
+                    searchQuery: SearchQuery(query: query),
+                    headers: widget.sensitiveEpoch == null
+                        ? null
+                        : sensitiveAccountHeaders(
+                            ref.read(sessionStoreProvider),
+                          ),
+                    extra: widget.sensitiveEpoch == null
+                        ? null
+                        : sensitiveAccountExtra(ref.read(sessionStoreProvider)),
+                  ))
               .data!;
       if (!_current || request != _request) return;
       setState(() {
@@ -243,7 +298,18 @@ class _PreferenceDialogState extends ConsumerState<_PreferenceDialog> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    if (ref.watch(authProvider).value?.id != widget.accountId) {
+    final account = ref.watch(authProvider).value?.id;
+    final valid =
+        widget.sensitiveEpoch == null ||
+        (ref.watch(sensitiveMemoryProvider).epoch == widget.sensitiveEpoch &&
+            ref.watch(familyMemoryProvider).epoch == widget.familyEpoch);
+    if (account != widget.accountId || !valid) {
+      _erase();
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        _query.clear();
+        if (ModalRoute.of(context)?.isCurrent == true) Navigator.pop(context);
+      });
       return const SizedBox.shrink();
     }
     return AlertDialog(
@@ -284,7 +350,12 @@ class _PreferenceDialogState extends ConsumerState<_PreferenceDialog> {
                 ),
               ),
               if (_loading) const LinearProgressIndicator(),
-              if (_error != null) Text(ApiFailure.from(_error!).message),
+              if (_error != null)
+                Text(
+                  widget.sensitiveEpoch == null
+                      ? ApiFailure.from(_error!).message
+                      : l10n.allergySearchUnavailable,
+                ),
               if (_searched && _results.isEmpty) Text(l10n.tasteSearchEmpty),
               for (final item in _results)
                 IngredientPreferenceAction(
@@ -309,54 +380,59 @@ class _PreferenceDialogState extends ConsumerState<_PreferenceDialog> {
                     }),
                   ),
                 ),
-              IngredientPreferenceAction(
-                name: 'category',
-                builder: (dispatch) => DropdownButton<String>(
-                  key: const ValueKey('taste-preference-category'),
-                  hint: Text(l10n.tasteCategory),
-                  value: _category,
-                  isExpanded: true,
-                  items: [
-                    for (final category in widget.categories)
-                      DropdownMenuItem(value: category, child: Text(category)),
-                  ],
-                  onChanged: (category) => dispatch(() {
-                    if (!_current) {
-                      return;
-                    }
-                    setState(() {
-                      _category = category;
-                      _selected = null;
-                      _request++;
-                      _loading = false;
-                      _results = [];
-                      _searched = false;
-                    });
-                  }),
+              if (widget.categories.isNotEmpty)
+                IngredientPreferenceAction(
+                  name: 'category',
+                  builder: (dispatch) => DropdownButton<String>(
+                    key: const ValueKey('taste-preference-category'),
+                    hint: Text(l10n.tasteCategory),
+                    value: _category,
+                    isExpanded: true,
+                    items: [
+                      for (final category in widget.categories)
+                        DropdownMenuItem(
+                          value: category,
+                          child: Text(category),
+                        ),
+                    ],
+                    onChanged: (category) => dispatch(() {
+                      if (!_current) {
+                        return;
+                      }
+                      setState(() {
+                        _category = category;
+                        _selected = null;
+                        _request++;
+                        _loading = false;
+                        _results = [];
+                        _searched = false;
+                      });
+                    }),
+                  ),
                 ),
-              ),
-              IngredientPreferenceAction(
-                name: 'choice',
-                builder: (dispatch) => DropdownButton<String>(
-                  key: const ValueKey('taste-preference-choice'),
-                  value: _preference,
-                  isExpanded: true,
-                  items: [
-                    for (final kind
-                        in IngredientPreferencePreferenceEnum.values)
-                      DropdownMenuItem(
-                        value: kind.value,
-                        child: Text(preferenceLabel(kind.value, l10n)),
-                      ),
-                  ],
-                  onChanged: (kind) {
-                    if (kind == null) return;
-                    dispatch(() {
-                      if (_current) setState(() => _preference = kind);
-                    });
-                  },
+              if (widget.sensitiveEpoch == null)
+                IngredientPreferenceAction(
+                  name: 'choice',
+                  builder: (dispatch) => DropdownButton<String>(
+                    key: const ValueKey('taste-preference-choice'),
+                    value: _preference,
+                    isExpanded: true,
+                    items: [
+                      for (final kind
+                          in IngredientPreferencePreferenceEnum.values)
+                        DropdownMenuItem(
+                          value: kind.value,
+                          child: Text(preferenceLabel(kind.value, l10n)),
+                        ),
+                    ],
+                    onChanged: (kind) {
+                      if (kind == null) return;
+                      dispatch(() {
+                        if (_current) setState(() => _preference = kind);
+                      });
+                    },
+                  ),
                 ),
-              ),
             ],
           ),
         ),
@@ -377,6 +453,14 @@ class _PreferenceDialogState extends ConsumerState<_PreferenceDialog> {
                 ? null
                 : () => dispatch(() {
                     if (!_current) {
+                      return;
+                    }
+                    if (widget.sensitiveEpoch != null) {
+                      Navigator.pop(context, (
+                        ingredientId: _selected?.id,
+                        category: _category,
+                        name: _selected?.standardName ?? _category!,
+                      ));
                       return;
                     }
                     Navigator.pop(

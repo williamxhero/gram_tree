@@ -44,10 +44,10 @@ class ModificationOperation {
   });
 
   @JsonKey(name: r'after', required: true, includeIfNull: true)
-  final String? after;
+  final Object? after;
 
   @JsonKey(name: r'before', required: true, includeIfNull: true)
-  final String? before;
+  final Object? before;
 
   // minimum: 0.0
   // maximum: 1.0
@@ -127,12 +127,44 @@ class ModificationOperation {
 enum ModificationOperationTypeEnum {
   @JsonValue(r'change_step_field')
   changeStepField(r'change_step_field'),
+  @JsonValue(r'change_step_duration')
+  changeStepDuration(r'change_step_duration'),
+  @JsonValue(r'change_step_heat')
+  changeStepHeat(r'change_step_heat'),
   @JsonValue(r'change_preparation')
   changePreparation(r'change_preparation'),
   @JsonValue(r'change_display_name')
   changeDisplayName(r'change_display_name'),
   @JsonValue(r'change_recipe_info')
-  changeRecipeInfo(r'change_recipe_info');
+  changeRecipeInfo(r'change_recipe_info'),
+  @JsonValue(r'change_step_ingredients')
+  changeStepIngredients(r'change_step_ingredients'),
+  @JsonValue(r'change_step_dependencies')
+  changeStepDependencies(r'change_step_dependencies'),
+  @JsonValue(r'replace_ingredient')
+  replaceIngredient(r'replace_ingredient'),
+  @JsonValue(r'change_quantity')
+  changeQuantity(r'change_quantity'),
+  @JsonValue(r'change_group_or_optional')
+  changeGroupOrOptional(r'change_group_or_optional'),
+  @JsonValue(r'change_functional')
+  changeFunctional(r'change_functional'),
+  @JsonValue(r'change_scaling')
+  changeScaling(r'change_scaling'),
+  @JsonValue(r'change_replacement')
+  changeReplacement(r'change_replacement'),
+  @JsonValue(r'add_ingredient')
+  addIngredient(r'add_ingredient'),
+  @JsonValue(r'remove_ingredient')
+  removeIngredient(r'remove_ingredient'),
+  @JsonValue(r'add_step')
+  addStep(r'add_step'),
+  @JsonValue(r'remove_step')
+  removeStep(r'remove_step'),
+  @JsonValue(r'reorder_ingredients')
+  reorderIngredients(r'reorder_ingredients'),
+  @JsonValue(r'reorder_steps')
+  reorderSteps(r'reorder_steps');
 
   const ModificationOperationTypeEnum(this.value);
 

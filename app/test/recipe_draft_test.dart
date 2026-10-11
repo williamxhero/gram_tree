@@ -16,6 +16,54 @@ import 'offline_recipe_editor_test.dart' show navigate;
 import 'recipe_snapshot_test.dart' show recipeSnapshotFixture;
 
 void main() {
+  test('账号删除会阻止迟到的修改草稿重新写入', () async {
+    final local = MemoryLocalStore(consentedStore());
+    final drafts = RecipeDraftStore(local);
+    const accountId = 'alice';
+    const recipeKey = 'recipe';
+    final epoch = drafts.modificationEpoch(
+      recipeKey: recipeKey,
+      accountId: accountId,
+    );
+    await drafts.clearAccount(accountId);
+    await drafts.saveModification(
+      recipeKey: recipeKey,
+      accountId: accountId,
+      payload: {'text': 'stale'},
+      expectedEpoch: epoch,
+    );
+
+    expect(
+      drafts.readModification(recipeKey: recipeKey, accountId: accountId),
+      isNull,
+    );
+  });
+
+  test('清理带基线的表单草稿会同时移除基线副本和恢复指针', () async {
+    final drafts = RecipeDraftStore(MemoryLocalStore(consentedStore()));
+    final draft = RecipeDraft(
+      accountId: 'alice',
+      recipeKey: 'recipe',
+      baselineVersionId: 'version-1',
+      payload: {'dish_name': '待清理'},
+    );
+    await drafts.save(draft);
+    await drafts.discardMatching(draft);
+
+    expect(
+      drafts.read(
+        recipeKey: draft.recipeKey,
+        accountId: draft.accountId,
+        baselineVersionId: draft.baselineVersionId,
+      ),
+      isNull,
+    );
+    expect(
+      drafts.readLatest(recipeKey: draft.recipeKey, accountId: draft.accountId),
+      isNull,
+    );
+  });
+
   for (final operation in ['logout', 'withdrawal', 'deletion']) {
     testWidgets('$operation 对未保存菜谱草稿遵守保留与注销清理区别', (tester) async {
       final env = await pumpApp(tester);

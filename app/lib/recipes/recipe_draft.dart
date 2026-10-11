@@ -64,11 +64,88 @@ class RecipeDraftStore {
     _epochs = Map.of(_coordinator.epochs);
   }
 
+  static const generatedResultKey = 'generation-result';
   static const keyPrefix = 'recipe_draft:v1:';
   static final _coordinators = Expando<_DraftCoordinator>();
+  static final _modificationEpochs = Expando<Map<String, int>>();
   final LocalStore _store;
   late final _DraftCoordinator _coordinator;
   late final Map<String, int> _epochs;
+
+  int modificationEpoch({
+    required String recipeKey,
+    required String accountId,
+    String? baselineVersionId,
+  }) {
+    final epochs = _modificationEpochs[_store] ??= <String, int>{};
+    final key = keyFor(
+      modificationKey(recipeKey, baselineVersionId),
+      accountId: accountId,
+    );
+    return epochs[key] ?? 0;
+  }
+
+  String modificationKey(String recipeKey, String? baselineVersionId) =>
+      'modification:$recipeKey:${baselineVersionId ?? 'generated'}';
+
+  RecipeDraft? readModification({
+    required String recipeKey,
+    required String accountId,
+    String? baselineVersionId,
+  }) => read(
+    recipeKey: modificationKey(recipeKey, baselineVersionId),
+    accountId: accountId,
+    baselineVersionId: baselineVersionId,
+  );
+
+  Future<void> saveModification({
+    required String recipeKey,
+    required String accountId,
+    required Map<String, dynamic> payload,
+    required int expectedEpoch,
+    String? baselineVersionId,
+  }) {
+    final key = modificationKey(recipeKey, baselineVersionId);
+    final encoded = jsonEncode(
+      RecipeDraft(
+        accountId: accountId,
+        recipeKey: key,
+        baselineVersionId: baselineVersionId,
+        payload: payload,
+      ).toJson(),
+    );
+    return _enqueue(() async {
+      if (!_canUseAccount(accountId) ||
+          expectedEpoch !=
+              modificationEpoch(
+                recipeKey: recipeKey,
+                accountId: accountId,
+                baselineVersionId: baselineVersionId,
+              )) {
+        return;
+      }
+      await _store.setString(keyFor(key, accountId: accountId), encoded);
+    });
+  }
+
+  Future<void> discardModification({
+    required String recipeKey,
+    required String accountId,
+    String? baselineVersionId,
+  }) {
+    final epochs = _modificationEpochs[_store] ??= <String, int>{};
+    final key = keyFor(
+      modificationKey(recipeKey, baselineVersionId),
+      accountId: accountId,
+    );
+    // Invalidate mounted writers immediately, not only after platform removal.
+    // Late checks or metadata callbacks must not recreate an abandoned draft.
+    epochs[key] = (epochs[key] ?? 0) + 1;
+    return discard(
+      modificationKey(recipeKey, baselineVersionId),
+      accountId: accountId,
+    );
+  }
 
   bool _canUseAccount(String owner) =>
       (_epochs[owner] ?? 0) == (_coordinator.epochs[owner] ?? 0);
@@ -173,6 +250,52 @@ class RecipeDraftStore {
     );
     if (latest?.baselineVersionId == baseline) {
       await _store.remove(keyFor(recipeKey, accountId: accountId));
+    }
+  });
+
+  /// A completed save may outlive its editor. Remove only that editor's form
+  /// receipt, never a newer draft written while its cleanup was pending.
+  Future<void> discardMatching(RecipeDraft? expected) {
+    if (expected == null) return Future<void>.value();
+    return _enqueue(() async {
+      final current = read(
+        recipeKey: expected.recipeKey,
+        accountId: expected.accountId,
+        baselineVersionId: expected.baselineVersionId,
+      );
+      if (current == null ||
+          jsonEncode(current.toJson()) != jsonEncode(expected.toJson())) {
+        return;
+      }
+      await _store.remove(
+        keyFor(
+          expected.recipeKey,
+          accountId: expected.accountId,
+          baselineVersionId: expected.baselineVersionId,
+        ),
+      );
+      final latest = readLatest(
+        recipeKey: expected.recipeKey,
+        accountId: expected.accountId,
+      );
+      if (latest != null &&
+          jsonEncode(latest.toJson()) == jsonEncode(expected.toJson())) {
+        await _store.remove(
+          keyFor(expected.recipeKey, accountId: expected.accountId),
+        );
+      }
+    });
+  }
+
+  Future<void> discardGeneratedResult(
+    String requestId, {
+    required String accountId,
+  }) => _enqueue(() async {
+    final draft = read(recipeKey: generatedResultKey, accountId: accountId);
+    final result = draft?.payload['result'];
+    // An older editor must not remove a newer generation's reopen target.
+    if (result is Map && result['request_id'] == requestId) {
+      await _store.remove(keyFor(generatedResultKey, accountId: accountId));
     }
   });
 

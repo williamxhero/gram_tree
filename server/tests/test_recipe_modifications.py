@@ -1,8 +1,12 @@
 """Natural-language edits at the owned HTTP boundary, using recorded answers only."""
 
 import copy
+import json
+import subprocess
+import sys
 import uuid
 from concurrent.futures import ThreadPoolExecutor
+from pathlib import Path
 from threading import Barrier
 
 import pytest
@@ -71,6 +75,110 @@ def propose(api, directory, headers, detail, *, operations=None, extra=None):
     )
     assert response.status_code == 200, response.text
     return response.json()
+
+
+def test_materialized_corpus_previews_a_recipe_saved_through_the_editor(modification_api):
+    api, directory = modification_api
+    root = Path(__file__).resolve().parents[2]
+    subprocess.run(
+        [sys.executable, str(root / "tool/ai_replay_corpus.py"), "--out", str(directory)],
+        check=True,
+    )
+    headers = bearer(api.login("text-editor-corpus@example.com"))
+    found = begin(api, headers)
+    generated = generate(api, headers, found["request_id"])
+    assert generated["error"] is None, generated
+    recipe = copy.deepcopy(generated["draft"]["recipe"])
+    # RecipeForm uses an empty difficulty and dart-dio omits null sources,
+    # but still sends functional=False. Exercise that public save payload.
+    recipe["snapshot"]["difficulty"] = ""
+    for ingredient in recipe["snapshot"]["ingredients"]:
+        ingredient["base_quantity"] = ingredient["quantity"]
+        ingredient["base_unit"] = "g"
+        ingredient["scaling_mode"] = "proportional"
+        ingredient["flavor_contribution"] = {}
+        for field in ("ingredient_id", "functional_source", "flavor_source"):
+            if ingredient.get(field) is None:
+                ingredient.pop(field, None)
+    created = api.client.post("/v1/recipes", headers=headers, json=recipe)
+    assert created.status_code == 201, created.text
+    detail = created.json()
+    assert all(
+        ingredient["functional_source"]["source"] == "author_filled"
+        for ingredient in detail["version"]["snapshot"]["ingredients"]
+    )
+    corpus = json.loads(
+        (root / "server/tests/fixtures/ai/modification_corpus.json").read_text("utf-8")
+    )
+    response = api.client.post(
+        "/v1/ai/recipes/modifications",
+        headers=headers,
+        json={
+            "text": corpus["text"],
+            "recipe_id": detail["id"],
+            "base_version_id": detail["version"]["id"],
+        },
+    )
+    assert response.status_code == 200, response.text
+    preview = response.json()
+    assert preview["error"] is None, preview
+    assert [item["operation_id"] for item in preview["operations"]] == [
+        "clarify-cook",
+        "explain-cook",
+        "remind-cook",
+    ]
+    assert preview["snapshot"] == detail["version"]["snapshot"]
+
+
+def test_materialized_method_corpus_previews_a_recipe_saved_through_the_editor(modification_api):
+    api, directory = modification_api
+    root = Path(__file__).resolve().parents[2]
+    subprocess.run(
+        [sys.executable, str(root / "tool/ai_replay_corpus.py"), "--out", str(directory)],
+        check=True,
+    )
+    headers = bearer(api.login("method-editor-corpus@example.com"))
+    found_response = api.client.post(
+        "/v1/ai/recipes/requests",
+        headers=headers,
+        json={"text": "合成测试：做一道先腌肉再炒的宫保鸡丁"},
+    )
+    assert found_response.status_code == 200, found_response.text
+    generated = generate(api, headers, found_response.json()["request_id"])
+    assert generated["error"] is None, generated
+    recipe = copy.deepcopy(generated["draft"]["recipe"])
+    recipe["snapshot"]["difficulty"] = ""
+    for ingredient in recipe["snapshot"]["ingredients"]:
+        ingredient["flavor_contribution"] = {}
+        for field in ("ingredient_id", "functional_source", "flavor_source"):
+            if ingredient.get(field) is None:
+                ingredient.pop(field, None)
+    created_response = api.client.post("/v1/recipes", headers=headers, json=recipe)
+    assert created_response.status_code == 201, created_response.text
+    created = created_response.json()
+    assert all(
+        ingredient["functional_source"]["source"] == "author_filled"
+        for ingredient in created["version"]["snapshot"]["ingredients"]
+    )
+    corpus = json.loads(
+        (root / "server/tests/fixtures/ai/method_modification_corpus.json").read_text("utf-8")
+    )
+    response = api.client.post(
+        "/v1/ai/recipes/modifications",
+        headers=headers,
+        json={
+            "text": corpus["difficulty"]["text"],
+            "recipe_id": created["id"],
+            "base_version_id": created["version"]["id"],
+        },
+    )
+    assert response.status_code == 200, response.text
+    preview = response.json()
+    assert preview["error"] is None, preview
+    assert preview["snapshot"] == created["version"]["snapshot"]
+    assert [operation["operation_id"] for operation in preview["operations"]] == [
+        change["operation_id"] for change in corpus["difficulty"]["changes"]
+    ]
 
 
 def test_text_preview_confirm_keeps_old_version_and_operation_intent(modification_api):
@@ -541,6 +649,59 @@ def test_generated_modification_uses_first_save_and_preserves_text_sources(
     assert regular_retry.status_code == 201 and regular_retry.json()["id"] == saved.json()["id"]
 
 
+def test_generated_accepted_servings_preserves_ai_source_on_first_save(modification_api):
+    api, directory = modification_api
+    headers = bearer(api.login("method-generation-servings@example.com"))
+    request_id, draft = unsaved_generation(api, directory, headers)
+    snapshot = draft["snapshot"]
+    text = "调整做法为四人份"
+    intent = {"category": "method", "parameters": {}, "confidence": 0.95}
+    op = operation(
+        snapshot,
+        operation_id="servings",
+        type="change_recipe_info",
+        id=None,
+        field="servings",
+        before=snapshot["servings"],
+        after=4,
+        scope=["recipe"],
+        intent="调整份数",
+        reason="按本次选定的份数调整",
+    )
+    recording(directory, "modify_intent", {"text": text}, intent)
+    recording(
+        directory,
+        "modify",
+        {"text": text, "snapshot": snapshot, "intent": intent},
+        {"operations": [op]},
+    )
+    response = api.client.post(
+        "/v1/ai/recipes/modifications",
+        headers=headers,
+        json={"text": text, "generation_request_id": request_id},
+    )
+    assert response.status_code == 200, response.text
+    proposal = response.json()
+    assert proposal["error"] is None, proposal
+    selected = choice(api, headers, proposal, [{"operation_id": "servings", "decision": "accept"}])
+    assert selected["snapshot"]["servings"] == 4
+    selected_source = selected["snapshot"]["servings_source"]
+    assert selected_source["source"] == "ai_estimated"
+    assert selected_source["basis"] == op["reason"]
+    saved = api.client.post(
+        f"/v1/ai/recipes/modifications/{proposal['id']}/confirm",
+        headers=headers,
+        json={"revision": selected["revision"]},
+    )
+    assert saved.status_code == 201, saved.text
+    version = saved.json()["version"]
+    assert version["version_number"] == 1
+    assert version["ai_assisted"] is True
+    assert version["snapshot"]["servings"] == 4
+    assert version["snapshot"]["servings_source"] == selected_source
+    assert [edit["operation_id"] for edit in version["edit_operations"]] == ["servings"]
+
+
 @pytest.mark.parametrize("decision", ["reject", "modify"])
 def test_no_actual_existing_edit_does_not_create_version(modification_api, decision):
     api, directory = modification_api
@@ -664,7 +825,13 @@ def test_ownership_stale_base_and_conflicting_receipt_are_guarded(modification_a
 @pytest.mark.parametrize(
     "category,confidence,error",
     [
-        (c, 0.95, "unsupported_intent")
+        (
+            c,
+            0.95,
+            "model_unavailable"
+            if c in ("cookware", "time_difficulty", "method")
+            else "unsupported_intent",
+        )
         for c in ["taste", "cookware", "substitution", "time_difficulty", "method"]
     ]
     + [("unknown", 0.95, "uncertain_intent"), ("text", 0.4, "uncertain_intent")],
@@ -692,9 +859,11 @@ def test_unsupported_or_uncertain_intent_is_explicit(modification_api, category,
     assert response.json()["error"] == error and response.json()["operations"] == []
     assert response.json()["snapshot"] == created["version"]["snapshot"]
     user_id = api.client.get("/v1/me", headers=headers).json()["id"]
-    assert [c["capability"] for c in cli("ai", "audit", "--user", user_id)["calls"]] == [
-        "modify_intent"
-    ]
+    assert [c["capability"] for c in cli("ai", "audit", "--user", user_id)["calls"]] == (
+        ["modify_intent", "modify"]
+        if category in ("cookware", "time_difficulty", "method")
+        else ["modify_intent"]
+    )
 
 
 def test_selected_health_claim_blocks_confirm_and_modified_text_rechecks(modification_api):

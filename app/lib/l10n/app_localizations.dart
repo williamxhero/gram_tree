@@ -94,6 +94,294 @@ abstract class AppLocalizations {
   /// A list of this localizations delegate's supported locales.
   static const List<Locale> supportedLocales = <Locale>[Locale('zh')];
 
+  /// No description provided for @familyTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'家庭成员'**
+  String get familyTitle;
+
+  /// No description provided for @familyIntro.
+  ///
+  /// In zh, this message translates to:
+  /// **'只记必要的称呼、年龄段和简单偏好；不创建家庭账号，不推断过敏。'**
+  String get familyIntro;
+
+  /// No description provided for @familyEmpty.
+  ///
+  /// In zh, this message translates to:
+  /// **'还没有家庭成员'**
+  String get familyEmpty;
+
+  /// No description provided for @familyHidden.
+  ///
+  /// In zh, this message translates to:
+  /// **'家庭成员信息已从内存清除'**
+  String get familyHidden;
+
+  /// No description provided for @familyUnavailable.
+  ///
+  /// In zh, this message translates to:
+  /// **'家庭信息暂不可用；仍可在设置撤回同意'**
+  String get familyUnavailable;
+
+  /// No description provided for @familySaveUnconfirmed.
+  ///
+  /// In zh, this message translates to:
+  /// **'保存尚未确认，请联网后重试'**
+  String get familySaveUnconfirmed;
+
+  /// No description provided for @familyCreateUnconfirmed.
+  ///
+  /// In zh, this message translates to:
+  /// **'创建尚未确认；请关闭并重新打开家庭成员列表，确认是否已创建后再操作。'**
+  String get familyCreateUnconfirmed;
+
+  /// No description provided for @familyDeleteUnconfirmed.
+  ///
+  /// In zh, this message translates to:
+  /// **'删除尚未确认，信息已从本机内存清除；请重试'**
+  String get familyDeleteUnconfirmed;
+
+  /// No description provided for @familyDeleteRetry.
+  ///
+  /// In zh, this message translates to:
+  /// **'重试删除'**
+  String get familyDeleteRetry;
+
+  /// No description provided for @familyAdd.
+  ///
+  /// In zh, this message translates to:
+  /// **'添加家庭成员'**
+  String get familyAdd;
+
+  /// No description provided for @familyConsentTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'家庭成员信息单独同意'**
+  String get familyConsentTitle;
+
+  /// No description provided for @familyConsentBody.
+  ///
+  /// In zh, this message translates to:
+  /// **'只收集家人的称呼、年龄段、与标准不同的简单口味、忌口和你手动选择的过敏，用于保存和查看本账号内的必要做菜信息。不收集真实姓名、生日或照片，不建立可登录或共享的家庭账号。涉及不满十四周岁儿童时，请由监护人确认同意并仅填写必要信息。当前资料和可识别修改历史加密保存、仅本人可见，不进入公开内容、持久缓存或模型日志。删除成员会删除其资料、可识别历史和关联；在设置的隐私入口撤回敏感同意，会删除所有家庭成员及本人过敏，账号注销也会删除。拒绝不影响普通口味。本同意不代表同意外部 AI 或第三方共享。'**
+  String get familyConsentBody;
+
+  /// No description provided for @familyRefuse.
+  ///
+  /// In zh, this message translates to:
+  /// **'暂不填写'**
+  String get familyRefuse;
+
+  /// No description provided for @familyAgree.
+  ///
+  /// In zh, this message translates to:
+  /// **'单独同意并继续'**
+  String get familyAgree;
+
+  /// No description provided for @familyEditorTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'家庭成员简化档案'**
+  String get familyEditorTitle;
+
+  /// No description provided for @familyDetailTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'家庭成员档案'**
+  String get familyDetailTitle;
+
+  /// No description provided for @familyNickname.
+  ///
+  /// In zh, this message translates to:
+  /// **'称呼（不是真实姓名）'**
+  String get familyNickname;
+
+  /// No description provided for @familyNicknameRequired.
+  ///
+  /// In zh, this message translates to:
+  /// **'请填写称呼和年龄段'**
+  String get familyNicknameRequired;
+
+  /// No description provided for @familyAgeBand.
+  ///
+  /// In zh, this message translates to:
+  /// **'年龄段'**
+  String get familyAgeBand;
+
+  /// No description provided for @familyAgeUnder1.
+  ///
+  /// In zh, this message translates to:
+  /// **'1 岁以下'**
+  String get familyAgeUnder1;
+
+  /// No description provided for @familyAge1To3.
+  ///
+  /// In zh, this message translates to:
+  /// **'1～3 岁'**
+  String get familyAge1To3;
+
+  /// No description provided for @familyAge3To6.
+  ///
+  /// In zh, this message translates to:
+  /// **'3～6 岁'**
+  String get familyAge3To6;
+
+  /// No description provided for @familyAge6To12.
+  ///
+  /// In zh, this message translates to:
+  /// **'6～12 岁'**
+  String get familyAge6To12;
+
+  /// No description provided for @familyAge12To18.
+  ///
+  /// In zh, this message translates to:
+  /// **'12～18 岁'**
+  String get familyAge12To18;
+
+  /// No description provided for @familyAgeAdult.
+  ///
+  /// In zh, this message translates to:
+  /// **'成人'**
+  String get familyAgeAdult;
+
+  /// No description provided for @familyAgeElder.
+  ///
+  /// In zh, this message translates to:
+  /// **'老人'**
+  String get familyAgeElder;
+
+  /// No description provided for @familyFlavors.
+  ///
+  /// In zh, this message translates to:
+  /// **'只填写与标准不同的口味'**
+  String get familyFlavors;
+
+  /// No description provided for @familyNoChili.
+  ///
+  /// In zh, this message translates to:
+  /// **'不吃辣'**
+  String get familyNoChili;
+
+  /// No description provided for @familyStandard.
+  ///
+  /// In zh, this message translates to:
+  /// **'标准（不单独记录）'**
+  String get familyStandard;
+
+  /// No description provided for @familySavedCoefficient.
+  ///
+  /// In zh, this message translates to:
+  /// **'已保存系数'**
+  String get familySavedCoefficient;
+
+  /// No description provided for @familyAvoidances.
+  ///
+  /// In zh, this message translates to:
+  /// **'忌口'**
+  String get familyAvoidances;
+
+  /// No description provided for @familyAvoidanceAdd.
+  ///
+  /// In zh, this message translates to:
+  /// **'添加忌口食材或分类'**
+  String get familyAvoidanceAdd;
+
+  /// No description provided for @familyAllergies.
+  ///
+  /// In zh, this message translates to:
+  /// **'手动过敏（不会自动推断）'**
+  String get familyAllergies;
+
+  /// No description provided for @familyAllergyAdd.
+  ///
+  /// In zh, this message translates to:
+  /// **'添加具体过敏食材'**
+  String get familyAllergyAdd;
+
+  /// No description provided for @familyUnset.
+  ///
+  /// In zh, this message translates to:
+  /// **'未填写'**
+  String get familyUnset;
+
+  /// No description provided for @familyView.
+  ///
+  /// In zh, this message translates to:
+  /// **'查看'**
+  String get familyView;
+
+  /// No description provided for @familyEdit.
+  ///
+  /// In zh, this message translates to:
+  /// **'修改'**
+  String get familyEdit;
+
+  /// No description provided for @familyDelete.
+  ///
+  /// In zh, this message translates to:
+  /// **'删除成员'**
+  String get familyDelete;
+
+  /// No description provided for @familyDeleteTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'删除这位家庭成员？'**
+  String get familyDeleteTitle;
+
+  /// No description provided for @familyDeleteBody.
+  ///
+  /// In zh, this message translates to:
+  /// **'删除其全部资料、可识别修改历史和关联引用。其他成员和普通口味不受影响。'**
+  String get familyDeleteBody;
+
+  /// No description provided for @familyHistory.
+  ///
+  /// In zh, this message translates to:
+  /// **'家庭成员私密修改历史'**
+  String get familyHistory;
+
+  /// No description provided for @familyHistoryEmpty.
+  ///
+  /// In zh, this message translates to:
+  /// **'没有家庭成员私密修改历史'**
+  String get familyHistoryEmpty;
+
+  /// No description provided for @familyHistoryUnavailable.
+  ///
+  /// In zh, this message translates to:
+  /// **'私密历史暂不可用'**
+  String get familyHistoryUnavailable;
+
+  /// No description provided for @familyManual.
+  ///
+  /// In zh, this message translates to:
+  /// **'家庭成员手动填写'**
+  String get familyManual;
+
+  /// No description provided for @familyDeletedReceipt.
+  ///
+  /// In zh, this message translates to:
+  /// **'家庭成员已删除（不保留身份）'**
+  String get familyDeletedReceipt;
+
+  /// No description provided for @familyWhy.
+  ///
+  /// In zh, this message translates to:
+  /// **'为什么'**
+  String get familyWhy;
+
+  /// No description provided for @familyClose.
+  ///
+  /// In zh, this message translates to:
+  /// **'关闭'**
+  String get familyClose;
+
+  /// No description provided for @familyRemove.
+  ///
+  /// In zh, this message translates to:
+  /// **'移除'**
+  String get familyRemove;
+
   /// No description provided for @networkConsentRequired.
   ///
   /// In zh, this message translates to:
@@ -267,6 +555,12 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'权限或内容校验未通过；已保留内容，请检查权限或修改内容后另存，不会盲目重试。'**
   String get syncPermissionReason;
+
+  /// No description provided for @syncRecipeValidationReason.
+  String get syncRecipeValidationReason;
+
+  /// No description provided for @syncRecipePolicyReason.
+  String get syncRecipePolicyReason;
 
   /// No description provided for @syncExhaustedReason.
   ///
@@ -579,6 +873,474 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'味谱'**
   String get appTitle;
+
+  /// No description provided for @measureInputAction.
+  ///
+  /// In zh, this message translates to:
+  /// **'用自家量具录入'**
+  String get measureInputAction;
+
+  /// No description provided for @measureInputTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'量具用量换算'**
+  String get measureInputTitle;
+
+  /// No description provided for @measureInputTool.
+  ///
+  /// In zh, this message translates to:
+  /// **'自家量具'**
+  String get measureInputTool;
+
+  /// No description provided for @measureInputCount.
+  ///
+  /// In zh, this message translates to:
+  /// **'几勺、几碗或几杯'**
+  String get measureInputCount;
+
+  /// No description provided for @measureInputBaseUnit.
+  ///
+  /// In zh, this message translates to:
+  /// **'采用的基础单位'**
+  String get measureInputBaseUnit;
+
+  /// No description provided for @measureInputPreview.
+  ///
+  /// In zh, this message translates to:
+  /// **'查看换算'**
+  String get measureInputPreview;
+
+  /// No description provided for @measureInputConfirm.
+  ///
+  /// In zh, this message translates to:
+  /// **'确认采用基础量'**
+  String get measureInputConfirm;
+
+  /// No description provided for @measureInputEstimate.
+  ///
+  /// In zh, this message translates to:
+  /// **'我了解这是估算，继续换算'**
+  String get measureInputEstimate;
+
+  /// No description provided for @measureInputFallback.
+  ///
+  /// In zh, this message translates to:
+  /// **'返回填写基础量'**
+  String get measureInputFallback;
+
+  /// No description provided for @measureInputNoTools.
+  ///
+  /// In zh, this message translates to:
+  /// **'还没有登记量具，请先在个人中心登记，或直接填写克、毫升。'**
+  String get measureInputNoTools;
+
+  /// No description provided for @measureInputOffline.
+  ///
+  /// In zh, this message translates to:
+  /// **'离线或缺少转换数据，不能可靠换算；请返回填写基础量。草稿不会改变。'**
+  String get measureInputOffline;
+
+  /// No description provided for @measureInputInvalid.
+  ///
+  /// In zh, this message translates to:
+  /// **'请输入有限、非负且不超过 10000000 的数量。'**
+  String get measureInputInvalid;
+
+  /// No description provided for @measureInputUnchanged.
+  ///
+  /// In zh, this message translates to:
+  /// **'尚未确认，当前食材用量不会改变。'**
+  String get measureInputUnchanged;
+
+  /// No description provided for @measureInputEvidence.
+  ///
+  /// In zh, this message translates to:
+  /// **'量具输入依据'**
+  String get measureInputEvidence;
+
+  /// No description provided for @recipeFlavorUnknown.
+  ///
+  /// In zh, this message translates to:
+  /// **'味型贡献未填写'**
+  String get recipeFlavorUnknown;
+
+  /// No description provided for @recipeFlavorFunctionalOff.
+  ///
+  /// In zh, this message translates to:
+  /// **'不作功能性用料'**
+  String get recipeFlavorFunctionalOff;
+
+  /// No description provided for @recipeFlavorAuthorBasis.
+  ///
+  /// In zh, this message translates to:
+  /// **'作者按这道菜的实际作用填写'**
+  String get recipeFlavorAuthorBasis;
+
+  /// No description provided for @recipeFlavorEditorTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'这道菜的味型贡献'**
+  String get recipeFlavorEditorTitle;
+
+  /// No description provided for @recipeFlavorEditorHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'强度 0–3；未填写不代表零贡献'**
+  String get recipeFlavorEditorHint;
+
+  /// No description provided for @recipeFlavorAxisLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'{axis}味贡献'**
+  String recipeFlavorAxisLabel(Object axis);
+
+  /// No description provided for @recipeFlavorAxisUnknown.
+  ///
+  /// In zh, this message translates to:
+  /// **'{axis} 未填写'**
+  String recipeFlavorAxisUnknown(Object axis);
+
+  /// No description provided for @recipeFlavorStrength.
+  ///
+  /// In zh, this message translates to:
+  /// **'{axis} {strength}'**
+  String recipeFlavorStrength(String axis, int strength);
+
+  /// No description provided for @recipeFlavorSalty.
+  ///
+  /// In zh, this message translates to:
+  /// **'咸'**
+  String get recipeFlavorSalty;
+
+  /// No description provided for @recipeFlavorSweet.
+  ///
+  /// In zh, this message translates to:
+  /// **'甜'**
+  String get recipeFlavorSweet;
+
+  /// No description provided for @recipeFlavorSour.
+  ///
+  /// In zh, this message translates to:
+  /// **'酸'**
+  String get recipeFlavorSour;
+
+  /// No description provided for @recipeFlavorSpicy.
+  ///
+  /// In zh, this message translates to:
+  /// **'辣'**
+  String get recipeFlavorSpicy;
+
+  /// No description provided for @recipeFlavorUmami.
+  ///
+  /// In zh, this message translates to:
+  /// **'鲜'**
+  String get recipeFlavorUmami;
+
+  /// No description provided for @recipeFlavorNumbing.
+  ///
+  /// In zh, this message translates to:
+  /// **'麻'**
+  String get recipeFlavorNumbing;
+
+  /// No description provided for @recipeFlavorOily.
+  ///
+  /// In zh, this message translates to:
+  /// **'油'**
+  String get recipeFlavorOily;
+
+  /// No description provided for @recipeComparisonTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'食材版本对比'**
+  String get recipeComparisonTitle;
+
+  /// No description provided for @recipeComparisonError.
+  ///
+  /// In zh, this message translates to:
+  /// **'无法比较这些版本，请确认两版仍可查看'**
+  String get recipeComparisonError;
+
+  /// No description provided for @recipeComparisonFrom.
+  ///
+  /// In zh, this message translates to:
+  /// **'从 A'**
+  String get recipeComparisonFrom;
+
+  /// No description provided for @recipeComparisonTo.
+  ///
+  /// In zh, this message translates to:
+  /// **'到 B'**
+  String get recipeComparisonTo;
+
+  /// No description provided for @recipeComparisonScope.
+  ///
+  /// In zh, this message translates to:
+  /// **'仅比较食材，尚未比较步骤'**
+  String get recipeComparisonScope;
+
+  /// No description provided for @recipeComparisonServings.
+  ///
+  /// In zh, this message translates to:
+  /// **'已按 {servings} 人份对比'**
+  String recipeComparisonServings(int servings);
+
+  /// No description provided for @recipeComparisonServingValue.
+  ///
+  /// In zh, this message translates to:
+  /// **'{servings} 人份'**
+  String recipeComparisonServingValue(int servings);
+
+  /// No description provided for @recipeComparisonServingBasis.
+  ///
+  /// In zh, this message translates to:
+  /// **'B 的基础量按线性、固定或阶梯规则归一到 A 的份数；原版本未修改。'**
+  String get recipeComparisonServingBasis;
+
+  /// No description provided for @recipeComparisonShowAll.
+  ///
+  /// In zh, this message translates to:
+  /// **'展开全部食材'**
+  String get recipeComparisonShowAll;
+
+  /// No description provided for @recipeComparisonEmpty.
+  ///
+  /// In zh, this message translates to:
+  /// **'没有食材配方变化'**
+  String get recipeComparisonEmpty;
+
+  /// No description provided for @recipeComparisonSnapshotFields.
+  ///
+  /// In zh, this message translates to:
+  /// **'菜谱字段变化'**
+  String get recipeComparisonSnapshotFields;
+
+  /// No description provided for @recipeComparisonVersion.
+  ///
+  /// In zh, this message translates to:
+  /// **'{author} · 第 {version} 版 · {servings} 人份'**
+  String recipeComparisonVersion(String author, int version, int servings);
+
+  /// No description provided for @recipeComparisonDetails.
+  ///
+  /// In zh, this message translates to:
+  /// **'查看版本详情'**
+  String get recipeComparisonDetails;
+
+  /// No description provided for @recipeComparisonUnchangedBasis.
+  ///
+  /// In zh, this message translates to:
+  /// **'基础量按相同份数比较，食材与执行字段均未改变'**
+  String get recipeComparisonUnchangedBasis;
+
+  /// No description provided for @recipeComparisonUnchanged.
+  ///
+  /// In zh, this message translates to:
+  /// **'无食材变化'**
+  String get recipeComparisonUnchanged;
+
+  /// No description provided for @recipeComparisonBefore.
+  ///
+  /// In zh, this message translates to:
+  /// **'A：{value}'**
+  String recipeComparisonBefore(Object value);
+
+  /// No description provided for @recipeComparisonAfter.
+  ///
+  /// In zh, this message translates to:
+  /// **'B：{value}'**
+  String recipeComparisonAfter(Object value);
+
+  /// No description provided for @recipeComparisonIngredientDetails.
+  ///
+  /// In zh, this message translates to:
+  /// **'食材明细'**
+  String get recipeComparisonIngredientDetails;
+
+  /// No description provided for @recipeComparisonNone.
+  ///
+  /// In zh, this message translates to:
+  /// **'无'**
+  String get recipeComparisonNone;
+
+  /// No description provided for @recipeComparisonYes.
+  ///
+  /// In zh, this message translates to:
+  /// **'是'**
+  String get recipeComparisonYes;
+
+  /// No description provided for @recipeComparisonNo.
+  ///
+  /// In zh, this message translates to:
+  /// **'否'**
+  String get recipeComparisonNo;
+
+  /// No description provided for @recipeComparisonAdded.
+  ///
+  /// In zh, this message translates to:
+  /// **'新增'**
+  String get recipeComparisonAdded;
+
+  /// No description provided for @recipeComparisonRemoved.
+  ///
+  /// In zh, this message translates to:
+  /// **'删除'**
+  String get recipeComparisonRemoved;
+
+  /// No description provided for @recipeComparisonReplacement.
+  ///
+  /// In zh, this message translates to:
+  /// **'替换'**
+  String get recipeComparisonReplacement;
+
+  /// No description provided for @recipeComparisonQuantity.
+  ///
+  /// In zh, this message translates to:
+  /// **'用量变化'**
+  String get recipeComparisonQuantity;
+
+  /// No description provided for @recipeComparisonUnit.
+  ///
+  /// In zh, this message translates to:
+  /// **'单位不同'**
+  String get recipeComparisonUnit;
+
+  /// No description provided for @recipeComparisonField.
+  ///
+  /// In zh, this message translates to:
+  /// **'执行字段变化'**
+  String get recipeComparisonField;
+
+  /// No description provided for @recipeComparisonText.
+  ///
+  /// In zh, this message translates to:
+  /// **'文字修改'**
+  String get recipeComparisonText;
+
+  /// No description provided for @recipeComparisonBaseQuantity.
+  ///
+  /// In zh, this message translates to:
+  /// **'基础量'**
+  String get recipeComparisonBaseQuantity;
+
+  /// No description provided for @recipeComparisonBaseUnit.
+  ///
+  /// In zh, this message translates to:
+  /// **'基础单位'**
+  String get recipeComparisonBaseUnit;
+
+  /// No description provided for @recipeComparisonDisplayName.
+  ///
+  /// In zh, this message translates to:
+  /// **'显示名'**
+  String get recipeComparisonDisplayName;
+
+  /// No description provided for @recipeComparisonPreparation.
+  ///
+  /// In zh, this message translates to:
+  /// **'处理方式'**
+  String get recipeComparisonPreparation;
+
+  /// No description provided for @recipeComparisonOptional.
+  ///
+  /// In zh, this message translates to:
+  /// **'可选性'**
+  String get recipeComparisonOptional;
+
+  /// No description provided for @recipeComparisonFlavor.
+  ///
+  /// In zh, this message translates to:
+  /// **'味型贡献'**
+  String get recipeComparisonFlavor;
+
+  /// No description provided for @recipeComparisonTags.
+  ///
+  /// In zh, this message translates to:
+  /// **'标签'**
+  String get recipeComparisonTags;
+
+  /// No description provided for @recipeDescription.
+  ///
+  /// In zh, this message translates to:
+  /// **'描述'**
+  String get recipeDescription;
+
+  /// No description provided for @recipeBaseMold.
+  ///
+  /// In zh, this message translates to:
+  /// **'基准模具'**
+  String get recipeBaseMold;
+
+  /// No description provided for @recipeCuisine.
+  ///
+  /// In zh, this message translates to:
+  /// **'菜系'**
+  String get recipeCuisine;
+
+  /// No description provided for @recipeDesignRationale.
+  ///
+  /// In zh, this message translates to:
+  /// **'设计理由'**
+  String get recipeDesignRationale;
+
+  /// No description provided for @whyTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'为什么'**
+  String get whyTitle;
+
+  /// No description provided for @recipeComparisonTotalTime.
+  ///
+  /// In zh, this message translates to:
+  /// **'总时长'**
+  String get recipeComparisonTotalTime;
+
+  /// No description provided for @recipeComparisonActiveTime.
+  ///
+  /// In zh, this message translates to:
+  /// **'需守着的时长'**
+  String get recipeComparisonActiveTime;
+
+  /// No description provided for @recipeComparisonDetailField.
+  ///
+  /// In zh, this message translates to:
+  /// **'{label}：{value}'**
+  String recipeComparisonDetailField(Object label, Object value);
+
+  /// No description provided for @recipeComparisonCancelSelection.
+  ///
+  /// In zh, this message translates to:
+  /// **'取消选择'**
+  String get recipeComparisonCancelSelection;
+
+  /// No description provided for @recipeComparisonSelect.
+  ///
+  /// In zh, this message translates to:
+  /// **'选两版对比'**
+  String get recipeComparisonSelect;
+
+  /// No description provided for @recipeComparisonSelectionHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'先选 A，再选 B；方向为 A 到 B，仅比较食材'**
+  String get recipeComparisonSelectionHint;
+
+  /// No description provided for @recipeComparisonAction.
+  ///
+  /// In zh, this message translates to:
+  /// **'比较食材'**
+  String get recipeComparisonAction;
+
+  /// No description provided for @recipeComparisonPrevious.
+  ///
+  /// In zh, this message translates to:
+  /// **'和上一版比食材'**
+  String get recipeComparisonPrevious;
+
+  /// No description provided for @recipeComparisonCandidate.
+  ///
+  /// In zh, this message translates to:
+  /// **'{author} · 菜谱 {recipe} · 第 {version} 版'**
+  String recipeComparisonCandidate(String author, String recipe, int version);
 
   /// No description provided for @tabToday.
   ///
@@ -1359,6 +2121,144 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'这次改了什么'**
   String get recipeChangeNote;
+
+  /// No description provided for @changeExplanationTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'改动说明'**
+  String get changeExplanationTitle;
+
+  /// No description provided for @changeExplanationChanged.
+  ///
+  /// In zh, this message translates to:
+  /// **'改动已变化，请重新生成说明或手写。'**
+  String get changeExplanationChanged;
+
+  /// No description provided for @changeExplanationModelUnavailable.
+  ///
+  /// In zh, this message translates to:
+  /// **'模型暂不可用，可手写说明和标签。'**
+  String get changeExplanationModelUnavailable;
+
+  /// No description provided for @changeExplanationDailyQuota.
+  ///
+  /// In zh, this message translates to:
+  /// **'今日 AI 额度已用完，可手写说明和标签。'**
+  String get changeExplanationDailyQuota;
+
+  /// No description provided for @changeExplanationMonthlyBudget.
+  ///
+  /// In zh, this message translates to:
+  /// **'AI 预算暂不可用，可手写说明和标签。'**
+  String get changeExplanationMonthlyBudget;
+
+  /// No description provided for @changeExplanationNoChanges.
+  ///
+  /// In zh, this message translates to:
+  /// **'本次没有可说明的实际改动，可手写说明和标签。'**
+  String get changeExplanationNoChanges;
+
+  /// No description provided for @changeExplanationFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'说明生成失败，请重试或手写说明和标签。'**
+  String get changeExplanationFailed;
+
+  /// No description provided for @changeExplanationBasis.
+  ///
+  /// In zh, this message translates to:
+  /// **'仅依据本次最终改动生成，不代表已做过验证。作者可以修改说明和标签。'**
+  String get changeExplanationBasis;
+
+  /// No description provided for @changeExplanationGenerating.
+  ///
+  /// In zh, this message translates to:
+  /// **'正在生成说明…'**
+  String get changeExplanationGenerating;
+
+  /// No description provided for @changeExplanationGenerate.
+  ///
+  /// In zh, this message translates to:
+  /// **'生成改动说明'**
+  String get changeExplanationGenerate;
+
+  /// No description provided for @changeExplanationHandwritten.
+  ///
+  /// In zh, this message translates to:
+  /// **'可手写说明和标签'**
+  String get changeExplanationHandwritten;
+
+  /// No description provided for @changeExplanationSaveAvailable.
+  ///
+  /// In zh, this message translates to:
+  /// **'{message} 手动保存不受影响。'**
+  String changeExplanationSaveAvailable(String message);
+
+  /// No description provided for @textEditDraftSaveFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'本机草稿保存失败，请保留当前页面并重试。'**
+  String get textEditDraftSaveFailed;
+
+  /// No description provided for @textEditDraftCleanupFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'本机草稿清理失败，已保留修改，请重试。'**
+  String get textEditDraftCleanupFailed;
+
+  /// No description provided for @textEditInvalidJsonNumber.
+  ///
+  /// In zh, this message translates to:
+  /// **'请输入有效的 JSON 数值。'**
+  String get textEditInvalidJsonNumber;
+
+  /// No description provided for @textEditInvalidJsonValue.
+  ///
+  /// In zh, this message translates to:
+  /// **'请输入与原值类型一致的有效 JSON（最多 4000 字符）。'**
+  String get textEditInvalidJsonValue;
+
+  /// No description provided for @textEditAfterJsonLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'修改后的 JSON 值'**
+  String get textEditAfterJsonLabel;
+
+  /// No description provided for @textEditTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'一句话修改菜谱'**
+  String get textEditTitle;
+
+  /// No description provided for @textEditSupportedChanges.
+  ///
+  /// In zh, this message translates to:
+  /// **'支持改文字、换厨具、调整时间或难度、调整做法；口味和缺料替代暂未支持。确认前不会保存。'**
+  String get textEditSupportedChanges;
+
+  /// No description provided for @textEditRequestLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'想怎样修改菜谱？'**
+  String get textEditRequestLabel;
+
+  /// No description provided for @textEditPreview.
+  ///
+  /// In zh, this message translates to:
+  /// **'预览菜谱修改'**
+  String get textEditPreview;
+
+  /// No description provided for @textEditRetrySaveCleanup.
+  ///
+  /// In zh, this message translates to:
+  /// **'重试保存与本机清理'**
+  String get textEditRetrySaveCleanup;
+
+  /// No description provided for @textEditUnsupportedIntent.
+  ///
+  /// In zh, this message translates to:
+  /// **'这类修改暂未支持，不会应用。支持改文字、换厨具、调整时间或难度、调整做法；口味和缺料替代请手动编辑。'**
+  String get textEditUnsupportedIntent;
 
   /// No description provided for @recipeSaveVersion.
   ///
@@ -2886,7 +3786,7 @@ abstract class AppLocalizations {
   /// No description provided for @personalMeasuresIntro.
   ///
   /// In zh, this message translates to:
-  /// **'把空量具放在厨房秤上归零，装满水后的克数就是容量（毫升）。只影响显示，不会修改菜谱。'**
+  /// **'把空量具放在厨房秤上归零，装满水后的克数就是容量（毫升）。可用于显示或确认录入；重新校准不会修改已保存菜谱。'**
   String get personalMeasuresIntro;
 
   /// No description provided for @personalMeasuresOffline.
@@ -3388,7 +4288,7 @@ abstract class AppLocalizations {
   /// No description provided for @allergyConsentBody.
   ///
   /// In zh, this message translates to:
-  /// **'只收集你手动选择的八类过敏原和标准食材，用于保存本人过敏设置及修改历史。当前值和历史加密保存，仅本人可见，不从行为或模型推断。可在设置的隐私入口撤回，删除当前值、私密历史及关联副本；重新同意从空状态开始。拒绝不影响普通口味，不代表同意外部 AI 共享。'**
+  /// **'只收集你手动选择的八类过敏原和标准食材，用于保存本人过敏设置及修改历史。当前值和历史加密保存，仅本人可见，不从行为或模型推断。可在设置的隐私入口撤回这项敏感同意，删除本人过敏、所有家庭成员、可识别私密历史及关联副本；重新同意从空状态开始。家庭成员首次添加时另行说明必要收集和儿童保护。拒绝不影响普通口味，不代表同意外部 AI 共享。'**
   String get allergyConsentBody;
 
   /// No description provided for @allergyRefuse.
@@ -3502,7 +4402,7 @@ abstract class AppLocalizations {
   /// No description provided for @allergyWithdrawDetail.
   ///
   /// In zh, this message translates to:
-  /// **'仅删除本人过敏和私密历史，不退出普通口味'**
+  /// **'删除本人过敏、所有家庭成员和私密历史，保留普通口味'**
   String get allergyWithdrawDetail;
 
   /// No description provided for @allergyWithdrawTitle.
@@ -3514,7 +4414,7 @@ abstract class AppLocalizations {
   /// No description provided for @allergyWithdrawBody.
   ///
   /// In zh, this message translates to:
-  /// **'删除本人过敏、私密修改历史及关联副本。普通口味、食材偏好和做菜约束保留；重新同意后从空状态开始。'**
+  /// **'删除本人过敏、所有家庭成员、可识别私密修改历史及关联副本。普通口味、食材偏好和做菜约束保留；重新同意后从空状态开始。'**
   String get allergyWithdrawBody;
 
   /// No description provided for @allergyWithdrawConfirm.
@@ -3532,7 +4432,7 @@ abstract class AppLocalizations {
   /// No description provided for @allergyWithdrawn.
   ///
   /// In zh, this message translates to:
-  /// **'敏感同意已撤回，过敏及私密历史已删除'**
+  /// **'敏感同意已撤回，过敏、家庭成员及私密历史已删除'**
   String get allergyWithdrawn;
 
   /// No description provided for @allergyWithdrawUnconfirmed.

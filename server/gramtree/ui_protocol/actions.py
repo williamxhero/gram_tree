@@ -14,6 +14,8 @@
 
 from __future__ import annotations
 
+import math
+import re
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from typing import Any, get_args
@@ -25,7 +27,18 @@ _SOURCE_TYPES: frozenset[str] = frozenset(get_args(SourceType))
 #: "打开页面"意图（`open_page`）能打开的页面名，和 App 端
 #: `app/lib/ui_protocol/registered_pages.dart` 的 `registeredPages` 保持一致——只有
 #: 这里登记过的名字算合法，其余一律不合法，包括任意网址。
-REGISTERED_PAGES: frozenset[str] = frozenset({"create"})
+REGISTERED_PAGES: frozenset[str] = frozenset({"create", "my_recipes", "personal_measures"})
+
+
+def _recipe_id(value: Any) -> bool:
+    return (
+        isinstance(value, str)
+        and re.fullmatch(
+            r"[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-4[0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}",
+            value,
+        )
+        is not None
+    )
 
 
 def _require_non_empty_string(params: Mapping[str, Any], key: str) -> bool:
@@ -35,7 +48,19 @@ def _require_non_empty_string(params: Mapping[str, Any], key: str) -> bool:
 
 def _validate_open_page(params: Mapping[str, Any]) -> bool:
     page = params.get("page")
-    return isinstance(page, str) and page in REGISTERED_PAGES
+    if "close_dialog" in params and not (
+        page == "personal_measures" and isinstance(params["close_dialog"], bool)
+    ):
+        return False
+    if isinstance(page, str) and page in REGISTERED_PAGES:
+        return True
+    if not _recipe_id(params.get("recipe_id")):
+        return False
+    if page == "recipe_version":
+        return _recipe_id(params.get("version_id"))
+    if page in {"ingredient_comparison", "full_comparison"}:
+        return _recipe_id(params.get("from_version_id")) and _recipe_id(params.get("to_version_id"))
+    return False
 
 
 def _validate_start_cooking(params: Mapping[str, Any]) -> bool:
@@ -59,16 +84,42 @@ def _validate_request_batch_advice(params: Mapping[str, Any]) -> bool:
 def _validate_call_operation(params: Mapping[str, Any]) -> bool:
     if not _require_non_empty_string(params, "operation"):
         return False
-    # Preserve legacy placeholders; only this concrete operation can execute in App.
-    if params["operation"] != "answer_recipe_question":
+    operation = params["operation"]
+    if operation == "answer_recipe_question":
+        question = params.get("question")
+        return (
+            _require_non_empty_string(params, "recipe_id")
+            and _require_non_empty_string(params, "recipe_version_id")
+            and isinstance(question, str)
+            and bool(question.strip())
+            and len(question) <= 1000
+        )
+    if operation not in ("preview_measure_input", "confirm_measure_input"):
+        # Keep legacy placeholder actions inert, like the App registry.
         return True
-    question = params.get("question")
+    value = params.get("input")
+    if not isinstance(value, dict):
+        return False
+    quantity = value.get("quantity" if operation == "preview_measure_input" else "base_quantity")
+    if not (
+        isinstance(quantity, (int, float))
+        and not isinstance(quantity, bool)
+        and math.isfinite(quantity)
+        and 0 <= quantity <= 10_000_000
+        and value.get("base_unit") in ("g", "ml")
+    ):
+        return False
+    if operation == "preview_measure_input":
+        return (
+            _recipe_id(value.get("measure_id"))
+            and (value.get("ingredient_id") is None or _recipe_id(value["ingredient_id"]))
+            and (value.get("accept_estimate") is None or isinstance(value["accept_estimate"], bool))
+        )
     return (
-        _require_non_empty_string(params, "recipe_id")
-        and _require_non_empty_string(params, "recipe_version_id")
-        and isinstance(question, str)
-        and bool(question.strip())
-        and len(question) <= 1000
+        value.get("status") == "ready"
+        and isinstance(value.get("original"), str)
+        and isinstance(value.get("basis"), str)
+        and _require_non_empty_string(value, "measure_input_token")
     )
 
 

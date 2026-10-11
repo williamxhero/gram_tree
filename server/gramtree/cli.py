@@ -227,6 +227,9 @@ def cmd_recipes(args: argparse.Namespace) -> int:
                 "event_id": str(event.id),
                 "recipe_version_id": event.content.get("recipe_version_id"),
                 "previous_version_id": event.content.get("previous_version_id"),
+                "base_version_id": event.content.get("base_version_id"),
+                "conclusion": event.content.get("conclusion"),
+                "rules_version": event.content.get("rules_version"),
                 "edit_operations": event.content.get("edit_operations", []),
                 "ai_assisted": event.content.get("ai_assisted", False),
             }
@@ -358,6 +361,7 @@ def cmd_ai(args: argparse.Namespace) -> int:
                             "input_tokens": c.input_tokens,
                             "output_tokens": c.output_tokens,
                             "cost": c.cost,
+                            "reserved_cost": c.reserved_cost,
                             "duration_ms": c.duration_ms,
                             "status": c.status,
                             "error_code": c.error_code,

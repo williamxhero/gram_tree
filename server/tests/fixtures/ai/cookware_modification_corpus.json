@@ -1,0 +1,16 @@
+{
+  "note": "Synthetic cookware conversion answers; no user data or paid calls. Container requirements use existing step notes.",
+  "text": "改成空气炸锅",
+  "intent": {"category": "cookware", "parameters": {"target_cookware": "空气炸锅", "step_ids": "cook"}, "confidence": 0.95},
+  "changes": [
+    {"operation_id": "appliance", "type": "change_step_field", "field": "cookware", "after": "空气炸锅", "depends_on": []},
+    {"operation_id": "instructions", "type": "change_step_field", "field": "instruction", "after": "鸡肉放入耐热浅盘，单层摆放，空气炸锅 180°C 加热 1 分钟，表面变白后盛出。", "depends_on": ["appliance"]},
+    {"operation_id": "temperature", "type": "change_step_heat", "field": "temperature_celsius", "after": 180, "depends_on": ["appliance"]},
+    {"operation_id": "duration", "type": "change_step_duration", "field": "duration_seconds", "after": 60, "depends_on": ["appliance", "temperature"]},
+    {"operation_id": "heat", "type": "change_step_heat", "field": "heat", "after": null, "depends_on": ["appliance"]},
+    {"operation_id": "container", "type": "change_step_field", "field": "notes", "after": "使用适配空气炸锅的耐热浅盘，勿覆盖风道；分批单层摆放。未进行实做验证。", "depends_on": ["appliance"]},
+    {"operation_id": "doneness", "type": "change_step_field", "field": "doneness", "after": "表面变白后盛出（AI估算，未验证）", "depends_on": ["appliance"]}
+  ],
+  "reason": "仅将 cook 步骤转换为空气炸锅；温度和时长为估算，需分批并复测中心温度",
+  "risk": "1 分钟可能不足以熟透，必须继续加热至中心达到 74°C；不代表家庭已有该厨具"
+}

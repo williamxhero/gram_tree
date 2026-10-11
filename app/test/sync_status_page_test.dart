@@ -14,6 +14,7 @@ import 'package:gram_tree/l10n/app_localizations.dart';
 
 import 'event_queue_test_executor.dart';
 import 'helpers.dart';
+import 'recipe_snapshot_test.dart' show recipeSnapshotFixture;
 
 QueuedEvent write(String owner, int number) => QueuedEvent.write(
   id: '77777777-7777-4777-8777-${number.toString().padLeft(12, '0')}',
@@ -117,6 +118,33 @@ void main() {
       await tester.runAsync(fixture.dispose);
     }
   }, skip: kIsWeb);
+
+  testWidgets('手动重试清除旧退避截止时间并立即复用原写入', (tester) async {
+    final env = TestEnv.signedIn();
+    final root = ProviderContainer(overrides: env.overrides);
+    addTearDown(root.dispose);
+    await root.read(sessionStoreProvider).load();
+    await env.eventQueue.enqueue(write(env.server.user.id, 1));
+    final entry = (await env.eventQueue.entries()).single;
+    await env.eventQueue.update(
+      entry.change(
+        state: WriteState.failed,
+        reasonCode: 'network_or_server_failure',
+        nextAttemptAt: DateTime.now().toUtc().add(const Duration(hours: 1)),
+      ),
+    );
+    await page(tester, root);
+    await tester.tap(find.byKey(const ValueKey('sync-manual-retry')));
+    await tester.pumpAndSettle();
+    expect(env.server.calls('POST', '/v1/sync/writes'), hasLength(1));
+    expect(
+      ((env.server.calls('POST', '/v1/sync/writes').single.body
+                  as Map)['writes']
+              as List)
+          .single,
+      entry.write.toJson(),
+    );
+  });
 
   testWidgets('真实页面事件失败后手动重试复用原写入，连点不双投递，显示服务端确认时间', (tester) async {
     final server = FakeServer();
@@ -244,6 +272,48 @@ void main() {
       find.byKey(const ValueKey('sync-manual-retry')),
     );
     expect(retryButton.onPressed, isNull);
+  });
+
+  testWidgets('菜谱失败项展示可识别条目和安全的具体原因', (tester) async {
+    final env = TestEnv.signedIn(offline: true);
+    final root = ProviderContainer(overrides: env.overrides);
+    addTearDown(root.dispose);
+    await root.read(sessionStoreProvider).load();
+    final owner = env.server.user.id;
+    for (final (number, recipeId, reason) in [
+      (1, 'abababab-abab-4bab-8bab-abababababab', 'invalid_recipe'),
+      (2, 'cdcdcdcd-cdcd-4dcd-8dcd-cdcdcdcdcdcd', 'prohibited_health_claim'),
+    ]) {
+      await env.eventQueue.enqueue(
+        QueuedEvent.write(
+          id: '77777777-7777-4777-8777-${number.toString().padLeft(12, '0')}',
+          ownerId: owner,
+          writeType: 'recipe_version.save',
+          deviceTime: DateTime.utc(2026, 10, 8),
+          payload: {
+            'recipe_id': recipeId,
+            'candidate_version_id': 'efefefef-efef-4fef-8fef-efefefefefef',
+            'baseline_version_id': 'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee',
+            'candidate': {
+              'snapshot': recipeSnapshotFixture('baseline').version.snapshot
+                  .toJson(),
+            },
+          },
+        ),
+      );
+      final entry = (await env.eventQueue.entries(ownerId: owner)).last;
+      await env.eventQueue.update(
+        entry.change(state: WriteState.failed, reasonCode: reason),
+      );
+    }
+    await page(tester, root);
+    await tester.scrollUntilVisible(find.textContaining('abababab'), 250);
+    expect(find.textContaining('abababab'), findsOneWidget);
+    expect(find.textContaining('菜谱结构校验未通过'), findsOneWidget);
+    await tester.scrollUntilVisible(find.textContaining('cdcdcdcd'), 250);
+    expect(find.textContaining('cdcdcdcd'), findsOneWidget);
+    expect(find.textContaining('健康/治疗表述'), findsOneWidget);
+    expect(find.textContaining('private-recipe-content'), findsNothing);
   });
 
   testWidgets('我的入口打开当前账号真实队列状态', (tester) async {

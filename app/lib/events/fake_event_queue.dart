@@ -95,7 +95,8 @@ class FakeEventQueue implements EventQueue {
         state: WriteState.confirmed,
         result: result,
         businessRecord: business,
-        confirmedAt: confirmedAt?.toUtc() ?? DateTime.now().toUtc(),
+        // Keep lastSuccess tied to the server receipt, never the device clock.
+        confirmedAt: confirmedAt?.toUtc(),
       ),
     );
   }

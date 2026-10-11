@@ -611,6 +611,9 @@ Future<void> _restore(
   await tester.tap(source);
   final panel = find.byKey(const ValueKey('why-panel'));
   await _until(tester, () => panel.evaluate().isNotEmpty);
+  // Mounting can precede the bottom sheet's entrance into the phone viewport.
+  // Settle the real animation before retaining the exact hit-test assertions.
+  await tester.pumpAndSettle();
   expect(
     find.descendant(of: panel, matching: find.text('原来：100 g')).hitTestable(),
     findsOneWidget,

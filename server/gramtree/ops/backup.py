@@ -126,9 +126,10 @@ def sanitize_restored_sensitive(target_url: str) -> None:
         # Old backups before sensitive storage have no grants to restore.
         if not inspect(engine).has_table("owner_allergies"):
             return
+        include_family = inspect(engine).has_table("family_members")
         with Session(engine) as session, session.begin():
             for profile in session.scalars(select(TasteProfile)):
-                erase_sensitive(session, profile.owner_id)
+                erase_sensitive(session, profile.owner_id, include_family=include_family)
                 receipts = list(
                     session.scalars(
                         select(Consent.received_at).where(

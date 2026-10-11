@@ -152,7 +152,7 @@ void main() {
     await waitFor(tester, find.byKey(const ValueKey('sensitive-withdraw')));
     await tap(tester, find.byKey(const ValueKey('sensitive-withdraw')));
     await tap(tester, find.byKey(const ValueKey('sensitive-withdraw-confirm')));
-    await waitFor(tester, find.text('敏感同意已撤回，过敏及私密历史已删除'));
+    await waitFor(tester, find.text('敏感同意已撤回，过敏、家庭成员及私密历史已删除'));
     await tester.tap(find.byType(BackButton).last);
     await tester.pumpAndSettle();
     await openProfile(tester);

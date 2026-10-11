@@ -23,6 +23,7 @@ from gramtree.recipes import router as recipes
 from gramtree.settings import Settings, get_settings
 from gramtree.taste_profiles import allergy_router as allergies
 from gramtree.taste_profiles import constraint_router as cooking_constraints
+from gramtree.taste_profiles import family_router as family_members
 from gramtree.taste_profiles import router as taste_profiles
 from gramtree.ui_protocol import router as ui_protocol
 
@@ -79,6 +80,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     v1.include_router(taste_profiles.router)
     v1.include_router(cooking_constraints.router)
     v1.include_router(allergies.router)
+    v1.include_router(family_members.router)
     v1.include_router(ui_protocol.router)
     if settings.dev_tools_enabled:
         v1.include_router(accounts_dev.router)

@@ -320,11 +320,17 @@ class EventUploader {
               if (result.result == null) {
                 throw StateError('Missing resource association');
               }
+              final confirmedAt = DateTime.tryParse(result.confirmedAt ?? '');
+              if (confirmedAt == null || !confirmedAt.isUtc) {
+                // A success without the server receipt time cannot establish
+                // the durable confirmation contract; retain it for retry.
+                throw StateError('Missing server confirmation time');
+              }
               await queue.confirm(
                 entry.write.id,
                 owner,
                 result.result!.toJson(),
-                confirmedAt: DateTime.tryParse(result.confirmedAt ?? ''),
+                confirmedAt: confirmedAt,
               );
               byId[entry.write.id] = entry.change(state: WriteState.confirmed);
               progressed = true;

@@ -4,6 +4,7 @@
 """
 
 import json
+import math
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Any
@@ -66,6 +67,20 @@ def parse_value(cfg: ConfigItem, raw: str) -> int | float | bool | str | dict[st
 
 
 def validate(cfg: ConfigItem, value: int | float | bool | str | dict[str, Any]) -> None:
+    # Comparison runs during an ordinary recipe save, so reject malformed policy
+    # at the audited write boundary rather than breaking saves afterwards.
+    if cfg.key in {"recipe.comparison_main_groups", "recipe.comparison_heating_actions"}:
+        values = value.get("values") if isinstance(value, dict) else None
+        if not isinstance(values, list) or any(
+            not isinstance(item, str) or not item.strip() for item in values
+        ):
+            raise ConfigError(f"{cfg.key} 需要 values 字符串列表（可以为空）")
+    if (
+        cfg.key.startswith("recipe.comparison_")
+        and isinstance(value, (int, float))
+        and not math.isfinite(value)
+    ):
+        raise ConfigError(f"{cfg.key} 需要有限数值")
     if (
         cfg.type in ("int", "float")
         and isinstance(value, (int, float))

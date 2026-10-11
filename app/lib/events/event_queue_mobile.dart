@@ -264,7 +264,9 @@ class DriftEventQueue implements EventQueue {
           state: WriteState.confirmed,
           result: result,
           businessRecord: business,
-          confirmedAt: confirmedAt?.toUtc() ?? DateTime.now().toUtc(),
+          // A local clock is not evidence of server confirmation. Older or
+          // malformed responses remain confirmed without inventing a time.
+          confirmedAt: confirmedAt?.toUtc(),
         ),
       );
     });

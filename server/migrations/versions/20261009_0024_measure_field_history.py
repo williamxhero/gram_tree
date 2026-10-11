@@ -4,7 +4,7 @@ import sqlalchemy as sa
 from alembic import op
 from sqlalchemy.dialects import postgresql
 
-revision = "0024"
+revision = "0024_measure_history"
 down_revision = "0023"
 branch_labels = None
 depends_on = None

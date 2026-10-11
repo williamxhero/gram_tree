@@ -320,6 +320,7 @@ void main() {
               {
                 'write_id': write['write_id'],
                 'status': 'confirmed',
+                'confirmed_at': '2026-10-08T10:11:12Z',
                 'result': {
                   'resource_type': 'experience.event',
                   'resource_id': write['write_id'],
@@ -465,6 +466,7 @@ void main() {
               {
                 'write_id': write['write_id'],
                 'status': 'confirmed',
+                'confirmed_at': '2026-10-08T10:11:12Z',
                 'result': {
                   'resource_type': 'experience.event',
                   'resource_id': write['write_id'],
@@ -949,6 +951,7 @@ void main() {
                     {
                       'write_id': write['write_id'],
                       'status': 'confirmed',
+                      'confirmed_at': '2026-10-08T10:11:12Z',
                       'result': {
                         'resource_type': 'experience.event',
                         'resource_id': write['write_id'],

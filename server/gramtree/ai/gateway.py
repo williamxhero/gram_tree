@@ -10,6 +10,7 @@ import logging
 import math
 import time
 import uuid
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -107,7 +108,7 @@ def availability(
     try:
         count = remaining(session, user_id, capability)
         reason = None
-        if count == 0:
+        if count == 0 and capability != "comparison":
             reason = "daily_quota"
         elif monthly_spend(session) + float(config.get(session, "ai.call_reservation")) > float(
             config.get(session, "ai.monthly_budget")
@@ -163,11 +164,23 @@ def _invoke(
                 "batch_advice": BatchAdvice,
             }[capability]
             prompt += "\nJSON schema: " + json.dumps(schema.model_json_schema(), ensure_ascii=False)
+        if capability == "comparison":
+            from gramtree.recipes.comparison_assistance import ComparisonModelOutput
+
+            prompt += "\nJSON schema: " + json.dumps(
+                ComparisonModelOutput.model_json_schema(), ensure_ascii=False
+            )
         if capability in ("modify", "modify_intent"):
             from gramtree.ai.modification_schemas import ModificationIntent, ModificationOutput
 
             schema = ModificationOutput if capability == "modify" else ModificationIntent
             prompt += "\nJSON schema: " + json.dumps(schema.model_json_schema(), ensure_ascii=False)
+        if capability == "change_explanation":
+            from gramtree.ai.explanation_schemas import ChangeExplanationOutput
+
+            prompt += "\nJSON schema: " + json.dumps(
+                ChangeExplanationOutput.model_json_schema(), ensure_ascii=False
+            )
         if capability == "quantify":
             from gramtree.recipes.quantification_schemas import QuantificationOutput
 
@@ -213,6 +226,7 @@ def call(
     operation_id: uuid.UUID,
     *,
     content_id: uuid.UUID | None = None,
+    validate_output: Callable[[Any], Any] | None = None,
 ) -> Any:
     model, policy = route(session, capability)
     # Disabled/unconfigured providers never made a billable attempt. In particular,
@@ -235,7 +249,13 @@ def call(
             )
             .limit(1)
         )
-        if not already_counted and remaining(session, user_id, capability) == 0:
+        # Shared comparison overlays are not user generation/modification operations.
+        # They still use this same reservation, retry and actual-attempt ledger.
+        if (
+            capability != "comparison"
+            and not already_counted
+            and remaining(session, user_id, capability) == 0
+        ):
             session.rollback()
             raise Unavailable("daily_quota")
         estimated_input = len(json.dumps(payload, ensure_ascii=False).encode()) + 16000
@@ -288,9 +308,14 @@ def call(
             # objects before the caller can reject it and request one repair.
             log.output = (
                 json.dumps(result, ensure_ascii=False)
-                if capability in ("batch_advice", "modify", "modify_intent")
+                if capability
+                in {"batch_advice", "comparison", "modify", "modify_intent", "change_explanation"}
                 else result
             )
+            # Semantic rejection is a failed actual attempt, not a free success.
+            # Usage/cost already recorded above still belongs to that attempt.
+            if validate_output is not None:
+                result = validate_output(result)
             row.status = "succeeded"
         except (
             Unavailable,

@@ -110,9 +110,10 @@ class _SyncStatusPageState extends ConsumerState<SyncStatusPage> {
                     children: [
                       Text(
                         l10n.syncItemIdentity(
-                          _typeLabel(entry, l10n),
-                          entry.sequence,
-                        ),
+                              _typeLabel(entry, l10n),
+                              entry.sequence,
+                            ) +
+                            _itemLabel(entry),
                         style: Theme.of(context).textTheme.titleSmall,
                       ),
                       const SizedBox(height: 8),
@@ -136,6 +137,22 @@ String _typeLabel(QueueEntry entry, AppLocalizations l10n) =>
       _ => l10n.syncOtherType,
     };
 
+String _itemLabel(QueueEntry entry) {
+  final key = switch (entry.write.writeType) {
+    'recipe_version.save' => 'recipe_id',
+    'personal_measure.change' => 'resource_id',
+    _ => null,
+  };
+  if (key == null) return '';
+  final value = entry.write.payload[key];
+  if (value is! String ||
+      !RegExp(r'^[0-9a-fA-F]{8}-[0-9a-fA-F-]{27}$').hasMatch(value)) {
+    return '';
+  }
+  final shortId = value.substring(0, 8);
+  return ' · #$shortId';
+}
+
 String _diagnosis(QueueEntry entry, AppLocalizations l10n) {
   final reason = entry.reasonCode?.split(':').first;
   if (entry.state == WriteState.conflict || reason == 'dependency_conflict') {
@@ -149,7 +166,10 @@ String _diagnosis(QueueEntry entry, AppLocalizations l10n) {
     'dependency_cycle' => l10n.syncDependencyCycleReason,
     'dependency_failed' ||
     'dependency_not_arrived' ||
-    'dependency_not_confirmed' => l10n.syncDependencyReason,
+    'dependency_not_confirmed' ||
+    'reference_not_arrived' => l10n.syncDependencyReason,
+    'invalid_recipe' => l10n.syncRecipeValidationReason,
+    'prohibited_health_claim' => l10n.syncRecipePolicyReason,
     'forbidden' ||
     'reference_forbidden' ||
     'recipe_not_writable' ||

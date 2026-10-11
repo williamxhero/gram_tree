@@ -25,9 +25,11 @@ _PERMISSION = {
     "write_id_unavailable",
     "reference_forbidden",
     "recipe_not_writable",
+    "prohibited_health_claim",
 }
 _VALIDATION = {
     "invalid_content",
+    "invalid_recipe",
     "unknown_write_type",
     "unknown_event_type",
     "write_id_reused",
@@ -50,6 +52,7 @@ _DEPENDENCY = {
     "dependency_not_arrived",
     "dependency_not_confirmed",
     "dependency_conflict",
+    "reference_not_arrived",
 }
 
 

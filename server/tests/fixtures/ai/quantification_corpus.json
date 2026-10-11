@@ -5,7 +5,7 @@
     "snapshot": {
       "servings": 2, "difficulty": "", "dish_type": "", "active_time_seconds": 0, "total_time_seconds": 0,
       "ingredients": [
-        {"id": "ingredient-1", "display_name": "盐", "quantity": 0, "unit": "少许", "scaling_mode": "proportional", "quantity_source": {"source": "author_filled", "original": "0", "basis": "", "confidence": 1}}
+        {"id": "ingredient-1", "display_name": "盐", "quantity": 0, "unit": "少许", "scaling_mode": "proportional", "functional": false, "functional_source": {"source": "author_filled", "basis": "作者按这道菜的实际作用填写"}, "quantity_source": {"source": "author_filled", "original": "0", "basis": "", "confidence": 1}}
       ],
       "steps": [{"id": "step-1", "instruction": "搅拌均匀"}]
     }

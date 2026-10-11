@@ -60,7 +60,15 @@ UserOut testUser({String nickname = '味友0001', String tz = 'Asia/Shanghai'}) 
 
 /// 记录的一次请求。
 class Recorded {
-  Recorded(this.method, this.path, this.body, this.headers);
+  Recorded(
+    this.method,
+    this.path,
+    this.body,
+    this.headers, [
+    this.query = const {},
+  ]);
+
+  final Map<String, dynamic> query;
 
   final String method;
   final String path;
@@ -227,6 +235,45 @@ class FakeServer extends Interceptor {
       '/v1/me/taste-profile/allergies/changes',
       (_) => (200, PageTasteProfileChangeOut(items: const []).toJson()),
     );
+    on(
+      'GET',
+      '/v1/me/taste-profile/family-members',
+      (_) => (
+        200,
+        FamilyMembersOut.fromJson({
+          'consent_id': null,
+          'consent_version': 'allergies-v1',
+          'authorization_version': 0,
+          'profile_version': 1,
+          'available_age_bands': [
+            'under_1',
+            '1_to_3',
+            '3_to_6',
+            '6_to_12',
+            '12_to_18',
+            'adult',
+            'elder',
+          ],
+          'available_allergen_categories': [
+            '含麸质的谷物',
+            '甲壳纲类动物',
+            '鱼类',
+            '蛋类',
+            '花生',
+            '大豆',
+            '乳及乳制品',
+            '坚果及其果仁',
+          ],
+          'items': [],
+          'next_cursor': null,
+        }).toJson(),
+      ),
+    );
+    on(
+      'GET',
+      '/v1/me/taste-profile/family-members/changes',
+      (_) => (200, PageTasteProfileChangeOut(items: const []).toJson()),
+    );
     final personalMeasures = <Map<String, dynamic>>[];
     on(
       'GET',
@@ -286,6 +333,7 @@ class FakeServer extends Interceptor {
               WriteResult(
                 writeId: write.writeId,
                 status: WriteResultStatusEnum.confirmed,
+                confirmedAt: '2026-10-08T10:11:12Z',
                 result: WriteResourceResult(
                   resourceType: 'experience.event',
                   resourceId: write.writeId,
@@ -379,6 +427,7 @@ class FakeServer extends Interceptor {
       options.uri.path,
       body,
       Map.of(options.headers),
+      Map.of(options.queryParameters),
     );
     requests.add(rec);
     final handle = _routes['${options.method} ${options.uri.path}'];

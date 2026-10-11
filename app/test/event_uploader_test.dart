@@ -36,6 +36,7 @@ List<Map> writes(Recorded request) =>
           status: replay
               ? WriteResultStatusEnum.alreadyProcessed
               : WriteResultStatusEnum.confirmed,
+          confirmedAt: '2026-10-08T10:11:12Z',
           result: WriteResourceResult(
             resourceType: 'experience.event',
             resourceId: write['write_id'] as String,
@@ -135,6 +136,42 @@ void main() {
     );
     expect(await env.eventQueue.pending(), hasLength(1));
   });
+
+  for (final serverTime in [null, '2026-10-08T10:11:12']) {
+    test('确认响应缺少明确服务端时区时保留原写入：$serverTime', () async {
+      final server = FakeServer()
+        ..on(
+          'POST',
+          '/v1/sync/writes',
+          (request) => (
+            200,
+            {
+              'results': [
+                {
+                  'write_id': writes(request).single['write_id'],
+                  'status': 'confirmed',
+                  ...?serverTime == null ? null : {'confirmed_at': serverTime},
+                  'result': {
+                    'resource_type': 'experience.event',
+                    'resource_id': writes(request).single['write_id'],
+                  },
+                },
+              ],
+            },
+          ),
+        );
+      final env = TestEnv.signedIn(server: server);
+      final container = await setup(env);
+      final original = sample();
+      await env.eventQueue.enqueue(original);
+      await container.read(eventUploaderProvider).triggerUpload();
+      final entry = (await env.eventQueue.entries()).single;
+      expect(entry.write.sameEnvelope(original), isTrue);
+      expect(entry.state, WriteState.pending);
+      expect(entry.reasonCode, 'invalid_or_lost_response');
+      expect(entry.confirmedAt, isNull);
+    });
+  }
 
   test('5xx 保留内容按退避重试，第三次确认后停止', () async {
     var attempts = 0;

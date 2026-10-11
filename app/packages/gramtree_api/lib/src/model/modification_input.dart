@@ -26,6 +26,8 @@ class ModificationInput {
 
     this.requestId,
 
+    this.retryFailed = false,
+
     required this.text,
   });
 
@@ -45,6 +47,14 @@ class ModificationInput {
   @JsonKey(name: r'request_id', required: false, includeIfNull: false)
   final String? requestId;
 
+  @JsonKey(
+    defaultValue: false,
+    name: r'retry_failed',
+    required: false,
+    includeIfNull: false,
+  )
+  final bool? retryFailed;
+
   @JsonKey(name: r'text', required: true, includeIfNull: false)
   final String text;
 
@@ -56,6 +66,7 @@ class ModificationInput {
           other.generationRequestId == generationRequestId &&
           other.recipeId == recipeId &&
           other.requestId == requestId &&
+          other.retryFailed == retryFailed &&
           other.text == text;
 
   @override
@@ -64,6 +75,7 @@ class ModificationInput {
       (generationRequestId == null ? 0 : generationRequestId.hashCode) +
       (recipeId == null ? 0 : recipeId.hashCode) +
       (requestId == null ? 0 : requestId.hashCode) +
+      retryFailed.hashCode +
       text.hashCode;
 
   factory ModificationInput.fromJson(Map<String, dynamic> json) =>

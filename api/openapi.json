@@ -352,6 +352,47 @@
         "title": "AppleReauthRequest",
         "type": "object"
       },
+      "AssistedStepPair": {
+        "properties": {
+          "after_step_id": {
+            "title": "After Step Id",
+            "type": "string"
+          },
+          "alignment": {
+            "const": "ai_assisted",
+            "title": "Alignment",
+            "type": "string"
+          },
+          "basis": {
+            "$ref": "#/components/schemas/SourceBasis"
+          },
+          "before_step_id": {
+            "title": "Before Step Id",
+            "type": "string"
+          },
+          "confidence": {
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Confidence",
+            "type": "number"
+          },
+          "source_type": {
+            "const": "ai_estimated",
+            "title": "Source Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "before_step_id",
+          "after_step_id",
+          "alignment",
+          "confidence",
+          "source_type",
+          "basis"
+        ],
+        "title": "AssistedStepPair",
+        "type": "object"
+      },
       "AttributeStatus": {
         "description": "字段的校对状态。",
         "enum": [
@@ -638,6 +679,141 @@
         "title": "CacheInfo",
         "type": "object"
       },
+      "ChangeExplanationInput": {
+        "additionalProperties": false,
+        "properties": {
+          "base_version_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Base Version Id"
+          },
+          "generation_request_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Generation Request Id"
+          },
+          "modification_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Modification Id"
+          },
+          "recipe_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Recipe Id"
+          },
+          "revision": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Revision"
+          },
+          "snapshot": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RecipeSnapshot"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "title": "ChangeExplanationInput",
+        "type": "object"
+      },
+      "ChangeExplanationResult": {
+        "properties": {
+          "change_note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Change Note"
+          },
+          "changes_fingerprint": {
+            "title": "Changes Fingerprint",
+            "type": "string"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "source": {
+            "anyOf": [
+              {
+                "const": "ai_estimated",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source"
+          },
+          "status": {
+            "$ref": "#/components/schemas/AIStatus"
+          },
+          "tags": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Tags",
+            "type": "array"
+          }
+        },
+        "required": [
+          "status",
+          "changes_fingerprint"
+        ],
+        "title": "ChangeExplanationResult",
+        "type": "object"
+      },
       "ChangesResponse": {
         "description": "某个版本之后的食材变化（#101），App 用它增量更新本机缓存。",
         "properties": {
@@ -710,6 +886,106 @@
           "params"
         ],
         "title": "ClientConfig",
+        "type": "object"
+      },
+      "ComparisonChange": {
+        "properties": {
+          "after": {
+            "title": "After"
+          },
+          "basis": {
+            "title": "Basis",
+            "type": "string"
+          },
+          "before": {
+            "title": "Before"
+          },
+          "field": {
+            "title": "Field",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "added",
+              "removed",
+              "replacement",
+              "quantity",
+              "unit",
+              "field",
+              "text"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "relative_change": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Relative Change"
+          },
+          "unit": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unit"
+          }
+        },
+        "required": [
+          "kind",
+          "field",
+          "basis"
+        ],
+        "title": "ComparisonChange",
+        "type": "object"
+      },
+      "ComparisonVersion": {
+        "properties": {
+          "author": {
+            "title": "Author",
+            "type": "string"
+          },
+          "dish_name": {
+            "title": "Dish Name",
+            "type": "string"
+          },
+          "recipe_id": {
+            "format": "uuid",
+            "title": "Recipe Id",
+            "type": "string"
+          },
+          "servings": {
+            "title": "Servings",
+            "type": "integer"
+          },
+          "version_id": {
+            "format": "uuid",
+            "title": "Version Id",
+            "type": "string"
+          },
+          "version_number": {
+            "title": "Version Number",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "recipe_id",
+          "version_id",
+          "version_number",
+          "author",
+          "dish_name",
+          "servings"
+        ],
+        "title": "ComparisonVersion",
         "type": "object"
       },
       "ComponentDescriptor": {
@@ -1770,6 +2046,347 @@
         "title": "FallbackInfo",
         "type": "object"
       },
+      "FamilyAllergiesOut": {
+        "properties": {
+          "categories": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Categories",
+            "type": "array"
+          },
+          "ingredients": {
+            "items": {
+              "$ref": "#/components/schemas/AllergyIngredientOut"
+            },
+            "title": "Ingredients",
+            "type": "array"
+          }
+        },
+        "required": [
+          "categories",
+          "ingredients"
+        ],
+        "title": "FamilyAllergiesOut",
+        "type": "object"
+      },
+      "FamilyAllergiesWrite": {
+        "additionalProperties": false,
+        "properties": {
+          "categories": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 8,
+            "title": "Categories",
+            "type": "array"
+          },
+          "ingredient_ids": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "maxItems": 100,
+            "title": "Ingredient Ids",
+            "type": "array"
+          }
+        },
+        "title": "FamilyAllergiesWrite",
+        "type": "object"
+      },
+      "FamilyAvoidance": {
+        "additionalProperties": false,
+        "properties": {
+          "category": {
+            "anyOf": [
+              {
+                "maxLength": 20,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Category"
+          },
+          "ingredient_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ingredient Id"
+          }
+        },
+        "title": "FamilyAvoidance",
+        "type": "object"
+      },
+      "FamilyAvoidanceOut": {
+        "additionalProperties": false,
+        "properties": {
+          "category": {
+            "anyOf": [
+              {
+                "maxLength": 20,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Category"
+          },
+          "ingredient_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ingredient Id"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "title": "FamilyAvoidanceOut",
+        "type": "object"
+      },
+      "FamilyMemberOut": {
+        "properties": {
+          "age_band": {
+            "enum": [
+              "under_1",
+              "1_to_3",
+              "3_to_6",
+              "6_to_12",
+              "12_to_18",
+              "adult",
+              "elder"
+            ],
+            "title": "Age Band",
+            "type": "string"
+          },
+          "allergies": {
+            "$ref": "#/components/schemas/FamilyAllergiesOut"
+          },
+          "avoidances": {
+            "items": {
+              "$ref": "#/components/schemas/FamilyAvoidanceOut"
+            },
+            "title": "Avoidances",
+            "type": "array"
+          },
+          "flavors": {
+            "additionalProperties": {
+              "type": "number"
+            },
+            "propertyNames": {
+              "enum": [
+                "salty",
+                "sweet",
+                "sour",
+                "spicy",
+                "numbing",
+                "umami",
+                "oily"
+              ]
+            },
+            "title": "Flavors",
+            "type": "object"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "nickname": {
+            "title": "Nickname",
+            "type": "string"
+          },
+          "source": {
+            "const": "manual",
+            "title": "Source",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "nickname",
+          "age_band",
+          "flavors",
+          "avoidances",
+          "allergies",
+          "source"
+        ],
+        "title": "FamilyMemberOut",
+        "type": "object"
+      },
+      "FamilyMemberWrite": {
+        "additionalProperties": false,
+        "properties": {
+          "age_band": {
+            "enum": [
+              "under_1",
+              "1_to_3",
+              "3_to_6",
+              "6_to_12",
+              "12_to_18",
+              "adult",
+              "elder"
+            ],
+            "title": "Age Band",
+            "type": "string"
+          },
+          "allergies": {
+            "$ref": "#/components/schemas/FamilyAllergiesWrite"
+          },
+          "authorization_version": {
+            "minimum": 0.0,
+            "title": "Authorization Version",
+            "type": "integer"
+          },
+          "avoidances": {
+            "items": {
+              "$ref": "#/components/schemas/FamilyAvoidance"
+            },
+            "maxItems": 100,
+            "title": "Avoidances",
+            "type": "array"
+          },
+          "consent_id": {
+            "format": "uuid",
+            "title": "Consent Id",
+            "type": "string"
+          },
+          "flavors": {
+            "additionalProperties": {
+              "type": "number"
+            },
+            "maxProperties": 7,
+            "propertyNames": {
+              "enum": [
+                "salty",
+                "sweet",
+                "sour",
+                "spicy",
+                "numbing",
+                "umami",
+                "oily"
+              ]
+            },
+            "title": "Flavors",
+            "type": "object"
+          },
+          "nickname": {
+            "maxLength": 40,
+            "minLength": 1,
+            "title": "Nickname",
+            "type": "string"
+          }
+        },
+        "required": [
+          "consent_id",
+          "authorization_version",
+          "nickname",
+          "age_band"
+        ],
+        "title": "FamilyMemberWrite",
+        "type": "object"
+      },
+      "FamilyMembersOut": {
+        "properties": {
+          "authorization_version": {
+            "title": "Authorization Version",
+            "type": "integer"
+          },
+          "available_age_bands": {
+            "items": {
+              "enum": [
+                "under_1",
+                "1_to_3",
+                "3_to_6",
+                "6_to_12",
+                "12_to_18",
+                "adult",
+                "elder"
+              ],
+              "type": "string"
+            },
+            "title": "Available Age Bands",
+            "type": "array"
+          },
+          "available_allergen_categories": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Available Allergen Categories",
+            "type": "array"
+          },
+          "consent_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Consent Id"
+          },
+          "consent_version": {
+            "title": "Consent Version",
+            "type": "string"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/FamilyMemberOut"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Cursor"
+          },
+          "profile_version": {
+            "title": "Profile Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "consent_id",
+          "consent_version",
+          "authorization_version",
+          "profile_version",
+          "available_age_bands",
+          "available_allergen_categories",
+          "items"
+        ],
+        "title": "FamilyMembersOut",
+        "type": "object"
+      },
       "FlavorAttribute": {
         "additionalProperties": false,
         "properties": {
@@ -1987,6 +2604,133 @@
           "status"
         ],
         "title": "GenerationResult",
+        "type": "object"
+      },
+      "GradedComparisonChange": {
+        "properties": {
+          "after": {
+            "title": "After"
+          },
+          "basis": {
+            "title": "Basis",
+            "type": "string"
+          },
+          "before": {
+            "title": "Before"
+          },
+          "field": {
+            "title": "Field",
+            "type": "string"
+          },
+          "grade": {
+            "enum": [
+              "excluded",
+              "minor",
+              "general",
+              "significant"
+            ],
+            "title": "Grade",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "added",
+              "removed",
+              "replacement",
+              "quantity",
+              "unit",
+              "field",
+              "text"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "relative_change": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Relative Change"
+          },
+          "rule_id": {
+            "title": "Rule Id",
+            "type": "string"
+          },
+          "rules_version": {
+            "title": "Rules Version",
+            "type": "string"
+          },
+          "unit": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unit"
+          }
+        },
+        "required": [
+          "kind",
+          "field",
+          "basis",
+          "grade",
+          "rule_id",
+          "rules_version"
+        ],
+        "title": "GradedComparisonChange",
+        "type": "object"
+      },
+      "GradedIngredientComparisonRow": {
+        "properties": {
+          "after": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RecipeIngredient"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "before": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RecipeIngredient"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "changes": {
+            "items": {
+              "$ref": "#/components/schemas/GradedComparisonChange"
+            },
+            "title": "Changes",
+            "type": "array"
+          },
+          "pairing": {
+            "enum": [
+              "stable_id",
+              "identity_group",
+              "group_replacement",
+              "unpaired"
+            ],
+            "title": "Pairing",
+            "type": "string"
+          }
+        },
+        "required": [
+          "pairing"
+        ],
+        "title": "GradedIngredientComparisonRow",
         "type": "object"
       },
       "HealthChecks": {
@@ -2221,6 +2965,52 @@
         "title": "IngredientAttributes",
         "type": "object"
       },
+      "IngredientComparisonRow": {
+        "properties": {
+          "after": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RecipeIngredient"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "before": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RecipeIngredient"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "changes": {
+            "items": {
+              "$ref": "#/components/schemas/ComparisonChange"
+            },
+            "title": "Changes",
+            "type": "array"
+          },
+          "pairing": {
+            "enum": [
+              "stable_id",
+              "identity_group",
+              "group_replacement",
+              "unpaired"
+            ],
+            "title": "Pairing",
+            "type": "string"
+          }
+        },
+        "required": [
+          "pairing"
+        ],
+        "title": "IngredientComparisonRow",
+        "type": "object"
+      },
       "IngredientDetail": {
         "description": "按 ID 读取时的完整数据：身份信息加全部详细属性（#97），每个属性带估算标记。",
         "properties": {
@@ -2379,6 +3169,7 @@
         "title": "IngredientPreferenceOut",
         "type": "object"
       },
+      "JsonValue": {},
       "LocalCuisineOut": {
         "properties": {
           "adjustments": {
@@ -2567,6 +3358,123 @@
         "title": "MeasureHistoryOut",
         "type": "object"
       },
+      "MeasureInputOut": {
+        "properties": {
+          "base_quantity": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Base Quantity"
+          },
+          "base_unit": {
+            "enum": [
+              "g",
+              "ml"
+            ],
+            "title": "Base Unit",
+            "type": "string"
+          },
+          "basis": {
+            "title": "Basis",
+            "type": "string"
+          },
+          "measure_input_token": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Measure Input Token"
+          },
+          "original": {
+            "title": "Original",
+            "type": "string"
+          },
+          "quantity_source": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ValueSource"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "status": {
+            "enum": [
+              "ready",
+              "no_density",
+              "estimate_confirmation_required"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "original",
+          "base_unit",
+          "status",
+          "basis"
+        ],
+        "title": "MeasureInputOut",
+        "type": "object"
+      },
+      "MeasureInputRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "accept_estimate": {
+            "default": false,
+            "title": "Accept Estimate",
+            "type": "boolean"
+          },
+          "base_unit": {
+            "enum": [
+              "g",
+              "ml"
+            ],
+            "title": "Base Unit",
+            "type": "string"
+          },
+          "ingredient_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ingredient Id"
+          },
+          "measure_id": {
+            "format": "uuid",
+            "title": "Measure Id",
+            "type": "string"
+          },
+          "quantity": {
+            "maximum": 10000000.0,
+            "minimum": 0.0,
+            "title": "Quantity",
+            "type": "number"
+          }
+        },
+        "required": [
+          "measure_id",
+          "quantity",
+          "base_unit"
+        ],
+        "title": "MeasureInputRequest",
+        "type": "object"
+      },
       "MergeRelation": {
         "description": "一次合并：旧 ID 指向新 ID，并保留旧记录的身份信息（#101）。",
         "properties": {
@@ -2610,10 +3518,39 @@
             "title": "Change Note",
             "type": "string"
           },
+          "explanation_fingerprint": {
+            "anyOf": [
+              {
+                "maxLength": 64,
+                "minLength": 64,
+                "pattern": "^[0-9a-f]{64}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Explanation Fingerprint"
+          },
           "revision": {
             "minimum": 0.0,
             "title": "Revision",
             "type": "integer"
+          },
+          "tags": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "maxItems": 50,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tags"
           }
         },
         "required": [
@@ -2626,16 +3563,7 @@
         "additionalProperties": false,
         "properties": {
           "after": {
-            "anyOf": [
-              {
-                "maxLength": 4000,
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "After"
+            "$ref": "#/components/schemas/JsonValue"
           },
           "decision": {
             "enum": [
@@ -2663,15 +3591,7 @@
       "ModificationDecisionOut": {
         "properties": {
           "after": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "After"
+            "$ref": "#/components/schemas/JsonValue"
           },
           "blocked_by": {
             "items": {
@@ -2768,6 +3688,11 @@
             ],
             "title": "Request Id"
           },
+          "retry_failed": {
+            "default": false,
+            "title": "Retry Failed",
+            "type": "boolean"
+          },
           "text": {
             "maxLength": 1000,
             "minLength": 1,
@@ -2836,26 +3761,10 @@
         "additionalProperties": false,
         "properties": {
           "after": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "After"
+            "$ref": "#/components/schemas/JsonValue"
           },
           "before": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Before"
+            "$ref": "#/components/schemas/JsonValue"
           },
           "confidence": {
             "maximum": 1.0,
@@ -2929,9 +3838,25 @@
           "type": {
             "enum": [
               "change_step_field",
+              "change_step_duration",
+              "change_step_heat",
               "change_preparation",
               "change_display_name",
-              "change_recipe_info"
+              "change_recipe_info",
+              "change_step_ingredients",
+              "change_step_dependencies",
+              "replace_ingredient",
+              "change_quantity",
+              "change_group_or_optional",
+              "change_functional",
+              "change_scaling",
+              "change_replacement",
+              "add_ingredient",
+              "remove_ingredient",
+              "add_step",
+              "remove_step",
+              "reorder_ingredients",
+              "reorder_steps"
             ],
             "title": "Type",
             "type": "string"
@@ -4464,6 +5389,192 @@
         "title": "RecipeBatchAdviceOut",
         "type": "object"
       },
+      "RecipeComparisonAssistance": {
+        "properties": {
+          "alignments": {
+            "items": {
+              "$ref": "#/components/schemas/AssistedStepPair"
+            },
+            "title": "Alignments",
+            "type": "array"
+          },
+          "from_version_id": {
+            "format": "uuid",
+            "title": "From Version Id",
+            "type": "string"
+          },
+          "interpretation": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SourcedValue"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "reason_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason Code"
+          },
+          "rules_version": {
+            "title": "Rules Version",
+            "type": "string"
+          },
+          "status": {
+            "default": "unavailable",
+            "enum": [
+              "ready",
+              "unavailable"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "to_version_id": {
+            "format": "uuid",
+            "title": "To Version Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "from_version_id",
+          "to_version_id",
+          "rules_version"
+        ],
+        "title": "RecipeComparisonAssistance",
+        "type": "object"
+      },
+      "RecipeComparisonCandidate": {
+        "properties": {
+          "ai_assisted": {
+            "title": "Ai Assisted",
+            "type": "boolean"
+          },
+          "author": {
+            "title": "Author",
+            "type": "string"
+          },
+          "base_version_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Base Version Id"
+          },
+          "change_note": {
+            "title": "Change Note",
+            "type": "string"
+          },
+          "conclusion": {
+            "anyOf": [
+              {
+                "enum": [
+                  "no_change",
+                  "minor_only",
+                  "general",
+                  "significant"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Conclusion"
+          },
+          "created_at": {
+            "title": "Created At",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "previous_version_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Previous Version Id"
+          },
+          "recipe_id": {
+            "format": "uuid",
+            "title": "Recipe Id",
+            "type": "string"
+          },
+          "rules_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rules Version"
+          },
+          "version_number": {
+            "title": "Version Number",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "version_number",
+          "change_note",
+          "ai_assisted",
+          "created_at",
+          "recipe_id",
+          "author"
+        ],
+        "title": "RecipeComparisonCandidate",
+        "type": "object"
+      },
+      "RecipeComparisonCandidates": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/RecipeComparisonCandidate"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Cursor"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "title": "RecipeComparisonCandidates",
+        "type": "object"
+      },
       "RecipeCreate": {
         "description": "创建菜谱并保存第 1 版。",
         "properties": {
@@ -4506,6 +5617,20 @@
               }
             ],
             "title": "Dish Name"
+          },
+          "explanation_fingerprint": {
+            "anyOf": [
+              {
+                "maxLength": 64,
+                "minLength": 64,
+                "pattern": "^[0-9a-f]{64}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Explanation Fingerprint"
           },
           "image_ids": {
             "items": {
@@ -4765,6 +5890,195 @@
         "title": "RecipeDisplayedIngredient",
         "type": "object"
       },
+      "RecipeFlavorContribution": {
+        "additionalProperties": false,
+        "description": "This recipe's relative strengths; null means unknown, not zero.",
+        "properties": {
+          "numbing": {
+            "anyOf": [
+              {
+                "maximum": 3.0,
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "麻",
+            "title": "Numbing"
+          },
+          "oily": {
+            "anyOf": [
+              {
+                "maximum": 3.0,
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "油",
+            "title": "Oily"
+          },
+          "salty": {
+            "anyOf": [
+              {
+                "maximum": 3.0,
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "咸",
+            "title": "Salty"
+          },
+          "sour": {
+            "anyOf": [
+              {
+                "maximum": 3.0,
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "酸",
+            "title": "Sour"
+          },
+          "spicy": {
+            "anyOf": [
+              {
+                "maximum": 3.0,
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "辣",
+            "title": "Spicy"
+          },
+          "sweet": {
+            "anyOf": [
+              {
+                "maximum": 3.0,
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "甜",
+            "title": "Sweet"
+          },
+          "umami": {
+            "anyOf": [
+              {
+                "maximum": 3.0,
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "鲜",
+            "title": "Umami"
+          }
+        },
+        "title": "RecipeFlavorContribution",
+        "type": "object"
+      },
+      "RecipeFullComparison": {
+        "properties": {
+          "basis": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Basis",
+            "type": "array"
+          },
+          "conclusion": {
+            "enum": [
+              "no_change",
+              "minor_only",
+              "general",
+              "significant"
+            ],
+            "title": "Conclusion",
+            "type": "string"
+          },
+          "from_version": {
+            "$ref": "#/components/schemas/ComparisonVersion"
+          },
+          "ingredients": {
+            "items": {
+              "$ref": "#/components/schemas/GradedIngredientComparisonRow"
+            },
+            "title": "Ingredients",
+            "type": "array"
+          },
+          "method_changes": {
+            "items": {
+              "$ref": "#/components/schemas/GradedComparisonChange"
+            },
+            "title": "Method Changes",
+            "type": "array"
+          },
+          "normalized_servings": {
+            "title": "Normalized Servings",
+            "type": "integer"
+          },
+          "rules_version": {
+            "title": "Rules Version",
+            "type": "string"
+          },
+          "scope": {
+            "const": "full",
+            "default": "full",
+            "title": "Scope",
+            "type": "string"
+          },
+          "snapshot_fields": {
+            "items": {
+              "$ref": "#/components/schemas/GradedComparisonChange"
+            },
+            "title": "Snapshot Fields",
+            "type": "array"
+          },
+          "steps": {
+            "items": {
+              "$ref": "#/components/schemas/StepComparisonRow"
+            },
+            "title": "Steps",
+            "type": "array"
+          },
+          "to_version": {
+            "$ref": "#/components/schemas/ComparisonVersion"
+          }
+        },
+        "required": [
+          "from_version",
+          "to_version",
+          "normalized_servings",
+          "ingredients",
+          "snapshot_fields",
+          "steps",
+          "method_changes",
+          "conclusion",
+          "rules_version",
+          "basis"
+        ],
+        "title": "RecipeFullComparison",
+        "type": "object"
+      },
       "RecipeImageOut": {
         "properties": {
           "byte_size": {
@@ -4955,10 +6269,41 @@
             "title": "Display Name",
             "type": "string"
           },
+          "flavor_contribution": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RecipeFlavorContribution"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "本菜谱实际采用的味型贡献；未填写不代表零贡献"
+          },
+          "flavor_source": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ValueSource"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "functional": {
             "default": false,
             "title": "Functional",
             "type": "boolean"
+          },
+          "functional_source": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ValueSource"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "group": {
             "anyOf": [
@@ -4991,6 +6336,19 @@
             ],
             "description": "标准食材 UUID；为空表示未收录",
             "title": "Ingredient Id"
+          },
+          "measure_input_token": {
+            "anyOf": [
+              {
+                "maxLength": 8192,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "本人确认的量具换算凭据；基础量与来源不随量具校准改变",
+            "title": "Measure Input Token"
           },
           "optional": {
             "default": false,
@@ -5080,6 +6438,48 @@
           "unit"
         ],
         "title": "RecipeIngredient",
+        "type": "object"
+      },
+      "RecipeIngredientComparison": {
+        "properties": {
+          "from_version": {
+            "$ref": "#/components/schemas/ComparisonVersion"
+          },
+          "ingredients": {
+            "items": {
+              "$ref": "#/components/schemas/IngredientComparisonRow"
+            },
+            "title": "Ingredients",
+            "type": "array"
+          },
+          "normalized_servings": {
+            "title": "Normalized Servings",
+            "type": "integer"
+          },
+          "scope": {
+            "const": "ingredients",
+            "default": "ingredients",
+            "title": "Scope",
+            "type": "string"
+          },
+          "snapshot_fields": {
+            "items": {
+              "$ref": "#/components/schemas/ComparisonChange"
+            },
+            "title": "Snapshot Fields",
+            "type": "array"
+          },
+          "to_version": {
+            "$ref": "#/components/schemas/ComparisonVersion"
+          }
+        },
+        "required": [
+          "from_version",
+          "to_version",
+          "normalized_servings",
+          "ingredients"
+        ],
+        "title": "RecipeIngredientComparison",
         "type": "object"
       },
       "RecipeIngredientDisplay": {
@@ -5554,6 +6954,18 @@
       "RecipeSafetyCheckRequest": {
         "additionalProperties": false,
         "properties": {
+          "base_version_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Base Version Id"
+          },
           "change_note": {
             "default": "",
             "maxLength": 2000,
@@ -5585,6 +6997,18 @@
             "maxLength": 200,
             "title": "Dish Name",
             "type": "string"
+          },
+          "recipe_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Recipe Id"
           },
           "snapshot": {
             "$ref": "#/components/schemas/RecipeSnapshot"
@@ -6136,6 +7560,20 @@
             "description": "可选并发保护；不改变显式从历史版分支的行为",
             "title": "Expected Current Version Id"
           },
+          "explanation_fingerprint": {
+            "anyOf": [
+              {
+                "maxLength": 64,
+                "minLength": 64,
+                "pattern": "^[0-9a-f]{64}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Explanation Fingerprint"
+          },
           "image_ids": {
             "items": {
               "format": "uuid",
@@ -6188,9 +7626,38 @@
             "title": "Ai Assisted",
             "type": "boolean"
           },
+          "base_version_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Base Version Id"
+          },
           "change_note": {
             "title": "Change Note",
             "type": "string"
+          },
+          "conclusion": {
+            "anyOf": [
+              {
+                "enum": [
+                  "no_change",
+                  "minor_only",
+                  "general",
+                  "significant"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Conclusion"
           },
           "created_at": {
             "title": "Created At",
@@ -6241,6 +7708,17 @@
               }
             ]
           },
+          "rules_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rules Version"
+          },
           "safety": {
             "anyOf": [
               {
@@ -6288,9 +7766,38 @@
             "title": "Ai Assisted",
             "type": "boolean"
           },
+          "base_version_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Base Version Id"
+          },
           "change_note": {
             "title": "Change Note",
             "type": "string"
+          },
+          "conclusion": {
+            "anyOf": [
+              {
+                "enum": [
+                  "no_change",
+                  "minor_only",
+                  "general",
+                  "significant"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Conclusion"
           },
           "created_at": {
             "title": "Created At",
@@ -6312,6 +7819,17 @@
               }
             ],
             "title": "Previous Version Id"
+          },
+          "rules_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rules Version"
           },
           "version_number": {
             "title": "Version Number",
@@ -6994,6 +8512,164 @@
           "basis"
         ],
         "title": "SourcedValue",
+        "type": "object"
+      },
+      "StepComparisonChange": {
+        "properties": {
+          "after": {
+            "title": "After"
+          },
+          "basis": {
+            "title": "Basis",
+            "type": "string"
+          },
+          "before": {
+            "title": "Before"
+          },
+          "field": {
+            "title": "Field",
+            "type": "string"
+          },
+          "grade": {
+            "enum": [
+              "excluded",
+              "minor",
+              "general",
+              "significant"
+            ],
+            "title": "Grade",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "added",
+              "removed",
+              "field",
+              "text",
+              "order"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "relative_change": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Relative Change"
+          },
+          "rule_id": {
+            "title": "Rule Id",
+            "type": "string"
+          },
+          "rules_version": {
+            "title": "Rules Version",
+            "type": "string"
+          },
+          "unit": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unit"
+          }
+        },
+        "required": [
+          "kind",
+          "field",
+          "basis",
+          "grade",
+          "rule_id",
+          "rules_version"
+        ],
+        "title": "StepComparisonChange",
+        "type": "object"
+      },
+      "StepComparisonRow": {
+        "properties": {
+          "after": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RecipeStep"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "after_index": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "After Index"
+          },
+          "alignment": {
+            "enum": [
+              "deterministic",
+              "uncertain",
+              "unpaired"
+            ],
+            "title": "Alignment",
+            "type": "string"
+          },
+          "basis": {
+            "title": "Basis",
+            "type": "string"
+          },
+          "before": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RecipeStep"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "before_index": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Before Index"
+          },
+          "changes": {
+            "items": {
+              "$ref": "#/components/schemas/StepComparisonChange"
+            },
+            "title": "Changes",
+            "type": "array"
+          },
+          "confidence": {
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Confidence",
+            "type": "number"
+          }
+        },
+        "required": [
+          "alignment",
+          "confidence",
+          "basis"
+        ],
+        "title": "StepComparisonRow",
         "type": "object"
       },
       "StorageAdvice": {
@@ -7761,6 +9437,62 @@
   },
   "openapi": "3.1.0",
   "paths": {
+    "/v1/ai/recipes/change-explanation": {
+      "post": {
+        "operationId": "explain_recipe_changes",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChangeExplanationInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChangeExplanationResult"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "参数错误"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "服务端错误"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Explain Recipe Changes",
+        "tags": [
+          "recipe-ai"
+        ]
+      }
+    },
     "/v1/ai/recipes/modifications": {
       "post": {
         "operationId": "propose_recipe_modification",
@@ -10468,6 +12200,92 @@
         ]
       }
     },
+    "/v1/me/measures/input": {
+      "post": {
+        "operationId": "preview_personal_measure_input",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MeasureInputRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MeasureInputOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "参数错误"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "服务端错误"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Preview Personal Measure Input",
+        "tags": [
+          "personal-measures"
+        ]
+      }
+    },
     "/v1/me/measures/{measure_id}": {
       "delete": {
         "operationId": "delete_personal_measure",
@@ -11785,6 +13603,799 @@
         ]
       }
     },
+    "/v1/me/taste-profile/family-members": {
+      "get": {
+        "operationId": "list_family_members",
+        "parameters": [
+          {
+            "description": "上一页返回的 next_cursor",
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "上一页返回的 next_cursor",
+              "title": "Cursor"
+            }
+          },
+          {
+            "description": "每页条数，上限见配置项 api.page_size_max",
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "description": "每页条数，上限见配置项 api.page_size_max",
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FamilyMembersOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "参数错误"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "服务端错误"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Family Members",
+        "tags": [
+          "family-members"
+        ]
+      },
+      "post": {
+        "operationId": "create_family_member",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FamilyMemberWrite"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FamilyMemberOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "参数错误"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "服务端错误"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Create Family Member",
+        "tags": [
+          "family-members"
+        ]
+      }
+    },
+    "/v1/me/taste-profile/family-members/changes": {
+      "get": {
+        "operationId": "list_family_member_changes",
+        "parameters": [
+          {
+            "description": "上一页返回的 next_cursor",
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "上一页返回的 next_cursor",
+              "title": "Cursor"
+            }
+          },
+          {
+            "description": "每页条数，上限见配置项 api.page_size_max",
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "description": "每页条数，上限见配置项 api.page_size_max",
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page_TasteProfileChangeOut_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "参数错误"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "服务端错误"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Family Member Changes",
+        "tags": [
+          "family-members"
+        ]
+      }
+    },
+    "/v1/me/taste-profile/family-members/changes/{change_id}": {
+      "get": {
+        "operationId": "get_family_member_change",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "change_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Change Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TasteProfileChangeOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "参数错误"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "服务端错误"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Family Member Change",
+        "tags": [
+          "family-members"
+        ]
+      }
+    },
+    "/v1/me/taste-profile/family-members/{member_id}": {
+      "delete": {
+        "operationId": "delete_family_member",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "member_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Member Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "参数错误"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "服务端错误"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Delete Family Member",
+        "tags": [
+          "family-members"
+        ]
+      },
+      "get": {
+        "operationId": "get_family_member",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "member_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Member Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FamilyMemberOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "参数错误"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "服务端错误"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Family Member",
+        "tags": [
+          "family-members"
+        ]
+      },
+      "put": {
+        "operationId": "update_family_member",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "member_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Member Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FamilyMemberWrite"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FamilyMemberOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "参数错误"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "服务端错误"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Update Family Member",
+        "tags": [
+          "family-members"
+        ]
+      }
+    },
     "/v1/me/taste-profile/reset": {
       "post": {
         "operationId": "reset_taste_profile",
@@ -12458,6 +15069,311 @@
         ]
       }
     },
+    "/v1/recipes/{recipe_id}/compare": {
+      "get": {
+        "operationId": "compare_recipe_ingredients",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "recipe_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Recipe Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "from_version_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "From Version Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "to_version_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "To Version Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecipeIngredientComparison"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "服务端错误"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Compare Recipe Ingredients",
+        "tags": [
+          "recipes"
+        ]
+      }
+    },
+    "/v1/recipes/{recipe_id}/comparison-assistance": {
+      "get": {
+        "operationId": "compare_recipe_assistance",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "recipe_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Recipe Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "from_version_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "From Version Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "to_version_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "To Version Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecipeComparisonAssistance"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "服务端错误"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Compare Recipe Assistance",
+        "tags": [
+          "recipes"
+        ]
+      }
+    },
+    "/v1/recipes/{recipe_id}/comparison-candidates": {
+      "get": {
+        "operationId": "list_recipe_comparison_candidates",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "recipe_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Recipe Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "上一页返回的 next_cursor",
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "上一页返回的 next_cursor",
+              "title": "Cursor"
+            }
+          },
+          {
+            "description": "每页条数，上限见配置项 api.page_size_max",
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "description": "每页条数，上限见配置项 api.page_size_max",
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecipeComparisonCandidates"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "服务端错误"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Recipe Comparison Candidates",
+        "tags": [
+          "recipes"
+        ]
+      }
+    },
     "/v1/recipes/{recipe_id}/display": {
       "get": {
         "operationId": "display_current_recipe_ingredients",
@@ -12596,6 +15512,104 @@
           }
         ],
         "summary": "Display Current Recipe Ingredients",
+        "tags": [
+          "recipes"
+        ]
+      }
+    },
+    "/v1/recipes/{recipe_id}/full-comparison": {
+      "get": {
+        "operationId": "compare_recipe_full",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "recipe_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Recipe Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "from_version_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "From Version Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "to_version_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "To Version Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecipeFullComparison"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "服务端错误"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Compare Recipe Full",
         "tags": [
           "recipes"
         ]

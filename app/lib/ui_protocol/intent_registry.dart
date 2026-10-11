@@ -5,7 +5,13 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:gramtree_api/gramtree_api.dart'
-    show EventCorrelationIds, SkipAdjustmentRequest;
+    show
+        EventCorrelationIds,
+        SkipAdjustmentRequest,
+        MeasureInputRequest,
+        MeasureInputOut;
+
+import '../recipes/personal_measure_repository.dart';
 
 import '../api/api_client.dart';
 import '../events/event_recorder.dart';
@@ -14,6 +20,7 @@ import '../recipes/batch_advice.dart';
 import 'registered_pages.dart';
 import 'allergy_actions.dart';
 import 'cooking_constraint_actions.dart';
+import 'family_actions.dart';
 import 'ingredient_preference_actions.dart';
 import 'recipe_operations.dart';
 import 'source_overrides.dart';
@@ -42,7 +49,7 @@ typedef IntentParamsValidator = bool Function(Map<String, dynamic> params);
 /// 触发一个意图时真正要做的事。[context] 给需要跳转的意图（比如 `open_page`）用；
 /// [ref] 给以后可能要读 Provider、调用接口的意图（比如 `call_operation` 真正实现
 /// 时）用。可以同步返回（`void`），[IntentDispatcher.dispatch] 一律 `await` 一次。
-typedef IntentHandler = FutureOr<void> Function(
+typedef IntentHandler = FutureOr<Object?> Function(
   BuildContext context,
   Ref ref,
   Map<String, dynamic> params,
@@ -93,20 +100,28 @@ bool _requireNonEmptyString(Map<String, dynamic> params, String key) {
 /// 校验同时挡住"未登记的页面名"和"任意网址跳转"（一个 URL 字符串不会出现在这张
 /// 白名单里，天然被拒绝，不需要额外判断"像不像网址"）。
 bool _validateOpenPage(Map<String, dynamic> params) {
-  final page = params['page'];
-  return page is String && registeredPages.containsKey(page);
+  return registeredPagePath(params) != null &&
+      (!params.containsKey('close_dialog') ||
+          (params['page'] == 'personal_measures' &&
+              params['close_dialog'] is bool));
 }
 
-Future<void> _handleOpenPage(
+Future<Object?> _handleOpenPage(
   BuildContext context,
   Ref ref,
   Map<String, dynamic> params,
 ) async {
-  final path = registeredPages[params['page']];
-  // 正常链路里参数已经在渲染前校验过，这里理应总能找到；找不到就安静地什么都不做
-  // （不崩溃），呼应 IntentDispatcher.dispatch 顶部注释里说的兜底口子。
-  if (path == null) return;
-  context.go(path);
+  final path = registeredPagePath(params);
+  if (path == null) return null;
+  final router = GoRouter.of(context);
+  if (params['close_dialog'] == true) Navigator.pop(context);
+  if (registeredPages.containsKey(params['page']) &&
+      params['close_dialog'] != true) {
+    router.go(path);
+  } else {
+    unawaited(router.push(path));
+  }
+  return null;
 }
 
 /// `start_cooking`：参数格式要求 `recipe_version_id`（要开始做的菜谱版本 ID）。
@@ -117,50 +132,104 @@ Future<void> _handleOpenPage(
 bool _validateStartCooking(Map<String, dynamic> params) =>
     _requireNonEmptyString(params, 'recipe_version_id');
 
-void _handleStartCooking(
+Object? _handleStartCooking(
   BuildContext context,
   Ref ref,
   Map<String, dynamic> params,
-) {}
+) => null;
 
 /// `open_record_card`：参数格式要求 `cooking_record_id`（要打开的做菜记录 ID）。
 /// 记录卡页面还没有实现，处理器和 `start_cooking` 一样先是占位——理由同上。
 bool _validateOpenRecordCard(Map<String, dynamic> params) =>
     _requireNonEmptyString(params, 'cooking_record_id');
 
-void _handleOpenRecordCard(
+Object? _handleOpenRecordCard(
   BuildContext context,
   Ref ref,
   Map<String, dynamic> params,
-) {}
+) => null;
 
-/// Only the concrete recipe-question operation executes. Legacy placeholder
-/// operation names remain structurally valid but cannot call arbitrary APIs.
+/// Only named, validated operations are callable; never dispatch arbitrary URLs.
 bool _validateCallOperation(Map<String, dynamic> params) {
   if (!_requireNonEmptyString(params, 'operation')) return false;
-  if (params['operation'] != 'answer_recipe_question') return true;
-  final question = params['question'];
-  return _requireNonEmptyString(params, 'recipe_id') &&
-      _requireNonEmptyString(params, 'recipe_version_id') &&
-      question is String &&
-      question.trim().isNotEmpty &&
-      question.length <= 1000;
+  if (params['operation'] == 'answer_recipe_question') {
+    final question = params['question'];
+    return _requireNonEmptyString(params, 'recipe_id') &&
+        _requireNonEmptyString(params, 'recipe_version_id') &&
+        question is String &&
+        question.trim().isNotEmpty &&
+        question.length <= 1000;
+  }
+  // Preserve previously registered placeholder operations as inert actions.
+  // Only these concrete operations have a handler and require payloads.
+  if (!const [
+    'preview_measure_input',
+    'confirm_measure_input',
+  ].contains(params['operation'])) {
+    return true;
+  }
+  final input = params['input'];
+  if (input is! Map) return false;
+  if (params['operation'] == 'preview_measure_input') {
+    final quantity = input['quantity'];
+    return isRecipeId(input['measure_id']) &&
+        (input['ingredient_id'] == null ||
+            isRecipeId(input['ingredient_id'])) &&
+        quantity is num &&
+        quantity.isFinite &&
+        quantity >= 0 &&
+        quantity <= 10000000 &&
+        const ['g', 'ml'].contains(input['base_unit']) &&
+        (input['accept_estimate'] == null || input['accept_estimate'] is bool);
+  }
+  if (params['operation'] == 'confirm_measure_input') {
+    final quantity = input['base_quantity'];
+    return input['status'] == 'ready' &&
+        quantity is num &&
+        quantity.isFinite &&
+        quantity >= 0 &&
+        quantity <= 10000000 &&
+        const ['g', 'ml'].contains(input['base_unit']) &&
+        input['original'] is String &&
+        input['basis'] is String &&
+        input['measure_input_token'] is String &&
+        (input['measure_input_token'] as String).isNotEmpty;
+  }
+  return false;
 }
 
-Future<void> _handleCallOperation(
+Future<Object?> _handleCallOperation(
   BuildContext context,
   Ref ref,
   Map<String, dynamic> params,
 ) async {
-  if (params['operation'] != 'answer_recipe_question') return;
-  await ref
-      .read(
-        recipeAnswerOperationProvider((
-          params['recipe_id'] as String,
-          params['recipe_version_id'] as String,
-        )),
-      )
-      .submit((params['question'] as String).trim());
+  if (params['operation'] == 'answer_recipe_question') {
+    await ref
+        .read(
+          recipeAnswerOperationProvider((
+            params['recipe_id'] as String,
+            params['recipe_version_id'] as String,
+          )),
+        )
+        .submit((params['question'] as String).trim());
+    return null;
+  }
+  if (!const [
+    'preview_measure_input',
+    'confirm_measure_input',
+  ].contains(params['operation'])) {
+    return null;
+  }
+  final input = Map<String, dynamic>.from(params['input'] as Map);
+  switch (params['operation']) {
+    case 'preview_measure_input':
+      return ref
+          .read(personalMeasureRepositoryProvider)
+          .previewInput(MeasureInputRequest.fromJson(input));
+    case 'confirm_measure_input':
+      Navigator.pop(context, MeasureInputOut.fromJson(input));
+  }
+  return null;
 }
 
 /// `save_to_taste`/`apply_change`：还没有实现处理器的子 SPEC 接手，这两个意图这张
@@ -192,7 +261,7 @@ bool _validateSourceFeedback(Map<String, dynamic> params) {
 ///    据此重新渲染——网络出问题（离线、服务端报错）时安静地什么都不做，不崩溃、
 ///    不影响其它界面（呼应 `intent_dispatcher.dart`/`component_scaffold.dart` 里
 ///    同样的兜底口子），已经记下的反馈事件不受影响，留在本机队列里等下次上传。
-Future<void> _handleSkipThisTime(
+Future<Object?> _handleSkipThisTime(
   BuildContext context,
   Ref ref,
   Map<String, dynamic> params,
@@ -226,7 +295,7 @@ Future<void> _handleSkipThisTime(
           ),
         );
     final result = response.data;
-    if (result == null) return;
+    if (result == null) return null;
     final source = result.source_;
     ref
         .read(sourceOverridesProvider.notifier)
@@ -243,12 +312,13 @@ Future<void> _handleSkipThisTime(
   } on DioException {
     // 网络/服务端问题：这条链路只是演示用（#82），安静地忽略，不影响界面其它部分。
   }
+  return null;
 }
 
 /// "以后别这样"（SPEC-009.1 #82）：只记一条 `ui.source_feedback` 事件
 /// （`feedback: never_again`），由 SPEC-005.3/SPEC-009.2 消化；这张票不需要立刻
 /// 改变界面内容，所以不像 `skip_this_time` 那样还要调服务端接口。
-Future<void> _handleDontDoAgain(
+Future<Object?> _handleDontDoAgain(
   BuildContext context,
   Ref ref,
   Map<String, dynamic> params,
@@ -270,6 +340,7 @@ Future<void> _handleDontDoAgain(
           'feedback': 'never_again',
         },
       );
+  return null;
 }
 
 Future<void> _handleRecipeOperation(
@@ -284,6 +355,7 @@ Future<void> _handleRecipeOperation(
 final defaultIntentRegistry = IntentRegistry([
   ...allergyIntentSpecs,
   ...cookingConstraintIntentSpecs,
+  ...familyIntentSpecs,
   ...ingredientPreferenceIntentSpecs,
   const IntentSpec(
     name: 'recipe_operation',

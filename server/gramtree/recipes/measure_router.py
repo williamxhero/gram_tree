@@ -20,8 +20,9 @@ from gramtree.core.pagination import (
     page_params,
 )
 from gramtree.core.time import Timestamp, utcnow
-from gramtree.deps import SessionDep
+from gramtree.deps import SessionDep, SettingsDep
 from gramtree.recipes.measure_display import display_amount, quantity_text
+from gramtree.recipes.measure_input import MeasureInputOut, MeasureInputRequest, preview_input
 from gramtree.recipes.measure_models import PersonalMeasure
 from gramtree.runtime_config import service as config
 from gramtree.ui_protocol.protocol import SourceBasis, SourcedValue
@@ -170,6 +171,13 @@ def display_personal_measure(
         ),
     )
     return MeasureDisplayOut.model_validate({**result, "source": _display_source(body, result)})
+
+
+@router.post("/input", response_model=MeasureInputOut, responses=_ERRORS)
+def preview_personal_measure_input(
+    body: MeasureInputRequest, auth: CurrentAuth, session: SessionDep, settings: SettingsDep
+) -> MeasureInputOut:
+    return preview_input(session, auth.user.id, body, settings.auth_secret)
 
 
 @router.get("", response_model=Page[PersonalMeasureOut], responses=_ERRORS)

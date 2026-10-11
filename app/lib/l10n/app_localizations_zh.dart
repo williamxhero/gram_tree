@@ -10,6 +10,151 @@ class AppLocalizationsZh extends AppLocalizations {
   AppLocalizationsZh([String locale = 'zh']) : super(locale);
 
   @override
+  String get familyTitle => '家庭成员';
+
+  @override
+  String get familyIntro => '只记必要的称呼、年龄段和简单偏好；不创建家庭账号，不推断过敏。';
+
+  @override
+  String get familyEmpty => '还没有家庭成员';
+
+  @override
+  String get familyHidden => '家庭成员信息已从内存清除';
+
+  @override
+  String get familyUnavailable => '家庭信息暂不可用；仍可在设置撤回同意';
+
+  @override
+  String get familySaveUnconfirmed => '保存尚未确认，请联网后重试';
+
+  @override
+  String get familyCreateUnconfirmed => '创建尚未确认；请关闭并重新打开家庭成员列表，确认是否已创建后再操作。';
+
+  @override
+  String get familyDeleteUnconfirmed => '删除尚未确认，信息已从本机内存清除；请重试';
+
+  @override
+  String get familyDeleteRetry => '重试删除';
+
+  @override
+  String get familyAdd => '添加家庭成员';
+
+  @override
+  String get familyConsentTitle => '家庭成员信息单独同意';
+
+  @override
+  String get familyConsentBody =>
+      '只收集家人的称呼、年龄段、与标准不同的简单口味、忌口和你手动选择的过敏，用于保存和查看本账号内的必要做菜信息。不收集真实姓名、生日或照片，不建立可登录或共享的家庭账号。涉及不满十四周岁儿童时，请由监护人确认同意并仅填写必要信息。当前资料和可识别修改历史加密保存、仅本人可见，不进入公开内容、持久缓存或模型日志。删除成员会删除其资料、可识别历史和关联；在设置的隐私入口撤回敏感同意，会删除所有家庭成员及本人过敏，账号注销也会删除。拒绝不影响普通口味。本同意不代表同意外部 AI 或第三方共享。';
+
+  @override
+  String get familyRefuse => '暂不填写';
+
+  @override
+  String get familyAgree => '单独同意并继续';
+
+  @override
+  String get familyEditorTitle => '家庭成员简化档案';
+
+  @override
+  String get familyDetailTitle => '家庭成员档案';
+
+  @override
+  String get familyNickname => '称呼（不是真实姓名）';
+
+  @override
+  String get familyNicknameRequired => '请填写称呼和年龄段';
+
+  @override
+  String get familyAgeBand => '年龄段';
+
+  @override
+  String get familyAgeUnder1 => '1 岁以下';
+
+  @override
+  String get familyAge1To3 => '1～3 岁';
+
+  @override
+  String get familyAge3To6 => '3～6 岁';
+
+  @override
+  String get familyAge6To12 => '6～12 岁';
+
+  @override
+  String get familyAge12To18 => '12～18 岁';
+
+  @override
+  String get familyAgeAdult => '成人';
+
+  @override
+  String get familyAgeElder => '老人';
+
+  @override
+  String get familyFlavors => '只填写与标准不同的口味';
+
+  @override
+  String get familyNoChili => '不吃辣';
+
+  @override
+  String get familyStandard => '标准（不单独记录）';
+
+  @override
+  String get familySavedCoefficient => '已保存系数';
+
+  @override
+  String get familyAvoidances => '忌口';
+
+  @override
+  String get familyAvoidanceAdd => '添加忌口食材或分类';
+
+  @override
+  String get familyAllergies => '手动过敏（不会自动推断）';
+
+  @override
+  String get familyAllergyAdd => '添加具体过敏食材';
+
+  @override
+  String get familyUnset => '未填写';
+
+  @override
+  String get familyView => '查看';
+
+  @override
+  String get familyEdit => '修改';
+
+  @override
+  String get familyDelete => '删除成员';
+
+  @override
+  String get familyDeleteTitle => '删除这位家庭成员？';
+
+  @override
+  String get familyDeleteBody => '删除其全部资料、可识别修改历史和关联引用。其他成员和普通口味不受影响。';
+
+  @override
+  String get familyHistory => '家庭成员私密修改历史';
+
+  @override
+  String get familyHistoryEmpty => '没有家庭成员私密修改历史';
+
+  @override
+  String get familyHistoryUnavailable => '私密历史暂不可用';
+
+  @override
+  String get familyManual => '家庭成员手动填写';
+
+  @override
+  String get familyDeletedReceipt => '家庭成员已删除（不保留身份）';
+
+  @override
+  String get familyWhy => '为什么';
+
+  @override
+  String get familyClose => '关闭';
+
+  @override
+  String get familyRemove => '移除';
+
+  @override
   String get networkConsentRequired => '需要先同意隐私政策';
 
   @override
@@ -106,6 +251,12 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get syncPermissionReason => '权限或内容校验未通过；已保留内容，请检查权限或修改内容后另存，不会盲目重试。';
+
+  @override
+  String get syncRecipeValidationReason => '菜谱结构校验未通过；请检查食材和步骤后重新保存。';
+
+  @override
+  String get syncRecipePolicyReason => '描述包含不允许的健康/治疗表述；请修改后重新保存。';
 
   @override
   String get syncExhaustedReason => '重试次数已达上限；内容已保留，可恢复连接后手动重试。';
@@ -290,6 +441,261 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get appTitle => '味谱';
+
+  @override
+  String get measureInputAction => '用自家量具录入';
+
+  @override
+  String get measureInputTitle => '量具用量换算';
+
+  @override
+  String get measureInputTool => '自家量具';
+
+  @override
+  String get measureInputCount => '几勺、几碗或几杯';
+
+  @override
+  String get measureInputBaseUnit => '采用的基础单位';
+
+  @override
+  String get measureInputPreview => '查看换算';
+
+  @override
+  String get measureInputConfirm => '确认采用基础量';
+
+  @override
+  String get measureInputEstimate => '我了解这是估算，继续换算';
+
+  @override
+  String get measureInputFallback => '返回填写基础量';
+
+  @override
+  String get measureInputNoTools => '还没有登记量具，请先在个人中心登记，或直接填写克、毫升。';
+
+  @override
+  String get measureInputOffline => '离线或缺少转换数据，不能可靠换算；请返回填写基础量。草稿不会改变。';
+
+  @override
+  String get measureInputInvalid => '请输入有限、非负且不超过 10000000 的数量。';
+
+  @override
+  String get measureInputUnchanged => '尚未确认，当前食材用量不会改变。';
+
+  @override
+  String get measureInputEvidence => '量具输入依据';
+
+  @override
+  String get recipeFlavorUnknown => '味型贡献未填写';
+
+  @override
+  String get recipeFlavorFunctionalOff => '不作功能性用料';
+
+  @override
+  String get recipeFlavorAuthorBasis => '作者按这道菜的实际作用填写';
+
+  @override
+  String get recipeFlavorEditorTitle => '这道菜的味型贡献';
+
+  @override
+  String get recipeFlavorEditorHint => '强度 0–3；未填写不代表零贡献';
+
+  @override
+  String recipeFlavorAxisLabel(Object axis) {
+    return '$axis味贡献';
+  }
+
+  @override
+  String recipeFlavorAxisUnknown(Object axis) {
+    return '$axis 未填写';
+  }
+
+  @override
+  String recipeFlavorStrength(String axis, int strength) {
+    return '$axis $strength';
+  }
+
+  @override
+  String get recipeFlavorSalty => '咸';
+
+  @override
+  String get recipeFlavorSweet => '甜';
+
+  @override
+  String get recipeFlavorSour => '酸';
+
+  @override
+  String get recipeFlavorSpicy => '辣';
+
+  @override
+  String get recipeFlavorUmami => '鲜';
+
+  @override
+  String get recipeFlavorNumbing => '麻';
+
+  @override
+  String get recipeFlavorOily => '油';
+
+  @override
+  String get recipeComparisonTitle => '食材版本对比';
+
+  @override
+  String get recipeComparisonError => '无法比较这些版本，请确认两版仍可查看';
+
+  @override
+  String get recipeComparisonFrom => '从 A';
+
+  @override
+  String get recipeComparisonTo => '到 B';
+
+  @override
+  String get recipeComparisonScope => '仅比较食材，尚未比较步骤';
+
+  @override
+  String recipeComparisonServings(int servings) {
+    return '已按 $servings 人份对比';
+  }
+
+  @override
+  String recipeComparisonServingValue(int servings) {
+    return '$servings 人份';
+  }
+
+  @override
+  String get recipeComparisonServingBasis =>
+      'B 的基础量按线性、固定或阶梯规则归一到 A 的份数；原版本未修改。';
+
+  @override
+  String get recipeComparisonShowAll => '展开全部食材';
+
+  @override
+  String get recipeComparisonEmpty => '没有食材配方变化';
+
+  @override
+  String get recipeComparisonSnapshotFields => '菜谱字段变化';
+
+  @override
+  String recipeComparisonVersion(String author, int version, int servings) {
+    return '$author · 第 $version 版 · $servings 人份';
+  }
+
+  @override
+  String get recipeComparisonDetails => '查看版本详情';
+
+  @override
+  String get recipeComparisonUnchangedBasis => '基础量按相同份数比较，食材与执行字段均未改变';
+
+  @override
+  String get recipeComparisonUnchanged => '无食材变化';
+
+  @override
+  String recipeComparisonBefore(Object value) {
+    return 'A：$value';
+  }
+
+  @override
+  String recipeComparisonAfter(Object value) {
+    return 'B：$value';
+  }
+
+  @override
+  String get recipeComparisonIngredientDetails => '食材明细';
+
+  @override
+  String get recipeComparisonNone => '无';
+
+  @override
+  String get recipeComparisonYes => '是';
+
+  @override
+  String get recipeComparisonNo => '否';
+
+  @override
+  String get recipeComparisonAdded => '新增';
+
+  @override
+  String get recipeComparisonRemoved => '删除';
+
+  @override
+  String get recipeComparisonReplacement => '替换';
+
+  @override
+  String get recipeComparisonQuantity => '用量变化';
+
+  @override
+  String get recipeComparisonUnit => '单位不同';
+
+  @override
+  String get recipeComparisonField => '执行字段变化';
+
+  @override
+  String get recipeComparisonText => '文字修改';
+
+  @override
+  String get recipeComparisonBaseQuantity => '基础量';
+
+  @override
+  String get recipeComparisonBaseUnit => '基础单位';
+
+  @override
+  String get recipeComparisonDisplayName => '显示名';
+
+  @override
+  String get recipeComparisonPreparation => '处理方式';
+
+  @override
+  String get recipeComparisonOptional => '可选性';
+
+  @override
+  String get recipeComparisonFlavor => '味型贡献';
+
+  @override
+  String get recipeComparisonTags => '标签';
+
+  @override
+  String get recipeDescription => '描述';
+
+  @override
+  String get recipeBaseMold => '基准模具';
+
+  @override
+  String get recipeCuisine => '菜系';
+
+  @override
+  String get recipeDesignRationale => '设计理由';
+
+  @override
+  String get whyTitle => '为什么';
+
+  @override
+  String get recipeComparisonTotalTime => '总时长';
+
+  @override
+  String get recipeComparisonActiveTime => '需守着的时长';
+
+  @override
+  String recipeComparisonDetailField(Object label, Object value) {
+    return '$label：$value';
+  }
+
+  @override
+  String get recipeComparisonCancelSelection => '取消选择';
+
+  @override
+  String get recipeComparisonSelect => '选两版对比';
+
+  @override
+  String get recipeComparisonSelectionHint => '先选 A，再选 B；方向为 A 到 B，仅比较食材';
+
+  @override
+  String get recipeComparisonAction => '比较食材';
+
+  @override
+  String get recipeComparisonPrevious => '和上一版比食材';
+
+  @override
+  String recipeComparisonCandidate(String author, String recipe, int version) {
+    return '$author · 菜谱 $recipe · 第 $version 版';
+  }
 
   @override
   String get tabToday => '今天';
@@ -704,6 +1110,79 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get recipeChangeNote => '这次改了什么';
+
+  @override
+  String get changeExplanationTitle => '改动说明';
+
+  @override
+  String get changeExplanationChanged => '改动已变化，请重新生成说明或手写。';
+
+  @override
+  String get changeExplanationModelUnavailable => '模型暂不可用，可手写说明和标签。';
+
+  @override
+  String get changeExplanationDailyQuota => '今日 AI 额度已用完，可手写说明和标签。';
+
+  @override
+  String get changeExplanationMonthlyBudget => 'AI 预算暂不可用，可手写说明和标签。';
+
+  @override
+  String get changeExplanationNoChanges => '本次没有可说明的实际改动，可手写说明和标签。';
+
+  @override
+  String get changeExplanationFailed => '说明生成失败，请重试或手写说明和标签。';
+
+  @override
+  String get changeExplanationBasis => '仅依据本次最终改动生成，不代表已做过验证。作者可以修改说明和标签。';
+
+  @override
+  String get changeExplanationGenerating => '正在生成说明…';
+
+  @override
+  String get changeExplanationGenerate => '生成改动说明';
+
+  @override
+  String get changeExplanationHandwritten => '可手写说明和标签';
+
+  @override
+  String changeExplanationSaveAvailable(String message) {
+    return '$message 手动保存不受影响。';
+  }
+
+  @override
+  String get textEditDraftSaveFailed => '本机草稿保存失败，请保留当前页面并重试。';
+
+  @override
+  String get textEditDraftCleanupFailed => '本机草稿清理失败，已保留修改，请重试。';
+
+  @override
+  String get textEditInvalidJsonNumber => '请输入有效的 JSON 数值。';
+
+  @override
+  String get textEditInvalidJsonValue => '请输入与原值类型一致的有效 JSON（最多 4000 字符）。';
+
+  @override
+  String get textEditAfterJsonLabel => '修改后的 JSON 值';
+
+  @override
+  String get textEditTitle => '一句话修改菜谱';
+
+  @override
+  String get textEditSupportedChanges =>
+      '支持改文字、换厨具、调整时间或难度、调整做法；口味和缺料替代暂未支持。确认前不会保存。';
+
+  @override
+  String get textEditRequestLabel => '想怎样修改菜谱？';
+
+  @override
+  String get textEditPreview => '预览菜谱修改';
+
+  @override
+  String get textEditRetrySaveCleanup => '重试保存与本机清理';
+
+  @override
+  String get textEditUnsupportedIntent =>
+      '这类修改暂未支持，不会应用。支持改文字、换厨具、调整时间或难度、调整做法；口味和缺料替代请手动编辑。';
 
   @override
   String get recipeSaveVersion => '保存为新版本';
@@ -1540,7 +2019,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get personalMeasuresIntro =>
-      '把空量具放在厨房秤上归零，装满水后的克数就是容量（毫升）。只影响显示，不会修改菜谱。';
+      '把空量具放在厨房秤上归零，装满水后的克数就是容量（毫升）。可用于显示或确认录入；重新校准不会修改已保存菜谱。';
 
   @override
   String get personalMeasuresOffline => '离线：正在使用已缓存的量具；登记、修改和删除需要联网。';
@@ -1823,7 +2302,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get allergyConsentBody =>
-      '只收集你手动选择的八类过敏原和标准食材，用于保存本人过敏设置及修改历史。当前值和历史加密保存，仅本人可见，不从行为或模型推断。可在设置的隐私入口撤回，删除当前值、私密历史及关联副本；重新同意从空状态开始。拒绝不影响普通口味，不代表同意外部 AI 共享。';
+      '只收集你手动选择的八类过敏原和标准食材，用于保存本人过敏设置及修改历史。当前值和历史加密保存，仅本人可见，不从行为或模型推断。可在设置的隐私入口撤回这项敏感同意，删除本人过敏、所有家庭成员、可识别私密历史及关联副本；重新同意从空状态开始。家庭成员首次添加时另行说明必要收集和儿童保护。拒绝不影响普通口味，不代表同意外部 AI 共享。';
 
   @override
   String get allergyRefuse => '暂不同意';
@@ -1880,14 +2359,14 @@ class AppLocalizationsZh extends AppLocalizations {
   String get allergyWithdrawEntry => '撤回敏感信息同意';
 
   @override
-  String get allergyWithdrawDetail => '仅删除本人过敏和私密历史，不退出普通口味';
+  String get allergyWithdrawDetail => '删除本人过敏、所有家庭成员和私密历史，保留普通口味';
 
   @override
   String get allergyWithdrawTitle => '撤回敏感信息同意？';
 
   @override
   String get allergyWithdrawBody =>
-      '删除本人过敏、私密修改历史及关联副本。普通口味、食材偏好和做菜约束保留；重新同意后从空状态开始。';
+      '删除本人过敏、所有家庭成员、可识别私密修改历史及关联副本。普通口味、食材偏好和做菜约束保留；重新同意后从空状态开始。';
 
   @override
   String get allergyWithdrawConfirm => '撤回并删除';
@@ -1896,7 +2375,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get allergyWithdrawing => '撤回处理中，本机私密信息已隐藏';
 
   @override
-  String get allergyWithdrawn => '敏感同意已撤回，过敏及私密历史已删除';
+  String get allergyWithdrawn => '敏感同意已撤回，过敏、家庭成员及私密历史已删除';
 
   @override
   String get allergyWithdrawUnconfirmed => '撤回尚未确认，请联网后重试；普通口味不受影响';
