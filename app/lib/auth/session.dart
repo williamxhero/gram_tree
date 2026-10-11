@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gramtree_api/gramtree_api.dart';
 
+import '../features/me/taste_profile_cache.dart';
 import '../storage/secure_store.dart';
 
 /// 当前设备的登录状态：访问令牌、刷新令牌和账号资料，存在系统安全存储里。
@@ -54,9 +55,10 @@ class SessionIdentity {
 
 /// 持有当前登录状态。拦截器同步读取令牌；登录、续期、退出时通知界面。
 class SessionStore extends ChangeNotifier {
-  SessionStore(this._secure);
+  SessionStore(this._secure, [TasteProfileCache? cache]) : _cache = cache;
 
   final SecureStore _secure;
+  final TasteProfileCache? _cache;
   AuthSession? _current;
   bool _loaded = false;
   int _identityEpoch = 0;
@@ -128,11 +130,18 @@ class SessionStore extends ChangeNotifier {
   /// 清掉本机的登录状态。
   Future<void> clear() async {
     _identityEpoch++;
+    final ownerId = _current?.user.id;
     _current = null;
     _loaded = true;
     // Hide account-private UI immediately, even while older storage IO drains.
     notifyListeners();
     await _persist(() => _secure.delete(sessionStorageKey));
+    // Route cache deletion through the cache's own write queue. This waits for
+    // an already-started snapshot write before deleting it, so expiry cannot
+    // leave a private snapshot behind for the next app start.
+    if (ownerId != null) {
+      await _cache?.clear(ownerId);
+    }
   }
 
   Future<void> expire({required String reason}) async {
@@ -143,7 +152,10 @@ class SessionStore extends ChangeNotifier {
 }
 
 final sessionStoreProvider = Provider<SessionStore>((ref) {
-  final store = SessionStore(ref.watch(secureStoreProvider));
+  final store = SessionStore(
+    ref.watch(secureStoreProvider),
+    ref.watch(tasteProfileCacheProvider),
+  );
   ref.onDispose(store.dispose);
   return store;
 });

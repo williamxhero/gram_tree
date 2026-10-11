@@ -59,6 +59,9 @@ class GenerationRequest(Base):
         ForeignKey("recipes.id", ondelete="SET NULL"), default=None
     )
     selected_recipe_id: Mapped[uuid.UUID | None] = mapped_column(default=None)
+    # Versioned owner-checked context receipt for cache invalidation and cleanup.
+    # It is metadata only; decrypted sensitive values never enter this column.
+    context_dependency: Mapped[dict[str, Any]] = mapped_column(JSONB, default=dict)
     created_at: Mapped[datetime] = mapped_column(default=utcnow)
 
 

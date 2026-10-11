@@ -41,7 +41,9 @@ class _WithdrawConsentPageState extends ConsumerState<WithdrawConsentPage> {
           },
         );
     await snapshots?.clear();
-    if (identity != null) await auth.clearLocalSession(identity: identity);
+    if (identity != null) {
+      await auth.clearLocalSession(deleteAccountData: true, identity: identity);
+    }
   }
 
   @override

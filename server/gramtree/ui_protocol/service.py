@@ -25,7 +25,7 @@ from uuid import uuid4
 from sqlalchemy.orm import Session
 
 from gramtree.core.time import utcnow
-from gramtree.recipes.schemas import RecipeDerived, RecipeSafetyResult
+from gramtree.recipes.schemas import RecipeDerived, RecipePersonalSafety, RecipeSafetyResult
 from gramtree.runtime_config import service as runtime_config_service
 from gramtree.ui_protocol import experiments
 from gramtree.ui_protocol.protocol import (
@@ -160,6 +160,7 @@ def compose_recipe_safety(
     *,
     session: Session,
     safety_context: tuple[RecipeSafetyResult, RecipeDerived] | None,
+    personal_safety: RecipePersonalSafety | None = None,
     **_: object,
 ) -> PageDescription:
     """Compose mandatory safety sections from one owner-authorized saved version."""
@@ -244,6 +245,8 @@ def compose_recipe_safety(
             "basis": "根据此版本食材及替代品对应的标准食材信息推导。",
             "result": allergen_result,
         }
+        if personal_safety is not None:
+            allergen_data["personal_safety"] = personal_safety.model_dump(mode="json")
 
     candidates = [
         ComponentDescriptor(
@@ -341,6 +344,7 @@ def compose(
     detail_overrides: Mapping[str, DetailLevel] | None = None,
     exclude_components: Collection[str] | None = None,
     safety_context: tuple[RecipeSafetyResult, RecipeDerived] | None = None,
+    personal_safety: RecipePersonalSafety | None = None,
 ) -> PageDescription:
     composer = COMPOSERS[page_type]
     if page_type in {"recipe_detail", "recipe_editor"}:
@@ -348,6 +352,7 @@ def compose(
             supported_components,
             session=session,
             safety_context=safety_context,
+            personal_safety=personal_safety,
         )
     return composer(
         supported_components,

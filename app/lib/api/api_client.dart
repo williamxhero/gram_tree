@@ -312,6 +312,17 @@ class AuthInterceptor extends QueuedInterceptor {
 }
 
 /// 从接口错误里取出统一错误格式的 code 和给用户看的 message。
+bool isNetworkFailure(Object error) {
+  if (error is! DioException || error.response != null) return false;
+  return switch (error.type) {
+    DioExceptionType.connectionError ||
+    DioExceptionType.connectionTimeout ||
+    DioExceptionType.receiveTimeout ||
+    DioExceptionType.sendTimeout => true,
+    _ => false,
+  };
+}
+
 class ApiFailure {
   const ApiFailure(this.code, this.message);
 
@@ -334,7 +345,7 @@ class ApiFailure {
       if (error.error is OnlineFeatureUnavailable) {
         return ApiFailure('network', error.error.toString());
       }
-      if (error.response == null) {
+      if (isNetworkFailure(error)) {
         return const ApiFailure('network', '网络连接不上，请检查网络后再试');
       }
     }
