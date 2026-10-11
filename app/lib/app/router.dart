@@ -20,6 +20,7 @@ import '../features/me/withdraw_page.dart';
 import '../features/onboarding/consent_page.dart';
 import '../features/recipes/personal_measures_page.dart';
 import '../features/recipes/recipe_pages.dart';
+import '../features/recipes/cooking_session.dart';
 import '../features/recipes/ingredient_comparison_page.dart';
 import '../features/recipes/full_comparison_page.dart';
 import '../features/records/records_page.dart';
@@ -166,6 +167,12 @@ final routerProvider = Provider<GoRouter>((ref) {
             ),
           ),
         ],
+      ),
+      GoRoute(
+        path: '/cooking/:sessionId',
+        builder: (_, state) => CookingPage(
+          sessionId: state.pathParameters['sessionId']!,
+        ),
       ),
       GoRoute(
         path: SettingsPage.path,

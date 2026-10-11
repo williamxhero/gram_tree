@@ -37,6 +37,7 @@ import 'quantification_panel.dart';
 import 'recipe_source_badge.dart';
 import 'text_edit_panel.dart';
 import 'change_explanation_panel.dart';
+import 'cooking_session.dart';
 import '../../storage/local_store.dart';
 import '../../ui_protocol/components/component_scaffold.dart';
 import '../../ui_protocol/intent_dispatcher.dart';
@@ -2734,6 +2735,14 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
     context.go(RecipeListPage.path);
   }
 
+  Future<void> _startCooking() async {
+    final store = ref.read(cookingSessionStoreProvider);
+    final snapshot = _frozenSnapshot;
+    if (store == null || snapshot == null || snapshot.render == null) return;
+    final session = await store.start(snapshot);
+    if (mounted) context.push('/cooking/${session.id}');
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
@@ -3079,6 +3088,13 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
           Text(
             detail.dish.name,
             style: Theme.of(context).textTheme.headlineSmall,
+          ),
+          const SizedBox(height: 12),
+          FilledButton.icon(
+            key: const ValueKey('start-cooking-button'),
+            onPressed: _frozenSnapshot?.render == null ? null : _startCooking,
+            icon: const Icon(Icons.play_arrow),
+            label: const Text('开始做菜'),
           ),
           const SizedBox(height: 4),
           Text(

@@ -190,6 +190,21 @@ class RecipeModificationContentV1(BaseModel):
     saved_version_id: str | None = None
 
 
+class CookingSessionContentV1(BaseModel):
+    """做菜会话的只追加操作；冻结显示内容保存在客户端会话交接中。"""
+
+    session_id: str
+    event: Literal[
+        "step_forward",
+        "step_back",
+        "timer_start",
+        "timer_pause",
+        "timer_resume",
+        "completed",
+    ]
+    step_index: int
+
+
 ITEMS: tuple[EventTypeSpec, ...] = (
     EventTypeSpec(
         event_type="ai.recipe_modification",
@@ -198,6 +213,14 @@ ITEMS: tuple[EventTypeSpec, ...] = (
         correlation_fields=("recipe_version_id",),
         exportable=True,
         content_schema=RecipeModificationContentV1,
+    ),
+    EventTypeSpec(
+        event_type="cooking.session",
+        version=1,
+        description="做菜会话的步骤与计时操作，客户端 ID 幂等上传。",
+        correlation_fields=("recipe_version_id",),
+        exportable=True,
+        content_schema=CookingSessionContentV1,
     ),
     EventTypeSpec(
         event_type="taste_profile.changed",
