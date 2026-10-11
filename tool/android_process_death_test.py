@@ -100,6 +100,11 @@ class LogWatch:
         self.run_id = run_id
         self.lines: queue.Queue[str | None] = queue.Queue()
         self.recent: collections.deque[str] = collections.deque(maxlen=200)
+        # Flutter can emit hundreds of routine framework lines between a
+        # protocol marker and FAILED. Keep a separate bounded stream of only
+        # lines that the redactor is allowed to retain, so the root-cause
+        # marker/stack cannot be evicted by unrelated logcat noise.
+        self.safe_recent: collections.deque[str] = collections.deque(maxlen=200)
         self.process = subprocess.Popen(
             [
                 *android.prefix,
@@ -127,6 +132,19 @@ class LogWatch:
         for line in self.process.stdout:
             self.lines.put(line.rstrip())
         self.lines.put(None)
+
+    def _remember_safe_line(self, line: str) -> None:
+        detail_prefix = re.compile(
+            rf"GRAMTREE_PROCESS_DETAIL {re.escape(self.run_id)}(?: pid=\d+)? "
+        )
+        marker = MARKER.search(line)
+        if (
+            (marker and marker[1] == self.run_id)
+            or detail_prefix.search(line)
+            or re.search(r"#\d+\s+.*\((?:package:|file:)[^()\s]+:\d+(?::\d+)?\)$", line)
+            or FAILURE.search(line)
+        ):
+            self.safe_recent.append(line)
 
     def wait(self, target: str, process: str, timeout: float) -> None:
         deadline = time.monotonic() + timeout
@@ -162,6 +180,7 @@ class LogWatch:
             if line is None:
                 raise RuntimeError(f"logcat exited before {target}")
             self.recent.append(line)
+            self._remember_safe_line(line)
             marker = MARKER.search(line)
             if marker and marker[1] == self.run_id:
                 state, marker_pid = marker[2], marker[3]
@@ -201,6 +220,7 @@ class LogWatch:
             if line is None:
                 break
             self.recent.append(line)
+            self._remember_safe_line(line)
 
     def safe_failure_log(self) -> str:
         # Flutter's automatic assertion report can dump whole envelopes even
@@ -213,7 +233,7 @@ class LogWatch:
             r"#\d+\s+[A-Za-z0-9_.$<> ]+\s+"
             r"\((?:package:|file:)[^()\s]+:\d+(?::\d+)?\)$"
         )
-        for line in self.recent:
+        for line in getattr(self, "safe_recent", self.recent):
             marker = MARKER.search(line)
             if marker and marker[1] == self.run_id:
                 safe.append(marker.group(0))

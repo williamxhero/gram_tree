@@ -57,6 +57,31 @@ class SafeFailureLogTest(unittest.TestCase):
             watch.safe_failure_log(),
         )
 
+    def test_safe_stream_survives_logcat_noise(self) -> None:
+        watch = _MODULE.LogWatch.__new__(_MODULE.LogWatch)
+        watch.run_id = "abc123"
+        watch.safe_recent = collections.deque(maxlen=200)
+        watch.recent = collections.deque(maxlen=200)
+        watch._remember_safe_line(
+            "I/flutter: GRAMTREE_PROCESS_DEATH abc123 BOOT pid=4935"
+        )
+        for index in range(250):
+            watch.recent.append(f"I/flutter: routine frame {index}")
+            watch._remember_safe_line(f"I/flutter: routine frame {index}")
+        watch._remember_safe_line(
+            "I/flutter: GRAMTREE_PROCESS_DEATH abc123 FAILED pid=4935"
+        )
+
+        self.assertEqual(
+            "\n".join(
+                [
+                    "GRAMTREE_PROCESS_DEATH abc123 BOOT pid=4935",
+                    "GRAMTREE_PROCESS_DEATH abc123 FAILED pid=4935",
+                ]
+            ),
+            watch.safe_failure_log(),
+        )
+
 
 if __name__ == "__main__":
     unittest.main()
