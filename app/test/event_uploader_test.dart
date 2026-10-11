@@ -138,7 +138,8 @@ void main() {
     final env = TestEnv.signedIn();
     final container = ProviderContainer(
       overrides: [
-        ...env.overrides,
+        for (final override in env.overrides)
+          if (override.origin != eventQueueProvider) override,
         eventQueueProvider.overrideWithValue(
           _ThrowingEntriesQueue(env.eventQueue),
         ),
