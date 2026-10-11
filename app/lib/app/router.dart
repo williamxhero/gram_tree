@@ -170,9 +170,8 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: '/cooking/:sessionId',
-        builder: (_, state) => CookingPage(
-          sessionId: state.pathParameters['sessionId']!,
-        ),
+        builder: (_, state) =>
+            CookingPage(sessionId: state.pathParameters['sessionId']!),
       ),
       GoRoute(
         path: SettingsPage.path,
