@@ -308,9 +308,9 @@ class _RecipeEditorPageState extends ConsumerState<RecipeEditorPage> {
   Future<void> _load() async {
     try {
       if (widget.recipeId != null) {
-        // Resolve retained saves and the immutable editing baseline locally
-        // before any HTTP. A recovery draft keeps its original baseline even
-        // when the server or the last-viewed execution snapshot has moved on.
+        // Resolve retained saves and form recovery locally first. A recovery
+        // draft keeps its original baseline, while an ordinary online open must
+        // prefer the server so an old snapshot cannot restore stale proposals.
         final account = _accountId;
         final local = await ref
             .read(offlineRecipeRepositoryProvider)
@@ -338,17 +338,23 @@ class _RecipeEditorPageState extends ConsumerState<RecipeEditorPage> {
         } else if (local != null) {
           _loaded = local.detail;
         } else {
-          _loaded =
-              (await ref
-                      .read(recipeSnapshotStoreProvider)
-                      ?.read(widget.recipeId!, versionId: widget.versionId))
-                  ?.detail;
-        }
-        if (_loaded == null) {
-          final repo = ref.read(recipeRepositoryProvider);
-          _loaded = widget.versionId == null
-              ? await repo.get(widget.recipeId!)
-              : await repo.getVersion(widget.recipeId!, widget.versionId!);
+          final cached = await ref
+              .read(recipeSnapshotStoreProvider)
+              ?.read(widget.recipeId!, versionId: widget.versionId);
+          if (ref.read(apiReachabilityProvider) == ApiReachability.unavailable) {
+            _loaded = cached?.detail;
+          }
+          if (_loaded == null) {
+            try {
+              final repo = ref.read(recipeRepositoryProvider);
+              _loaded = widget.versionId == null
+                  ? await repo.get(widget.recipeId!)
+                  : await repo.getVersion(widget.recipeId!, widget.versionId!);
+            } catch (_) {
+              _loaded = cached?.detail;
+              if (_loaded == null) rethrow;
+            }
+          }
         }
         if (!mounted || !_sameEditorAccount) return;
         _form = RecipeForm.fromSnapshot(

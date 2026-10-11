@@ -243,6 +243,7 @@ void main() {
                   ? WriteResultStatusEnum.confirmed
                   : WriteResultStatusEnum.deferred_,
               reasonCode: ready ? null : 'dependency_not_arrived',
+              confirmedAt: ready ? '2026-10-08T10:11:12Z' : null,
               result: ready
                   ? WriteResourceResult(
                       resourceType: 'experience.event',
