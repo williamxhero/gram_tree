@@ -186,7 +186,6 @@ class AuthController extends AsyncNotifier<UserOut?> {
     await session.clear();
     await revoking;
   }
-  }
 
   /// 只通知服务端吊销这台设备的令牌，本机状态留给调用方清。
   Future<void> signOutOnServer({SessionIdentity? identity}) async {
