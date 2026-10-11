@@ -52,5 +52,24 @@ void main() {
       expect(CookingTimerState.fromJson(null), isNull);
       expect(CookingTimerState.fromJson({'id': 'missing'}), isNull);
     });
+
+    test('persists the due-event idempotency marker', () {
+      final reportedAt = started.add(const Duration(seconds: 60));
+      final timer = CookingTimerState(
+        id: 'timer',
+        stepId: 'step',
+        startedAt: started,
+        durationSeconds: 60,
+        dueReportedAt: reportedAt,
+      );
+
+      final decoded = CookingTimerState.fromJson(timer.toJson());
+      expect(decoded?.hasReportedDue, isTrue);
+      expect(decoded?.dueReportedAt, reportedAt);
+      expect(
+        decoded?.isDueAt(started.add(const Duration(seconds: 120))),
+        isTrue,
+      );
+    });
   });
 }

@@ -24,6 +24,7 @@ class CookingTimerState {
     required this.durationSeconds,
     this.pausedSeconds = 0,
     this.pausedAt,
+    this.dueReportedAt,
     this.status = 'running',
   });
 
@@ -33,9 +34,15 @@ class CookingTimerState {
   final int durationSeconds;
   final int pausedSeconds;
   final DateTime? pausedAt;
+  /// Persisted idempotency marker for the local timer-due event. Keeping this
+  /// in the session (rather than only in widget memory) prevents a process
+  /// restart/resume from recording the same due timer repeatedly.
+  final DateTime? dueReportedAt;
   final String status;
 
   bool isDueAt(DateTime now) => status == 'running' && remainingAt(now) == 0;
+
+  bool get hasReportedDue => dueReportedAt != null;
 
   int remainingAt(DateTime now) {
     final paused = pausedAt == null
@@ -52,6 +59,7 @@ class CookingTimerState {
     'duration_seconds': durationSeconds,
     'paused_seconds': pausedSeconds,
     'paused_at': pausedAt?.toUtc().toIso8601String(),
+    'due_reported_at': dueReportedAt?.toUtc().toIso8601String(),
     'status': status,
   };
 
@@ -67,6 +75,9 @@ class CookingTimerState {
         pausedAt: map['paused_at'] == null
             ? null
             : DateTime.parse(map['paused_at'] as String),
+        dueReportedAt: map['due_reported_at'] == null
+            ? null
+            : DateTime.parse(map['due_reported_at'] as String),
         status: map['status'] as String? ?? 'running',
       );
     } catch (_) {
@@ -321,12 +332,24 @@ class _CookingPageState extends ConsumerState<CookingPage>
   Future<void> _reportDueTimers() async {
     final session = _session;
     if (session == null) return;
-    for (final timer in session.timers) {
-      if (timer.isDueAt(DateTime.now().toUtc()) &&
-          _reportedDueTimers.add(timer.id)) {
-        await _save(session, event: 'timer_due');
-      }
-    }
+    final now = DateTime.now().toUtc();
+    final due = session.timers
+        .where((timer) => timer.isDueAt(now) && !timer.hasReportedDue)
+        .toList();
+    if (due.isEmpty) return;
+    final dueIds = {for (final timer in due) timer.id};
+    _reportedDueTimers.addAll(dueIds);
+    await _save(
+      session.copyWith(
+        timers: [
+          for (final timer in session.timers)
+            dueIds.contains(timer.id)
+                ? timer.copyWithStatus('running', dueReportedAt: now)
+                : timer,
+        ],
+      ),
+      event: 'timer_due',
+    );
   }
 
   Future<void> _load() async {
@@ -740,7 +763,11 @@ class _CookingPageState extends ConsumerState<CookingPage>
 }
 
 extension on CookingTimerState {
-  CookingTimerState copyWithStatus(String status, {DateTime? pausedAt}) =>
+  CookingTimerState copyWithStatus(
+    String status, {
+    DateTime? pausedAt,
+    DateTime? dueReportedAt,
+  }) =>
       CookingTimerState(
         id: id,
         stepId: stepId,
@@ -748,6 +775,7 @@ extension on CookingTimerState {
         durationSeconds: durationSeconds,
         pausedSeconds: pausedSeconds,
         pausedAt: pausedAt,
+        dueReportedAt: dueReportedAt,
         status: status,
       );
 }
