@@ -203,6 +203,7 @@ class CookingSessionContentV1(BaseModel):
         "timer_resume",
         "timer_due",
         "question_recorded",
+        "adjustment_recorded",
         "completed",
     ]
     step_index: int

@@ -8,6 +8,7 @@ import 'package:gramtree_api/gramtree_api.dart';
 import '../../app/theme.dart';
 import '../../events/event_recorder.dart';
 import '../../platform/device_capabilities.dart';
+import '../../platform/permissions.dart';
 import '../../recipes/recipe_snapshot.dart';
 import '../../recipes/recipe_snapshot_provider.dart';
 import '../../storage/local_store.dart';
@@ -289,13 +290,7 @@ class _CookingPageState extends ConsumerState<CookingPage>
       setState(() {});
       final session = _session;
       if (session == null) return;
-      for (final timer in session.timers) {
-        if (timer.isDueAt(DateTime.now().toUtc()) &&
-            _reportedDueTimers.add(timer.id)) {
-          unawaited(_save(session, event: 'timer_due'));
-          break;
-        }
-      }
+      unawaited(_reportDueTimers());
     });
   }
 
@@ -318,8 +313,21 @@ class _CookingPageState extends ConsumerState<CookingPage>
             !session.isComplete && state != AppLifecycleState.detached,
           ),
     );
+    if (state == AppLifecycleState.resumed) {
+      unawaited(_reportDueTimers());
+    }
   }
 
+  Future<void> _reportDueTimers() async {
+    final session = _session;
+    if (session == null) return;
+    for (final timer in session.timers) {
+      if (timer.isDueAt(DateTime.now().toUtc()) &&
+          _reportedDueTimers.add(timer.id)) {
+        await _save(session, event: 'timer_due');
+      }
+    }
+  }
   Future<void> _load() async {
     final session = await ref
         .read(cookingSessionStoreProvider)
@@ -510,6 +518,65 @@ class _CookingPageState extends ConsumerState<CookingPage>
     );
   }
 
+  Future<void> _recordAdjustment() async {
+    final session = _session;
+    if (session == null || session.stepIndex < 0) return;
+    final controller = TextEditingController();
+    final text = await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('记录临时调整'),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          decoration: const InputDecoration(hintText: '例如：少放一点盐'),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('取消'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, controller.text.trim()),
+            child: const Text('保存'),
+          ),
+        ],
+      ),
+    );
+    controller.dispose();
+    if (text == null || text.isEmpty) return;
+    await _save(
+      session.copyWith(
+        adjustments: [
+          ...session.adjustments,
+          {
+            'step_id': session.steps[session.stepIndex].id,
+            'text': text,
+            'created_at': DateTime.now().toUtc().toIso8601String(),
+          },
+        ],
+      ),
+      event: 'adjustment_recorded',
+    );
+  }
+
+  Future<void> _recordVoiceQuestion() async {
+    final state = await ref
+        .read(permissionServiceProvider)
+        .request(AppPermission.microphone);
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          state == PermissionState.granted
+              ? '当前设备暂不支持离线语音转写，请直接输入问题。'
+              : '未获得麦克风权限，请直接输入问题。',
+        ),
+      ),
+    );
+    await _recordQuestion();
+  }
+
   @override
   Widget build(BuildContext context) {
     final session = _session;
@@ -612,6 +679,16 @@ class _CookingPageState extends ConsumerState<CookingPage>
                     onPressed: _recordQuestion,
                     icon: const Icon(Icons.help_outline),
                     label: const Text('记录问题'),
+                  ),
+                  OutlinedButton.icon(
+                    onPressed: _recordVoiceQuestion,
+                    icon: const Icon(Icons.mic_none),
+                    label: const Text('语音提问'),
+                  ),
+                  OutlinedButton.icon(
+                    onPressed: _recordAdjustment,
+                    icon: const Icon(Icons.edit_note),
+                    label: const Text('记录临时调整'),
                   ),
                   OutlinedButton.icon(
                     onPressed: index == 0 ? null : () => _move(-1),

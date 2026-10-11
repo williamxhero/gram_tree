@@ -4,6 +4,8 @@
     <!-- Camera is requested only when the author taps 拍照. Gallery uses the
          Android 13+ system Photo Picker and does not request storage access. -->
     <uses-permission android:name="android.permission.CAMERA"/>
+    <uses-permission android:name="android.permission.RECORD_AUDIO"/>
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
     <application
         android:label="味谱"
         android:name="${applicationName}"
