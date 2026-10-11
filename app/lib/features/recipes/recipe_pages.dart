@@ -3127,7 +3127,8 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
         .firstOrNull;
     // Nested edit routes retain this detail page underneath them. Do not start
     // hidden display requests while the user is editing or restoring drafts.
-    if (ModalRoute.of(context)?.isCurrent == true) {
+    final routeIsCurrent = ModalRoute.of(context)?.isCurrent == true;
+    if (routeIsCurrent) {
       _scheduleDisplayContract(
         snapshot: snapshot,
         targetServings: targetServings,
@@ -3185,7 +3186,7 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
                       ),
               ),
           };
-    if (!offline) {
+    if (routeIsCurrent && !offline) {
       unawaited(
         _persistDisplayed(
           detail,

@@ -1369,6 +1369,46 @@ void main() {
     },
   );
   testWidgets(
+    'hidden recipe detail does not overwrite its frozen display while editing',
+    (tester) async {
+      final server = FakeServer();
+      _installRecipeApi(server);
+      final env = TestEnv.signedIn(server: server);
+      await pumpApp(tester, env: env);
+      final container = ProviderScope.containerOf(
+        tester.element(find.byType(Scaffold).first),
+      );
+      final router = container.read(routerProvider);
+      router.go('/recipes/$_recipeId/versions/$_firstVersionId');
+      await tester.pumpAndSettle();
+      await _scrollUntilVisible(
+        tester,
+        find.byKey(const ValueKey('recipe-serving-increase')),
+      );
+      await tester.tap(find.byKey(const ValueKey('recipe-serving-increase')));
+      await tester.pumpAndSettle();
+
+      final cache = RecipeSnapshotStore(env.local, accountId: testUser().id);
+      final before = await cache.read(
+        _recipeId,
+        versionId: _firstVersionId,
+      );
+      expect(before, isNotNull);
+      expect(before!.inputs['target_servings'], 3);
+
+      router.go('/me/measures');
+      await tester.pumpAndSettle();
+      router.go('/recipes/$_recipeId/edit?versionId=$_firstVersionId');
+      await tester.pumpAndSettle();
+
+      expect(
+        (await cache.read(_recipeId, versionId: _firstVersionId))!.toJson(),
+        before.toJson(),
+      );
+      expect(tester.takeException(), isNull);
+    },
+  );
+  testWidgets(
     'version route update restores frozen metadata and gates batch advice offline',
     (tester) async {
       final server = FakeServer();
