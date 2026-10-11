@@ -142,6 +142,16 @@ Future<void> _reveal(WidgetTester tester, Finder finder) async {
   expect(finder.hitTestable(), findsOneWidget);
 }
 
+Future<void> _revealPanelContent(WidgetTester tester, Finder finder) async {
+  expect(finder, findsOneWidget);
+  // The WhyPanel is itself scrollable. At the harness's 320x640 viewport and
+  // 1.5 text scale, the bottom line can be mounted but below the sheet's
+  // viewport even after its entrance animation settles.
+  await Scrollable.ensureVisible(tester.element(finder), alignment: 0.5);
+  await tester.pumpAndSettle();
+  expect(finder.hitTestable(), findsOneWidget);
+}
+
 Future<int> _count(Dio server, String token, String device) async {
   final response = await server.get<Map<String, dynamic>>(
     '/v1/dev/events/count',
@@ -614,19 +624,17 @@ Future<void> _restore(
   // Mounting can precede the bottom sheet's entrance into the phone viewport.
   // Settle the real animation before retaining the exact hit-test assertions.
   await tester.pumpAndSettle();
-  expect(
-    find.descendant(of: panel, matching: find.text('原来：100 g')).hitTestable(),
-    findsOneWidget,
+  await _revealPanelContent(
+    tester,
+    find.descendant(of: panel, matching: find.text('原来：100 g')),
   );
-  expect(
-    find.descendant(of: panel, matching: find.text('现在：150 克')).hitTestable(),
-    findsOneWidget,
+  await _revealPanelContent(
+    tester,
+    find.descendant(of: panel, matching: find.text('现在：150 克')),
   );
-  expect(
-    find
-        .descendant(of: panel, matching: find.textContaining('比例换算'))
-        .hitTestable(),
-    findsOneWidget,
+  await _revealPanelContent(
+    tester,
+    find.descendant(of: panel, matching: find.textContaining('比例换算')),
   );
   expect(
     find.descendant(of: panel, matching: find.byType(OutlinedButton)),
