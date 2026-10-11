@@ -289,7 +289,6 @@ class _CookingPageState extends ConsumerState<CookingPage>
     with WidgetsBindingObserver {
   CookingSession? _session;
   Timer? _ticker;
-  final Set<String> _reportedDueTimers = <String>{};
 
   @override
   void initState() {
@@ -338,7 +337,6 @@ class _CookingPageState extends ConsumerState<CookingPage>
         .toList();
     if (due.isEmpty) return;
     final dueIds = {for (final timer in due) timer.id};
-    _reportedDueTimers.addAll(dueIds);
     await _save(
       session.copyWith(
         timers: [
