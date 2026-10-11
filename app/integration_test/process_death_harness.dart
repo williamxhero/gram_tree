@@ -825,8 +825,10 @@ void main() {
           restoredSuccessfully &&
           binding.reportData?['verified'] == true) {
         _marker('PASSED');
-      } else if (!failureReported) {
-        failureReported = true;
+      } else {
+        // The test body may have already emitted FAILED before this future
+        // completes. Always publish the binding's own failure details as a
+        // trailing diagnostic; the host drains them after the terminal marker.
         _diagnostic(
           'Binding completed: passed=$passed restored=$restoredSuccessfully '
           'phase=${binding.reportData?['phase']}',
@@ -835,7 +837,10 @@ void main() {
           _diagnostic('Framework failure in ${failure.methodName}');
           _diagnostic(_sourceStack(failure.details ?? ''));
         }
-        _marker('FAILED');
+        if (!failureReported) {
+          failureReported = true;
+          _marker('FAILED');
+        }
       }
     }),
   );
