@@ -1988,6 +1988,14 @@ class AppLocalizationsZh extends AppLocalizations {
   String get tasteLocalReadonly => '菜系对应的味型调整只读显示，暂不提供学习或编辑。';
 
   @override
+  String get tasteOfflineReadonly => '当前是离线副本，只能查看；需要联网后才能修改。';
+
+  @override
+  String tasteOfflineUpdated(Object timestamp, Object version) {
+    return '离线副本 · 上次联网更新：$timestamp · 版本 $version';
+  }
+
+  @override
   String get tasteActive => '生效';
 
   @override

@@ -117,7 +117,9 @@ class FakeEventQueue implements EventQueue {
     _entries.removeWhere(
       (id, entry) =>
           entry.write.ownerId == ownerId &&
-          (!experienceOnly || entry.write.writeType == 'experience.event'),
+          (!experienceOnly ||
+              (entry.write.writeType == 'experience.event' &&
+                  entry.state != WriteState.failed)),
     );
     _changes.add(null);
   }

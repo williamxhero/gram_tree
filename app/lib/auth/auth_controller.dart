@@ -9,6 +9,7 @@ import '../events/event_uploader.dart';
 import '../platform/apple_sign_in.dart';
 import '../platform/timezone_source.dart';
 import '../privacy/consent.dart';
+import '../features/me/taste_profile_cache.dart';
 import 'session.dart';
 
 /// 当前登录的账号；null 表示未登录。加载本机保存的登录状态时是 loading。
@@ -185,6 +186,7 @@ class AuthController extends AsyncNotifier<UserOut?> {
     await session.clear();
     await revoking;
   }
+  }
 
   /// 只通知服务端吊销这台设备的令牌，本机状态留给调用方清。
   Future<void> signOutOnServer({SessionIdentity? identity}) async {
@@ -214,6 +216,7 @@ class AuthController extends AsyncNotifier<UserOut?> {
     // Capture dependencies before awaiting; provider disposal must not silently
     // skip a confirmed deletion, nor turn Alice's cleanup into Bob's cleanup.
     if (session.matches(captured)) await session.clear();
+    await ref.read(tasteProfileCacheProvider).clear(captured.ownerId);
     await queue.clearAccount(
       captured.ownerId,
       experienceOnly: !deleteAccountData,

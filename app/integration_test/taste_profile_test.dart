@@ -22,16 +22,41 @@ void main() {
   }
 
   Future<void> reveal(WidgetTester tester, Finder finder, double delta) async {
-    await tester.scrollUntilVisible(
-      finder,
-      delta,
-      scrollable: find
-          .byWidgetPredicate(
-            (w) => w is Scrollable && w.axisDirection == AxisDirection.down,
-          )
-          .first,
+    final scrollables = find.byWidgetPredicate(
+      (w) => w is Scrollable && w.axisDirection == AxisDirection.down,
     );
-    await Scrollable.ensureVisible(tester.element(finder), alignment: 0.5);
+    await waitFor(tester, scrollables);
+    final profile = find.byKey(const ValueKey('taste-profile-content'));
+    final profileScrollables = find.descendant(
+      of: profile,
+      matching: scrollables,
+    );
+    final scrollable =
+        profile.evaluate().isNotEmpty &&
+            profileScrollables.evaluate().isNotEmpty
+        ? profileScrollables.first
+        : scrollables.first;
+    final position = tester.state<ScrollableState>(scrollable).position;
+    final step = delta.abs().clamp(100.0, 500.0).toDouble();
+    // Reset before each bounded forward search so historical rows are mounted
+    // even when a prior reveal left the list at its maximum extent.
+    position.jumpTo(position.minScrollExtent);
+    await tester.pumpAndSettle();
+    for (var i = 0; i < 300 && finder.evaluate().isEmpty; i++) {
+      position.jumpTo(
+        (position.pixels + step).clamp(
+          position.minScrollExtent,
+          position.maxScrollExtent,
+        ),
+      );
+      await tester.pump(const Duration(milliseconds: 100));
+    }
+    expect(finder, findsOneWidget);
+    await Scrollable.ensureVisible(
+      tester.element(finder),
+      alignment: 0.5,
+      alignmentPolicy: ScrollPositionAlignmentPolicy.explicit,
+    );
     await tester.pumpAndSettle();
   }
 

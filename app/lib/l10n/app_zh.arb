@@ -718,6 +718,8 @@
   "tasteLocal": "菜系局部偏好",
   "tasteLocalEmpty": "还没有菜系局部偏好",
   "tasteLocalReadonly": "菜系对应的味型调整只读显示，暂不提供学习或编辑。",
+  "tasteOfflineReadonly": "当前是离线副本，只能查看；需要联网后才能修改。",
+  "tasteOfflineUpdated": "离线副本 · 上次联网更新：{timestamp} · 版本 {version}",
   "tasteActive": "生效",
   "tasteReverted": "已撤销",
   "tasteSalty": "咸",

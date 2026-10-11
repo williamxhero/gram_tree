@@ -98,10 +98,14 @@ Widget buildAllergenNoticeProtocolComponent(
   final data = _componentData(component.data);
   final result = _resultFromAllergenNotice(data['result']);
   final status = data['status'] as String?;
+  final personal = data['personal_safety'];
   return AllergenCard(
     result: result,
     statusMessage: status == 'available' ? null : data['conclusion'] as String?,
     awaitingCheck: status == 'unknown',
+    personalSafety: personal is Map
+        ? Map<String, dynamic>.from(personal)
+        : null,
   );
 }
 

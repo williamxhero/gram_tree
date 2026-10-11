@@ -26,7 +26,7 @@ from gramtree.events import service as event_service
 from gramtree.events.registry import SourceType
 from gramtree.ingredients.attributes import IngredientAttributes
 from gramtree.ingredients.models import Ingredient, IngredientAttribute
-from gramtree.recipes import food_safety, reproducibility
+from gramtree.recipes import food_safety, personal_safety, reproducibility
 from gramtree.recipes.measure_display import display_amount, quantity_text
 from gramtree.recipes.measure_input import confirmed_source
 from gramtree.recipes.measure_models import PersonalMeasure
@@ -73,6 +73,7 @@ from gramtree.recipes.schemas import (
     RecipeList,
     RecipeListItem,
     RecipeMoldConversionOut,
+    RecipePersonalSafety,
     RecipeReproducibilityResult,
     RecipeSafetyCheckRequest,
     RecipeSafetyResult,
@@ -843,6 +844,24 @@ def recipe_safety_context(
             policy=policy,
         )
     return result, RecipeDerived.model_validate(version.derived)
+
+
+def recipe_personal_safety_context(
+    session: Session,
+    settings: Settings,
+    owner: User,
+    recipe_id: uuid.UUID,
+    version_id: uuid.UUID | None = None,
+) -> RecipePersonalSafety:
+    """Read current private constraints for an uncached recipe composition only."""
+    recipe, version = _owned_version(session, owner, recipe_id, version_id)
+    del recipe
+    return personal_safety.check(
+        session,
+        RecipeSnapshot.model_validate(version.snapshot),
+        owner.id,
+        settings,
+    )
 
 
 def create_recipe(

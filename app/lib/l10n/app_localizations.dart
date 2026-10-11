@@ -3723,6 +3723,18 @@ abstract class AppLocalizations {
   /// **'菜系对应的味型调整只读显示，暂不提供学习或编辑。'**
   String get tasteLocalReadonly;
 
+  /// No description provided for @tasteOfflineReadonly.
+  ///
+  /// In zh, this message translates to:
+  /// **'当前是离线副本，只能查看；需要联网后才能修改。'**
+  String get tasteOfflineReadonly;
+
+  /// No description provided for @tasteOfflineUpdated.
+  ///
+  /// In zh, this message translates to:
+  /// **'离线副本 · 上次联网更新：{timestamp} · 版本 {version}'**
+  String tasteOfflineUpdated(Object timestamp, Object version);
+
   /// No description provided for @tasteActive.
   ///
   /// In zh, this message translates to:
