@@ -1389,10 +1389,7 @@ void main() {
       await tester.pumpAndSettle();
 
       final cache = RecipeSnapshotStore(env.local, accountId: testUser().id);
-      final before = await cache.read(
-        _recipeId,
-        versionId: _firstVersionId,
-      );
+      final before = await cache.read(_recipeId, versionId: _firstVersionId);
       expect(before, isNotNull);
       expect(before!.inputs['target_servings'], 3);
 
