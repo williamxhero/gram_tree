@@ -704,6 +704,15 @@ Future<void> _restore(
   await tester.pumpAndSettle();
   expect(panel, findsNothing);
   expect(tester.takeException(), isNull);
+
+  // The online replay can schedule a display-cache write from the restored
+  // detail page while the next restart cycle is being prepared. Read through
+  // the serialized snapshot store before navigating away, so that late work
+  // cannot race the business-write snapshot immutability assertion.
+  expect(
+    (await snapshots.read(parts[2], versionId: parts[4]))!.toJson(),
+    manifest['snapshot'],
+  );
 }
 
 Future<void> _seedBusinessRestart(
