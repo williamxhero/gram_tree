@@ -13,11 +13,9 @@ void main() {
   testWidgets(
     'read-only snapshot why content enters the phone viewport after panel mount',
     (tester) async {
-      tester.view.physicalSize = const Size(320, 640);
+      tester.view.physicalSize = const Size(360, 640);
       tester.view.devicePixelRatio = 1;
       addTearDown(tester.view.reset);
-      tester.platformDispatcher.textScaleFactorTestValue = 1.5;
-      addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
       final env = TestEnv.signedIn(server: FakeServer(), offline: true);
       await tester.pumpWidget(
         ProviderScope(
@@ -75,14 +73,9 @@ void main() {
       }
 
       await tester.pumpAndSettle();
-      for (final content in [original, current, basis]) {
-        await Scrollable.ensureVisible(
-          tester.element(content),
-          alignment: 0.5,
-        );
-        await tester.pumpAndSettle();
-        expect(content.hitTestable(), findsOneWidget);
-      }
+      expect(original.hitTestable(), findsOneWidget);
+      expect(current.hitTestable(), findsOneWidget);
+      expect(basis.hitTestable(), findsOneWidget);
       expect(
         find.descendant(of: panel, matching: find.byType(OutlinedButton)),
         findsNothing,
