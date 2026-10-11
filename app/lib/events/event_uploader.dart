@@ -112,7 +112,10 @@ class EventUploader {
             entry.state == WriteState.loginPaused ||
             (entry.state == WriteState.uploading && !_uploading)) {
           await queue.update(
-            entry.change(state: WriteState.pending, reasonCode: entry.reasonCode),
+            entry.change(
+              state: WriteState.pending,
+              reasonCode: entry.reasonCode,
+            ),
           );
         }
       }
