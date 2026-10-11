@@ -328,6 +328,7 @@ class _CookingPageState extends ConsumerState<CookingPage>
       }
     }
   }
+
   Future<void> _load() async {
     final session = await ref
         .read(cookingSessionStoreProvider)
@@ -469,7 +470,8 @@ class _CookingPageState extends ConsumerState<CookingPage>
     final unfinished = session.steps
         .where(
           (step) =>
-              !completed.contains(step.id) && !session.skipped.contains(step.id),
+              !completed.contains(step.id) &&
+              !session.skipped.contains(step.id),
         )
         .toList();
     if (unfinished.isNotEmpty) {
