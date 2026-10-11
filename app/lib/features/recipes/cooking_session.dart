@@ -289,6 +289,7 @@ class _CookingPageState extends ConsumerState<CookingPage>
     with WidgetsBindingObserver {
   CookingSession? _session;
   Timer? _ticker;
+  bool _reportingDueTimers = false;
 
   @override
   void initState() {
@@ -329,6 +330,20 @@ class _CookingPageState extends ConsumerState<CookingPage>
   }
 
   Future<void> _reportDueTimers() async {
+    // The ticker and the resumed lifecycle callback can arrive in the same
+    // frame.  Serialize this read/mark/write sequence so both callbacks
+    // cannot emit the same timer_due event before either one updates the
+    // persisted idempotency marker.
+    if (_reportingDueTimers) return;
+    _reportingDueTimers = true;
+    try {
+      await _reportDueTimersOnce();
+    } finally {
+      _reportingDueTimers = false;
+    }
+  }
+
+  Future<void> _reportDueTimersOnce() async {
     final session = _session;
     if (session == null) return;
     final now = DateTime.now().toUtc();
