@@ -434,7 +434,11 @@ Future<void> retryAndSwitchAccounts(
   }
   final pendingCount = retained.where((e) => e.needsSync).length;
   expect(pendingCount, greaterThanOrEqualTo(2));
-  expect(tester.widget<Text>(count).data, '未完成 $pendingCount 条');
+  // Queue updates notify the sync-status stream after the durable reads above;
+  // wait for that final snapshot before inspecting the rebuilt page.
+  final expectedCount = find.text('未完成 $pendingCount 条');
+  await support.waitFor(tester, expectedCount);
+  expect(expectedCount, findsOneWidget);
   await goAcceptance(tester, container, '/me/settings');
   await revealAcceptance(tester, find.text('退出登录'));
   await tester.tap(find.text('退出登录'));
