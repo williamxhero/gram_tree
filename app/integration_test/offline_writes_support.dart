@@ -87,6 +87,31 @@ Future<void> revealAcceptance(WidgetTester tester, Finder finder) async {
   expect(finder.hitTestable(), findsOneWidget);
 }
 
+/// Reveal a top-of-list assertion after a lower control was used. A ListView
+/// may evict the top child from the element tree while it is scrolled down.
+Future<void> revealAcceptanceFromTop(
+  WidgetTester tester,
+  Finder finder,
+) async {
+  tester.testTextInput.hide();
+  await tester.pump();
+  final scrollable = find
+      .byWidgetPredicate(
+        (w) => w is Scrollable && w.axisDirection == AxisDirection.down,
+      )
+      .first;
+  final rect = tester.getRect(scrollable);
+  final origin = Offset(rect.left + 10, rect.center.dy);
+  for (var i = 0; i < 60 && finder.evaluate().isEmpty; i++) {
+    await tester.dragFrom(origin, const Offset(0, 250));
+    await tester.pump(const Duration(milliseconds: 50));
+  }
+  expect(finder, findsOneWidget);
+  await Scrollable.ensureVisible(tester.element(finder), alignment: 0.2);
+  await support.settle(tester);
+  expect(finder.hitTestable(), findsOneWidget);
+}
+
 Future<void> goAcceptance(
   WidgetTester tester,
   ProviderContainer container,
@@ -434,11 +459,11 @@ Future<void> retryAndSwitchAccounts(
   }
   final pendingCount = retained.where((e) => e.needsSync).length;
   expect(pendingCount, greaterThanOrEqualTo(2));
-  // Queue updates notify the sync-status stream after the durable reads above;
-  // wait for that final snapshot before inspecting the rebuilt page.
+  // Queue updates notify the sync-status stream after the durable reads above.
+  // The count is at the top of the lazy list after the retry control was
+  // revealed, so remount it before inspecting the rebuilt page.
   final expectedCount = find.text('未完成 $pendingCount 条');
-  await support.waitFor(tester, expectedCount);
-  expect(expectedCount, findsOneWidget);
+  await revealAcceptanceFromTop(tester, expectedCount);
   await goAcceptance(tester, container, '/me/settings');
   await revealAcceptance(tester, find.text('退出登录'));
   await tester.tap(find.text('退出登录'));
