@@ -166,8 +166,8 @@ class CookingSession {
         ],
         timers: [
           for (final item in (map['timers'] as List? ?? []))
-            if (CookingTimerState.fromJson(item) case final timer?) timer,
-        ],
+            CookingTimerState.fromJson(item),
+        ].nonNulls.toList(),
         adjustments: [
           for (final item in (map['adjustments'] as List? ?? []))
             Map<String, dynamic>.from(item as Map),
@@ -315,8 +315,10 @@ class _CookingPageState extends ConsumerState<CookingPage> {
   Future<void> _move(int delta) async {
     final session = _session;
     if (session == null || session.steps.isEmpty || session.isComplete) return;
-    final next =
-        (session.stepIndex + delta).clamp(-1, session.steps.length - 1) as int;
+    final next = (session.stepIndex + delta).clamp(
+      -1,
+      session.steps.length - 1,
+    );
     if (next == session.stepIndex) return;
     final reached = [...session.reached];
     final completed = [...session.completed];
@@ -412,8 +414,9 @@ class _CookingPageState extends ConsumerState<CookingPage> {
   @override
   Widget build(BuildContext context) {
     final session = _session;
-    if (session == null)
+    if (session == null) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
     final steps = session.steps;
     if (session.isComplete) {
       return Scaffold(
