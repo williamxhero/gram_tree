@@ -11,6 +11,7 @@ class RecipeDraft {
     required this.payload,
     this.accountId = '',
     this.formatVersion = 1,
+    this.baselineDetail,
   });
 
   final int formatVersion;
@@ -18,6 +19,7 @@ class RecipeDraft {
   final String recipeKey;
   final String? baselineVersionId;
   final Map<String, dynamic> payload;
+  final Map<String, dynamic>? baselineDetail;
 
   Map<String, dynamic> toJson() => {
     'format_version': formatVersion,
@@ -25,6 +27,7 @@ class RecipeDraft {
     'recipe_key': recipeKey,
     'baseline_version_id': baselineVersionId,
     'payload': payload,
+    if (baselineDetail != null) 'baseline_detail': baselineDetail,
   };
 
   static RecipeDraft? fromJson(Object? value) {
@@ -45,6 +48,9 @@ class RecipeDraft {
         recipeKey: key,
         baselineVersionId: baseline as String?,
         payload: Map<String, dynamic>.from(payload),
+        baselineDetail: value['baseline_detail'] is Map
+            ? Map<String, dynamic>.from(value['baseline_detail'] as Map)
+            : null,
       );
     } catch (_) {
       return null;
@@ -53,15 +59,18 @@ class RecipeDraft {
 }
 
 class RecipeDraftStore {
-  RecipeDraftStore(this._store);
+  RecipeDraftStore(this._store) {
+    _coordinator = _coordinators[_store] ??= _DraftCoordinator();
+    _epochs = Map.of(_coordinator.epochs);
+  }
 
-  static const keyPrefix = 'recipe_draft:v1:';
   static const generatedResultKey = 'generation-result';
-  final LocalStore _store;
-  // Editor and modification surfaces share one platform store. A queue per
-  // store also orders a disposal write before a successful-save removal.
-  static final _writeTails = Expando<Future<void>>();
+  static const keyPrefix = 'recipe_draft:v1:';
+  static final _coordinators = Expando<_DraftCoordinator>();
   static final _modificationEpochs = Expando<Map<String, int>>();
+  final LocalStore _store;
+  late final _DraftCoordinator _coordinator;
+  late final Map<String, int> _epochs;
 
   int modificationEpoch({
     required String recipeKey,
@@ -106,12 +115,13 @@ class RecipeDraftStore {
       ).toJson(),
     );
     return _enqueue(() async {
-      if (expectedEpoch !=
-          modificationEpoch(
-            recipeKey: recipeKey,
-            accountId: accountId,
-            baselineVersionId: baselineVersionId,
-          )) {
+      if (!_canUseAccount(accountId) ||
+          expectedEpoch !=
+              modificationEpoch(
+                recipeKey: recipeKey,
+                accountId: accountId,
+                baselineVersionId: baselineVersionId,
+              )) {
         return;
       }
       await _store.setString(keyFor(key, accountId: accountId), encoded);
@@ -137,24 +147,81 @@ class RecipeDraftStore {
     );
   }
 
-  String keyFor(String recipeKey, {String accountId = ''}) =>
-      '$keyPrefix$accountId:$recipeKey';
+  bool _canUseAccount(String owner) =>
+      (_epochs[owner] ?? 0) == (_coordinator.epochs[owner] ?? 0);
+
+  /// Successful account deletion only. Fence every old editor handle before
+  /// waiting for admitted platform writes, then erase pointers and all baselines.
+  Future<void> clearAccount(String owner) {
+    _coordinator.epochs[owner] = (_coordinator.epochs[owner] ?? 0) + 1;
+    return _enqueue(() async {
+      for (final key in _store.keys.where(
+        (key) => key.startsWith('$keyPrefix$owner:'),
+      )) {
+        await _store.remove(key);
+      }
+    });
+  }
+
+  String keyFor(
+    String recipeKey, {
+    String accountId = '',
+    String? baselineVersionId,
+  }) =>
+      '$keyPrefix$accountId:$recipeKey${baselineVersionId == null ? '' : ':$baselineVersionId'}';
+
+  RecipeDraft? readLatest({required String recipeKey, String accountId = ''}) {
+    if (!_canUseAccount(accountId)) return null;
+    final raw = _store.getString(keyFor(recipeKey, accountId: accountId));
+    if (raw == null) return null;
+    try {
+      final draft = RecipeDraft.fromJson(jsonDecode(raw));
+      return draft?.recipeKey == recipeKey && draft?.accountId == accountId
+          ? draft
+          : null;
+    } catch (_) {
+      return null;
+    }
+  }
 
   /// Writes are serialized so a delayed platform write cannot reorder a newer
   /// draft behind an older one.
-  Future<void> save(RecipeDraft draft) => _enqueue(
-    () => _store.setString(
-      keyFor(draft.recipeKey, accountId: draft.accountId),
-      jsonEncode(draft.toJson()),
-    ),
-  );
+  Future<void> save(RecipeDraft draft) => _enqueue(() async {
+    if (!_canUseAccount(draft.accountId)) return;
+    final encoded = jsonEncode(draft.toJson());
+    await _store.setString(
+      keyFor(
+        draft.recipeKey,
+        accountId: draft.accountId,
+        baselineVersionId: draft.baselineVersionId,
+      ),
+      encoded,
+    );
+    // The recipe pointer permits local-first recovery without a remote lookup;
+    // baseline-specific copies remain separate when a newer version is edited.
+    if (draft.baselineVersionId != null && _canUseAccount(draft.accountId)) {
+      await _store.setString(
+        keyFor(draft.recipeKey, accountId: draft.accountId),
+        encoded,
+      );
+    }
+  });
 
   RecipeDraft? read({
     required String recipeKey,
     String? baselineVersionId,
     String accountId = '',
   }) {
-    final raw = _store.getString(keyFor(recipeKey, accountId: accountId));
+    if (!_canUseAccount(accountId)) return null;
+    final raw =
+        _store.getString(
+          keyFor(
+            recipeKey,
+            accountId: accountId,
+            baselineVersionId: baselineVersionId,
+          ),
+        ) ??
+        _store.getString(keyFor(recipeKey, accountId: accountId));
     if (raw == null) return null;
     try {
       final draft = RecipeDraft.fromJson(jsonDecode(raw));
@@ -170,8 +237,21 @@ class RecipeDraftStore {
     }
   }
 
-  Future<void> discard(String recipeKey, {String accountId = ''}) =>
-      _enqueue(() => _store.remove(keyFor(recipeKey, accountId: accountId)));
+  Future<void> discard(
+    String recipeKey, {
+    String accountId = '',
+    String? baselineVersionId,
+  }) => _enqueue(() async {
+    if (!_canUseAccount(accountId)) return;
+    final latest = readLatest(recipeKey: recipeKey, accountId: accountId);
+    final baseline = baselineVersionId ?? latest?.baselineVersionId;
+    await _store.remove(
+      keyFor(recipeKey, accountId: accountId, baselineVersionId: baseline),
+    );
+    if (latest?.baselineVersionId == baseline) {
+      await _store.remove(keyFor(recipeKey, accountId: accountId));
+    }
+  });
 
   /// A completed save may outlive its editor. Remove only that editor's form
   /// receipt, never a newer draft written while its cleanup was pending.
@@ -188,8 +268,22 @@ class RecipeDraftStore {
         return;
       }
       await _store.remove(
-        keyFor(expected.recipeKey, accountId: expected.accountId),
+        keyFor(
+          expected.recipeKey,
+          accountId: expected.accountId,
+          baselineVersionId: expected.baselineVersionId,
+        ),
       );
+      final latest = readLatest(
+        recipeKey: expected.recipeKey,
+        accountId: expected.accountId,
+      );
+      if (latest != null &&
+          jsonEncode(latest.toJson()) == jsonEncode(expected.toJson())) {
+        await _store.remove(
+          keyFor(expected.recipeKey, accountId: expected.accountId),
+        );
+      }
     });
   }
 
@@ -206,13 +300,16 @@ class RecipeDraftStore {
   });
 
   Future<void> _enqueue(Future<void> Function() operation) {
-    final result = (_writeTails[_store] ?? Future<void>.value()).then(
-      (_) => operation(),
-    );
-    _writeTails[_store] = result.then<void>(
+    final result = _coordinator.tail.then((_) => operation());
+    _coordinator.tail = result.then<void>(
       (_) {},
       onError: (Object error, StackTrace stackTrace) {},
     );
     return result;
   }
+}
+
+class _DraftCoordinator {
+  Future<void> tail = Future<void>.value();
+  final Map<String, int> epochs = {};
 }

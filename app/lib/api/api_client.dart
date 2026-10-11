@@ -150,6 +150,9 @@ final dioProvider = Provider<Dio>((ref) {
         );
         return resp.data!;
       },
+      canRefresh: () =>
+          !ref.read(offlineSimulationProvider) &&
+          ref.read(apiReachabilityProvider) != ApiReachability.unavailable,
       onSessionExpired: () =>
           ref.read(sessionStoreProvider).expire(reason: 'refresh_failed'),
     ),
@@ -194,6 +197,7 @@ class AuthInterceptor extends QueuedInterceptor {
     required this.session,
     required this.refresh,
     required this.onSessionExpired,
+    this.canRefresh,
   });
 
   /// 重试原请求用的 Dio，不能带这个拦截器。
@@ -201,6 +205,7 @@ class AuthInterceptor extends QueuedInterceptor {
   final SessionStore session;
   final Future<TokenPair> Function(String refreshToken) refresh;
   final Future<void> Function() onSessionExpired;
+  final bool Function()? canRefresh;
 
   static const _retried = 'auth_retried';
   static const _originOwner = 'auth_origin_owner';
@@ -218,12 +223,24 @@ class AuthInterceptor extends QueuedInterceptor {
     final epoch =
         options.extra['sync_identity_epoch'] ??
         options.extra['auth_identity_epoch'];
+    final identity = session.identity;
     return (owner == null || owner == session.current?.user.id) &&
-        (epoch == null || epoch == session.identityEpoch);
+        (epoch == null || epoch == session.identityEpoch) &&
+        (options.extra['sync_owner_id'] == null ||
+            (identity != null && session.canUpload(identity)));
   }
 
   @override
   void onRequest(RequestOptions options, RequestInterceptorHandler handler) {
+    // Confirmed local logout fences the session before HTTP dispatch. Allow
+    // only this captured-token revocation, never inject a new account's token.
+    if (options.extra['auth_revocation'] == true &&
+        options.method == 'POST' &&
+        options.uri.path == '/v1/auth/logout' &&
+        options.headers['Authorization'] != null) {
+      handler.next(options);
+      return;
+    }
     if (!_matchesIdentity(options) || !_sensitiveOriginMatches(options)) {
       handler.reject(
         DioException(
@@ -265,6 +282,16 @@ class AuthInterceptor extends QueuedInterceptor {
       handler.next(err);
       return;
     }
+    if (canRefresh?.call() == false) {
+      handler.next(
+        DioException(
+          requestOptions: err.requestOptions,
+          type: DioExceptionType.connectionError,
+          error: 'refresh_waiting_for_network',
+        ),
+      );
+      return;
+    }
     var expected = current;
     try {
       // 排队期间可能已经有别的请求续期成功了，直接用新的。
@@ -280,11 +307,22 @@ class AuthInterceptor extends QueuedInterceptor {
           handler.next(err);
           return;
         }
-        final saving = session.save(tokens);
+        final saving = session.saveRefreshed(
+          tokens,
+          identity: SessionIdentity(ownerId: current.user.id, epoch: epoch),
+        );
         expected = session.current!;
         await saving;
       }
-    } catch (_) {
+    } catch (error) {
+      // A transport outage is not a revoked login. Return the transport error
+      // so account queues retain their writes for network recovery, not logout.
+      if (error is DioException &&
+          (error.response == null ||
+              (error.response?.statusCode ?? 0) >= 500)) {
+        handler.next(error);
+        return;
+      }
       // A failed old refresh must not sign out a newly selected account.
       if (_matchesIdentity(err.requestOptions) &&
           session.identityEpoch == epoch &&

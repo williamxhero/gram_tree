@@ -1,13 +1,21 @@
+import 'dart:async';
+
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gramtree_api/gramtree_api.dart';
 
 import '../../api/api_client.dart';
 import '../../auth/auth_controller.dart';
+import '../../auth/logout_confirmation.dart';
 import '../../auth/session.dart';
+import '../../events/event_uploader.dart';
 import '../../l10n/app_localizations.dart';
 import '../../platform/apple_sign_in.dart';
 import '../../recipes/recipe_snapshot_provider.dart';
+import '../../recipes/personal_measure_repository.dart';
+import '../../recipes/recipe_draft.dart';
+import '../../storage/local_store.dart';
 import '../../widgets/page_frame.dart';
 import '../auth/code_page.dart';
 import 'account_data.dart';
@@ -28,8 +36,17 @@ class _DeleteAccountPageState extends ConsumerState<DeleteAccountPage> {
   bool _verified = false;
   bool _checked = false;
   bool _busy = false;
+  bool _uncertain = false;
   EmailCodeSent? _sent;
   String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    final session = ref.read(sessionStoreProvider);
+    final identity = session.identity;
+    _uncertain = identity != null && !session.canUpload(identity);
+  }
 
   Future<void> _run(Future<void> Function() action) async {
     setState(() {
@@ -86,20 +103,58 @@ class _DeleteAccountPageState extends ConsumerState<DeleteAccountPage> {
     final session = ref.read(sessionStoreProvider);
     final identity = session.identity;
     if (identity == null) return;
+    final pausing = session.pauseAccountUploads(identity);
     final auth = ref.read(authProvider.notifier);
     final snapshots = ref.read(recipeSnapshotStoreProvider);
-    await ref
-        .read(apiClientProvider)
-        .getAccountApi()
-        .requestDeletion(
-          extra: {
-            'auth_owner_id': identity.ownerId,
-            'auth_identity_epoch': identity.epoch,
-          },
-        );
+    final measures = ref.read(personalMeasureRepositoryProvider);
+    final drafts = RecipeDraftStore(ref.read(localStoreProvider));
+    final uploader = ref.read(eventUploaderProvider);
+    await pausing;
+    if (!session.matches(identity)) return;
+    final wasUncertain = _uncertain;
+    try {
+      await ref
+          .read(apiClientProvider)
+          .getAccountApi()
+          .requestDeletion(
+            extra: {
+              'auth_owner_id': identity.ownerId,
+              'auth_identity_epoch': identity.epoch,
+            },
+          );
+    } catch (error) {
+      final status = error is DioException ? error.response?.statusCode : null;
+      final rejected =
+          !wasUncertain &&
+          status != null &&
+          status >= 400 &&
+          status < 500 &&
+          status != 408 &&
+          ApiFailure.from(error).code != 'account_unavailable';
+      if (rejected && await session.resumeAccountUploads(identity)) {
+        unawaited(uploader.networkRestored());
+      }
+      if (mounted && session.matches(identity)) {
+        // A missing response may follow a committed deletion. Never resume
+        // private uploads merely because the confirmation could not be read.
+        if (!rejected) _uncertain = true;
+        // Reauthentication remains actionable even when an earlier deletion
+        // outcome is unknown; verifying again must not release its upload fence.
+        if (rejected || ApiFailure.from(error).code == 'reauth_required') {
+          _verified = false;
+          _checked = false;
+          _sent = null;
+        }
+      }
+      rethrow;
+    }
+    // Once accepted, even a local cleanup failure must never authorize uploads.
+    if (mounted && session.matches(identity)) _uncertain = true;
     // Capture before auth reset; clear invalidates any late owner cache writes.
     // Kept at the page boundary to avoid auth -> snapshot -> auth dependency.
     await snapshots?.clear();
+    await measures.clearAccount();
+    await drafts.clearAccount(identity.ownerId);
     final showResult = session.matches(identity);
     await auth.clearLocalSession(deleteAccountData: true, identity: identity);
     if (showResult && messenger.mounted) {
@@ -116,6 +171,7 @@ class _DeleteAccountPageState extends ConsumerState<DeleteAccountPage> {
         _Steps(done: _verified ? 3 : 1),
         if (!_verified) ..._verifyStep(l10n) else ..._confirmStep(l10n),
         if (_error != null) ErrorText(_error!),
+        if (_uncertain) BodyText(l10n.deletionUncertainBody),
       ],
       actions: [
         if (_verified)
@@ -128,7 +184,12 @@ class _DeleteAccountPageState extends ConsumerState<DeleteAccountPage> {
               foregroundColor: Theme.of(context).colorScheme.onError,
             ),
             onPressed: _checked && !_busy ? _delete : null,
-            child: Text(l10n.deleteAccount),
+            child: Text(_uncertain ? l10n.deletionRetry : l10n.deleteAccount),
+          ),
+        if (_uncertain)
+          SecondaryButton(
+            label: l10n.deletionExit,
+            onPressed: _busy ? null : () => confirmLogout(context, ref),
           ),
       ],
     );

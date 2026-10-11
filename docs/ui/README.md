@@ -24,6 +24,8 @@
 
 | [`offline-online.html`](offline-online.html) | 在线入口降级：需要联网说明、原话保留、本机能力可用，浅色/深色 | #27 SPEC-013.3 / #215 | 本会话无 Artifact 发布工具；本地 HTML 样稿 |
 
+| [`offline-writes.html`](offline-writes.html) | 离线手工编辑与保存、个人量具修改历史、账号退出保留提醒、同步分类与重试；浅色/深色交互 | #27 / #216、#218、#219、#220 | 本会话无 Artifact 发布工具；本地 HTML 样稿 |
+
 ## 说明
 
 - `recipe-detail/` 是画布的**源文件**：`index.html` 引用平台运行时 `artifact-type/app.js`，`Pro.dc.html` 引用 `support.js`，这两个运行时文件属于 claude.ai 平台，没有导出，所以这份不能在本地直接打开渲染；要看效果请去 claude.ai 的原 Artifact，这里保存的是设计内容的备份。

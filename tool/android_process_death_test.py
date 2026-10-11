@@ -26,7 +26,9 @@ MARKER = re.compile(r"GRAMTREE_PROCESS_DEATH ([a-f0-9]+) ([A-Z_]+) pid=(\d+)")
 LOG_PID = re.compile(r"^\d\d-\d\d\s+[\d:.]+\s+(\d+)\s+\d+\s+")
 FAILURE = re.compile(
     r"FATAL EXCEPTION|Fatal signal|Unhandled Exception|"
-    r"EXCEPTION CAUGHT BY FLUTTER|Test failed|TimeoutException|"
+    r"EXCEPTION CAUGHT BY (?:FLUTTER|WIDGETS|RENDERING|SCHEDULER|SERVICES|"
+    r"GESTURE|PAINT|LAYOUT)|"
+    r"Test failed|TimeoutException|══╡|"
     r"Lost connection to device|Process .* has died|ANR in " + re.escape(PACKAGE),
     re.IGNORECASE,
 )
@@ -98,6 +100,11 @@ class LogWatch:
         self.run_id = run_id
         self.lines: queue.Queue[str | None] = queue.Queue()
         self.recent: collections.deque[str] = collections.deque(maxlen=200)
+        # Flutter can emit hundreds of routine framework lines between a
+        # protocol marker and FAILED. Keep a separate bounded stream of only
+        # lines that the redactor is allowed to retain, so the root-cause
+        # marker/stack cannot be evicted by unrelated logcat noise.
+        self.safe_recent: collections.deque[str] = collections.deque(maxlen=200)
         self.process = subprocess.Popen(
             [
                 *android.prefix,
@@ -126,12 +133,37 @@ class LogWatch:
             self.lines.put(line.rstrip())
         self.lines.put(None)
 
+    def _remember_safe_line(self, line: str) -> None:
+        detail_prefix = re.compile(
+            rf"GRAMTREE_PROCESS_DETAIL {re.escape(self.run_id)}(?: pid=\d+)? "
+        )
+        marker = MARKER.search(line)
+        if (
+            (marker and marker[1] == self.run_id)
+            or detail_prefix.search(line)
+            or re.search(r"#\d+\s+.*\((?:package:|file:)[^()\s]+:\d+(?::\d+)?\)$", line)
+            or FAILURE.search(line)
+        ):
+            self.safe_recent.append(line)
+
     def wait(self, target: str, process: str, timeout: float) -> None:
         deadline = time.monotonic() + timeout
         next_pid_check = 0.0
         stages = {
             "SEED_READY": ["BOOT", "SEED_READY"],
-            "PASSED": ["BOOT", "RESTORE_DURABLE", "RESTORE_OFFLINE", "PASSED"],
+            "WRITES_SEED_READY": [
+                "BOOT",
+                "RESTORE_DURABLE",
+                "RESTORE_OFFLINE",
+                "WRITES_SEED_READY",
+            ],
+            "PASSED": [
+                "BOOT",
+                "WRITES_DURABLE",
+                "WRITES_OFFLINE",
+                "WRITES_REPLAY",
+                "PASSED",
+            ],
         }[target]
         seen: list[str] = []
         while time.monotonic() < deadline:
@@ -148,6 +180,7 @@ class LogWatch:
             if line is None:
                 raise RuntimeError(f"logcat exited before {target}")
             self.recent.append(line)
+            self._remember_safe_line(line)
             marker = MARKER.search(line)
             if marker and marker[1] == self.run_id:
                 state, marker_pid = marker[2], marker[3]
@@ -187,22 +220,25 @@ class LogWatch:
             if line is None:
                 break
             self.recent.append(line)
+            self._remember_safe_line(line)
 
     def safe_failure_log(self) -> str:
         # Flutter's automatic assertion report can dump whole envelopes even
         # though our Dart diagnostics do not. Never relay those raw values.
         safe: list[str] = []
-        detail_prefix = f"GRAMTREE_PROCESS_DETAIL {self.run_id} "
+        detail_prefix = re.compile(
+            rf"GRAMTREE_PROCESS_DETAIL {re.escape(self.run_id)}(?: pid=\d+)? "
+        )
         frame = re.compile(
             r"#\d+\s+[A-Za-z0-9_.$<> ]+\s+"
             r"\((?:package:|file:)[^()\s]+:\d+(?::\d+)?\)$"
         )
-        for line in self.recent:
+        for line in getattr(self, "safe_recent", self.recent):
             marker = MARKER.search(line)
             if marker and marker[1] == self.run_id:
                 safe.append(marker.group(0))
-            elif detail_prefix in line:
-                safe.append(line[line.index(detail_prefix) :])
+            elif detail := detail_prefix.search(line):
+                safe.append(line[detail.start() :])
             elif match := frame.search(line):
                 safe.append(match.group(0))
             elif FAILURE.search(line):
@@ -278,7 +314,19 @@ def main() -> int:
         if restore_pid == seed_pid:
             raise RuntimeError("Restore reused the seed PID instead of restarting")
         print(f"OS relaunch verified: {seed_pid} -> {restore_pid}", flush=True)
-        watch.wait("PASSED", restore_pid, args.phase_timeout)
+        watch.wait("WRITES_SEED_READY", restore_pid, args.phase_timeout)
+        # Original snapshot/experience assertions completed before this second
+        # durable seed. Stop and launch the same APK again without clearing data.
+        android.stop_and_check(restore_pid)
+        watch.close()
+        watch = None
+        android.run("logcat", "-c")
+        watch = LogWatch(android, run_id)
+        writes_pid = android.launch()
+        if writes_pid in (seed_pid, restore_pid):
+            raise RuntimeError("Business restore reused an earlier PID")
+        print(f"OS business relaunch verified: {restore_pid} -> {writes_pid}", flush=True)
+        watch.wait("PASSED", writes_pid, args.phase_timeout)
         print(
             "Android process-death acceptance PASSED (binding test future passed)",
             flush=True,

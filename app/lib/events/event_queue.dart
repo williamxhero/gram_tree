@@ -181,6 +181,23 @@ class QueueEntry {
   bool get needsSync =>
       state != WriteState.confirmed && state != WriteState.quarantined;
 
+  /// Only transient delivery failures may spend a fresh manual retry budget.
+  /// Unknown/validation/permission failures are retained, never blind-replayed.
+  bool get canRetryDelivery {
+    if (state == WriteState.pending) return true;
+    if (state == WriteState.deferred) {
+      return reasonCode != 'dependency_conflict';
+    }
+    if (state != WriteState.failed) return false;
+    final reason = reasonCode?.split(':').first;
+    return const {
+      'network_or_server_failure',
+      'invalid_or_lost_response',
+      'retry_limit_exceeded',
+      'dependency_failed',
+    }.contains(reason);
+  }
+
   QueueEntry change({
     required WriteState state,
     int? attempts,
@@ -200,6 +217,23 @@ class QueueEntry {
     businessRecord: businessRecord ?? this.businessRecord,
     confirmedAt: confirmedAt ?? this.confirmedAt,
   );
+}
+
+/// Resolve retry eligibility against the same owner snapshot. A blocked child
+/// cannot bypass a rejected prerequisite or a conflict awaiting user choice.
+Iterable<QueueEntry> manualRetryEntries(List<QueueEntry> entries) {
+  final byId = {for (final entry in entries) entry.write.id: entry};
+  bool eligible(QueueEntry entry, Set<String> visiting) {
+    if (!entry.canRetryDelivery || !visiting.add(entry.write.id)) return false;
+    for (final id in entry.write.dependencies) {
+      final parent = byId[id];
+      if (parent == null || parent.state == WriteState.confirmed) continue;
+      if (!eligible(parent, {...visiting})) return false;
+    }
+    return true;
+  }
+
+  return entries.where((entry) => eligible(entry, {}));
 }
 
 /// Device-level migration evidence, intentionally counts only. There is no
@@ -225,7 +259,12 @@ abstract class EventQueue {
   });
   Future<List<QueueEntry>> entries({String? ownerId});
   Future<void> update(QueueEntry entry);
-  Future<void> confirm(String id, String ownerId, Map<String, dynamic> result);
+  Future<void> confirm(
+    String id,
+    String ownerId,
+    Map<String, dynamic> result, {
+    DateTime? confirmedAt,
+  });
   Future<void> retryAccount(String ownerId);
   Future<void> clearAccount(String ownerId, {bool experienceOnly = false});
   Future<List<QueuedEvent>> pending({int? limit, String? ownerId});

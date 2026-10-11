@@ -5,6 +5,8 @@ import 'package:go_router/go_router.dart';
 import '../../api/api_client.dart';
 import '../../auth/auth_controller.dart';
 import '../../l10n/app_localizations.dart';
+import '../../events/sync_status.dart';
+import 'sync_status_page.dart';
 import '../../widgets/tab_page.dart';
 import '../recipes/personal_measures_page.dart';
 import '../recipes/recipe_pages.dart';
@@ -85,6 +87,21 @@ class MePage extends ConsumerWidget {
             subtitle: Text(l10n.personalMeasuresCapacity),
             trailing: const Icon(Icons.chevron_right),
             onTap: () => context.push(PersonalMeasuresPage.path),
+          ),
+          ListTile(
+            key: const ValueKey('sync-status-entry'),
+            contentPadding: EdgeInsets.zero,
+            title: Text(l10n.syncStatusTitle),
+            subtitle: ref
+                .watch(syncStatusProvider)
+                .when(
+                  data: (status) =>
+                      Text(l10n.syncUnfinishedCount(status.pendingCount)),
+                  loading: () => null,
+                  error: (_, _) => Text(l10n.syncLoadingError),
+                ),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => context.push(SyncStatusPage.path),
           ),
           ListTile(
             contentPadding: EdgeInsets.zero,

@@ -7,11 +7,12 @@
 """
 
 import logging
+from typing import cast
 
 from redis import Redis
 from sqlalchemy.orm import Session
 
-from gramtree.events import metrics
+from gramtree.events import metrics, sync_metrics
 from gramtree.observability import alerts
 from gramtree.runtime_config import service as config
 
@@ -29,6 +30,20 @@ def check_and_notify(session: Session, redis: Redis, now: float | None = None) -
         max_reject = float(config.get(session, "events.alert_reject_rate"))
         if stats.reject_rate > max_reject:
             problems.append(f"事件拒收率 {stats.reject_rate:.1%} 超过阈值 {max_reject:.1%}")
+
+    # Reuse the established rejection threshold/window and operator channel.
+    # Replayed HTTP attempts do not inflate the independent-content denominator.
+    sync = sync_metrics.window(redis, minutes, now=now)
+    outcome_count = cast(int, sync["outcome_count"])
+    failed_count = cast(int, sync["failed_count"])
+    conflict_count = cast(int, sync["conflict_count"])
+    if outcome_count >= int(config.get(session, "events.alert_min_events")) and outcome_count:
+        sync_problem_rate = (failed_count + conflict_count) / outcome_count
+        max_reject = float(config.get(session, "events.alert_reject_rate"))
+        if sync_problem_rate > max_reject:
+            problems.append(
+                f"同步独立写入失败/冲突率 {sync_problem_rate:.1%} 超过阈值 {max_reject:.1%}"
+            )
 
     sent = False
     if problems:
@@ -52,6 +67,7 @@ def check_and_notify(session: Session, redis: Redis, now: float | None = None) -
         "duplicate": stats.duplicate,
         "rejected": stats.rejected,
         "avg_delay_ms": stats.avg_delay_ms,
+        "sync": sync,
         "problems": problems,
         "sent": sent,
     }
