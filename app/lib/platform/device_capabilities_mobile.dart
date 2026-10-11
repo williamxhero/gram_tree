@@ -4,9 +4,8 @@ import 'device_capabilities.dart';
 
 /// iOS / Android implementation.
 ///
-/// Vibration uses Flutter's built-in haptics. Keeping the screen on and the
-/// lock-screen timer need native code (added with the cooking-mode SPEC); until
-/// then [setKeepScreenOn] only tracks the requested state.
+/// Vibration uses Flutter's built-in haptics. Timer reminders are scheduled by
+/// the platform implementation so they survive backgrounding and screen lock.
 DeviceCapabilities createDeviceCapabilities() => MobileDeviceCapabilities();
 
 class MobileDeviceCapabilities implements DeviceCapabilities {
@@ -26,6 +25,24 @@ class MobileDeviceCapabilities implements DeviceCapabilities {
     _keepScreenOn = enabled;
     await _channel.invokeMethod<void>('setKeepScreenOn', enabled);
   }
+
+  @override
+  Future<void> scheduleTimerReminder({
+    required String id,
+    required DateTime dueAt,
+    required String title,
+    required String body,
+  }) =>
+      _channel.invokeMethod<void>('scheduleTimerReminder', {
+        'id': id,
+        'dueAtMillis': dueAt.toUtc().millisecondsSinceEpoch,
+        'title': title,
+        'body': body,
+      });
+
+  @override
+  Future<void> cancelTimerReminder(String id) =>
+      _channel.invokeMethod<void>('cancelTimerReminder', {'id': id});
 
   @override
   Future<void> vibrate() => HapticFeedback.mediumImpact();

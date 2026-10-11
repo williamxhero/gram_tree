@@ -16,6 +16,17 @@ abstract class DeviceCapabilities {
   /// Keeps the screen on (e.g. while cooking) or releases the lock.
   Future<void> setKeepScreenOn(bool enabled);
 
+  /// Schedules a native reminder that remains available when the app is
+  /// backgrounded or the screen is locked.
+  Future<void> scheduleTimerReminder({
+    required String id,
+    required DateTime dueAt,
+    required String title,
+    required String body,
+  });
+
+  Future<void> cancelTimerReminder(String id);
+
   /// Short haptic / vibration feedback.
   Future<void> vibrate();
 }
