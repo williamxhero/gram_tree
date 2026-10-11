@@ -204,7 +204,9 @@ class LogWatch:
         # Flutter's automatic assertion report can dump whole envelopes even
         # though our Dart diagnostics do not. Never relay those raw values.
         safe: list[str] = []
-        detail_prefix = f"GRAMTREE_PROCESS_DETAIL {self.run_id} "
+        detail_prefix = re.compile(
+            rf"GRAMTREE_PROCESS_DETAIL {re.escape(self.run_id)}(?: pid=\\d+)? "
+        )
         frame = re.compile(
             r"#\d+\s+[A-Za-z0-9_.$<> ]+\s+"
             r"\((?:package:|file:)[^()\s]+:\d+(?::\d+)?\)$"
@@ -213,8 +215,8 @@ class LogWatch:
             marker = MARKER.search(line)
             if marker and marker[1] == self.run_id:
                 safe.append(marker.group(0))
-            elif detail_prefix in line:
-                safe.append(line[line.index(detail_prefix) :])
+            elif detail := detail_prefix.search(line):
+                safe.append(line[detail.start() :])
             elif match := frame.search(line):
                 safe.append(match.group(0))
             elif FAILURE.search(line):
