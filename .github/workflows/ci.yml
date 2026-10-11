@@ -141,10 +141,6 @@ jobs:
   web-e2e:
     name: 网页版端到端测试
     runs-on: ubuntu-24.04
-    # The suite runs each integration target in a fresh Flutter web build.
-    # Keep the job alive for the full serial suite instead of relying on the
-    # runner's default timeout while retaining a bounded upper limit.
-    timeout-minutes: 120
     services:
       postgres:
         image: pgvector/pgvector:pg16
