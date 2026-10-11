@@ -90,7 +90,8 @@ void main() {
         stepId: paused.stepId,
         startedAt: paused.startedAt,
         durationSeconds: paused.durationSeconds,
-        pausedSeconds: paused.pausedSeconds +
+        pausedSeconds:
+            paused.pausedSeconds +
             started
                 .add(const Duration(seconds: 20))
                 .difference(paused.pausedAt!)

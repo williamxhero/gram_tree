@@ -34,6 +34,7 @@ class CookingTimerState {
   final int durationSeconds;
   final int pausedSeconds;
   final DateTime? pausedAt;
+
   /// Persisted idempotency marker for the local timer-due event. Keeping this
   /// in the session (rather than only in widget memory) prevents a process
   /// restart/resume from recording the same due timer repeatedly.
@@ -781,15 +782,14 @@ extension on CookingTimerState {
     String status, {
     DateTime? pausedAt,
     DateTime? dueReportedAt,
-  }) =>
-      CookingTimerState(
-        id: id,
-        stepId: stepId,
-        startedAt: startedAt,
-        durationSeconds: durationSeconds,
-        pausedSeconds: pausedSeconds,
-        pausedAt: pausedAt,
-        dueReportedAt: dueReportedAt ?? this.dueReportedAt,
-        status: status,
-      );
+  }) => CookingTimerState(
+    id: id,
+    stepId: stepId,
+    startedAt: startedAt,
+    durationSeconds: durationSeconds,
+    pausedSeconds: pausedSeconds,
+    pausedAt: pausedAt,
+    dueReportedAt: dueReportedAt ?? this.dueReportedAt,
+    status: status,
+  );
 }
