@@ -10,6 +10,7 @@ import 'device_capabilities.dart';
 DeviceCapabilities createDeviceCapabilities() => MobileDeviceCapabilities();
 
 class MobileDeviceCapabilities implements DeviceCapabilities {
+  static const _channel = MethodChannel('app.gramtree/device_capabilities');
   bool _keepScreenOn = false;
 
   bool get keepScreenOn => _keepScreenOn;
@@ -21,7 +22,10 @@ class MobileDeviceCapabilities implements DeviceCapabilities {
   bool get supportsVibration => true;
 
   @override
-  Future<void> setKeepScreenOn(bool enabled) async => _keepScreenOn = enabled;
+  Future<void> setKeepScreenOn(bool enabled) async {
+    _keepScreenOn = enabled;
+    await _channel.invokeMethod<void>('setKeepScreenOn', enabled);
+  }
 
   @override
   Future<void> vibrate() => HapticFeedback.mediumImpact();

@@ -12,5 +12,17 @@ import UIKit
 
   func didInitializeImplicitFlutterEngine(_ engineBridge: FlutterImplicitEngineBridge) {
     GeneratedPluginRegistrant.register(with: engineBridge.pluginRegistry)
+    let channel = FlutterMethodChannel(
+      name: "app.gramtree/device_capabilities",
+      binaryMessenger: engineBridge.binaryMessenger
+    )
+    channel.setMethodCallHandler { call, result in
+      guard call.method == "setKeepScreenOn", let enabled = call.arguments as? Bool else {
+        result(FlutterMethodNotImplemented)
+        return
+      }
+      DispatchQueue.main.async { UIApplication.shared.isIdleTimerDisabled = enabled }
+      result(nil)
+    }
   }
 }

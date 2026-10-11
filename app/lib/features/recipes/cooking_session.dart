@@ -7,6 +7,7 @@ import 'package:gramtree_api/gramtree_api.dart';
 
 import '../../app/theme.dart';
 import '../../events/event_recorder.dart';
+import '../../platform/device_capabilities.dart';
 import '../../recipes/recipe_snapshot.dart';
 import '../../recipes/recipe_snapshot_provider.dart';
 import '../../storage/local_store.dart';
@@ -33,8 +34,7 @@ class CookingTimerState {
   final DateTime? pausedAt;
   final String status;
 
-  bool isDueAt(DateTime now) =>
-      status == 'running' && remainingAt(now) == 0;
+  bool isDueAt(DateTime now) => status == 'running' && remainingAt(now) == 0;
 
   int remainingAt(DateTime now) {
     final paused = pausedAt == null
@@ -273,7 +273,8 @@ class CookingPage extends ConsumerStatefulWidget {
   ConsumerState<CookingPage> createState() => _CookingPageState();
 }
 
-class _CookingPageState extends ConsumerState<CookingPage> {
+class _CookingPageState extends ConsumerState<CookingPage>
+    with WidgetsBindingObserver {
   CookingSession? _session;
   Timer? _ticker;
   final Set<String> _reportedDueTimers = <String>{};
@@ -281,6 +282,7 @@ class _CookingPageState extends ConsumerState<CookingPage> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     unawaited(_load());
     _ticker = Timer.periodic(const Duration(seconds: 1), (_) {
       if (!mounted) return;
@@ -300,7 +302,22 @@ class _CookingPageState extends ConsumerState<CookingPage> {
   @override
   void dispose() {
     _ticker?.cancel();
+    WidgetsBinding.instance.removeObserver(this);
+    unawaited(ref.read(deviceCapabilitiesProvider).setKeepScreenOn(false));
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    final session = _session;
+    if (session == null) return;
+    unawaited(
+      ref
+          .read(deviceCapabilitiesProvider)
+          .setKeepScreenOn(
+            !session.isComplete && state != AppLifecycleState.detached,
+          ),
+    );
   }
 
   Future<void> _load() async {
@@ -308,6 +325,13 @@ class _CookingPageState extends ConsumerState<CookingPage> {
         .read(cookingSessionStoreProvider)
         ?.read(widget.sessionId);
     if (mounted) setState(() => _session = session);
+    if (session != null) {
+      unawaited(
+        ref
+            .read(deviceCapabilitiesProvider)
+            .setKeepScreenOn(!session.isComplete),
+      );
+    }
   }
 
   Future<void> _save(CookingSession session, {String? event}) async {
@@ -341,12 +365,12 @@ class _CookingPageState extends ConsumerState<CookingPage> {
       session.steps.length - 1,
     );
     if (next == session.stepIndex) return;
-    if (delta > 0 && next >= 0 &&
+    if (delta > 0 &&
+        next >= 0 &&
         !session.dependenciesReady(session.steps[next])) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('请先完成前置步骤，再继续。')),
-        );
+        ScaffoldMessenger.of(context)
+            .showSnackBar(const SnackBar(content: Text('请先完成前置步骤，再继续。')));
       }
       return;
     }
