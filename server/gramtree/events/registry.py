@@ -197,12 +197,17 @@ class CookingSessionContentV1(BaseModel):
     event: Literal[
         "step_forward",
         "step_back",
+        "step_skip",
         "timer_start",
         "timer_pause",
         "timer_resume",
+        "timer_due",
+        "question_recorded",
         "completed",
     ]
     step_index: int
+    trigger: Literal["user_action", "local_clock"] = "user_action"
+    source: Literal["cooking_session"] = "cooking_session"
 
 
 ITEMS: tuple[EventTypeSpec, ...] = (

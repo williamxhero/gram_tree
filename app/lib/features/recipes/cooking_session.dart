@@ -33,6 +33,9 @@ class CookingTimerState {
   final DateTime? pausedAt;
   final String status;
 
+  bool isDueAt(DateTime now) =>
+      status == 'running' && remainingAt(now) == 0;
+
   int remainingAt(DateTime now) {
     final paused = pausedAt == null
         ? pausedSeconds
@@ -103,6 +106,11 @@ class CookingSession {
   List<RecipeStep> get steps =>
       snapshot.detail.version.snapshot.steps ?? const [];
   bool get isComplete => status == 'completed';
+
+  bool dependenciesReady(RecipeStep step) =>
+      (step.dependsOn ?? const <String>[]).every(
+        (id) => completed.contains(id) || skipped.contains(id),
+      );
 
   Map<String, dynamic> toJson() => {
     'id': id,
@@ -268,13 +276,24 @@ class CookingPage extends ConsumerStatefulWidget {
 class _CookingPageState extends ConsumerState<CookingPage> {
   CookingSession? _session;
   Timer? _ticker;
+  final Set<String> _reportedDueTimers = <String>{};
 
   @override
   void initState() {
     super.initState();
     unawaited(_load());
     _ticker = Timer.periodic(const Duration(seconds: 1), (_) {
-      if (mounted) setState(() {});
+      if (!mounted) return;
+      setState(() {});
+      final session = _session;
+      if (session == null) return;
+      for (final timer in session.timers) {
+        if (timer.isDueAt(DateTime.now().toUtc()) &&
+            _reportedDueTimers.add(timer.id)) {
+          unawaited(_save(session, event: 'timer_due'));
+          break;
+        }
+      }
     });
   }
 
@@ -306,6 +325,8 @@ class _CookingPageState extends ConsumerState<CookingPage> {
               'session_id': session.id,
               'event': event,
               'step_index': session.stepIndex,
+              'trigger': event == 'timer_due' ? 'local_clock' : 'user_action',
+              'source': 'cooking_session',
             },
           );
     }
@@ -320,6 +341,15 @@ class _CookingPageState extends ConsumerState<CookingPage> {
       session.steps.length - 1,
     );
     if (next == session.stepIndex) return;
+    if (delta > 0 && next >= 0 &&
+        !session.dependenciesReady(session.steps[next])) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('请先完成前置步骤，再继续。')),
+        );
+      }
+      return;
+    }
     final reached = [...session.reached];
     final completed = [...session.completed];
     if (delta > 0 && session.stepIndex >= 0) {
@@ -408,6 +438,51 @@ class _CookingPageState extends ConsumerState<CookingPage> {
         finishedAt: DateTime.now().toUtc(),
       ),
       event: 'completed',
+    );
+  }
+
+  Future<void> _skipCurrent() async {
+    final session = _session;
+    if (session == null || session.stepIndex < 0) return;
+    final stepId = session.steps[session.stepIndex].id;
+    if (session.skipped.contains(stepId)) return;
+    await _save(
+      session.copyWith(skipped: [...session.skipped, stepId]),
+      event: 'step_skip',
+    );
+  }
+
+  Future<void> _recordQuestion() async {
+    final session = _session;
+    if (session == null || session.stepIndex < 0) return;
+    final controller = TextEditingController();
+    final text = await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('记录问题'),
+        content: TextField(controller: controller, autofocus: true),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('取消'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, controller.text.trim()),
+            child: const Text('保存'),
+          ),
+        ],
+      ),
+    );
+    controller.dispose();
+    if (text == null || text.isEmpty) return;
+    await _save(
+      session.copyWith(
+        questions: [
+          ...session.questions,
+          {'step_id': session.steps[session.stepIndex].id, 'text': text},
+        ],
+      ),
+      event: 'question_recorded',
     );
   }
 
@@ -503,6 +578,16 @@ class _CookingPageState extends ConsumerState<CookingPage> {
                           ? '无计时'
                           : '计时 ${current.durationSeconds} 秒',
                     ),
+                  ),
+                  OutlinedButton.icon(
+                    onPressed: _skipCurrent,
+                    icon: const Icon(Icons.skip_next),
+                    label: const Text('跳过'),
+                  ),
+                  OutlinedButton.icon(
+                    onPressed: _recordQuestion,
+                    icon: const Icon(Icons.help_outline),
+                    label: const Text('记录问题'),
                   ),
                   OutlinedButton.icon(
                     onPressed: index == 0 ? null : () => _move(-1),
