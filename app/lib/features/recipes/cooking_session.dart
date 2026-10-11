@@ -38,7 +38,7 @@ class CookingTimerState {
         ? pausedSeconds
         : pausedSeconds + now.difference(pausedAt!).inSeconds;
     final elapsed = now.difference(startedAt).inSeconds - paused;
-    return (durationSeconds - elapsed).clamp(0, durationSeconds) as int;
+    return (durationSeconds - elapsed).clamp(0, durationSeconds);
   }
 
   Map<String, dynamic> toJson() => {
@@ -194,8 +194,9 @@ class CookingSessionStore {
   Map<String, dynamic> _load() {
     try {
       final decoded = jsonDecode(store.getString(_cookingStoreKey) ?? '{}');
-      if (decoded is Map && decoded['accounts'] is Map)
+      if (decoded is Map && decoded['accounts'] is Map) {
         return Map<String, dynamic>.from(decoded);
+      }
     } catch (_) {}
     return {'format_version': 1, 'accounts': <String, dynamic>{}};
   }
@@ -323,8 +324,9 @@ class _CookingPageState extends ConsumerState<CookingPage> {
       final previous = session.steps[session.stepIndex].id;
       if (!completed.contains(previous)) completed.add(previous);
     }
-    if (next >= 0 && !reached.contains(session.steps[next].id))
+    if (next >= 0 && !reached.contains(session.steps[next].id)) {
       reached.add(session.steps[next].id);
+    }
     await _save(
       session.copyWith(stepIndex: next, reached: reached, completed: completed),
       event: delta > 0 ? 'step_forward' : 'step_back',
