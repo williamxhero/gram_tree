@@ -26,7 +26,9 @@ MARKER = re.compile(r"GRAMTREE_PROCESS_DEATH ([a-f0-9]+) ([A-Z_]+) pid=(\d+)")
 LOG_PID = re.compile(r"^\d\d-\d\d\s+[\d:.]+\s+(\d+)\s+\d+\s+")
 FAILURE = re.compile(
     r"FATAL EXCEPTION|Fatal signal|Unhandled Exception|"
-    r"EXCEPTION CAUGHT BY FLUTTER|Test failed|TimeoutException|"
+    r"EXCEPTION CAUGHT BY (?:FLUTTER|WIDGETS|RENDERING|SCHEDULER|SERVICES|"
+    r"GESTURE|PAINT|LAYOUT)|"
+    r"Test failed|TimeoutException|══╡|"
     r"Lost connection to device|Process .* has died|ANR in " + re.escape(PACKAGE),
     re.IGNORECASE,
 )

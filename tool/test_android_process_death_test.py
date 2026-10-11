@@ -33,6 +33,30 @@ class SafeFailureLogTest(unittest.TestCase):
             watch.safe_failure_log(),
         )
 
+    def test_keeps_markers_and_redacts_framework_failure(self) -> None:
+        watch = _MODULE.LogWatch.__new__(_MODULE.LogWatch)
+        watch.run_id = "abc123"
+        watch.recent = collections.deque(
+            [
+                "I/flutter: GRAMTREE_PROCESS_DEATH abc123 BOOT pid=4935",
+                "E/flutter: EXCEPTION CAUGHT BY WIDGETS LIBRARY",
+                "E/flutter: secret business payload",
+                "I/flutter: GRAMTREE_PROCESS_DEATH abc123 FAILED pid=4935",
+            ],
+            maxlen=200,
+        )
+
+        self.assertEqual(
+            "\n".join(
+                [
+                    "GRAMTREE_PROCESS_DEATH abc123 BOOT pid=4935",
+                    "Native/framework failure detected (raw message omitted)",
+                    "GRAMTREE_PROCESS_DEATH abc123 FAILED pid=4935",
+                ]
+            ),
+            watch.safe_failure_log(),
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

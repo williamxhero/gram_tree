@@ -808,6 +808,12 @@ Future<void> _restoreBusinessRestart(
 
 void main() {
   final binding = IntegrationTestWidgetsFlutterBinding.ensureInitialized();
+  final frameworkErrors = <FlutterErrorDetails>[];
+  final previousFlutterError = FlutterError.onError;
+  FlutterError.onError = (details) {
+    if (frameworkErrors.length < 8) frameworkErrors.add(details);
+    previousFlutterError?.call(details);
+  };
   final testFinished = Completer<void>();
   var restoredSuccessfully = false;
   var failureReported = false;
@@ -836,6 +842,14 @@ void main() {
         for (final failure in binding.failureMethodsDetails.take(2)) {
           _diagnostic('Framework failure in ${failure.methodName}');
           _diagnostic(_sourceStack(failure.details ?? ''));
+        }
+        for (final error in frameworkErrors.take(4)) {
+          final stack = _sourceStack(error.stack?.toString() ?? '');
+          _diagnostic(
+            'FlutterError type=${error.exception.runtimeType} '
+            'library=${error.library ?? 'unknown'}',
+          );
+          if (stack.isNotEmpty) _diagnostic(stack);
         }
         if (!failureReported) {
           failureReported = true;
