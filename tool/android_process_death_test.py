@@ -205,7 +205,7 @@ class LogWatch:
         # though our Dart diagnostics do not. Never relay those raw values.
         safe: list[str] = []
         detail_prefix = re.compile(
-            rf"GRAMTREE_PROCESS_DETAIL {re.escape(self.run_id)}(?: pid=\\d+)? "
+            rf"GRAMTREE_PROCESS_DETAIL {re.escape(self.run_id)}(?: pid=\d+)? "
         )
         frame = re.compile(
             r"#\d+\s+[A-Za-z0-9_.$<> ]+\s+"
