@@ -71,5 +71,36 @@ void main() {
         isTrue,
       );
     });
+
+    test('keeps the due-event marker when a timer is resumed', () {
+      final reportedAt = started.add(const Duration(seconds: 60));
+      final paused = CookingTimerState(
+        id: 'timer',
+        stepId: 'step',
+        startedAt: started,
+        durationSeconds: 60,
+        pausedSeconds: 5,
+        pausedAt: started.add(const Duration(seconds: 10)),
+        dueReportedAt: reportedAt,
+        status: 'paused',
+      );
+
+      final resumed = CookingTimerState(
+        id: paused.id,
+        stepId: paused.stepId,
+        startedAt: paused.startedAt,
+        durationSeconds: paused.durationSeconds,
+        pausedSeconds: paused.pausedSeconds +
+            started
+                .add(const Duration(seconds: 20))
+                .difference(paused.pausedAt!)
+                .inSeconds,
+        dueReportedAt: paused.dueReportedAt,
+        status: 'running',
+      );
+
+      expect(resumed.dueReportedAt, reportedAt);
+      expect(resumed.hasReportedDue, isTrue);
+    });
   });
 }

@@ -469,6 +469,7 @@ class _CookingPageState extends ConsumerState<CookingPage>
         pausedSeconds:
             paused.pausedSeconds +
             DateTime.now().toUtc().difference(paused.pausedAt!).inSeconds,
+        dueReportedAt: paused.dueReportedAt,
         status: 'running',
       );
       await _save(
@@ -788,7 +789,7 @@ extension on CookingTimerState {
         durationSeconds: durationSeconds,
         pausedSeconds: pausedSeconds,
         pausedAt: pausedAt,
-        dueReportedAt: dueReportedAt,
+        dueReportedAt: dueReportedAt ?? this.dueReportedAt,
         status: status,
       );
 }
