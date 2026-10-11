@@ -333,6 +333,7 @@ class FakeServer extends Interceptor {
               WriteResult(
                 writeId: write.writeId,
                 status: WriteResultStatusEnum.confirmed,
+                confirmedAt: '2026-10-08T10:11:12Z',
                 result: WriteResourceResult(
                   resourceType: 'experience.event',
                   resourceId: write.writeId,

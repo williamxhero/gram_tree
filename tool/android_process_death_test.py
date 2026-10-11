@@ -131,7 +131,19 @@ class LogWatch:
         next_pid_check = 0.0
         stages = {
             "SEED_READY": ["BOOT", "SEED_READY"],
-            "PASSED": ["BOOT", "RESTORE_DURABLE", "RESTORE_OFFLINE", "PASSED"],
+            "WRITES_SEED_READY": [
+                "BOOT",
+                "RESTORE_DURABLE",
+                "RESTORE_OFFLINE",
+                "WRITES_SEED_READY",
+            ],
+            "PASSED": [
+                "BOOT",
+                "WRITES_DURABLE",
+                "WRITES_OFFLINE",
+                "WRITES_REPLAY",
+                "PASSED",
+            ],
         }[target]
         seen: list[str] = []
         while time.monotonic() < deadline:
@@ -192,7 +204,9 @@ class LogWatch:
         # Flutter's automatic assertion report can dump whole envelopes even
         # though our Dart diagnostics do not. Never relay those raw values.
         safe: list[str] = []
-        detail_prefix = f"GRAMTREE_PROCESS_DETAIL {self.run_id} "
+        detail_prefix = re.compile(
+            rf"GRAMTREE_PROCESS_DETAIL {re.escape(self.run_id)}(?: pid=\\d+)? "
+        )
         frame = re.compile(
             r"#\d+\s+[A-Za-z0-9_.$<> ]+\s+"
             r"\((?:package:|file:)[^()\s]+:\d+(?::\d+)?\)$"
@@ -201,8 +215,8 @@ class LogWatch:
             marker = MARKER.search(line)
             if marker and marker[1] == self.run_id:
                 safe.append(marker.group(0))
-            elif detail_prefix in line:
-                safe.append(line[line.index(detail_prefix) :])
+            elif detail := detail_prefix.search(line):
+                safe.append(line[detail.start() :])
             elif match := frame.search(line):
                 safe.append(match.group(0))
             elif FAILURE.search(line):
@@ -278,7 +292,19 @@ def main() -> int:
         if restore_pid == seed_pid:
             raise RuntimeError("Restore reused the seed PID instead of restarting")
         print(f"OS relaunch verified: {seed_pid} -> {restore_pid}", flush=True)
-        watch.wait("PASSED", restore_pid, args.phase_timeout)
+        watch.wait("WRITES_SEED_READY", restore_pid, args.phase_timeout)
+        # Original snapshot/experience assertions completed before this second
+        # durable seed. Stop and launch the same APK again without clearing data.
+        android.stop_and_check(restore_pid)
+        watch.close()
+        watch = None
+        android.run("logcat", "-c")
+        watch = LogWatch(android, run_id)
+        writes_pid = android.launch()
+        if writes_pid in (seed_pid, restore_pid):
+            raise RuntimeError("Business restore reused an earlier PID")
+        print(f"OS business relaunch verified: {restore_pid} -> {writes_pid}", flush=True)
+        watch.wait("PASSED", writes_pid, args.phase_timeout)
         print(
             "Android process-death acceptance PASSED (binding test future passed)",
             flush=True,

@@ -3309,6 +3309,55 @@
         "title": "MeasureDisplayRequest",
         "type": "object"
       },
+      "MeasureHistoryOut": {
+        "properties": {
+          "device_time": {
+            "title": "Device Time",
+            "type": "string"
+          },
+          "field": {
+            "title": "Field",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "new_value": {
+            "title": "New Value"
+          },
+          "old_value": {
+            "title": "Old Value"
+          },
+          "outcome": {
+            "enum": [
+              "won",
+              "lost",
+              "unchanged",
+              "tombstoned"
+            ],
+            "title": "Outcome",
+            "type": "string"
+          },
+          "write_id": {
+            "format": "uuid",
+            "title": "Write Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "write_id",
+          "field",
+          "device_time",
+          "old_value",
+          "new_value",
+          "outcome"
+        ],
+        "title": "MeasureHistoryOut",
+        "type": "object"
+      },
       "MeasureInputOut": {
         "properties": {
           "base_quantity": {
@@ -4643,6 +4692,33 @@
           "cache"
         ],
         "title": "PageDescription",
+        "type": "object"
+      },
+      "Page_MeasureHistoryOut_": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/MeasureHistoryOut"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Cursor"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "title": "Page[MeasureHistoryOut]",
         "type": "object"
       },
       "Page_PersonalMeasureOut_": {
@@ -9261,6 +9337,11 @@
           "resource_type": {
             "title": "Resource Type",
             "type": "string"
+          },
+          "values": {
+            "additionalProperties": true,
+            "title": "Values",
+            "type": "object"
           }
         },
         "required": [
@@ -9272,6 +9353,17 @@
       },
       "WriteResult": {
         "properties": {
+          "confirmed_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Confirmed At"
+          },
           "conflict": {
             "anyOf": [
               {
@@ -12452,6 +12544,125 @@
           }
         ],
         "summary": "Update Personal Measure",
+        "tags": [
+          "personal-measures"
+        ]
+      }
+    },
+    "/v1/me/measures/{measure_id}/history": {
+      "get": {
+        "operationId": "personal_measure_history",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "measure_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Measure Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "上一页返回的 next_cursor",
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "上一页返回的 next_cursor",
+              "title": "Cursor"
+            }
+          },
+          {
+            "description": "每页条数，上限见配置项 api.page_size_max",
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "description": "每页条数，上限见配置项 api.page_size_max",
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page_MeasureHistoryOut_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "参数错误"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "服务端错误"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Personal Measure History",
         "tags": [
           "personal-measures"
         ]

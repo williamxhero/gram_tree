@@ -80,6 +80,7 @@ import 'package:gramtree_api/src/model/ingredient_preference_out.dart';
 import 'package:gramtree_api/src/model/local_cuisine_out.dart';
 import 'package:gramtree_api/src/model/measure_display_out.dart';
 import 'package:gramtree_api/src/model/measure_display_request.dart';
+import 'package:gramtree_api/src/model/measure_history_out.dart';
 import 'package:gramtree_api/src/model/measure_input_out.dart';
 import 'package:gramtree_api/src/model/measure_input_request.dart';
 import 'package:gramtree_api/src/model/merge_relation.dart';
@@ -106,6 +107,7 @@ import 'package:gramtree_api/src/model/nutrition_attribute.dart';
 import 'package:gramtree_api/src/model/nutrition_estimate.dart';
 import 'package:gramtree_api/src/model/one_line_input.dart';
 import 'package:gramtree_api/src/model/page_description.dart';
+import 'package:gramtree_api/src/model/page_measure_history_out.dart';
 import 'package:gramtree_api/src/model/page_personal_measure_out.dart';
 import 'package:gramtree_api/src/model/page_taste_profile_change_out.dart';
 import 'package:gramtree_api/src/model/page_unrecorded_ingredient_item.dart';
@@ -458,6 +460,9 @@ ReturnType deserialize<ReturnType, BaseType>(
     case 'MeasureDisplayRequest':
       return MeasureDisplayRequest.fromJson(value as Map<String, dynamic>)
           as ReturnType;
+    case 'MeasureHistoryOut':
+      return MeasureHistoryOut.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
     case 'MeasureInputOut':
       return MeasureInputOut.fromJson(value as Map<String, dynamic>)
           as ReturnType;
@@ -532,6 +537,9 @@ ReturnType deserialize<ReturnType, BaseType>(
       return OneLineInput.fromJson(value as Map<String, dynamic>) as ReturnType;
     case 'PageDescription':
       return PageDescription.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'PageMeasureHistoryOut':
+      return PageMeasureHistoryOut.fromJson(value as Map<String, dynamic>)
           as ReturnType;
     case 'PagePersonalMeasureOut':
       return PagePersonalMeasureOut.fromJson(value as Map<String, dynamic>)

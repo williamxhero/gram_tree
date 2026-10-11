@@ -3,6 +3,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 /// 本机的普通键值存储（同意记录、设备 ID 等不敏感的数据）。读是同步的。
 abstract class LocalStore {
+  Set<String> get keys;
   String? getString(String key);
   Future<void> setString(String key, String value);
   Future<void> remove(String key);
@@ -15,6 +16,9 @@ class PrefsLocalStore implements LocalStore {
       PrefsLocalStore(await SharedPreferences.getInstance());
 
   final SharedPreferences _prefs;
+
+  @override
+  Set<String> get keys => _prefs.getKeys();
 
   @override
   String? getString(String key) => _prefs.getString(key);
@@ -32,6 +36,9 @@ class MemoryLocalStore implements LocalStore {
   MemoryLocalStore([Map<String, String>? values]) : values = values ?? {};
 
   final Map<String, String> values;
+
+  @override
+  Set<String> get keys => values.keys.toSet();
 
   @override
   String? getString(String key) => values[key];

@@ -7,6 +7,8 @@ part of 'write_result.dart';
 // **************************************************************************
 
 abstract class _$WriteResultCWProxy {
+  WriteResult confirmedAt(String? confirmedAt);
+
   WriteResult conflict(Object? conflict);
 
   WriteResult reasonCode(String? reasonCode);
@@ -24,6 +26,7 @@ abstract class _$WriteResultCWProxy {
   /// WriteResult(...).copyWith(id: 12, name: "My name")
   /// ````
   WriteResult call({
+    String? confirmedAt,
     Object? conflict,
     String? reasonCode,
     WriteResourceResult? result,
@@ -37,6 +40,10 @@ class _$WriteResultCWProxyImpl implements _$WriteResultCWProxy {
   const _$WriteResultCWProxyImpl(this._value);
 
   final WriteResult _value;
+
+  @override
+  WriteResult confirmedAt(String? confirmedAt) =>
+      this(confirmedAt: confirmedAt);
 
   @override
   WriteResult conflict(Object? conflict) => this(conflict: conflict);
@@ -61,6 +68,7 @@ class _$WriteResultCWProxyImpl implements _$WriteResultCWProxy {
   /// WriteResult(...).copyWith(id: 12, name: "My name")
   /// ````
   WriteResult call({
+    Object? confirmedAt = const $CopyWithPlaceholder(),
     Object? conflict = const $CopyWithPlaceholder(),
     Object? reasonCode = const $CopyWithPlaceholder(),
     Object? result = const $CopyWithPlaceholder(),
@@ -68,6 +76,10 @@ class _$WriteResultCWProxyImpl implements _$WriteResultCWProxy {
     Object? writeId = const $CopyWithPlaceholder(),
   }) {
     return WriteResult(
+      confirmedAt: confirmedAt == const $CopyWithPlaceholder()
+          ? _value.confirmedAt
+          // ignore: cast_nullable_to_non_nullable
+          : confirmedAt as String?,
       conflict: conflict == const $CopyWithPlaceholder()
           ? _value.conflict
           // ignore: cast_nullable_to_non_nullable
@@ -102,29 +114,39 @@ extension $WriteResultCopyWith on WriteResult {
 // JsonSerializableGenerator
 // **************************************************************************
 
-WriteResult _$WriteResultFromJson(Map<String, dynamic> json) =>
-    $checkedCreate('WriteResult', json, ($checkedConvert) {
-      $checkKeys(json, requiredKeys: const ['status', 'write_id']);
-      final val = WriteResult(
-        conflict: $checkedConvert('conflict', (v) => v),
-        reasonCode: $checkedConvert('reason_code', (v) => v as String?),
-        result: $checkedConvert(
-          'result',
-          (v) => v == null
-              ? null
-              : WriteResourceResult.fromJson(v as Map<String, dynamic>),
-        ),
-        status: $checkedConvert(
-          'status',
-          (v) => $enumDecode(_$WriteResultStatusEnumEnumMap, v),
-        ),
-        writeId: $checkedConvert('write_id', (v) => v as String),
-      );
-      return val;
-    }, fieldKeyMap: const {'reasonCode': 'reason_code', 'writeId': 'write_id'});
+WriteResult _$WriteResultFromJson(Map<String, dynamic> json) => $checkedCreate(
+  'WriteResult',
+  json,
+  ($checkedConvert) {
+    $checkKeys(json, requiredKeys: const ['status', 'write_id']);
+    final val = WriteResult(
+      confirmedAt: $checkedConvert('confirmed_at', (v) => v as String?),
+      conflict: $checkedConvert('conflict', (v) => v),
+      reasonCode: $checkedConvert('reason_code', (v) => v as String?),
+      result: $checkedConvert(
+        'result',
+        (v) => v == null
+            ? null
+            : WriteResourceResult.fromJson(v as Map<String, dynamic>),
+      ),
+      status: $checkedConvert(
+        'status',
+        (v) => $enumDecode(_$WriteResultStatusEnumEnumMap, v),
+      ),
+      writeId: $checkedConvert('write_id', (v) => v as String),
+    );
+    return val;
+  },
+  fieldKeyMap: const {
+    'confirmedAt': 'confirmed_at',
+    'reasonCode': 'reason_code',
+    'writeId': 'write_id',
+  },
+);
 
 Map<String, dynamic> _$WriteResultToJson(WriteResult instance) =>
     <String, dynamic>{
+      'confirmed_at': ?instance.confirmedAt,
       'conflict': ?instance.conflict,
       'reason_code': ?instance.reasonCode,
       'result': ?instance.result?.toJson(),

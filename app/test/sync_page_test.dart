@@ -15,6 +15,7 @@ import 'package:gram_tree/events/event_queue_mobile.dart' as mobile;
 import 'package:gram_tree/events/event_uploader.dart';
 import 'package:gram_tree/events/sync_status.dart';
 import 'package:gram_tree/l10n/app_localizations.dart';
+import 'package:gram_tree/network/reachability.dart';
 import 'package:gram_tree/ui_protocol/source_mark.dart';
 
 import 'event_queue_test_executor.dart';
@@ -242,6 +243,7 @@ void main() {
                   ? WriteResultStatusEnum.confirmed
                   : WriteResultStatusEnum.deferred_,
               reasonCode: ready ? null : 'dependency_not_arrived',
+              confirmedAt: ready ? '2026-10-08T10:11:12Z' : null,
               result: ready
                   ? WriteResourceResult(
                       resourceType: 'experience.event',
@@ -319,6 +321,7 @@ void main() {
               {
                 'write_id': write['write_id'],
                 'status': 'confirmed',
+                'confirmed_at': '2026-10-08T10:11:12Z',
                 'result': {
                   'resource_type': 'experience.event',
                   'resource_id': write['write_id'],
@@ -445,9 +448,15 @@ void main() {
 
   testWidgets('页面两次为什么遇到503，后写入按已有期限重试且原封包保留', (tester) async {
     var available = false;
+    var attempts = 0;
+    final firstRetryReply = Completer<(int, Object?)>();
     final server = FakeServer()
       ..on('POST', '/v1/sync/writes', (request) {
+        attempts++;
         if (!available) {
+          // Hold the first retry at the HTTP boundary so a slow wall-clock poll
+          // cannot miss the three-request observation before the next write.
+          if (attempts == 3) return firstRetryReply.future;
           return FakeServer.error(503, 'unavailable', '暂不可用');
         }
         final write = ((request.body as Map)['writes'] as List).single as Map;
@@ -458,6 +467,7 @@ void main() {
               {
                 'write_id': write['write_id'],
                 'status': 'confirmed',
+                'confirmed_at': '2026-10-08T10:11:12Z',
                 'result': {
                   'resource_type': 'experience.event',
                   'resource_id': write['write_id'],
@@ -563,6 +573,8 @@ void main() {
 
       await waitForWrites(3);
       expect(sent()[2], originals[0]);
+      firstRetryReply.complete(FakeServer.error(503, 'unavailable', '暂不可用'));
+      await tester.pumpAndSettle();
       final retained = await env.eventQueue.entries();
       expect(retained[1].nextAttemptAt, isNotNull);
       expect(
@@ -588,6 +600,9 @@ void main() {
       expect(sent(), [...originals, ...originals, ...originals]);
       expect(tester.takeException(), isNull);
     } finally {
+      if (!firstRetryReply.isCompleted) {
+        firstRetryReply.complete(FakeServer.error(503, 'unavailable', '暂不可用'));
+      }
       container.dispose();
       await tester.pumpWidget(const SizedBox.shrink());
     }
@@ -905,8 +920,16 @@ void main() {
       await tester.tap(find.text('已验证'));
       await tester.pumpAndSettle();
       expect(find.text('待同步 1 条'), findsOneWidget);
+      // Restoring the simulated transport also restores the shared API probe;
+      // otherwise the auth boundary correctly refuses to refresh while offline.
+      env.reachability.reachable = true;
       container.read(offlineSimulationProvider.notifier).set(false);
+      await container.read(apiReachabilityProvider.notifier).check();
       await tester.pumpAndSettle();
+      expect(
+        server.calls('POST', '/v1/auth/refresh'),
+        hasLength(delayedKind == 'confirmation' ? 0 : 1),
+      );
       final original = server.calls('POST', '/v1/sync/writes').single;
       final write = ((original.body as Map)['writes'] as List).single as Map;
       server.user = UserOut.fromJson({
@@ -929,6 +952,7 @@ void main() {
                     {
                       'write_id': write['write_id'],
                       'status': 'confirmed',
+                      'confirmed_at': '2026-10-08T10:11:12Z',
                       'result': {
                         'resource_type': 'experience.event',
                         'resource_id': write['write_id'],

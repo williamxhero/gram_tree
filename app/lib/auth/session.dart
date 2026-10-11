@@ -62,6 +62,7 @@ class SessionStore extends ChangeNotifier {
   AuthSession? _current;
   bool _loaded = false;
   int _identityEpoch = 0;
+  int? _uploadsPausedEpoch;
   Future<void> _persistence = Future<void>.value();
 
   Future<void> _persist(Future<void> Function() operation) {
@@ -83,6 +84,36 @@ class SessionStore extends ChangeNotifier {
   bool matches(SessionIdentity identity) =>
       _current?.user.id == identity.ownerId && _identityEpoch == identity.epoch;
 
+  bool canUpload(SessionIdentity identity) =>
+      matches(identity) && _uploadsPausedEpoch != identity.epoch;
+
+  /// Fence private writes at confirmation, while allowing the captured login to
+  /// send consent withdrawal/account deletion. Refresh cannot remove this fence.
+  Future<void> pauseAccountUploads(SessionIdentity identity) async {
+    if (!matches(identity)) return;
+    _uploadsPausedEpoch = identity.epoch;
+    final value = _encode(_current!);
+    notifyListeners();
+    await _persist(() => _secure.write(sessionStorageKey, value));
+  }
+
+  /// Only a definite rejection may release this generation's privacy fence.
+  Future<bool> resumeAccountUploads(SessionIdentity identity) async {
+    if (!matches(identity) || _uploadsPausedEpoch != identity.epoch) {
+      return false;
+    }
+    _uploadsPausedEpoch = null;
+    final value = _encode(_current!);
+    notifyListeners();
+    await _persist(() => _secure.write(sessionStorageKey, value));
+    return true;
+  }
+
+  String _encode(AuthSession session) => jsonEncode({
+    ...session.toJson(),
+    if (_uploadsPausedEpoch == _identityEpoch) 'uploads_paused': true,
+  });
+
   /// 为什么变成了未登录（续期失败、撤回同意等），给登录页显示提示用。
   String? lastExpiryReason;
 
@@ -96,9 +127,11 @@ class SessionStore extends ChangeNotifier {
     if (_loaded || epoch != _identityEpoch) return _current;
     if (raw != null) {
       try {
-        _current = AuthSession.fromJson(
-          jsonDecode(raw) as Map<String, dynamic>,
-        );
+        final value = jsonDecode(raw) as Map<String, dynamic>;
+        _current = AuthSession.fromJson(value);
+        if (value['uploads_paused'] == true) {
+          _uploadsPausedEpoch = _identityEpoch;
+        }
       } catch (_) {
         await _persist(() => _secure.delete(sessionStorageKey));
         if (_loaded || epoch != _identityEpoch) return _current;
@@ -109,19 +142,35 @@ class SessionStore extends ChangeNotifier {
     return _current;
   }
 
-  Future<void> save(TokenPair tokens) => _set(AuthSession.fromTokens(tokens));
+  /// Every explicit login is a new generation, even for the same owner.
+  Future<void> save(TokenPair tokens) =>
+      _set(AuthSession.fromTokens(tokens), newLogin: true);
+
+  /// Refresh rotates credentials without invalidating that login's queue drain.
+  Future<void> saveRefreshed(
+    TokenPair tokens, {
+    required SessionIdentity identity,
+  }) {
+    if (!matches(identity) || tokens.user.id != identity.ownerId) {
+      throw StateError('account_changed');
+    }
+    return _set(AuthSession.fromTokens(tokens));
+  }
 
   Future<void> updateUser(UserOut user) async {
     final s = _current;
     if (s != null && s.user.id == user.id) await _set(s.withUser(user));
   }
 
-  Future<void> _set(AuthSession session) async {
-    if (_current?.user.id != session.user.id) _identityEpoch++;
+  Future<void> _set(AuthSession session, {bool newLogin = false}) async {
+    if (newLogin || _current?.user.id != session.user.id) {
+      _identityEpoch++;
+      _uploadsPausedEpoch = null;
+    }
     _current = session;
     _loaded = true;
     lastExpiryReason = null;
-    final value = jsonEncode(session.toJson());
+    final value = _encode(session);
     // Fence old account work immediately; ordered persistence may still be slow.
     notifyListeners();
     await _persist(() => _secure.write(sessionStorageKey, value));

@@ -246,8 +246,9 @@ class DriftEventQueue implements EventQueue {
   Future<void> confirm(
     String id,
     String ownerId,
-    Map<String, dynamic> result,
-  ) => _operation(() async {
+    Map<String, dynamic> result, {
+    DateTime? confirmedAt,
+  }) => _operation(() async {
     await _db.transaction(() async {
       final row =
           await (_db.select(_db.queuedEvents)
@@ -263,7 +264,9 @@ class DriftEventQueue implements EventQueue {
           state: WriteState.confirmed,
           result: result,
           businessRecord: business,
-          confirmedAt: DateTime.now().toUtc(),
+          // A local clock is not evidence of server confirmation. Older or
+          // malformed responses remain confirmed without inventing a time.
+          confirmedAt: confirmedAt?.toUtc(),
         ),
       );
     });
@@ -272,11 +275,9 @@ class DriftEventQueue implements EventQueue {
   @override
   Future<void> retryAccount(String ownerId) => _operation(() async {
     await _db.transaction(() async {
-      for (final entry in await _entries(ownerId: ownerId)) {
-        if (entry.state != WriteState.confirmed &&
-            entry.state != WriteState.conflict) {
-          await _update(entry.change(state: WriteState.pending, attempts: 0));
-        }
+      final snapshot = await _entries(ownerId: ownerId);
+      for (final entry in manualRetryEntries(snapshot)) {
+        await _update(entry.change(state: WriteState.pending, attempts: 0));
       }
     });
   });

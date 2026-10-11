@@ -1,3 +1,8 @@
+import '../recipes/offline_recipe_repository.dart'
+    show recipeVersionWriteRegistration;
+import '../recipes/personal_measure_write.dart'
+    show personalMeasureWriteRegistration;
+
 /// Business modules register once and use the existing event queue/uploader.
 /// Resource IDs in payloads are not delivery IDs in dependencies.
 enum WriteConflictRule { appendOnly, fieldLastWriteWithHistory, preserveBoth }
@@ -25,6 +30,8 @@ class WriteRegistration {
 
 class WriteRegistry {
   WriteRegistry() {
+    register(recipeVersionWriteRegistration);
+    register(personalMeasureWriteRegistration);
     register(
       WriteRegistration(
         type: 'experience.event',

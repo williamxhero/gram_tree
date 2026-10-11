@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:gram_tree/auth/session.dart';
 import 'package:gram_tree/events/event_queue.dart';
 import 'package:gram_tree/events/event_uploader.dart';
+import 'package:gram_tree/events/write_registry.dart';
 import 'package:gramtree_api/gramtree_api.dart';
 
 import 'helpers.dart';
@@ -36,6 +37,7 @@ List<Map> writes(Recorded request) =>
           status: replay
               ? WriteResultStatusEnum.alreadyProcessed
               : WriteResultStatusEnum.confirmed,
+          confirmedAt: '2026-10-08T10:11:12Z',
           result: WriteResourceResult(
             resourceType: 'experience.event',
             resourceId: write['write_id'] as String,
@@ -64,7 +66,93 @@ Future<ProviderContainer> setup(TestEnv env, {bool fast = false}) async {
   return container;
 }
 
+class _ThrowingEntriesQueue implements EventQueue {
+  _ThrowingEntriesQueue(this._delegate);
+
+  final EventQueue _delegate;
+
+  @override
+  WriteRegistry get registry => _delegate.registry;
+
+  @override
+  Stream<void> get changes => _delegate.changes;
+
+  @override
+  Future<void> enqueue(
+    QueuedEvent event, {
+    Map<String, dynamic>? businessRecord,
+  }) => _delegate.enqueue(event, businessRecord: businessRecord);
+
+  @override
+  Future<List<QueueEntry>> entries({String? ownerId}) =>
+      Future.error(StateError('queue read failed'));
+
+  @override
+  Future<void> update(QueueEntry entry) => _delegate.update(entry);
+
+  @override
+  Future<void> confirm(
+    String id,
+    String ownerId,
+    Map<String, dynamic> result, {
+    DateTime? confirmedAt,
+  }) => _delegate.confirm(id, ownerId, result, confirmedAt: confirmedAt);
+
+  @override
+  Future<void> retryAccount(String ownerId) => _delegate.retryAccount(ownerId);
+
+  @override
+  Future<void> clearAccount(String ownerId, {bool experienceOnly = false}) =>
+      _delegate.clearAccount(ownerId, experienceOnly: experienceOnly);
+
+  @override
+  Future<List<QueuedEvent>> pending({int? limit, String? ownerId}) =>
+      _delegate.pending(limit: limit, ownerId: ownerId);
+
+  @override
+  Future<void> remove(String id) => _delegate.remove(id);
+
+  @override
+  Future<void> removeAll(Iterable<String> ids) => _delegate.removeAll(ids);
+
+  @override
+  Future<void> reject(String id, {required String reasonCode}) =>
+      _delegate.reject(id, reasonCode: reasonCode);
+
+  @override
+  Future<int> rejectedCount() => _delegate.rejectedCount();
+
+  @override
+  Future<LegacyQueueDiagnostics> legacyDiagnostics() =>
+      _delegate.legacyDiagnostics();
+
+  @override
+  Future<void> clear() => _delegate.clear();
+
+  @override
+  Future<void> close() => _delegate.close();
+}
+
 void main() {
+  test('unexpected queue errors do not escape background upload', () async {
+    final env = TestEnv.signedIn();
+    final container = ProviderContainer(
+      overrides: [
+        for (final override in env.overrides)
+          if (override.origin != eventQueueProvider) override,
+        eventQueueProvider.overrideWithValue(
+          _ThrowingEntriesQueue(env.eventQueue),
+        ),
+      ],
+    );
+    addTearDown(container.dispose);
+    await container.read(sessionStoreProvider).load();
+
+    final uploader = container.read(eventUploaderProvider);
+    await expectLater(uploader.networkRestored(), completes);
+    await expectLater(uploader.triggerUpload(), completes);
+  });
+
   test('未登录时不发请求，已归属事件留在队列里不认领', () async {
     final env = TestEnv();
     final container = await setup(env);
@@ -135,6 +223,42 @@ void main() {
     );
     expect(await env.eventQueue.pending(), hasLength(1));
   });
+
+  for (final serverTime in [null, '2026-10-08T10:11:12']) {
+    test('确认响应缺少明确服务端时区时保留原写入：$serverTime', () async {
+      final server = FakeServer()
+        ..on(
+          'POST',
+          '/v1/sync/writes',
+          (request) => (
+            200,
+            {
+              'results': [
+                {
+                  'write_id': writes(request).single['write_id'],
+                  'status': 'confirmed',
+                  ...?serverTime == null ? null : {'confirmed_at': serverTime},
+                  'result': {
+                    'resource_type': 'experience.event',
+                    'resource_id': writes(request).single['write_id'],
+                  },
+                },
+              ],
+            },
+          ),
+        );
+      final env = TestEnv.signedIn(server: server);
+      final container = await setup(env);
+      final original = sample();
+      await env.eventQueue.enqueue(original);
+      await container.read(eventUploaderProvider).triggerUpload();
+      final entry = (await env.eventQueue.entries()).single;
+      expect(entry.write.sameEnvelope(original), isTrue);
+      expect(entry.state, WriteState.pending);
+      expect(entry.reasonCode, 'invalid_or_lost_response');
+      expect(entry.confirmedAt, isNull);
+    });
+  }
 
   test('5xx 保留内容按退避重试，第三次确认后停止', () async {
     var attempts = 0;

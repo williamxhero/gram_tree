@@ -19,6 +19,8 @@ part 'write_result.g.dart';
 class WriteResult {
   /// Returns a new [WriteResult] instance.
   WriteResult({
+    this.confirmedAt,
+
     this.conflict,
 
     this.reasonCode,
@@ -29,6 +31,9 @@ class WriteResult {
 
     required this.writeId,
   });
+
+  @JsonKey(name: r'confirmed_at', required: false, includeIfNull: false)
+  final String? confirmedAt;
 
   @JsonKey(name: r'conflict', required: false, includeIfNull: false)
   final Object? conflict;
@@ -49,6 +54,7 @@ class WriteResult {
   bool operator ==(Object other) =>
       identical(this, other) ||
       other is WriteResult &&
+          other.confirmedAt == confirmedAt &&
           other.conflict == conflict &&
           other.reasonCode == reasonCode &&
           other.result == result &&
@@ -57,6 +63,7 @@ class WriteResult {
 
   @override
   int get hashCode =>
+      (confirmedAt == null ? 0 : confirmedAt.hashCode) +
       (conflict == null ? 0 : conflict.hashCode) +
       (reasonCode == null ? 0 : reasonCode.hashCode) +
       (result == null ? 0 : result.hashCode) +

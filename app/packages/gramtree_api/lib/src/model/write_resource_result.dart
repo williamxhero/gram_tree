@@ -17,7 +17,13 @@ part 'write_resource_result.g.dart';
 )
 class WriteResourceResult {
   /// Returns a new [WriteResourceResult] instance.
-  WriteResourceResult({required this.resourceId, required this.resourceType});
+  WriteResourceResult({
+    required this.resourceId,
+
+    required this.resourceType,
+
+    this.values,
+  });
 
   @JsonKey(name: r'resource_id', required: true, includeIfNull: false)
   final String resourceId;
@@ -25,15 +31,20 @@ class WriteResourceResult {
   @JsonKey(name: r'resource_type', required: true, includeIfNull: false)
   final String resourceType;
 
+  @JsonKey(name: r'values', required: false, includeIfNull: false)
+  final Object? values;
+
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
       other is WriteResourceResult &&
           other.resourceId == resourceId &&
-          other.resourceType == resourceType;
+          other.resourceType == resourceType &&
+          other.values == values;
 
   @override
-  int get hashCode => resourceId.hashCode + resourceType.hashCode;
+  int get hashCode =>
+      resourceId.hashCode + resourceType.hashCode + values.hashCode;
 
   factory WriteResourceResult.fromJson(Map<String, dynamic> json) =>
       _$WriteResourceResultFromJson(json);

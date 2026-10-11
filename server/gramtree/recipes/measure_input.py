@@ -46,7 +46,9 @@ def preview_input(
 ) -> MeasureInputOut:
     measure = session.scalar(
         select(PersonalMeasure).where(
-            PersonalMeasure.id == body.measure_id, PersonalMeasure.owner_id == owner_id
+            PersonalMeasure.id == body.measure_id,
+            PersonalMeasure.owner_id == owner_id,
+            PersonalMeasure.deleted_at.is_(None),
         )
     )
     if measure is None:

@@ -677,6 +677,10 @@ def purge_due_accounts(session: Session, apple: AppleClient, now: datetime) -> i
 
         erase_sensitive(session, user.id)
         session.execute(delete(Consent).where(Consent.user_id == user.id))
+        from gramtree.events.field_adjudication import FieldEntity, FieldHistory
+
+        session.execute(delete(FieldHistory).where(FieldHistory.owner_id == user.id))
+        session.execute(delete(FieldEntity).where(FieldEntity.owner_id == user.id))
         session.execute(delete(PersonalMeasure).where(PersonalMeasure.owner_id == user.id))
         # User IDs are retained, so FK cascade cannot remove delivery payloads.
         # Delete dependent fact bundles before their immutable receipts; other

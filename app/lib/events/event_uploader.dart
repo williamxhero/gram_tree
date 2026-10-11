@@ -19,8 +19,11 @@ final eventUploaderProvider = Provider<EventUploader>((ref) {
     final next = session.identity;
     final previous = previousIdentity;
     previousIdentity = next;
-    if (previous != null && previous.epoch != next?.epoch) {
-      unawaited(uploader.pauseOwner(previous));
+    if (previous != null && !session.canUpload(previous)) {
+      uploader.cancelAccountRetry();
+      if (previous.epoch != next?.epoch) {
+        unawaited(uploader.pauseOwner(previous));
+      }
     }
   }
 
@@ -53,6 +56,8 @@ class EventUploader {
   bool _rerunRequested = false;
   bool _rerunAttemptedOnly = true;
   bool _disposed = false;
+  bool _manualRetryInProgress = false;
+  SessionIdentity? _manualRetryIdentity;
 
   // Compatibility diagnostic thresholds; no content is discarded on backlog.
   static const backlogCountThreshold = 500;
@@ -62,60 +67,75 @@ class EventUploader {
   EventQueue get _queue => _ref.read(eventQueueProvider);
 
   Future<void> pauseOwner(SessionIdentity identity) async {
-    bool canPause() =>
-        !_disposed &&
-        _ref.mounted &&
-        _session.current?.user.id != identity.ownerId;
-    if (!canPause()) return;
-    final queue = _queue;
-    for (final entry in await queue.entries(ownerId: identity.ownerId)) {
-      // A new login of the same owner supersedes this old logout callback.
+    try {
+      bool canPause() =>
+          !_disposed &&
+          _ref.mounted &&
+          _session.current?.user.id != identity.ownerId;
       if (!canPause()) return;
-      if (entry.state == WriteState.pending ||
-          entry.state == WriteState.uploading ||
-          entry.state == WriteState.deferred) {
-        await queue.update(
-          entry.change(
-            state: WriteState.loginPaused,
-            attempts: entry.state == WriteState.uploading
-                ? math.max(0, entry.attempts - 1)
-                : entry.attempts,
-            reasonCode: 'login_required',
-          ),
-        );
+      final queue = _queue;
+      for (final entry in await queue.entries(ownerId: identity.ownerId)) {
+        // A new login of the same owner supersedes this old logout callback.
+        if (!canPause()) return;
+        if (entry.state == WriteState.pending ||
+            entry.state == WriteState.uploading ||
+            entry.state == WriteState.deferred) {
+          await queue.update(
+            entry.change(
+              state: WriteState.loginPaused,
+              attempts: entry.state == WriteState.uploading
+                  ? math.max(0, entry.attempts - 1)
+                  : entry.attempts,
+              reasonCode: 'login_required',
+            ),
+          );
+        }
       }
+    } catch (_) {
+      // Account lifecycle callbacks are deliberately best effort. The next
+      // login/lifecycle trigger will retry without leaking an async error into
+      // Flutter's framework error zone.
     }
   }
 
   Future<void> networkRestored() async {
-    if (_disposed || !_ref.mounted) return;
-    final owner = _session.current?.user.id;
-    final epoch = _session.identityEpoch;
-    if (owner == null || !_sameAccount(owner, epoch)) return;
-    final queue = _queue;
-    for (final entry in await queue.entries(ownerId: owner)) {
-      if (!_sameAccount(owner, epoch)) return;
-      if (entry.state == WriteState.pending ||
-          entry.state == WriteState.deferred ||
-          entry.state == WriteState.loginPaused ||
-          (entry.state == WriteState.uploading && !_uploading)) {
-        await queue.update(
-          entry.change(state: WriteState.pending, reasonCode: entry.reasonCode),
-        );
+    try {
+      if (_disposed || !_ref.mounted) return;
+      final owner = _session.current?.user.id;
+      final epoch = _session.identityEpoch;
+      if (owner == null || !_sameAccount(owner, epoch)) return;
+      final queue = _queue;
+      for (final entry in await queue.entries(ownerId: owner)) {
+        if (!_sameAccount(owner, epoch)) return;
+        if (entry.state == WriteState.pending ||
+            entry.state == WriteState.deferred ||
+            entry.state == WriteState.loginPaused ||
+            (entry.state == WriteState.uploading && !_uploading)) {
+          await queue.update(
+            entry.change(
+              state: WriteState.pending,
+              reasonCode: entry.reasonCode,
+            ),
+          );
+        }
       }
+      if (_sameAccount(owner, epoch)) await triggerUpload();
+    } catch (_) {
+      // Recovery is retried by the next lifecycle/reachability notification.
     }
-    if (_sameAccount(owner, epoch)) await triggerUpload();
   }
 
   Future<void> retryCurrentAccount() async {
-    if (_disposed || !_ref.mounted) return;
+    if (_disposed || !_ref.mounted || _manualRetryInProgress) return;
     final identity = _session.identity;
     if (identity == null || !_sameAccount(identity.ownerId, identity.epoch)) {
       return;
     }
-    final queue = _queue;
-    await queue.retryAccount(identity.ownerId);
-    if (_sameAccount(identity.ownerId, identity.epoch)) await triggerUpload();
+    // Budget mutation is admitted by the same single-flight drain as HTTP.
+    // A retry during active upload is coalesced, never demotes an in-flight row.
+    _manualRetryInProgress = true;
+    _manualRetryIdentity = identity;
+    await triggerUpload();
   }
 
   bool _sameAccount(String owner, int epoch) =>
@@ -123,6 +143,7 @@ class EventUploader {
       _ref.mounted &&
       _session.current?.user.id == owner &&
       _session.identityEpoch == epoch &&
+      _session.canUpload(SessionIdentity(ownerId: owner, epoch: epoch)) &&
       _ref.read(privacyConsentProvider);
 
   Future<void> triggerUpload() => _triggerUpload();
@@ -143,12 +164,24 @@ class EventUploader {
       do {
         _rerunRequested = false;
         _rerunAttemptedOnly = true;
+        final retryIdentity = _manualRetryIdentity;
+        _manualRetryIdentity = null;
+        if (retryIdentity != null &&
+            _sameAccount(retryIdentity.ownerId, retryIdentity.epoch)) {
+          await _queue.retryAccount(retryIdentity.ownerId);
+          attemptedOnly = false;
+        }
         await _drain(attemptedOnly: attemptedOnly);
         attemptedOnly = _rerunAttemptedOnly;
       } while (_rerunRequested && !_disposed && _ref.mounted);
       if (!_disposed && _ref.mounted) await _checkBacklog();
+    } catch (_) {
+      // Uploads are lifecycle/background work. Per-write failures are retained
+      // durably by _drain; an unexpected queue/storage failure must wait for a
+      // later lifecycle or reachability trigger instead of escaping unawaited.
     } finally {
       _uploading = false;
+      _manualRetryInProgress = false;
     }
     // An overdue retry can fire during the asynchronous backlog read too.
     if (_rerunRequested) {
@@ -304,10 +337,17 @@ class EventUploader {
               if (result.result == null) {
                 throw StateError('Missing resource association');
               }
+              final confirmedAt = DateTime.tryParse(result.confirmedAt ?? '');
+              if (confirmedAt == null || !confirmedAt.isUtc) {
+                // A success without the server receipt time cannot establish
+                // the durable confirmation contract; retain it for retry.
+                throw StateError('Missing server confirmation time');
+              }
               await queue.confirm(
                 entry.write.id,
                 owner,
                 result.result!.toJson(),
+                confirmedAt: confirmedAt,
               );
               byId[entry.write.id] = entry.change(state: WriteState.confirmed);
               progressed = true;
@@ -558,6 +598,12 @@ class EventUploader {
         unawaited(_triggerUpload(attemptedOnly: attemptedOnly));
       }
     });
+  }
+
+  void cancelAccountRetry() {
+    _retryTimer?.cancel();
+    _retryTimer = null;
+    _manualRetryIdentity = null;
   }
 
   void dispose() {

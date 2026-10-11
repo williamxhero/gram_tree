@@ -164,6 +164,136 @@ class AppLocalizationsZh extends AppLocalizations {
   String get networkConnected => '服务已连接';
 
   @override
+  String logoutUnfinishedCount(int count) {
+    return '还有 $count 条内容未同步';
+  }
+
+  @override
+  String get logoutRetainedExplanation =>
+      '包括待同步、失败和冲突内容。退出后仍保留在这台设备，再次登录同一账号后可继续同步；其他账号无法查看或上传。';
+
+  @override
+  String get logoutIdentityChanged => '登录状态已改变，请重新操作';
+
+  @override
+  String get logoutViewSync => '查看同步状态';
+
+  @override
+  String get deletionUncertainBody =>
+      '注销结果尚未确认，同步已暂停。可以重新验证后重试确认注销，或退出并保留本机内容；在确认结果前，不会继续上传。';
+
+  @override
+  String get deletionRetry => '重试确认注销';
+
+  @override
+  String get deletionExit => '退出并保留本机内容';
+
+  @override
+  String get syncStatusTitle => '同步状态';
+
+  @override
+  String syncUnfinishedCount(int count) {
+    return '未完成 $count 条';
+  }
+
+  @override
+  String syncCategoryCount(String category, int count) {
+    return '$category $count 条';
+  }
+
+  @override
+  String get syncWaiting => '待上传';
+
+  @override
+  String get syncDeferred => '暂缓';
+
+  @override
+  String get syncLoginPaused => '登录暂停';
+
+  @override
+  String get syncConflict => '等待冲突选择';
+
+  @override
+  String get syncFailed => '失败';
+
+  @override
+  String get syncNever => '尚未同步';
+
+  @override
+  String syncLastSuccess(String time) {
+    return '上次服务端确认：$time';
+  }
+
+  @override
+  String get syncBasis =>
+      '来自当前账号的本机持久队列；每条写入只计一次。上次成功只记录服务端确认的写入，不表示其余内容已全部同步。网页测试使用内存替身。';
+
+  @override
+  String get syncQueueSource => '本机队列记录';
+
+  @override
+  String get syncRetryAction => '重试可恢复项';
+
+  @override
+  String get syncRetryError => '暂时无法重试，内容仍在本机，请稍后再试。';
+
+  @override
+  String get syncLoadingError => '暂时无法读取本机同步状态，请稍后重试。';
+
+  @override
+  String get syncNetworkReason => '网络或服务暂不可用；请恢复连接后重试。';
+
+  @override
+  String get syncDependencyReason => '前置内容尚未确认；请先恢复前置内容的同步。';
+
+  @override
+  String get syncDependencyCycleReason => '前置内容互相依赖；已保留内容，请联系支持处理。';
+
+  @override
+  String get syncPermissionReason => '权限或内容校验未通过；已保留内容，请检查权限或修改内容后另存，不会盲目重试。';
+
+  @override
+  String get syncRecipeValidationReason => '菜谱结构校验未通过；请检查食材和步骤后重新保存。';
+
+  @override
+  String get syncRecipePolicyReason => '描述包含不允许的健康/治疗表述；请修改后重新保存。';
+
+  @override
+  String get syncExhaustedReason => '重试次数已达上限；内容已保留，可恢复连接后手动重试。';
+
+  @override
+  String get syncLoginReason => '需要恢复当前账号登录，内容保留且不会上传给其他账号。';
+
+  @override
+  String get syncConflictReason => '需要先比较两份内容并选择；重试不会代替你的选择。';
+
+  @override
+  String get syncUnknownReason => '服务未接收这条内容；已保留，请检查内容或联系支持。';
+
+  @override
+  String get syncUploadingReason => '写入正在上传；关闭后保留原 ID，重新打开会恢复确认，不会重复保存。';
+
+  @override
+  String get syncPendingReason => '已保存在本机，等待上传确认。';
+
+  @override
+  String get syncEventType => '操作记录';
+
+  @override
+  String get syncRecipeType => '菜谱修改';
+
+  @override
+  String get syncMeasureType => '个人量具';
+
+  @override
+  String get syncOtherType => '离线写入';
+
+  @override
+  String syncItemIdentity(String type, int sequence) {
+    return '$type · 条目 $sequence';
+  }
+
+  @override
   String syncPendingCount(int count) {
     return '待同步 $count 条';
   }

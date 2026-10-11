@@ -11,13 +11,19 @@ abstract class _$WriteResourceResultCWProxy {
 
   WriteResourceResult resourceType(String resourceType);
 
+  WriteResourceResult values(Object? values);
+
   /// This function **does support** nullification of nullable fields. All `null` values passed to `non-nullable` fields will be ignored. You can also use `WriteResourceResult(...).copyWith.fieldName(...)` to override fields one at a time with nullification support.
   ///
   /// Usage
   /// ```dart
   /// WriteResourceResult(...).copyWith(id: 12, name: "My name")
   /// ````
-  WriteResourceResult call({String resourceId, String resourceType});
+  WriteResourceResult call({
+    String resourceId,
+    String resourceType,
+    Object? values,
+  });
 }
 
 /// Proxy class for `copyWith` functionality. This is a callable class and can be used as follows: `instanceOfWriteResourceResult.copyWith(...)`. Additionally contains functions for specific fields e.g. `instanceOfWriteResourceResult.copyWith.fieldName(...)`
@@ -35,6 +41,9 @@ class _$WriteResourceResultCWProxyImpl implements _$WriteResourceResultCWProxy {
       this(resourceType: resourceType);
 
   @override
+  WriteResourceResult values(Object? values) => this(values: values);
+
+  @override
   /// This function **does support** nullification of nullable fields. All `null` values passed to `non-nullable` fields will be ignored. You can also use `WriteResourceResult(...).copyWith.fieldName(...)` to override fields one at a time with nullification support.
   ///
   /// Usage
@@ -44,6 +53,7 @@ class _$WriteResourceResultCWProxyImpl implements _$WriteResourceResultCWProxy {
   WriteResourceResult call({
     Object? resourceId = const $CopyWithPlaceholder(),
     Object? resourceType = const $CopyWithPlaceholder(),
+    Object? values = const $CopyWithPlaceholder(),
   }) {
     return WriteResourceResult(
       resourceId: resourceId == const $CopyWithPlaceholder()
@@ -54,6 +64,10 @@ class _$WriteResourceResultCWProxyImpl implements _$WriteResourceResultCWProxy {
           ? _value.resourceType
           // ignore: cast_nullable_to_non_nullable
           : resourceType as String,
+      values: values == const $CopyWithPlaceholder()
+          ? _value.values
+          // ignore: cast_nullable_to_non_nullable
+          : values as Object?,
     );
   }
 }
@@ -78,6 +92,7 @@ WriteResourceResult _$WriteResourceResultFromJson(Map<String, dynamic> json) =>
         final val = WriteResourceResult(
           resourceId: $checkedConvert('resource_id', (v) => v as String),
           resourceType: $checkedConvert('resource_type', (v) => v as String),
+          values: $checkedConvert('values', (v) => v),
         );
         return val;
       },
@@ -92,4 +107,5 @@ Map<String, dynamic> _$WriteResourceResultToJson(
 ) => <String, dynamic>{
   'resource_id': instance.resourceId,
   'resource_type': instance.resourceType,
+  'values': ?instance.values,
 };
