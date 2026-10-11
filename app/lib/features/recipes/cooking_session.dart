@@ -461,8 +461,25 @@ class _CookingPageState extends ConsumerState<CookingPage>
     final session = _session;
     if (session == null || session.steps.isEmpty) return;
     final completed = [...session.completed];
-    final current = session.steps.last.id;
-    if (!completed.contains(current)) completed.add(current);
+    final currentIndex = session.stepIndex;
+    if (currentIndex >= 0 && currentIndex < session.steps.length) {
+      final current = session.steps[currentIndex].id;
+      if (!completed.contains(current)) completed.add(current);
+    }
+    final unfinished = session.steps
+        .where(
+          (step) =>
+              !completed.contains(step.id) && !session.skipped.contains(step.id),
+        )
+        .toList();
+    if (unfinished.isNotEmpty) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('还有 ${unfinished.length} 个步骤未完成，请逐步执行或跳过。')),
+        );
+      }
+      return;
+    }
     await _save(
       session.copyWith(
         status: 'completed',
