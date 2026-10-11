@@ -341,7 +341,8 @@ class _RecipeEditorPageState extends ConsumerState<RecipeEditorPage> {
           final cached = await ref
               .read(recipeSnapshotStoreProvider)
               ?.read(widget.recipeId!, versionId: widget.versionId);
-          if (ref.read(apiReachabilityProvider) == ApiReachability.unavailable) {
+          if (ref.read(apiReachabilityProvider) ==
+              ApiReachability.unavailable) {
             _loaded = cached?.detail;
           }
           if (_loaded == null) {
