@@ -808,15 +808,25 @@ Future<void> _restoreBusinessRestart(
 
 void main() {
   final binding = IntegrationTestWidgetsFlutterBinding.ensureInitialized();
+  final testFinished = Completer<void>();
   var restoredSuccessfully = false;
+  var failureReported = false;
   _marker('BOOT');
   unawaited(
-    binding.allTestsPassed.future.then((passed) {
+    binding.allTestsPassed.future.then((passed) async {
+      // The binding can complete this future before the test body's catch block
+      // has published its redacted failure details. Wait for that body first so
+      // the host never sees FAILED without the diagnostic that explains it.
+      await testFinished.future.timeout(
+        const Duration(seconds: 2),
+        onTimeout: () {},
+      );
       if (passed &&
           restoredSuccessfully &&
           binding.reportData?['verified'] == true) {
         _marker('PASSED');
-      } else {
+      } else if (!failureReported) {
+        failureReported = true;
         _diagnostic(
           'Binding completed: passed=$passed restored=$restoredSuccessfully '
           'phase=${binding.reportData?['phase']}',
@@ -832,19 +842,19 @@ void main() {
   testWidgets('Android OS restart preserves frozen view and exact replay IDs', (
     tester,
   ) async {
-    expect(
-      _runId,
-      isNotEmpty,
-      reason: 'Use tool/android_process_death_test.py',
-    );
-    tester.view.physicalSize = const Size(320, 640);
-    tester.view.devicePixelRatio = 1;
-    addTearDown(tester.view.reset);
-    tester.platformDispatcher.textScaleFactorTestValue = 1.5;
-    addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
-    tester.testTextInput.register();
-    addTearDown(tester.testTextInput.unregister);
     try {
+      expect(
+        _runId,
+        isNotEmpty,
+        reason: 'Use tool/android_process_death_test.py',
+      );
+      tester.view.physicalSize = const Size(320, 640);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      tester.platformDispatcher.textScaleFactorTestValue = 1.5;
+      addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+      tester.testTextInput.register();
+      addTearDown(tester.testTextInput.unregister);
       final prefs = await SharedPreferences.getInstance();
       final raw = prefs.getString(_manifestKey);
       if (raw == null) await resetLocalAppState();
@@ -893,6 +903,7 @@ void main() {
     } catch (error, stack) {
       // Do not serialize Dio request/response objects or auth headers. The host
       // consumes FAILED immediately, so synchronous details must precede it.
+      failureReported = true;
       final detail = error is DioException
           ? 'DioException type=${error.type.name} '
                 'status=${error.response?.statusCode}'
@@ -908,6 +919,8 @@ void main() {
       );
       _marker('FAILED');
       rethrow;
+    } finally {
+      if (!testFinished.isCompleted) testFinished.complete();
     }
   }, timeout: const Timeout(Duration(minutes: 4)));
 }
