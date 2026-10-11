@@ -67,49 +67,59 @@ class EventUploader {
   EventQueue get _queue => _ref.read(eventQueueProvider);
 
   Future<void> pauseOwner(SessionIdentity identity) async {
-    bool canPause() =>
-        !_disposed &&
-        _ref.mounted &&
-        _session.current?.user.id != identity.ownerId;
-    if (!canPause()) return;
-    final queue = _queue;
-    for (final entry in await queue.entries(ownerId: identity.ownerId)) {
-      // A new login of the same owner supersedes this old logout callback.
+    try {
+      bool canPause() =>
+          !_disposed &&
+          _ref.mounted &&
+          _session.current?.user.id != identity.ownerId;
       if (!canPause()) return;
-      if (entry.state == WriteState.pending ||
-          entry.state == WriteState.uploading ||
-          entry.state == WriteState.deferred) {
-        await queue.update(
-          entry.change(
-            state: WriteState.loginPaused,
-            attempts: entry.state == WriteState.uploading
-                ? math.max(0, entry.attempts - 1)
-                : entry.attempts,
-            reasonCode: 'login_required',
-          ),
-        );
+      final queue = _queue;
+      for (final entry in await queue.entries(ownerId: identity.ownerId)) {
+        // A new login of the same owner supersedes this old logout callback.
+        if (!canPause()) return;
+        if (entry.state == WriteState.pending ||
+            entry.state == WriteState.uploading ||
+            entry.state == WriteState.deferred) {
+          await queue.update(
+            entry.change(
+              state: WriteState.loginPaused,
+              attempts: entry.state == WriteState.uploading
+                  ? math.max(0, entry.attempts - 1)
+                  : entry.attempts,
+              reasonCode: 'login_required',
+            ),
+          );
+        }
       }
+    } catch (_) {
+      // Account lifecycle callbacks are deliberately best effort. The next
+      // login/lifecycle trigger will retry without leaking an async error into
+      // Flutter's framework error zone.
     }
   }
 
   Future<void> networkRestored() async {
-    if (_disposed || !_ref.mounted) return;
-    final owner = _session.current?.user.id;
-    final epoch = _session.identityEpoch;
-    if (owner == null || !_sameAccount(owner, epoch)) return;
-    final queue = _queue;
-    for (final entry in await queue.entries(ownerId: owner)) {
-      if (!_sameAccount(owner, epoch)) return;
-      if (entry.state == WriteState.pending ||
-          entry.state == WriteState.deferred ||
-          entry.state == WriteState.loginPaused ||
-          (entry.state == WriteState.uploading && !_uploading)) {
-        await queue.update(
-          entry.change(state: WriteState.pending, reasonCode: entry.reasonCode),
-        );
+    try {
+      if (_disposed || !_ref.mounted) return;
+      final owner = _session.current?.user.id;
+      final epoch = _session.identityEpoch;
+      if (owner == null || !_sameAccount(owner, epoch)) return;
+      final queue = _queue;
+      for (final entry in await queue.entries(ownerId: owner)) {
+        if (!_sameAccount(owner, epoch)) return;
+        if (entry.state == WriteState.pending ||
+            entry.state == WriteState.deferred ||
+            entry.state == WriteState.loginPaused ||
+            (entry.state == WriteState.uploading && !_uploading)) {
+          await queue.update(
+            entry.change(state: WriteState.pending, reasonCode: entry.reasonCode),
+          );
+        }
       }
+      if (_sameAccount(owner, epoch)) await triggerUpload();
+    } catch (_) {
+      // Recovery is retried by the next lifecycle/reachability notification.
     }
-    if (_sameAccount(owner, epoch)) await triggerUpload();
   }
 
   Future<void> retryCurrentAccount() async {
@@ -162,6 +172,10 @@ class EventUploader {
         attemptedOnly = _rerunAttemptedOnly;
       } while (_rerunRequested && !_disposed && _ref.mounted);
       if (!_disposed && _ref.mounted) await _checkBacklog();
+    } catch (_) {
+      // Uploads are lifecycle/background work. Per-write failures are retained
+      // durably by _drain; an unexpected queue/storage failure must wait for a
+      // later lifecycle or reachability trigger instead of escaping unawaited.
     } finally {
       _uploading = false;
       _manualRetryInProgress = false;
