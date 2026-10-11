@@ -556,14 +556,27 @@ class _CookingPageState extends ConsumerState<CookingPage>
       }
       return;
     }
-    await _save(
-      session.copyWith(
-        status: 'completed',
-        completed: completed,
-        finishedAt: DateTime.now().toUtc(),
-      ),
-      event: 'completed',
+    // A completed session must not leave native alarms behind. Keep the timer
+    // records (they are part of the execution evidence), but mark them
+    // cancelled so a late alarm cannot claim that this finished session still
+    // needs attention.
+    final finished = session.copyWith(
+      status: 'completed',
+      completed: completed,
+      timers: [
+        for (final timer in session.timers)
+          timer.status == 'running' || timer.status == 'paused'
+              ? timer.copyWithStatus('cancelled')
+              : timer,
+      ],
+      finishedAt: DateTime.now().toUtc(),
     );
+    await _save(finished, event: 'completed');
+    for (final timer in session.timers) {
+      if (timer.status == 'running' || timer.status == 'paused') {
+        await ref.read(deviceCapabilitiesProvider).cancelTimerReminder(timer.id);
+      }
+    }
   }
 
   Future<void> _skipCurrent() async {

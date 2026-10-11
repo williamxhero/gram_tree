@@ -103,5 +103,18 @@ void main() {
       expect(resumed.dueReportedAt, reportedAt);
       expect(resumed.hasReportedDue, isTrue);
     });
+
+    test('cancelled timers do not remain due', () {
+      final timer = CookingTimerState(
+        id: 'timer',
+        stepId: 'step',
+        startedAt: started,
+        durationSeconds: 60,
+        status: 'cancelled',
+      );
+
+      expect(timer.remainingAt(started.add(const Duration(seconds: 120))), 0);
+      expect(timer.isDueAt(started.add(const Duration(seconds: 120))), isFalse);
+    });
   });
 }
