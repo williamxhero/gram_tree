@@ -15,7 +15,7 @@ class MobileDeviceCapabilities implements DeviceCapabilities {
   bool get keepScreenOn => _keepScreenOn;
 
   @override
-  bool get supportsLockScreenTimer => false;
+  bool get supportsLockScreenTimer => true;
 
   @override
   bool get supportsVibration => true;
@@ -32,13 +32,12 @@ class MobileDeviceCapabilities implements DeviceCapabilities {
     required DateTime dueAt,
     required String title,
     required String body,
-  }) =>
-      _channel.invokeMethod<void>('scheduleTimerReminder', {
-        'id': id,
-        'dueAtMillis': dueAt.toUtc().millisecondsSinceEpoch,
-        'title': title,
-        'body': body,
-      });
+  }) => _channel.invokeMethod<void>('scheduleTimerReminder', {
+    'id': id,
+    'dueAtMillis': dueAt.toUtc().millisecondsSinceEpoch,
+    'title': title,
+    'body': body,
+  });
 
   @override
   Future<void> cancelTimerReminder(String id) =>
