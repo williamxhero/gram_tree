@@ -85,7 +85,8 @@ def apple_token(
 
 class Clock:
     def __init__(self) -> None:
-        self.now = datetime.now(UTC)
+        # 把测试时钟固定在每天中间，避免每日限流使用的 UTC 午夜边界。
+        self.now = datetime(2026, 1, 15, 12, tzinfo=UTC)
 
     def __call__(self) -> datetime:
         return self.now
