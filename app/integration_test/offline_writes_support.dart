@@ -89,10 +89,7 @@ Future<void> revealAcceptance(WidgetTester tester, Finder finder) async {
 
 /// Reveal a top-of-list assertion after a lower control was used. A ListView
 /// may evict the top child from the element tree while it is scrolled down.
-Future<void> revealAcceptanceFromTop(
-  WidgetTester tester,
-  Finder finder,
-) async {
+Future<void> revealAcceptanceFromTop(WidgetTester tester, Finder finder) async {
   tester.testTextInput.hide();
   await tester.pump();
   final scrollable = find
