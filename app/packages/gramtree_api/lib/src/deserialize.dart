@@ -35,6 +35,12 @@ import 'package:gramtree_api/src/model/cooking_constraints_out.dart';
 import 'package:gramtree_api/src/model/cooking_equipment.dart';
 import 'package:gramtree_api/src/model/cooking_meal_template.dart';
 import 'package:gramtree_api/src/model/cooking_meal_time.dart';
+import 'package:gramtree_api/src/model/cooking_record_create.dart';
+import 'package:gramtree_api/src/model/cooking_record_history_out.dart';
+import 'package:gramtree_api/src/model/cooking_record_list_out.dart';
+import 'package:gramtree_api/src/model/cooking_record_out.dart';
+import 'package:gramtree_api/src/model/cooking_record_revision_create.dart';
+import 'package:gramtree_api/src/model/cooking_record_revision_out.dart';
 import 'package:gramtree_api/src/model/count_unit.dart';
 import 'package:gramtree_api/src/model/count_units_attribute.dart';
 import 'package:gramtree_api/src/model/deletion_out.dart';
@@ -330,6 +336,24 @@ ReturnType deserialize<ReturnType, BaseType>(
           as ReturnType;
     case 'CookingMealTime':
       return CookingMealTime.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'CookingRecordCreate':
+      return CookingRecordCreate.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'CookingRecordHistoryOut':
+      return CookingRecordHistoryOut.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'CookingRecordListOut':
+      return CookingRecordListOut.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'CookingRecordOut':
+      return CookingRecordOut.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'CookingRecordRevisionCreate':
+      return CookingRecordRevisionCreate.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'CookingRecordRevisionOut':
+      return CookingRecordRevisionOut.fromJson(value as Map<String, dynamic>)
           as ReturnType;
     case 'CountUnit':
       return CountUnit.fromJson(value as Map<String, dynamic>) as ReturnType;
