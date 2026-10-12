@@ -73,6 +73,36 @@ def test_committed_write_replays_same_confirmation_without_another_fact(api: Api
     assert count(api, tokens) == 1
 
 
+def test_expired_owner_can_refresh_and_replay_without_transferring_old_write(api: Api) -> None:
+    alice = api.login("renewed-queue@example.com")
+    original = envelope(alice["user"]["id"])
+    first = submit(api, alice, original)[0]
+    assert first["status"] == "confirmed"
+    api.clock.advance(minutes=31)
+    expired = api.client.post("/v1/sync/writes", headers=bearer(alice), json={"writes": [original]})
+    assert expired.status_code == 401
+    assert expired.json()["error"]["code"] == "token_expired"
+    refreshed = api.client.post("/v1/auth/refresh", json={"refresh_token": alice["refresh_token"]})
+    assert refreshed.status_code == 200
+    renewed = refreshed.json()
+    assert renewed["refresh_token"] != alice["refresh_token"]
+    replay = submit(api, renewed, original)[0]
+    assert replay["status"] == "already_processed"
+    assert replay["result"] == first["result"]
+    assert count(api, renewed) == 1
+
+    bob = api.login("other-renewed-queue@example.com")
+    rejected = submit(api, bob, original)[0]
+    assert rejected["reason_code"] == "owner_mismatch"
+    assert rejected["result"] is None
+    disguised = submit(api, bob, {**original, "owner_id": bob["user"]["id"]})[0]
+    assert disguised["status"] == "failed"
+    assert disguised["result"] is None
+    assert disguised["conflict"] is None
+    assert count(api, bob) == 0
+    assert count(api, renewed) == 1
+
+
 def test_same_id_cannot_change_content_or_transfer_to_another_account(api: Api) -> None:
     alice = api.login("alice@example.com")
     bob = api.login("bob@example.com")

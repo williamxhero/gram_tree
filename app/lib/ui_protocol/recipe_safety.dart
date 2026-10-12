@@ -109,6 +109,7 @@ class AllergenCard extends StatelessWidget {
     this.statusMessage,
     this.loading = false,
     this.awaitingCheck = false,
+    this.personalSafety,
   });
 
   final RecipeSafetyResult? result;
@@ -117,6 +118,7 @@ class AllergenCard extends StatelessWidget {
   final String? statusMessage;
   final bool loading;
   final bool awaitingCheck;
+  final Map<String, dynamic>? personalSafety;
 
   @override
   Widget build(BuildContext context) {
@@ -174,9 +176,50 @@ class AllergenCard extends StatelessWidget {
             ),
           for (final replacement in replacements)
             _ReplacementAllergenView(replacement: replacement),
+          if (personalSafety != null)
+            _PersonalSafetyNotices(data: personalSafety!),
         ],
       ),
       basisText: incomplete ? l10n.recipeAllergenIncompleteBasis : null,
+    );
+  }
+}
+
+class _PersonalSafetyNotices extends StatelessWidget {
+  const _PersonalSafetyNotices({required this.data});
+
+  final Map<String, dynamic> data;
+
+  @override
+  Widget build(BuildContext context) {
+    final alerts = (data['alerts'] as List? ?? const []).whereType<Map>().map(
+      (item) => Map<String, dynamic>.from(item),
+    );
+    final unknown = (data['unknown_ingredients'] as List? ?? const [])
+        .whereType<String>()
+        .toList();
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        for (final alert in alerts)
+          _SafetyNotice(
+            key: ValueKey(
+              'personal-safety-${alert['person']}-${alert['kind']}-${alert['ingredient']}',
+            ),
+            icon: alert['kind'] == 'allergy'
+                ? Icons.warning_amber_rounded
+                : Icons.info_outline,
+            text:
+                '${alert['kind'] == 'allergy' ? '过敏提醒' : '忌口提醒'}：${alert['person']}，${alert['target']}（${alert['ingredient']}${alert['replacement'] == true ? '，替代食材' : ''}）',
+            emphasis: alert['kind'] == 'allergy',
+          ),
+        if (unknown.isNotEmpty)
+          _SafetyNotice(
+            key: const ValueKey('personal-safety-unknown'),
+            icon: Icons.help_outline,
+            text: '以下食材未标准化，无法确认个人过敏或忌口风险：${unknown.join('、')}',
+          ),
+      ],
     );
   }
 }

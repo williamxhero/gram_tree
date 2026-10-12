@@ -10,6 +10,31 @@
     "status": { "type": "string", "enum": ["available", "unknown", "error"] },
     "conclusion": { "type": "string", "minLength": 1 },
     "basis": { "oneOf": [{ "type": "null" }, { "type": "string", "minLength": 1 }] },
+    "personal_safety": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "alerts", "unknown_ingredients", "incomplete"],
+      "properties": {
+        "status": { "type": "string", "enum": ["available", "not_authorized"] },
+        "alerts": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["person", "kind", "target", "ingredient", "replacement"],
+            "properties": {
+              "person": { "type": "string", "minLength": 1 },
+              "kind": { "type": "string", "enum": ["allergy", "avoidance"] },
+              "target": { "type": "string", "minLength": 1 },
+              "ingredient": { "type": "string", "minLength": 1 },
+              "replacement": { "type": "boolean" }
+            }
+          }
+        },
+        "unknown_ingredients": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+        "incomplete": { "type": "boolean" }
+      }
+    },
     "result": {
       "description": "供页面使用的过敏原检查结果子集；null 时必须依据 status/conclusion 显示不可确认说明。",
       "oneOf": [

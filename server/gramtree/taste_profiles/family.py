@@ -40,6 +40,9 @@ def erase_member(session: Session, profile: TasteProfile, row: FamilyMember) -> 
     The retained receipt describes only the manual deletion action, never its target.
     """
     allergies.erase_sensitive_history(session, profile.owner_id, field=member_field(row.id))
+    from gramtree.ai.privacy import clear_user_content
+
+    clear_user_content(session, profile.owner_id)
     profile.sensitive_authorization_version += 1
     session.execute(
         delete(FamilyMember).where(

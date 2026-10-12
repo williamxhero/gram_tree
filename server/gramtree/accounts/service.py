@@ -315,6 +315,9 @@ def refresh(session: Session, settings: Settings, token: str, now: datetime) -> 
 def logout(session: Session, ds: DeviceSession, now: datetime) -> None:
     ds.revoked_at = now
     ds.revoked_reason = "logout"
+    from gramtree.ai.privacy import clear_user_content
+
+    clear_user_content(session, ds.user_id)
     session.commit()
 
 
@@ -633,6 +636,9 @@ def request_deletion(
     user.status = UserStatus.deleting
     user.deletion_requested_at = now
     user.deletion_due_at = add_business_days(now, days)
+    from gramtree.ai.privacy import clear_user_content
+
+    clear_user_content(session, user.id)
     # 所有设备立即退出
     session.execute(
         update(DeviceSession)
@@ -671,6 +677,10 @@ def purge_due_accounts(session: Session, apple: AppleClient, now: datetime) -> i
 
         erase_sensitive(session, user.id)
         session.execute(delete(Consent).where(Consent.user_id == user.id))
+        from gramtree.events.field_adjudication import FieldEntity, FieldHistory
+
+        session.execute(delete(FieldHistory).where(FieldHistory.owner_id == user.id))
+        session.execute(delete(FieldEntity).where(FieldEntity.owner_id == user.id))
         session.execute(delete(PersonalMeasure).where(PersonalMeasure.owner_id == user.id))
         # User IDs are retained, so FK cascade cannot remove delivery payloads.
         # Delete dependent fact bundles before their immutable receipts; other

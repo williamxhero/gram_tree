@@ -127,6 +127,26 @@ def availability(
         return {"remaining": 0, "available": False, "reason": exc.reason}
 
 
+def _audit_payload(capability: str, payload: dict[str, Any]) -> dict[str, Any]:
+    """Keep operational logs useful without copying user/model content."""
+    raw = json.dumps(payload, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+    return {
+        "capability": capability,
+        "prompt_version": PROMPT_VERSION,
+        "payload_sha256": hashlib.sha256(raw.encode()).hexdigest(),
+        "keys": sorted(payload),
+    }
+
+
+def _audit_output(value: Any) -> dict[str, Any]:
+    raw = value if isinstance(value, str) else json.dumps(value, ensure_ascii=False, sort_keys=True)
+    return {
+        "sha256": hashlib.sha256(raw.encode()).hexdigest(),
+        "type": type(value).__name__,
+        "length": len(raw),
+    }
+
+
 def replay_key(capability: str, payload: dict[str, Any]) -> str:
     raw = json.dumps(
         {"capability": capability, "prompt_version": PROMPT_VERSION, "input": payload},
@@ -287,7 +307,9 @@ def call(
         )
         session.add(row)
         session.flush()
-        log = GenerationLog(call_id=row.id, input=payload)
+        # Durable audit stores only a digest and field names. Full payload/response
+        # remains transient in process memory for validation and replay matching.
+        log = GenerationLog(call_id=row.id, input=_audit_payload(capability, payload))
         session.add(log)
         session.commit()
         start = time.monotonic()
@@ -306,12 +328,7 @@ def call(
             # Batch advice is untrusted until its schema/step references are checked.
             # Preserve raw output as text: JSONB rejects NaN in structured replay
             # objects before the caller can reject it and request one repair.
-            log.output = (
-                json.dumps(result, ensure_ascii=False)
-                if capability
-                in {"batch_advice", "comparison", "modify", "modify_intent", "change_explanation"}
-                else result
-            )
+            log.output = _audit_output(result)
             # Semantic rejection is a failed actual attempt, not a free success.
             # Usage/cost already recorded above still belongs to that attempt.
             if validate_output is not None:

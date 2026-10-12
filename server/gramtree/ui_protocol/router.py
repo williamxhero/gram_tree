@@ -27,7 +27,7 @@ from pydantic import BaseModel, Field, model_validator
 
 from gramtree.accounts.deps import CurrentAuth
 from gramtree.core.errors import ERROR_RESPONSES, ApiError
-from gramtree.deps import RedisDep, SessionDep
+from gramtree.deps import RedisDep, SessionDep, SettingsDep
 from gramtree.recipes import service as recipe_service
 from gramtree.ui_protocol import cache, composition_events, experiments, service, validation
 from gramtree.ui_protocol.protocol import (
@@ -79,7 +79,11 @@ class ComposeRequest(BaseModel):
     summary="按 App 声明的协议版本和组件清单，下发一份页面描述（需要登录）",
 )
 def compose(
-    body: ComposeRequest, auth: CurrentAuth, session: SessionDep, redis: RedisDep
+    body: ComposeRequest,
+    auth: CurrentAuth,
+    session: SessionDep,
+    redis: RedisDep,
+    settings: SettingsDep,
 ) -> PageDescription:
     # 目前只有"今天"页有实验（按场景组合是 SPEC-009.2 #34 起才用到，#84 的测试用
     # 实验也只在这一个页面类型上验证），其他页面类型不分组、不带实验标识。每次组合
@@ -92,6 +96,7 @@ def compose(
     # the selected immutable version on every request.
     recipe_page = body.page_type in {"recipe_detail", "recipe_editor"}
     safety_context = None
+    personal_safety = None
     safety_context_failed = False
     if recipe_page and body.recipe_id is not None:
         # Resolve ownership before the fallback-catching block. A private recipe that
@@ -101,6 +106,9 @@ def compose(
         try:
             safety_context = recipe_service.recipe_safety_context(
                 session, auth.user, body.recipe_id, body.version_id
+            )
+            personal_safety = recipe_service.recipe_personal_safety_context(
+                session, settings, auth.user, body.recipe_id, body.version_id
             )
         except ApiError as exc:
             if exc.status == 404:
@@ -137,6 +145,7 @@ def compose(
                 detail_overrides=assignment.detail_overrides,
                 exclude_components=assignment.dropped_components,
                 safety_context=safety_context,
+                personal_safety=personal_safety,
             )
         except Exception:
             # 组合模块本身报错、或者实验分组时出了问题：不让这个错误往上冒（这个接口出

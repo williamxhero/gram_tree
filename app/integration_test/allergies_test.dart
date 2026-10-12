@@ -5,6 +5,8 @@ import 'package:gram_tree/config/app_config.dart';
 import 'package:gram_tree/main.dart' as app;
 import 'package:integration_test/integration_test.dart';
 
+import 'event_pipeline_support.dart' show resetLocalAppState;
+
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
   final server = Dio(
@@ -23,16 +25,41 @@ void main() {
     Finder finder, [
     double delta = 300,
   ]) async {
-    await tester.scrollUntilVisible(
-      finder,
-      delta,
-      scrollable: find
-          .byWidgetPredicate(
-            (w) => w is Scrollable && w.axisDirection == AxisDirection.down,
-          )
-          .first,
+    final scrollables = find.byWidgetPredicate(
+      (w) => w is Scrollable && w.axisDirection == AxisDirection.down,
     );
-    await Scrollable.ensureVisible(tester.element(finder), alignment: 0.5);
+    await waitFor(tester, scrollables);
+    final profile = find.byKey(const ValueKey('taste-profile-content'));
+    final profileScrollables = find.descendant(
+      of: profile,
+      matching: scrollables,
+    );
+    final scrollable =
+        profile.evaluate().isNotEmpty &&
+            profileScrollables.evaluate().isNotEmpty
+        ? profileScrollables.first
+        : scrollables.first;
+    final position = tester.state<ScrollableState>(scrollable).position;
+    final step = delta.abs().clamp(100.0, 500.0).toDouble();
+    // Reset the lazy profile list before each bounded forward search. This
+    // avoids stranding targets above the viewport after an earlier reveal.
+    position.jumpTo(position.minScrollExtent);
+    await tester.pumpAndSettle();
+    for (var i = 0; i < 300 && finder.evaluate().isEmpty; i++) {
+      position.jumpTo(
+        (position.pixels + step).clamp(
+          position.minScrollExtent,
+          position.maxScrollExtent,
+        ),
+      );
+      await tester.pump(const Duration(milliseconds: 100));
+    }
+    expect(finder, findsOneWidget);
+    await Scrollable.ensureVisible(
+      tester.element(finder),
+      alignment: 0.5,
+      alignmentPolicy: ScrollPositionAlignmentPolicy.explicit,
+    );
     await tester.pumpAndSettle();
   }
 
@@ -73,6 +100,7 @@ void main() {
     // Never attach page text, raw errors, responses or screenshots to diagnostics.
     tester.testTextInput.register();
     addTearDown(tester.testTextInput.unregister);
+    await resetLocalAppState();
     await app.main();
     await waitFor(tester, find.byKey(const ValueKey('consent-agree')));
     await tester.tap(find.byKey(const ValueKey('consent-agree')));
@@ -121,11 +149,14 @@ void main() {
     await waitFor(tester, keyed('allergy-result-'));
     await tap(tester, keyed('allergy-result-').first);
     await tester.tap(find.byKey(const ValueKey('allergies-save')));
+    await waitFor(tester, find.byKey(const ValueKey('taste-profile-content')));
+    await reveal(tester, find.text('花生、测试酱油'));
     await waitFor(tester, find.text('花生、测试酱油'));
     await reopen(tester);
+    await reveal(tester, find.text('花生、测试酱油'));
     expect(find.text('花生、测试酱油'), findsOneWidget);
     final why = keyed('allergy-why-');
-    await reveal(tester, why.first);
+    await reveal(tester, why);
     await tester.tap(why.first);
     await waitFor(tester, find.byKey(const ValueKey('why-panel')));
     expect(find.text('本人手动填写'), findsOneWidget);
@@ -141,8 +172,11 @@ void main() {
     await tap(tester, find.byKey(const ValueKey('allergy-category-蛋类')));
     await tap(tester, keyed('allergy-delete-').first);
     await tester.tap(find.byKey(const ValueKey('allergies-save')));
+    await waitFor(tester, find.byKey(const ValueKey('taste-profile-content')));
+    await reveal(tester, find.text('蛋类'));
     await waitFor(tester, find.text('蛋类'));
     await reopen(tester);
+    await reveal(tester, find.text('蛋类'));
     expect(find.text('蛋类'), findsOneWidget);
     expect(find.text('花生、测试酱油 → 蛋类'), findsOneWidget);
     await tester.tap(find.byType(BackButton).last);
@@ -156,8 +190,10 @@ void main() {
     await tester.tap(find.byType(BackButton).last);
     await tester.pumpAndSettle();
     await openProfile(tester);
+    await reveal(tester, find.text('咸 · 淡一点'));
     expect(find.text('咸 · 淡一点'), findsOneWidget);
     await reveal(tester, edit);
+    await reveal(tester, find.text('尚未填写本人过敏'));
     await waitFor(tester, find.text('尚未填写本人过敏'));
     expect(find.text('没有私密修改历史'), findsOneWidget);
     expect(find.text('蛋类'), findsNothing);

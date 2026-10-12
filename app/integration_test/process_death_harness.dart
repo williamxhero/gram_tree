@@ -31,6 +31,7 @@ import 'package:integration_test/integration_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'event_pipeline_support.dart' show resetLocalAppState;
+import 'offline_writes_support.dart' as acceptance;
 
 const _runId = String.fromEnvironment('PROCESS_DEATH_RUN_ID');
 const _manifestKey = 'process_death_harness:$_runId';
@@ -136,6 +137,16 @@ Future<void> _reveal(WidgetTester tester, Finder finder) async {
     await tester.pump(const Duration(milliseconds: 50));
   }
   expect(finder, findsOneWidget);
+  await Scrollable.ensureVisible(tester.element(finder), alignment: 0.5);
+  await tester.pumpAndSettle();
+  expect(finder.hitTestable(), findsOneWidget);
+}
+
+Future<void> _revealPanelContent(WidgetTester tester, Finder finder) async {
+  expect(finder, findsOneWidget);
+  // The WhyPanel is itself scrollable. At the harness's 320x640 viewport and
+  // 1.5 text scale, the bottom line can be mounted but below the sheet's
+  // viewport even after its entrance animation settles.
   await Scrollable.ensureVisible(tester.element(finder), alignment: 0.5);
   await tester.pumpAndSettle();
   expect(finder.hitTestable(), findsOneWidget);
@@ -613,19 +624,17 @@ Future<void> _restore(
   // Mounting can precede the bottom sheet's entrance into the phone viewport.
   // Settle the real animation before retaining the exact hit-test assertions.
   await tester.pumpAndSettle();
-  expect(
-    find.descendant(of: panel, matching: find.text('原来：100 g')).hitTestable(),
-    findsOneWidget,
+  await _revealPanelContent(
+    tester,
+    find.descendant(of: panel, matching: find.text('原来：100 g')),
   );
-  expect(
-    find.descendant(of: panel, matching: find.text('现在：150 克')).hitTestable(),
-    findsOneWidget,
+  await _revealPanelContent(
+    tester,
+    find.descendant(of: panel, matching: find.text('现在：150 克')),
   );
-  expect(
-    find
-        .descendant(of: panel, matching: find.textContaining('比例换算'))
-        .hitTestable(),
-    findsOneWidget,
+  await _revealPanelContent(
+    tester,
+    find.descendant(of: panel, matching: find.textContaining('比例换算')),
   );
   expect(
     find.descendant(of: panel, matching: find.byType(OutlinedButton)),
@@ -695,19 +704,146 @@ Future<void> _restore(
   await tester.pumpAndSettle();
   expect(panel, findsNothing);
   expect(tester.takeException(), isNull);
+
+  // The online replay can schedule a display-cache write from the restored
+  // detail page while the next restart cycle is being prepared. Read through
+  // the serialized snapshot store before navigating away, so that late work
+  // cannot race the business-write snapshot immutability assertion.
+  expect(
+    (await snapshots.read(parts[2], versionId: parts[4]))!.toJson(),
+    manifest['snapshot'],
+  );
+}
+
+Future<void> _seedBusinessRestart(
+  WidgetTester tester,
+  ProviderContainer container,
+  Dio server,
+  Map<String, dynamic> original,
+) async {
+  final parts = (original['path'] as String).split('/');
+  final business = await acceptance.seedOfflineBusinessWrites(
+    tester,
+    container,
+    server,
+    recipeId: parts[2],
+    versionId: parts[4],
+    stepId: 'mix',
+    email: 'process-death-$_runId@example.com',
+  );
+  // The first restart's original frozen snapshot is still a separate immutable
+  // execution cache. Business candidates must not mutate that prior snapshot.
+  final snapshots = container.read(recipeSnapshotStoreProvider)!;
+  expect(
+    (await snapshots.read(parts[2], versionId: parts[4]))!.toJson(),
+    original['snapshot'],
+  );
+  await container
+      .read(localStoreProvider)
+      .setString(
+        _manifestKey,
+        jsonEncode({
+          ...original,
+          'phase': 'business',
+          'business_seed_pid': pid,
+          'business': business,
+        }),
+      );
+  _marker('WRITES_SEED_READY');
+  while (true) {
+    await tester.pump(const Duration(milliseconds: 100));
+  }
+}
+
+Future<void> _restoreBusinessRestart(
+  WidgetTester tester,
+  ProviderContainer container,
+  Dio server,
+  Map<String, dynamic> manifest,
+) async {
+  expect(manifest['run_id'], _runId);
+  expect(pid, isNot(manifest['seed_pid']));
+  expect(pid, isNot(manifest['business_seed_pid']));
+  final session = await container.read(sessionStoreProvider).load();
+  expect(session!.user.id, manifest['owner']);
+  expect(container.read(deviceIdProvider), manifest['device']);
+  final business = Map<String, dynamic>.from(manifest['business'] as Map);
+  final entries = await container
+      .read(eventQueueProvider)
+      .entries(ownerId: session.user.id);
+  // No auth/root widget exists yet: observe disk before any upload can repair it.
+  for (final before in (business['entries'] as List).cast<Map>()) {
+    final now = entries.singleWhere(
+      (entry) => entry.write.id == (before['write'] as Map)['write_id'],
+    );
+    expect(acceptance.retainedEntry(now), before);
+    expect(now.state, WriteState.pending);
+    expect(now.businessRecord, isNotNull);
+    expect(now.attempts, greaterThan(0));
+    expect(now.reasonCode, 'network_or_server_failure');
+    expect(now.nextAttemptAt, isNotNull);
+  }
+  final parts = (manifest['path'] as String).split('/');
+  final snapshots = RecipeSnapshotStore(
+    container.read(localStoreProvider),
+    accountId: session.user.id,
+  );
+  expect(
+    (await snapshots.read(parts[2], versionId: parts[4]))!.toJson(),
+    manifest['snapshot'],
+  );
+  await acceptance.assertBusinessServerState(
+    server,
+    session.accessToken,
+    business,
+    confirmed: false,
+  );
+  _marker('WRITES_DURABLE');
+  container.read(offlineSimulationProvider.notifier).set(true);
+  await container.read(authProvider.future);
+  await tester.pumpWidget(
+    UncontrolledProviderScope(container: container, child: const GramTreeApp()),
+  );
+  await acceptance.showRestoredOfflineBusiness(tester, container, business);
+  _marker('WRITES_OFFLINE');
+  await acceptance.retryAndSwitchAccounts(tester, container, business);
+  await acceptance.replayAndVerifyBusiness(tester, container, server, business);
+  expect(
+    (await snapshots.read(parts[2], versionId: parts[4]))!.toJson(),
+    manifest['snapshot'],
+  );
+  _marker('WRITES_REPLAY');
 }
 
 void main() {
   final binding = IntegrationTestWidgetsFlutterBinding.ensureInitialized();
+  final frameworkErrors = <FlutterErrorDetails>[];
+  final previousFlutterError = FlutterError.onError;
+  FlutterError.onError = (details) {
+    if (frameworkErrors.length < 8) frameworkErrors.add(details);
+    previousFlutterError?.call(details);
+  };
+  final testFinished = Completer<void>();
   var restoredSuccessfully = false;
+  var failureReported = false;
   _marker('BOOT');
   unawaited(
-    binding.allTestsPassed.future.then((passed) {
+    binding.allTestsPassed.future.then((passed) async {
+      // The binding can complete this future before the test body's catch block
+      // has published its redacted failure details. Wait for that body first so
+      // the host never sees FAILED without the diagnostic that explains it.
+      await testFinished.future.timeout(
+        const Duration(seconds: 2),
+        onTimeout: () {},
+      );
       if (passed &&
           restoredSuccessfully &&
           binding.reportData?['verified'] == true) {
         _marker('PASSED');
       } else {
+        // The test body may have already emitted FAILED before this future
+        // completes. Always publish the binding's own failure details as a
+        // trailing diagnostic; the host drains them after the terminal marker.
         _diagnostic(
           'Binding completed: passed=$passed restored=$restoredSuccessfully '
           'phase=${binding.reportData?['phase']}',
@@ -716,26 +852,37 @@ void main() {
           _diagnostic('Framework failure in ${failure.methodName}');
           _diagnostic(_sourceStack(failure.details ?? ''));
         }
-        _marker('FAILED');
+        for (final error in frameworkErrors.take(4)) {
+          final stack = _sourceStack(error.stack?.toString() ?? '');
+          _diagnostic(
+            'FlutterError type=${error.exception.runtimeType} '
+            'library=${error.library ?? 'unknown'}',
+          );
+          if (stack.isNotEmpty) _diagnostic(stack);
+        }
+        if (!failureReported) {
+          failureReported = true;
+          _marker('FAILED');
+        }
       }
     }),
   );
   testWidgets('Android OS restart preserves frozen view and exact replay IDs', (
     tester,
   ) async {
-    expect(
-      _runId,
-      isNotEmpty,
-      reason: 'Use tool/android_process_death_test.py',
-    );
-    tester.view.physicalSize = const Size(320, 640);
-    tester.view.devicePixelRatio = 1;
-    addTearDown(tester.view.reset);
-    tester.platformDispatcher.textScaleFactorTestValue = 1.5;
-    addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
-    tester.testTextInput.register();
-    addTearDown(tester.testTextInput.unregister);
     try {
+      expect(
+        _runId,
+        isNotEmpty,
+        reason: 'Use tool/android_process_death_test.py',
+      );
+      tester.view.physicalSize = const Size(320, 640);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      tester.platformDispatcher.textScaleFactorTestValue = 1.5;
+      addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+      tester.testTextInput.register();
+      addTearDown(tester.testTextInput.unregister);
       final prefs = await SharedPreferences.getInstance();
       final raw = prefs.getString(_manifestKey);
       if (raw == null) await resetLocalAppState();
@@ -766,13 +913,17 @@ void main() {
         binding.reportData = {'run_id': _runId, 'phase': 'seed'};
         await _seed(tester, container, server);
       } else {
-        binding.reportData = {'run_id': _runId, 'phase': 'restore'};
-        await _restore(
-          tester,
-          container,
-          server,
-          jsonDecode(raw) as Map<String, dynamic>,
-        );
+        final manifest = jsonDecode(raw) as Map<String, dynamic>;
+        if (manifest['phase'] == 'business') {
+          binding.reportData = {'run_id': _runId, 'phase': 'business_restore'};
+          await _restoreBusinessRestart(tester, container, server, manifest);
+        } else {
+          binding.reportData = {'run_id': _runId, 'phase': 'restore'};
+          // Preserve every original assertion/wait in its original order before
+          // adding a second independently fenced actual process-death cycle.
+          await _restore(tester, container, server, manifest);
+          await _seedBusinessRestart(tester, container, server, manifest);
+        }
         await tester.pumpWidget(const SizedBox.shrink());
         restoredSuccessfully = true;
         binding.reportData = {...?binding.reportData, 'verified': true};
@@ -780,6 +931,7 @@ void main() {
     } catch (error, stack) {
       // Do not serialize Dio request/response objects or auth headers. The host
       // consumes FAILED immediately, so synchronous details must precede it.
+      failureReported = true;
       final detail = error is DioException
           ? 'DioException type=${error.type.name} '
                 'status=${error.response?.statusCode}'
@@ -795,6 +947,8 @@ void main() {
       );
       _marker('FAILED');
       rethrow;
+    } finally {
+      if (!testFinished.isCompleted) testFinished.complete();
     }
   }, timeout: const Timeout(Duration(minutes: 4)));
 }

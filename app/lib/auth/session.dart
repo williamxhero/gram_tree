@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gramtree_api/gramtree_api.dart';
 
+import '../features/me/taste_profile_cache.dart';
 import '../storage/secure_store.dart';
 
 /// 当前设备的登录状态：访问令牌、刷新令牌和账号资料，存在系统安全存储里。
@@ -54,12 +55,14 @@ class SessionIdentity {
 
 /// 持有当前登录状态。拦截器同步读取令牌；登录、续期、退出时通知界面。
 class SessionStore extends ChangeNotifier {
-  SessionStore(this._secure);
+  SessionStore(this._secure, [TasteProfileCache? cache]) : _cache = cache;
 
   final SecureStore _secure;
+  final TasteProfileCache? _cache;
   AuthSession? _current;
   bool _loaded = false;
   int _identityEpoch = 0;
+  int? _uploadsPausedEpoch;
   Future<void> _persistence = Future<void>.value();
 
   Future<void> _persist(Future<void> Function() operation) {
@@ -81,6 +84,36 @@ class SessionStore extends ChangeNotifier {
   bool matches(SessionIdentity identity) =>
       _current?.user.id == identity.ownerId && _identityEpoch == identity.epoch;
 
+  bool canUpload(SessionIdentity identity) =>
+      matches(identity) && _uploadsPausedEpoch != identity.epoch;
+
+  /// Fence private writes at confirmation, while allowing the captured login to
+  /// send consent withdrawal/account deletion. Refresh cannot remove this fence.
+  Future<void> pauseAccountUploads(SessionIdentity identity) async {
+    if (!matches(identity)) return;
+    _uploadsPausedEpoch = identity.epoch;
+    final value = _encode(_current!);
+    notifyListeners();
+    await _persist(() => _secure.write(sessionStorageKey, value));
+  }
+
+  /// Only a definite rejection may release this generation's privacy fence.
+  Future<bool> resumeAccountUploads(SessionIdentity identity) async {
+    if (!matches(identity) || _uploadsPausedEpoch != identity.epoch) {
+      return false;
+    }
+    _uploadsPausedEpoch = null;
+    final value = _encode(_current!);
+    notifyListeners();
+    await _persist(() => _secure.write(sessionStorageKey, value));
+    return true;
+  }
+
+  String _encode(AuthSession session) => jsonEncode({
+    ...session.toJson(),
+    if (_uploadsPausedEpoch == _identityEpoch) 'uploads_paused': true,
+  });
+
   /// 为什么变成了未登录（续期失败、撤回同意等），给登录页显示提示用。
   String? lastExpiryReason;
 
@@ -94,9 +127,11 @@ class SessionStore extends ChangeNotifier {
     if (_loaded || epoch != _identityEpoch) return _current;
     if (raw != null) {
       try {
-        _current = AuthSession.fromJson(
-          jsonDecode(raw) as Map<String, dynamic>,
-        );
+        final value = jsonDecode(raw) as Map<String, dynamic>;
+        _current = AuthSession.fromJson(value);
+        if (value['uploads_paused'] == true) {
+          _uploadsPausedEpoch = _identityEpoch;
+        }
       } catch (_) {
         await _persist(() => _secure.delete(sessionStorageKey));
         if (_loaded || epoch != _identityEpoch) return _current;
@@ -107,19 +142,35 @@ class SessionStore extends ChangeNotifier {
     return _current;
   }
 
-  Future<void> save(TokenPair tokens) => _set(AuthSession.fromTokens(tokens));
+  /// Every explicit login is a new generation, even for the same owner.
+  Future<void> save(TokenPair tokens) =>
+      _set(AuthSession.fromTokens(tokens), newLogin: true);
+
+  /// Refresh rotates credentials without invalidating that login's queue drain.
+  Future<void> saveRefreshed(
+    TokenPair tokens, {
+    required SessionIdentity identity,
+  }) {
+    if (!matches(identity) || tokens.user.id != identity.ownerId) {
+      throw StateError('account_changed');
+    }
+    return _set(AuthSession.fromTokens(tokens));
+  }
 
   Future<void> updateUser(UserOut user) async {
     final s = _current;
     if (s != null && s.user.id == user.id) await _set(s.withUser(user));
   }
 
-  Future<void> _set(AuthSession session) async {
-    if (_current?.user.id != session.user.id) _identityEpoch++;
+  Future<void> _set(AuthSession session, {bool newLogin = false}) async {
+    if (newLogin || _current?.user.id != session.user.id) {
+      _identityEpoch++;
+      _uploadsPausedEpoch = null;
+    }
     _current = session;
     _loaded = true;
     lastExpiryReason = null;
-    final value = jsonEncode(session.toJson());
+    final value = _encode(session);
     // Fence old account work immediately; ordered persistence may still be slow.
     notifyListeners();
     await _persist(() => _secure.write(sessionStorageKey, value));
@@ -128,11 +179,18 @@ class SessionStore extends ChangeNotifier {
   /// 清掉本机的登录状态。
   Future<void> clear() async {
     _identityEpoch++;
+    final ownerId = _current?.user.id;
     _current = null;
     _loaded = true;
     // Hide account-private UI immediately, even while older storage IO drains.
     notifyListeners();
     await _persist(() => _secure.delete(sessionStorageKey));
+    // Route cache deletion through the cache's own write queue. This waits for
+    // an already-started snapshot write before deleting it, so expiry cannot
+    // leave a private snapshot behind for the next app start.
+    if (ownerId != null) {
+      await _cache?.clear(ownerId);
+    }
   }
 
   Future<void> expire({required String reason}) async {
@@ -143,7 +201,10 @@ class SessionStore extends ChangeNotifier {
 }
 
 final sessionStoreProvider = Provider<SessionStore>((ref) {
-  final store = SessionStore(ref.watch(secureStoreProvider));
+  final store = SessionStore(
+    ref.watch(secureStoreProvider),
+    ref.watch(tasteProfileCacheProvider),
+  );
   ref.onDispose(store.dispose);
   return store;
 });

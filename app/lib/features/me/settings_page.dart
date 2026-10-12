@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:gramtree_api/gramtree_api.dart';
 
 import '../../auth/auth_controller.dart';
+import '../../auth/logout_confirmation.dart';
 import '../../l10n/app_localizations.dart';
 import '../../privacy/consent.dart';
 import '../../privacy/documents.dart';
@@ -93,7 +94,7 @@ class SettingsPage extends ConsumerWidget {
             ),
           item(l10n.settingsWithdraw, onTap: () => context.push(withdraw)),
           const Divider(height: 32),
-          item(l10n.signOut, onTap: () => _signOut(context, ref)),
+          item(l10n.signOut, onTap: () => confirmLogout(context, ref)),
           item(
             l10n.deleteAccount,
             // 不可撤回的操作用错误色；酱红只留给“系统替你改了”
@@ -103,27 +104,6 @@ class SettingsPage extends ConsumerWidget {
         ],
       ),
     );
-  }
-
-  Future<void> _signOut(BuildContext context, WidgetRef ref) async {
-    final l10n = AppLocalizations.of(context);
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        content: Text(l10n.signOutConfirm),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: Text(l10n.cancel),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            child: Text(l10n.signOut),
-          ),
-        ],
-      ),
-    );
-    if (ok == true) await ref.read(authProvider.notifier).signOut();
   }
 
   /// 开关变化都记一条 `product_analytics` 同意记录，登录状态下立刻尝试上传。

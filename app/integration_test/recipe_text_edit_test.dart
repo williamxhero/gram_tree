@@ -31,25 +31,48 @@ void main() {
     tester.testTextInput.hide();
     await tester.pump();
     final finder = find.byKey(ValueKey(key));
-    final scrollable = find
-        .byWidgetPredicate(
-          (widget) =>
-              widget is Scrollable &&
-              widget.axisDirection == AxisDirection.down,
-        )
-        .first;
-    // Reset the visible scroll position before seeking a lazy historical row.
-    for (var i = 0; i < 12; i++) {
-      await tester.drag(scrollable, const Offset(0, 500));
+    final scrollables = find.byWidgetPredicate(
+      (widget) =>
+          widget is Scrollable && widget.axisDirection == AxisDirection.down,
+    );
+    // Route bodies can briefly be loading/error widgets with no Scrollable.
+    // Wait for the route to mount before resolving the page body.
+    await waitFor(tester, scrollables);
+    final body = find.byKey(const ValueKey('recipe-editor-content'));
+    final bodyScrollables = find.descendant(of: body, matching: scrollables);
+    final oneLine = find.byKey(const ValueKey('one-line-search'));
+    final oneLineScrollables = find.ancestor(
+      of: oneLine,
+      matching: scrollables,
+    );
+    final scrollable =
+        body.evaluate().isNotEmpty && tester.widget(body) is Scrollable
+        ? body
+        : bodyScrollables.evaluate().isNotEmpty
+        ? bodyScrollables.first
+        : oneLineScrollables.evaluate().isNotEmpty
+        ? oneLineScrollables.first
+        : scrollables.first;
+    final position = tester.state<ScrollableState>(scrollable).position;
+    // Reset before each search so lazy editor rows are mounted through a
+    // bounded forward scan, regardless of the previous viewport position.
+    position.jumpTo(position.minScrollExtent);
+    await tester.pumpAndSettle();
+    for (var i = 0; i < 300 && finder.evaluate().isEmpty; i++) {
+      position.jumpTo(
+        (position.pixels + 250).clamp(
+          position.minScrollExtent,
+          position.maxScrollExtent,
+        ),
+      );
       await tester.pump(const Duration(milliseconds: 100));
     }
-    await tester.scrollUntilVisible(
-      finder,
-      250,
-      scrollable: scrollable,
-      maxScrolls: 60,
+    expect(finder, findsOneWidget);
+    await Scrollable.ensureVisible(
+      tester.element(finder),
+      alignment: 0.5,
+      alignmentPolicy: ScrollPositionAlignmentPolicy.explicit,
     );
-    await Scrollable.ensureVisible(tester.element(finder), alignment: 0.5);
     await tester.pumpAndSettle();
     expect(finder.hitTestable(), findsOneWidget);
   }
@@ -95,10 +118,31 @@ void main() {
       _request,
     );
     await tap(tester, 'one-line-search');
-    // Existing-recipe matches can put this lazy action below the iOS viewport.
+    // The search is asynchronous; the design action is not mounted until its
+    // result arrives, so wait for the actual enabled action before revealing it.
+    // These actions live below the initially mounted portion of a lazy
+    // one-line page. Mount them before waiting for the enabled state.
     await reveal(tester, 'ai-design-new');
-    await waitFor(tester, find.byKey(const ValueKey('ai-design-new')));
+    await waitFor(
+      tester,
+      find.byWidgetPredicate(
+        (widget) =>
+            widget is OutlinedButton &&
+            widget.key == const ValueKey('ai-design-new') &&
+            widget.onPressed != null,
+      ),
+    );
     await tap(tester, 'ai-design-new');
+    await reveal(tester, 'ai-skip-questions');
+    await waitFor(
+      tester,
+      find.byWidgetPredicate(
+        (widget) =>
+            widget is TextButton &&
+            widget.key == const ValueKey('ai-skip-questions') &&
+            widget.onPressed != null,
+      ),
+    );
     await tap(tester, 'ai-skip-questions');
     // Existing-recipe cards can scroll this lazy row out on a narrow phone.
     // Reveal it before checking completion; keep the same enabled-state guard.
@@ -200,6 +244,7 @@ void main() {
         find.byKey(const ValueKey('recipe-detail-content')),
       );
       await tap(tester, 'edit-recipe-button');
+      await reveal(tester, 'text-edit-input');
       await waitFor(tester, find.byKey(const ValueKey('text-edit-input')));
 
       phase = 'owned-editor-preview';

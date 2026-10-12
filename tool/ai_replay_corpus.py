@@ -19,23 +19,57 @@ def main() -> None:
     parser.add_argument("--out", type=Path, required=True)
     args = parser.parse_args()
     corpus = json.loads((ROOT / "server/tests/fixtures/ai/recipe_corpus.json").read_text("utf-8"))
-    records = [
-        ("intent", {"text": TEXT}, corpus["intent"]),
-        (
-            "generate",
-            {
-                "text": TEXT,
-                "intent": {**corpus["intent"], "servings": 2},
-                "profile": None,
-                "family": None,
-                "cookware_profile": None,
+    records = [("intent", {"text": TEXT}, corpus["intent"])]
+    # A fresh account has no profile until the first profile-dependent request,
+    # while a later journey may have materialized the default profile. Both are
+    # the same synthetic user context and must resolve to the same draft.
+    profiles = [
+        None,
+        {
+            "flavors": {
+                key: 1.0
+                for key in (
+                    "salty",
+                    "sweet",
+                    "sour",
+                    "spicy",
+                    "numbing",
+                    "umami",
+                    "oily",
+                )
             },
-            corpus["valid"],
-        ),
-        ("normalize", {"names": ["鸡腿肉", "盐"], "candidates": []}, corpus["normalization"]),
-        ("embedding", {"text": "宫保鸡丁"}, corpus["embedding"]),
-        ("embedding", {"text": "宫保鸡丁 鸡腿肉 盐 鸡腿肉切丁 炒"}, corpus["embedding"]),
+            "preferences": [],
+        },
     ]
+    for profile in profiles:
+        records.append(
+            (
+                "generate",
+                {
+                    "text": TEXT,
+                    "intent": {**corpus["intent"], "servings": 2},
+                    "profile": profile,
+                    "family": None,
+                    "cookware_profile": None,
+                },
+                corpus["valid"],
+            )
+        )
+    records.extend(
+        [
+            (
+                "normalize",
+                {"names": ["鸡腿肉", "盐"], "candidates": []},
+                corpus["normalization"],
+            ),
+            ("embedding", {"text": "宫保鸡丁"}, corpus["embedding"]),
+            (
+                "embedding",
+                {"text": "宫保鸡丁 鸡腿肉 盐 鸡腿肉切丁 炒"},
+                corpus["embedding"],
+            ),
+        ]
+    )
     # The browser journey saves the synthetic draft after confirming 320 g.
     # Use the public snapshot contract's defaults, never a production recording.
     from sqlalchemy.orm import Session

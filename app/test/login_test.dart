@@ -157,6 +157,36 @@ void main() {
     expect(next.data, hasLength(1));
   });
 
+  testWidgets('续期暂时无法连接不退出账号，恢复联网后仍能续期', (tester) async {
+    final server = FakeServer();
+    server.on('GET', '/v1/me/identities', (r) {
+      if (r.headers['Authorization'] == 'Bearer access-0') {
+        return FakeServer.error(401, 'token_expired', '登录已过期');
+      }
+      return (200, [for (final i in server.identities) i.toJson()]);
+    });
+    final env = TestEnv.signedIn(server: server);
+    server.on('POST', '/v1/auth/refresh', (_) {
+      env.reachability.reachable = false;
+      return FakeServer.error(503, 'temporarily_unavailable', '暂时无法连接');
+    });
+    await pumpApp(tester, env: env);
+    await tapTab(tester, 4);
+    expect(find.text('登录味谱'), findsNothing);
+    expect(find.text('味友0001'), findsOneWidget);
+    expect(env.secure.values[sessionStorageKey], contains('refresh-0'));
+    await tester.pump(const Duration(seconds: 30));
+    expect(server.calls('POST', '/v1/auth/refresh'), hasLength(1));
+
+    env.reachability.reachable = true;
+    server.on('POST', '/v1/auth/refresh', (_) => (200, server.tokens()));
+    await restartApp(tester, env);
+    await tapTab(tester, 4);
+    expect(find.text(testEmail), findsOneWidget);
+    expect(env.secure.values[sessionStorageKey], contains('refresh-1'));
+    expect(find.text('登录味谱'), findsNothing);
+  });
+
   testWidgets('续期失败就回到登录页', (tester) async {
     final server = FakeServer()
       ..on(

@@ -49,12 +49,16 @@ class _TasteBodyState extends ConsumerState<_TasteBody> {
   Future<void> _mutate(
     Future<TasteProfileOut> Function(TasteProfileRepository) action,
   ) async {
-    if (_busy || !_isCurrentAccount) return;
+    if (_busy ||
+        !_isCurrentAccount ||
+        ref.read(tasteProfileSnapshotProvider).value?.fromCache == true) {
+      return;
+    }
     setState(() => _busy = true);
     try {
       await action(ref.read(tasteProfileRepositoryProvider));
       if (!_isCurrentAccount) return;
-      ref.invalidate(tasteProfileProvider);
+      ref.invalidate(tasteProfileSnapshotProvider);
       ref.invalidate(tasteProfileChangesProvider);
     } catch (error) {
       if (mounted && _isCurrentAccount) {
@@ -96,18 +100,20 @@ class _TasteBodyState extends ConsumerState<_TasteBody> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final profile = ref.watch(tasteProfileProvider);
+    final snapshot = ref.watch(tasteProfileSnapshotProvider);
+    final offline = snapshot.value?.fromCache == true;
     final changes = ref.watch(tasteProfileChangesProvider);
     return profile.when(
       loading: () => const Center(child: CircularProgressIndicator()),
       error: (error, _) => Center(
         child: _Retry(
           error: error,
-          retry: () => ref.invalidate(tasteProfileProvider),
+          retry: () => ref.invalidate(tasteProfileSnapshotProvider),
         ),
       ),
       data: (value) => RefreshIndicator(
         onRefresh: () async {
-          ref.invalidate(tasteProfileProvider);
+          ref.invalidate(tasteProfileSnapshotProvider);
           ref.invalidate(tasteProfileChangesProvider);
           await ref.read(tasteProfileProvider.future);
         },
@@ -117,6 +123,18 @@ class _TasteBodyState extends ConsumerState<_TasteBody> {
           physics: const AlwaysScrollableScrollPhysics(),
           children: [
             Text(l10n.tasteIntro),
+            if (offline) ...[
+              const SizedBox(height: 8),
+              Text(l10n.tasteOfflineReadonly),
+              if (snapshot.value != null)
+                Text(
+                  l10n.tasteOfflineUpdated(
+                    MaterialLocalizations.of(context)
+                        .formatFullDate(snapshot.value!.cachedAt.toLocal()),
+                    value.version,
+                  ),
+                ),
+            ],
             const SizedBox(height: 12),
             for (final flavor in value.flavors.entries)
               ComponentCard(
@@ -141,7 +159,7 @@ class _TasteBodyState extends ConsumerState<_TasteBody> {
                             child: Text(value.scale.levels[i].label),
                           ),
                       ],
-                      onChanged: _busy
+                      onChanged: _busy || offline
                           ? null
                           : (level) {
                               if (level != null) {
@@ -181,7 +199,7 @@ class _TasteBodyState extends ConsumerState<_TasteBody> {
             IngredientPreferencesSection(
               profile: value,
               accountId: widget.accountId,
-              busy: _busy,
+              busy: _busy || offline,
               onSave: (preferences) => _mutate(
                 (repository) => repository.setPreferences(preferences),
               ),
@@ -190,7 +208,7 @@ class _TasteBodyState extends ConsumerState<_TasteBody> {
             FamilyMembersSection(key: ValueKey('family-${widget.accountId}')),
             OutlinedButton(
               key: const ValueKey('taste-reset'),
-              onPressed: _busy ? null : _reset,
+              onPressed: _busy || offline ? null : _reset,
               child: Text(l10n.tasteReset),
             ),
             const SizedBox(height: 24),

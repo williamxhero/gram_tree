@@ -85,7 +85,14 @@ def apple_token(
 
 class Clock:
     def __init__(self) -> None:
-        self.now = datetime.now(UTC)
+        # 让新建 app（使用真实时钟）也能接受当前 app 签发的令牌；避开接下来
+        # 十分钟内的 UTC 午夜，避免每日限流测试跨日期。
+        now = datetime.now(UTC) + timedelta(minutes=1)
+        if now + timedelta(minutes=10) >= now.replace(
+            hour=0, minute=0, second=0, microsecond=0
+        ) + timedelta(days=1):
+            now = (now + timedelta(days=1)).replace(hour=12, minute=0, second=0, microsecond=0)
+        self.now = now
 
     def __call__(self) -> datetime:
         return self.now

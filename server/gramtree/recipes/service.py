@@ -26,7 +26,7 @@ from gramtree.events import service as event_service
 from gramtree.events.registry import SourceType
 from gramtree.ingredients.attributes import IngredientAttributes
 from gramtree.ingredients.models import Ingredient, IngredientAttribute
-from gramtree.recipes import food_safety, reproducibility
+from gramtree.recipes import food_safety, personal_safety, reproducibility
 from gramtree.recipes.measure_display import display_amount, quantity_text
 from gramtree.recipes.measure_input import confirmed_source
 from gramtree.recipes.measure_models import PersonalMeasure
@@ -73,6 +73,7 @@ from gramtree.recipes.schemas import (
     RecipeList,
     RecipeListItem,
     RecipeMoldConversionOut,
+    RecipePersonalSafety,
     RecipeReproducibilityResult,
     RecipeSafetyCheckRequest,
     RecipeSafetyResult,
@@ -845,6 +846,24 @@ def recipe_safety_context(
     return result, RecipeDerived.model_validate(version.derived)
 
 
+def recipe_personal_safety_context(
+    session: Session,
+    settings: Settings,
+    owner: User,
+    recipe_id: uuid.UUID,
+    version_id: uuid.UUID | None = None,
+) -> RecipePersonalSafety:
+    """Read current private constraints for an uncached recipe composition only."""
+    recipe, version = _owned_version(session, owner, recipe_id, version_id)
+    del recipe
+    return personal_safety.check(
+        session,
+        RecipeSnapshot.model_validate(version.snapshot),
+        owner.id,
+        settings,
+    )
+
+
 def create_recipe(
     session: Session,
     redis: Redis,
@@ -1133,7 +1152,7 @@ def _prepare_version_snapshot(
     return normalize_sources(snapshot, baseline, trusted_sources=trusted_sources)
 
 
-def save_version(
+def mutate_version(
     session: Session,
     redis: Redis,
     settings: Settings,
@@ -1141,6 +1160,7 @@ def save_version(
     recipe_id: uuid.UUID,
     body: RecipeVersionCreate,
     *,
+    version_id: uuid.UUID | None = None,
     trusted_sources: bool = False,
     confirmed_operations: list[dict[str, Any]] | None = None,
     before_commit: Callable[[RecipeVersion], None] | None = None,
@@ -1148,6 +1168,11 @@ def save_version(
     decision_events: list[event_service.EventInput] | None = None,
     ignored_problem_ids: set[str] | None = None,
 ) -> RecipeDetail:
+    """Create a version and its save outbox inside the caller's transaction.
+
+    Online saves and durable sync share validation and normalization, but the
+    caller controls commit and whether the current-version fence is mandatory.
+    """
     recipe = session.scalar(
         select(Recipe)
         .where(Recipe.id == recipe_id, Recipe.owner_id == owner.id)
@@ -1196,6 +1221,7 @@ def save_version(
     safety = _safety_for_save(session, snapshot, dish.name, safety_descriptions)
     version = RecipeVersion(
         recipe_id=recipe.id,
+        id=version_id or uuid.uuid4(),
         version_number=previous.version_number + 1,
         previous_version_id=previous.id,
         base_version_id=baseline.id,
@@ -1251,9 +1277,42 @@ def save_version(
     recipe.current_version_id = version.id
     recipe.updated_at = version.created_at
     _enqueue_save_event(session, owner, recipe, version)
+    session.flush()
+    return _detail(session, settings, recipe, version)
+
+
+def save_version(
+    session: Session,
+    redis: Redis,
+    settings: Settings,
+    owner: User,
+    recipe_id: uuid.UUID,
+    body: RecipeVersionCreate,
+    *,
+    trusted_sources: bool = False,
+    confirmed_operations: list[dict[str, Any]] | None = None,
+    before_commit: Callable[[RecipeVersion], None] | None = None,
+    quantification_record: RecipeQuantification | None = None,
+    decision_events: list[event_service.EventInput] | None = None,
+    ignored_problem_ids: set[str] | None = None,
+) -> RecipeDetail:
+    detail = mutate_version(
+        session,
+        redis,
+        settings,
+        owner,
+        recipe_id,
+        body,
+        trusted_sources=trusted_sources,
+        confirmed_operations=confirmed_operations,
+        before_commit=before_commit,
+        quantification_record=quantification_record,
+        decision_events=decision_events,
+        ignored_problem_ids=ignored_problem_ids,
+    )
     session.commit()
     _drain_save_events(session, redis, owner)
-    return _detail(session, settings, recipe, version)
+    return detail
 
 
 def get_recipe(

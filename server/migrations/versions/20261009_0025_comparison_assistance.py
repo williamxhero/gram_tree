@@ -1,7 +1,7 @@
 """Shared display-only comparison assistance.
 
 Revision ID: 0025
-Revises: 0024
+Revises: 0024, 0024_measure_history
 """
 
 import sqlalchemy as sa
@@ -9,7 +9,7 @@ from alembic import op
 from sqlalchemy.dialects import postgresql
 
 revision = "0025"
-down_revision = "0024"
+down_revision = ("0024", "0024_measure_history")
 branch_labels = None
 depends_on = None
 
