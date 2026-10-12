@@ -34,6 +34,21 @@ class WriteRegistry {
     register(personalMeasureWriteRegistration);
     register(
       WriteRegistration(
+        type: 'cooking_record.create',
+        conflictRule: WriteConflictRule.appendOnly,
+        validate: (payload) {
+          final record = payload['record'];
+          if (record is! Map ||
+              record['client_id'] is! String ||
+              record['source'] is! String) {
+            throw ArgumentError('Invalid cooking record');
+          }
+        },
+        applyResult: (record, result) => record,
+      ),
+    );
+    register(
+      WriteRegistration(
         type: 'experience.event',
         conflictRule: WriteConflictRule.appendOnly,
         validate: (payload) {

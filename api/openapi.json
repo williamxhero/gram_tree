@@ -1464,6 +1464,390 @@
         "title": "CookingMealTime",
         "type": "object"
       },
+      "CookingRecordCreate": {
+        "properties": {
+          "adjustments": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Adjustments",
+            "type": "array"
+          },
+          "client_id": {
+            "format": "uuid",
+            "title": "Client Id",
+            "type": "string"
+          },
+          "dish_name": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dish Name"
+          },
+          "meal": {
+            "anyOf": [
+              {
+                "enum": [
+                  "breakfast",
+                  "lunch",
+                  "dinner",
+                  "snack"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Meal"
+          },
+          "occurred_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Occurred At"
+          },
+          "recipe_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Recipe Id"
+          },
+          "recipe_version_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Recipe Version Id"
+          },
+          "snapshot": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Snapshot"
+          },
+          "source": {
+            "default": "cooking_session",
+            "enum": [
+              "cooking_session",
+              "recommendation",
+              "calendar",
+              "external_cooking",
+              "dining"
+            ],
+            "title": "Source",
+            "type": "string"
+          },
+          "source_context": {
+            "additionalProperties": true,
+            "title": "Source Context",
+            "type": "object"
+          },
+          "verification": {
+            "default": "unverified",
+            "enum": [
+              "cooking_mode",
+              "unverified"
+            ],
+            "title": "Verification",
+            "type": "string"
+          }
+        },
+        "required": [
+          "client_id"
+        ],
+        "title": "CookingRecordCreate",
+        "type": "object"
+      },
+      "CookingRecordHistoryOut": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/CookingRecordRevisionOut"
+            },
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "title": "CookingRecordHistoryOut",
+        "type": "object"
+      },
+      "CookingRecordListOut": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/CookingRecordOut"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Cursor"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "title": "CookingRecordListOut",
+        "type": "object"
+      },
+      "CookingRecordOut": {
+        "properties": {
+          "adjustments": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Adjustments",
+            "type": "array"
+          },
+          "client_id": {
+            "format": "uuid",
+            "title": "Client Id",
+            "type": "string"
+          },
+          "counts_as_cooked": {
+            "title": "Counts As Cooked",
+            "type": "boolean"
+          },
+          "created_at": {
+            "title": "Created At",
+            "type": "string"
+          },
+          "dish_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dish Name"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "meal": {
+            "anyOf": [
+              {
+                "enum": [
+                  "breakfast",
+                  "lunch",
+                  "dinner",
+                  "snack"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Meal"
+          },
+          "occurred_at": {
+            "title": "Occurred At",
+            "type": "string"
+          },
+          "recipe_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Recipe Id"
+          },
+          "recipe_version_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Recipe Version Id"
+          },
+          "snapshot": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Snapshot"
+          },
+          "source": {
+            "enum": [
+              "cooking_session",
+              "recommendation",
+              "calendar",
+              "external_cooking",
+              "dining"
+            ],
+            "title": "Source",
+            "type": "string"
+          },
+          "source_context": {
+            "additionalProperties": true,
+            "title": "Source Context",
+            "type": "object"
+          },
+          "verification": {
+            "enum": [
+              "cooking_mode",
+              "unverified"
+            ],
+            "title": "Verification",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "client_id",
+          "recipe_id",
+          "recipe_version_id",
+          "dish_name",
+          "source",
+          "verification",
+          "counts_as_cooked",
+          "meal",
+          "occurred_at",
+          "snapshot",
+          "adjustments",
+          "source_context",
+          "created_at"
+        ],
+        "title": "CookingRecordOut",
+        "type": "object"
+      },
+      "CookingRecordRevisionCreate": {
+        "properties": {
+          "field": {
+            "enum": [
+              "rating",
+              "feedback",
+              "tags"
+            ],
+            "title": "Field",
+            "type": "string"
+          },
+          "note": {
+            "default": "",
+            "title": "Note",
+            "type": "string"
+          },
+          "revision_id": {
+            "format": "uuid",
+            "title": "Revision Id",
+            "type": "string"
+          },
+          "value": {
+            "additionalProperties": true,
+            "title": "Value",
+            "type": "object"
+          }
+        },
+        "required": [
+          "revision_id",
+          "field",
+          "value"
+        ],
+        "title": "CookingRecordRevisionCreate",
+        "type": "object"
+      },
+      "CookingRecordRevisionOut": {
+        "properties": {
+          "created_at": {
+            "title": "Created At",
+            "type": "string"
+          },
+          "field": {
+            "title": "Field",
+            "type": "string"
+          },
+          "note": {
+            "title": "Note",
+            "type": "string"
+          },
+          "revision": {
+            "title": "Revision",
+            "type": "integer"
+          },
+          "revision_id": {
+            "format": "uuid",
+            "title": "Revision Id",
+            "type": "string"
+          },
+          "value": {
+            "additionalProperties": true,
+            "title": "Value",
+            "type": "object"
+          }
+        },
+        "required": [
+          "revision_id",
+          "revision",
+          "field",
+          "value",
+          "note",
+          "created_at"
+        ],
+        "title": "CookingRecordRevisionOut",
+        "type": "object"
+      },
       "CountUnit": {
         "additionalProperties": false,
         "properties": {
@@ -16919,6 +17303,323 @@
         "summary": "Convert Recipe Version Servings",
         "tags": [
           "recipes"
+        ]
+      }
+    },
+    "/v1/records": {
+      "get": {
+        "operationId": "list_records",
+        "parameters": [
+          {
+            "description": "上一页返回的 next_cursor",
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "上一页返回的 next_cursor",
+              "title": "Cursor"
+            }
+          },
+          {
+            "description": "每页条数，上限见配置项 api.page_size_max",
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "description": "每页条数，上限见配置项 api.page_size_max",
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CookingRecordListOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "参数错误"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "服务端错误"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Records",
+        "tags": [
+          "records"
+        ]
+      },
+      "post": {
+        "operationId": "create_record",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CookingRecordCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CookingRecordOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "参数错误"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "服务端错误"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Create Record",
+        "tags": [
+          "records"
+        ]
+      }
+    },
+    "/v1/records/{record_id}": {
+      "get": {
+        "operationId": "get_record",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "record_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Record Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CookingRecordOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "参数错误"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "服务端错误"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Record",
+        "tags": [
+          "records"
+        ]
+      }
+    },
+    "/v1/records/{record_id}/history": {
+      "get": {
+        "operationId": "record_history",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "record_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Record Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CookingRecordHistoryOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "参数错误"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "服务端错误"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Record History",
+        "tags": [
+          "records"
+        ]
+      }
+    },
+    "/v1/records/{record_id}/revisions": {
+      "post": {
+        "operationId": "revise_record",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "record_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Record Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CookingRecordRevisionCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CookingRecordRevisionOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "参数错误"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "服务端错误"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Revise Record",
+        "tags": [
+          "records"
         ]
       }
     },
