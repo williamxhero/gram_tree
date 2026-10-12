@@ -392,12 +392,14 @@ class _CookingPageState extends ConsumerState<CookingPage>
   ) async {
     final remaining = timer.remainingAt(now);
     if (remaining <= 0 || timer.hasReportedDue) return;
-    await ref.read(deviceCapabilitiesProvider).scheduleTimerReminder(
-      id: timer.id,
-      dueAt: now.add(Duration(seconds: remaining)),
-      title: '做菜计时结束',
-      body: '步骤计时已结束，可以回来继续做菜。',
-    );
+    await ref
+        .read(deviceCapabilitiesProvider)
+        .scheduleTimerReminder(
+          id: timer.id,
+          dueAt: now.add(Duration(seconds: remaining)),
+          title: '做菜计时结束',
+          body: '步骤计时已结束，可以回来继续做菜。',
+        );
   }
 
   Future<void> _save(CookingSession session, {String? event}) async {
@@ -435,9 +437,8 @@ class _CookingPageState extends ConsumerState<CookingPage>
         next >= 0 &&
         !session.dependenciesReady(session.steps[next])) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('请先完成前置步骤，再继续。')),
-        );
+        ScaffoldMessenger.of(context)
+            .showSnackBar(const SnackBar(content: Text('请先完成前置步骤，再继续。')));
       }
       return;
     }
@@ -507,14 +508,16 @@ class _CookingPageState extends ConsumerState<CookingPage>
         ),
         event: 'timer_resume',
       );
-      await ref.read(deviceCapabilitiesProvider).scheduleTimerReminder(
-        id: resumed.id,
-        dueAt: DateTime.now().toUtc().add(
-          Duration(seconds: resumed.remainingAt(DateTime.now().toUtc())),
-        ),
-        title: '做菜计时结束',
-        body: '步骤计时已结束，可以回来继续做菜。',
-      );
+      await ref
+          .read(deviceCapabilitiesProvider)
+          .scheduleTimerReminder(
+            id: resumed.id,
+            dueAt: DateTime.now().toUtc().add(
+              Duration(seconds: resumed.remainingAt(DateTime.now().toUtc())),
+            ),
+            title: '做菜计时结束',
+            body: '步骤计时已结束，可以回来继续做菜。',
+          );
       return;
     }
     final timer = CookingTimerState(
@@ -527,12 +530,14 @@ class _CookingPageState extends ConsumerState<CookingPage>
       session.copyWith(timers: [...session.timers, timer]),
       event: 'timer_start',
     );
-    await ref.read(deviceCapabilitiesProvider).scheduleTimerReminder(
-      id: timer.id,
-      dueAt: timer.startedAt.add(Duration(seconds: timer.durationSeconds)),
-      title: '做菜计时结束',
-      body: '步骤计时已结束，可以回来继续做菜。',
-    );
+    await ref
+        .read(deviceCapabilitiesProvider)
+        .scheduleTimerReminder(
+          id: timer.id,
+          dueAt: timer.startedAt.add(Duration(seconds: timer.durationSeconds)),
+          title: '做菜计时结束',
+          body: '步骤计时已结束，可以回来继续做菜。',
+        );
   }
 
   Future<void> _complete() async {
@@ -577,7 +582,9 @@ class _CookingPageState extends ConsumerState<CookingPage>
     await _save(finished, event: 'completed');
     for (final timer in session.timers) {
       if (timer.status == 'running' || timer.status == 'paused') {
-        await ref.read(deviceCapabilitiesProvider).cancelTimerReminder(timer.id);
+        await ref
+            .read(deviceCapabilitiesProvider)
+            .cancelTimerReminder(timer.id);
       }
     }
   }
