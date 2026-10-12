@@ -15,6 +15,7 @@ import '../../storage/local_store.dart';
 import '../../util/ids.dart';
 import 'cooking_voice.dart';
 import 'press_hold_voice_question.dart';
+import '../records/records_repository.dart';
 
 const _cookingStoreKey = 'cooking_sessions:v1';
 
@@ -593,6 +594,7 @@ class _CookingPageState extends ConsumerState<CookingPage>
       finishedAt: DateTime.now().toUtc(),
     );
     await _save(finished, event: 'completed');
+    await ref.read(recordsRepositoryProvider).saveCompletedSession(finished);
     for (final timer in session.timers) {
       if (timer.status == 'running' || timer.status == 'paused') {
         await ref

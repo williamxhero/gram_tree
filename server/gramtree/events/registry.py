@@ -225,6 +225,16 @@ class CookingSessionContentV1(BaseModel):
     source: Literal["cooking_session"] = "cooking_session"
 
 
+class CookingRecordCreatedContentV1(BaseModel):
+    """Authoritative creation fact for one account-scoped cooking record."""
+
+    record_id: str
+    client_id: str
+    source: Literal["cooking_session", "recommendation", "calendar", "external_cooking", "dining"]
+    verification: Literal["cooking_mode", "unverified"]
+    counts_as_cooked: bool
+
+
 ITEMS: tuple[EventTypeSpec, ...] = (
     EventTypeSpec(
         event_type="recipe.import",
@@ -248,6 +258,14 @@ ITEMS: tuple[EventTypeSpec, ...] = (
         correlation_fields=("recipe_version_id",),
         exportable=True,
         content_schema=CookingSessionContentV1,
+    ),
+    EventTypeSpec(
+        event_type="cooking.record_created",
+        version=1,
+        description="做过记录创建事实；按客户端记录 ID 唯一计数。",
+        correlation_fields=("cooking_record_id", "recipe_version_id"),
+        exportable=True,
+        content_schema=CookingRecordCreatedContentV1,
     ),
     EventTypeSpec(
         event_type="taste_profile.changed",

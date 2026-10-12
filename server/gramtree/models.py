@@ -12,6 +12,7 @@ from gramtree.ingredients import models as _ingredients  # noqa: F401
 from gramtree.recipes import import_models as _recipe_imports  # noqa: F401
 from gramtree.recipes import measure_models as _measure_models  # noqa: F401
 from gramtree.recipes import models as _recipes  # noqa: F401
+from gramtree.records import models as _records  # noqa: F401
 from gramtree.runtime_config import models as _runtime_config  # noqa: F401
 from gramtree.taste_profiles import models as _taste_profiles  # noqa: F401
 

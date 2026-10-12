@@ -21,6 +21,7 @@ from gramtree.events.sync_contract import (
 )
 from gramtree.recipes.measure_sync import measure_write_spec
 from gramtree.recipes.models import Recipe, RecipeVersion
+from gramtree.records.sync import cooking_record_write_spec
 from gramtree.runtime_config import service as config_service
 
 
@@ -191,6 +192,7 @@ def register_write_type(spec: WriteTypeSpec) -> None:
 
 
 register_write_type(measure_write_spec)
+register_write_type(cooking_record_write_spec)
 
 register_write_type(
     WriteTypeSpec(
