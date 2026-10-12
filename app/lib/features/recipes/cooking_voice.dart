@@ -102,15 +102,33 @@ class SherpaOfflineChineseRecognizer implements OfflineChineseRecognizer {
     }
     try {
       await sherpa.initBindingsAsync();
-      final modelPath = await materializeModelAsset(model.modelPath);
-      final decoderPath = await materializeModelAsset(model.decoderPath);
-      final joinerPath = await materializeModelAsset(model.joinerPath);
-      final tokensPath = await materializeModelAsset(model.tokensPath);
+      // Keep Flutter asset keys separate from the filesystem paths passed to
+      // sherpa-onnx. Android's asset bundle is not directly readable by FFI.
+      final encoderAssetKey = model.modelPath;
+      final decoderAssetKey = model.decoderPath;
+      final joinerAssetKey = model.joinerPath;
+      final tokensAssetKey = model.tokensPath;
+      final encoderPath = await materializeModelAsset(
+        assetKey: encoderAssetKey,
+        nativeFileName: 'encoder.onnx',
+      );
+      final decoderPath = await materializeModelAsset(
+        assetKey: decoderAssetKey,
+        nativeFileName: 'decoder.onnx',
+      );
+      final joinerPath = await materializeModelAsset(
+        assetKey: joinerAssetKey,
+        nativeFileName: 'joiner.onnx',
+      );
+      final tokensPath = await materializeModelAsset(
+        assetKey: tokensAssetKey,
+        nativeFileName: 'tokens.txt',
+      );
       _recognizer?.free();
       final config = sherpa.OnlineRecognizerConfig(
         model: sherpa.OnlineModelConfig(
           transducer: sherpa.OnlineTransducerModelConfig(
-            encoder: modelPath!,
+            encoder: encoderPath!,
             decoder: decoderPath!,
             joiner: joinerPath!,
           ),
