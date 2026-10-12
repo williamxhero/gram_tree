@@ -12,6 +12,8 @@
 	<string>用来拍这道菜的成品照，照片只存在你的记录里。</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>用来从相册选一张菜谱截图或成品照。</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>做菜时手上不方便，可以用说的记录问题；语音不会在离线时上传。</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>

@@ -16,5 +16,16 @@ class FakeDeviceCapabilities implements DeviceCapabilities {
   Future<void> setKeepScreenOn(bool enabled) async => keepScreenOn = enabled;
 
   @override
+  Future<void> scheduleTimerReminder({
+    required String id,
+    required DateTime dueAt,
+    required String title,
+    required String body,
+  }) async {}
+
+  @override
+  Future<void> cancelTimerReminder(String id) async {}
+
+  @override
   Future<void> vibrate() async => vibrateCount++;
 }

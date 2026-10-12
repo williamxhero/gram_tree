@@ -39,13 +39,14 @@ void main() {
             profileScrollables.evaluate().isNotEmpty
         ? profileScrollables.first
         : scrollables.first;
-    final position = tester.state<ScrollableState>(scrollable).position;
+    var position = tester.state<ScrollableState>(scrollable).position;
     final step = delta.abs().clamp(100.0, 500.0).toDouble();
     // Reset the lazy profile list before each bounded forward search. This
     // avoids stranding targets above the viewport after an earlier reveal.
     position.jumpTo(position.minScrollExtent);
     await tester.pumpAndSettle();
     for (var i = 0; i < 300 && finder.evaluate().isEmpty; i++) {
+      position = tester.state<ScrollableState>(scrollable).position;
       position.jumpTo(
         (position.pixels + step).clamp(
           position.minScrollExtent,
