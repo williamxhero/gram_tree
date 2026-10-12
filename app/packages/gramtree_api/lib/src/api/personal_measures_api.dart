@@ -21,15 +21,16 @@ import 'package:gramtree_api/src/model/personal_measure_out.dart';
 import 'package:gramtree_api/src/model/personal_measure_update.dart';
 
 class PersonalMeasuresApi {
+
   final Dio _dio;
 
   const PersonalMeasuresApi(this._dio);
 
   /// Create Personal Measure
-  ///
+  /// 
   ///
   /// Parameters:
-  /// * [personalMeasureInput]
+  /// * [personalMeasureInput] 
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -39,7 +40,7 @@ class PersonalMeasuresApi {
   ///
   /// Returns a [Future] containing a [Response] with a [PersonalMeasureOut] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<PersonalMeasureOut>> createPersonalMeasure({
+  Future<Response<PersonalMeasureOut>> createPersonalMeasure({ 
     required PersonalMeasureInput personalMeasureInput,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -51,10 +52,16 @@ class PersonalMeasuresApi {
     final _path = r'/v1/me/measures';
     final _options = Options(
       method: r'POST',
-      headers: <String, dynamic>{...?headers},
+      headers: <String, dynamic>{
+        ...?headers,
+      },
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
-          {'type': 'http', 'scheme': 'bearer', 'name': 'HTTPBearer'},
+          {
+            'type': 'http',
+            'scheme': 'bearer',
+            'name': 'HTTPBearer',
+          },
         ],
         ...?extra,
       },
@@ -65,10 +72,13 @@ class PersonalMeasuresApi {
     dynamic _bodyData;
 
     try {
-      _bodyData = jsonEncode(personalMeasureInput);
-    } catch (error, stackTrace) {
+_bodyData=jsonEncode(personalMeasureInput);
+    } catch(error, stackTrace) {
       throw DioException(
-        requestOptions: _options.compose(_dio.options, _path),
+         requestOptions: _options.compose(
+          _dio.options,
+          _path,
+        ),
         type: DioExceptionType.unknown,
         error: error,
         stackTrace: stackTrace,
@@ -87,14 +97,9 @@ class PersonalMeasuresApi {
     PersonalMeasureOut? _responseData;
 
     try {
-      final rawData = _response.data;
-      _responseData = rawData == null
-          ? null
-          : deserialize<PersonalMeasureOut, PersonalMeasureOut>(
-              rawData,
-              'PersonalMeasureOut',
-              growable: true,
-            );
+final rawData = _response.data;
+_responseData = rawData == null ? null : deserialize<PersonalMeasureOut, PersonalMeasureOut>(rawData, 'PersonalMeasureOut', growable: true);
+
     } catch (error, stackTrace) {
       throw DioException(
         requestOptions: _response.requestOptions,
@@ -118,10 +123,10 @@ class PersonalMeasuresApi {
   }
 
   /// Delete Personal Measure
-  ///
+  /// 
   ///
   /// Parameters:
-  /// * [measureId]
+  /// * [measureId] 
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -131,7 +136,7 @@ class PersonalMeasuresApi {
   ///
   /// Returns a [Future]
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<void>> deletePersonalMeasure({
+  Future<Response<void>> deletePersonalMeasure({ 
     required String measureId,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -140,18 +145,19 @@ class PersonalMeasuresApi {
     ProgressCallback? onSendProgress,
     ProgressCallback? onReceiveProgress,
   }) async {
-    final _path = r'/v1/me/measures/{measure_id}'.replaceAll(
-      '{'
-      r'measure_id'
-      '}',
-      measureId.toString(),
-    );
+    final _path = r'/v1/me/measures/{measure_id}'.replaceAll('{' r'measure_id' '}', measureId.toString());
     final _options = Options(
       method: r'DELETE',
-      headers: <String, dynamic>{...?headers},
+      headers: <String, dynamic>{
+        ...?headers,
+      },
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
-          {'type': 'http', 'scheme': 'bearer', 'name': 'HTTPBearer'},
+          {
+            'type': 'http',
+            'scheme': 'bearer',
+            'name': 'HTTPBearer',
+          },
         ],
         ...?extra,
       },
@@ -170,10 +176,10 @@ class PersonalMeasuresApi {
   }
 
   /// Display Personal Measure
-  ///
+  /// 
   ///
   /// Parameters:
-  /// * [measureDisplayRequest]
+  /// * [measureDisplayRequest] 
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -183,7 +189,7 @@ class PersonalMeasuresApi {
   ///
   /// Returns a [Future] containing a [Response] with a [MeasureDisplayOut] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<MeasureDisplayOut>> displayPersonalMeasure({
+  Future<Response<MeasureDisplayOut>> displayPersonalMeasure({ 
     required MeasureDisplayRequest measureDisplayRequest,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -195,10 +201,16 @@ class PersonalMeasuresApi {
     final _path = r'/v1/me/measures/display';
     final _options = Options(
       method: r'POST',
-      headers: <String, dynamic>{...?headers},
+      headers: <String, dynamic>{
+        ...?headers,
+      },
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
-          {'type': 'http', 'scheme': 'bearer', 'name': 'HTTPBearer'},
+          {
+            'type': 'http',
+            'scheme': 'bearer',
+            'name': 'HTTPBearer',
+          },
         ],
         ...?extra,
       },
@@ -209,10 +221,13 @@ class PersonalMeasuresApi {
     dynamic _bodyData;
 
     try {
-      _bodyData = jsonEncode(measureDisplayRequest);
-    } catch (error, stackTrace) {
+_bodyData=jsonEncode(measureDisplayRequest);
+    } catch(error, stackTrace) {
       throw DioException(
-        requestOptions: _options.compose(_dio.options, _path),
+         requestOptions: _options.compose(
+          _dio.options,
+          _path,
+        ),
         type: DioExceptionType.unknown,
         error: error,
         stackTrace: stackTrace,
@@ -231,14 +246,9 @@ class PersonalMeasuresApi {
     MeasureDisplayOut? _responseData;
 
     try {
-      final rawData = _response.data;
-      _responseData = rawData == null
-          ? null
-          : deserialize<MeasureDisplayOut, MeasureDisplayOut>(
-              rawData,
-              'MeasureDisplayOut',
-              growable: true,
-            );
+final rawData = _response.data;
+_responseData = rawData == null ? null : deserialize<MeasureDisplayOut, MeasureDisplayOut>(rawData, 'MeasureDisplayOut', growable: true);
+
     } catch (error, stackTrace) {
       throw DioException(
         requestOptions: _response.requestOptions,
@@ -262,10 +272,10 @@ class PersonalMeasuresApi {
   }
 
   /// Get Personal Measure
-  ///
+  /// 
   ///
   /// Parameters:
-  /// * [measureId]
+  /// * [measureId] 
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -275,7 +285,7 @@ class PersonalMeasuresApi {
   ///
   /// Returns a [Future] containing a [Response] with a [PersonalMeasureOut] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<PersonalMeasureOut>> getPersonalMeasure({
+  Future<Response<PersonalMeasureOut>> getPersonalMeasure({ 
     required String measureId,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -284,18 +294,19 @@ class PersonalMeasuresApi {
     ProgressCallback? onSendProgress,
     ProgressCallback? onReceiveProgress,
   }) async {
-    final _path = r'/v1/me/measures/{measure_id}'.replaceAll(
-      '{'
-      r'measure_id'
-      '}',
-      measureId.toString(),
-    );
+    final _path = r'/v1/me/measures/{measure_id}'.replaceAll('{' r'measure_id' '}', measureId.toString());
     final _options = Options(
       method: r'GET',
-      headers: <String, dynamic>{...?headers},
+      headers: <String, dynamic>{
+        ...?headers,
+      },
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
-          {'type': 'http', 'scheme': 'bearer', 'name': 'HTTPBearer'},
+          {
+            'type': 'http',
+            'scheme': 'bearer',
+            'name': 'HTTPBearer',
+          },
         ],
         ...?extra,
       },
@@ -313,14 +324,9 @@ class PersonalMeasuresApi {
     PersonalMeasureOut? _responseData;
 
     try {
-      final rawData = _response.data;
-      _responseData = rawData == null
-          ? null
-          : deserialize<PersonalMeasureOut, PersonalMeasureOut>(
-              rawData,
-              'PersonalMeasureOut',
-              growable: true,
-            );
+final rawData = _response.data;
+_responseData = rawData == null ? null : deserialize<PersonalMeasureOut, PersonalMeasureOut>(rawData, 'PersonalMeasureOut', growable: true);
+
     } catch (error, stackTrace) {
       throw DioException(
         requestOptions: _response.requestOptions,
@@ -344,7 +350,7 @@ class PersonalMeasuresApi {
   }
 
   /// List Personal Measures
-  ///
+  /// 
   ///
   /// Parameters:
   /// * [cursor] - 上一页返回的 next_cursor
@@ -358,7 +364,7 @@ class PersonalMeasuresApi {
   ///
   /// Returns a [Future] containing a [Response] with a [PagePersonalMeasureOut] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<PagePersonalMeasureOut>> listPersonalMeasures({
+  Future<Response<PagePersonalMeasureOut>> listPersonalMeasures({ 
     String? cursor,
     int? limit = 20,
     CancelToken? cancelToken,
@@ -371,10 +377,16 @@ class PersonalMeasuresApi {
     final _path = r'/v1/me/measures';
     final _options = Options(
       method: r'GET',
-      headers: <String, dynamic>{...?headers},
+      headers: <String, dynamic>{
+        ...?headers,
+      },
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
-          {'type': 'http', 'scheme': 'bearer', 'name': 'HTTPBearer'},
+          {
+            'type': 'http',
+            'scheme': 'bearer',
+            'name': 'HTTPBearer',
+          },
         ],
         ...?extra,
       },
@@ -398,14 +410,9 @@ class PersonalMeasuresApi {
     PagePersonalMeasureOut? _responseData;
 
     try {
-      final rawData = _response.data;
-      _responseData = rawData == null
-          ? null
-          : deserialize<PagePersonalMeasureOut, PagePersonalMeasureOut>(
-              rawData,
-              'PagePersonalMeasureOut',
-              growable: true,
-            );
+final rawData = _response.data;
+_responseData = rawData == null ? null : deserialize<PagePersonalMeasureOut, PagePersonalMeasureOut>(rawData, 'PagePersonalMeasureOut', growable: true);
+
     } catch (error, stackTrace) {
       throw DioException(
         requestOptions: _response.requestOptions,
@@ -429,10 +436,10 @@ class PersonalMeasuresApi {
   }
 
   /// Personal Measure History
-  ///
+  /// 
   ///
   /// Parameters:
-  /// * [measureId]
+  /// * [measureId] 
   /// * [cursor] - 上一页返回的 next_cursor
   /// * [limit] - 每页条数，上限见配置项 api.page_size_max
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
@@ -444,7 +451,7 @@ class PersonalMeasuresApi {
   ///
   /// Returns a [Future] containing a [Response] with a [PageMeasureHistoryOut] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<PageMeasureHistoryOut>> personalMeasureHistory({
+  Future<Response<PageMeasureHistoryOut>> personalMeasureHistory({ 
     required String measureId,
     String? cursor,
     int? limit = 20,
@@ -455,18 +462,19 @@ class PersonalMeasuresApi {
     ProgressCallback? onSendProgress,
     ProgressCallback? onReceiveProgress,
   }) async {
-    final _path = r'/v1/me/measures/{measure_id}/history'.replaceAll(
-      '{'
-      r'measure_id'
-      '}',
-      measureId.toString(),
-    );
+    final _path = r'/v1/me/measures/{measure_id}/history'.replaceAll('{' r'measure_id' '}', measureId.toString());
     final _options = Options(
       method: r'GET',
-      headers: <String, dynamic>{...?headers},
+      headers: <String, dynamic>{
+        ...?headers,
+      },
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
-          {'type': 'http', 'scheme': 'bearer', 'name': 'HTTPBearer'},
+          {
+            'type': 'http',
+            'scheme': 'bearer',
+            'name': 'HTTPBearer',
+          },
         ],
         ...?extra,
       },
@@ -490,14 +498,9 @@ class PersonalMeasuresApi {
     PageMeasureHistoryOut? _responseData;
 
     try {
-      final rawData = _response.data;
-      _responseData = rawData == null
-          ? null
-          : deserialize<PageMeasureHistoryOut, PageMeasureHistoryOut>(
-              rawData,
-              'PageMeasureHistoryOut',
-              growable: true,
-            );
+final rawData = _response.data;
+_responseData = rawData == null ? null : deserialize<PageMeasureHistoryOut, PageMeasureHistoryOut>(rawData, 'PageMeasureHistoryOut', growable: true);
+
     } catch (error, stackTrace) {
       throw DioException(
         requestOptions: _response.requestOptions,
@@ -521,10 +524,10 @@ class PersonalMeasuresApi {
   }
 
   /// Preview Personal Measure Input
-  ///
+  /// 
   ///
   /// Parameters:
-  /// * [measureInputRequest]
+  /// * [measureInputRequest] 
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -534,7 +537,7 @@ class PersonalMeasuresApi {
   ///
   /// Returns a [Future] containing a [Response] with a [MeasureInputOut] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<MeasureInputOut>> previewPersonalMeasureInput({
+  Future<Response<MeasureInputOut>> previewPersonalMeasureInput({ 
     required MeasureInputRequest measureInputRequest,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -546,10 +549,16 @@ class PersonalMeasuresApi {
     final _path = r'/v1/me/measures/input';
     final _options = Options(
       method: r'POST',
-      headers: <String, dynamic>{...?headers},
+      headers: <String, dynamic>{
+        ...?headers,
+      },
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
-          {'type': 'http', 'scheme': 'bearer', 'name': 'HTTPBearer'},
+          {
+            'type': 'http',
+            'scheme': 'bearer',
+            'name': 'HTTPBearer',
+          },
         ],
         ...?extra,
       },
@@ -560,10 +569,13 @@ class PersonalMeasuresApi {
     dynamic _bodyData;
 
     try {
-      _bodyData = jsonEncode(measureInputRequest);
-    } catch (error, stackTrace) {
+_bodyData=jsonEncode(measureInputRequest);
+    } catch(error, stackTrace) {
       throw DioException(
-        requestOptions: _options.compose(_dio.options, _path),
+         requestOptions: _options.compose(
+          _dio.options,
+          _path,
+        ),
         type: DioExceptionType.unknown,
         error: error,
         stackTrace: stackTrace,
@@ -582,14 +594,9 @@ class PersonalMeasuresApi {
     MeasureInputOut? _responseData;
 
     try {
-      final rawData = _response.data;
-      _responseData = rawData == null
-          ? null
-          : deserialize<MeasureInputOut, MeasureInputOut>(
-              rawData,
-              'MeasureInputOut',
-              growable: true,
-            );
+final rawData = _response.data;
+_responseData = rawData == null ? null : deserialize<MeasureInputOut, MeasureInputOut>(rawData, 'MeasureInputOut', growable: true);
+
     } catch (error, stackTrace) {
       throw DioException(
         requestOptions: _response.requestOptions,
@@ -613,11 +620,11 @@ class PersonalMeasuresApi {
   }
 
   /// Update Personal Measure
-  ///
+  /// 
   ///
   /// Parameters:
-  /// * [measureId]
-  /// * [personalMeasureUpdate]
+  /// * [measureId] 
+  /// * [personalMeasureUpdate] 
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -627,7 +634,7 @@ class PersonalMeasuresApi {
   ///
   /// Returns a [Future] containing a [Response] with a [PersonalMeasureOut] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<PersonalMeasureOut>> updatePersonalMeasure({
+  Future<Response<PersonalMeasureOut>> updatePersonalMeasure({ 
     required String measureId,
     required PersonalMeasureUpdate personalMeasureUpdate,
     CancelToken? cancelToken,
@@ -637,18 +644,19 @@ class PersonalMeasuresApi {
     ProgressCallback? onSendProgress,
     ProgressCallback? onReceiveProgress,
   }) async {
-    final _path = r'/v1/me/measures/{measure_id}'.replaceAll(
-      '{'
-      r'measure_id'
-      '}',
-      measureId.toString(),
-    );
+    final _path = r'/v1/me/measures/{measure_id}'.replaceAll('{' r'measure_id' '}', measureId.toString());
     final _options = Options(
       method: r'PATCH',
-      headers: <String, dynamic>{...?headers},
+      headers: <String, dynamic>{
+        ...?headers,
+      },
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
-          {'type': 'http', 'scheme': 'bearer', 'name': 'HTTPBearer'},
+          {
+            'type': 'http',
+            'scheme': 'bearer',
+            'name': 'HTTPBearer',
+          },
         ],
         ...?extra,
       },
@@ -659,10 +667,13 @@ class PersonalMeasuresApi {
     dynamic _bodyData;
 
     try {
-      _bodyData = jsonEncode(personalMeasureUpdate);
-    } catch (error, stackTrace) {
+_bodyData=jsonEncode(personalMeasureUpdate);
+    } catch(error, stackTrace) {
       throw DioException(
-        requestOptions: _options.compose(_dio.options, _path),
+         requestOptions: _options.compose(
+          _dio.options,
+          _path,
+        ),
         type: DioExceptionType.unknown,
         error: error,
         stackTrace: stackTrace,
@@ -681,14 +692,9 @@ class PersonalMeasuresApi {
     PersonalMeasureOut? _responseData;
 
     try {
-      final rawData = _response.data;
-      _responseData = rawData == null
-          ? null
-          : deserialize<PersonalMeasureOut, PersonalMeasureOut>(
-              rawData,
-              'PersonalMeasureOut',
-              growable: true,
-            );
+final rawData = _response.data;
+_responseData = rawData == null ? null : deserialize<PersonalMeasureOut, PersonalMeasureOut>(rawData, 'PersonalMeasureOut', growable: true);
+
     } catch (error, stackTrace) {
       throw DioException(
         requestOptions: _response.requestOptions,
@@ -710,4 +716,5 @@ class PersonalMeasuresApi {
       extra: _response.extra,
     );
   }
+
 }

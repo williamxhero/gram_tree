@@ -8,6 +8,7 @@ import 'package:json_annotation/json_annotation.dart';
 
 part 'quantification_input.g.dart';
 
+
 @CopyWith()
 @JsonSerializable(
   checked: true,
@@ -17,21 +18,34 @@ part 'quantification_input.g.dart';
 )
 class QuantificationInput {
   /// Returns a new [QuantificationInput] instance.
-  QuantificationInput({required this.baseVersionId});
+  QuantificationInput({
 
-  @JsonKey(name: r'base_version_id', required: true, includeIfNull: false)
+    required  this.baseVersionId,
+  });
+
+  @JsonKey(
+    
+    name: r'base_version_id',
+    required: true,
+    includeIfNull: false,
+  )
+
+
   final String baseVersionId;
 
-  @override
-  bool operator ==(Object other) =>
-      identical(this, other) ||
-      other is QuantificationInput && other.baseVersionId == baseVersionId;
 
-  @override
-  int get hashCode => baseVersionId.hashCode;
 
-  factory QuantificationInput.fromJson(Map<String, dynamic> json) =>
-      _$QuantificationInputFromJson(json);
+
+
+    @override
+    bool operator ==(Object other) => identical(this, other) || other is QuantificationInput &&
+      other.baseVersionId == baseVersionId;
+
+    @override
+    int get hashCode =>
+        baseVersionId.hashCode;
+
+  factory QuantificationInput.fromJson(Map<String, dynamic> json) => _$QuantificationInputFromJson(json);
 
   Map<String, dynamic> toJson() => _$QuantificationInputToJson(this);
 
@@ -39,4 +53,6 @@ class QuantificationInput {
   String toString() {
     return toJson().toString();
   }
+
 }
+

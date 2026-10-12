@@ -9,6 +9,7 @@ import 'package:json_annotation/json_annotation.dart';
 
 part 'recipe_step.g.dart';
 
+
 @CopyWith()
 @JsonSerializable(
   checked: true,
@@ -19,100 +20,240 @@ part 'recipe_step.g.dart';
 class RecipeStep {
   /// Returns a new [RecipeStep] instance.
   RecipeStep({
-    this.action,
 
-    this.cookware,
+     this.action,
 
-    this.dependsOn,
+     this.cookware,
 
-    this.doneness,
+     this.dependsOn,
 
-    this.donenessSource,
+     this.doneness,
 
-    this.durationSeconds = 0,
+     this.donenessSource,
 
-    this.durationSource,
+     this.durationSeconds = 0,
 
-    this.heat,
+     this.durationSource,
 
-    this.heatSource,
+     this.heat,
 
-    required this.id,
+     this.heatSource,
 
-    this.ingredientIds,
+    required  this.id,
 
-    required this.instruction,
+     this.ingredientIds,
 
-    this.instructionSource,
+    required  this.instruction,
 
-    this.notes,
+     this.instructionSource,
 
-    this.temperatureCelsius,
+     this.notes,
 
-    this.temperatureSource,
+     this.temperatureCelsius,
 
-    this.unattended = false,
+     this.temperatureSource,
 
-    this.why,
+     this.unattended = false,
+
+     this.why,
   });
 
-  @JsonKey(name: r'action', required: false, includeIfNull: false)
+  @JsonKey(
+    
+    name: r'action',
+    required: false,
+    includeIfNull: false,
+  )
+
+
   final String? action;
 
-  @JsonKey(name: r'cookware', required: false, includeIfNull: false)
+
+
+  @JsonKey(
+    
+    name: r'cookware',
+    required: false,
+    includeIfNull: false,
+  )
+
+
   final String? cookware;
 
-  @JsonKey(name: r'depends_on', required: false, includeIfNull: false)
+
+
+  @JsonKey(
+    
+    name: r'depends_on',
+    required: false,
+    includeIfNull: false,
+  )
+
+
   final List<String>? dependsOn;
 
-  @JsonKey(name: r'doneness', required: false, includeIfNull: false)
+
+
+  @JsonKey(
+    
+    name: r'doneness',
+    required: false,
+    includeIfNull: false,
+  )
+
+
   final String? doneness;
 
-  @JsonKey(name: r'doneness_source', required: false, includeIfNull: false)
+
+
+  @JsonKey(
+    
+    name: r'doneness_source',
+    required: false,
+    includeIfNull: false,
+  )
+
+
   final ValueSource? donenessSource;
 
-  // minimum: 0
-  // maximum: 86400
+
+
+          // minimum: 0
+          // maximum: 86400
   @JsonKey(
     defaultValue: 0,
     name: r'duration_seconds',
     required: false,
     includeIfNull: false,
   )
+
+
   final int? durationSeconds;
 
-  @JsonKey(name: r'duration_source', required: false, includeIfNull: false)
+
+
+  @JsonKey(
+    
+    name: r'duration_source',
+    required: false,
+    includeIfNull: false,
+  )
+
+
   final ValueSource? durationSource;
 
-  @JsonKey(name: r'heat', required: false, includeIfNull: false)
+
+
+  @JsonKey(
+    
+    name: r'heat',
+    required: false,
+    includeIfNull: false,
+  )
+
+
   final String? heat;
 
-  @JsonKey(name: r'heat_source', required: false, includeIfNull: false)
+
+
+  @JsonKey(
+    
+    name: r'heat_source',
+    required: false,
+    includeIfNull: false,
+  )
+
+
   final ValueSource? heatSource;
 
-  /// 步骤 ID
-  @JsonKey(name: r'id', required: true, includeIfNull: false)
+
+
+      /// 步骤 ID
+  @JsonKey(
+    
+    name: r'id',
+    required: true,
+    includeIfNull: false,
+  )
+
+
   final String id;
 
-  @JsonKey(name: r'ingredient_ids', required: false, includeIfNull: false)
+
+
+  @JsonKey(
+    
+    name: r'ingredient_ids',
+    required: false,
+    includeIfNull: false,
+  )
+
+
   final List<String>? ingredientIds;
 
-  @JsonKey(name: r'instruction', required: true, includeIfNull: false)
+
+
+  @JsonKey(
+    
+    name: r'instruction',
+    required: true,
+    includeIfNull: false,
+  )
+
+
   final String instruction;
 
-  @JsonKey(name: r'instruction_source', required: false, includeIfNull: false)
+
+
+  @JsonKey(
+    
+    name: r'instruction_source',
+    required: false,
+    includeIfNull: false,
+  )
+
+
   final ValueSource? instructionSource;
 
-  @JsonKey(name: r'notes', required: false, includeIfNull: false)
+
+
+  @JsonKey(
+    
+    name: r'notes',
+    required: false,
+    includeIfNull: false,
+  )
+
+
   final String? notes;
 
-  // minimum: -50.0
-  // maximum: 1000.0
-  @JsonKey(name: r'temperature_celsius', required: false, includeIfNull: false)
+
+
+          // minimum: -50.0
+          // maximum: 1000.0
+  @JsonKey(
+    
+    name: r'temperature_celsius',
+    required: false,
+    includeIfNull: false,
+  )
+
+
   final num? temperatureCelsius;
 
-  @JsonKey(name: r'temperature_source', required: false, includeIfNull: false)
+
+
+  @JsonKey(
+    
+    name: r'temperature_source',
+    required: false,
+    includeIfNull: false,
+  )
+
+
   final ValueSource? temperatureSource;
+
+
 
   @JsonKey(
     defaultValue: false,
@@ -120,57 +261,69 @@ class RecipeStep {
     required: false,
     includeIfNull: false,
   )
+
+
   final bool? unattended;
 
-  @JsonKey(name: r'why', required: false, includeIfNull: false)
+
+
+  @JsonKey(
+    
+    name: r'why',
+    required: false,
+    includeIfNull: false,
+  )
+
+
   final String? why;
 
-  @override
-  bool operator ==(Object other) =>
-      identical(this, other) ||
-      other is RecipeStep &&
-          other.action == action &&
-          other.cookware == cookware &&
-          other.dependsOn == dependsOn &&
-          other.doneness == doneness &&
-          other.donenessSource == donenessSource &&
-          other.durationSeconds == durationSeconds &&
-          other.durationSource == durationSource &&
-          other.heat == heat &&
-          other.heatSource == heatSource &&
-          other.id == id &&
-          other.ingredientIds == ingredientIds &&
-          other.instruction == instruction &&
-          other.instructionSource == instructionSource &&
-          other.notes == notes &&
-          other.temperatureCelsius == temperatureCelsius &&
-          other.temperatureSource == temperatureSource &&
-          other.unattended == unattended &&
-          other.why == why;
 
-  @override
-  int get hashCode =>
-      (action == null ? 0 : action.hashCode) +
-      (cookware == null ? 0 : cookware.hashCode) +
-      dependsOn.hashCode +
-      (doneness == null ? 0 : doneness.hashCode) +
-      donenessSource.hashCode +
-      durationSeconds.hashCode +
-      durationSource.hashCode +
-      (heat == null ? 0 : heat.hashCode) +
-      heatSource.hashCode +
-      id.hashCode +
-      ingredientIds.hashCode +
-      instruction.hashCode +
-      instructionSource.hashCode +
-      (notes == null ? 0 : notes.hashCode) +
-      (temperatureCelsius == null ? 0 : temperatureCelsius.hashCode) +
-      temperatureSource.hashCode +
-      unattended.hashCode +
-      (why == null ? 0 : why.hashCode);
 
-  factory RecipeStep.fromJson(Map<String, dynamic> json) =>
-      _$RecipeStepFromJson(json);
+
+
+    @override
+    bool operator ==(Object other) => identical(this, other) || other is RecipeStep &&
+      other.action == action &&
+      other.cookware == cookware &&
+      other.dependsOn == dependsOn &&
+      other.doneness == doneness &&
+      other.donenessSource == donenessSource &&
+      other.durationSeconds == durationSeconds &&
+      other.durationSource == durationSource &&
+      other.heat == heat &&
+      other.heatSource == heatSource &&
+      other.id == id &&
+      other.ingredientIds == ingredientIds &&
+      other.instruction == instruction &&
+      other.instructionSource == instructionSource &&
+      other.notes == notes &&
+      other.temperatureCelsius == temperatureCelsius &&
+      other.temperatureSource == temperatureSource &&
+      other.unattended == unattended &&
+      other.why == why;
+
+    @override
+    int get hashCode =>
+        (action == null ? 0 : action.hashCode) +
+        (cookware == null ? 0 : cookware.hashCode) +
+        dependsOn.hashCode +
+        (doneness == null ? 0 : doneness.hashCode) +
+        donenessSource.hashCode +
+        durationSeconds.hashCode +
+        durationSource.hashCode +
+        (heat == null ? 0 : heat.hashCode) +
+        heatSource.hashCode +
+        id.hashCode +
+        ingredientIds.hashCode +
+        instruction.hashCode +
+        instructionSource.hashCode +
+        (notes == null ? 0 : notes.hashCode) +
+        (temperatureCelsius == null ? 0 : temperatureCelsius.hashCode) +
+        temperatureSource.hashCode +
+        unattended.hashCode +
+        (why == null ? 0 : why.hashCode);
+
+  factory RecipeStep.fromJson(Map<String, dynamic> json) => _$RecipeStepFromJson(json);
 
   Map<String, dynamic> toJson() => _$RecipeStepToJson(this);
 
@@ -178,4 +331,6 @@ class RecipeStep {
   String toString() {
     return toJson().toString();
   }
+
 }
+

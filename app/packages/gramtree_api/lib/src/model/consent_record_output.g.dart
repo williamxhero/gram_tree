@@ -117,29 +117,39 @@ extension $ConsentRecordOutputCopyWith on ConsentRecordOutput {
 // JsonSerializableGenerator
 // **************************************************************************
 
-ConsentRecordOutput _$ConsentRecordOutputFromJson(
-  Map<String, dynamic> json,
-) => $checkedCreate('ConsentRecordOutput', json, ($checkedConvert) {
-  $checkKeys(
-    json,
-    requiredKeys: const ['action', 'id', 'kind', 'occurred_at', 'version'],
-  );
-  final val = ConsentRecordOutput(
-    action: $checkedConvert(
-      'action',
-      (v) => $enumDecode(_$ConsentRecordOutputActionEnumEnumMap, v),
-    ),
-    deviceId: $checkedConvert('device_id', (v) => v as String?),
-    id: $checkedConvert('id', (v) => v as String),
-    kind: $checkedConvert(
-      'kind',
-      (v) => $enumDecode(_$ConsentRecordOutputKindEnumEnumMap, v),
-    ),
-    occurredAt: $checkedConvert('occurred_at', (v) => v as String),
-    version: $checkedConvert('version', (v) => v as String),
-  );
-  return val;
-}, fieldKeyMap: const {'deviceId': 'device_id', 'occurredAt': 'occurred_at'});
+ConsentRecordOutput _$ConsentRecordOutputFromJson(Map<String, dynamic> json) =>
+    $checkedCreate(
+      'ConsentRecordOutput',
+      json,
+      ($checkedConvert) {
+        $checkKeys(
+          json,
+          requiredKeys: const [
+            'action',
+            'id',
+            'kind',
+            'occurred_at',
+            'version',
+          ],
+        );
+        final val = ConsentRecordOutput(
+          action: $checkedConvert(
+            'action',
+            (v) => $enumDecode(_$ConsentRecordOutputActionEnumEnumMap, v),
+          ),
+          deviceId: $checkedConvert('device_id', (v) => v as String?),
+          id: $checkedConvert('id', (v) => v as String),
+          kind: $checkedConvert(
+            'kind',
+            (v) => $enumDecode(_$ConsentRecordOutputKindEnumEnumMap, v),
+          ),
+          occurredAt: $checkedConvert('occurred_at', (v) => v as String),
+          version: $checkedConvert('version', (v) => v as String),
+        );
+        return val;
+      },
+      fieldKeyMap: const {'deviceId': 'device_id', 'occurredAt': 'occurred_at'},
+    );
 
 Map<String, dynamic> _$ConsentRecordOutputToJson(
   ConsentRecordOutput instance,

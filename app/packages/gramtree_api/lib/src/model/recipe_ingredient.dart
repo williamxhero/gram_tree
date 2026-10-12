@@ -10,6 +10,7 @@ import 'package:json_annotation/json_annotation.dart';
 
 part 'recipe_ingredient.g.dart';
 
+
 @CopyWith()
 @JsonSerializable(
   checked: true,
@@ -20,62 +21,108 @@ part 'recipe_ingredient.g.dart';
 class RecipeIngredient {
   /// Returns a new [RecipeIngredient] instance.
   RecipeIngredient({
-    this.baseQuantity,
 
-    this.baseUnit,
+     this.baseQuantity,
 
-    required this.displayName,
+     this.baseUnit,
 
-    this.flavorContribution,
+    required  this.displayName,
 
-    this.flavorSource,
+     this.flavorContribution,
 
-    this.functional = false,
+     this.flavorSource,
 
-    this.functionalSource,
+     this.functional = false,
 
-    this.group,
+     this.functionalSource,
 
-    required this.id,
+     this.group,
 
-    this.ingredientId,
+    required  this.id,
 
-    this.measureInputToken,
+     this.ingredientId,
 
-    this.optional = false,
+     this.measureInputToken,
 
-    this.preparation,
+     this.optional = false,
 
-    this.preparationSource,
+     this.preparation,
 
-    required this.quantity,
+     this.preparationSource,
 
-    this.quantitySource,
+    required  this.quantity,
 
-    this.replacement,
+     this.quantitySource,
 
-    this.scalingMode,
+     this.replacement,
 
-    required this.unit,
+     this.scalingMode,
+
+    required  this.unit,
   });
 
-  /// 换算后的基础数量
-  @JsonKey(name: r'base_quantity', required: false, includeIfNull: false)
+      /// 换算后的基础数量
+  @JsonKey(
+    
+    name: r'base_quantity',
+    required: false,
+    includeIfNull: false,
+  )
+
+
   final num? baseQuantity;
 
-  /// 换算后的基础单位
-  @JsonKey(name: r'base_unit', required: false, includeIfNull: false)
+
+
+      /// 换算后的基础单位
+  @JsonKey(
+    
+    name: r'base_unit',
+    required: false,
+    includeIfNull: false,
+  )
+
+
   final RecipeIngredientBaseUnitEnum? baseUnit;
 
-  @JsonKey(name: r'display_name', required: true, includeIfNull: false)
+
+
+  @JsonKey(
+    
+    name: r'display_name',
+    required: true,
+    includeIfNull: false,
+  )
+
+
   final String displayName;
 
-  /// 本菜谱实际采用的味型贡献；未填写不代表零贡献
-  @JsonKey(name: r'flavor_contribution', required: false, includeIfNull: false)
+
+
+      /// 本菜谱实际采用的味型贡献；未填写不代表零贡献
+  @JsonKey(
+    
+    name: r'flavor_contribution',
+    required: false,
+    includeIfNull: false,
+  )
+
+
   final RecipeFlavorContribution? flavorContribution;
 
-  @JsonKey(name: r'flavor_source', required: false, includeIfNull: false)
+
+
+  @JsonKey(
+    
+    name: r'flavor_source',
+    required: false,
+    includeIfNull: false,
+  )
+
+
   final ValueSource? flavorSource;
+
+
 
   @JsonKey(
     defaultValue: false,
@@ -83,26 +130,75 @@ class RecipeIngredient {
     required: false,
     includeIfNull: false,
   )
+
+
   final bool? functional;
 
-  @JsonKey(name: r'functional_source', required: false, includeIfNull: false)
+
+
+  @JsonKey(
+    
+    name: r'functional_source',
+    required: false,
+    includeIfNull: false,
+  )
+
+
   final ValueSource? functionalSource;
 
-  /// 食材分组
-  @JsonKey(name: r'group', required: false, includeIfNull: false)
+
+
+      /// 食材分组
+  @JsonKey(
+    
+    name: r'group',
+    required: false,
+    includeIfNull: false,
+  )
+
+
   final String? group;
 
-  /// 菜谱内食材 ID
-  @JsonKey(name: r'id', required: true, includeIfNull: false)
+
+
+      /// 菜谱内食材 ID
+  @JsonKey(
+    
+    name: r'id',
+    required: true,
+    includeIfNull: false,
+  )
+
+
   final String id;
 
-  /// 标准食材 UUID；为空表示未收录
-  @JsonKey(name: r'ingredient_id', required: false, includeIfNull: false)
+
+
+      /// 标准食材 UUID；为空表示未收录
+  @JsonKey(
+    
+    name: r'ingredient_id',
+    required: false,
+    includeIfNull: false,
+  )
+
+
   final String? ingredientId;
 
-  /// 本人确认的量具换算凭据；基础量与来源不随量具校准改变
-  @JsonKey(name: r'measure_input_token', required: false, includeIfNull: false)
+
+
+      /// 本人确认的量具换算凭据；基础量与来源不随量具校准改变
+  @JsonKey(
+    
+    name: r'measure_input_token',
+    required: false,
+    includeIfNull: false,
+  )
+
+
   final String? measureInputToken;
+
+
 
   @JsonKey(
     defaultValue: false,
@@ -110,81 +206,147 @@ class RecipeIngredient {
     required: false,
     includeIfNull: false,
   )
+
+
   final bool? optional;
 
-  /// 处理方式
-  @JsonKey(name: r'preparation', required: false, includeIfNull: false)
+
+
+      /// 处理方式
+  @JsonKey(
+    
+    name: r'preparation',
+    required: false,
+    includeIfNull: false,
+  )
+
+
   final String? preparation;
 
-  @JsonKey(name: r'preparation_source', required: false, includeIfNull: false)
+
+
+  @JsonKey(
+    
+    name: r'preparation_source',
+    required: false,
+    includeIfNull: false,
+  )
+
+
   final ValueSource? preparationSource;
 
-  // minimum: 0.0
-  // maximum: 10000000
-  @JsonKey(name: r'quantity', required: true, includeIfNull: false)
+
+
+          // minimum: 0.0
+          // maximum: 10000000
+  @JsonKey(
+    
+    name: r'quantity',
+    required: true,
+    includeIfNull: false,
+  )
+
+
   final num quantity;
 
-  @JsonKey(name: r'quantity_source', required: false, includeIfNull: false)
+
+
+  @JsonKey(
+    
+    name: r'quantity_source',
+    required: false,
+    includeIfNull: false,
+  )
+
+
   final ValueSource? quantitySource;
 
-  @JsonKey(name: r'replacement', required: false, includeIfNull: false)
+
+
+  @JsonKey(
+    
+    name: r'replacement',
+    required: false,
+    includeIfNull: false,
+  )
+
+
   final Object? replacement;
 
-  /// 缩放方式；不填时用标准食材库的默认值，未收录的食材按比例
-  @JsonKey(name: r'scaling_mode', required: false, includeIfNull: false)
+
+
+      /// 缩放方式；不填时用标准食材库的默认值，未收录的食材按比例
+  @JsonKey(
+    
+    name: r'scaling_mode',
+    required: false,
+    includeIfNull: false,
+  )
+
+
   final RecipeIngredientScalingModeEnum? scalingMode;
 
-  @JsonKey(name: r'unit', required: true, includeIfNull: false)
+
+
+  @JsonKey(
+    
+    name: r'unit',
+    required: true,
+    includeIfNull: false,
+  )
+
+
   final String unit;
 
-  @override
-  bool operator ==(Object other) =>
-      identical(this, other) ||
-      other is RecipeIngredient &&
-          other.baseQuantity == baseQuantity &&
-          other.baseUnit == baseUnit &&
-          other.displayName == displayName &&
-          other.flavorContribution == flavorContribution &&
-          other.flavorSource == flavorSource &&
-          other.functional == functional &&
-          other.functionalSource == functionalSource &&
-          other.group == group &&
-          other.id == id &&
-          other.ingredientId == ingredientId &&
-          other.measureInputToken == measureInputToken &&
-          other.optional == optional &&
-          other.preparation == preparation &&
-          other.preparationSource == preparationSource &&
-          other.quantity == quantity &&
-          other.quantitySource == quantitySource &&
-          other.replacement == replacement &&
-          other.scalingMode == scalingMode &&
-          other.unit == unit;
 
-  @override
-  int get hashCode =>
-      baseQuantity.hashCode +
-      (baseUnit == null ? 0 : baseUnit.hashCode) +
-      displayName.hashCode +
-      flavorContribution.hashCode +
-      flavorSource.hashCode +
-      functional.hashCode +
-      functionalSource.hashCode +
-      group.hashCode +
-      id.hashCode +
-      ingredientId.hashCode +
-      measureInputToken.hashCode +
-      optional.hashCode +
-      preparation.hashCode +
-      preparationSource.hashCode +
-      quantity.hashCode +
-      quantitySource.hashCode +
-      replacement.hashCode +
-      (scalingMode == null ? 0 : scalingMode.hashCode) +
-      unit.hashCode;
 
-  factory RecipeIngredient.fromJson(Map<String, dynamic> json) =>
-      _$RecipeIngredientFromJson(json);
+
+
+    @override
+    bool operator ==(Object other) => identical(this, other) || other is RecipeIngredient &&
+      other.baseQuantity == baseQuantity &&
+      other.baseUnit == baseUnit &&
+      other.displayName == displayName &&
+      other.flavorContribution == flavorContribution &&
+      other.flavorSource == flavorSource &&
+      other.functional == functional &&
+      other.functionalSource == functionalSource &&
+      other.group == group &&
+      other.id == id &&
+      other.ingredientId == ingredientId &&
+      other.measureInputToken == measureInputToken &&
+      other.optional == optional &&
+      other.preparation == preparation &&
+      other.preparationSource == preparationSource &&
+      other.quantity == quantity &&
+      other.quantitySource == quantitySource &&
+      other.replacement == replacement &&
+      other.scalingMode == scalingMode &&
+      other.unit == unit;
+
+    @override
+    int get hashCode =>
+        baseQuantity.hashCode +
+        (baseUnit == null ? 0 : baseUnit.hashCode) +
+        displayName.hashCode +
+        flavorContribution.hashCode +
+        flavorSource.hashCode +
+        functional.hashCode +
+        functionalSource.hashCode +
+        group.hashCode +
+        id.hashCode +
+        ingredientId.hashCode +
+        measureInputToken.hashCode +
+        optional.hashCode +
+        preparation.hashCode +
+        preparationSource.hashCode +
+        quantity.hashCode +
+        quantitySource.hashCode +
+        replacement.hashCode +
+        (scalingMode == null ? 0 : scalingMode.hashCode) +
+        unit.hashCode;
+
+  factory RecipeIngredient.fromJson(Map<String, dynamic> json) => _$RecipeIngredientFromJson(json);
 
   Map<String, dynamic> toJson() => _$RecipeIngredientToJson(this);
 
@@ -192,48 +354,48 @@ class RecipeIngredient {
   String toString() {
     return toJson().toString();
   }
+
 }
 
 /// 换算后的基础单位
 enum RecipeIngredientBaseUnitEnum {
-  /// 换算后的基础单位
-  @JsonValue(r'g')
-  g(r'g'),
+    /// 换算后的基础单位
+@JsonValue(r'g')
+g(r'g'),
+    /// 换算后的基础单位
+@JsonValue(r'ml')
+ml(r'ml'),
+    /// 换算后的基础单位
+@JsonValue(r'count')
+count(r'count');
 
-  /// 换算后的基础单位
-  @JsonValue(r'ml')
-  ml(r'ml'),
+const RecipeIngredientBaseUnitEnum(this.value);
 
-  /// 换算后的基础单位
-  @JsonValue(r'count')
-  count(r'count');
+final String value;
 
-  const RecipeIngredientBaseUnitEnum(this.value);
-
-  final String value;
-
-  @override
-  String toString() => value;
+@override
+String toString() => value;
 }
+
 
 /// 缩放方式；不填时用标准食材库的默认值，未收录的食材按比例
 enum RecipeIngredientScalingModeEnum {
-  /// 缩放方式；不填时用标准食材库的默认值，未收录的食材按比例
-  @JsonValue(r'proportional')
-  proportional(r'proportional'),
+    /// 缩放方式；不填时用标准食材库的默认值，未收录的食材按比例
+@JsonValue(r'proportional')
+proportional(r'proportional'),
+    /// 缩放方式；不填时用标准食材库的默认值，未收录的食材按比例
+@JsonValue(r'unchanged')
+unchanged(r'unchanged'),
+    /// 缩放方式；不填时用标准食材库的默认值，未收录的食材按比例
+@JsonValue(r'round')
+round(r'round');
 
-  /// 缩放方式；不填时用标准食材库的默认值，未收录的食材按比例
-  @JsonValue(r'unchanged')
-  unchanged(r'unchanged'),
+const RecipeIngredientScalingModeEnum(this.value);
 
-  /// 缩放方式；不填时用标准食材库的默认值，未收录的食材按比例
-  @JsonValue(r'round')
-  round(r'round');
+final String value;
 
-  const RecipeIngredientScalingModeEnum(this.value);
-
-  final String value;
-
-  @override
-  String toString() => value;
+@override
+String toString() => value;
 }
+
+

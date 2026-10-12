@@ -21,6 +21,7 @@ import 'package:gramtree_api/src/model/search_query.dart';
 import 'package:gramtree_api/src/model/search_result.dart';
 
 class IngredientsApi {
+
   final Dio _dio;
 
   const IngredientsApi(this._dio);
@@ -29,7 +30,7 @@ class IngredientsApi {
   /// 按一组 ID 读取多种食材的完整数据（含详细属性和估算标记）。  命中已合并的旧 ID 时返回合并后的新食材，并在 &#x60;requested_id&#x60; 里标明是从哪个旧 ID 转过来的； 库里没有的 ID 收在 &#x60;missing_ids&#x60; 里单独返回，不让整次请求失败。
   ///
   /// Parameters:
-  /// * [batchRequest]
+  /// * [batchRequest] 
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -39,7 +40,7 @@ class IngredientsApi {
   ///
   /// Returns a [Future] containing a [Response] with a [BatchResponse] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<BatchResponse>> batchGetIngredients({
+  Future<Response<BatchResponse>> batchGetIngredients({ 
     required BatchRequest batchRequest,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -51,8 +52,13 @@ class IngredientsApi {
     final _path = r'/v1/ingredients/batch';
     final _options = Options(
       method: r'POST',
-      headers: <String, dynamic>{...?headers},
-      extra: <String, dynamic>{'secure': <Map<String, String>>[], ...?extra},
+      headers: <String, dynamic>{
+        ...?headers,
+      },
+      extra: <String, dynamic>{
+        'secure': <Map<String, String>>[],
+        ...?extra,
+      },
       contentType: 'application/json',
       validateStatus: validateStatus,
     );
@@ -60,10 +66,13 @@ class IngredientsApi {
     dynamic _bodyData;
 
     try {
-      _bodyData = jsonEncode(batchRequest);
-    } catch (error, stackTrace) {
+_bodyData=jsonEncode(batchRequest);
+    } catch(error, stackTrace) {
       throw DioException(
-        requestOptions: _options.compose(_dio.options, _path),
+         requestOptions: _options.compose(
+          _dio.options,
+          _path,
+        ),
         type: DioExceptionType.unknown,
         error: error,
         stackTrace: stackTrace,
@@ -82,14 +91,9 @@ class IngredientsApi {
     BatchResponse? _responseData;
 
     try {
-      final rawData = _response.data;
-      _responseData = rawData == null
-          ? null
-          : deserialize<BatchResponse, BatchResponse>(
-              rawData,
-              'BatchResponse',
-              growable: true,
-            );
+final rawData = _response.data;
+_responseData = rawData == null ? null : deserialize<BatchResponse, BatchResponse>(rawData, 'BatchResponse', growable: true);
+
     } catch (error, stackTrace) {
       throw DioException(
         requestOptions: _response.requestOptions,
@@ -126,7 +130,7 @@ class IngredientsApi {
   ///
   /// Returns a [Future] containing a [Response] with a [BatchResponse] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<BatchResponse>> batchGetIngredientsByQuery({
+  Future<Response<BatchResponse>> batchGetIngredientsByQuery({ 
     required String ids,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -138,12 +142,19 @@ class IngredientsApi {
     final _path = r'/v1/ingredients/batch';
     final _options = Options(
       method: r'GET',
-      headers: <String, dynamic>{...?headers},
-      extra: <String, dynamic>{'secure': <Map<String, String>>[], ...?extra},
+      headers: <String, dynamic>{
+        ...?headers,
+      },
+      extra: <String, dynamic>{
+        'secure': <Map<String, String>>[],
+        ...?extra,
+      },
       validateStatus: validateStatus,
     );
 
-    final _queryParameters = <String, dynamic>{r'ids': ids};
+    final _queryParameters = <String, dynamic>{
+      r'ids': ids,
+    };
 
     final _response = await _dio.request<Object>(
       _path,
@@ -157,14 +168,9 @@ class IngredientsApi {
     BatchResponse? _responseData;
 
     try {
-      final rawData = _response.data;
-      _responseData = rawData == null
-          ? null
-          : deserialize<BatchResponse, BatchResponse>(
-              rawData,
-              'BatchResponse',
-              growable: true,
-            );
+final rawData = _response.data;
+_responseData = rawData == null ? null : deserialize<BatchResponse, BatchResponse>(rawData, 'BatchResponse', growable: true);
+
     } catch (error, stackTrace) {
       throw DioException(
         requestOptions: _response.requestOptions,
@@ -191,7 +197,7 @@ class IngredientsApi {
   /// 读取一种食材的完整数据。如果这个 ID 已经合并到另一个,自动返回合并后的食材。  没经人工校对的属性带 &#x60;estimate: true&#x60;，计算和显示时按估算处理。
   ///
   /// Parameters:
-  /// * [ingredientId]
+  /// * [ingredientId] 
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -201,7 +207,7 @@ class IngredientsApi {
   ///
   /// Returns a [Future] containing a [Response] with a [IngredientDetail] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<IngredientDetail>> getIngredient({
+  Future<Response<IngredientDetail>> getIngredient({ 
     required String ingredientId,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -210,16 +216,16 @@ class IngredientsApi {
     ProgressCallback? onSendProgress,
     ProgressCallback? onReceiveProgress,
   }) async {
-    final _path = r'/v1/ingredients/{ingredient_id}'.replaceAll(
-      '{'
-      r'ingredient_id'
-      '}',
-      ingredientId.toString(),
-    );
+    final _path = r'/v1/ingredients/{ingredient_id}'.replaceAll('{' r'ingredient_id' '}', ingredientId.toString());
     final _options = Options(
       method: r'GET',
-      headers: <String, dynamic>{...?headers},
-      extra: <String, dynamic>{'secure': <Map<String, String>>[], ...?extra},
+      headers: <String, dynamic>{
+        ...?headers,
+      },
+      extra: <String, dynamic>{
+        'secure': <Map<String, String>>[],
+        ...?extra,
+      },
       validateStatus: validateStatus,
     );
 
@@ -234,14 +240,9 @@ class IngredientsApi {
     IngredientDetail? _responseData;
 
     try {
-      final rawData = _response.data;
-      _responseData = rawData == null
-          ? null
-          : deserialize<IngredientDetail, IngredientDetail>(
-              rawData,
-              'IngredientDetail',
-              growable: true,
-            );
+final rawData = _response.data;
+_responseData = rawData == null ? null : deserialize<IngredientDetail, IngredientDetail>(rawData, 'IngredientDetail', growable: true);
+
     } catch (error, stackTrace) {
       throw DioException(
         requestOptions: _response.requestOptions,
@@ -278,7 +279,7 @@ class IngredientsApi {
   ///
   /// Returns a [Future] containing a [Response] with a [ChangesResponse] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<ChangesResponse>> getIngredientChanges({
+  Future<Response<ChangesResponse>> getIngredientChanges({ 
     String? sinceVersion,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -290,12 +291,19 @@ class IngredientsApi {
     final _path = r'/v1/ingredients/changes';
     final _options = Options(
       method: r'GET',
-      headers: <String, dynamic>{...?headers},
-      extra: <String, dynamic>{'secure': <Map<String, String>>[], ...?extra},
+      headers: <String, dynamic>{
+        ...?headers,
+      },
+      extra: <String, dynamic>{
+        'secure': <Map<String, String>>[],
+        ...?extra,
+      },
       validateStatus: validateStatus,
     );
 
-    final _queryParameters = <String, dynamic>{r'since_version': sinceVersion};
+    final _queryParameters = <String, dynamic>{
+      r'since_version': sinceVersion,
+    };
 
     final _response = await _dio.request<Object>(
       _path,
@@ -309,14 +317,9 @@ class IngredientsApi {
     ChangesResponse? _responseData;
 
     try {
-      final rawData = _response.data;
-      _responseData = rawData == null
-          ? null
-          : deserialize<ChangesResponse, ChangesResponse>(
-              rawData,
-              'ChangesResponse',
-              growable: true,
-            );
+final rawData = _response.data;
+_responseData = rawData == null ? null : deserialize<ChangesResponse, ChangesResponse>(rawData, 'ChangesResponse', growable: true);
+
     } catch (error, stackTrace) {
       throw DioException(
         requestOptions: _response.requestOptions,
@@ -354,7 +357,7 @@ class IngredientsApi {
   ///
   /// Returns a [Future] containing a [Response] with a [PageUnrecordedIngredientItem] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<PageUnrecordedIngredientItem>> listUnrecordedIngredients({
+  Future<Response<PageUnrecordedIngredientItem>> listUnrecordedIngredients({ 
     String? cursor,
     int? limit = 20,
     CancelToken? cancelToken,
@@ -367,10 +370,16 @@ class IngredientsApi {
     final _path = r'/v1/ingredients/unrecorded';
     final _options = Options(
       method: r'GET',
-      headers: <String, dynamic>{...?headers},
+      headers: <String, dynamic>{
+        ...?headers,
+      },
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
-          {'type': 'http', 'scheme': 'bearer', 'name': 'HTTPBearer'},
+          {
+            'type': 'http',
+            'scheme': 'bearer',
+            'name': 'HTTPBearer',
+          },
         ],
         ...?extra,
       },
@@ -394,13 +403,9 @@ class IngredientsApi {
     PageUnrecordedIngredientItem? _responseData;
 
     try {
-      final rawData = _response.data;
-      _responseData = rawData == null
-          ? null
-          : deserialize<
-              PageUnrecordedIngredientItem,
-              PageUnrecordedIngredientItem
-            >(rawData, 'PageUnrecordedIngredientItem', growable: true);
+final rawData = _response.data;
+_responseData = rawData == null ? null : deserialize<PageUnrecordedIngredientItem, PageUnrecordedIngredientItem>(rawData, 'PageUnrecordedIngredientItem', growable: true);
+
     } catch (error, stackTrace) {
       throw DioException(
         requestOptions: _response.requestOptions,
@@ -427,7 +432,7 @@ class IngredientsApi {
   /// 把一批食材名称归一到标准 ID，并尽力记录未收录名称。
   ///
   /// Parameters:
-  /// * [normalizeRequest]
+  /// * [normalizeRequest] 
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -437,7 +442,7 @@ class IngredientsApi {
   ///
   /// Returns a [Future] containing a [Response] with a [NormalizeResponse] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<NormalizeResponse>> normalizeIngredients({
+  Future<Response<NormalizeResponse>> normalizeIngredients({ 
     required NormalizeRequest normalizeRequest,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -449,8 +454,13 @@ class IngredientsApi {
     final _path = r'/v1/ingredients/normalize';
     final _options = Options(
       method: r'POST',
-      headers: <String, dynamic>{...?headers},
-      extra: <String, dynamic>{'secure': <Map<String, String>>[], ...?extra},
+      headers: <String, dynamic>{
+        ...?headers,
+      },
+      extra: <String, dynamic>{
+        'secure': <Map<String, String>>[],
+        ...?extra,
+      },
       contentType: 'application/json',
       validateStatus: validateStatus,
     );
@@ -458,10 +468,13 @@ class IngredientsApi {
     dynamic _bodyData;
 
     try {
-      _bodyData = jsonEncode(normalizeRequest);
-    } catch (error, stackTrace) {
+_bodyData=jsonEncode(normalizeRequest);
+    } catch(error, stackTrace) {
       throw DioException(
-        requestOptions: _options.compose(_dio.options, _path),
+         requestOptions: _options.compose(
+          _dio.options,
+          _path,
+        ),
         type: DioExceptionType.unknown,
         error: error,
         stackTrace: stackTrace,
@@ -480,14 +493,9 @@ class IngredientsApi {
     NormalizeResponse? _responseData;
 
     try {
-      final rawData = _response.data;
-      _responseData = rawData == null
-          ? null
-          : deserialize<NormalizeResponse, NormalizeResponse>(
-              rawData,
-              'NormalizeResponse',
-              growable: true,
-            );
+final rawData = _response.data;
+_responseData = rawData == null ? null : deserialize<NormalizeResponse, NormalizeResponse>(rawData, 'NormalizeResponse', growable: true);
+
     } catch (error, stackTrace) {
       throw DioException(
         requestOptions: _response.requestOptions,
@@ -514,7 +522,7 @@ class IngredientsApi {
   /// 搜索食材并按匹配质量返回稳定分页结果。
   ///
   /// Parameters:
-  /// * [searchQuery]
+  /// * [searchQuery] 
   /// * [cursor] - 上一页返回的 next_cursor
   /// * [limit] - 每页条数，上限见配置项 api.page_size_max
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
@@ -526,7 +534,7 @@ class IngredientsApi {
   ///
   /// Returns a [Future] containing a [Response] with a [SearchResult] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<SearchResult>> searchIngredients({
+  Future<Response<SearchResult>> searchIngredients({ 
     required SearchQuery searchQuery,
     String? cursor,
     int? limit = 20,
@@ -540,8 +548,13 @@ class IngredientsApi {
     final _path = r'/v1/ingredients/search';
     final _options = Options(
       method: r'POST',
-      headers: <String, dynamic>{...?headers},
-      extra: <String, dynamic>{'secure': <Map<String, String>>[], ...?extra},
+      headers: <String, dynamic>{
+        ...?headers,
+      },
+      extra: <String, dynamic>{
+        'secure': <Map<String, String>>[],
+        ...?extra,
+      },
       contentType: 'application/json',
       validateStatus: validateStatus,
     );
@@ -554,10 +567,10 @@ class IngredientsApi {
     dynamic _bodyData;
 
     try {
-      _bodyData = jsonEncode(searchQuery);
-    } catch (error, stackTrace) {
+_bodyData=jsonEncode(searchQuery);
+    } catch(error, stackTrace) {
       throw DioException(
-        requestOptions: _options.compose(
+         requestOptions: _options.compose(
           _dio.options,
           _path,
           queryParameters: _queryParameters,
@@ -581,14 +594,9 @@ class IngredientsApi {
     SearchResult? _responseData;
 
     try {
-      final rawData = _response.data;
-      _responseData = rawData == null
-          ? null
-          : deserialize<SearchResult, SearchResult>(
-              rawData,
-              'SearchResult',
-              growable: true,
-            );
+final rawData = _response.data;
+_responseData = rawData == null ? null : deserialize<SearchResult, SearchResult>(rawData, 'SearchResult', growable: true);
+
     } catch (error, stackTrace) {
       throw DioException(
         requestOptions: _response.requestOptions,
@@ -610,4 +618,5 @@ class IngredientsApi {
       extra: _response.extra,
     );
   }
+
 }

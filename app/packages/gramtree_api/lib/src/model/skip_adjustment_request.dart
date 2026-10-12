@@ -8,6 +8,7 @@ import 'package:json_annotation/json_annotation.dart';
 
 part 'skip_adjustment_request.g.dart';
 
+
 @CopyWith()
 @JsonSerializable(
   checked: true,
@@ -17,22 +18,35 @@ part 'skip_adjustment_request.g.dart';
 )
 class SkipAdjustmentRequest {
   /// Returns a new [SkipAdjustmentRequest] instance.
-  SkipAdjustmentRequest({required this.componentId});
+  SkipAdjustmentRequest({
 
-  /// 要去掉来源调整的组件实例 ID
-  @JsonKey(name: r'component_id', required: true, includeIfNull: false)
+    required  this.componentId,
+  });
+
+      /// 要去掉来源调整的组件实例 ID
+  @JsonKey(
+    
+    name: r'component_id',
+    required: true,
+    includeIfNull: false,
+  )
+
+
   final String componentId;
 
-  @override
-  bool operator ==(Object other) =>
-      identical(this, other) ||
-      other is SkipAdjustmentRequest && other.componentId == componentId;
 
-  @override
-  int get hashCode => componentId.hashCode;
 
-  factory SkipAdjustmentRequest.fromJson(Map<String, dynamic> json) =>
-      _$SkipAdjustmentRequestFromJson(json);
+
+
+    @override
+    bool operator ==(Object other) => identical(this, other) || other is SkipAdjustmentRequest &&
+      other.componentId == componentId;
+
+    @override
+    int get hashCode =>
+        componentId.hashCode;
+
+  factory SkipAdjustmentRequest.fromJson(Map<String, dynamic> json) => _$SkipAdjustmentRequestFromJson(json);
 
   Map<String, dynamic> toJson() => _$SkipAdjustmentRequestToJson(this);
 
@@ -40,4 +54,6 @@ class SkipAdjustmentRequest {
   String toString() {
     return toJson().toString();
   }
+
 }
+

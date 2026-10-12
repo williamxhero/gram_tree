@@ -8,6 +8,7 @@ import 'package:json_annotation/json_annotation.dart';
 
 part 'analytics_event_in.g.dart';
 
+
 @CopyWith()
 @JsonSerializable(
   checked: true,
@@ -18,63 +19,117 @@ part 'analytics_event_in.g.dart';
 class AnalyticsEventIn {
   /// Returns a new [AnalyticsEventIn] instance.
   AnalyticsEventIn({
-    this.deviceId,
 
-    this.durationMs,
+     this.deviceId,
 
-    required this.eventType,
+     this.durationMs,
 
-    required this.id,
+    required  this.eventType,
 
-    required this.occurredAt,
+    required  this.id,
 
-    required this.target,
+    required  this.occurredAt,
+
+    required  this.target,
   });
 
-  @JsonKey(name: r'device_id', required: false, includeIfNull: false)
+  @JsonKey(
+    
+    name: r'device_id',
+    required: false,
+    includeIfNull: false,
+  )
+
+
   final String? deviceId;
 
-  // minimum: 0
-  // maximum: 600000
-  @JsonKey(name: r'duration_ms', required: false, includeIfNull: false)
+
+
+          // minimum: 0
+          // maximum: 600000
+  @JsonKey(
+    
+    name: r'duration_ms',
+    required: false,
+    includeIfNull: false,
+  )
+
+
   final int? durationMs;
 
-  @JsonKey(name: r'event_type', required: true, includeIfNull: false)
+
+
+  @JsonKey(
+    
+    name: r'event_type',
+    required: true,
+    includeIfNull: false,
+  )
+
+
   final AnalyticsEventInEventTypeEnum eventType;
 
-  /// 客户端生成的 UUID v4，用于去重
-  @JsonKey(name: r'id', required: true, includeIfNull: false)
+
+
+      /// 客户端生成的 UUID v4，用于去重
+  @JsonKey(
+    
+    name: r'id',
+    required: true,
+    includeIfNull: false,
+  )
+
+
   final String id;
 
-  @JsonKey(name: r'occurred_at', required: true, includeIfNull: false)
+
+
+  @JsonKey(
+    
+    name: r'occurred_at',
+    required: true,
+    includeIfNull: false,
+  )
+
+
   final DateTime occurredAt;
 
-  /// 页面或入口标识
-  @JsonKey(name: r'target', required: true, includeIfNull: false)
+
+
+      /// 页面或入口标识
+  @JsonKey(
+    
+    name: r'target',
+    required: true,
+    includeIfNull: false,
+  )
+
+
   final String target;
 
-  @override
-  bool operator ==(Object other) =>
-      identical(this, other) ||
-      other is AnalyticsEventIn &&
-          other.deviceId == deviceId &&
-          other.durationMs == durationMs &&
-          other.eventType == eventType &&
-          other.id == id &&
-          other.occurredAt == occurredAt &&
-          other.target == target;
 
-  @override
-  int get hashCode =>
-      (deviceId == null ? 0 : deviceId.hashCode) +
-      (durationMs == null ? 0 : durationMs.hashCode) +
-      eventType.hashCode +
-      id.hashCode +
-      occurredAt.hashCode +
-      target.hashCode;
 
-  factory AnalyticsEventIn.fromJson(Map<String, dynamic> json) =>
-      _$AnalyticsEventInFromJson(json);
+
+
+    @override
+    bool operator ==(Object other) => identical(this, other) || other is AnalyticsEventIn &&
+      other.deviceId == deviceId &&
+      other.durationMs == durationMs &&
+      other.eventType == eventType &&
+      other.id == id &&
+      other.occurredAt == occurredAt &&
+      other.target == target;
+
+    @override
+    int get hashCode =>
+        (deviceId == null ? 0 : deviceId.hashCode) +
+        (durationMs == null ? 0 : durationMs.hashCode) +
+        eventType.hashCode +
+        id.hashCode +
+        occurredAt.hashCode +
+        target.hashCode;
+
+  factory AnalyticsEventIn.fromJson(Map<String, dynamic> json) => _$AnalyticsEventInFromJson(json);
 
   Map<String, dynamic> toJson() => _$AnalyticsEventInToJson(this);
 
@@ -82,20 +137,24 @@ class AnalyticsEventIn {
   String toString() {
     return toJson().toString();
   }
+
 }
+
 
 enum AnalyticsEventInEventTypeEnum {
-  @JsonValue(r'page_view')
-  pageView(r'page_view'),
-  @JsonValue(r'tap')
-  tap(r'tap'),
-  @JsonValue(r'load_duration')
-  loadDuration(r'load_duration');
+@JsonValue(r'page_view')
+pageView(r'page_view'),
+@JsonValue(r'tap')
+tap(r'tap'),
+@JsonValue(r'load_duration')
+loadDuration(r'load_duration');
 
-  const AnalyticsEventInEventTypeEnum(this.value);
+const AnalyticsEventInEventTypeEnum(this.value);
 
-  final String value;
+final String value;
 
-  @override
-  String toString() => value;
+@override
+String toString() => value;
 }
+
+

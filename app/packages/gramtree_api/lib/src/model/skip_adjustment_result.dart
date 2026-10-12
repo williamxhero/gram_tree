@@ -9,6 +9,7 @@ import 'package:json_annotation/json_annotation.dart';
 
 part 'skip_adjustment_result.g.dart';
 
+
 @CopyWith()
 @JsonSerializable(
   checked: true,
@@ -18,26 +19,50 @@ part 'skip_adjustment_result.g.dart';
 )
 class SkipAdjustmentResult {
   /// Returns a new [SkipAdjustmentResult] instance.
-  SkipAdjustmentResult({required this.componentId, required this.source_});
+  SkipAdjustmentResult({
 
-  @JsonKey(name: r'component_id', required: true, includeIfNull: false)
+    required  this.componentId,
+
+    required  this.source_,
+  });
+
+  @JsonKey(
+    
+    name: r'component_id',
+    required: true,
+    includeIfNull: false,
+  )
+
+
   final String componentId;
 
-  @JsonKey(name: r'source', required: true, includeIfNull: false)
+
+
+  @JsonKey(
+    
+    name: r'source',
+    required: true,
+    includeIfNull: false,
+  )
+
+
   final SourcedValue source_;
 
-  @override
-  bool operator ==(Object other) =>
-      identical(this, other) ||
-      other is SkipAdjustmentResult &&
-          other.componentId == componentId &&
-          other.source_ == source_;
 
-  @override
-  int get hashCode => componentId.hashCode + source_.hashCode;
 
-  factory SkipAdjustmentResult.fromJson(Map<String, dynamic> json) =>
-      _$SkipAdjustmentResultFromJson(json);
+
+
+    @override
+    bool operator ==(Object other) => identical(this, other) || other is SkipAdjustmentResult &&
+      other.componentId == componentId &&
+      other.source_ == source_;
+
+    @override
+    int get hashCode =>
+        componentId.hashCode +
+        source_.hashCode;
+
+  factory SkipAdjustmentResult.fromJson(Map<String, dynamic> json) => _$SkipAdjustmentResultFromJson(json);
 
   Map<String, dynamic> toJson() => _$SkipAdjustmentResultToJson(this);
 
@@ -45,4 +70,6 @@ class SkipAdjustmentResult {
   String toString() {
     return toJson().toString();
   }
+
 }
+

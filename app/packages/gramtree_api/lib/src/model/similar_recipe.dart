@@ -8,6 +8,7 @@ import 'package:json_annotation/json_annotation.dart';
 
 part 'similar_recipe.g.dart';
 
+
 @CopyWith()
 @JsonSerializable(
   checked: true,
@@ -18,59 +19,113 @@ part 'similar_recipe.g.dart';
 class SimilarRecipe {
   /// Returns a new [SimilarRecipe] instance.
   SimilarRecipe({
-    required this.aiAssisted,
 
-    required this.basis,
+    required  this.aiAssisted,
 
-    required this.dishName,
+    required  this.basis,
 
-    required this.recipeId,
+    required  this.dishName,
 
-    required this.servings,
+    required  this.recipeId,
 
-    required this.versionId,
+    required  this.servings,
+
+    required  this.versionId,
   });
 
-  @JsonKey(name: r'ai_assisted', required: true, includeIfNull: false)
+  @JsonKey(
+    
+    name: r'ai_assisted',
+    required: true,
+    includeIfNull: false,
+  )
+
+
   final bool aiAssisted;
 
-  @JsonKey(name: r'basis', required: true, includeIfNull: false)
+
+
+  @JsonKey(
+    
+    name: r'basis',
+    required: true,
+    includeIfNull: false,
+  )
+
+
   final String basis;
 
-  @JsonKey(name: r'dish_name', required: true, includeIfNull: false)
+
+
+  @JsonKey(
+    
+    name: r'dish_name',
+    required: true,
+    includeIfNull: false,
+  )
+
+
   final String dishName;
 
-  @JsonKey(name: r'recipe_id', required: true, includeIfNull: false)
+
+
+  @JsonKey(
+    
+    name: r'recipe_id',
+    required: true,
+    includeIfNull: false,
+  )
+
+
   final String recipeId;
 
-  @JsonKey(name: r'servings', required: true, includeIfNull: false)
+
+
+  @JsonKey(
+    
+    name: r'servings',
+    required: true,
+    includeIfNull: false,
+  )
+
+
   final int servings;
 
-  @JsonKey(name: r'version_id', required: true, includeIfNull: false)
+
+
+  @JsonKey(
+    
+    name: r'version_id',
+    required: true,
+    includeIfNull: false,
+  )
+
+
   final String versionId;
 
-  @override
-  bool operator ==(Object other) =>
-      identical(this, other) ||
-      other is SimilarRecipe &&
-          other.aiAssisted == aiAssisted &&
-          other.basis == basis &&
-          other.dishName == dishName &&
-          other.recipeId == recipeId &&
-          other.servings == servings &&
-          other.versionId == versionId;
 
-  @override
-  int get hashCode =>
-      aiAssisted.hashCode +
-      basis.hashCode +
-      dishName.hashCode +
-      recipeId.hashCode +
-      servings.hashCode +
-      versionId.hashCode;
 
-  factory SimilarRecipe.fromJson(Map<String, dynamic> json) =>
-      _$SimilarRecipeFromJson(json);
+
+
+    @override
+    bool operator ==(Object other) => identical(this, other) || other is SimilarRecipe &&
+      other.aiAssisted == aiAssisted &&
+      other.basis == basis &&
+      other.dishName == dishName &&
+      other.recipeId == recipeId &&
+      other.servings == servings &&
+      other.versionId == versionId;
+
+    @override
+    int get hashCode =>
+        aiAssisted.hashCode +
+        basis.hashCode +
+        dishName.hashCode +
+        recipeId.hashCode +
+        servings.hashCode +
+        versionId.hashCode;
+
+  factory SimilarRecipe.fromJson(Map<String, dynamic> json) => _$SimilarRecipeFromJson(json);
 
   Map<String, dynamic> toJson() => _$SimilarRecipeToJson(this);
 
@@ -78,4 +133,6 @@ class SimilarRecipe {
   String toString() {
     return toJson().toString();
   }
+
 }
+

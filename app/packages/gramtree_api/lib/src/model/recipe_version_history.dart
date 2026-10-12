@@ -9,6 +9,7 @@ import 'package:json_annotation/json_annotation.dart';
 
 part 'recipe_version_history.g.dart';
 
+
 @CopyWith()
 @JsonSerializable(
   checked: true,
@@ -18,27 +19,50 @@ part 'recipe_version_history.g.dart';
 )
 class RecipeVersionHistory {
   /// Returns a new [RecipeVersionHistory] instance.
-  RecipeVersionHistory({required this.items, this.nextCursor});
+  RecipeVersionHistory({
 
-  @JsonKey(name: r'items', required: true, includeIfNull: false)
+    required  this.items,
+
+     this.nextCursor,
+  });
+
+  @JsonKey(
+    
+    name: r'items',
+    required: true,
+    includeIfNull: false,
+  )
+
+
   final List<RecipeVersionSummary> items;
 
-  @JsonKey(name: r'next_cursor', required: false, includeIfNull: false)
+
+
+  @JsonKey(
+    
+    name: r'next_cursor',
+    required: false,
+    includeIfNull: false,
+  )
+
+
   final String? nextCursor;
 
-  @override
-  bool operator ==(Object other) =>
-      identical(this, other) ||
-      other is RecipeVersionHistory &&
-          other.items == items &&
-          other.nextCursor == nextCursor;
 
-  @override
-  int get hashCode =>
-      items.hashCode + (nextCursor == null ? 0 : nextCursor.hashCode);
 
-  factory RecipeVersionHistory.fromJson(Map<String, dynamic> json) =>
-      _$RecipeVersionHistoryFromJson(json);
+
+
+    @override
+    bool operator ==(Object other) => identical(this, other) || other is RecipeVersionHistory &&
+      other.items == items &&
+      other.nextCursor == nextCursor;
+
+    @override
+    int get hashCode =>
+        items.hashCode +
+        (nextCursor == null ? 0 : nextCursor.hashCode);
+
+  factory RecipeVersionHistory.fromJson(Map<String, dynamic> json) => _$RecipeVersionHistoryFromJson(json);
 
   Map<String, dynamic> toJson() => _$RecipeVersionHistoryToJson(this);
 
@@ -46,4 +70,6 @@ class RecipeVersionHistory {
   String toString() {
     return toJson().toString();
   }
+
 }
+

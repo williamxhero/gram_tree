@@ -75,22 +75,27 @@ extension $RecipeComparisonCandidatesCopyWith on RecipeComparisonCandidates {
 
 RecipeComparisonCandidates _$RecipeComparisonCandidatesFromJson(
   Map<String, dynamic> json,
-) => $checkedCreate('RecipeComparisonCandidates', json, ($checkedConvert) {
-  $checkKeys(json, requiredKeys: const ['items']);
-  final val = RecipeComparisonCandidates(
-    items: $checkedConvert(
-      'items',
-      (v) => (v as List<dynamic>)
-          .map(
-            (e) =>
-                RecipeComparisonCandidate.fromJson(e as Map<String, dynamic>),
-          )
-          .toList(),
-    ),
-    nextCursor: $checkedConvert('next_cursor', (v) => v as String?),
-  );
-  return val;
-}, fieldKeyMap: const {'nextCursor': 'next_cursor'});
+) => $checkedCreate(
+  'RecipeComparisonCandidates',
+  json,
+  ($checkedConvert) {
+    $checkKeys(json, requiredKeys: const ['items']);
+    final val = RecipeComparisonCandidates(
+      items: $checkedConvert(
+        'items',
+        (v) => (v as List<dynamic>)
+            .map(
+              (e) =>
+                  RecipeComparisonCandidate.fromJson(e as Map<String, dynamic>),
+            )
+            .toList(),
+      ),
+      nextCursor: $checkedConvert('next_cursor', (v) => v as String?),
+    );
+    return val;
+  },
+  fieldKeyMap: const {'nextCursor': 'next_cursor'},
+);
 
 Map<String, dynamic> _$RecipeComparisonCandidatesToJson(
   RecipeComparisonCandidates instance,

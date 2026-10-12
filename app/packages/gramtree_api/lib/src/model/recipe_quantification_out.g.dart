@@ -113,43 +113,49 @@ extension $RecipeQuantificationOutCopyWith on RecipeQuantificationOut {
 
 RecipeQuantificationOut _$RecipeQuantificationOutFromJson(
   Map<String, dynamic> json,
-) => $checkedCreate('RecipeQuantificationOut', json, ($checkedConvert) {
-  $checkKeys(
-    json,
-    requiredKeys: const [
-      'base_version_id',
-      'detail',
-      'id',
-      'problems',
-      'suggestions',
-    ],
-  );
-  final val = RecipeQuantificationOut(
-    baseVersionId: $checkedConvert('base_version_id', (v) => v as String),
-    detail: $checkedConvert(
-      'detail',
-      (v) => $enumDecode(_$RecipeQuantificationOutDetailEnumEnumMap, v),
-    ),
-    id: $checkedConvert('id', (v) => v as String),
-    problems: $checkedConvert(
-      'problems',
-      (v) => (v as List<dynamic>)
-          .map(
-            (e) => ReproducibilityProblem.fromJson(e as Map<String, dynamic>),
-          )
-          .toList(),
-    ),
-    suggestions: $checkedConvert(
-      'suggestions',
-      (v) => (v as List<dynamic>)
-          .map(
-            (e) => QuantificationSuggestion.fromJson(e as Map<String, dynamic>),
-          )
-          .toList(),
-    ),
-  );
-  return val;
-}, fieldKeyMap: const {'baseVersionId': 'base_version_id'});
+) => $checkedCreate(
+  'RecipeQuantificationOut',
+  json,
+  ($checkedConvert) {
+    $checkKeys(
+      json,
+      requiredKeys: const [
+        'base_version_id',
+        'detail',
+        'id',
+        'problems',
+        'suggestions',
+      ],
+    );
+    final val = RecipeQuantificationOut(
+      baseVersionId: $checkedConvert('base_version_id', (v) => v as String),
+      detail: $checkedConvert(
+        'detail',
+        (v) => $enumDecode(_$RecipeQuantificationOutDetailEnumEnumMap, v),
+      ),
+      id: $checkedConvert('id', (v) => v as String),
+      problems: $checkedConvert(
+        'problems',
+        (v) => (v as List<dynamic>)
+            .map(
+              (e) => ReproducibilityProblem.fromJson(e as Map<String, dynamic>),
+            )
+            .toList(),
+      ),
+      suggestions: $checkedConvert(
+        'suggestions',
+        (v) => (v as List<dynamic>)
+            .map(
+              (e) =>
+                  QuantificationSuggestion.fromJson(e as Map<String, dynamic>),
+            )
+            .toList(),
+      ),
+    );
+    return val;
+  },
+  fieldKeyMap: const {'baseVersionId': 'base_version_id'},
+);
 
 Map<String, dynamic> _$RecipeQuantificationOutToJson(
   RecipeQuantificationOut instance,

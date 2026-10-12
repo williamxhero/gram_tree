@@ -12,6 +12,7 @@ import 'package:json_annotation/json_annotation.dart';
 
 part 'mold_conversion.g.dart';
 
+
 @CopyWith()
 @JsonSerializable(
   checked: true,
@@ -22,59 +23,113 @@ part 'mold_conversion.g.dart';
 class MoldConversion {
   /// Returns a new [MoldConversion] instance.
   MoldConversion({
-    required this.areaRatio,
 
-    required this.ingredients,
+    required  this.areaRatio,
 
-    required this.originalMold,
+    required  this.ingredients,
 
-    required this.steps,
+    required  this.originalMold,
 
-    required this.targetMold,
+    required  this.steps,
 
-    required this.warnings,
+    required  this.targetMold,
+
+    required  this.warnings,
   });
 
-  @JsonKey(name: r'area_ratio', required: true, includeIfNull: false)
+  @JsonKey(
+    
+    name: r'area_ratio',
+    required: true,
+    includeIfNull: false,
+  )
+
+
   final num areaRatio;
 
-  @JsonKey(name: r'ingredients', required: true, includeIfNull: false)
+
+
+  @JsonKey(
+    
+    name: r'ingredients',
+    required: true,
+    includeIfNull: false,
+  )
+
+
   final List<MoldConversionIngredient> ingredients;
 
-  @JsonKey(name: r'original_mold', required: true, includeIfNull: false)
+
+
+  @JsonKey(
+    
+    name: r'original_mold',
+    required: true,
+    includeIfNull: false,
+  )
+
+
   final MoldSpec originalMold;
 
-  @JsonKey(name: r'steps', required: true, includeIfNull: false)
+
+
+  @JsonKey(
+    
+    name: r'steps',
+    required: true,
+    includeIfNull: false,
+  )
+
+
   final List<MoldConversionStep> steps;
 
-  @JsonKey(name: r'target_mold', required: true, includeIfNull: false)
+
+
+  @JsonKey(
+    
+    name: r'target_mold',
+    required: true,
+    includeIfNull: false,
+  )
+
+
   final MoldSpec targetMold;
 
-  @JsonKey(name: r'warnings', required: true, includeIfNull: false)
+
+
+  @JsonKey(
+    
+    name: r'warnings',
+    required: true,
+    includeIfNull: false,
+  )
+
+
   final List<MoldConversionWarning> warnings;
 
-  @override
-  bool operator ==(Object other) =>
-      identical(this, other) ||
-      other is MoldConversion &&
-          other.areaRatio == areaRatio &&
-          other.ingredients == ingredients &&
-          other.originalMold == originalMold &&
-          other.steps == steps &&
-          other.targetMold == targetMold &&
-          other.warnings == warnings;
 
-  @override
-  int get hashCode =>
-      areaRatio.hashCode +
-      ingredients.hashCode +
-      originalMold.hashCode +
-      steps.hashCode +
-      targetMold.hashCode +
-      warnings.hashCode;
 
-  factory MoldConversion.fromJson(Map<String, dynamic> json) =>
-      _$MoldConversionFromJson(json);
+
+
+    @override
+    bool operator ==(Object other) => identical(this, other) || other is MoldConversion &&
+      other.areaRatio == areaRatio &&
+      other.ingredients == ingredients &&
+      other.originalMold == originalMold &&
+      other.steps == steps &&
+      other.targetMold == targetMold &&
+      other.warnings == warnings;
+
+    @override
+    int get hashCode =>
+        areaRatio.hashCode +
+        ingredients.hashCode +
+        originalMold.hashCode +
+        steps.hashCode +
+        targetMold.hashCode +
+        warnings.hashCode;
+
+  factory MoldConversion.fromJson(Map<String, dynamic> json) => _$MoldConversionFromJson(json);
 
   Map<String, dynamic> toJson() => _$MoldConversionToJson(this);
 
@@ -82,4 +137,6 @@ class MoldConversion {
   String toString() {
     return toJson().toString();
   }
+
 }
+

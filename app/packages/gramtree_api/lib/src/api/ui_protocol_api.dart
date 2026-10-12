@@ -16,15 +16,16 @@ import 'package:gramtree_api/src/model/skip_adjustment_request.dart';
 import 'package:gramtree_api/src/model/skip_adjustment_result.dart';
 
 class UiProtocolApi {
+
   final Dio _dio;
 
   const UiProtocolApi(this._dio);
 
   /// 按 App 声明的协议版本和组件清单，下发一份页面描述（需要登录）
-  ///
+  /// 
   ///
   /// Parameters:
-  /// * [composeRequest]
+  /// * [composeRequest] 
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -34,7 +35,7 @@ class UiProtocolApi {
   ///
   /// Returns a [Future] containing a [Response] with a [PageDescription] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<PageDescription>> compose({
+  Future<Response<PageDescription>> compose({ 
     required ComposeRequest composeRequest,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -46,10 +47,16 @@ class UiProtocolApi {
     final _path = r'/v1/ui/compositions';
     final _options = Options(
       method: r'POST',
-      headers: <String, dynamic>{...?headers},
+      headers: <String, dynamic>{
+        ...?headers,
+      },
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
-          {'type': 'http', 'scheme': 'bearer', 'name': 'HTTPBearer'},
+          {
+            'type': 'http',
+            'scheme': 'bearer',
+            'name': 'HTTPBearer',
+          },
         ],
         ...?extra,
       },
@@ -60,10 +67,13 @@ class UiProtocolApi {
     dynamic _bodyData;
 
     try {
-      _bodyData = jsonEncode(composeRequest);
-    } catch (error, stackTrace) {
+_bodyData=jsonEncode(composeRequest);
+    } catch(error, stackTrace) {
       throw DioException(
-        requestOptions: _options.compose(_dio.options, _path),
+         requestOptions: _options.compose(
+          _dio.options,
+          _path,
+        ),
         type: DioExceptionType.unknown,
         error: error,
         stackTrace: stackTrace,
@@ -82,14 +92,9 @@ class UiProtocolApi {
     PageDescription? _responseData;
 
     try {
-      final rawData = _response.data;
-      _responseData = rawData == null
-          ? null
-          : deserialize<PageDescription, PageDescription>(
-              rawData,
-              'PageDescription',
-              growable: true,
-            );
+final rawData = _response.data;
+_responseData = rawData == null ? null : deserialize<PageDescription, PageDescription>(rawData, 'PageDescription', growable: true);
+
     } catch (error, stackTrace) {
       throw DioException(
         requestOptions: _response.requestOptions,
@@ -113,10 +118,10 @@ class UiProtocolApi {
   }
 
   /// \&quot;这次不用\&quot;：返回去掉这条来源调整后的结果，只影响这次查看，不写口味档案（需要登录）
-  ///
+  /// 
   ///
   /// Parameters:
-  /// * [skipAdjustmentRequest]
+  /// * [skipAdjustmentRequest] 
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -126,7 +131,7 @@ class UiProtocolApi {
   ///
   /// Returns a [Future] containing a [Response] with a [SkipAdjustmentResult] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<SkipAdjustmentResult>> skipAdjustment({
+  Future<Response<SkipAdjustmentResult>> skipAdjustment({ 
     required SkipAdjustmentRequest skipAdjustmentRequest,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -138,10 +143,16 @@ class UiProtocolApi {
     final _path = r'/v1/ui/compositions/skip-adjustment';
     final _options = Options(
       method: r'POST',
-      headers: <String, dynamic>{...?headers},
+      headers: <String, dynamic>{
+        ...?headers,
+      },
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
-          {'type': 'http', 'scheme': 'bearer', 'name': 'HTTPBearer'},
+          {
+            'type': 'http',
+            'scheme': 'bearer',
+            'name': 'HTTPBearer',
+          },
         ],
         ...?extra,
       },
@@ -152,10 +163,13 @@ class UiProtocolApi {
     dynamic _bodyData;
 
     try {
-      _bodyData = jsonEncode(skipAdjustmentRequest);
-    } catch (error, stackTrace) {
+_bodyData=jsonEncode(skipAdjustmentRequest);
+    } catch(error, stackTrace) {
       throw DioException(
-        requestOptions: _options.compose(_dio.options, _path),
+         requestOptions: _options.compose(
+          _dio.options,
+          _path,
+        ),
         type: DioExceptionType.unknown,
         error: error,
         stackTrace: stackTrace,
@@ -174,14 +188,9 @@ class UiProtocolApi {
     SkipAdjustmentResult? _responseData;
 
     try {
-      final rawData = _response.data;
-      _responseData = rawData == null
-          ? null
-          : deserialize<SkipAdjustmentResult, SkipAdjustmentResult>(
-              rawData,
-              'SkipAdjustmentResult',
-              growable: true,
-            );
+final rawData = _response.data;
+_responseData = rawData == null ? null : deserialize<SkipAdjustmentResult, SkipAdjustmentResult>(rawData, 'SkipAdjustmentResult', growable: true);
+
     } catch (error, stackTrace) {
       throw DioException(
         requestOptions: _response.requestOptions,
@@ -203,4 +212,5 @@ class UiProtocolApi {
       extra: _response.extra,
     );
   }
+
 }

@@ -12,6 +12,7 @@ import 'package:json_annotation/json_annotation.dart';
 
 part 'retrieval_result.g.dart';
 
+
 @CopyWith()
 @JsonSerializable(
   checked: true,
@@ -22,23 +23,33 @@ part 'retrieval_result.g.dart';
 class RetrievalResult {
   /// Returns a new [RetrievalResult] instance.
   RetrievalResult({
-    required this.intent,
 
-    this.localFallback = false,
+    required  this.intent,
 
-    required this.questions,
+     this.localFallback = false,
 
-    required this.recipes,
+    required  this.questions,
 
-    required this.requestId,
+    required  this.recipes,
 
-    required this.status,
+    required  this.requestId,
 
-    required this.text,
+    required  this.status,
+
+    required  this.text,
   });
 
-  @JsonKey(name: r'intent', required: true, includeIfNull: false)
+  @JsonKey(
+    
+    name: r'intent',
+    required: true,
+    includeIfNull: false,
+  )
+
+
   final RecipeIntent intent;
+
+
 
   @JsonKey(
     defaultValue: false,
@@ -46,47 +57,95 @@ class RetrievalResult {
     required: false,
     includeIfNull: false,
   )
+
+
   final bool? localFallback;
 
-  @JsonKey(name: r'questions', required: true, includeIfNull: false)
+
+
+  @JsonKey(
+    
+    name: r'questions',
+    required: true,
+    includeIfNull: false,
+  )
+
+
   final List<Question> questions;
 
-  @JsonKey(name: r'recipes', required: true, includeIfNull: false)
+
+
+  @JsonKey(
+    
+    name: r'recipes',
+    required: true,
+    includeIfNull: false,
+  )
+
+
   final List<SimilarRecipe> recipes;
 
-  @JsonKey(name: r'request_id', required: true, includeIfNull: false)
+
+
+  @JsonKey(
+    
+    name: r'request_id',
+    required: true,
+    includeIfNull: false,
+  )
+
+
   final String requestId;
 
-  @JsonKey(name: r'status', required: true, includeIfNull: false)
+
+
+  @JsonKey(
+    
+    name: r'status',
+    required: true,
+    includeIfNull: false,
+  )
+
+
   final AIStatus status;
 
-  @JsonKey(name: r'text', required: true, includeIfNull: false)
+
+
+  @JsonKey(
+    
+    name: r'text',
+    required: true,
+    includeIfNull: false,
+  )
+
+
   final String text;
 
-  @override
-  bool operator ==(Object other) =>
-      identical(this, other) ||
-      other is RetrievalResult &&
-          other.intent == intent &&
-          other.localFallback == localFallback &&
-          other.questions == questions &&
-          other.recipes == recipes &&
-          other.requestId == requestId &&
-          other.status == status &&
-          other.text == text;
 
-  @override
-  int get hashCode =>
-      intent.hashCode +
-      localFallback.hashCode +
-      questions.hashCode +
-      recipes.hashCode +
-      requestId.hashCode +
-      status.hashCode +
-      text.hashCode;
 
-  factory RetrievalResult.fromJson(Map<String, dynamic> json) =>
-      _$RetrievalResultFromJson(json);
+
+
+    @override
+    bool operator ==(Object other) => identical(this, other) || other is RetrievalResult &&
+      other.intent == intent &&
+      other.localFallback == localFallback &&
+      other.questions == questions &&
+      other.recipes == recipes &&
+      other.requestId == requestId &&
+      other.status == status &&
+      other.text == text;
+
+    @override
+    int get hashCode =>
+        intent.hashCode +
+        localFallback.hashCode +
+        questions.hashCode +
+        recipes.hashCode +
+        requestId.hashCode +
+        status.hashCode +
+        text.hashCode;
+
+  factory RetrievalResult.fromJson(Map<String, dynamic> json) => _$RetrievalResultFromJson(json);
 
   Map<String, dynamic> toJson() => _$RetrievalResultToJson(this);
 
@@ -94,4 +153,6 @@ class RetrievalResult {
   String toString() {
     return toJson().toString();
   }
+
 }
+

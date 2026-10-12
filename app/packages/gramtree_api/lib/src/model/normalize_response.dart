@@ -9,6 +9,7 @@ import 'package:json_annotation/json_annotation.dart';
 
 part 'normalize_response.g.dart';
 
+
 @CopyWith()
 @JsonSerializable(
   checked: true,
@@ -18,21 +19,34 @@ part 'normalize_response.g.dart';
 )
 class NormalizeResponse {
   /// Returns a new [NormalizeResponse] instance.
-  NormalizeResponse({required this.results});
+  NormalizeResponse({
 
-  @JsonKey(name: r'results', required: true, includeIfNull: false)
+    required  this.results,
+  });
+
+  @JsonKey(
+    
+    name: r'results',
+    required: true,
+    includeIfNull: false,
+  )
+
+
   final List<NormalizeResultItem> results;
 
-  @override
-  bool operator ==(Object other) =>
-      identical(this, other) ||
-      other is NormalizeResponse && other.results == results;
 
-  @override
-  int get hashCode => results.hashCode;
 
-  factory NormalizeResponse.fromJson(Map<String, dynamic> json) =>
-      _$NormalizeResponseFromJson(json);
+
+
+    @override
+    bool operator ==(Object other) => identical(this, other) || other is NormalizeResponse &&
+      other.results == results;
+
+    @override
+    int get hashCode =>
+        results.hashCode;
+
+  factory NormalizeResponse.fromJson(Map<String, dynamic> json) => _$NormalizeResponseFromJson(json);
 
   Map<String, dynamic> toJson() => _$NormalizeResponseToJson(this);
 
@@ -40,4 +54,6 @@ class NormalizeResponse {
   String toString() {
     return toJson().toString();
   }
+
 }
+

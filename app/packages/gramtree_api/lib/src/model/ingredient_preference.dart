@@ -8,6 +8,7 @@ import 'package:json_annotation/json_annotation.dart';
 
 part 'ingredient_preference.g.dart';
 
+
 @CopyWith()
 @JsonSerializable(
   checked: true,
@@ -18,38 +19,65 @@ part 'ingredient_preference.g.dart';
 class IngredientPreference {
   /// Returns a new [IngredientPreference] instance.
   IngredientPreference({
-    this.category,
 
-    this.ingredientId,
+     this.category,
 
-    required this.preference,
+     this.ingredientId,
+
+    required  this.preference,
   });
 
-  @JsonKey(name: r'category', required: false, includeIfNull: false)
+  @JsonKey(
+    
+    name: r'category',
+    required: false,
+    includeIfNull: false,
+  )
+
+
   final String? category;
 
-  @JsonKey(name: r'ingredient_id', required: false, includeIfNull: false)
+
+
+  @JsonKey(
+    
+    name: r'ingredient_id',
+    required: false,
+    includeIfNull: false,
+  )
+
+
   final String? ingredientId;
 
-  @JsonKey(name: r'preference', required: true, includeIfNull: false)
+
+
+  @JsonKey(
+    
+    name: r'preference',
+    required: true,
+    includeIfNull: false,
+  )
+
+
   final IngredientPreferencePreferenceEnum preference;
 
-  @override
-  bool operator ==(Object other) =>
-      identical(this, other) ||
-      other is IngredientPreference &&
-          other.category == category &&
-          other.ingredientId == ingredientId &&
-          other.preference == preference;
 
-  @override
-  int get hashCode =>
-      (category == null ? 0 : category.hashCode) +
-      (ingredientId == null ? 0 : ingredientId.hashCode) +
-      preference.hashCode;
 
-  factory IngredientPreference.fromJson(Map<String, dynamic> json) =>
-      _$IngredientPreferenceFromJson(json);
+
+
+    @override
+    bool operator ==(Object other) => identical(this, other) || other is IngredientPreference &&
+      other.category == category &&
+      other.ingredientId == ingredientId &&
+      other.preference == preference;
+
+    @override
+    int get hashCode =>
+        (category == null ? 0 : category.hashCode) +
+        (ingredientId == null ? 0 : ingredientId.hashCode) +
+        preference.hashCode;
+
+  factory IngredientPreference.fromJson(Map<String, dynamic> json) => _$IngredientPreferenceFromJson(json);
 
   Map<String, dynamic> toJson() => _$IngredientPreferenceToJson(this);
 
@@ -57,20 +85,24 @@ class IngredientPreference {
   String toString() {
     return toJson().toString();
   }
+
 }
+
 
 enum IngredientPreferencePreferenceEnum {
-  @JsonValue(r'liked')
-  liked(r'liked'),
-  @JsonValue(r'disliked')
-  disliked(r'disliked'),
-  @JsonValue(r'avoided')
-  avoided(r'avoided');
+@JsonValue(r'liked')
+liked(r'liked'),
+@JsonValue(r'disliked')
+disliked(r'disliked'),
+@JsonValue(r'avoided')
+avoided(r'avoided');
 
-  const IngredientPreferencePreferenceEnum(this.value);
+const IngredientPreferencePreferenceEnum(this.value);
 
-  final String value;
+final String value;
 
-  @override
-  String toString() => value;
+@override
+String toString() => value;
 }
+
+

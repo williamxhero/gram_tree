@@ -9,6 +9,7 @@ import 'package:json_annotation/json_annotation.dart';
 
 part 'serving_conversion_ingredient.g.dart';
 
+
 @CopyWith()
 @JsonSerializable(
   checked: true,
@@ -19,27 +20,37 @@ part 'serving_conversion_ingredient.g.dart';
 class ServingConversionIngredient {
   /// Returns a new [ServingConversionIngredient] instance.
   ServingConversionIngredient({
-    this.deviationRatio,
 
-    this.deviationWarning = false,
+     this.deviationRatio,
 
-    required this.displayName,
+     this.deviationWarning = false,
 
-    required this.displayQuantity,
+    required  this.displayName,
 
-    required this.id,
+    required  this.displayQuantity,
 
-    required this.originalQuantity,
+    required  this.id,
 
-    required this.rule,
+    required  this.originalQuantity,
 
-    required this.source_,
+    required  this.rule,
 
-    required this.unit,
+    required  this.source_,
+
+    required  this.unit,
   });
 
-  @JsonKey(name: r'deviation_ratio', required: false, includeIfNull: false)
+  @JsonKey(
+    
+    name: r'deviation_ratio',
+    required: false,
+    includeIfNull: false,
+  )
+
+
   final num? deviationRatio;
+
+
 
   @JsonKey(
     defaultValue: false,
@@ -47,57 +58,123 @@ class ServingConversionIngredient {
     required: false,
     includeIfNull: false,
   )
+
+
   final bool? deviationWarning;
 
-  @JsonKey(name: r'display_name', required: true, includeIfNull: false)
+
+
+  @JsonKey(
+    
+    name: r'display_name',
+    required: true,
+    includeIfNull: false,
+  )
+
+
   final String displayName;
 
-  @JsonKey(name: r'display_quantity', required: true, includeIfNull: false)
+
+
+  @JsonKey(
+    
+    name: r'display_quantity',
+    required: true,
+    includeIfNull: false,
+  )
+
+
   final num displayQuantity;
 
-  @JsonKey(name: r'id', required: true, includeIfNull: false)
+
+
+  @JsonKey(
+    
+    name: r'id',
+    required: true,
+    includeIfNull: false,
+  )
+
+
   final String id;
 
-  @JsonKey(name: r'original_quantity', required: true, includeIfNull: false)
+
+
+  @JsonKey(
+    
+    name: r'original_quantity',
+    required: true,
+    includeIfNull: false,
+  )
+
+
   final num originalQuantity;
 
-  @JsonKey(name: r'rule', required: true, includeIfNull: false)
+
+
+  @JsonKey(
+    
+    name: r'rule',
+    required: true,
+    includeIfNull: false,
+  )
+
+
   final ServingConversionIngredientRuleEnum rule;
 
-  @JsonKey(name: r'source', required: true, includeIfNull: false)
+
+
+  @JsonKey(
+    
+    name: r'source',
+    required: true,
+    includeIfNull: false,
+  )
+
+
   final SourcedValue source_;
 
-  @JsonKey(name: r'unit', required: true, includeIfNull: false)
+
+
+  @JsonKey(
+    
+    name: r'unit',
+    required: true,
+    includeIfNull: false,
+  )
+
+
   final String unit;
 
-  @override
-  bool operator ==(Object other) =>
-      identical(this, other) ||
-      other is ServingConversionIngredient &&
-          other.deviationRatio == deviationRatio &&
-          other.deviationWarning == deviationWarning &&
-          other.displayName == displayName &&
-          other.displayQuantity == displayQuantity &&
-          other.id == id &&
-          other.originalQuantity == originalQuantity &&
-          other.rule == rule &&
-          other.source_ == source_ &&
-          other.unit == unit;
 
-  @override
-  int get hashCode =>
-      (deviationRatio == null ? 0 : deviationRatio.hashCode) +
-      deviationWarning.hashCode +
-      displayName.hashCode +
-      displayQuantity.hashCode +
-      id.hashCode +
-      originalQuantity.hashCode +
-      rule.hashCode +
-      source_.hashCode +
-      unit.hashCode;
 
-  factory ServingConversionIngredient.fromJson(Map<String, dynamic> json) =>
-      _$ServingConversionIngredientFromJson(json);
+
+
+    @override
+    bool operator ==(Object other) => identical(this, other) || other is ServingConversionIngredient &&
+      other.deviationRatio == deviationRatio &&
+      other.deviationWarning == deviationWarning &&
+      other.displayName == displayName &&
+      other.displayQuantity == displayQuantity &&
+      other.id == id &&
+      other.originalQuantity == originalQuantity &&
+      other.rule == rule &&
+      other.source_ == source_ &&
+      other.unit == unit;
+
+    @override
+    int get hashCode =>
+        (deviationRatio == null ? 0 : deviationRatio.hashCode) +
+        deviationWarning.hashCode +
+        displayName.hashCode +
+        displayQuantity.hashCode +
+        id.hashCode +
+        originalQuantity.hashCode +
+        rule.hashCode +
+        source_.hashCode +
+        unit.hashCode;
+
+  factory ServingConversionIngredient.fromJson(Map<String, dynamic> json) => _$ServingConversionIngredientFromJson(json);
 
   Map<String, dynamic> toJson() => _$ServingConversionIngredientToJson(this);
 
@@ -105,20 +182,24 @@ class ServingConversionIngredient {
   String toString() {
     return toJson().toString();
   }
+
 }
+
 
 enum ServingConversionIngredientRuleEnum {
-  @JsonValue(r'proportional')
-  proportional(r'proportional'),
-  @JsonValue(r'unchanged')
-  unchanged(r'unchanged'),
-  @JsonValue(r'round')
-  round(r'round');
+@JsonValue(r'proportional')
+proportional(r'proportional'),
+@JsonValue(r'unchanged')
+unchanged(r'unchanged'),
+@JsonValue(r'round')
+round(r'round');
 
-  const ServingConversionIngredientRuleEnum(this.value);
+const ServingConversionIngredientRuleEnum(this.value);
 
-  final String value;
+final String value;
 
-  @override
-  String toString() => value;
+@override
+String toString() => value;
 }
+
+

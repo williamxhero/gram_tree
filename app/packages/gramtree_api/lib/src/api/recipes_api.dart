@@ -37,15 +37,16 @@ import 'package:gramtree_api/src/model/recipe_version_create.dart';
 import 'package:gramtree_api/src/model/recipe_version_history.dart';
 
 class RecipesApi {
+
   final Dio _dio;
 
   const RecipesApi(this._dio);
 
   /// Check Recipe Reproducibility
-  ///
+  /// 
   ///
   /// Parameters:
-  /// * [recipeReproducibilityCheckRequest]
+  /// * [recipeReproducibilityCheckRequest] 
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -55,9 +56,8 @@ class RecipesApi {
   ///
   /// Returns a [Future] containing a [Response] with a [RecipeReproducibilityCheckOut] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<RecipeReproducibilityCheckOut>> checkRecipeReproducibility({
-    required RecipeReproducibilityCheckRequest
-    recipeReproducibilityCheckRequest,
+  Future<Response<RecipeReproducibilityCheckOut>> checkRecipeReproducibility({ 
+    required RecipeReproducibilityCheckRequest recipeReproducibilityCheckRequest,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
     Map<String, dynamic>? extra,
@@ -68,10 +68,16 @@ class RecipesApi {
     final _path = r'/v1/recipes/reproducibility/check';
     final _options = Options(
       method: r'POST',
-      headers: <String, dynamic>{...?headers},
+      headers: <String, dynamic>{
+        ...?headers,
+      },
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
-          {'type': 'http', 'scheme': 'bearer', 'name': 'HTTPBearer'},
+          {
+            'type': 'http',
+            'scheme': 'bearer',
+            'name': 'HTTPBearer',
+          },
         ],
         ...?extra,
       },
@@ -82,10 +88,13 @@ class RecipesApi {
     dynamic _bodyData;
 
     try {
-      _bodyData = jsonEncode(recipeReproducibilityCheckRequest);
-    } catch (error, stackTrace) {
+_bodyData=jsonEncode(recipeReproducibilityCheckRequest);
+    } catch(error, stackTrace) {
       throw DioException(
-        requestOptions: _options.compose(_dio.options, _path),
+         requestOptions: _options.compose(
+          _dio.options,
+          _path,
+        ),
         type: DioExceptionType.unknown,
         error: error,
         stackTrace: stackTrace,
@@ -104,13 +113,9 @@ class RecipesApi {
     RecipeReproducibilityCheckOut? _responseData;
 
     try {
-      final rawData = _response.data;
-      _responseData = rawData == null
-          ? null
-          : deserialize<
-              RecipeReproducibilityCheckOut,
-              RecipeReproducibilityCheckOut
-            >(rawData, 'RecipeReproducibilityCheckOut', growable: true);
+final rawData = _response.data;
+_responseData = rawData == null ? null : deserialize<RecipeReproducibilityCheckOut, RecipeReproducibilityCheckOut>(rawData, 'RecipeReproducibilityCheckOut', growable: true);
+
     } catch (error, stackTrace) {
       throw DioException(
         requestOptions: _response.requestOptions,
@@ -134,10 +139,10 @@ class RecipesApi {
   }
 
   /// Check Recipe Safety
-  ///
+  /// 
   ///
   /// Parameters:
-  /// * [recipeSafetyCheckRequest]
+  /// * [recipeSafetyCheckRequest] 
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -147,7 +152,7 @@ class RecipesApi {
   ///
   /// Returns a [Future] containing a [Response] with a [RecipeSafetyCheckOut] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<RecipeSafetyCheckOut>> checkRecipeSafety({
+  Future<Response<RecipeSafetyCheckOut>> checkRecipeSafety({ 
     required RecipeSafetyCheckRequest recipeSafetyCheckRequest,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -159,10 +164,16 @@ class RecipesApi {
     final _path = r'/v1/recipes/safety/check';
     final _options = Options(
       method: r'POST',
-      headers: <String, dynamic>{...?headers},
+      headers: <String, dynamic>{
+        ...?headers,
+      },
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
-          {'type': 'http', 'scheme': 'bearer', 'name': 'HTTPBearer'},
+          {
+            'type': 'http',
+            'scheme': 'bearer',
+            'name': 'HTTPBearer',
+          },
         ],
         ...?extra,
       },
@@ -173,10 +184,13 @@ class RecipesApi {
     dynamic _bodyData;
 
     try {
-      _bodyData = jsonEncode(recipeSafetyCheckRequest);
-    } catch (error, stackTrace) {
+_bodyData=jsonEncode(recipeSafetyCheckRequest);
+    } catch(error, stackTrace) {
       throw DioException(
-        requestOptions: _options.compose(_dio.options, _path),
+         requestOptions: _options.compose(
+          _dio.options,
+          _path,
+        ),
         type: DioExceptionType.unknown,
         error: error,
         stackTrace: stackTrace,
@@ -195,14 +209,9 @@ class RecipesApi {
     RecipeSafetyCheckOut? _responseData;
 
     try {
-      final rawData = _response.data;
-      _responseData = rawData == null
-          ? null
-          : deserialize<RecipeSafetyCheckOut, RecipeSafetyCheckOut>(
-              rawData,
-              'RecipeSafetyCheckOut',
-              growable: true,
-            );
+final rawData = _response.data;
+_responseData = rawData == null ? null : deserialize<RecipeSafetyCheckOut, RecipeSafetyCheckOut>(rawData, 'RecipeSafetyCheckOut', growable: true);
+
     } catch (error, stackTrace) {
       throw DioException(
         requestOptions: _response.requestOptions,
@@ -226,12 +235,12 @@ class RecipesApi {
   }
 
   /// Compare Recipe Assistance
-  ///
+  /// 
   ///
   /// Parameters:
-  /// * [recipeId]
-  /// * [fromVersionId]
-  /// * [toVersionId]
+  /// * [recipeId] 
+  /// * [fromVersionId] 
+  /// * [toVersionId] 
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -241,7 +250,7 @@ class RecipesApi {
   ///
   /// Returns a [Future] containing a [Response] with a [RecipeComparisonAssistance] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<RecipeComparisonAssistance>> compareRecipeAssistance({
+  Future<Response<RecipeComparisonAssistance>> compareRecipeAssistance({ 
     required String recipeId,
     required String fromVersionId,
     required String toVersionId,
@@ -252,18 +261,19 @@ class RecipesApi {
     ProgressCallback? onSendProgress,
     ProgressCallback? onReceiveProgress,
   }) async {
-    final _path = r'/v1/recipes/{recipe_id}/comparison-assistance'.replaceAll(
-      '{'
-      r'recipe_id'
-      '}',
-      recipeId.toString(),
-    );
+    final _path = r'/v1/recipes/{recipe_id}/comparison-assistance'.replaceAll('{' r'recipe_id' '}', recipeId.toString());
     final _options = Options(
       method: r'GET',
-      headers: <String, dynamic>{...?headers},
+      headers: <String, dynamic>{
+        ...?headers,
+      },
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
-          {'type': 'http', 'scheme': 'bearer', 'name': 'HTTPBearer'},
+          {
+            'type': 'http',
+            'scheme': 'bearer',
+            'name': 'HTTPBearer',
+          },
         ],
         ...?extra,
       },
@@ -287,14 +297,9 @@ class RecipesApi {
     RecipeComparisonAssistance? _responseData;
 
     try {
-      final rawData = _response.data;
-      _responseData = rawData == null
-          ? null
-          : deserialize<RecipeComparisonAssistance, RecipeComparisonAssistance>(
-              rawData,
-              'RecipeComparisonAssistance',
-              growable: true,
-            );
+final rawData = _response.data;
+_responseData = rawData == null ? null : deserialize<RecipeComparisonAssistance, RecipeComparisonAssistance>(rawData, 'RecipeComparisonAssistance', growable: true);
+
     } catch (error, stackTrace) {
       throw DioException(
         requestOptions: _response.requestOptions,
@@ -318,12 +323,12 @@ class RecipesApi {
   }
 
   /// Compare Recipe Full
-  ///
+  /// 
   ///
   /// Parameters:
-  /// * [recipeId]
-  /// * [fromVersionId]
-  /// * [toVersionId]
+  /// * [recipeId] 
+  /// * [fromVersionId] 
+  /// * [toVersionId] 
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -333,7 +338,7 @@ class RecipesApi {
   ///
   /// Returns a [Future] containing a [Response] with a [RecipeFullComparison] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<RecipeFullComparison>> compareRecipeFull({
+  Future<Response<RecipeFullComparison>> compareRecipeFull({ 
     required String recipeId,
     required String fromVersionId,
     required String toVersionId,
@@ -344,18 +349,19 @@ class RecipesApi {
     ProgressCallback? onSendProgress,
     ProgressCallback? onReceiveProgress,
   }) async {
-    final _path = r'/v1/recipes/{recipe_id}/full-comparison'.replaceAll(
-      '{'
-      r'recipe_id'
-      '}',
-      recipeId.toString(),
-    );
+    final _path = r'/v1/recipes/{recipe_id}/full-comparison'.replaceAll('{' r'recipe_id' '}', recipeId.toString());
     final _options = Options(
       method: r'GET',
-      headers: <String, dynamic>{...?headers},
+      headers: <String, dynamic>{
+        ...?headers,
+      },
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
-          {'type': 'http', 'scheme': 'bearer', 'name': 'HTTPBearer'},
+          {
+            'type': 'http',
+            'scheme': 'bearer',
+            'name': 'HTTPBearer',
+          },
         ],
         ...?extra,
       },
@@ -379,14 +385,9 @@ class RecipesApi {
     RecipeFullComparison? _responseData;
 
     try {
-      final rawData = _response.data;
-      _responseData = rawData == null
-          ? null
-          : deserialize<RecipeFullComparison, RecipeFullComparison>(
-              rawData,
-              'RecipeFullComparison',
-              growable: true,
-            );
+final rawData = _response.data;
+_responseData = rawData == null ? null : deserialize<RecipeFullComparison, RecipeFullComparison>(rawData, 'RecipeFullComparison', growable: true);
+
     } catch (error, stackTrace) {
       throw DioException(
         requestOptions: _response.requestOptions,
@@ -410,12 +411,12 @@ class RecipesApi {
   }
 
   /// Compare Recipe Ingredients
-  ///
+  /// 
   ///
   /// Parameters:
-  /// * [recipeId]
-  /// * [fromVersionId]
-  /// * [toVersionId]
+  /// * [recipeId] 
+  /// * [fromVersionId] 
+  /// * [toVersionId] 
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -425,7 +426,7 @@ class RecipesApi {
   ///
   /// Returns a [Future] containing a [Response] with a [RecipeIngredientComparison] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<RecipeIngredientComparison>> compareRecipeIngredients({
+  Future<Response<RecipeIngredientComparison>> compareRecipeIngredients({ 
     required String recipeId,
     required String fromVersionId,
     required String toVersionId,
@@ -436,18 +437,19 @@ class RecipesApi {
     ProgressCallback? onSendProgress,
     ProgressCallback? onReceiveProgress,
   }) async {
-    final _path = r'/v1/recipes/{recipe_id}/compare'.replaceAll(
-      '{'
-      r'recipe_id'
-      '}',
-      recipeId.toString(),
-    );
+    final _path = r'/v1/recipes/{recipe_id}/compare'.replaceAll('{' r'recipe_id' '}', recipeId.toString());
     final _options = Options(
       method: r'GET',
-      headers: <String, dynamic>{...?headers},
+      headers: <String, dynamic>{
+        ...?headers,
+      },
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
-          {'type': 'http', 'scheme': 'bearer', 'name': 'HTTPBearer'},
+          {
+            'type': 'http',
+            'scheme': 'bearer',
+            'name': 'HTTPBearer',
+          },
         ],
         ...?extra,
       },
@@ -471,14 +473,9 @@ class RecipesApi {
     RecipeIngredientComparison? _responseData;
 
     try {
-      final rawData = _response.data;
-      _responseData = rawData == null
-          ? null
-          : deserialize<RecipeIngredientComparison, RecipeIngredientComparison>(
-              rawData,
-              'RecipeIngredientComparison',
-              growable: true,
-            );
+final rawData = _response.data;
+_responseData = rawData == null ? null : deserialize<RecipeIngredientComparison, RecipeIngredientComparison>(rawData, 'RecipeIngredientComparison', growable: true);
+
     } catch (error, stackTrace) {
       throw DioException(
         requestOptions: _response.requestOptions,
@@ -502,11 +499,11 @@ class RecipesApi {
   }
 
   /// Convert Current Recipe Mold
-  ///
+  /// 
   ///
   /// Parameters:
-  /// * [recipeId]
-  /// * [recipeMoldConversionRequest]
+  /// * [recipeId] 
+  /// * [recipeMoldConversionRequest] 
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -516,7 +513,7 @@ class RecipesApi {
   ///
   /// Returns a [Future] containing a [Response] with a [RecipeMoldConversionOut] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<RecipeMoldConversionOut>> convertCurrentRecipeMold({
+  Future<Response<RecipeMoldConversionOut>> convertCurrentRecipeMold({ 
     required String recipeId,
     required RecipeMoldConversionRequest recipeMoldConversionRequest,
     CancelToken? cancelToken,
@@ -526,18 +523,19 @@ class RecipesApi {
     ProgressCallback? onSendProgress,
     ProgressCallback? onReceiveProgress,
   }) async {
-    final _path = r'/v1/recipes/{recipe_id}/mold'.replaceAll(
-      '{'
-      r'recipe_id'
-      '}',
-      recipeId.toString(),
-    );
+    final _path = r'/v1/recipes/{recipe_id}/mold'.replaceAll('{' r'recipe_id' '}', recipeId.toString());
     final _options = Options(
       method: r'POST',
-      headers: <String, dynamic>{...?headers},
+      headers: <String, dynamic>{
+        ...?headers,
+      },
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
-          {'type': 'http', 'scheme': 'bearer', 'name': 'HTTPBearer'},
+          {
+            'type': 'http',
+            'scheme': 'bearer',
+            'name': 'HTTPBearer',
+          },
         ],
         ...?extra,
       },
@@ -548,10 +546,13 @@ class RecipesApi {
     dynamic _bodyData;
 
     try {
-      _bodyData = jsonEncode(recipeMoldConversionRequest);
-    } catch (error, stackTrace) {
+_bodyData=jsonEncode(recipeMoldConversionRequest);
+    } catch(error, stackTrace) {
       throw DioException(
-        requestOptions: _options.compose(_dio.options, _path),
+         requestOptions: _options.compose(
+          _dio.options,
+          _path,
+        ),
         type: DioExceptionType.unknown,
         error: error,
         stackTrace: stackTrace,
@@ -570,14 +571,9 @@ class RecipesApi {
     RecipeMoldConversionOut? _responseData;
 
     try {
-      final rawData = _response.data;
-      _responseData = rawData == null
-          ? null
-          : deserialize<RecipeMoldConversionOut, RecipeMoldConversionOut>(
-              rawData,
-              'RecipeMoldConversionOut',
-              growable: true,
-            );
+final rawData = _response.data;
+_responseData = rawData == null ? null : deserialize<RecipeMoldConversionOut, RecipeMoldConversionOut>(rawData, 'RecipeMoldConversionOut', growable: true);
+
     } catch (error, stackTrace) {
       throw DioException(
         requestOptions: _response.requestOptions,
@@ -601,11 +597,11 @@ class RecipesApi {
   }
 
   /// Convert Current Recipe Servings
-  ///
+  /// 
   ///
   /// Parameters:
-  /// * [recipeId]
-  /// * [targetServings]
+  /// * [recipeId] 
+  /// * [targetServings] 
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -615,7 +611,7 @@ class RecipesApi {
   ///
   /// Returns a [Future] containing a [Response] with a [RecipeServingConversionOut] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<RecipeServingConversionOut>> convertCurrentRecipeServings({
+  Future<Response<RecipeServingConversionOut>> convertCurrentRecipeServings({ 
     required String recipeId,
     required int targetServings,
     CancelToken? cancelToken,
@@ -625,18 +621,19 @@ class RecipesApi {
     ProgressCallback? onSendProgress,
     ProgressCallback? onReceiveProgress,
   }) async {
-    final _path = r'/v1/recipes/{recipe_id}/servings'.replaceAll(
-      '{'
-      r'recipe_id'
-      '}',
-      recipeId.toString(),
-    );
+    final _path = r'/v1/recipes/{recipe_id}/servings'.replaceAll('{' r'recipe_id' '}', recipeId.toString());
     final _options = Options(
       method: r'GET',
-      headers: <String, dynamic>{...?headers},
+      headers: <String, dynamic>{
+        ...?headers,
+      },
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
-          {'type': 'http', 'scheme': 'bearer', 'name': 'HTTPBearer'},
+          {
+            'type': 'http',
+            'scheme': 'bearer',
+            'name': 'HTTPBearer',
+          },
         ],
         ...?extra,
       },
@@ -659,14 +656,9 @@ class RecipesApi {
     RecipeServingConversionOut? _responseData;
 
     try {
-      final rawData = _response.data;
-      _responseData = rawData == null
-          ? null
-          : deserialize<RecipeServingConversionOut, RecipeServingConversionOut>(
-              rawData,
-              'RecipeServingConversionOut',
-              growable: true,
-            );
+final rawData = _response.data;
+_responseData = rawData == null ? null : deserialize<RecipeServingConversionOut, RecipeServingConversionOut>(rawData, 'RecipeServingConversionOut', growable: true);
+
     } catch (error, stackTrace) {
       throw DioException(
         requestOptions: _response.requestOptions,
@@ -690,12 +682,12 @@ class RecipesApi {
   }
 
   /// Convert Recipe Version Mold
-  ///
+  /// 
   ///
   /// Parameters:
-  /// * [recipeId]
-  /// * [versionId]
-  /// * [recipeMoldConversionRequest]
+  /// * [recipeId] 
+  /// * [versionId] 
+  /// * [recipeMoldConversionRequest] 
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -705,7 +697,7 @@ class RecipesApi {
   ///
   /// Returns a [Future] containing a [Response] with a [RecipeMoldConversionOut] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<RecipeMoldConversionOut>> convertRecipeVersionMold({
+  Future<Response<RecipeMoldConversionOut>> convertRecipeVersionMold({ 
     required String recipeId,
     required String versionId,
     required RecipeMoldConversionRequest recipeMoldConversionRequest,
@@ -716,25 +708,19 @@ class RecipesApi {
     ProgressCallback? onSendProgress,
     ProgressCallback? onReceiveProgress,
   }) async {
-    final _path = r'/v1/recipes/{recipe_id}/versions/{version_id}/mold'
-        .replaceAll(
-          '{'
-          r'recipe_id'
-          '}',
-          recipeId.toString(),
-        )
-        .replaceAll(
-          '{'
-          r'version_id'
-          '}',
-          versionId.toString(),
-        );
+    final _path = r'/v1/recipes/{recipe_id}/versions/{version_id}/mold'.replaceAll('{' r'recipe_id' '}', recipeId.toString()).replaceAll('{' r'version_id' '}', versionId.toString());
     final _options = Options(
       method: r'POST',
-      headers: <String, dynamic>{...?headers},
+      headers: <String, dynamic>{
+        ...?headers,
+      },
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
-          {'type': 'http', 'scheme': 'bearer', 'name': 'HTTPBearer'},
+          {
+            'type': 'http',
+            'scheme': 'bearer',
+            'name': 'HTTPBearer',
+          },
         ],
         ...?extra,
       },
@@ -745,10 +731,13 @@ class RecipesApi {
     dynamic _bodyData;
 
     try {
-      _bodyData = jsonEncode(recipeMoldConversionRequest);
-    } catch (error, stackTrace) {
+_bodyData=jsonEncode(recipeMoldConversionRequest);
+    } catch(error, stackTrace) {
       throw DioException(
-        requestOptions: _options.compose(_dio.options, _path),
+         requestOptions: _options.compose(
+          _dio.options,
+          _path,
+        ),
         type: DioExceptionType.unknown,
         error: error,
         stackTrace: stackTrace,
@@ -767,14 +756,9 @@ class RecipesApi {
     RecipeMoldConversionOut? _responseData;
 
     try {
-      final rawData = _response.data;
-      _responseData = rawData == null
-          ? null
-          : deserialize<RecipeMoldConversionOut, RecipeMoldConversionOut>(
-              rawData,
-              'RecipeMoldConversionOut',
-              growable: true,
-            );
+final rawData = _response.data;
+_responseData = rawData == null ? null : deserialize<RecipeMoldConversionOut, RecipeMoldConversionOut>(rawData, 'RecipeMoldConversionOut', growable: true);
+
     } catch (error, stackTrace) {
       throw DioException(
         requestOptions: _response.requestOptions,
@@ -798,12 +782,12 @@ class RecipesApi {
   }
 
   /// Convert Recipe Version Servings
-  ///
+  /// 
   ///
   /// Parameters:
-  /// * [recipeId]
-  /// * [versionId]
-  /// * [targetServings]
+  /// * [recipeId] 
+  /// * [versionId] 
+  /// * [targetServings] 
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -813,7 +797,7 @@ class RecipesApi {
   ///
   /// Returns a [Future] containing a [Response] with a [RecipeServingConversionOut] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<RecipeServingConversionOut>> convertRecipeVersionServings({
+  Future<Response<RecipeServingConversionOut>> convertRecipeVersionServings({ 
     required String recipeId,
     required String versionId,
     required int targetServings,
@@ -824,25 +808,19 @@ class RecipesApi {
     ProgressCallback? onSendProgress,
     ProgressCallback? onReceiveProgress,
   }) async {
-    final _path = r'/v1/recipes/{recipe_id}/versions/{version_id}/servings'
-        .replaceAll(
-          '{'
-          r'recipe_id'
-          '}',
-          recipeId.toString(),
-        )
-        .replaceAll(
-          '{'
-          r'version_id'
-          '}',
-          versionId.toString(),
-        );
+    final _path = r'/v1/recipes/{recipe_id}/versions/{version_id}/servings'.replaceAll('{' r'recipe_id' '}', recipeId.toString()).replaceAll('{' r'version_id' '}', versionId.toString());
     final _options = Options(
       method: r'GET',
-      headers: <String, dynamic>{...?headers},
+      headers: <String, dynamic>{
+        ...?headers,
+      },
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
-          {'type': 'http', 'scheme': 'bearer', 'name': 'HTTPBearer'},
+          {
+            'type': 'http',
+            'scheme': 'bearer',
+            'name': 'HTTPBearer',
+          },
         ],
         ...?extra,
       },
@@ -865,14 +843,9 @@ class RecipesApi {
     RecipeServingConversionOut? _responseData;
 
     try {
-      final rawData = _response.data;
-      _responseData = rawData == null
-          ? null
-          : deserialize<RecipeServingConversionOut, RecipeServingConversionOut>(
-              rawData,
-              'RecipeServingConversionOut',
-              growable: true,
-            );
+final rawData = _response.data;
+_responseData = rawData == null ? null : deserialize<RecipeServingConversionOut, RecipeServingConversionOut>(rawData, 'RecipeServingConversionOut', growable: true);
+
     } catch (error, stackTrace) {
       throw DioException(
         requestOptions: _response.requestOptions,
@@ -896,10 +869,10 @@ class RecipesApi {
   }
 
   /// Create Recipe
-  ///
+  /// 
   ///
   /// Parameters:
-  /// * [recipeCreate]
+  /// * [recipeCreate] 
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -909,7 +882,7 @@ class RecipesApi {
   ///
   /// Returns a [Future] containing a [Response] with a [RecipeDetail] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<RecipeDetail>> createRecipe({
+  Future<Response<RecipeDetail>> createRecipe({ 
     required RecipeCreate recipeCreate,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -921,10 +894,16 @@ class RecipesApi {
     final _path = r'/v1/recipes';
     final _options = Options(
       method: r'POST',
-      headers: <String, dynamic>{...?headers},
+      headers: <String, dynamic>{
+        ...?headers,
+      },
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
-          {'type': 'http', 'scheme': 'bearer', 'name': 'HTTPBearer'},
+          {
+            'type': 'http',
+            'scheme': 'bearer',
+            'name': 'HTTPBearer',
+          },
         ],
         ...?extra,
       },
@@ -935,10 +914,13 @@ class RecipesApi {
     dynamic _bodyData;
 
     try {
-      _bodyData = jsonEncode(recipeCreate);
-    } catch (error, stackTrace) {
+_bodyData=jsonEncode(recipeCreate);
+    } catch(error, stackTrace) {
       throw DioException(
-        requestOptions: _options.compose(_dio.options, _path),
+         requestOptions: _options.compose(
+          _dio.options,
+          _path,
+        ),
         type: DioExceptionType.unknown,
         error: error,
         stackTrace: stackTrace,
@@ -957,14 +939,9 @@ class RecipesApi {
     RecipeDetail? _responseData;
 
     try {
-      final rawData = _response.data;
-      _responseData = rawData == null
-          ? null
-          : deserialize<RecipeDetail, RecipeDetail>(
-              rawData,
-              'RecipeDetail',
-              growable: true,
-            );
+final rawData = _response.data;
+_responseData = rawData == null ? null : deserialize<RecipeDetail, RecipeDetail>(rawData, 'RecipeDetail', growable: true);
+
     } catch (error, stackTrace) {
       throw DioException(
         requestOptions: _response.requestOptions,
@@ -988,12 +965,12 @@ class RecipesApi {
   }
 
   /// Decide Recipe Quantification
-  ///
+  /// 
   ///
   /// Parameters:
-  /// * [recipeId]
-  /// * [proposalId]
-  /// * [quantificationDecisionsInput]
+  /// * [recipeId] 
+  /// * [proposalId] 
+  /// * [quantificationDecisionsInput] 
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -1003,7 +980,7 @@ class RecipesApi {
   ///
   /// Returns a [Future] containing a [Response] with a [RecipeDetail] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<RecipeDetail>> decideRecipeQuantification({
+  Future<Response<RecipeDetail>> decideRecipeQuantification({ 
     required String recipeId,
     required String proposalId,
     required QuantificationDecisionsInput quantificationDecisionsInput,
@@ -1014,26 +991,19 @@ class RecipesApi {
     ProgressCallback? onSendProgress,
     ProgressCallback? onReceiveProgress,
   }) async {
-    final _path =
-        r'/v1/recipes/{recipe_id}/quantification/{proposal_id}/decisions'
-            .replaceAll(
-              '{'
-              r'recipe_id'
-              '}',
-              recipeId.toString(),
-            )
-            .replaceAll(
-              '{'
-              r'proposal_id'
-              '}',
-              proposalId.toString(),
-            );
+    final _path = r'/v1/recipes/{recipe_id}/quantification/{proposal_id}/decisions'.replaceAll('{' r'recipe_id' '}', recipeId.toString()).replaceAll('{' r'proposal_id' '}', proposalId.toString());
     final _options = Options(
       method: r'POST',
-      headers: <String, dynamic>{...?headers},
+      headers: <String, dynamic>{
+        ...?headers,
+      },
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
-          {'type': 'http', 'scheme': 'bearer', 'name': 'HTTPBearer'},
+          {
+            'type': 'http',
+            'scheme': 'bearer',
+            'name': 'HTTPBearer',
+          },
         ],
         ...?extra,
       },
@@ -1044,10 +1014,13 @@ class RecipesApi {
     dynamic _bodyData;
 
     try {
-      _bodyData = jsonEncode(quantificationDecisionsInput);
-    } catch (error, stackTrace) {
+_bodyData=jsonEncode(quantificationDecisionsInput);
+    } catch(error, stackTrace) {
       throw DioException(
-        requestOptions: _options.compose(_dio.options, _path),
+         requestOptions: _options.compose(
+          _dio.options,
+          _path,
+        ),
         type: DioExceptionType.unknown,
         error: error,
         stackTrace: stackTrace,
@@ -1066,14 +1039,9 @@ class RecipesApi {
     RecipeDetail? _responseData;
 
     try {
-      final rawData = _response.data;
-      _responseData = rawData == null
-          ? null
-          : deserialize<RecipeDetail, RecipeDetail>(
-              rawData,
-              'RecipeDetail',
-              growable: true,
-            );
+final rawData = _response.data;
+_responseData = rawData == null ? null : deserialize<RecipeDetail, RecipeDetail>(rawData, 'RecipeDetail', growable: true);
+
     } catch (error, stackTrace) {
       throw DioException(
         requestOptions: _response.requestOptions,
@@ -1097,10 +1065,10 @@ class RecipesApi {
   }
 
   /// Delete Recipe
-  ///
+  /// 
   ///
   /// Parameters:
-  /// * [recipeId]
+  /// * [recipeId] 
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -1110,7 +1078,7 @@ class RecipesApi {
   ///
   /// Returns a [Future]
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<void>> deleteRecipe({
+  Future<Response<void>> deleteRecipe({ 
     required String recipeId,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -1119,18 +1087,19 @@ class RecipesApi {
     ProgressCallback? onSendProgress,
     ProgressCallback? onReceiveProgress,
   }) async {
-    final _path = r'/v1/recipes/{recipe_id}'.replaceAll(
-      '{'
-      r'recipe_id'
-      '}',
-      recipeId.toString(),
-    );
+    final _path = r'/v1/recipes/{recipe_id}'.replaceAll('{' r'recipe_id' '}', recipeId.toString());
     final _options = Options(
       method: r'DELETE',
-      headers: <String, dynamic>{...?headers},
+      headers: <String, dynamic>{
+        ...?headers,
+      },
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
-          {'type': 'http', 'scheme': 'bearer', 'name': 'HTTPBearer'},
+          {
+            'type': 'http',
+            'scheme': 'bearer',
+            'name': 'HTTPBearer',
+          },
         ],
         ...?extra,
       },
@@ -1149,13 +1118,13 @@ class RecipesApi {
   }
 
   /// Display Current Recipe Ingredients
-  ///
+  /// 
   ///
   /// Parameters:
-  /// * [recipeId]
-  /// * [mode]
-  /// * [measureId]
-  /// * [targetServings]
+  /// * [recipeId] 
+  /// * [mode] 
+  /// * [measureId] 
+  /// * [targetServings] 
   /// * [targetMold] - JSON encoded target mold
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
@@ -1166,7 +1135,7 @@ class RecipesApi {
   ///
   /// Returns a [Future] containing a [Response] with a [RecipeIngredientDisplayOut] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<RecipeIngredientDisplayOut>> displayCurrentRecipeIngredients({
+  Future<Response<RecipeIngredientDisplayOut>> displayCurrentRecipeIngredients({ 
     required String recipeId,
     required String mode,
     String? measureId,
@@ -1179,18 +1148,19 @@ class RecipesApi {
     ProgressCallback? onSendProgress,
     ProgressCallback? onReceiveProgress,
   }) async {
-    final _path = r'/v1/recipes/{recipe_id}/display'.replaceAll(
-      '{'
-      r'recipe_id'
-      '}',
-      recipeId.toString(),
-    );
+    final _path = r'/v1/recipes/{recipe_id}/display'.replaceAll('{' r'recipe_id' '}', recipeId.toString());
     final _options = Options(
       method: r'GET',
-      headers: <String, dynamic>{...?headers},
+      headers: <String, dynamic>{
+        ...?headers,
+      },
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
-          {'type': 'http', 'scheme': 'bearer', 'name': 'HTTPBearer'},
+          {
+            'type': 'http',
+            'scheme': 'bearer',
+            'name': 'HTTPBearer',
+          },
         ],
         ...?extra,
       },
@@ -1216,14 +1186,9 @@ class RecipesApi {
     RecipeIngredientDisplayOut? _responseData;
 
     try {
-      final rawData = _response.data;
-      _responseData = rawData == null
-          ? null
-          : deserialize<RecipeIngredientDisplayOut, RecipeIngredientDisplayOut>(
-              rawData,
-              'RecipeIngredientDisplayOut',
-              growable: true,
-            );
+final rawData = _response.data;
+_responseData = rawData == null ? null : deserialize<RecipeIngredientDisplayOut, RecipeIngredientDisplayOut>(rawData, 'RecipeIngredientDisplayOut', growable: true);
+
     } catch (error, stackTrace) {
       throw DioException(
         requestOptions: _response.requestOptions,
@@ -1247,14 +1212,14 @@ class RecipesApi {
   }
 
   /// Display Recipe Version Ingredients
-  ///
+  /// 
   ///
   /// Parameters:
-  /// * [recipeId]
-  /// * [versionId]
-  /// * [mode]
-  /// * [measureId]
-  /// * [targetServings]
+  /// * [recipeId] 
+  /// * [versionId] 
+  /// * [mode] 
+  /// * [measureId] 
+  /// * [targetServings] 
   /// * [targetMold] - JSON encoded target mold
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
@@ -1265,7 +1230,7 @@ class RecipesApi {
   ///
   /// Returns a [Future] containing a [Response] with a [RecipeIngredientDisplayOut] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<RecipeIngredientDisplayOut>> displayRecipeVersionIngredients({
+  Future<Response<RecipeIngredientDisplayOut>> displayRecipeVersionIngredients({ 
     required String recipeId,
     required String versionId,
     required String mode,
@@ -1279,25 +1244,19 @@ class RecipesApi {
     ProgressCallback? onSendProgress,
     ProgressCallback? onReceiveProgress,
   }) async {
-    final _path = r'/v1/recipes/{recipe_id}/versions/{version_id}/display'
-        .replaceAll(
-          '{'
-          r'recipe_id'
-          '}',
-          recipeId.toString(),
-        )
-        .replaceAll(
-          '{'
-          r'version_id'
-          '}',
-          versionId.toString(),
-        );
+    final _path = r'/v1/recipes/{recipe_id}/versions/{version_id}/display'.replaceAll('{' r'recipe_id' '}', recipeId.toString()).replaceAll('{' r'version_id' '}', versionId.toString());
     final _options = Options(
       method: r'GET',
-      headers: <String, dynamic>{...?headers},
+      headers: <String, dynamic>{
+        ...?headers,
+      },
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
-          {'type': 'http', 'scheme': 'bearer', 'name': 'HTTPBearer'},
+          {
+            'type': 'http',
+            'scheme': 'bearer',
+            'name': 'HTTPBearer',
+          },
         ],
         ...?extra,
       },
@@ -1323,14 +1282,9 @@ class RecipesApi {
     RecipeIngredientDisplayOut? _responseData;
 
     try {
-      final rawData = _response.data;
-      _responseData = rawData == null
-          ? null
-          : deserialize<RecipeIngredientDisplayOut, RecipeIngredientDisplayOut>(
-              rawData,
-              'RecipeIngredientDisplayOut',
-              growable: true,
-            );
+final rawData = _response.data;
+_responseData = rawData == null ? null : deserialize<RecipeIngredientDisplayOut, RecipeIngredientDisplayOut>(rawData, 'RecipeIngredientDisplayOut', growable: true);
+
     } catch (error, stackTrace) {
       throw DioException(
         requestOptions: _response.requestOptions,
@@ -1354,10 +1308,10 @@ class RecipesApi {
   }
 
   /// Get Recipe
-  ///
+  /// 
   ///
   /// Parameters:
-  /// * [recipeId]
+  /// * [recipeId] 
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -1367,7 +1321,7 @@ class RecipesApi {
   ///
   /// Returns a [Future] containing a [Response] with a [RecipeDetail] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<RecipeDetail>> getRecipe({
+  Future<Response<RecipeDetail>> getRecipe({ 
     required String recipeId,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -1376,18 +1330,19 @@ class RecipesApi {
     ProgressCallback? onSendProgress,
     ProgressCallback? onReceiveProgress,
   }) async {
-    final _path = r'/v1/recipes/{recipe_id}'.replaceAll(
-      '{'
-      r'recipe_id'
-      '}',
-      recipeId.toString(),
-    );
+    final _path = r'/v1/recipes/{recipe_id}'.replaceAll('{' r'recipe_id' '}', recipeId.toString());
     final _options = Options(
       method: r'GET',
-      headers: <String, dynamic>{...?headers},
+      headers: <String, dynamic>{
+        ...?headers,
+      },
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
-          {'type': 'http', 'scheme': 'bearer', 'name': 'HTTPBearer'},
+          {
+            'type': 'http',
+            'scheme': 'bearer',
+            'name': 'HTTPBearer',
+          },
         ],
         ...?extra,
       },
@@ -1405,14 +1360,9 @@ class RecipesApi {
     RecipeDetail? _responseData;
 
     try {
-      final rawData = _response.data;
-      _responseData = rawData == null
-          ? null
-          : deserialize<RecipeDetail, RecipeDetail>(
-              rawData,
-              'RecipeDetail',
-              growable: true,
-            );
+final rawData = _response.data;
+_responseData = rawData == null ? null : deserialize<RecipeDetail, RecipeDetail>(rawData, 'RecipeDetail', growable: true);
+
     } catch (error, stackTrace) {
       throw DioException(
         requestOptions: _response.requestOptions,
@@ -1436,11 +1386,11 @@ class RecipesApi {
   }
 
   /// Get Recipe Version
-  ///
+  /// 
   ///
   /// Parameters:
-  /// * [recipeId]
-  /// * [versionId]
+  /// * [recipeId] 
+  /// * [versionId] 
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -1450,7 +1400,7 @@ class RecipesApi {
   ///
   /// Returns a [Future] containing a [Response] with a [RecipeDetail] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<RecipeDetail>> getRecipeVersion({
+  Future<Response<RecipeDetail>> getRecipeVersion({ 
     required String recipeId,
     required String versionId,
     CancelToken? cancelToken,
@@ -1460,25 +1410,19 @@ class RecipesApi {
     ProgressCallback? onSendProgress,
     ProgressCallback? onReceiveProgress,
   }) async {
-    final _path = r'/v1/recipes/{recipe_id}/versions/{version_id}'
-        .replaceAll(
-          '{'
-          r'recipe_id'
-          '}',
-          recipeId.toString(),
-        )
-        .replaceAll(
-          '{'
-          r'version_id'
-          '}',
-          versionId.toString(),
-        );
+    final _path = r'/v1/recipes/{recipe_id}/versions/{version_id}'.replaceAll('{' r'recipe_id' '}', recipeId.toString()).replaceAll('{' r'version_id' '}', versionId.toString());
     final _options = Options(
       method: r'GET',
-      headers: <String, dynamic>{...?headers},
+      headers: <String, dynamic>{
+        ...?headers,
+      },
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
-          {'type': 'http', 'scheme': 'bearer', 'name': 'HTTPBearer'},
+          {
+            'type': 'http',
+            'scheme': 'bearer',
+            'name': 'HTTPBearer',
+          },
         ],
         ...?extra,
       },
@@ -1496,14 +1440,9 @@ class RecipesApi {
     RecipeDetail? _responseData;
 
     try {
-      final rawData = _response.data;
-      _responseData = rawData == null
-          ? null
-          : deserialize<RecipeDetail, RecipeDetail>(
-              rawData,
-              'RecipeDetail',
-              growable: true,
-            );
+final rawData = _response.data;
+_responseData = rawData == null ? null : deserialize<RecipeDetail, RecipeDetail>(rawData, 'RecipeDetail', growable: true);
+
     } catch (error, stackTrace) {
       throw DioException(
         requestOptions: _response.requestOptions,
@@ -1527,10 +1466,10 @@ class RecipesApi {
   }
 
   /// List Recipe Comparison Candidates
-  ///
+  /// 
   ///
   /// Parameters:
-  /// * [recipeId]
+  /// * [recipeId] 
   /// * [cursor] - 上一页返回的 next_cursor
   /// * [limit] - 每页条数，上限见配置项 api.page_size_max
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
@@ -1542,7 +1481,7 @@ class RecipesApi {
   ///
   /// Returns a [Future] containing a [Response] with a [RecipeComparisonCandidates] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<RecipeComparisonCandidates>> listRecipeComparisonCandidates({
+  Future<Response<RecipeComparisonCandidates>> listRecipeComparisonCandidates({ 
     required String recipeId,
     String? cursor,
     int? limit = 20,
@@ -1553,18 +1492,19 @@ class RecipesApi {
     ProgressCallback? onSendProgress,
     ProgressCallback? onReceiveProgress,
   }) async {
-    final _path = r'/v1/recipes/{recipe_id}/comparison-candidates'.replaceAll(
-      '{'
-      r'recipe_id'
-      '}',
-      recipeId.toString(),
-    );
+    final _path = r'/v1/recipes/{recipe_id}/comparison-candidates'.replaceAll('{' r'recipe_id' '}', recipeId.toString());
     final _options = Options(
       method: r'GET',
-      headers: <String, dynamic>{...?headers},
+      headers: <String, dynamic>{
+        ...?headers,
+      },
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
-          {'type': 'http', 'scheme': 'bearer', 'name': 'HTTPBearer'},
+          {
+            'type': 'http',
+            'scheme': 'bearer',
+            'name': 'HTTPBearer',
+          },
         ],
         ...?extra,
       },
@@ -1588,14 +1528,9 @@ class RecipesApi {
     RecipeComparisonCandidates? _responseData;
 
     try {
-      final rawData = _response.data;
-      _responseData = rawData == null
-          ? null
-          : deserialize<RecipeComparisonCandidates, RecipeComparisonCandidates>(
-              rawData,
-              'RecipeComparisonCandidates',
-              growable: true,
-            );
+final rawData = _response.data;
+_responseData = rawData == null ? null : deserialize<RecipeComparisonCandidates, RecipeComparisonCandidates>(rawData, 'RecipeComparisonCandidates', growable: true);
+
     } catch (error, stackTrace) {
       throw DioException(
         requestOptions: _response.requestOptions,
@@ -1619,10 +1554,10 @@ class RecipesApi {
   }
 
   /// List Recipe Versions
-  ///
+  /// 
   ///
   /// Parameters:
-  /// * [recipeId]
+  /// * [recipeId] 
   /// * [cursor] - 上一页返回的 next_cursor
   /// * [limit] - 每页条数，上限见配置项 api.page_size_max
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
@@ -1634,7 +1569,7 @@ class RecipesApi {
   ///
   /// Returns a [Future] containing a [Response] with a [RecipeVersionHistory] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<RecipeVersionHistory>> listRecipeVersions({
+  Future<Response<RecipeVersionHistory>> listRecipeVersions({ 
     required String recipeId,
     String? cursor,
     int? limit = 20,
@@ -1645,18 +1580,19 @@ class RecipesApi {
     ProgressCallback? onSendProgress,
     ProgressCallback? onReceiveProgress,
   }) async {
-    final _path = r'/v1/recipes/{recipe_id}/versions'.replaceAll(
-      '{'
-      r'recipe_id'
-      '}',
-      recipeId.toString(),
-    );
+    final _path = r'/v1/recipes/{recipe_id}/versions'.replaceAll('{' r'recipe_id' '}', recipeId.toString());
     final _options = Options(
       method: r'GET',
-      headers: <String, dynamic>{...?headers},
+      headers: <String, dynamic>{
+        ...?headers,
+      },
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
-          {'type': 'http', 'scheme': 'bearer', 'name': 'HTTPBearer'},
+          {
+            'type': 'http',
+            'scheme': 'bearer',
+            'name': 'HTTPBearer',
+          },
         ],
         ...?extra,
       },
@@ -1680,14 +1616,9 @@ class RecipesApi {
     RecipeVersionHistory? _responseData;
 
     try {
-      final rawData = _response.data;
-      _responseData = rawData == null
-          ? null
-          : deserialize<RecipeVersionHistory, RecipeVersionHistory>(
-              rawData,
-              'RecipeVersionHistory',
-              growable: true,
-            );
+final rawData = _response.data;
+_responseData = rawData == null ? null : deserialize<RecipeVersionHistory, RecipeVersionHistory>(rawData, 'RecipeVersionHistory', growable: true);
+
     } catch (error, stackTrace) {
       throw DioException(
         requestOptions: _response.requestOptions,
@@ -1711,7 +1642,7 @@ class RecipesApi {
   }
 
   /// List Recipes
-  ///
+  /// 
   ///
   /// Parameters:
   /// * [cursor] - 上一页返回的 next_cursor
@@ -1725,7 +1656,7 @@ class RecipesApi {
   ///
   /// Returns a [Future] containing a [Response] with a [RecipeList] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<RecipeList>> listRecipes({
+  Future<Response<RecipeList>> listRecipes({ 
     String? cursor,
     int? limit = 20,
     CancelToken? cancelToken,
@@ -1738,10 +1669,16 @@ class RecipesApi {
     final _path = r'/v1/recipes';
     final _options = Options(
       method: r'GET',
-      headers: <String, dynamic>{...?headers},
+      headers: <String, dynamic>{
+        ...?headers,
+      },
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
-          {'type': 'http', 'scheme': 'bearer', 'name': 'HTTPBearer'},
+          {
+            'type': 'http',
+            'scheme': 'bearer',
+            'name': 'HTTPBearer',
+          },
         ],
         ...?extra,
       },
@@ -1765,14 +1702,9 @@ class RecipesApi {
     RecipeList? _responseData;
 
     try {
-      final rawData = _response.data;
-      _responseData = rawData == null
-          ? null
-          : deserialize<RecipeList, RecipeList>(
-              rawData,
-              'RecipeList',
-              growable: true,
-            );
+final rawData = _response.data;
+_responseData = rawData == null ? null : deserialize<RecipeList, RecipeList>(rawData, 'RecipeList', growable: true);
+
     } catch (error, stackTrace) {
       throw DioException(
         requestOptions: _response.requestOptions,
@@ -1796,11 +1728,11 @@ class RecipesApi {
   }
 
   /// Quantify Recipe
-  ///
+  /// 
   ///
   /// Parameters:
-  /// * [recipeId]
-  /// * [quantificationInput]
+  /// * [recipeId] 
+  /// * [quantificationInput] 
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -1810,7 +1742,7 @@ class RecipesApi {
   ///
   /// Returns a [Future] containing a [Response] with a [RecipeQuantificationOut] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<RecipeQuantificationOut>> quantifyRecipe({
+  Future<Response<RecipeQuantificationOut>> quantifyRecipe({ 
     required String recipeId,
     required QuantificationInput quantificationInput,
     CancelToken? cancelToken,
@@ -1820,18 +1752,19 @@ class RecipesApi {
     ProgressCallback? onSendProgress,
     ProgressCallback? onReceiveProgress,
   }) async {
-    final _path = r'/v1/recipes/{recipe_id}/quantification'.replaceAll(
-      '{'
-      r'recipe_id'
-      '}',
-      recipeId.toString(),
-    );
+    final _path = r'/v1/recipes/{recipe_id}/quantification'.replaceAll('{' r'recipe_id' '}', recipeId.toString());
     final _options = Options(
       method: r'POST',
-      headers: <String, dynamic>{...?headers},
+      headers: <String, dynamic>{
+        ...?headers,
+      },
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
-          {'type': 'http', 'scheme': 'bearer', 'name': 'HTTPBearer'},
+          {
+            'type': 'http',
+            'scheme': 'bearer',
+            'name': 'HTTPBearer',
+          },
         ],
         ...?extra,
       },
@@ -1842,10 +1775,13 @@ class RecipesApi {
     dynamic _bodyData;
 
     try {
-      _bodyData = jsonEncode(quantificationInput);
-    } catch (error, stackTrace) {
+_bodyData=jsonEncode(quantificationInput);
+    } catch(error, stackTrace) {
       throw DioException(
-        requestOptions: _options.compose(_dio.options, _path),
+         requestOptions: _options.compose(
+          _dio.options,
+          _path,
+        ),
         type: DioExceptionType.unknown,
         error: error,
         stackTrace: stackTrace,
@@ -1864,14 +1800,9 @@ class RecipesApi {
     RecipeQuantificationOut? _responseData;
 
     try {
-      final rawData = _response.data;
-      _responseData = rawData == null
-          ? null
-          : deserialize<RecipeQuantificationOut, RecipeQuantificationOut>(
-              rawData,
-              'RecipeQuantificationOut',
-              growable: true,
-            );
+final rawData = _response.data;
+_responseData = rawData == null ? null : deserialize<RecipeQuantificationOut, RecipeQuantificationOut>(rawData, 'RecipeQuantificationOut', growable: true);
+
     } catch (error, stackTrace) {
       throw DioException(
         requestOptions: _response.requestOptions,
@@ -1895,13 +1826,13 @@ class RecipesApi {
   }
 
   /// Read Recipe Image
-  ///
+  /// 
   ///
   /// Parameters:
-  /// * [recipeId]
-  /// * [imageId]
-  /// * [expires]
-  /// * [signature]
+  /// * [recipeId] 
+  /// * [imageId] 
+  /// * [expires] 
+  /// * [signature] 
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -1911,7 +1842,7 @@ class RecipesApi {
   ///
   /// Returns a [Future] containing a [Response] with a [Object] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<Object>> readRecipeImage({
+  Future<Response<Object>> readRecipeImage({ 
     required String recipeId,
     required String imageId,
     required int expires,
@@ -1923,23 +1854,16 @@ class RecipesApi {
     ProgressCallback? onSendProgress,
     ProgressCallback? onReceiveProgress,
   }) async {
-    final _path = r'/v1/recipes/{recipe_id}/images/{image_id}'
-        .replaceAll(
-          '{'
-          r'recipe_id'
-          '}',
-          recipeId.toString(),
-        )
-        .replaceAll(
-          '{'
-          r'image_id'
-          '}',
-          imageId.toString(),
-        );
+    final _path = r'/v1/recipes/{recipe_id}/images/{image_id}'.replaceAll('{' r'recipe_id' '}', recipeId.toString()).replaceAll('{' r'image_id' '}', imageId.toString());
     final _options = Options(
       method: r'GET',
-      headers: <String, dynamic>{...?headers},
-      extra: <String, dynamic>{'secure': <Map<String, String>>[], ...?extra},
+      headers: <String, dynamic>{
+        ...?headers,
+      },
+      extra: <String, dynamic>{
+        'secure': <Map<String, String>>[],
+        ...?extra,
+      },
       validateStatus: validateStatus,
     );
 
@@ -1960,10 +1884,9 @@ class RecipesApi {
     Object? _responseData;
 
     try {
-      final rawData = _response.data;
-      _responseData = rawData == null
-          ? null
-          : deserialize<Object, Object>(rawData, 'Object', growable: true);
+final rawData = _response.data;
+_responseData = rawData == null ? null : deserialize<Object, Object>(rawData, 'Object', growable: true);
+
     } catch (error, stackTrace) {
       throw DioException(
         requestOptions: _response.requestOptions,
@@ -1987,12 +1910,12 @@ class RecipesApi {
   }
 
   /// Read Staged Recipe Image
-  ///
+  /// 
   ///
   /// Parameters:
-  /// * [imageId]
-  /// * [expires]
-  /// * [signature]
+  /// * [imageId] 
+  /// * [expires] 
+  /// * [signature] 
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -2002,7 +1925,7 @@ class RecipesApi {
   ///
   /// Returns a [Future] containing a [Response] with a [Object] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<Object>> readStagedRecipeImage({
+  Future<Response<Object>> readStagedRecipeImage({ 
     required String imageId,
     required int expires,
     required String signature,
@@ -2013,16 +1936,16 @@ class RecipesApi {
     ProgressCallback? onSendProgress,
     ProgressCallback? onReceiveProgress,
   }) async {
-    final _path = r'/v1/recipes/images/staging/{image_id}'.replaceAll(
-      '{'
-      r'image_id'
-      '}',
-      imageId.toString(),
-    );
+    final _path = r'/v1/recipes/images/staging/{image_id}'.replaceAll('{' r'image_id' '}', imageId.toString());
     final _options = Options(
       method: r'GET',
-      headers: <String, dynamic>{...?headers},
-      extra: <String, dynamic>{'secure': <Map<String, String>>[], ...?extra},
+      headers: <String, dynamic>{
+        ...?headers,
+      },
+      extra: <String, dynamic>{
+        'secure': <Map<String, String>>[],
+        ...?extra,
+      },
       validateStatus: validateStatus,
     );
 
@@ -2043,10 +1966,9 @@ class RecipesApi {
     Object? _responseData;
 
     try {
-      final rawData = _response.data;
-      _responseData = rawData == null
-          ? null
-          : deserialize<Object, Object>(rawData, 'Object', growable: true);
+final rawData = _response.data;
+_responseData = rawData == null ? null : deserialize<Object, Object>(rawData, 'Object', growable: true);
+
     } catch (error, stackTrace) {
       throw DioException(
         requestOptions: _response.requestOptions,
@@ -2070,12 +1992,12 @@ class RecipesApi {
   }
 
   /// Request Recipe Batch Advice
-  ///
+  /// 
   ///
   /// Parameters:
-  /// * [recipeId]
-  /// * [versionId]
-  /// * [batchAdviceInput]
+  /// * [recipeId] 
+  /// * [versionId] 
+  /// * [batchAdviceInput] 
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -2085,7 +2007,7 @@ class RecipesApi {
   ///
   /// Returns a [Future] containing a [Response] with a [RecipeBatchAdviceOut] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<RecipeBatchAdviceOut>> requestRecipeBatchAdvice({
+  Future<Response<RecipeBatchAdviceOut>> requestRecipeBatchAdvice({ 
     required String recipeId,
     required String versionId,
     required BatchAdviceInput batchAdviceInput,
@@ -2096,25 +2018,19 @@ class RecipesApi {
     ProgressCallback? onSendProgress,
     ProgressCallback? onReceiveProgress,
   }) async {
-    final _path = r'/v1/recipes/{recipe_id}/versions/{version_id}/batch-advice'
-        .replaceAll(
-          '{'
-          r'recipe_id'
-          '}',
-          recipeId.toString(),
-        )
-        .replaceAll(
-          '{'
-          r'version_id'
-          '}',
-          versionId.toString(),
-        );
+    final _path = r'/v1/recipes/{recipe_id}/versions/{version_id}/batch-advice'.replaceAll('{' r'recipe_id' '}', recipeId.toString()).replaceAll('{' r'version_id' '}', versionId.toString());
     final _options = Options(
       method: r'POST',
-      headers: <String, dynamic>{...?headers},
+      headers: <String, dynamic>{
+        ...?headers,
+      },
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
-          {'type': 'http', 'scheme': 'bearer', 'name': 'HTTPBearer'},
+          {
+            'type': 'http',
+            'scheme': 'bearer',
+            'name': 'HTTPBearer',
+          },
         ],
         ...?extra,
       },
@@ -2125,10 +2041,13 @@ class RecipesApi {
     dynamic _bodyData;
 
     try {
-      _bodyData = jsonEncode(batchAdviceInput);
-    } catch (error, stackTrace) {
+_bodyData=jsonEncode(batchAdviceInput);
+    } catch(error, stackTrace) {
       throw DioException(
-        requestOptions: _options.compose(_dio.options, _path),
+         requestOptions: _options.compose(
+          _dio.options,
+          _path,
+        ),
         type: DioExceptionType.unknown,
         error: error,
         stackTrace: stackTrace,
@@ -2147,14 +2066,9 @@ class RecipesApi {
     RecipeBatchAdviceOut? _responseData;
 
     try {
-      final rawData = _response.data;
-      _responseData = rawData == null
-          ? null
-          : deserialize<RecipeBatchAdviceOut, RecipeBatchAdviceOut>(
-              rawData,
-              'RecipeBatchAdviceOut',
-              growable: true,
-            );
+final rawData = _response.data;
+_responseData = rawData == null ? null : deserialize<RecipeBatchAdviceOut, RecipeBatchAdviceOut>(rawData, 'RecipeBatchAdviceOut', growable: true);
+
     } catch (error, stackTrace) {
       throw DioException(
         requestOptions: _response.requestOptions,
@@ -2178,11 +2092,11 @@ class RecipesApi {
   }
 
   /// Save Recipe Version
-  ///
+  /// 
   ///
   /// Parameters:
-  /// * [recipeId]
-  /// * [recipeVersionCreate]
+  /// * [recipeId] 
+  /// * [recipeVersionCreate] 
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -2192,7 +2106,7 @@ class RecipesApi {
   ///
   /// Returns a [Future] containing a [Response] with a [RecipeDetail] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<RecipeDetail>> saveRecipeVersion({
+  Future<Response<RecipeDetail>> saveRecipeVersion({ 
     required String recipeId,
     required RecipeVersionCreate recipeVersionCreate,
     CancelToken? cancelToken,
@@ -2202,18 +2116,19 @@ class RecipesApi {
     ProgressCallback? onSendProgress,
     ProgressCallback? onReceiveProgress,
   }) async {
-    final _path = r'/v1/recipes/{recipe_id}/versions'.replaceAll(
-      '{'
-      r'recipe_id'
-      '}',
-      recipeId.toString(),
-    );
+    final _path = r'/v1/recipes/{recipe_id}/versions'.replaceAll('{' r'recipe_id' '}', recipeId.toString());
     final _options = Options(
       method: r'POST',
-      headers: <String, dynamic>{...?headers},
+      headers: <String, dynamic>{
+        ...?headers,
+      },
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
-          {'type': 'http', 'scheme': 'bearer', 'name': 'HTTPBearer'},
+          {
+            'type': 'http',
+            'scheme': 'bearer',
+            'name': 'HTTPBearer',
+          },
         ],
         ...?extra,
       },
@@ -2224,10 +2139,13 @@ class RecipesApi {
     dynamic _bodyData;
 
     try {
-      _bodyData = jsonEncode(recipeVersionCreate);
-    } catch (error, stackTrace) {
+_bodyData=jsonEncode(recipeVersionCreate);
+    } catch(error, stackTrace) {
       throw DioException(
-        requestOptions: _options.compose(_dio.options, _path),
+         requestOptions: _options.compose(
+          _dio.options,
+          _path,
+        ),
         type: DioExceptionType.unknown,
         error: error,
         stackTrace: stackTrace,
@@ -2246,14 +2164,9 @@ class RecipesApi {
     RecipeDetail? _responseData;
 
     try {
-      final rawData = _response.data;
-      _responseData = rawData == null
-          ? null
-          : deserialize<RecipeDetail, RecipeDetail>(
-              rawData,
-              'RecipeDetail',
-              growable: true,
-            );
+final rawData = _response.data;
+_responseData = rawData == null ? null : deserialize<RecipeDetail, RecipeDetail>(rawData, 'RecipeDetail', growable: true);
+
     } catch (error, stackTrace) {
       throw DioException(
         requestOptions: _response.requestOptions,
@@ -2277,10 +2190,10 @@ class RecipesApi {
   }
 
   /// Stage Recipe Image
-  ///
+  /// 
   ///
   /// Parameters:
-  /// * [recipeImageUpload]
+  /// * [recipeImageUpload] 
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -2290,7 +2203,7 @@ class RecipesApi {
   ///
   /// Returns a [Future] containing a [Response] with a [RecipeImageStagedOut] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<RecipeImageStagedOut>> stageRecipeImage({
+  Future<Response<RecipeImageStagedOut>> stageRecipeImage({ 
     required RecipeImageUpload recipeImageUpload,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -2302,10 +2215,16 @@ class RecipesApi {
     final _path = r'/v1/recipes/images/staging';
     final _options = Options(
       method: r'POST',
-      headers: <String, dynamic>{...?headers},
+      headers: <String, dynamic>{
+        ...?headers,
+      },
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
-          {'type': 'http', 'scheme': 'bearer', 'name': 'HTTPBearer'},
+          {
+            'type': 'http',
+            'scheme': 'bearer',
+            'name': 'HTTPBearer',
+          },
         ],
         ...?extra,
       },
@@ -2316,10 +2235,13 @@ class RecipesApi {
     dynamic _bodyData;
 
     try {
-      _bodyData = jsonEncode(recipeImageUpload);
-    } catch (error, stackTrace) {
+_bodyData=jsonEncode(recipeImageUpload);
+    } catch(error, stackTrace) {
       throw DioException(
-        requestOptions: _options.compose(_dio.options, _path),
+         requestOptions: _options.compose(
+          _dio.options,
+          _path,
+        ),
         type: DioExceptionType.unknown,
         error: error,
         stackTrace: stackTrace,
@@ -2338,14 +2260,9 @@ class RecipesApi {
     RecipeImageStagedOut? _responseData;
 
     try {
-      final rawData = _response.data;
-      _responseData = rawData == null
-          ? null
-          : deserialize<RecipeImageStagedOut, RecipeImageStagedOut>(
-              rawData,
-              'RecipeImageStagedOut',
-              growable: true,
-            );
+final rawData = _response.data;
+_responseData = rawData == null ? null : deserialize<RecipeImageStagedOut, RecipeImageStagedOut>(rawData, 'RecipeImageStagedOut', growable: true);
+
     } catch (error, stackTrace) {
       throw DioException(
         requestOptions: _response.requestOptions,
@@ -2369,11 +2286,11 @@ class RecipesApi {
   }
 
   /// Upload Recipe Image
-  ///
+  /// 
   ///
   /// Parameters:
-  /// * [recipeId]
-  /// * [recipeImageUpload]
+  /// * [recipeId] 
+  /// * [recipeImageUpload] 
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -2383,7 +2300,7 @@ class RecipesApi {
   ///
   /// Returns a [Future] containing a [Response] with a [RecipeImageOut] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<RecipeImageOut>> uploadRecipeImage({
+  Future<Response<RecipeImageOut>> uploadRecipeImage({ 
     required String recipeId,
     required RecipeImageUpload recipeImageUpload,
     CancelToken? cancelToken,
@@ -2393,18 +2310,19 @@ class RecipesApi {
     ProgressCallback? onSendProgress,
     ProgressCallback? onReceiveProgress,
   }) async {
-    final _path = r'/v1/recipes/{recipe_id}/images'.replaceAll(
-      '{'
-      r'recipe_id'
-      '}',
-      recipeId.toString(),
-    );
+    final _path = r'/v1/recipes/{recipe_id}/images'.replaceAll('{' r'recipe_id' '}', recipeId.toString());
     final _options = Options(
       method: r'POST',
-      headers: <String, dynamic>{...?headers},
+      headers: <String, dynamic>{
+        ...?headers,
+      },
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
-          {'type': 'http', 'scheme': 'bearer', 'name': 'HTTPBearer'},
+          {
+            'type': 'http',
+            'scheme': 'bearer',
+            'name': 'HTTPBearer',
+          },
         ],
         ...?extra,
       },
@@ -2415,10 +2333,13 @@ class RecipesApi {
     dynamic _bodyData;
 
     try {
-      _bodyData = jsonEncode(recipeImageUpload);
-    } catch (error, stackTrace) {
+_bodyData=jsonEncode(recipeImageUpload);
+    } catch(error, stackTrace) {
       throw DioException(
-        requestOptions: _options.compose(_dio.options, _path),
+         requestOptions: _options.compose(
+          _dio.options,
+          _path,
+        ),
         type: DioExceptionType.unknown,
         error: error,
         stackTrace: stackTrace,
@@ -2437,14 +2358,9 @@ class RecipesApi {
     RecipeImageOut? _responseData;
 
     try {
-      final rawData = _response.data;
-      _responseData = rawData == null
-          ? null
-          : deserialize<RecipeImageOut, RecipeImageOut>(
-              rawData,
-              'RecipeImageOut',
-              growable: true,
-            );
+final rawData = _response.data;
+_responseData = rawData == null ? null : deserialize<RecipeImageOut, RecipeImageOut>(rawData, 'RecipeImageOut', growable: true);
+
     } catch (error, stackTrace) {
       throw DioException(
         requestOptions: _response.requestOptions,
@@ -2466,4 +2382,5 @@ class RecipesApi {
       extra: _response.extra,
     );
   }
+
 }

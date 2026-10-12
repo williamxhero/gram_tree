@@ -8,6 +8,7 @@ import 'package:json_annotation/json_annotation.dart';
 
 part 'component_reason.g.dart';
 
+
 @CopyWith()
 @JsonSerializable(
   checked: true,
@@ -17,26 +18,52 @@ part 'component_reason.g.dart';
 )
 class ComponentReason {
   /// Returns a new [ComponentReason] instance.
-  ComponentReason({required this.code, required this.text});
+  ComponentReason({
 
-  /// 理由代码，例如 default
-  @JsonKey(name: r'code', required: true, includeIfNull: false)
+    required  this.code,
+
+    required  this.text,
+  });
+
+      /// 理由代码，例如 default
+  @JsonKey(
+    
+    name: r'code',
+    required: true,
+    includeIfNull: false,
+  )
+
+
   final String code;
 
-  /// 给人看的一句话说明
-  @JsonKey(name: r'text', required: true, includeIfNull: false)
+
+
+      /// 给人看的一句话说明
+  @JsonKey(
+    
+    name: r'text',
+    required: true,
+    includeIfNull: false,
+  )
+
+
   final String text;
 
-  @override
-  bool operator ==(Object other) =>
-      identical(this, other) ||
-      other is ComponentReason && other.code == code && other.text == text;
 
-  @override
-  int get hashCode => code.hashCode + text.hashCode;
 
-  factory ComponentReason.fromJson(Map<String, dynamic> json) =>
-      _$ComponentReasonFromJson(json);
+
+
+    @override
+    bool operator ==(Object other) => identical(this, other) || other is ComponentReason &&
+      other.code == code &&
+      other.text == text;
+
+    @override
+    int get hashCode =>
+        code.hashCode +
+        text.hashCode;
+
+  factory ComponentReason.fromJson(Map<String, dynamic> json) => _$ComponentReasonFromJson(json);
 
   Map<String, dynamic> toJson() => _$ComponentReasonToJson(this);
 
@@ -44,4 +71,6 @@ class ComponentReason {
   String toString() {
     return toJson().toString();
   }
+
 }
+

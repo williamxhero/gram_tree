@@ -128,46 +128,55 @@ extension $FamilyMemberOutCopyWith on FamilyMemberOut {
 // JsonSerializableGenerator
 // **************************************************************************
 
-FamilyMemberOut _$FamilyMemberOutFromJson(
-  Map<String, dynamic> json,
-) => $checkedCreate('FamilyMemberOut', json, ($checkedConvert) {
-  $checkKeys(
-    json,
-    requiredKeys: const [
-      'age_band',
-      'allergies',
-      'avoidances',
-      'flavors',
-      'id',
-      'nickname',
-      'source',
-    ],
-  );
-  final val = FamilyMemberOut(
-    ageBand: $checkedConvert(
-      'age_band',
-      (v) => $enumDecode(_$FamilyMemberOutAgeBandEnumEnumMap, v),
-    ),
-    allergies: $checkedConvert(
-      'allergies',
-      (v) => FamilyAllergiesOut.fromJson(v as Map<String, dynamic>),
-    ),
-    avoidances: $checkedConvert(
-      'avoidances',
-      (v) => (v as List<dynamic>)
-          .map((e) => FamilyAvoidanceOut.fromJson(e as Map<String, dynamic>))
-          .toList(),
-    ),
-    flavors: $checkedConvert('flavors', (v) => Map<String, num>.from(v as Map)),
-    id: $checkedConvert('id', (v) => v as String),
-    nickname: $checkedConvert('nickname', (v) => v as String),
-    source_: $checkedConvert(
-      'source',
-      (v) => $enumDecode(_$FamilyMemberOutSource_EnumEnumMap, v),
-    ),
-  );
-  return val;
-}, fieldKeyMap: const {'ageBand': 'age_band', 'source_': 'source'});
+FamilyMemberOut _$FamilyMemberOutFromJson(Map<String, dynamic> json) =>
+    $checkedCreate(
+      'FamilyMemberOut',
+      json,
+      ($checkedConvert) {
+        $checkKeys(
+          json,
+          requiredKeys: const [
+            'age_band',
+            'allergies',
+            'avoidances',
+            'flavors',
+            'id',
+            'nickname',
+            'source',
+          ],
+        );
+        final val = FamilyMemberOut(
+          ageBand: $checkedConvert(
+            'age_band',
+            (v) => $enumDecode(_$FamilyMemberOutAgeBandEnumEnumMap, v),
+          ),
+          allergies: $checkedConvert(
+            'allergies',
+            (v) => FamilyAllergiesOut.fromJson(v as Map<String, dynamic>),
+          ),
+          avoidances: $checkedConvert(
+            'avoidances',
+            (v) => (v as List<dynamic>)
+                .map(
+                  (e) => FamilyAvoidanceOut.fromJson(e as Map<String, dynamic>),
+                )
+                .toList(),
+          ),
+          flavors: $checkedConvert(
+            'flavors',
+            (v) => Map<String, num>.from(v as Map),
+          ),
+          id: $checkedConvert('id', (v) => v as String),
+          nickname: $checkedConvert('nickname', (v) => v as String),
+          source_: $checkedConvert(
+            'source',
+            (v) => $enumDecode(_$FamilyMemberOutSource_EnumEnumMap, v),
+          ),
+        );
+        return val;
+      },
+      fieldKeyMap: const {'ageBand': 'age_band', 'source_': 'source'},
+    );
 
 Map<String, dynamic> _$FamilyMemberOutToJson(FamilyMemberOut instance) =>
     <String, dynamic>{
