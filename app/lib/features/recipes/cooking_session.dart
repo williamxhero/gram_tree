@@ -13,6 +13,8 @@ import '../../recipes/recipe_snapshot.dart';
 import '../../recipes/recipe_snapshot_provider.dart';
 import '../../storage/local_store.dart';
 import '../../util/ids.dart';
+import 'cooking_voice.dart';
+import 'press_hold_voice_question.dart';
 
 const _cookingStoreKey = 'cooking_sessions:v1';
 
@@ -291,6 +293,10 @@ class _CookingPageState extends ConsumerState<CookingPage>
   CookingSession? _session;
   Timer? _ticker;
   bool _reportingDueTimers = false;
+  final _voiceCommands = CookingVoiceController();
+  VoiceQuestionLifecycle? _voiceQuestion;
+  PressAndHoldVoiceQuestion? _voiceRecorder;
+  bool _voiceUnavailable = false;
 
   @override
   void initState() {
@@ -309,6 +315,8 @@ class _CookingPageState extends ConsumerState<CookingPage>
   @override
   void dispose() {
     _ticker?.cancel();
+    _voiceQuestion?.cancel();
+    unawaited(_voiceRecorder?.dispose());
     WidgetsBinding.instance.removeObserver(this);
     unawaited(ref.read(deviceCapabilitiesProvider).setKeepScreenOn(false));
     super.dispose();
@@ -600,6 +608,43 @@ class _CookingPageState extends ConsumerState<CookingPage>
     );
   }
 
+  /// Run a validated transcript from the active offline command recognizer.
+  Future<void> runVoiceCommand(String transcript) async {
+    final command = _voiceCommands.accept(transcript, DateTime.now());
+    if (_voiceRecorder != null) return;
+    final session = _session;
+    if (command == null || session == null || session.isComplete) return;
+    switch (command) {
+      case CookingVoiceCommand.next:
+        await _move(1);
+      case CookingVoiceCommand.previous:
+        await _move(-1);
+      case CookingVoiceCommand.repeat:
+        if (mounted) setState(() {});
+      case CookingVoiceCommand.startTimer:
+        final index = session.stepIndex;
+        if (index < 0 || index >= session.steps.length) return;
+        final step = session.steps[index];
+        final existing = session.timers
+            .where(
+              (timer) => timer.stepId == step.id && timer.status == 'running',
+            )
+            .firstOrNull;
+        if (existing == null && (step.durationSeconds ?? 0) > 0) {
+          await _toggleTimer(step);
+        }
+      case CookingVoiceCommand.pauseTimer:
+        final index = session.stepIndex;
+        if (index < 0 || index >= session.steps.length) return;
+        final step = session.steps[index];
+        final running = session.timers.any(
+          (timer) => timer.stepId == step.id && timer.status == 'running',
+        );
+        if (running) await _toggleTimer(step);
+    }
+    await _save(session.copyWith(), event: 'voice_command_${command.name}');
+  }
+
   Future<void> _recordQuestion() async {
     final session = _session;
     if (session == null || session.stepIndex < 0) return;
@@ -676,21 +721,109 @@ class _CookingPageState extends ConsumerState<CookingPage>
     );
   }
 
-  Future<void> _recordVoiceQuestion() async {
+  Future<void> _startVoiceQuestion() async {
     final state = await ref
         .read(permissionServiceProvider)
         .request(AppPermission.microphone);
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          state == PermissionState.granted
-              ? '当前设备暂不支持离线语音转写，请直接输入问题。'
-              : '未获得麦克风权限，请直接输入问题。',
-        ),
+    if (!mounted || state != PermissionState.granted) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(const SnackBar(content: Text('未获得麦克风权限，语音提问已取消。')));
+      }
+      return;
+    }
+    final session = _session;
+    if (session == null || session.stepIndex < 0) return;
+    final recognizer = SherpaOfflineChineseRecognizer();
+    final modelState = await recognizer.initialize(
+      const OfflineChineseModel(
+        modelPath: 'assets/models/zh/encoder.onnx',
+        decoderPath: 'assets/models/zh/decoder.onnx',
+        joinerPath: 'assets/models/zh/joiner.onnx',
+        tokensPath: 'assets/models/zh/tokens.txt',
+        language: 'zh-CN',
       ),
     );
-    await _recordQuestion();
+    if (modelState is! OfflineModelReady) {
+      recognizer.dispose();
+      if (mounted) {
+        setState(() => _voiceUnavailable = true);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text((modelState as OfflineModelUnavailable).reason),
+          ),
+        );
+      }
+      return;
+    }
+    final recorder = PressAndHoldVoiceQuestion(recognizer);
+    try {
+      await recorder.pressDown(
+        sessionId: session.id,
+        versionId: session.snapshot.versionId,
+        stepId: session.steps[session.stepIndex].id,
+      );
+    } catch (error) {
+      await recorder.dispose();
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('无法开始录音：$error')));
+      }
+      return;
+    }
+    _voiceRecorder = recorder;
+    _voiceQuestion = recorder.lifecycle;
+    if (mounted) setState(() {});
+  }
+
+  Future<void> _finishVoiceQuestion() async {
+    final recorder = _voiceRecorder;
+    final session = _session;
+    if (recorder == null || session == null) return;
+    final lifecycle = recorder.lifecycle;
+    final saved = await recorder.release();
+    if (!saved || !mounted || lifecycle == null) {
+      if (mounted) {
+        final reason = lifecycle?.error ?? '语音提问已取消';
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(reason)));
+      }
+      return;
+    }
+    await _save(
+      session.copyWith(
+        questions: [
+          ...session.questions,
+          {
+            'session_id': lifecycle.sessionId,
+            'version_id': lifecycle.versionId,
+            'step_id': lifecycle.stepId,
+            'text': lifecycle.text,
+            'status': '已记下，暂时不能即时回答',
+            'created_at': DateTime.now().toUtc().toIso8601String(),
+          },
+        ],
+      ),
+      event: 'question_recorded',
+    );
+    await recorder.dispose();
+    _voiceRecorder = null;
+    _voiceQuestion = null;
+    if (mounted) setState(() {});
+    if (mounted) {
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('已记下，暂时不能即时回答。')));
+    }
+  }
+
+  Future<void> _cancelVoiceQuestion() async {
+    final recorder = _voiceRecorder;
+    if (recorder == null) return;
+    await recorder.cancel();
+    await recorder.dispose();
+    _voiceRecorder = null;
+    _voiceQuestion = null;
+    if (mounted) setState(() {});
   }
 
   @override
@@ -796,10 +929,26 @@ class _CookingPageState extends ConsumerState<CookingPage>
                     icon: const Icon(Icons.help_outline),
                     label: const Text('记录问题'),
                   ),
-                  OutlinedButton.icon(
-                    onPressed: _recordVoiceQuestion,
-                    icon: const Icon(Icons.mic_none),
-                    label: const Text('语音提问'),
+                  GestureDetector(
+                    onLongPressStart: (_) => _startVoiceQuestion(),
+                    onLongPressEnd: (_) => _finishVoiceQuestion(),
+                    onLongPressCancel: _cancelVoiceQuestion,
+                    child: OutlinedButton.icon(
+                      onPressed: null,
+                      icon: Icon(
+                        _voiceQuestion?.state == VoiceQuestionState.recording
+                            ? Icons.mic
+                            : Icons.mic_none,
+                      ),
+                      label: Text(
+                        _voiceUnavailable
+                            ? '语音不可用'
+                            : _voiceQuestion?.state ==
+                                  VoiceQuestionState.recording
+                            ? '松开结束录音'
+                            : '按住语音提问',
+                      ),
+                    ),
                   ),
                   OutlinedButton.icon(
                     onPressed: _recordAdjustment,

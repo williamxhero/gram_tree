@@ -120,7 +120,7 @@ const personalInfoList = StaticDocument(
     ListedItem(
       '做菜时的语音问题',
       '在做菜时取得麦克风权限并转写为问题文字',
-      '只有你主动点语音提问时申请麦克风；当前未接入离线识别，权限允许后仍回退到文字输入，不保存或上传音频。',
+      '只有你主动按住语音提问时申请麦克风；在设备内用 sherpa-onnx 离线转写，暂不保存或上传原始音频；模型未安装、权限拒绝或转写失败时明确提示，不把文字回退冒充语音完成。',
     ),
   ],
 );
@@ -140,6 +140,11 @@ const sdkList = StaticDocument(
       'Sign in with Apple（sign_in_with_apple）',
       '通过 Apple 登录（仅 iPhone）',
       '只在你点“通过 Apple 登录”时调用系统的 Apple 登录',
+    ),
+    ListedItem(
+      'sherpa-onnx（本地离线语音 SDK）',
+      '在设备内将你主动按住语音提问转写为文字，以及识别做菜命令',
+      '模型随 App 提供并在设备内运行；不把原始音频发给 sherpa-onnx 或云服务。仅在你主动使用语音时启动。',
     ),
     ListedItem(
       '服务端配置的模型服务（非 App SDK）',
