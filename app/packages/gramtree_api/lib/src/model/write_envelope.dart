@@ -8,6 +8,7 @@ import 'package:json_annotation/json_annotation.dart';
 
 part 'write_envelope.g.dart';
 
+
 @CopyWith()
 @JsonSerializable(
   checked: true,
@@ -18,69 +19,132 @@ part 'write_envelope.g.dart';
 class WriteEnvelope {
   /// Returns a new [WriteEnvelope] instance.
   WriteEnvelope({
-    this.dependencies,
 
-    required this.deviceTime,
+     this.dependencies,
 
-    required this.formatVersion,
+    required  this.deviceTime,
 
-    required this.ownerId,
+    required  this.formatVersion,
 
-    required this.payload,
+    required  this.ownerId,
 
-    required this.writeId,
+    required  this.payload,
 
-    required this.writeType,
+    required  this.writeId,
+
+    required  this.writeType,
   });
 
-  @JsonKey(name: r'dependencies', required: false, includeIfNull: false)
+  @JsonKey(
+    
+    name: r'dependencies',
+    required: false,
+    includeIfNull: false,
+  )
+
+
   final List<String>? dependencies;
 
-  @JsonKey(name: r'device_time', required: true, includeIfNull: false)
+
+
+  @JsonKey(
+    
+    name: r'device_time',
+    required: true,
+    includeIfNull: false,
+  )
+
+
   final DateTime deviceTime;
 
-  /// Immutable envelope format, independent of business version
-  @JsonKey(name: r'format_version', required: true, includeIfNull: false)
+
+
+      /// Immutable envelope format, independent of business version
+  @JsonKey(
+    
+    name: r'format_version',
+    required: true,
+    includeIfNull: false,
+  )
+
+
   final int formatVersion;
 
-  /// Bound at local creation; must equal the authenticated account
-  @JsonKey(name: r'owner_id', required: true, includeIfNull: false)
+
+
+      /// Bound at local creation; must equal the authenticated account
+  @JsonKey(
+    
+    name: r'owner_id',
+    required: true,
+    includeIfNull: false,
+  )
+
+
   final String ownerId;
 
-  @JsonKey(name: r'payload', required: true, includeIfNull: false)
+
+
+  @JsonKey(
+    
+    name: r'payload',
+    required: true,
+    includeIfNull: false,
+  )
+
+
   final Object payload;
 
-  /// UUID v4 delivery ID, not the referenced business resource ID
-  @JsonKey(name: r'write_id', required: true, includeIfNull: false)
+
+
+      /// UUID v4 delivery ID, not the referenced business resource ID
+  @JsonKey(
+    
+    name: r'write_id',
+    required: true,
+    includeIfNull: false,
+  )
+
+
   final String writeId;
 
-  @JsonKey(name: r'write_type', required: true, includeIfNull: false)
+
+
+  @JsonKey(
+    
+    name: r'write_type',
+    required: true,
+    includeIfNull: false,
+  )
+
+
   final String writeType;
 
-  @override
-  bool operator ==(Object other) =>
-      identical(this, other) ||
-      other is WriteEnvelope &&
-          other.dependencies == dependencies &&
-          other.deviceTime == deviceTime &&
-          other.formatVersion == formatVersion &&
-          other.ownerId == ownerId &&
-          other.payload == payload &&
-          other.writeId == writeId &&
-          other.writeType == writeType;
 
-  @override
-  int get hashCode =>
-      dependencies.hashCode +
-      deviceTime.hashCode +
-      formatVersion.hashCode +
-      ownerId.hashCode +
-      payload.hashCode +
-      writeId.hashCode +
-      writeType.hashCode;
 
-  factory WriteEnvelope.fromJson(Map<String, dynamic> json) =>
-      _$WriteEnvelopeFromJson(json);
+
+
+    @override
+    bool operator ==(Object other) => identical(this, other) || other is WriteEnvelope &&
+      other.dependencies == dependencies &&
+      other.deviceTime == deviceTime &&
+      other.formatVersion == formatVersion &&
+      other.ownerId == ownerId &&
+      other.payload == payload &&
+      other.writeId == writeId &&
+      other.writeType == writeType;
+
+    @override
+    int get hashCode =>
+        dependencies.hashCode +
+        deviceTime.hashCode +
+        formatVersion.hashCode +
+        ownerId.hashCode +
+        payload.hashCode +
+        writeId.hashCode +
+        writeType.hashCode;
+
+  factory WriteEnvelope.fromJson(Map<String, dynamic> json) => _$WriteEnvelopeFromJson(json);
 
   Map<String, dynamic> toJson() => _$WriteEnvelopeToJson(this);
 
@@ -88,4 +152,6 @@ class WriteEnvelope {
   String toString() {
     return toJson().toString();
   }
+
 }
+

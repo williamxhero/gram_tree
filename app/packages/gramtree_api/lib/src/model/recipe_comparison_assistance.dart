@@ -10,6 +10,7 @@ import 'package:json_annotation/json_annotation.dart';
 
 part 'recipe_comparison_assistance.g.dart';
 
+
 @CopyWith()
 @JsonSerializable(
   checked: true,
@@ -20,66 +21,129 @@ part 'recipe_comparison_assistance.g.dart';
 class RecipeComparisonAssistance {
   /// Returns a new [RecipeComparisonAssistance] instance.
   RecipeComparisonAssistance({
-    this.alignments,
 
-    required this.fromVersionId,
+     this.alignments,
 
-    this.interpretation,
+    required  this.fromVersionId,
 
-    this.reasonCode,
+     this.interpretation,
 
-    required this.rulesVersion,
+     this.reasonCode,
 
-    required this.status,
+    required  this.rulesVersion,
 
-    required this.toVersionId,
+    required  this.status,
+
+    required  this.toVersionId,
   });
 
-  @JsonKey(name: r'alignments', required: false, includeIfNull: false)
+  @JsonKey(
+    
+    name: r'alignments',
+    required: false,
+    includeIfNull: false,
+  )
+
+
   final List<AssistedStepPair>? alignments;
 
-  @JsonKey(name: r'from_version_id', required: true, includeIfNull: false)
+
+
+  @JsonKey(
+    
+    name: r'from_version_id',
+    required: true,
+    includeIfNull: false,
+  )
+
+
   final String fromVersionId;
 
-  @JsonKey(name: r'interpretation', required: false, includeIfNull: false)
+
+
+  @JsonKey(
+    
+    name: r'interpretation',
+    required: false,
+    includeIfNull: false,
+  )
+
+
   final SourcedValue? interpretation;
 
-  @JsonKey(name: r'reason_code', required: false, includeIfNull: false)
+
+
+  @JsonKey(
+    
+    name: r'reason_code',
+    required: false,
+    includeIfNull: false,
+  )
+
+
   final String? reasonCode;
 
-  @JsonKey(name: r'rules_version', required: true, includeIfNull: false)
+
+
+  @JsonKey(
+    
+    name: r'rules_version',
+    required: true,
+    includeIfNull: false,
+  )
+
+
   final String rulesVersion;
 
-  @JsonKey(name: r'status', required: true, includeIfNull: false)
+
+
+  @JsonKey(
+    
+    name: r'status',
+    required: true,
+    includeIfNull: false,
+  )
+
+
   final RecipeComparisonAssistanceStatusEnum status;
 
-  @JsonKey(name: r'to_version_id', required: true, includeIfNull: false)
+
+
+  @JsonKey(
+    
+    name: r'to_version_id',
+    required: true,
+    includeIfNull: false,
+  )
+
+
   final String toVersionId;
 
-  @override
-  bool operator ==(Object other) =>
-      identical(this, other) ||
-      other is RecipeComparisonAssistance &&
-          other.alignments == alignments &&
-          other.fromVersionId == fromVersionId &&
-          other.interpretation == interpretation &&
-          other.reasonCode == reasonCode &&
-          other.rulesVersion == rulesVersion &&
-          other.status == status &&
-          other.toVersionId == toVersionId;
 
-  @override
-  int get hashCode =>
-      alignments.hashCode +
-      fromVersionId.hashCode +
-      interpretation.hashCode +
-      (reasonCode == null ? 0 : reasonCode.hashCode) +
-      rulesVersion.hashCode +
-      status.hashCode +
-      toVersionId.hashCode;
 
-  factory RecipeComparisonAssistance.fromJson(Map<String, dynamic> json) =>
-      _$RecipeComparisonAssistanceFromJson(json);
+
+
+    @override
+    bool operator ==(Object other) => identical(this, other) || other is RecipeComparisonAssistance &&
+      other.alignments == alignments &&
+      other.fromVersionId == fromVersionId &&
+      other.interpretation == interpretation &&
+      other.reasonCode == reasonCode &&
+      other.rulesVersion == rulesVersion &&
+      other.status == status &&
+      other.toVersionId == toVersionId;
+
+    @override
+    int get hashCode =>
+        alignments.hashCode +
+        fromVersionId.hashCode +
+        interpretation.hashCode +
+        (reasonCode == null ? 0 : reasonCode.hashCode) +
+        rulesVersion.hashCode +
+        status.hashCode +
+        toVersionId.hashCode;
+
+  factory RecipeComparisonAssistance.fromJson(Map<String, dynamic> json) => _$RecipeComparisonAssistanceFromJson(json);
 
   Map<String, dynamic> toJson() => _$RecipeComparisonAssistanceToJson(this);
 
@@ -87,18 +151,22 @@ class RecipeComparisonAssistance {
   String toString() {
     return toJson().toString();
   }
+
 }
+
 
 enum RecipeComparisonAssistanceStatusEnum {
-  @JsonValue(r'ready')
-  ready(r'ready'),
-  @JsonValue(r'unavailable')
-  unavailable(r'unavailable');
+@JsonValue(r'ready')
+ready(r'ready'),
+@JsonValue(r'unavailable')
+unavailable(r'unavailable');
 
-  const RecipeComparisonAssistanceStatusEnum(this.value);
+const RecipeComparisonAssistanceStatusEnum(this.value);
 
-  final String value;
+final String value;
 
-  @override
-  String toString() => value;
+@override
+String toString() => value;
 }
+
+

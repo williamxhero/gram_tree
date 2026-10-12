@@ -8,6 +8,7 @@ import 'package:json_annotation/json_annotation.dart';
 
 part 'measure_input_request.g.dart';
 
+
 @CopyWith()
 @JsonSerializable(
   checked: true,
@@ -18,15 +19,16 @@ part 'measure_input_request.g.dart';
 class MeasureInputRequest {
   /// Returns a new [MeasureInputRequest] instance.
   MeasureInputRequest({
-    this.acceptEstimate = false,
 
-    required this.baseUnit,
+     this.acceptEstimate = false,
 
-    this.ingredientId,
+    required  this.baseUnit,
 
-    required this.measureId,
+     this.ingredientId,
 
-    required this.quantity,
+    required  this.measureId,
+
+    required  this.quantity,
   });
 
   @JsonKey(
@@ -35,42 +37,81 @@ class MeasureInputRequest {
     required: false,
     includeIfNull: false,
   )
+
+
   final bool? acceptEstimate;
 
-  @JsonKey(name: r'base_unit', required: true, includeIfNull: false)
+
+
+  @JsonKey(
+    
+    name: r'base_unit',
+    required: true,
+    includeIfNull: false,
+  )
+
+
   final MeasureInputRequestBaseUnitEnum baseUnit;
 
-  @JsonKey(name: r'ingredient_id', required: false, includeIfNull: false)
+
+
+  @JsonKey(
+    
+    name: r'ingredient_id',
+    required: false,
+    includeIfNull: false,
+  )
+
+
   final String? ingredientId;
 
-  @JsonKey(name: r'measure_id', required: true, includeIfNull: false)
+
+
+  @JsonKey(
+    
+    name: r'measure_id',
+    required: true,
+    includeIfNull: false,
+  )
+
+
   final String measureId;
 
-  // minimum: 0.0
-  // maximum: 10000000
-  @JsonKey(name: r'quantity', required: true, includeIfNull: false)
+
+
+          // minimum: 0.0
+          // maximum: 10000000
+  @JsonKey(
+    
+    name: r'quantity',
+    required: true,
+    includeIfNull: false,
+  )
+
+
   final num quantity;
 
-  @override
-  bool operator ==(Object other) =>
-      identical(this, other) ||
-      other is MeasureInputRequest &&
-          other.acceptEstimate == acceptEstimate &&
-          other.baseUnit == baseUnit &&
-          other.ingredientId == ingredientId &&
-          other.measureId == measureId &&
-          other.quantity == quantity;
 
-  @override
-  int get hashCode =>
-      acceptEstimate.hashCode +
-      baseUnit.hashCode +
-      (ingredientId == null ? 0 : ingredientId.hashCode) +
-      measureId.hashCode +
-      quantity.hashCode;
 
-  factory MeasureInputRequest.fromJson(Map<String, dynamic> json) =>
-      _$MeasureInputRequestFromJson(json);
+
+
+    @override
+    bool operator ==(Object other) => identical(this, other) || other is MeasureInputRequest &&
+      other.acceptEstimate == acceptEstimate &&
+      other.baseUnit == baseUnit &&
+      other.ingredientId == ingredientId &&
+      other.measureId == measureId &&
+      other.quantity == quantity;
+
+    @override
+    int get hashCode =>
+        acceptEstimate.hashCode +
+        baseUnit.hashCode +
+        (ingredientId == null ? 0 : ingredientId.hashCode) +
+        measureId.hashCode +
+        quantity.hashCode;
+
+  factory MeasureInputRequest.fromJson(Map<String, dynamic> json) => _$MeasureInputRequestFromJson(json);
 
   Map<String, dynamic> toJson() => _$MeasureInputRequestToJson(this);
 
@@ -78,18 +119,22 @@ class MeasureInputRequest {
   String toString() {
     return toJson().toString();
   }
+
 }
+
 
 enum MeasureInputRequestBaseUnitEnum {
-  @JsonValue(r'g')
-  g(r'g'),
-  @JsonValue(r'ml')
-  ml(r'ml');
+@JsonValue(r'g')
+g(r'g'),
+@JsonValue(r'ml')
+ml(r'ml');
 
-  const MeasureInputRequestBaseUnitEnum(this.value);
+const MeasureInputRequestBaseUnitEnum(this.value);
 
-  final String value;
+final String value;
 
-  @override
-  String toString() => value;
+@override
+String toString() => value;
 }
+
+

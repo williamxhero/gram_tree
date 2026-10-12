@@ -8,6 +8,7 @@ import 'package:json_annotation/json_annotation.dart';
 
 part 'recipe_version_summary.g.dart';
 
+
 @CopyWith()
 @JsonSerializable(
   checked: true,
@@ -18,80 +19,161 @@ part 'recipe_version_summary.g.dart';
 class RecipeVersionSummary {
   /// Returns a new [RecipeVersionSummary] instance.
   RecipeVersionSummary({
-    required this.aiAssisted,
 
-    this.baseVersionId,
+    required  this.aiAssisted,
 
-    required this.changeNote,
+     this.baseVersionId,
 
-    this.conclusion,
+    required  this.changeNote,
 
-    required this.createdAt,
+     this.conclusion,
 
-    required this.id,
+    required  this.createdAt,
 
-    this.previousVersionId,
+    required  this.id,
 
-    this.rulesVersion,
+     this.previousVersionId,
 
-    required this.versionNumber,
+     this.rulesVersion,
+
+    required  this.versionNumber,
   });
 
-  @JsonKey(name: r'ai_assisted', required: true, includeIfNull: false)
+  @JsonKey(
+    
+    name: r'ai_assisted',
+    required: true,
+    includeIfNull: false,
+  )
+
+
   final bool aiAssisted;
 
-  @JsonKey(name: r'base_version_id', required: false, includeIfNull: false)
+
+
+  @JsonKey(
+    
+    name: r'base_version_id',
+    required: false,
+    includeIfNull: false,
+  )
+
+
   final String? baseVersionId;
 
-  @JsonKey(name: r'change_note', required: true, includeIfNull: false)
+
+
+  @JsonKey(
+    
+    name: r'change_note',
+    required: true,
+    includeIfNull: false,
+  )
+
+
   final String changeNote;
 
-  @JsonKey(name: r'conclusion', required: false, includeIfNull: false)
+
+
+  @JsonKey(
+    
+    name: r'conclusion',
+    required: false,
+    includeIfNull: false,
+  )
+
+
   final RecipeVersionSummaryConclusionEnum? conclusion;
 
-  @JsonKey(name: r'created_at', required: true, includeIfNull: false)
+
+
+  @JsonKey(
+    
+    name: r'created_at',
+    required: true,
+    includeIfNull: false,
+  )
+
+
   final String createdAt;
 
-  @JsonKey(name: r'id', required: true, includeIfNull: false)
+
+
+  @JsonKey(
+    
+    name: r'id',
+    required: true,
+    includeIfNull: false,
+  )
+
+
   final String id;
 
-  @JsonKey(name: r'previous_version_id', required: false, includeIfNull: false)
+
+
+  @JsonKey(
+    
+    name: r'previous_version_id',
+    required: false,
+    includeIfNull: false,
+  )
+
+
   final String? previousVersionId;
 
-  @JsonKey(name: r'rules_version', required: false, includeIfNull: false)
+
+
+  @JsonKey(
+    
+    name: r'rules_version',
+    required: false,
+    includeIfNull: false,
+  )
+
+
   final String? rulesVersion;
 
-  @JsonKey(name: r'version_number', required: true, includeIfNull: false)
+
+
+  @JsonKey(
+    
+    name: r'version_number',
+    required: true,
+    includeIfNull: false,
+  )
+
+
   final int versionNumber;
 
-  @override
-  bool operator ==(Object other) =>
-      identical(this, other) ||
-      other is RecipeVersionSummary &&
-          other.aiAssisted == aiAssisted &&
-          other.baseVersionId == baseVersionId &&
-          other.changeNote == changeNote &&
-          other.conclusion == conclusion &&
-          other.createdAt == createdAt &&
-          other.id == id &&
-          other.previousVersionId == previousVersionId &&
-          other.rulesVersion == rulesVersion &&
-          other.versionNumber == versionNumber;
 
-  @override
-  int get hashCode =>
-      aiAssisted.hashCode +
-      (baseVersionId == null ? 0 : baseVersionId.hashCode) +
-      changeNote.hashCode +
-      (conclusion == null ? 0 : conclusion.hashCode) +
-      createdAt.hashCode +
-      id.hashCode +
-      (previousVersionId == null ? 0 : previousVersionId.hashCode) +
-      (rulesVersion == null ? 0 : rulesVersion.hashCode) +
-      versionNumber.hashCode;
 
-  factory RecipeVersionSummary.fromJson(Map<String, dynamic> json) =>
-      _$RecipeVersionSummaryFromJson(json);
+
+
+    @override
+    bool operator ==(Object other) => identical(this, other) || other is RecipeVersionSummary &&
+      other.aiAssisted == aiAssisted &&
+      other.baseVersionId == baseVersionId &&
+      other.changeNote == changeNote &&
+      other.conclusion == conclusion &&
+      other.createdAt == createdAt &&
+      other.id == id &&
+      other.previousVersionId == previousVersionId &&
+      other.rulesVersion == rulesVersion &&
+      other.versionNumber == versionNumber;
+
+    @override
+    int get hashCode =>
+        aiAssisted.hashCode +
+        (baseVersionId == null ? 0 : baseVersionId.hashCode) +
+        changeNote.hashCode +
+        (conclusion == null ? 0 : conclusion.hashCode) +
+        createdAt.hashCode +
+        id.hashCode +
+        (previousVersionId == null ? 0 : previousVersionId.hashCode) +
+        (rulesVersion == null ? 0 : rulesVersion.hashCode) +
+        versionNumber.hashCode;
+
+  factory RecipeVersionSummary.fromJson(Map<String, dynamic> json) => _$RecipeVersionSummaryFromJson(json);
 
   Map<String, dynamic> toJson() => _$RecipeVersionSummaryToJson(this);
 
@@ -99,22 +181,26 @@ class RecipeVersionSummary {
   String toString() {
     return toJson().toString();
   }
+
 }
+
 
 enum RecipeVersionSummaryConclusionEnum {
-  @JsonValue(r'no_change')
-  noChange(r'no_change'),
-  @JsonValue(r'minor_only')
-  minorOnly(r'minor_only'),
-  @JsonValue(r'general')
-  general(r'general'),
-  @JsonValue(r'significant')
-  significant(r'significant');
+@JsonValue(r'no_change')
+noChange(r'no_change'),
+@JsonValue(r'minor_only')
+minorOnly(r'minor_only'),
+@JsonValue(r'general')
+general(r'general'),
+@JsonValue(r'significant')
+significant(r'significant');
 
-  const RecipeVersionSummaryConclusionEnum(this.value);
+const RecipeVersionSummaryConclusionEnum(this.value);
 
-  final String value;
+final String value;
 
-  @override
-  String toString() => value;
+@override
+String toString() => value;
 }
+
+

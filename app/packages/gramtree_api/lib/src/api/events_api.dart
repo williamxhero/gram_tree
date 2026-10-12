@@ -14,15 +14,16 @@ import 'package:gramtree_api/src/model/event_upload_request.dart';
 import 'package:gramtree_api/src/model/event_upload_response.dart';
 
 class EventsApi {
+
   final Dio _dio;
 
   const EventsApi(this._dio);
 
   /// 批量上传经验层事件（需要登录，按登记表校验，按事件 ID 去重，只追加存储）
-  ///
+  /// 
   ///
   /// Parameters:
-  /// * [eventUploadRequest]
+  /// * [eventUploadRequest] 
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -32,7 +33,7 @@ class EventsApi {
   ///
   /// Returns a [Future] containing a [Response] with a [EventUploadResponse] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<EventUploadResponse>> uploadEvents({
+  Future<Response<EventUploadResponse>> uploadEvents({ 
     required EventUploadRequest eventUploadRequest,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -44,10 +45,16 @@ class EventsApi {
     final _path = r'/v1/events/upload';
     final _options = Options(
       method: r'POST',
-      headers: <String, dynamic>{...?headers},
+      headers: <String, dynamic>{
+        ...?headers,
+      },
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
-          {'type': 'http', 'scheme': 'bearer', 'name': 'HTTPBearer'},
+          {
+            'type': 'http',
+            'scheme': 'bearer',
+            'name': 'HTTPBearer',
+          },
         ],
         ...?extra,
       },
@@ -58,10 +65,13 @@ class EventsApi {
     dynamic _bodyData;
 
     try {
-      _bodyData = jsonEncode(eventUploadRequest);
-    } catch (error, stackTrace) {
+_bodyData=jsonEncode(eventUploadRequest);
+    } catch(error, stackTrace) {
       throw DioException(
-        requestOptions: _options.compose(_dio.options, _path),
+         requestOptions: _options.compose(
+          _dio.options,
+          _path,
+        ),
         type: DioExceptionType.unknown,
         error: error,
         stackTrace: stackTrace,
@@ -80,14 +90,9 @@ class EventsApi {
     EventUploadResponse? _responseData;
 
     try {
-      final rawData = _response.data;
-      _responseData = rawData == null
-          ? null
-          : deserialize<EventUploadResponse, EventUploadResponse>(
-              rawData,
-              'EventUploadResponse',
-              growable: true,
-            );
+final rawData = _response.data;
+_responseData = rawData == null ? null : deserialize<EventUploadResponse, EventUploadResponse>(rawData, 'EventUploadResponse', growable: true);
+
     } catch (error, stackTrace) {
       throw DioException(
         requestOptions: _response.requestOptions,
@@ -109,4 +114,5 @@ class EventsApi {
       extra: _response.extra,
     );
   }
+
 }

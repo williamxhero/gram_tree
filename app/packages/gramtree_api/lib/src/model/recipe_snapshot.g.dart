@@ -29,6 +29,8 @@ abstract class _$RecipeSnapshotCWProxy {
 
   RecipeSnapshot servingsSource(ValueSource? servingsSource);
 
+  RecipeSnapshot source_(RecipeSource? source_);
+
   RecipeSnapshot steps(List<RecipeStep>? steps);
 
   RecipeSnapshot tags(List<String>? tags);
@@ -55,6 +57,7 @@ abstract class _$RecipeSnapshotCWProxy {
     List<RecipeIngredient>? ingredients,
     int servings,
     ValueSource? servingsSource,
+    RecipeSource? source_,
     List<RecipeStep>? steps,
     List<String>? tags,
     ValueSource? textSource,
@@ -108,6 +111,9 @@ class _$RecipeSnapshotCWProxyImpl implements _$RecipeSnapshotCWProxy {
       this(servingsSource: servingsSource);
 
   @override
+  RecipeSnapshot source_(RecipeSource? source_) => this(source_: source_);
+
+  @override
   RecipeSnapshot steps(List<RecipeStep>? steps) => this(steps: steps);
 
   @override
@@ -140,6 +146,7 @@ class _$RecipeSnapshotCWProxyImpl implements _$RecipeSnapshotCWProxy {
     Object? ingredients = const $CopyWithPlaceholder(),
     Object? servings = const $CopyWithPlaceholder(),
     Object? servingsSource = const $CopyWithPlaceholder(),
+    Object? source_ = const $CopyWithPlaceholder(),
     Object? steps = const $CopyWithPlaceholder(),
     Object? tags = const $CopyWithPlaceholder(),
     Object? textSource = const $CopyWithPlaceholder(),
@@ -190,6 +197,10 @@ class _$RecipeSnapshotCWProxyImpl implements _$RecipeSnapshotCWProxy {
           ? _value.servingsSource
           // ignore: cast_nullable_to_non_nullable
           : servingsSource as ValueSource?,
+      source_: source_ == const $CopyWithPlaceholder()
+          ? _value.source_
+          // ignore: cast_nullable_to_non_nullable
+          : source_ as RecipeSource?,
       steps: steps == const $CopyWithPlaceholder()
           ? _value.steps
           // ignore: cast_nullable_to_non_nullable
@@ -257,6 +268,11 @@ RecipeSnapshot _$RecipeSnapshotFromJson(
         (v) =>
             v == null ? null : ValueSource.fromJson(v as Map<String, dynamic>),
       ),
+      source_: $checkedConvert(
+        'source',
+        (v) =>
+            v == null ? null : RecipeSource.fromJson(v as Map<String, dynamic>),
+      ),
       steps: $checkedConvert(
         'steps',
         (v) => (v as List<dynamic>?)
@@ -286,6 +302,7 @@ RecipeSnapshot _$RecipeSnapshotFromJson(
     'dishType': 'dish_type',
     'formatVersion': 'format_version',
     'servingsSource': 'servings_source',
+    'source_': 'source',
     'textSource': 'text_source',
     'totalTimeSeconds': 'total_time_seconds',
   },
@@ -305,6 +322,7 @@ Map<String, dynamic> _$RecipeSnapshotToJson(RecipeSnapshot instance) =>
       'ingredients': ?instance.ingredients?.map((e) => e.toJson()).toList(),
       'servings': instance.servings,
       'servings_source': ?instance.servingsSource?.toJson(),
+      'source': ?instance.source_?.toJson(),
       'steps': ?instance.steps?.map((e) => e.toJson()).toList(),
       'tags': ?instance.tags,
       'text_source': ?instance.textSource?.toJson(),

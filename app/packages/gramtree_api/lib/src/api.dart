@@ -18,6 +18,7 @@ import 'package:gramtree_api/src/api/health_api.dart';
 import 'package:gramtree_api/src/api/ingredients_api.dart';
 import 'package:gramtree_api/src/api/personal_measures_api.dart';
 import 'package:gramtree_api/src/api/recipe_ai_api.dart';
+import 'package:gramtree_api/src/api/recipe_imports_api.dart';
 import 'package:gramtree_api/src/api/recipes_api.dart';
 import 'package:gramtree_api/src/api/sync_api.dart';
 import 'package:gramtree_api/src/api/taste_profile_api.dart';
@@ -31,15 +32,13 @@ class GramtreeApi {
     Dio? dio,
     String? basePathOverride,
     List<Interceptor>? interceptors,
-  }) : this.dio =
-           dio ??
-           Dio(
-             BaseOptions(
-               baseUrl: basePathOverride ?? basePath,
-               connectTimeout: const Duration(milliseconds: 5000),
-               receiveTimeout: const Duration(milliseconds: 3000),
-             ),
-           ) {
+  })  : 
+        this.dio = dio ??
+            Dio(BaseOptions(
+              baseUrl: basePathOverride ?? basePath,
+              connectTimeout: const Duration(milliseconds: 5000),
+              receiveTimeout: const Duration(milliseconds: 3000),
+            )) {
     if (interceptors == null) {
       this.dio.interceptors.addAll([
         OAuthInterceptor(),
@@ -54,41 +53,25 @@ class GramtreeApi {
 
   void setOAuthToken(String name, String token) {
     if (this.dio.interceptors.any((i) => i is OAuthInterceptor)) {
-      (this.dio.interceptors.firstWhere((i) => i is OAuthInterceptor)
-                  as OAuthInterceptor)
-              .tokens[name] =
-          token;
+      (this.dio.interceptors.firstWhere((i) => i is OAuthInterceptor) as OAuthInterceptor).tokens[name] = token;
     }
   }
 
   void setBearerAuth(String name, String token) {
     if (this.dio.interceptors.any((i) => i is BearerAuthInterceptor)) {
-      (this.dio.interceptors.firstWhere((i) => i is BearerAuthInterceptor)
-                  as BearerAuthInterceptor)
-              .tokens[name] =
-          token;
+      (this.dio.interceptors.firstWhere((i) => i is BearerAuthInterceptor) as BearerAuthInterceptor).tokens[name] = token;
     }
   }
 
   void setBasicAuth(String name, String username, String password) {
     if (this.dio.interceptors.any((i) => i is BasicAuthInterceptor)) {
-      (this.dio.interceptors.firstWhere((i) => i is BasicAuthInterceptor)
-              as BasicAuthInterceptor)
-          .authInfo[name] = BasicAuthInfo(
-        username,
-        password,
-      );
+      (this.dio.interceptors.firstWhere((i) => i is BasicAuthInterceptor) as BasicAuthInterceptor).authInfo[name] = BasicAuthInfo(username, password);
     }
   }
 
   void setApiKey(String name, String apiKey) {
     if (this.dio.interceptors.any((i) => i is ApiKeyAuthInterceptor)) {
-      (this.dio.interceptors.firstWhere(
-                    (element) => element is ApiKeyAuthInterceptor,
-                  )
-                  as ApiKeyAuthInterceptor)
-              .apiKeys[name] =
-          apiKey;
+      (this.dio.interceptors.firstWhere((element) => element is ApiKeyAuthInterceptor) as ApiKeyAuthInterceptor).apiKeys[name] = apiKey;
     }
   }
 
@@ -156,6 +139,12 @@ class GramtreeApi {
   /// by doing that all interceptors will not be executed
   RecipeAiApi getRecipeAiApi() {
     return RecipeAiApi(dio);
+  }
+
+  /// Get RecipeImportsApi instance, base route and serializer can be overridden by a given but be careful,
+  /// by doing that all interceptors will not be executed
+  RecipeImportsApi getRecipeImportsApi() {
+    return RecipeImportsApi(dio);
   }
 
   /// Get RecipesApi instance, base route and serializer can be overridden by a given but be careful,

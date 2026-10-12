@@ -86,21 +86,26 @@ extension $RecipeMoldConversionOutCopyWith on RecipeMoldConversionOut {
 
 RecipeMoldConversionOut _$RecipeMoldConversionOutFromJson(
   Map<String, dynamic> json,
-) => $checkedCreate('RecipeMoldConversionOut', json, ($checkedConvert) {
-  $checkKeys(
-    json,
-    requiredKeys: const ['conversion', 'recipe_id', 'version_id'],
-  );
-  final val = RecipeMoldConversionOut(
-    conversion: $checkedConvert(
-      'conversion',
-      (v) => MoldConversion.fromJson(v as Map<String, dynamic>),
-    ),
-    recipeId: $checkedConvert('recipe_id', (v) => v as String),
-    versionId: $checkedConvert('version_id', (v) => v as String),
-  );
-  return val;
-}, fieldKeyMap: const {'recipeId': 'recipe_id', 'versionId': 'version_id'});
+) => $checkedCreate(
+  'RecipeMoldConversionOut',
+  json,
+  ($checkedConvert) {
+    $checkKeys(
+      json,
+      requiredKeys: const ['conversion', 'recipe_id', 'version_id'],
+    );
+    final val = RecipeMoldConversionOut(
+      conversion: $checkedConvert(
+        'conversion',
+        (v) => MoldConversion.fromJson(v as Map<String, dynamic>),
+      ),
+      recipeId: $checkedConvert('recipe_id', (v) => v as String),
+      versionId: $checkedConvert('version_id', (v) => v as String),
+    );
+    return val;
+  },
+  fieldKeyMap: const {'recipeId': 'recipe_id', 'versionId': 'version_id'},
+);
 
 Map<String, dynamic> _$RecipeMoldConversionOutToJson(
   RecipeMoldConversionOut instance,

@@ -8,6 +8,7 @@ import 'package:json_annotation/json_annotation.dart';
 
 part 'recipe_safety_finding.g.dart';
 
+
 @CopyWith()
 @JsonSerializable(
   checked: true,
@@ -18,73 +19,145 @@ part 'recipe_safety_finding.g.dart';
 class RecipeSafetyFinding {
   /// Returns a new [RecipeSafetyFinding] instance.
   RecipeSafetyFinding({
-    required this.basis,
 
-    this.ingredientIds,
+    required  this.basis,
 
-    required this.message,
+     this.ingredientIds,
 
-    this.restMinutes,
+    required  this.message,
 
-    required this.ruleId,
+     this.restMinutes,
 
-    required this.severity,
+    required  this.ruleId,
 
-    this.stepIds,
+    required  this.severity,
 
-    this.thresholdCelsius,
+     this.stepIds,
+
+     this.thresholdCelsius,
   });
 
-  @JsonKey(name: r'basis', required: true, includeIfNull: false)
+  @JsonKey(
+    
+    name: r'basis',
+    required: true,
+    includeIfNull: false,
+  )
+
+
   final String basis;
 
-  @JsonKey(name: r'ingredient_ids', required: false, includeIfNull: false)
+
+
+  @JsonKey(
+    
+    name: r'ingredient_ids',
+    required: false,
+    includeIfNull: false,
+  )
+
+
   final List<String>? ingredientIds;
 
-  @JsonKey(name: r'message', required: true, includeIfNull: false)
+
+
+  @JsonKey(
+    
+    name: r'message',
+    required: true,
+    includeIfNull: false,
+  )
+
+
   final String message;
 
-  @JsonKey(name: r'rest_minutes', required: false, includeIfNull: false)
+
+
+  @JsonKey(
+    
+    name: r'rest_minutes',
+    required: false,
+    includeIfNull: false,
+  )
+
+
   final int? restMinutes;
 
-  @JsonKey(name: r'rule_id', required: true, includeIfNull: false)
+
+
+  @JsonKey(
+    
+    name: r'rule_id',
+    required: true,
+    includeIfNull: false,
+  )
+
+
   final String ruleId;
 
-  @JsonKey(name: r'severity', required: true, includeIfNull: false)
+
+
+  @JsonKey(
+    
+    name: r'severity',
+    required: true,
+    includeIfNull: false,
+  )
+
+
   final RecipeSafetyFindingSeverityEnum severity;
 
-  @JsonKey(name: r'step_ids', required: false, includeIfNull: false)
+
+
+  @JsonKey(
+    
+    name: r'step_ids',
+    required: false,
+    includeIfNull: false,
+  )
+
+
   final List<String>? stepIds;
 
-  @JsonKey(name: r'threshold_celsius', required: false, includeIfNull: false)
+
+
+  @JsonKey(
+    
+    name: r'threshold_celsius',
+    required: false,
+    includeIfNull: false,
+  )
+
+
   final num? thresholdCelsius;
 
-  @override
-  bool operator ==(Object other) =>
-      identical(this, other) ||
-      other is RecipeSafetyFinding &&
-          other.basis == basis &&
-          other.ingredientIds == ingredientIds &&
-          other.message == message &&
-          other.restMinutes == restMinutes &&
-          other.ruleId == ruleId &&
-          other.severity == severity &&
-          other.stepIds == stepIds &&
-          other.thresholdCelsius == thresholdCelsius;
 
-  @override
-  int get hashCode =>
-      basis.hashCode +
-      ingredientIds.hashCode +
-      message.hashCode +
-      (restMinutes == null ? 0 : restMinutes.hashCode) +
-      ruleId.hashCode +
-      severity.hashCode +
-      stepIds.hashCode +
-      (thresholdCelsius == null ? 0 : thresholdCelsius.hashCode);
 
-  factory RecipeSafetyFinding.fromJson(Map<String, dynamic> json) =>
-      _$RecipeSafetyFindingFromJson(json);
+
+
+    @override
+    bool operator ==(Object other) => identical(this, other) || other is RecipeSafetyFinding &&
+      other.basis == basis &&
+      other.ingredientIds == ingredientIds &&
+      other.message == message &&
+      other.restMinutes == restMinutes &&
+      other.ruleId == ruleId &&
+      other.severity == severity &&
+      other.stepIds == stepIds &&
+      other.thresholdCelsius == thresholdCelsius;
+
+    @override
+    int get hashCode =>
+        basis.hashCode +
+        ingredientIds.hashCode +
+        message.hashCode +
+        (restMinutes == null ? 0 : restMinutes.hashCode) +
+        ruleId.hashCode +
+        severity.hashCode +
+        stepIds.hashCode +
+        (thresholdCelsius == null ? 0 : thresholdCelsius.hashCode);
+
+  factory RecipeSafetyFinding.fromJson(Map<String, dynamic> json) => _$RecipeSafetyFindingFromJson(json);
 
   Map<String, dynamic> toJson() => _$RecipeSafetyFindingToJson(this);
 
@@ -92,20 +165,24 @@ class RecipeSafetyFinding {
   String toString() {
     return toJson().toString();
   }
+
 }
+
 
 enum RecipeSafetyFindingSeverityEnum {
-  @JsonValue(r'info')
-  info(r'info'),
-  @JsonValue(r'warning')
-  warning(r'warning'),
-  @JsonValue(r'high_risk')
-  highRisk(r'high_risk');
+@JsonValue(r'info')
+info(r'info'),
+@JsonValue(r'warning')
+warning(r'warning'),
+@JsonValue(r'high_risk')
+highRisk(r'high_risk');
 
-  const RecipeSafetyFindingSeverityEnum(this.value);
+const RecipeSafetyFindingSeverityEnum(this.value);
 
-  final String value;
+final String value;
 
-  @override
-  String toString() => value;
+@override
+String toString() => value;
 }
+
+

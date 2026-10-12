@@ -9,6 +9,7 @@ import 'package:json_annotation/json_annotation.dart';
 
 part 'consent_upload.g.dart';
 
+
 @CopyWith()
 @JsonSerializable(
   checked: true,
@@ -18,21 +19,34 @@ part 'consent_upload.g.dart';
 )
 class ConsentUpload {
   /// Returns a new [ConsentUpload] instance.
-  ConsentUpload({required this.records});
+  ConsentUpload({
 
-  @JsonKey(name: r'records', required: true, includeIfNull: false)
+    required  this.records,
+  });
+
+  @JsonKey(
+    
+    name: r'records',
+    required: true,
+    includeIfNull: false,
+  )
+
+
   final List<ConsentRecordInput> records;
 
-  @override
-  bool operator ==(Object other) =>
-      identical(this, other) ||
-      other is ConsentUpload && other.records == records;
 
-  @override
-  int get hashCode => records.hashCode;
 
-  factory ConsentUpload.fromJson(Map<String, dynamic> json) =>
-      _$ConsentUploadFromJson(json);
+
+
+    @override
+    bool operator ==(Object other) => identical(this, other) || other is ConsentUpload &&
+      other.records == records;
+
+    @override
+    int get hashCode =>
+        records.hashCode;
+
+  factory ConsentUpload.fromJson(Map<String, dynamic> json) => _$ConsentUploadFromJson(json);
 
   Map<String, dynamic> toJson() => _$ConsentUploadToJson(this);
 
@@ -40,4 +54,6 @@ class ConsentUpload {
   String toString() {
     return toJson().toString();
   }
+
 }
+

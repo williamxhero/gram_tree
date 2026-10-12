@@ -9,6 +9,7 @@ import 'package:json_annotation/json_annotation.dart';
 
 part 'recipe_mold_conversion_request.g.dart';
 
+
 @CopyWith()
 @JsonSerializable(
   checked: true,
@@ -18,21 +19,34 @@ part 'recipe_mold_conversion_request.g.dart';
 )
 class RecipeMoldConversionRequest {
   /// Returns a new [RecipeMoldConversionRequest] instance.
-  RecipeMoldConversionRequest({required this.targetMold});
+  RecipeMoldConversionRequest({
 
-  @JsonKey(name: r'target_mold', required: true, includeIfNull: false)
+    required  this.targetMold,
+  });
+
+  @JsonKey(
+    
+    name: r'target_mold',
+    required: true,
+    includeIfNull: false,
+  )
+
+
   final MoldSpec targetMold;
 
-  @override
-  bool operator ==(Object other) =>
-      identical(this, other) ||
-      other is RecipeMoldConversionRequest && other.targetMold == targetMold;
 
-  @override
-  int get hashCode => targetMold.hashCode;
 
-  factory RecipeMoldConversionRequest.fromJson(Map<String, dynamic> json) =>
-      _$RecipeMoldConversionRequestFromJson(json);
+
+
+    @override
+    bool operator ==(Object other) => identical(this, other) || other is RecipeMoldConversionRequest &&
+      other.targetMold == targetMold;
+
+    @override
+    int get hashCode =>
+        targetMold.hashCode;
+
+  factory RecipeMoldConversionRequest.fromJson(Map<String, dynamic> json) => _$RecipeMoldConversionRequestFromJson(json);
 
   Map<String, dynamic> toJson() => _$RecipeMoldConversionRequestToJson(this);
 
@@ -40,4 +54,6 @@ class RecipeMoldConversionRequest {
   String toString() {
     return toJson().toString();
   }
+
 }
+

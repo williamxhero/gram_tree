@@ -8,6 +8,7 @@ import 'package:json_annotation/json_annotation.dart';
 
 part 'recipe_comparison_candidate.g.dart';
 
+
 @CopyWith()
 @JsonSerializable(
   checked: true,
@@ -18,94 +19,193 @@ part 'recipe_comparison_candidate.g.dart';
 class RecipeComparisonCandidate {
   /// Returns a new [RecipeComparisonCandidate] instance.
   RecipeComparisonCandidate({
-    required this.aiAssisted,
 
-    required this.author,
+    required  this.aiAssisted,
 
-    this.baseVersionId,
+    required  this.author,
 
-    required this.changeNote,
+     this.baseVersionId,
 
-    this.conclusion,
+    required  this.changeNote,
 
-    required this.createdAt,
+     this.conclusion,
 
-    required this.id,
+    required  this.createdAt,
 
-    this.previousVersionId,
+    required  this.id,
 
-    required this.recipeId,
+     this.previousVersionId,
 
-    this.rulesVersion,
+    required  this.recipeId,
 
-    required this.versionNumber,
+     this.rulesVersion,
+
+    required  this.versionNumber,
   });
 
-  @JsonKey(name: r'ai_assisted', required: true, includeIfNull: false)
+  @JsonKey(
+    
+    name: r'ai_assisted',
+    required: true,
+    includeIfNull: false,
+  )
+
+
   final bool aiAssisted;
 
-  @JsonKey(name: r'author', required: true, includeIfNull: false)
+
+
+  @JsonKey(
+    
+    name: r'author',
+    required: true,
+    includeIfNull: false,
+  )
+
+
   final String author;
 
-  @JsonKey(name: r'base_version_id', required: false, includeIfNull: false)
+
+
+  @JsonKey(
+    
+    name: r'base_version_id',
+    required: false,
+    includeIfNull: false,
+  )
+
+
   final String? baseVersionId;
 
-  @JsonKey(name: r'change_note', required: true, includeIfNull: false)
+
+
+  @JsonKey(
+    
+    name: r'change_note',
+    required: true,
+    includeIfNull: false,
+  )
+
+
   final String changeNote;
 
-  @JsonKey(name: r'conclusion', required: false, includeIfNull: false)
+
+
+  @JsonKey(
+    
+    name: r'conclusion',
+    required: false,
+    includeIfNull: false,
+  )
+
+
   final RecipeComparisonCandidateConclusionEnum? conclusion;
 
-  @JsonKey(name: r'created_at', required: true, includeIfNull: false)
+
+
+  @JsonKey(
+    
+    name: r'created_at',
+    required: true,
+    includeIfNull: false,
+  )
+
+
   final String createdAt;
 
-  @JsonKey(name: r'id', required: true, includeIfNull: false)
+
+
+  @JsonKey(
+    
+    name: r'id',
+    required: true,
+    includeIfNull: false,
+  )
+
+
   final String id;
 
-  @JsonKey(name: r'previous_version_id', required: false, includeIfNull: false)
+
+
+  @JsonKey(
+    
+    name: r'previous_version_id',
+    required: false,
+    includeIfNull: false,
+  )
+
+
   final String? previousVersionId;
 
-  @JsonKey(name: r'recipe_id', required: true, includeIfNull: false)
+
+
+  @JsonKey(
+    
+    name: r'recipe_id',
+    required: true,
+    includeIfNull: false,
+  )
+
+
   final String recipeId;
 
-  @JsonKey(name: r'rules_version', required: false, includeIfNull: false)
+
+
+  @JsonKey(
+    
+    name: r'rules_version',
+    required: false,
+    includeIfNull: false,
+  )
+
+
   final String? rulesVersion;
 
-  @JsonKey(name: r'version_number', required: true, includeIfNull: false)
+
+
+  @JsonKey(
+    
+    name: r'version_number',
+    required: true,
+    includeIfNull: false,
+  )
+
+
   final int versionNumber;
 
-  @override
-  bool operator ==(Object other) =>
-      identical(this, other) ||
-      other is RecipeComparisonCandidate &&
-          other.aiAssisted == aiAssisted &&
-          other.author == author &&
-          other.baseVersionId == baseVersionId &&
-          other.changeNote == changeNote &&
-          other.conclusion == conclusion &&
-          other.createdAt == createdAt &&
-          other.id == id &&
-          other.previousVersionId == previousVersionId &&
-          other.recipeId == recipeId &&
-          other.rulesVersion == rulesVersion &&
-          other.versionNumber == versionNumber;
 
-  @override
-  int get hashCode =>
-      aiAssisted.hashCode +
-      author.hashCode +
-      (baseVersionId == null ? 0 : baseVersionId.hashCode) +
-      changeNote.hashCode +
-      (conclusion == null ? 0 : conclusion.hashCode) +
-      createdAt.hashCode +
-      id.hashCode +
-      (previousVersionId == null ? 0 : previousVersionId.hashCode) +
-      recipeId.hashCode +
-      (rulesVersion == null ? 0 : rulesVersion.hashCode) +
-      versionNumber.hashCode;
 
-  factory RecipeComparisonCandidate.fromJson(Map<String, dynamic> json) =>
-      _$RecipeComparisonCandidateFromJson(json);
+
+
+    @override
+    bool operator ==(Object other) => identical(this, other) || other is RecipeComparisonCandidate &&
+      other.aiAssisted == aiAssisted &&
+      other.author == author &&
+      other.baseVersionId == baseVersionId &&
+      other.changeNote == changeNote &&
+      other.conclusion == conclusion &&
+      other.createdAt == createdAt &&
+      other.id == id &&
+      other.previousVersionId == previousVersionId &&
+      other.recipeId == recipeId &&
+      other.rulesVersion == rulesVersion &&
+      other.versionNumber == versionNumber;
+
+    @override
+    int get hashCode =>
+        aiAssisted.hashCode +
+        author.hashCode +
+        (baseVersionId == null ? 0 : baseVersionId.hashCode) +
+        changeNote.hashCode +
+        (conclusion == null ? 0 : conclusion.hashCode) +
+        createdAt.hashCode +
+        id.hashCode +
+        (previousVersionId == null ? 0 : previousVersionId.hashCode) +
+        recipeId.hashCode +
+        (rulesVersion == null ? 0 : rulesVersion.hashCode) +
+        versionNumber.hashCode;
+
+  factory RecipeComparisonCandidate.fromJson(Map<String, dynamic> json) => _$RecipeComparisonCandidateFromJson(json);
 
   Map<String, dynamic> toJson() => _$RecipeComparisonCandidateToJson(this);
 
@@ -113,22 +213,26 @@ class RecipeComparisonCandidate {
   String toString() {
     return toJson().toString();
   }
+
 }
+
 
 enum RecipeComparisonCandidateConclusionEnum {
-  @JsonValue(r'no_change')
-  noChange(r'no_change'),
-  @JsonValue(r'minor_only')
-  minorOnly(r'minor_only'),
-  @JsonValue(r'general')
-  general(r'general'),
-  @JsonValue(r'significant')
-  significant(r'significant');
+@JsonValue(r'no_change')
+noChange(r'no_change'),
+@JsonValue(r'minor_only')
+minorOnly(r'minor_only'),
+@JsonValue(r'general')
+general(r'general'),
+@JsonValue(r'significant')
+significant(r'significant');
 
-  const RecipeComparisonCandidateConclusionEnum(this.value);
+const RecipeComparisonCandidateConclusionEnum(this.value);
 
-  final String value;
+final String value;
 
-  @override
-  String toString() => value;
+@override
+String toString() => value;
 }
+
+

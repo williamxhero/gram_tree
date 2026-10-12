@@ -6,11 +6,13 @@
 import 'package:gramtree_api/src/model/recipe_ingredient.dart';
 import 'package:gramtree_api/src/model/recipe_step.dart';
 import 'package:gramtree_api/src/model/mold_spec.dart';
+import 'package:gramtree_api/src/model/recipe_source.dart';
 import 'package:gramtree_api/src/model/value_source.dart';
 import 'package:copy_with_extension/copy_with_extension.dart';
 import 'package:json_annotation/json_annotation.dart';
 
 part 'recipe_snapshot.g.dart';
+
 
 @CopyWith()
 @JsonSerializable(
@@ -22,140 +24,281 @@ part 'recipe_snapshot.g.dart';
 class RecipeSnapshot {
   /// Returns a new [RecipeSnapshot] instance.
   RecipeSnapshot({
-    this.activeTimeSeconds = 0,
 
-    this.baseMold,
+     this.activeTimeSeconds = 0,
 
-    this.cuisine,
+     this.baseMold,
 
-    this.description,
+     this.cuisine,
 
-    this.designRationale,
+     this.description,
 
-    this.difficulty,
+     this.designRationale,
 
-    this.dishType,
+     this.difficulty,
 
-    required this.formatVersion,
+     this.dishType,
 
-    this.ingredients,
+    required  this.formatVersion,
 
-    required this.servings,
+     this.ingredients,
 
-    this.servingsSource,
+    required  this.servings,
 
-    this.steps,
+     this.servingsSource,
 
-    this.tags,
+     this.source_,
 
-    this.textSource,
+     this.steps,
 
-    this.totalTimeSeconds = 0,
+     this.tags,
+
+     this.textSource,
+
+     this.totalTimeSeconds = 0,
   });
 
-  // minimum: 0
-  // maximum: 604800
+          // minimum: 0
+          // maximum: 604800
   @JsonKey(
     defaultValue: 0,
     name: r'active_time_seconds',
     required: false,
     includeIfNull: false,
   )
+
+
   final int? activeTimeSeconds;
 
-  /// 烘焙菜谱的基准模具
-  @JsonKey(name: r'base_mold', required: false, includeIfNull: false)
+
+
+      /// 烘焙菜谱的基准模具
+  @JsonKey(
+    
+    name: r'base_mold',
+    required: false,
+    includeIfNull: false,
+  )
+
+
   final MoldSpec? baseMold;
 
-  @JsonKey(name: r'cuisine', required: false, includeIfNull: false)
+
+
+  @JsonKey(
+    
+    name: r'cuisine',
+    required: false,
+    includeIfNull: false,
+  )
+
+
   final String? cuisine;
 
-  @JsonKey(name: r'description', required: false, includeIfNull: false)
+
+
+  @JsonKey(
+    
+    name: r'description',
+    required: false,
+    includeIfNull: false,
+  )
+
+
   final String? description;
 
-  @JsonKey(name: r'design_rationale', required: false, includeIfNull: false)
+
+
+  @JsonKey(
+    
+    name: r'design_rationale',
+    required: false,
+    includeIfNull: false,
+  )
+
+
   final String? designRationale;
 
-  @JsonKey(name: r'difficulty', required: false, includeIfNull: false)
+
+
+  @JsonKey(
+    
+    name: r'difficulty',
+    required: false,
+    includeIfNull: false,
+  )
+
+
   final String? difficulty;
 
-  @JsonKey(name: r'dish_type', required: false, includeIfNull: false)
+
+
+  @JsonKey(
+    
+    name: r'dish_type',
+    required: false,
+    includeIfNull: false,
+  )
+
+
   final String? dishType;
 
-  /// 快照格式版本
-  @JsonKey(name: r'format_version', required: true, includeIfNull: false)
+
+
+      /// 快照格式版本
+  @JsonKey(
+    
+    name: r'format_version',
+    required: true,
+    includeIfNull: false,
+  )
+
+
   final RecipeSnapshotFormatVersionEnum formatVersion;
 
-  @JsonKey(name: r'ingredients', required: false, includeIfNull: false)
+
+
+  @JsonKey(
+    
+    name: r'ingredients',
+    required: false,
+    includeIfNull: false,
+  )
+
+
   final List<RecipeIngredient>? ingredients;
 
-  // minimum: 1
-  // maximum: 1000
-  @JsonKey(name: r'servings', required: true, includeIfNull: false)
+
+
+          // minimum: 1
+          // maximum: 1000
+  @JsonKey(
+    
+    name: r'servings',
+    required: true,
+    includeIfNull: false,
+  )
+
+
   final int servings;
 
-  @JsonKey(name: r'servings_source', required: false, includeIfNull: false)
+
+
+  @JsonKey(
+    
+    name: r'servings_source',
+    required: false,
+    includeIfNull: false,
+  )
+
+
   final ValueSource? servingsSource;
 
-  @JsonKey(name: r'steps', required: false, includeIfNull: false)
+
+
+  @JsonKey(
+    
+    name: r'source',
+    required: false,
+    includeIfNull: false,
+  )
+
+
+  final RecipeSource? source_;
+
+
+
+  @JsonKey(
+    
+    name: r'steps',
+    required: false,
+    includeIfNull: false,
+  )
+
+
   final List<RecipeStep>? steps;
 
-  @JsonKey(name: r'tags', required: false, includeIfNull: false)
+
+
+  @JsonKey(
+    
+    name: r'tags',
+    required: false,
+    includeIfNull: false,
+  )
+
+
   final List<String>? tags;
 
-  @JsonKey(name: r'text_source', required: false, includeIfNull: false)
+
+
+  @JsonKey(
+    
+    name: r'text_source',
+    required: false,
+    includeIfNull: false,
+  )
+
+
   final ValueSource? textSource;
 
-  // minimum: 0
-  // maximum: 604800
+
+
+          // minimum: 0
+          // maximum: 604800
   @JsonKey(
     defaultValue: 0,
     name: r'total_time_seconds',
     required: false,
     includeIfNull: false,
   )
+
+
   final int? totalTimeSeconds;
 
-  @override
-  bool operator ==(Object other) =>
-      identical(this, other) ||
-      other is RecipeSnapshot &&
-          other.activeTimeSeconds == activeTimeSeconds &&
-          other.baseMold == baseMold &&
-          other.cuisine == cuisine &&
-          other.description == description &&
-          other.designRationale == designRationale &&
-          other.difficulty == difficulty &&
-          other.dishType == dishType &&
-          other.formatVersion == formatVersion &&
-          other.ingredients == ingredients &&
-          other.servings == servings &&
-          other.servingsSource == servingsSource &&
-          other.steps == steps &&
-          other.tags == tags &&
-          other.textSource == textSource &&
-          other.totalTimeSeconds == totalTimeSeconds;
 
-  @override
-  int get hashCode =>
-      activeTimeSeconds.hashCode +
-      baseMold.hashCode +
-      (cuisine == null ? 0 : cuisine.hashCode) +
-      (description == null ? 0 : description.hashCode) +
-      (designRationale == null ? 0 : designRationale.hashCode) +
-      (difficulty == null ? 0 : difficulty.hashCode) +
-      (dishType == null ? 0 : dishType.hashCode) +
-      formatVersion.hashCode +
-      ingredients.hashCode +
-      servings.hashCode +
-      servingsSource.hashCode +
-      steps.hashCode +
-      tags.hashCode +
-      textSource.hashCode +
-      totalTimeSeconds.hashCode;
 
-  factory RecipeSnapshot.fromJson(Map<String, dynamic> json) =>
-      _$RecipeSnapshotFromJson(json);
+
+
+    @override
+    bool operator ==(Object other) => identical(this, other) || other is RecipeSnapshot &&
+      other.activeTimeSeconds == activeTimeSeconds &&
+      other.baseMold == baseMold &&
+      other.cuisine == cuisine &&
+      other.description == description &&
+      other.designRationale == designRationale &&
+      other.difficulty == difficulty &&
+      other.dishType == dishType &&
+      other.formatVersion == formatVersion &&
+      other.ingredients == ingredients &&
+      other.servings == servings &&
+      other.servingsSource == servingsSource &&
+      other.source_ == source_ &&
+      other.steps == steps &&
+      other.tags == tags &&
+      other.textSource == textSource &&
+      other.totalTimeSeconds == totalTimeSeconds;
+
+    @override
+    int get hashCode =>
+        activeTimeSeconds.hashCode +
+        baseMold.hashCode +
+        (cuisine == null ? 0 : cuisine.hashCode) +
+        (description == null ? 0 : description.hashCode) +
+        (designRationale == null ? 0 : designRationale.hashCode) +
+        (difficulty == null ? 0 : difficulty.hashCode) +
+        (dishType == null ? 0 : dishType.hashCode) +
+        formatVersion.hashCode +
+        ingredients.hashCode +
+        servings.hashCode +
+        servingsSource.hashCode +
+        source_.hashCode +
+        steps.hashCode +
+        tags.hashCode +
+        textSource.hashCode +
+        totalTimeSeconds.hashCode;
+
+  factory RecipeSnapshot.fromJson(Map<String, dynamic> json) => _$RecipeSnapshotFromJson(json);
 
   Map<String, dynamic> toJson() => _$RecipeSnapshotToJson(this);
 
@@ -163,18 +306,21 @@ class RecipeSnapshot {
   String toString() {
     return toJson().toString();
   }
+
 }
 
 /// 快照格式版本
 enum RecipeSnapshotFormatVersionEnum {
-  /// 快照格式版本
-  @JsonValue(1)
-  number1('1');
+    /// 快照格式版本
+@JsonValue(1)
+number1('1');
 
-  const RecipeSnapshotFormatVersionEnum(this.value);
+const RecipeSnapshotFormatVersionEnum(this.value);
 
-  final String value;
+final String value;
 
-  @override
-  String toString() => value;
+@override
+String toString() => value;
 }
+
+

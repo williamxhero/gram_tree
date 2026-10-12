@@ -8,6 +8,7 @@ import 'package:json_annotation/json_annotation.dart';
 
 part 'profile_update.g.dart';
 
+
 @CopyWith()
 @JsonSerializable(
   checked: true,
@@ -17,28 +18,50 @@ part 'profile_update.g.dart';
 )
 class ProfileUpdate {
   /// Returns a new [ProfileUpdate] instance.
-  ProfileUpdate({this.nickname, this.timezone});
+  ProfileUpdate({
 
-  @JsonKey(name: r'nickname', required: false, includeIfNull: false)
+     this.nickname,
+
+     this.timezone,
+  });
+
+  @JsonKey(
+    
+    name: r'nickname',
+    required: false,
+    includeIfNull: false,
+  )
+
+
   final String? nickname;
 
-  @JsonKey(name: r'timezone', required: false, includeIfNull: false)
+
+
+  @JsonKey(
+    
+    name: r'timezone',
+    required: false,
+    includeIfNull: false,
+  )
+
+
   final String? timezone;
 
-  @override
-  bool operator ==(Object other) =>
-      identical(this, other) ||
-      other is ProfileUpdate &&
-          other.nickname == nickname &&
-          other.timezone == timezone;
 
-  @override
-  int get hashCode =>
-      (nickname == null ? 0 : nickname.hashCode) +
-      (timezone == null ? 0 : timezone.hashCode);
 
-  factory ProfileUpdate.fromJson(Map<String, dynamic> json) =>
-      _$ProfileUpdateFromJson(json);
+
+
+    @override
+    bool operator ==(Object other) => identical(this, other) || other is ProfileUpdate &&
+      other.nickname == nickname &&
+      other.timezone == timezone;
+
+    @override
+    int get hashCode =>
+        (nickname == null ? 0 : nickname.hashCode) +
+        (timezone == null ? 0 : timezone.hashCode);
+
+  factory ProfileUpdate.fromJson(Map<String, dynamic> json) => _$ProfileUpdateFromJson(json);
 
   Map<String, dynamic> toJson() => _$ProfileUpdateToJson(this);
 
@@ -46,4 +69,6 @@ class ProfileUpdate {
   String toString() {
     return toJson().toString();
   }
+
 }
+

@@ -9,6 +9,7 @@ import 'package:json_annotation/json_annotation.dart';
 
 part 'taste_profile_patch.g.dart';
 
+
 @CopyWith()
 @JsonSerializable(
   checked: true,
@@ -18,32 +19,50 @@ part 'taste_profile_patch.g.dart';
 )
 class TasteProfilePatch {
   /// Returns a new [TasteProfilePatch] instance.
-  TasteProfilePatch({this.flavors, this.ingredientPreferences});
+  TasteProfilePatch({
 
-  @JsonKey(name: r'flavors', required: false, includeIfNull: false)
-  final Map<String, num>? flavors;
+     this.flavors,
+
+     this.ingredientPreferences,
+  });
 
   @JsonKey(
+    
+    name: r'flavors',
+    required: false,
+    includeIfNull: false,
+  )
+
+
+  final Map<String, num>? flavors;
+
+
+
+  @JsonKey(
+    
     name: r'ingredient_preferences',
     required: false,
     includeIfNull: false,
   )
+
+
   final List<IngredientPreference>? ingredientPreferences;
 
-  @override
-  bool operator ==(Object other) =>
-      identical(this, other) ||
-      other is TasteProfilePatch &&
-          other.flavors == flavors &&
-          other.ingredientPreferences == ingredientPreferences;
 
-  @override
-  int get hashCode =>
-      flavors.hashCode +
-      (ingredientPreferences == null ? 0 : ingredientPreferences.hashCode);
 
-  factory TasteProfilePatch.fromJson(Map<String, dynamic> json) =>
-      _$TasteProfilePatchFromJson(json);
+
+
+    @override
+    bool operator ==(Object other) => identical(this, other) || other is TasteProfilePatch &&
+      other.flavors == flavors &&
+      other.ingredientPreferences == ingredientPreferences;
+
+    @override
+    int get hashCode =>
+        flavors.hashCode +
+        (ingredientPreferences == null ? 0 : ingredientPreferences.hashCode);
+
+  factory TasteProfilePatch.fromJson(Map<String, dynamic> json) => _$TasteProfilePatchFromJson(json);
 
   Map<String, dynamic> toJson() => _$TasteProfilePatchToJson(this);
 
@@ -51,4 +70,6 @@ class TasteProfilePatch {
   String toString() {
     return toJson().toString();
   }
+
 }
+

@@ -8,6 +8,7 @@ import 'package:json_annotation/json_annotation.dart';
 
 part 'apple_reauth_request.g.dart';
 
+
 @CopyWith()
 @JsonSerializable(
   checked: true,
@@ -17,21 +18,34 @@ part 'apple_reauth_request.g.dart';
 )
 class AppleReauthRequest {
   /// Returns a new [AppleReauthRequest] instance.
-  AppleReauthRequest({required this.identityToken});
+  AppleReauthRequest({
 
-  @JsonKey(name: r'identity_token', required: true, includeIfNull: false)
+    required  this.identityToken,
+  });
+
+  @JsonKey(
+    
+    name: r'identity_token',
+    required: true,
+    includeIfNull: false,
+  )
+
+
   final String identityToken;
 
-  @override
-  bool operator ==(Object other) =>
-      identical(this, other) ||
-      other is AppleReauthRequest && other.identityToken == identityToken;
 
-  @override
-  int get hashCode => identityToken.hashCode;
 
-  factory AppleReauthRequest.fromJson(Map<String, dynamic> json) =>
-      _$AppleReauthRequestFromJson(json);
+
+
+    @override
+    bool operator ==(Object other) => identical(this, other) || other is AppleReauthRequest &&
+      other.identityToken == identityToken;
+
+    @override
+    int get hashCode =>
+        identityToken.hashCode;
+
+  factory AppleReauthRequest.fromJson(Map<String, dynamic> json) => _$AppleReauthRequestFromJson(json);
 
   Map<String, dynamic> toJson() => _$AppleReauthRequestToJson(this);
 
@@ -39,4 +53,6 @@ class AppleReauthRequest {
   String toString() {
     return toJson().toString();
   }
+
 }
+

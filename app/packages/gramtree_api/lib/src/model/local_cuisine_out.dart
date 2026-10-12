@@ -8,6 +8,7 @@ import 'package:json_annotation/json_annotation.dart';
 
 part 'local_cuisine_out.g.dart';
 
+
 @CopyWith()
 @JsonSerializable(
   checked: true,
@@ -17,26 +18,50 @@ part 'local_cuisine_out.g.dart';
 )
 class LocalCuisineOut {
   /// Returns a new [LocalCuisineOut] instance.
-  LocalCuisineOut({required this.adjustments, required this.cuisine});
+  LocalCuisineOut({
 
-  @JsonKey(name: r'adjustments', required: true, includeIfNull: false)
+    required  this.adjustments,
+
+    required  this.cuisine,
+  });
+
+  @JsonKey(
+    
+    name: r'adjustments',
+    required: true,
+    includeIfNull: false,
+  )
+
+
   final Map<String, num> adjustments;
 
-  @JsonKey(name: r'cuisine', required: true, includeIfNull: false)
+
+
+  @JsonKey(
+    
+    name: r'cuisine',
+    required: true,
+    includeIfNull: false,
+  )
+
+
   final String cuisine;
 
-  @override
-  bool operator ==(Object other) =>
-      identical(this, other) ||
-      other is LocalCuisineOut &&
-          other.adjustments == adjustments &&
-          other.cuisine == cuisine;
 
-  @override
-  int get hashCode => adjustments.hashCode + cuisine.hashCode;
 
-  factory LocalCuisineOut.fromJson(Map<String, dynamic> json) =>
-      _$LocalCuisineOutFromJson(json);
+
+
+    @override
+    bool operator ==(Object other) => identical(this, other) || other is LocalCuisineOut &&
+      other.adjustments == adjustments &&
+      other.cuisine == cuisine;
+
+    @override
+    int get hashCode =>
+        adjustments.hashCode +
+        cuisine.hashCode;
+
+  factory LocalCuisineOut.fromJson(Map<String, dynamic> json) => _$LocalCuisineOutFromJson(json);
 
   Map<String, dynamic> toJson() => _$LocalCuisineOutToJson(this);
 
@@ -44,4 +69,6 @@ class LocalCuisineOut {
   String toString() {
     return toJson().toString();
   }
+
 }
+

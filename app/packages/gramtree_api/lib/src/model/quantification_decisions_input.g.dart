@@ -79,20 +79,25 @@ extension $QuantificationDecisionsInputCopyWith
 
 QuantificationDecisionsInput _$QuantificationDecisionsInputFromJson(
   Map<String, dynamic> json,
-) => $checkedCreate('QuantificationDecisionsInput', json, ($checkedConvert) {
-  final val = QuantificationDecisionsInput(
-    acceptAll: $checkedConvert('accept_all', (v) => v as bool? ?? false),
-    decisions: $checkedConvert(
-      'decisions',
-      (v) => (v as List<dynamic>?)
-          ?.map(
-            (e) => QuantificationDecision.fromJson(e as Map<String, dynamic>),
-          )
-          .toList(),
-    ),
-  );
-  return val;
-}, fieldKeyMap: const {'acceptAll': 'accept_all'});
+) => $checkedCreate(
+  'QuantificationDecisionsInput',
+  json,
+  ($checkedConvert) {
+    final val = QuantificationDecisionsInput(
+      acceptAll: $checkedConvert('accept_all', (v) => v as bool? ?? false),
+      decisions: $checkedConvert(
+        'decisions',
+        (v) => (v as List<dynamic>?)
+            ?.map(
+              (e) => QuantificationDecision.fromJson(e as Map<String, dynamic>),
+            )
+            .toList(),
+      ),
+    );
+    return val;
+  },
+  fieldKeyMap: const {'acceptAll': 'accept_all'},
+);
 
 Map<String, dynamic> _$QuantificationDecisionsInputToJson(
   QuantificationDecisionsInput instance,

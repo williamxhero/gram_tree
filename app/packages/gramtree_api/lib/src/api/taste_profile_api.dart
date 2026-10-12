@@ -18,12 +18,13 @@ import 'package:gramtree_api/src/model/taste_profile_out.dart';
 import 'package:gramtree_api/src/model/taste_profile_patch.dart';
 
 class TasteProfileApi {
+
   final Dio _dio;
 
   const TasteProfileApi(this._dio);
 
   /// Get Cooking Constraints
-  ///
+  /// 
   ///
   /// Parameters:
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
@@ -35,7 +36,7 @@ class TasteProfileApi {
   ///
   /// Returns a [Future] containing a [Response] with a [CookingConstraintsOut] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<CookingConstraintsOut>> getCookingConstraints({
+  Future<Response<CookingConstraintsOut>> getCookingConstraints({ 
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
     Map<String, dynamic>? extra,
@@ -46,10 +47,16 @@ class TasteProfileApi {
     final _path = r'/v1/me/taste-profile/cooking-constraints';
     final _options = Options(
       method: r'GET',
-      headers: <String, dynamic>{...?headers},
+      headers: <String, dynamic>{
+        ...?headers,
+      },
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
-          {'type': 'http', 'scheme': 'bearer', 'name': 'HTTPBearer'},
+          {
+            'type': 'http',
+            'scheme': 'bearer',
+            'name': 'HTTPBearer',
+          },
         ],
         ...?extra,
       },
@@ -67,14 +74,9 @@ class TasteProfileApi {
     CookingConstraintsOut? _responseData;
 
     try {
-      final rawData = _response.data;
-      _responseData = rawData == null
-          ? null
-          : deserialize<CookingConstraintsOut, CookingConstraintsOut>(
-              rawData,
-              'CookingConstraintsOut',
-              growable: true,
-            );
+final rawData = _response.data;
+_responseData = rawData == null ? null : deserialize<CookingConstraintsOut, CookingConstraintsOut>(rawData, 'CookingConstraintsOut', growable: true);
+
     } catch (error, stackTrace) {
       throw DioException(
         requestOptions: _response.requestOptions,
@@ -98,7 +100,7 @@ class TasteProfileApi {
   }
 
   /// Get Taste Profile
-  ///
+  /// 
   ///
   /// Parameters:
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
@@ -110,7 +112,7 @@ class TasteProfileApi {
   ///
   /// Returns a [Future] containing a [Response] with a [TasteProfileOut] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<TasteProfileOut>> getTasteProfile({
+  Future<Response<TasteProfileOut>> getTasteProfile({ 
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
     Map<String, dynamic>? extra,
@@ -121,10 +123,16 @@ class TasteProfileApi {
     final _path = r'/v1/me/taste-profile';
     final _options = Options(
       method: r'GET',
-      headers: <String, dynamic>{...?headers},
+      headers: <String, dynamic>{
+        ...?headers,
+      },
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
-          {'type': 'http', 'scheme': 'bearer', 'name': 'HTTPBearer'},
+          {
+            'type': 'http',
+            'scheme': 'bearer',
+            'name': 'HTTPBearer',
+          },
         ],
         ...?extra,
       },
@@ -142,14 +150,9 @@ class TasteProfileApi {
     TasteProfileOut? _responseData;
 
     try {
-      final rawData = _response.data;
-      _responseData = rawData == null
-          ? null
-          : deserialize<TasteProfileOut, TasteProfileOut>(
-              rawData,
-              'TasteProfileOut',
-              growable: true,
-            );
+final rawData = _response.data;
+_responseData = rawData == null ? null : deserialize<TasteProfileOut, TasteProfileOut>(rawData, 'TasteProfileOut', growable: true);
+
     } catch (error, stackTrace) {
       throw DioException(
         requestOptions: _response.requestOptions,
@@ -173,10 +176,10 @@ class TasteProfileApi {
   }
 
   /// Get Taste Profile Change
-  ///
+  /// 
   ///
   /// Parameters:
-  /// * [changeId]
+  /// * [changeId] 
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -186,7 +189,7 @@ class TasteProfileApi {
   ///
   /// Returns a [Future] containing a [Response] with a [TasteProfileChangeOut] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<TasteProfileChangeOut>> getTasteProfileChange({
+  Future<Response<TasteProfileChangeOut>> getTasteProfileChange({ 
     required String changeId,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -195,18 +198,19 @@ class TasteProfileApi {
     ProgressCallback? onSendProgress,
     ProgressCallback? onReceiveProgress,
   }) async {
-    final _path = r'/v1/me/taste-profile/changes/{change_id}'.replaceAll(
-      '{'
-      r'change_id'
-      '}',
-      changeId.toString(),
-    );
+    final _path = r'/v1/me/taste-profile/changes/{change_id}'.replaceAll('{' r'change_id' '}', changeId.toString());
     final _options = Options(
       method: r'GET',
-      headers: <String, dynamic>{...?headers},
+      headers: <String, dynamic>{
+        ...?headers,
+      },
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
-          {'type': 'http', 'scheme': 'bearer', 'name': 'HTTPBearer'},
+          {
+            'type': 'http',
+            'scheme': 'bearer',
+            'name': 'HTTPBearer',
+          },
         ],
         ...?extra,
       },
@@ -224,14 +228,9 @@ class TasteProfileApi {
     TasteProfileChangeOut? _responseData;
 
     try {
-      final rawData = _response.data;
-      _responseData = rawData == null
-          ? null
-          : deserialize<TasteProfileChangeOut, TasteProfileChangeOut>(
-              rawData,
-              'TasteProfileChangeOut',
-              growable: true,
-            );
+final rawData = _response.data;
+_responseData = rawData == null ? null : deserialize<TasteProfileChangeOut, TasteProfileChangeOut>(rawData, 'TasteProfileChangeOut', growable: true);
+
     } catch (error, stackTrace) {
       throw DioException(
         requestOptions: _response.requestOptions,
@@ -255,7 +254,7 @@ class TasteProfileApi {
   }
 
   /// List Taste Profile Changes
-  ///
+  /// 
   ///
   /// Parameters:
   /// * [cursor] - 上一页返回的 next_cursor
@@ -269,7 +268,7 @@ class TasteProfileApi {
   ///
   /// Returns a [Future] containing a [Response] with a [PageTasteProfileChangeOut] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<PageTasteProfileChangeOut>> listTasteProfileChanges({
+  Future<Response<PageTasteProfileChangeOut>> listTasteProfileChanges({ 
     String? cursor,
     int? limit = 20,
     CancelToken? cancelToken,
@@ -282,10 +281,16 @@ class TasteProfileApi {
     final _path = r'/v1/me/taste-profile/changes';
     final _options = Options(
       method: r'GET',
-      headers: <String, dynamic>{...?headers},
+      headers: <String, dynamic>{
+        ...?headers,
+      },
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
-          {'type': 'http', 'scheme': 'bearer', 'name': 'HTTPBearer'},
+          {
+            'type': 'http',
+            'scheme': 'bearer',
+            'name': 'HTTPBearer',
+          },
         ],
         ...?extra,
       },
@@ -309,14 +314,9 @@ class TasteProfileApi {
     PageTasteProfileChangeOut? _responseData;
 
     try {
-      final rawData = _response.data;
-      _responseData = rawData == null
-          ? null
-          : deserialize<PageTasteProfileChangeOut, PageTasteProfileChangeOut>(
-              rawData,
-              'PageTasteProfileChangeOut',
-              growable: true,
-            );
+final rawData = _response.data;
+_responseData = rawData == null ? null : deserialize<PageTasteProfileChangeOut, PageTasteProfileChangeOut>(rawData, 'PageTasteProfileChangeOut', growable: true);
+
     } catch (error, stackTrace) {
       throw DioException(
         requestOptions: _response.requestOptions,
@@ -343,7 +343,7 @@ class TasteProfileApi {
   /// Replace cooking settings; an empty object clears them.  Omitted fields use empty defaults.
   ///
   /// Parameters:
-  /// * [cookingConstraints]
+  /// * [cookingConstraints] 
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -353,7 +353,7 @@ class TasteProfileApi {
   ///
   /// Returns a [Future] containing a [Response] with a [CookingConstraintsOut] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<CookingConstraintsOut>> replaceCookingConstraints({
+  Future<Response<CookingConstraintsOut>> replaceCookingConstraints({ 
     required CookingConstraints cookingConstraints,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -365,10 +365,16 @@ class TasteProfileApi {
     final _path = r'/v1/me/taste-profile/cooking-constraints';
     final _options = Options(
       method: r'PUT',
-      headers: <String, dynamic>{...?headers},
+      headers: <String, dynamic>{
+        ...?headers,
+      },
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
-          {'type': 'http', 'scheme': 'bearer', 'name': 'HTTPBearer'},
+          {
+            'type': 'http',
+            'scheme': 'bearer',
+            'name': 'HTTPBearer',
+          },
         ],
         ...?extra,
       },
@@ -379,10 +385,13 @@ class TasteProfileApi {
     dynamic _bodyData;
 
     try {
-      _bodyData = jsonEncode(cookingConstraints);
-    } catch (error, stackTrace) {
+_bodyData=jsonEncode(cookingConstraints);
+    } catch(error, stackTrace) {
       throw DioException(
-        requestOptions: _options.compose(_dio.options, _path),
+         requestOptions: _options.compose(
+          _dio.options,
+          _path,
+        ),
         type: DioExceptionType.unknown,
         error: error,
         stackTrace: stackTrace,
@@ -401,14 +410,9 @@ class TasteProfileApi {
     CookingConstraintsOut? _responseData;
 
     try {
-      final rawData = _response.data;
-      _responseData = rawData == null
-          ? null
-          : deserialize<CookingConstraintsOut, CookingConstraintsOut>(
-              rawData,
-              'CookingConstraintsOut',
-              growable: true,
-            );
+final rawData = _response.data;
+_responseData = rawData == null ? null : deserialize<CookingConstraintsOut, CookingConstraintsOut>(rawData, 'CookingConstraintsOut', growable: true);
+
     } catch (error, stackTrace) {
       throw DioException(
         requestOptions: _response.requestOptions,
@@ -432,7 +436,7 @@ class TasteProfileApi {
   }
 
   /// Reset Taste Profile
-  ///
+  /// 
   ///
   /// Parameters:
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
@@ -444,7 +448,7 @@ class TasteProfileApi {
   ///
   /// Returns a [Future] containing a [Response] with a [TasteProfileOut] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<TasteProfileOut>> resetTasteProfile({
+  Future<Response<TasteProfileOut>> resetTasteProfile({ 
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
     Map<String, dynamic>? extra,
@@ -455,10 +459,16 @@ class TasteProfileApi {
     final _path = r'/v1/me/taste-profile/reset';
     final _options = Options(
       method: r'POST',
-      headers: <String, dynamic>{...?headers},
+      headers: <String, dynamic>{
+        ...?headers,
+      },
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
-          {'type': 'http', 'scheme': 'bearer', 'name': 'HTTPBearer'},
+          {
+            'type': 'http',
+            'scheme': 'bearer',
+            'name': 'HTTPBearer',
+          },
         ],
         ...?extra,
       },
@@ -476,14 +486,9 @@ class TasteProfileApi {
     TasteProfileOut? _responseData;
 
     try {
-      final rawData = _response.data;
-      _responseData = rawData == null
-          ? null
-          : deserialize<TasteProfileOut, TasteProfileOut>(
-              rawData,
-              'TasteProfileOut',
-              growable: true,
-            );
+final rawData = _response.data;
+_responseData = rawData == null ? null : deserialize<TasteProfileOut, TasteProfileOut>(rawData, 'TasteProfileOut', growable: true);
+
     } catch (error, stackTrace) {
       throw DioException(
         requestOptions: _response.requestOptions,
@@ -507,10 +512,10 @@ class TasteProfileApi {
   }
 
   /// Update Taste Profile
-  ///
+  /// 
   ///
   /// Parameters:
-  /// * [tasteProfilePatch]
+  /// * [tasteProfilePatch] 
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -520,7 +525,7 @@ class TasteProfileApi {
   ///
   /// Returns a [Future] containing a [Response] with a [TasteProfileOut] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<TasteProfileOut>> updateTasteProfile({
+  Future<Response<TasteProfileOut>> updateTasteProfile({ 
     required TasteProfilePatch tasteProfilePatch,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -532,10 +537,16 @@ class TasteProfileApi {
     final _path = r'/v1/me/taste-profile';
     final _options = Options(
       method: r'PATCH',
-      headers: <String, dynamic>{...?headers},
+      headers: <String, dynamic>{
+        ...?headers,
+      },
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
-          {'type': 'http', 'scheme': 'bearer', 'name': 'HTTPBearer'},
+          {
+            'type': 'http',
+            'scheme': 'bearer',
+            'name': 'HTTPBearer',
+          },
         ],
         ...?extra,
       },
@@ -546,10 +557,13 @@ class TasteProfileApi {
     dynamic _bodyData;
 
     try {
-      _bodyData = jsonEncode(tasteProfilePatch);
-    } catch (error, stackTrace) {
+_bodyData=jsonEncode(tasteProfilePatch);
+    } catch(error, stackTrace) {
       throw DioException(
-        requestOptions: _options.compose(_dio.options, _path),
+         requestOptions: _options.compose(
+          _dio.options,
+          _path,
+        ),
         type: DioExceptionType.unknown,
         error: error,
         stackTrace: stackTrace,
@@ -568,14 +582,9 @@ class TasteProfileApi {
     TasteProfileOut? _responseData;
 
     try {
-      final rawData = _response.data;
-      _responseData = rawData == null
-          ? null
-          : deserialize<TasteProfileOut, TasteProfileOut>(
-              rawData,
-              'TasteProfileOut',
-              growable: true,
-            );
+final rawData = _response.data;
+_responseData = rawData == null ? null : deserialize<TasteProfileOut, TasteProfileOut>(rawData, 'TasteProfileOut', growable: true);
+
     } catch (error, stackTrace) {
       throw DioException(
         requestOptions: _response.requestOptions,
@@ -597,4 +606,5 @@ class TasteProfileApi {
       extra: _response.extra,
     );
   }
+
 }

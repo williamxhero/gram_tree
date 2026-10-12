@@ -10,6 +10,7 @@ import 'package:json_annotation/json_annotation.dart';
 
 part 'recipe_safety_result.g.dart';
 
+
 @CopyWith()
 @JsonSerializable(
   checked: true,
@@ -20,31 +21,41 @@ part 'recipe_safety_result.g.dart';
 class RecipeSafetyResult {
   /// Returns a new [RecipeSafetyResult] instance.
   RecipeSafetyResult({
-    this.allergens,
 
-    this.allergensIncomplete = false,
+     this.allergens,
 
-    this.canSave = true,
+     this.allergensIncomplete = false,
 
-    required this.checkedAt,
+     this.canSave = true,
 
-    this.claimBasis,
+    required  this.checkedAt,
 
-    this.findings,
+     this.claimBasis,
 
-    this.highRisk = false,
+     this.findings,
 
-    this.prohibitedClaims,
+     this.highRisk = false,
 
-    this.replacementAllergens,
+     this.prohibitedClaims,
 
-    required this.rulesVersion,
+     this.replacementAllergens,
 
-    this.stale = false,
+    required  this.rulesVersion,
+
+     this.stale = false,
   });
 
-  @JsonKey(name: r'allergens', required: false, includeIfNull: false)
+  @JsonKey(
+    
+    name: r'allergens',
+    required: false,
+    includeIfNull: false,
+  )
+
+
   final List<String>? allergens;
+
+
 
   @JsonKey(
     defaultValue: false,
@@ -52,7 +63,11 @@ class RecipeSafetyResult {
     required: false,
     includeIfNull: false,
   )
+
+
   final bool? allergensIncomplete;
+
+
 
   @JsonKey(
     defaultValue: true,
@@ -60,16 +75,47 @@ class RecipeSafetyResult {
     required: false,
     includeIfNull: false,
   )
+
+
   final bool? canSave;
 
-  @JsonKey(name: r'checked_at', required: true, includeIfNull: false)
+
+
+  @JsonKey(
+    
+    name: r'checked_at',
+    required: true,
+    includeIfNull: false,
+  )
+
+
   final String checkedAt;
 
-  @JsonKey(name: r'claim_basis', required: false, includeIfNull: false)
+
+
+  @JsonKey(
+    
+    name: r'claim_basis',
+    required: false,
+    includeIfNull: false,
+  )
+
+
   final String? claimBasis;
 
-  @JsonKey(name: r'findings', required: false, includeIfNull: false)
+
+
+  @JsonKey(
+    
+    name: r'findings',
+    required: false,
+    includeIfNull: false,
+  )
+
+
   final List<RecipeSafetyFinding>? findings;
+
+
 
   @JsonKey(
     defaultValue: false,
@@ -77,62 +123,92 @@ class RecipeSafetyResult {
     required: false,
     includeIfNull: false,
   )
+
+
   final bool? highRisk;
 
-  @JsonKey(name: r'prohibited_claims', required: false, includeIfNull: false)
-  final List<String>? prohibitedClaims;
+
 
   @JsonKey(
+    
+    name: r'prohibited_claims',
+    required: false,
+    includeIfNull: false,
+  )
+
+
+  final List<String>? prohibitedClaims;
+
+
+
+  @JsonKey(
+    
     name: r'replacement_allergens',
     required: false,
     includeIfNull: false,
   )
+
+
   final List<RecipeReplacementAllergens>? replacementAllergens;
 
-  @JsonKey(name: r'rules_version', required: true, includeIfNull: false)
+
+
+  @JsonKey(
+    
+    name: r'rules_version',
+    required: true,
+    includeIfNull: false,
+  )
+
+
   final String rulesVersion;
 
-  /// 当前检查早于已部署规则，正在等待后台复检
+
+
+      /// 当前检查早于已部署规则，正在等待后台复检
   @JsonKey(
     defaultValue: false,
     name: r'stale',
     required: false,
     includeIfNull: false,
   )
+
+
   final bool? stale;
 
-  @override
-  bool operator ==(Object other) =>
-      identical(this, other) ||
-      other is RecipeSafetyResult &&
-          other.allergens == allergens &&
-          other.allergensIncomplete == allergensIncomplete &&
-          other.canSave == canSave &&
-          other.checkedAt == checkedAt &&
-          other.claimBasis == claimBasis &&
-          other.findings == findings &&
-          other.highRisk == highRisk &&
-          other.prohibitedClaims == prohibitedClaims &&
-          other.replacementAllergens == replacementAllergens &&
-          other.rulesVersion == rulesVersion &&
-          other.stale == stale;
 
-  @override
-  int get hashCode =>
-      allergens.hashCode +
-      allergensIncomplete.hashCode +
-      canSave.hashCode +
-      checkedAt.hashCode +
-      (claimBasis == null ? 0 : claimBasis.hashCode) +
-      findings.hashCode +
-      highRisk.hashCode +
-      prohibitedClaims.hashCode +
-      replacementAllergens.hashCode +
-      rulesVersion.hashCode +
-      stale.hashCode;
 
-  factory RecipeSafetyResult.fromJson(Map<String, dynamic> json) =>
-      _$RecipeSafetyResultFromJson(json);
+
+
+    @override
+    bool operator ==(Object other) => identical(this, other) || other is RecipeSafetyResult &&
+      other.allergens == allergens &&
+      other.allergensIncomplete == allergensIncomplete &&
+      other.canSave == canSave &&
+      other.checkedAt == checkedAt &&
+      other.claimBasis == claimBasis &&
+      other.findings == findings &&
+      other.highRisk == highRisk &&
+      other.prohibitedClaims == prohibitedClaims &&
+      other.replacementAllergens == replacementAllergens &&
+      other.rulesVersion == rulesVersion &&
+      other.stale == stale;
+
+    @override
+    int get hashCode =>
+        allergens.hashCode +
+        allergensIncomplete.hashCode +
+        canSave.hashCode +
+        checkedAt.hashCode +
+        (claimBasis == null ? 0 : claimBasis.hashCode) +
+        findings.hashCode +
+        highRisk.hashCode +
+        prohibitedClaims.hashCode +
+        replacementAllergens.hashCode +
+        rulesVersion.hashCode +
+        stale.hashCode;
+
+  factory RecipeSafetyResult.fromJson(Map<String, dynamic> json) => _$RecipeSafetyResultFromJson(json);
 
   Map<String, dynamic> toJson() => _$RecipeSafetyResultToJson(this);
 
@@ -140,4 +216,6 @@ class RecipeSafetyResult {
   String toString() {
     return toJson().toString();
   }
+
 }
+

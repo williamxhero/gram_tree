@@ -8,6 +8,7 @@ import 'package:json_annotation/json_annotation.dart';
 
 part 'experiment_info.g.dart';
 
+
 @CopyWith()
 @JsonSerializable(
   checked: true,
@@ -17,26 +18,50 @@ part 'experiment_info.g.dart';
 )
 class ExperimentInfo {
   /// Returns a new [ExperimentInfo] instance.
-  ExperimentInfo({required this.experiment, required this.variant});
+  ExperimentInfo({
 
-  @JsonKey(name: r'experiment', required: true, includeIfNull: false)
+    required  this.experiment,
+
+    required  this.variant,
+  });
+
+  @JsonKey(
+    
+    name: r'experiment',
+    required: true,
+    includeIfNull: false,
+  )
+
+
   final String experiment;
 
-  @JsonKey(name: r'variant', required: true, includeIfNull: false)
+
+
+  @JsonKey(
+    
+    name: r'variant',
+    required: true,
+    includeIfNull: false,
+  )
+
+
   final String variant;
 
-  @override
-  bool operator ==(Object other) =>
-      identical(this, other) ||
-      other is ExperimentInfo &&
-          other.experiment == experiment &&
-          other.variant == variant;
 
-  @override
-  int get hashCode => experiment.hashCode + variant.hashCode;
 
-  factory ExperimentInfo.fromJson(Map<String, dynamic> json) =>
-      _$ExperimentInfoFromJson(json);
+
+
+    @override
+    bool operator ==(Object other) => identical(this, other) || other is ExperimentInfo &&
+      other.experiment == experiment &&
+      other.variant == variant;
+
+    @override
+    int get hashCode =>
+        experiment.hashCode +
+        variant.hashCode;
+
+  factory ExperimentInfo.fromJson(Map<String, dynamic> json) => _$ExperimentInfoFromJson(json);
 
   Map<String, dynamic> toJson() => _$ExperimentInfoToJson(this);
 
@@ -44,4 +69,6 @@ class ExperimentInfo {
   String toString() {
     return toJson().toString();
   }
+
 }
+

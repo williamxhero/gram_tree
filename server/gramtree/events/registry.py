@@ -163,6 +163,20 @@ class RecipeGenerationContentV1(BaseModel):
     version_id: str | None = None
 
 
+class RecipeImportContentV1(BaseModel):
+    """Import outcomes and completeness counts; never include source text or URLs."""
+
+    import_id: str
+    mode: Literal["text", "link", "image"]
+    status: Literal["success", "partial", "failed"]
+    reason: str | None = None
+    image_count: int = 0
+    failed_image_count: int = 0
+    recognized_fields: int = 0
+    estimated_fields: int = 0
+    incomplete_fields: int = 0
+
+
 class TasteProfileChangedContentV1(BaseModel):
     """All necessary metadata lives in the owner-checked correlation ID."""
 
@@ -212,6 +226,13 @@ class CookingSessionContentV1(BaseModel):
 
 
 ITEMS: tuple[EventTypeSpec, ...] = (
+    EventTypeSpec(
+        event_type="recipe.import",
+        version=1,
+        description="外部菜谱导入方式、结果和补全字段数量；不包含原文或来源链接。",
+        exportable=True,
+        content_schema=RecipeImportContentV1,
+    ),
     EventTypeSpec(
         event_type="ai.recipe_modification",
         version=1,

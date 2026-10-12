@@ -9,6 +9,7 @@ import 'package:json_annotation/json_annotation.dart';
 
 part 'recipe_safety_check_out.g.dart';
 
+
 @CopyWith()
 @JsonSerializable(
   checked: true,
@@ -18,21 +19,34 @@ part 'recipe_safety_check_out.g.dart';
 )
 class RecipeSafetyCheckOut {
   /// Returns a new [RecipeSafetyCheckOut] instance.
-  RecipeSafetyCheckOut({required this.result});
+  RecipeSafetyCheckOut({
 
-  @JsonKey(name: r'result', required: true, includeIfNull: false)
+    required  this.result,
+  });
+
+  @JsonKey(
+    
+    name: r'result',
+    required: true,
+    includeIfNull: false,
+  )
+
+
   final RecipeSafetyResult result;
 
-  @override
-  bool operator ==(Object other) =>
-      identical(this, other) ||
-      other is RecipeSafetyCheckOut && other.result == result;
 
-  @override
-  int get hashCode => result.hashCode;
 
-  factory RecipeSafetyCheckOut.fromJson(Map<String, dynamic> json) =>
-      _$RecipeSafetyCheckOutFromJson(json);
+
+
+    @override
+    bool operator ==(Object other) => identical(this, other) || other is RecipeSafetyCheckOut &&
+      other.result == result;
+
+    @override
+    int get hashCode =>
+        result.hashCode;
+
+  factory RecipeSafetyCheckOut.fromJson(Map<String, dynamic> json) => _$RecipeSafetyCheckOutFromJson(json);
 
   Map<String, dynamic> toJson() => _$RecipeSafetyCheckOutToJson(this);
 
@@ -40,4 +54,6 @@ class RecipeSafetyCheckOut {
   String toString() {
     return toJson().toString();
   }
+
 }
+

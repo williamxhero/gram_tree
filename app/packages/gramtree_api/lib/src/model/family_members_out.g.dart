@@ -148,72 +148,70 @@ extension $FamilyMembersOutCopyWith on FamilyMembersOut {
 // JsonSerializableGenerator
 // **************************************************************************
 
-FamilyMembersOut _$FamilyMembersOutFromJson(Map<String, dynamic> json) =>
-    $checkedCreate(
-      'FamilyMembersOut',
+FamilyMembersOut _$FamilyMembersOutFromJson(
+  Map<String, dynamic> json,
+) => $checkedCreate(
+  'FamilyMembersOut',
+  json,
+  ($checkedConvert) {
+    $checkKeys(
       json,
-      ($checkedConvert) {
-        $checkKeys(
-          json,
-          requiredKeys: const [
-            'authorization_version',
-            'available_age_bands',
-            'available_allergen_categories',
-            'consent_id',
-            'consent_version',
-            'items',
-            'profile_version',
-          ],
-        );
-        final val = FamilyMembersOut(
-          authorizationVersion: $checkedConvert(
-            'authorization_version',
-            (v) => (v as num).toInt(),
-          ),
-          availableAgeBands: $checkedConvert(
-            'available_age_bands',
-            (v) => (v as List<dynamic>)
-                .map(
-                  (e) => $enumDecode(
-                    _$FamilyMembersOutAvailableAgeBandsEnumEnumMap,
-                    e,
-                  ),
-                )
-                .toList(),
-          ),
-          availableAllergenCategories: $checkedConvert(
-            'available_allergen_categories',
-            (v) => (v as List<dynamic>).map((e) => e as String).toList(),
-          ),
-          consentId: $checkedConvert('consent_id', (v) => v as String?),
-          consentVersion: $checkedConvert(
-            'consent_version',
-            (v) => v as String,
-          ),
-          items: $checkedConvert(
-            'items',
-            (v) => (v as List<dynamic>)
-                .map((e) => FamilyMemberOut.fromJson(e as Map<String, dynamic>))
-                .toList(),
-          ),
-          nextCursor: $checkedConvert('next_cursor', (v) => v as String?),
-          profileVersion: $checkedConvert(
-            'profile_version',
-            (v) => (v as num).toInt(),
-          ),
-        );
-        return val;
-      },
-      fieldKeyMap: const {
-        'authorizationVersion': 'authorization_version',
-        'availableAgeBands': 'available_age_bands',
-        'availableAllergenCategories': 'available_allergen_categories',
-        'consentId': 'consent_id',
-        'consentVersion': 'consent_version',
-        'nextCursor': 'next_cursor',
-        'profileVersion': 'profile_version',
-      },
+      requiredKeys: const [
+        'authorization_version',
+        'available_age_bands',
+        'available_allergen_categories',
+        'consent_id',
+        'consent_version',
+        'items',
+        'profile_version',
+      ],
     );
+    final val = FamilyMembersOut(
+      authorizationVersion: $checkedConvert(
+        'authorization_version',
+        (v) => (v as num).toInt(),
+      ),
+      availableAgeBands: $checkedConvert(
+        'available_age_bands',
+        (v) => (v as List<dynamic>)
+            .map(
+              (e) => $enumDecode(
+                _$FamilyMembersOutAvailableAgeBandsEnumEnumMap,
+                e,
+              ),
+            )
+            .toList(),
+      ),
+      availableAllergenCategories: $checkedConvert(
+        'available_allergen_categories',
+        (v) => (v as List<dynamic>).map((e) => e as String).toList(),
+      ),
+      consentId: $checkedConvert('consent_id', (v) => v as String?),
+      consentVersion: $checkedConvert('consent_version', (v) => v as String),
+      items: $checkedConvert(
+        'items',
+        (v) => (v as List<dynamic>)
+            .map((e) => FamilyMemberOut.fromJson(e as Map<String, dynamic>))
+            .toList(),
+      ),
+      nextCursor: $checkedConvert('next_cursor', (v) => v as String?),
+      profileVersion: $checkedConvert(
+        'profile_version',
+        (v) => (v as num).toInt(),
+      ),
+    );
+    return val;
+  },
+  fieldKeyMap: const {
+    'authorizationVersion': 'authorization_version',
+    'availableAgeBands': 'available_age_bands',
+    'availableAllergenCategories': 'available_allergen_categories',
+    'consentId': 'consent_id',
+    'consentVersion': 'consent_version',
+    'nextCursor': 'next_cursor',
+    'profileVersion': 'profile_version',
+  },
+);
 
 Map<String, dynamic> _$FamilyMembersOutToJson(FamilyMembersOut instance) =>
     <String, dynamic>{

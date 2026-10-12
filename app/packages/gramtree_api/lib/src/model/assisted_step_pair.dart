@@ -9,6 +9,7 @@ import 'package:json_annotation/json_annotation.dart';
 
 part 'assisted_step_pair.g.dart';
 
+
 @CopyWith()
 @JsonSerializable(
   checked: true,
@@ -19,61 +20,115 @@ part 'assisted_step_pair.g.dart';
 class AssistedStepPair {
   /// Returns a new [AssistedStepPair] instance.
   AssistedStepPair({
-    required this.afterStepId,
 
-    required this.alignment,
+    required  this.afterStepId,
 
-    required this.basis,
+    required  this.alignment,
 
-    required this.beforeStepId,
+    required  this.basis,
 
-    required this.confidence,
+    required  this.beforeStepId,
 
-    required this.sourceType,
+    required  this.confidence,
+
+    required  this.sourceType,
   });
 
-  @JsonKey(name: r'after_step_id', required: true, includeIfNull: false)
+  @JsonKey(
+    
+    name: r'after_step_id',
+    required: true,
+    includeIfNull: false,
+  )
+
+
   final String afterStepId;
 
-  @JsonKey(name: r'alignment', required: true, includeIfNull: false)
+
+
+  @JsonKey(
+    
+    name: r'alignment',
+    required: true,
+    includeIfNull: false,
+  )
+
+
   final AssistedStepPairAlignmentEnum alignment;
 
-  @JsonKey(name: r'basis', required: true, includeIfNull: false)
+
+
+  @JsonKey(
+    
+    name: r'basis',
+    required: true,
+    includeIfNull: false,
+  )
+
+
   final SourceBasis basis;
 
-  @JsonKey(name: r'before_step_id', required: true, includeIfNull: false)
+
+
+  @JsonKey(
+    
+    name: r'before_step_id',
+    required: true,
+    includeIfNull: false,
+  )
+
+
   final String beforeStepId;
 
-  // minimum: 0.0
-  // maximum: 1.0
-  @JsonKey(name: r'confidence', required: true, includeIfNull: false)
+
+
+          // minimum: 0.0
+          // maximum: 1.0
+  @JsonKey(
+    
+    name: r'confidence',
+    required: true,
+    includeIfNull: false,
+  )
+
+
   final num confidence;
 
-  @JsonKey(name: r'source_type', required: true, includeIfNull: false)
+
+
+  @JsonKey(
+    
+    name: r'source_type',
+    required: true,
+    includeIfNull: false,
+  )
+
+
   final AssistedStepPairSourceTypeEnum sourceType;
 
-  @override
-  bool operator ==(Object other) =>
-      identical(this, other) ||
-      other is AssistedStepPair &&
-          other.afterStepId == afterStepId &&
-          other.alignment == alignment &&
-          other.basis == basis &&
-          other.beforeStepId == beforeStepId &&
-          other.confidence == confidence &&
-          other.sourceType == sourceType;
 
-  @override
-  int get hashCode =>
-      afterStepId.hashCode +
-      alignment.hashCode +
-      basis.hashCode +
-      beforeStepId.hashCode +
-      confidence.hashCode +
-      sourceType.hashCode;
 
-  factory AssistedStepPair.fromJson(Map<String, dynamic> json) =>
-      _$AssistedStepPairFromJson(json);
+
+
+    @override
+    bool operator ==(Object other) => identical(this, other) || other is AssistedStepPair &&
+      other.afterStepId == afterStepId &&
+      other.alignment == alignment &&
+      other.basis == basis &&
+      other.beforeStepId == beforeStepId &&
+      other.confidence == confidence &&
+      other.sourceType == sourceType;
+
+    @override
+    int get hashCode =>
+        afterStepId.hashCode +
+        alignment.hashCode +
+        basis.hashCode +
+        beforeStepId.hashCode +
+        confidence.hashCode +
+        sourceType.hashCode;
+
+  factory AssistedStepPair.fromJson(Map<String, dynamic> json) => _$AssistedStepPairFromJson(json);
 
   Map<String, dynamic> toJson() => _$AssistedStepPairToJson(this);
 
@@ -81,28 +136,34 @@ class AssistedStepPair {
   String toString() {
     return toJson().toString();
   }
+
 }
+
 
 enum AssistedStepPairAlignmentEnum {
-  @JsonValue(r'ai_assisted')
-  aiAssisted(r'ai_assisted');
+@JsonValue(r'ai_assisted')
+aiAssisted(r'ai_assisted');
 
-  const AssistedStepPairAlignmentEnum(this.value);
+const AssistedStepPairAlignmentEnum(this.value);
 
-  final String value;
+final String value;
 
-  @override
-  String toString() => value;
+@override
+String toString() => value;
 }
+
+
 
 enum AssistedStepPairSourceTypeEnum {
-  @JsonValue(r'ai_estimated')
-  aiEstimated(r'ai_estimated');
+@JsonValue(r'ai_estimated')
+aiEstimated(r'ai_estimated');
 
-  const AssistedStepPairSourceTypeEnum(this.value);
+const AssistedStepPairSourceTypeEnum(this.value);
 
-  final String value;
+final String value;
 
-  @override
-  String toString() => value;
+@override
+String toString() => value;
 }
+
+

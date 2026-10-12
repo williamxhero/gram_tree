@@ -9,6 +9,7 @@ import 'package:json_annotation/json_annotation.dart';
 
 part 'recipe_safety_check_request.g.dart';
 
+
 @CopyWith()
 @JsonSerializable(
   checked: true,
@@ -19,23 +20,33 @@ part 'recipe_safety_check_request.g.dart';
 class RecipeSafetyCheckRequest {
   /// Returns a new [RecipeSafetyCheckRequest] instance.
   RecipeSafetyCheckRequest({
-    this.baseVersionId,
 
-    this.changeNote = '',
+     this.baseVersionId,
 
-    this.description,
+     this.changeNote = '',
 
-    this.dishAliases,
+     this.description,
 
-    this.dishName = '',
+     this.dishAliases,
 
-    this.recipeId,
+     this.dishName = '',
 
-    required this.snapshot,
+     this.recipeId,
+
+    required  this.snapshot,
   });
 
-  @JsonKey(name: r'base_version_id', required: false, includeIfNull: false)
+  @JsonKey(
+    
+    name: r'base_version_id',
+    required: false,
+    includeIfNull: false,
+  )
+
+
   final String? baseVersionId;
+
+
 
   @JsonKey(
     defaultValue: '',
@@ -43,13 +54,35 @@ class RecipeSafetyCheckRequest {
     required: false,
     includeIfNull: false,
   )
+
+
   final String? changeNote;
 
-  @JsonKey(name: r'description', required: false, includeIfNull: false)
+
+
+  @JsonKey(
+    
+    name: r'description',
+    required: false,
+    includeIfNull: false,
+  )
+
+
   final String? description;
 
-  @JsonKey(name: r'dish_aliases', required: false, includeIfNull: false)
+
+
+  @JsonKey(
+    
+    name: r'dish_aliases',
+    required: false,
+    includeIfNull: false,
+  )
+
+
   final List<String>? dishAliases;
+
+
 
   @JsonKey(
     defaultValue: '',
@@ -57,38 +90,59 @@ class RecipeSafetyCheckRequest {
     required: false,
     includeIfNull: false,
   )
+
+
   final String? dishName;
 
-  @JsonKey(name: r'recipe_id', required: false, includeIfNull: false)
+
+
+  @JsonKey(
+    
+    name: r'recipe_id',
+    required: false,
+    includeIfNull: false,
+  )
+
+
   final String? recipeId;
 
-  @JsonKey(name: r'snapshot', required: true, includeIfNull: false)
+
+
+  @JsonKey(
+    
+    name: r'snapshot',
+    required: true,
+    includeIfNull: false,
+  )
+
+
   final RecipeSnapshot snapshot;
 
-  @override
-  bool operator ==(Object other) =>
-      identical(this, other) ||
-      other is RecipeSafetyCheckRequest &&
-          other.baseVersionId == baseVersionId &&
-          other.changeNote == changeNote &&
-          other.description == description &&
-          other.dishAliases == dishAliases &&
-          other.dishName == dishName &&
-          other.recipeId == recipeId &&
-          other.snapshot == snapshot;
 
-  @override
-  int get hashCode =>
-      (baseVersionId == null ? 0 : baseVersionId.hashCode) +
-      changeNote.hashCode +
-      (description == null ? 0 : description.hashCode) +
-      dishAliases.hashCode +
-      dishName.hashCode +
-      (recipeId == null ? 0 : recipeId.hashCode) +
-      snapshot.hashCode;
 
-  factory RecipeSafetyCheckRequest.fromJson(Map<String, dynamic> json) =>
-      _$RecipeSafetyCheckRequestFromJson(json);
+
+
+    @override
+    bool operator ==(Object other) => identical(this, other) || other is RecipeSafetyCheckRequest &&
+      other.baseVersionId == baseVersionId &&
+      other.changeNote == changeNote &&
+      other.description == description &&
+      other.dishAliases == dishAliases &&
+      other.dishName == dishName &&
+      other.recipeId == recipeId &&
+      other.snapshot == snapshot;
+
+    @override
+    int get hashCode =>
+        (baseVersionId == null ? 0 : baseVersionId.hashCode) +
+        changeNote.hashCode +
+        (description == null ? 0 : description.hashCode) +
+        dishAliases.hashCode +
+        dishName.hashCode +
+        (recipeId == null ? 0 : recipeId.hashCode) +
+        snapshot.hashCode;
+
+  factory RecipeSafetyCheckRequest.fromJson(Map<String, dynamic> json) => _$RecipeSafetyCheckRequestFromJson(json);
 
   Map<String, dynamic> toJson() => _$RecipeSafetyCheckRequestToJson(this);
 
@@ -96,4 +150,6 @@ class RecipeSafetyCheckRequest {
   String toString() {
     return toJson().toString();
   }
+
 }
+

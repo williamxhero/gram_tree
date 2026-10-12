@@ -8,6 +8,7 @@ import 'package:json_annotation/json_annotation.dart';
 
 part 'storage_advice.g.dart';
 
+
 @CopyWith()
 @JsonSerializable(
   checked: true,
@@ -17,26 +18,52 @@ part 'storage_advice.g.dart';
 )
 class StorageAdvice {
   /// Returns a new [StorageAdvice] instance.
-  StorageAdvice({required this.days, required this.method});
+  StorageAdvice({
 
-  /// 建议存放天数
-  @JsonKey(name: r'days', required: true, includeIfNull: false)
+    required  this.days,
+
+    required  this.method,
+  });
+
+      /// 建议存放天数
+  @JsonKey(
+    
+    name: r'days',
+    required: true,
+    includeIfNull: false,
+  )
+
+
   final int days;
 
-  /// 常温、冷藏或冷冻
-  @JsonKey(name: r'method', required: true, includeIfNull: false)
+
+
+      /// 常温、冷藏或冷冻
+  @JsonKey(
+    
+    name: r'method',
+    required: true,
+    includeIfNull: false,
+  )
+
+
   final String method;
 
-  @override
-  bool operator ==(Object other) =>
-      identical(this, other) ||
-      other is StorageAdvice && other.days == days && other.method == method;
 
-  @override
-  int get hashCode => days.hashCode + method.hashCode;
 
-  factory StorageAdvice.fromJson(Map<String, dynamic> json) =>
-      _$StorageAdviceFromJson(json);
+
+
+    @override
+    bool operator ==(Object other) => identical(this, other) || other is StorageAdvice &&
+      other.days == days &&
+      other.method == method;
+
+    @override
+    int get hashCode =>
+        days.hashCode +
+        method.hashCode;
+
+  factory StorageAdvice.fromJson(Map<String, dynamic> json) => _$StorageAdviceFromJson(json);
 
   Map<String, dynamic> toJson() => _$StorageAdviceToJson(this);
 
@@ -44,4 +71,6 @@ class StorageAdvice {
   String toString() {
     return toJson().toString();
   }
+
 }
+

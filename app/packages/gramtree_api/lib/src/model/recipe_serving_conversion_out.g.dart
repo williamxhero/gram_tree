@@ -87,21 +87,26 @@ extension $RecipeServingConversionOutCopyWith on RecipeServingConversionOut {
 
 RecipeServingConversionOut _$RecipeServingConversionOutFromJson(
   Map<String, dynamic> json,
-) => $checkedCreate('RecipeServingConversionOut', json, ($checkedConvert) {
-  $checkKeys(
-    json,
-    requiredKeys: const ['conversion', 'recipe_id', 'version_id'],
-  );
-  final val = RecipeServingConversionOut(
-    conversion: $checkedConvert(
-      'conversion',
-      (v) => ServingConversion.fromJson(v as Map<String, dynamic>),
-    ),
-    recipeId: $checkedConvert('recipe_id', (v) => v as String),
-    versionId: $checkedConvert('version_id', (v) => v as String),
-  );
-  return val;
-}, fieldKeyMap: const {'recipeId': 'recipe_id', 'versionId': 'version_id'});
+) => $checkedCreate(
+  'RecipeServingConversionOut',
+  json,
+  ($checkedConvert) {
+    $checkKeys(
+      json,
+      requiredKeys: const ['conversion', 'recipe_id', 'version_id'],
+    );
+    final val = RecipeServingConversionOut(
+      conversion: $checkedConvert(
+        'conversion',
+        (v) => ServingConversion.fromJson(v as Map<String, dynamic>),
+      ),
+      recipeId: $checkedConvert('recipe_id', (v) => v as String),
+      versionId: $checkedConvert('version_id', (v) => v as String),
+    );
+    return val;
+  },
+  fieldKeyMap: const {'recipeId': 'recipe_id', 'versionId': 'version_id'},
+);
 
 Map<String, dynamic> _$RecipeServingConversionOutToJson(
   RecipeServingConversionOut instance,

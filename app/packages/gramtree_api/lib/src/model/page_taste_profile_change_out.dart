@@ -9,6 +9,7 @@ import 'package:json_annotation/json_annotation.dart';
 
 part 'page_taste_profile_change_out.g.dart';
 
+
 @CopyWith()
 @JsonSerializable(
   checked: true,
@@ -18,27 +19,50 @@ part 'page_taste_profile_change_out.g.dart';
 )
 class PageTasteProfileChangeOut {
   /// Returns a new [PageTasteProfileChangeOut] instance.
-  PageTasteProfileChangeOut({required this.items, this.nextCursor});
+  PageTasteProfileChangeOut({
 
-  @JsonKey(name: r'items', required: true, includeIfNull: false)
+    required  this.items,
+
+     this.nextCursor,
+  });
+
+  @JsonKey(
+    
+    name: r'items',
+    required: true,
+    includeIfNull: false,
+  )
+
+
   final List<TasteProfileChangeOut> items;
 
-  @JsonKey(name: r'next_cursor', required: false, includeIfNull: false)
+
+
+  @JsonKey(
+    
+    name: r'next_cursor',
+    required: false,
+    includeIfNull: false,
+  )
+
+
   final String? nextCursor;
 
-  @override
-  bool operator ==(Object other) =>
-      identical(this, other) ||
-      other is PageTasteProfileChangeOut &&
-          other.items == items &&
-          other.nextCursor == nextCursor;
 
-  @override
-  int get hashCode =>
-      items.hashCode + (nextCursor == null ? 0 : nextCursor.hashCode);
 
-  factory PageTasteProfileChangeOut.fromJson(Map<String, dynamic> json) =>
-      _$PageTasteProfileChangeOutFromJson(json);
+
+
+    @override
+    bool operator ==(Object other) => identical(this, other) || other is PageTasteProfileChangeOut &&
+      other.items == items &&
+      other.nextCursor == nextCursor;
+
+    @override
+    int get hashCode =>
+        items.hashCode +
+        (nextCursor == null ? 0 : nextCursor.hashCode);
+
+  factory PageTasteProfileChangeOut.fromJson(Map<String, dynamic> json) => _$PageTasteProfileChangeOutFromJson(json);
 
   Map<String, dynamic> toJson() => _$PageTasteProfileChangeOutToJson(this);
 
@@ -46,4 +70,6 @@ class PageTasteProfileChangeOut {
   String toString() {
     return toJson().toString();
   }
+
 }
+
