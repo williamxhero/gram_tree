@@ -378,7 +378,9 @@ class _CookingPageState extends ConsumerState<CookingPage>
             .setKeepScreenOn(!session.isComplete),
       );
       final now = DateTime.now().toUtc();
-      for (final timer in session.timers.where((item) => item.status == 'running')) {
+      for (final timer in session.timers.where(
+        (item) => item.status == 'running',
+      )) {
         await _scheduleTimerReminder(timer, now);
       }
     }
@@ -433,8 +435,9 @@ class _CookingPageState extends ConsumerState<CookingPage>
         next >= 0 &&
         !session.dependenciesReady(session.steps[next])) {
       if (mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(const SnackBar(content: Text('请先完成前置步骤，再继续。')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('请先完成前置步骤，再继续。')),
+        );
       }
       return;
     }
