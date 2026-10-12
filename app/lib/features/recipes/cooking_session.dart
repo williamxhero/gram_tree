@@ -337,6 +337,9 @@ class _CookingPageState extends ConsumerState<CookingPage>
     );
     if (state == AppLifecycleState.resumed) {
       unawaited(_reportDueTimers());
+    } else if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.inactive) {
+      unawaited(_stopVoiceCommands());
     }
   }
 
@@ -644,7 +647,10 @@ class _CookingPageState extends ConsumerState<CookingPage>
         );
         if (running) await _toggleTimer(step);
     }
-    await _save(session.copyWith(), event: 'voice_command_${command.name}');
+    final latest = _session;
+    if (latest != null) {
+      await _save(latest, event: 'voice_command_${command.name}');
+    }
   }
 
   Future<void> _recordQuestion() async {

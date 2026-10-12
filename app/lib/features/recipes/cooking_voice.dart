@@ -4,6 +4,8 @@ import 'dart:typed_data';
 import 'package:record/record.dart';
 import 'package:sherpa_onnx/sherpa_onnx.dart' as sherpa;
 
+import 'model_asset.dart';
+
 /// Offline model metadata required by the cooking voice features.
 class OfflineChineseModel {
   const OfflineChineseModel({
@@ -87,7 +89,7 @@ class ContractOfflineChineseRecognizer implements OfflineChineseRecognizer {
 /// Production sherpa-onnx adapter. Model files must be shipped by the app;
 /// recognition never downloads a model at runtime.
 class SherpaOfflineChineseRecognizer implements OfflineChineseRecognizer {
-  sherpa.OfflineRecognizer? _recognizer;
+  sherpa.OnlineRecognizer? _recognizer;
   OfflineModelState _state = const OfflineModelUninitialized();
 
   @override
@@ -100,21 +102,25 @@ class SherpaOfflineChineseRecognizer implements OfflineChineseRecognizer {
     }
     try {
       await sherpa.initBindingsAsync();
+      final modelPath = await materializeModelAsset(model.modelPath);
+      final decoderPath = await materializeModelAsset(model.decoderPath);
+      final joinerPath = await materializeModelAsset(model.joinerPath);
+      final tokensPath = await materializeModelAsset(model.tokensPath);
       _recognizer?.free();
-      final config = sherpa.OfflineRecognizerConfig(
-        model: sherpa.OfflineModelConfig(
-          transducer: sherpa.OfflineTransducerModelConfig(
-            encoder: model.modelPath,
-            decoder: model.decoderPath ?? model.modelPath,
-            joiner: model.joinerPath ?? model.modelPath,
+      final config = sherpa.OnlineRecognizerConfig(
+        model: sherpa.OnlineModelConfig(
+          transducer: sherpa.OnlineTransducerModelConfig(
+            encoder: modelPath!,
+            decoder: decoderPath!,
+            joiner: joinerPath!,
           ),
-          tokens: model.tokensPath,
-          modelType: 'transducer',
+          tokens: tokensPath!,
+          modelType: 'zipformer',
           numThreads: 1,
           debug: false,
         ),
       );
-      _recognizer = sherpa.OfflineRecognizer(config);
+      _recognizer = sherpa.OnlineRecognizer(config);
       return _state = OfflineModelReady(model);
     } catch (error) {
       return _state = OfflineModelUnavailable('离线中文模型初始化失败：$error');
@@ -129,7 +135,10 @@ class SherpaOfflineChineseRecognizer implements OfflineChineseRecognizer {
     final stream = recognizer.createStream();
     try {
       stream.acceptWaveform(samples: samples, sampleRate: 16000);
-      recognizer.decode(stream);
+      stream.inputFinished();
+      while (recognizer.isReady(stream)) {
+        recognizer.decode(stream);
+      }
       return recognizer.getResult(stream).text.trim();
     } finally {
       stream.free();
