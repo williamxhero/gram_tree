@@ -296,6 +296,7 @@ class _CookingPageState extends ConsumerState<CookingPage>
   final _voiceCommands = CookingVoiceController();
   VoiceQuestionLifecycle? _voiceQuestion;
   PressAndHoldVoiceQuestion? _voiceRecorder;
+  OfflineCookingVoiceListener? _voiceListener;
   bool _voiceUnavailable = false;
 
   @override
@@ -317,6 +318,7 @@ class _CookingPageState extends ConsumerState<CookingPage>
     _ticker?.cancel();
     _voiceQuestion?.cancel();
     unawaited(_voiceRecorder?.dispose());
+    unawaited(_voiceListener?.dispose());
     WidgetsBinding.instance.removeObserver(this);
     unawaited(ref.read(deviceCapabilitiesProvider).setKeepScreenOn(false));
     super.dispose();
@@ -722,6 +724,7 @@ class _CookingPageState extends ConsumerState<CookingPage>
   }
 
   Future<void> _startVoiceQuestion() async {
+    await _stopVoiceCommands();
     final state = await ref
         .read(permissionServiceProvider)
         .request(AppPermission.microphone);
@@ -826,6 +829,66 @@ class _CookingPageState extends ConsumerState<CookingPage>
     if (mounted) setState(() {});
   }
 
+  Future<void> _toggleVoiceCommands() async {
+    final listener = _voiceListener;
+    if (listener != null) {
+      await listener.dispose();
+      if (mounted) setState(() => _voiceListener = null);
+      return;
+    }
+    final permission = await ref
+        .read(permissionServiceProvider)
+        .request(AppPermission.microphone);
+    if (!mounted || permission != PermissionState.granted) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(const SnackBar(content: Text('未获得麦克风权限，语音翻页未开启。')));
+      }
+      return;
+    }
+    final recognizer = SherpaOfflineChineseRecognizer();
+    final state = await recognizer.initialize(
+      const OfflineChineseModel(
+        modelPath: 'assets/models/zh/encoder.onnx',
+        decoderPath: 'assets/models/zh/decoder.onnx',
+        joinerPath: 'assets/models/zh/joiner.onnx',
+        tokensPath: 'assets/models/zh/tokens.txt',
+        language: 'zh-CN',
+      ),
+    );
+    if (state is! OfflineModelReady) {
+      recognizer.dispose();
+      if (mounted) {
+        setState(() => _voiceUnavailable = true);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text((state as OfflineModelUnavailable).reason)),
+        );
+      }
+      return;
+    }
+    final next = OfflineCookingVoiceListener(
+      recognizer: recognizer,
+      onTranscript: runVoiceCommand,
+    );
+    try {
+      await next.start();
+      if (mounted) setState(() => _voiceListener = next);
+    } catch (error) {
+      await next.dispose();
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('无法开始语音翻页：$error')));
+      }
+    }
+  }
+
+  Future<void> _stopVoiceCommands() async {
+    final listener = _voiceListener;
+    if (listener == null) return;
+    await listener.dispose();
+    _voiceListener = null;
+  }
+
   @override
   Widget build(BuildContext context) {
     final session = _session;
@@ -923,6 +986,21 @@ class _CookingPageState extends ConsumerState<CookingPage>
                     onPressed: _skipCurrent,
                     icon: const Icon(Icons.skip_next),
                     label: const Text('跳过'),
+                  ),
+                  OutlinedButton.icon(
+                    onPressed: _voiceUnavailable ? null : _toggleVoiceCommands,
+                    icon: Icon(
+                      _voiceListener?.isRunning == true
+                          ? Icons.mic
+                          : Icons.mic_none,
+                    ),
+                    label: Text(
+                      _voiceUnavailable
+                          ? '语音不可用'
+                          : _voiceListener?.isRunning == true
+                          ? '关闭语音翻页'
+                          : '开启语音翻页',
+                    ),
                   ),
                   OutlinedButton.icon(
                     onPressed: _recordQuestion,

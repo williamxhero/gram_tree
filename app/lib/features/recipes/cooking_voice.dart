@@ -1,5 +1,7 @@
+import 'dart:async';
 import 'dart:typed_data';
 
+import 'package:record/record.dart';
 import 'package:sherpa_onnx/sherpa_onnx.dart' as sherpa;
 
 /// Offline model metadata required by the cooking voice features.
@@ -208,6 +210,87 @@ class CookingVoiceController {
   CookingVoiceCommand? accept(String text, DateTime now) {
     if (!deduplicator.accept(text, now)) return null;
     return parser.parse(text);
+  }
+}
+
+/// Owns the opt-in microphone lifetime for cooking commands. Audio is kept in
+/// memory only for one short recognition window and is never persisted.
+class OfflineCookingVoiceListener {
+  OfflineCookingVoiceListener({
+    required this.recognizer,
+    required this.onTranscript,
+    this.window = const Duration(milliseconds: 1200),
+  });
+
+  final SherpaOfflineChineseRecognizer recognizer;
+  final Future<void> Function(String transcript) onTranscript;
+  final Duration window;
+  final AudioRecorder _recorder = AudioRecorder();
+  StreamSubscription<Uint8List>? _subscription;
+  Timer? _windowTimer;
+  final _chunks = <Uint8List>[];
+  bool _running = false;
+
+  bool get isRunning => _running;
+
+  Future<void> start() async {
+    if (_running) return;
+    final stream = await _recorder.startStream(
+      const RecordConfig(
+        encoder: AudioEncoder.pcm16bits,
+        sampleRate: 16000,
+        numChannels: 1,
+      ),
+    );
+    _chunks.clear();
+    _running = true;
+    _subscription = stream.listen(_chunks.add);
+    _windowTimer = Timer.periodic(window, (_) => unawaited(_flush()));
+  }
+
+  Future<void> stop() async {
+    if (!_running) return;
+    _running = false;
+    _windowTimer?.cancel();
+    _windowTimer = null;
+    await _recorder.stop();
+    await _subscription?.cancel();
+    _subscription = null;
+    _chunks.clear();
+  }
+
+  Future<void> dispose() async {
+    await stop();
+    await _recorder.dispose();
+    recognizer.dispose();
+  }
+
+  Future<void> _flush() async {
+    if (!_running || _chunks.isEmpty) return;
+    final chunks = List<Uint8List>.of(_chunks);
+    _chunks.clear();
+    try {
+      final transcript = await recognizer.transcribeSamples(
+        _decodePcm16(chunks),
+      );
+      if (_running && transcript.isNotEmpty) await onTranscript(transcript);
+    } catch (_) {
+      // Noisy or invalid audio must not become a command.
+    }
+  }
+
+  Float32List _decodePcm16(List<Uint8List> chunks) {
+    final bytes = chunks.fold<int>(0, (sum, chunk) => sum + chunk.length);
+    final result = Float32List(bytes ~/ 2);
+    var index = 0;
+    for (final chunk in chunks) {
+      for (var offset = 0; offset + 1 < chunk.length; offset += 2) {
+        final value = chunk[offset] | (chunk[offset + 1] << 8);
+        final signed = value >= 0x8000 ? value - 0x10000 : value;
+        result[index++] = signed / 32768.0;
+      }
+    }
+    return result;
   }
 }
 
