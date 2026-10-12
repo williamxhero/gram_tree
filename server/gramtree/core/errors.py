@@ -93,8 +93,12 @@ def install_error_handlers(app: FastAPI) -> None:
         if private_profile_boundary(request.url.path):
             return error_response(exc.status, exc.code, "私密设置请求未完成，请刷新后重试", None)
         retry_after = getattr(exc, "retry_after", None)
-        headers = {"Retry-After": str(retry_after)} if retry_after is not None else None
-        return error_response(exc.status, exc.code, exc.message, exc.detail, headers=headers)
+        headers = dict(getattr(exc, "headers", {}))
+        if retry_after is not None:
+            headers["Retry-After"] = str(retry_after)
+        return error_response(
+            exc.status, exc.code, exc.message, exc.detail, headers=headers or None
+        )
 
     @app.exception_handler(RequestValidationError)
     async def _validation(request: Request, exc: RequestValidationError) -> JSONResponse:

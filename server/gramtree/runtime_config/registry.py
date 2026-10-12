@@ -313,6 +313,91 @@ ITEMS: tuple[ConfigItem, ...] = (
         minimum=1,
         maximum=120,
     ),
+    # —— 规则型机器行为保护（SPEC-011.2） ——
+    ConfigItem("risk.enabled", "bool", True, "是否启用机器行为风险规则"),
+    ConfigItem(
+        "risk.short_window_seconds", "int", 600, "短时行为计数窗口（秒）", minimum=10, maximum=86400
+    ),
+    ConfigItem(
+        "risk.short_request_limit", "int", 1000, "窗口内请求数触发点", minimum=1, maximum=1_000_000
+    ),
+    ConfigItem(
+        "risk.detail_interval_seconds",
+        "int",
+        2,
+        "详情请求视为几乎无停留的间隔（秒）",
+        minimum=1,
+        maximum=3600,
+    ),
+    ConfigItem(
+        "risk.detail_repeat_limit", "int", 20, "连续快速详情次数触发点", minimum=1, maximum=10000
+    ),
+    ConfigItem(
+        "risk.sequential_limit", "int", 100, "顺序详情访问数量触发点", minimum=1, maximum=100000
+    ),
+    ConfigItem(
+        "risk.uniform_daily_limit",
+        "int",
+        2000,
+        "全天均匀请求数量触发点",
+        minimum=1,
+        maximum=1_000_000,
+    ),
+    ConfigItem(
+        "risk.uniform_min_span_hours",
+        "int",
+        12,
+        "全天均匀请求至少覆盖的小时数",
+        minimum=1,
+        maximum=24,
+    ),
+    ConfigItem(
+        "risk.multi_account_limit", "int", 5, "单设备关联账号数触发点", minimum=2, maximum=1000
+    ),
+    ConfigItem(
+        "risk.subnet_new_account_limit",
+        "int",
+        10,
+        "网段窗口内新账号数触发点",
+        minimum=1,
+        maximum=10000,
+    ),
+    ConfigItem("risk.captcha_points", "int", 10, "验证码风险分阈值", minimum=1, maximum=100000),
+    ConfigItem("risk.throttle_points", "int", 20, "降速风险分阈值", minimum=2, maximum=100000),
+    ConfigItem(
+        "risk.temporary_block_points", "int", 40, "临时封禁风险分阈值", minimum=3, maximum=100000
+    ),
+    ConfigItem(
+        "risk.permanent_block_points", "int", 80, "人工封禁风险分阈值", minimum=4, maximum=100000
+    ),
+    ConfigItem("risk.throttle_seconds", "int", 30, "降速持续时间（秒）", minimum=1, maximum=86400),
+    ConfigItem(
+        "risk.temporary_block_seconds",
+        "int",
+        900,
+        "临时封禁持续时间（秒）",
+        minimum=1,
+        maximum=604800,
+    ),
+    ConfigItem(
+        "risk.captcha_seconds", "int", 600, "验证码挑战有效期（秒）", minimum=1, maximum=86400
+    ),
+    ConfigItem(
+        "risk.score_ttl_seconds",
+        "int",
+        86400,
+        "风险分滚动保留时间（秒）",
+        minimum=60,
+        maximum=2_592_000,
+    ),
+    ConfigItem(
+        "risk.retention_seconds",
+        "int",
+        604800,
+        "Redis 处置状态保留时间（秒）",
+        minimum=60,
+        maximum=2_592_000,
+    ),
     ConfigItem(
         "account.nickname_max_length",
         "int",

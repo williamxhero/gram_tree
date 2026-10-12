@@ -12,7 +12,8 @@ from gramtree.accounts.errors import Unauthorized
 from gramtree.accounts.mailer import MailSender
 from gramtree.accounts.models import DeviceSession, User
 from gramtree.core.clock import ClockDep
-from gramtree.deps import SessionDep, SettingsDep
+from gramtree.deps import RedisDep, SessionDep, SettingsDep
+from gramtree.risk import service as risk_service
 
 DEVICE_ID_HEADER = "X-Device-ID"
 
@@ -26,7 +27,9 @@ class AuthContext:
 
 
 def get_auth(
+    request: Request,
     session: SessionDep,
+    redis: RedisDep,
     settings: SettingsDep,
     clock: ClockDep,
     credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(_bearer)],
@@ -34,6 +37,21 @@ def get_auth(
     if credentials is None or credentials.scheme.lower() != "bearer":
         raise Unauthorized("missing bearer token")
     user, ds = service.authenticate(session, settings, credentials.credentials, clock())
+    decision = risk_service.observe_account(
+        redis,
+        session,
+        settings,
+        user_id=str(user.id),
+        device_id=ds.device_id,
+        ip=request.client.host if request.client else None,
+        path=request.url.path,
+        now=clock(),
+        captcha=request.app.state.captcha,
+    )
+    if decision is not None and decision.level is not None:
+        raise risk_service.RiskActionError(
+            decision.level, retry_after=decision.retry_after, challenge=decision.challenge_id
+        )
     return AuthContext(user, ds)
 
 
@@ -41,7 +59,9 @@ CurrentAuth = Annotated[AuthContext, Depends(get_auth)]
 
 
 def get_optional_auth(
+    request: Request,
     session: SessionDep,
+    redis: RedisDep,
     settings: SettingsDep,
     clock: ClockDep,
     credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(_bearer)],
@@ -49,7 +69,7 @@ def get_optional_auth(
     """带了令牌就校验，没带返回 None（给登录前后都能调用的接口用）。"""
     if credentials is None:
         return None
-    return get_auth(session, settings, clock, credentials)
+    return get_auth(request, session, redis, settings, clock, credentials)
 
 
 OptionalAuth = Annotated[AuthContext | None, Depends(get_optional_auth)]
