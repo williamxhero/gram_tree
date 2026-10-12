@@ -18,9 +18,9 @@ from gramtree.events import router as events
 from gramtree.events import sync_router as sync
 from gramtree.ingredients import router as ingredients
 from gramtree.legal import router as legal
+from gramtree.recipes import imports as recipe_imports
 from gramtree.recipes import measure_router as personal_measures
 from gramtree.recipes import router as recipes
-from gramtree.recipes import imports as recipe_imports
 from gramtree.records import router as records
 from gramtree.settings import Settings, get_settings
 from gramtree.taste_profiles import allergy_router as allergies
