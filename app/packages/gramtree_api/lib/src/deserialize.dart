@@ -75,9 +75,13 @@ import 'package:gramtree_api/src/model/generated_draft.dart';
 import 'package:gramtree_api/src/model/generation_result.dart';
 import 'package:gramtree_api/src/model/graded_comparison_change.dart';
 import 'package:gramtree_api/src/model/graded_ingredient_comparison_row.dart';
+import 'package:gramtree_api/src/model/http_validation_error.dart';
 import 'package:gramtree_api/src/model/health_checks.dart';
 import 'package:gramtree_api/src/model/health_response.dart';
 import 'package:gramtree_api/src/model/identity_out.dart';
+import 'package:gramtree_api/src/model/import_input.dart';
+import 'package:gramtree_api/src/model/import_original_out.dart';
+import 'package:gramtree_api/src/model/import_out.dart';
 import 'package:gramtree_api/src/model/ingredient_attributes.dart';
 import 'package:gramtree_api/src/model/ingredient_comparison_row.dart';
 import 'package:gramtree_api/src/model/ingredient_detail.dart';
@@ -165,6 +169,7 @@ import 'package:gramtree_api/src/model/recipe_safety_finding.dart';
 import 'package:gramtree_api/src/model/recipe_safety_result.dart';
 import 'package:gramtree_api/src/model/recipe_serving_conversion_out.dart';
 import 'package:gramtree_api/src/model/recipe_snapshot.dart';
+import 'package:gramtree_api/src/model/recipe_source.dart';
 import 'package:gramtree_api/src/model/recipe_step.dart';
 import 'package:gramtree_api/src/model/recipe_version_create.dart';
 import 'package:gramtree_api/src/model/recipe_version_history.dart';
@@ -202,6 +207,8 @@ import 'package:gramtree_api/src/model/text_attribute.dart';
 import 'package:gramtree_api/src/model/token_pair.dart';
 import 'package:gramtree_api/src/model/unrecorded_ingredient_item.dart';
 import 'package:gramtree_api/src/model/user_out.dart';
+import 'package:gramtree_api/src/model/validation_error.dart';
+import 'package:gramtree_api/src/model/validation_error_loc_inner.dart';
 import 'package:gramtree_api/src/model/value_source.dart';
 import 'package:gramtree_api/src/model/write_batch.dart';
 import 'package:gramtree_api/src/model/write_batch_response.dart';
@@ -213,671 +220,480 @@ final _regList = RegExp(r'^List<(.*)>$');
 final _regSet = RegExp(r'^Set<(.*)>$');
 final _regMap = RegExp(r'^Map<String,(.*)>$');
 
-ReturnType deserialize<ReturnType, BaseType>(
-  dynamic value,
-  String targetType, {
-  bool growable = true,
-}) {
-  switch (targetType) {
-    case 'String':
-      return '$value' as ReturnType;
-    case 'int':
-      return (value is int ? value : int.parse('$value')) as ReturnType;
-    case 'bool':
-      if (value is bool) {
-        return value as ReturnType;
-      }
-      final valueString = '$value'.toLowerCase();
-      return (valueString == 'true' || valueString == '1') as ReturnType;
-    case 'double':
-      return (value is double ? value : double.parse('$value')) as ReturnType;
-    case 'AIStatus':
-      return AIStatus.fromJson(value as Map<String, dynamic>) as ReturnType;
-    case 'ActionDescriptor':
-      return ActionDescriptor.fromJson(value as Map<String, dynamic>)
-          as ReturnType;
-    case 'AllergensAttribute':
-      return AllergensAttribute.fromJson(value as Map<String, dynamic>)
-          as ReturnType;
-    case 'AllergiesOut':
-      return AllergiesOut.fromJson(value as Map<String, dynamic>) as ReturnType;
-    case 'AllergiesWrite':
-      return AllergiesWrite.fromJson(value as Map<String, dynamic>)
-          as ReturnType;
-    case 'AllergyIngredientOut':
-      return AllergyIngredientOut.fromJson(value as Map<String, dynamic>)
-          as ReturnType;
-    case 'AnalyticsEventIn':
-      return AnalyticsEventIn.fromJson(value as Map<String, dynamic>)
-          as ReturnType;
-    case 'AnalyticsUploadRequest':
-      return AnalyticsUploadRequest.fromJson(value as Map<String, dynamic>)
-          as ReturnType;
-    case 'AppleLoginRequest':
-      return AppleLoginRequest.fromJson(value as Map<String, dynamic>)
-          as ReturnType;
-    case 'AppleReauthRequest':
-      return AppleReauthRequest.fromJson(value as Map<String, dynamic>)
-          as ReturnType;
-    case 'AssistedStepPair':
-      return AssistedStepPair.fromJson(value as Map<String, dynamic>)
-          as ReturnType;
-    case 'AttributeStatus':
-    case 'BatchAdvice':
-      return BatchAdvice.fromJson(value as Map<String, dynamic>) as ReturnType;
-    case 'BatchAdviceInput':
-      return BatchAdviceInput.fromJson(value as Map<String, dynamic>)
-          as ReturnType;
-    case 'BatchRequest':
-      return BatchRequest.fromJson(value as Map<String, dynamic>) as ReturnType;
-    case 'BatchResponse':
-      return BatchResponse.fromJson(value as Map<String, dynamic>)
-          as ReturnType;
-    case 'BatchStepAdvice':
-      return BatchStepAdvice.fromJson(value as Map<String, dynamic>)
-          as ReturnType;
-    case 'BindAppleRequest':
-      return BindAppleRequest.fromJson(value as Map<String, dynamic>)
-          as ReturnType;
-    case 'BindEmailRequest':
-      return BindEmailRequest.fromJson(value as Map<String, dynamic>)
-          as ReturnType;
-    case 'BoolAttribute':
-      return BoolAttribute.fromJson(value as Map<String, dynamic>)
-          as ReturnType;
-    case 'CacheInfo':
-      return CacheInfo.fromJson(value as Map<String, dynamic>) as ReturnType;
-    case 'ChangeExplanationInput':
-      return ChangeExplanationInput.fromJson(value as Map<String, dynamic>)
-          as ReturnType;
-    case 'ChangeExplanationResult':
-      return ChangeExplanationResult.fromJson(value as Map<String, dynamic>)
-          as ReturnType;
-    case 'ChangesResponse':
-      return ChangesResponse.fromJson(value as Map<String, dynamic>)
-          as ReturnType;
-    case 'ClientConfig':
-      return ClientConfig.fromJson(value as Map<String, dynamic>) as ReturnType;
-    case 'ComparisonChange':
-      return ComparisonChange.fromJson(value as Map<String, dynamic>)
-          as ReturnType;
-    case 'ComparisonVersion':
-      return ComparisonVersion.fromJson(value as Map<String, dynamic>)
-          as ReturnType;
-    case 'ComponentDescriptor':
-      return ComponentDescriptor.fromJson(value as Map<String, dynamic>)
-          as ReturnType;
-    case 'ComponentReason':
-      return ComponentReason.fromJson(value as Map<String, dynamic>)
-          as ReturnType;
-    case 'ComposeRequest':
-      return ComposeRequest.fromJson(value as Map<String, dynamic>)
-          as ReturnType;
-    case 'ConsentRecordInput':
-      return ConsentRecordInput.fromJson(value as Map<String, dynamic>)
-          as ReturnType;
-    case 'ConsentRecordOutput':
-      return ConsentRecordOutput.fromJson(value as Map<String, dynamic>)
-          as ReturnType;
-    case 'ConsentUpload':
-      return ConsentUpload.fromJson(value as Map<String, dynamic>)
-          as ReturnType;
-    case 'CookingConstraints':
-      return CookingConstraints.fromJson(value as Map<String, dynamic>)
-          as ReturnType;
-    case 'CookingConstraintsOut':
-      return CookingConstraintsOut.fromJson(value as Map<String, dynamic>)
-          as ReturnType;
-    case 'CookingEquipment':
-      return CookingEquipment.fromJson(value as Map<String, dynamic>)
-          as ReturnType;
-    case 'CookingMealTemplate':
-      return CookingMealTemplate.fromJson(value as Map<String, dynamic>)
-          as ReturnType;
-    case 'CookingMealTime':
-      return CookingMealTime.fromJson(value as Map<String, dynamic>)
-          as ReturnType;
-    case 'CookingRecordCreate':
-      return CookingRecordCreate.fromJson(value as Map<String, dynamic>)
-          as ReturnType;
-    case 'CookingRecordHistoryOut':
-      return CookingRecordHistoryOut.fromJson(value as Map<String, dynamic>)
-          as ReturnType;
-    case 'CookingRecordListOut':
-      return CookingRecordListOut.fromJson(value as Map<String, dynamic>)
-          as ReturnType;
-    case 'CookingRecordOut':
-      return CookingRecordOut.fromJson(value as Map<String, dynamic>)
-          as ReturnType;
-    case 'CookingRecordRevisionCreate':
-      return CookingRecordRevisionCreate.fromJson(value as Map<String, dynamic>)
-          as ReturnType;
-    case 'CookingRecordRevisionOut':
-      return CookingRecordRevisionOut.fromJson(value as Map<String, dynamic>)
-          as ReturnType;
-    case 'CountUnit':
-      return CountUnit.fromJson(value as Map<String, dynamic>) as ReturnType;
-    case 'CountUnitsAttribute':
-      return CountUnitsAttribute.fromJson(value as Map<String, dynamic>)
-          as ReturnType;
-    case 'DeletionOut':
-      return DeletionOut.fromJson(value as Map<String, dynamic>) as ReturnType;
-    case 'DensityAttribute':
-      return DensityAttribute.fromJson(value as Map<String, dynamic>)
-          as ReturnType;
-    case 'DishInput':
-      return DishInput.fromJson(value as Map<String, dynamic>) as ReturnType;
-    case 'DishOut':
-      return DishOut.fromJson(value as Map<String, dynamic>) as ReturnType;
-    case 'EmailCodeRequest':
-      return EmailCodeRequest.fromJson(value as Map<String, dynamic>)
-          as ReturnType;
-    case 'EmailCodeSent':
-      return EmailCodeSent.fromJson(value as Map<String, dynamic>)
-          as ReturnType;
-    case 'EmailLoginRequest':
-      return EmailLoginRequest.fromJson(value as Map<String, dynamic>)
-          as ReturnType;
-    case 'EmailReauthRequest':
-      return EmailReauthRequest.fromJson(value as Map<String, dynamic>)
-          as ReturnType;
-    case 'ErrorBody':
-      return ErrorBody.fromJson(value as Map<String, dynamic>) as ReturnType;
-    case 'ErrorResponse':
-      return ErrorResponse.fromJson(value as Map<String, dynamic>)
-          as ReturnType;
-    case 'EventCorrelationIds':
-      return EventCorrelationIds.fromJson(value as Map<String, dynamic>)
-          as ReturnType;
-    case 'EventUploadItem':
-      return EventUploadItem.fromJson(value as Map<String, dynamic>)
-          as ReturnType;
-    case 'EventUploadRequest':
-      return EventUploadRequest.fromJson(value as Map<String, dynamic>)
-          as ReturnType;
-    case 'EventUploadResponse':
-      return EventUploadResponse.fromJson(value as Map<String, dynamic>)
-          as ReturnType;
-    case 'EventUploadResultItem':
-      return EventUploadResultItem.fromJson(value as Map<String, dynamic>)
-          as ReturnType;
-    case 'ExistingChoice':
-      return ExistingChoice.fromJson(value as Map<String, dynamic>)
-          as ReturnType;
-    case 'ExperimentInfo':
-      return ExperimentInfo.fromJson(value as Map<String, dynamic>)
-          as ReturnType;
-    case 'FallbackInfo':
-      return FallbackInfo.fromJson(value as Map<String, dynamic>) as ReturnType;
-    case 'FamilyAllergiesOut':
-      return FamilyAllergiesOut.fromJson(value as Map<String, dynamic>)
-          as ReturnType;
-    case 'FamilyAllergiesWrite':
-      return FamilyAllergiesWrite.fromJson(value as Map<String, dynamic>)
-          as ReturnType;
-    case 'FamilyAvoidance':
-      return FamilyAvoidance.fromJson(value as Map<String, dynamic>)
-          as ReturnType;
-    case 'FamilyAvoidanceOut':
-      return FamilyAvoidanceOut.fromJson(value as Map<String, dynamic>)
-          as ReturnType;
-    case 'FamilyMemberOut':
-      return FamilyMemberOut.fromJson(value as Map<String, dynamic>)
-          as ReturnType;
-    case 'FamilyMemberWrite':
-      return FamilyMemberWrite.fromJson(value as Map<String, dynamic>)
-          as ReturnType;
-    case 'FamilyMembersOut':
-      return FamilyMembersOut.fromJson(value as Map<String, dynamic>)
-          as ReturnType;
-    case 'FlavorAttribute':
-      return FlavorAttribute.fromJson(value as Map<String, dynamic>)
-          as ReturnType;
-    case 'FlavorProfile':
-      return FlavorProfile.fromJson(value as Map<String, dynamic>)
-          as ReturnType;
-    case 'GenerateInput':
-      return GenerateInput.fromJson(value as Map<String, dynamic>)
-          as ReturnType;
-    case 'GeneratedDraft':
-      return GeneratedDraft.fromJson(value as Map<String, dynamic>)
-          as ReturnType;
-    case 'GenerationResult':
-      return GenerationResult.fromJson(value as Map<String, dynamic>)
-          as ReturnType;
-    case 'GradedComparisonChange':
-      return GradedComparisonChange.fromJson(value as Map<String, dynamic>)
-          as ReturnType;
-    case 'GradedIngredientComparisonRow':
-      return GradedIngredientComparisonRow.fromJson(
-            value as Map<String, dynamic>,
-          )
-          as ReturnType;
-    case 'HealthChecks':
-      return HealthChecks.fromJson(value as Map<String, dynamic>) as ReturnType;
-    case 'HealthResponse':
-      return HealthResponse.fromJson(value as Map<String, dynamic>)
-          as ReturnType;
-    case 'IdentityOut':
-      return IdentityOut.fromJson(value as Map<String, dynamic>) as ReturnType;
-    case 'IngredientAttributes':
-      return IngredientAttributes.fromJson(value as Map<String, dynamic>)
-          as ReturnType;
-    case 'IngredientComparisonRow':
-      return IngredientComparisonRow.fromJson(value as Map<String, dynamic>)
-          as ReturnType;
-    case 'IngredientDetail':
-      return IngredientDetail.fromJson(value as Map<String, dynamic>)
-          as ReturnType;
-    case 'IngredientPreference':
-      return IngredientPreference.fromJson(value as Map<String, dynamic>)
-          as ReturnType;
-    case 'IngredientPreferenceOut':
-      return IngredientPreferenceOut.fromJson(value as Map<String, dynamic>)
-          as ReturnType;
-    case 'LocalCuisineOut':
-      return LocalCuisineOut.fromJson(value as Map<String, dynamic>)
-          as ReturnType;
-    case 'MeasureDisplayOut':
-      return MeasureDisplayOut.fromJson(value as Map<String, dynamic>)
-          as ReturnType;
-    case 'MeasureDisplayRequest':
-      return MeasureDisplayRequest.fromJson(value as Map<String, dynamic>)
-          as ReturnType;
-    case 'MeasureHistoryOut':
-      return MeasureHistoryOut.fromJson(value as Map<String, dynamic>)
-          as ReturnType;
-    case 'MeasureInputOut':
-      return MeasureInputOut.fromJson(value as Map<String, dynamic>)
-          as ReturnType;
-    case 'MeasureInputRequest':
-      return MeasureInputRequest.fromJson(value as Map<String, dynamic>)
-          as ReturnType;
-    case 'MergeRelation':
-      return MergeRelation.fromJson(value as Map<String, dynamic>)
-          as ReturnType;
-    case 'ModificationConfirmInput':
-      return ModificationConfirmInput.fromJson(value as Map<String, dynamic>)
-          as ReturnType;
-    case 'ModificationDecision':
-      return ModificationDecision.fromJson(value as Map<String, dynamic>)
-          as ReturnType;
-    case 'ModificationDecisionOut':
-      return ModificationDecisionOut.fromJson(value as Map<String, dynamic>)
-          as ReturnType;
-    case 'ModificationDecisionsInput':
-      return ModificationDecisionsInput.fromJson(value as Map<String, dynamic>)
-          as ReturnType;
-    case 'ModificationInput':
-      return ModificationInput.fromJson(value as Map<String, dynamic>)
-          as ReturnType;
-    case 'ModificationIntent':
-      return ModificationIntent.fromJson(value as Map<String, dynamic>)
-          as ReturnType;
-    case 'ModificationOperation':
-      return ModificationOperation.fromJson(value as Map<String, dynamic>)
-          as ReturnType;
-    case 'ModificationPreview':
-      return ModificationPreview.fromJson(value as Map<String, dynamic>)
-          as ReturnType;
-    case 'MoldConversion':
-      return MoldConversion.fromJson(value as Map<String, dynamic>)
-          as ReturnType;
-    case 'MoldConversionIngredient':
-      return MoldConversionIngredient.fromJson(value as Map<String, dynamic>)
-          as ReturnType;
-    case 'MoldConversionStep':
-      return MoldConversionStep.fromJson(value as Map<String, dynamic>)
-          as ReturnType;
-    case 'MoldConversionWarning':
-      return MoldConversionWarning.fromJson(value as Map<String, dynamic>)
-          as ReturnType;
-    case 'MoldSpec':
-      return MoldSpec.fromJson(value as Map<String, dynamic>) as ReturnType;
-    case 'NormalizeCandidate':
-      return NormalizeCandidate.fromJson(value as Map<String, dynamic>)
-          as ReturnType;
-    case 'NormalizeItem':
-      return NormalizeItem.fromJson(value as Map<String, dynamic>)
-          as ReturnType;
-    case 'NormalizeRequest':
-      return NormalizeRequest.fromJson(value as Map<String, dynamic>)
-          as ReturnType;
-    case 'NormalizeResponse':
-      return NormalizeResponse.fromJson(value as Map<String, dynamic>)
-          as ReturnType;
-    case 'NormalizeResultItem':
-      return NormalizeResultItem.fromJson(value as Map<String, dynamic>)
-          as ReturnType;
-    case 'Nutrition':
-      return Nutrition.fromJson(value as Map<String, dynamic>) as ReturnType;
-    case 'NutritionAttribute':
-      return NutritionAttribute.fromJson(value as Map<String, dynamic>)
-          as ReturnType;
-    case 'NutritionEstimate':
-      return NutritionEstimate.fromJson(value as Map<String, dynamic>)
-          as ReturnType;
-    case 'OneLineInput':
-      return OneLineInput.fromJson(value as Map<String, dynamic>) as ReturnType;
-    case 'PageDescription':
-      return PageDescription.fromJson(value as Map<String, dynamic>)
-          as ReturnType;
-    case 'PageMeasureHistoryOut':
-      return PageMeasureHistoryOut.fromJson(value as Map<String, dynamic>)
-          as ReturnType;
-    case 'PagePersonalMeasureOut':
-      return PagePersonalMeasureOut.fromJson(value as Map<String, dynamic>)
-          as ReturnType;
-    case 'PageTasteProfileChangeOut':
-      return PageTasteProfileChangeOut.fromJson(value as Map<String, dynamic>)
-          as ReturnType;
-    case 'PageUnrecordedIngredientItem':
-      return PageUnrecordedIngredientItem.fromJson(
-            value as Map<String, dynamic>,
-          )
-          as ReturnType;
-    case 'PersonalMeasureInput':
-      return PersonalMeasureInput.fromJson(value as Map<String, dynamic>)
-          as ReturnType;
-    case 'PersonalMeasureOut':
-      return PersonalMeasureOut.fromJson(value as Map<String, dynamic>)
-          as ReturnType;
-    case 'PersonalMeasureUpdate':
-      return PersonalMeasureUpdate.fromJson(value as Map<String, dynamic>)
-          as ReturnType;
-    case 'ProfileUpdate':
-      return ProfileUpdate.fromJson(value as Map<String, dynamic>)
-          as ReturnType;
-    case 'PurchaseUnit':
-      return PurchaseUnit.fromJson(value as Map<String, dynamic>) as ReturnType;
-    case 'PurchaseUnitsAttribute':
-      return PurchaseUnitsAttribute.fromJson(value as Map<String, dynamic>)
-          as ReturnType;
-    case 'QuantificationDecision':
-      return QuantificationDecision.fromJson(value as Map<String, dynamic>)
-          as ReturnType;
-    case 'QuantificationDecisionsInput':
-      return QuantificationDecisionsInput.fromJson(
-            value as Map<String, dynamic>,
-          )
-          as ReturnType;
-    case 'QuantificationInput':
-      return QuantificationInput.fromJson(value as Map<String, dynamic>)
-          as ReturnType;
-    case 'QuantificationSuggestion':
-      return QuantificationSuggestion.fromJson(value as Map<String, dynamic>)
-          as ReturnType;
-    case 'Question':
-      return Question.fromJson(value as Map<String, dynamic>) as ReturnType;
-    case 'RecipeAnswer':
-      return RecipeAnswer.fromJson(value as Map<String, dynamic>) as ReturnType;
-    case 'RecipeAuthor':
-      return RecipeAuthor.fromJson(value as Map<String, dynamic>) as ReturnType;
-    case 'RecipeBatchAdviceOut':
-      return RecipeBatchAdviceOut.fromJson(value as Map<String, dynamic>)
-          as ReturnType;
-    case 'RecipeComparisonAssistance':
-      return RecipeComparisonAssistance.fromJson(value as Map<String, dynamic>)
-          as ReturnType;
-    case 'RecipeComparisonCandidate':
-      return RecipeComparisonCandidate.fromJson(value as Map<String, dynamic>)
-          as ReturnType;
-    case 'RecipeComparisonCandidates':
-      return RecipeComparisonCandidates.fromJson(value as Map<String, dynamic>)
-          as ReturnType;
-    case 'RecipeCreate':
-      return RecipeCreate.fromJson(value as Map<String, dynamic>) as ReturnType;
-    case 'RecipeDerived':
-      return RecipeDerived.fromJson(value as Map<String, dynamic>)
-          as ReturnType;
-    case 'RecipeDetail':
-      return RecipeDetail.fromJson(value as Map<String, dynamic>) as ReturnType;
-    case 'RecipeDisplayedIngredient':
-      return RecipeDisplayedIngredient.fromJson(value as Map<String, dynamic>)
-          as ReturnType;
-    case 'RecipeFlavorContribution':
-      return RecipeFlavorContribution.fromJson(value as Map<String, dynamic>)
-          as ReturnType;
-    case 'RecipeFullComparison':
-      return RecipeFullComparison.fromJson(value as Map<String, dynamic>)
-          as ReturnType;
-    case 'RecipeImageOut':
-      return RecipeImageOut.fromJson(value as Map<String, dynamic>)
-          as ReturnType;
-    case 'RecipeImageStagedOut':
-      return RecipeImageStagedOut.fromJson(value as Map<String, dynamic>)
-          as ReturnType;
-    case 'RecipeImageUpload':
-      return RecipeImageUpload.fromJson(value as Map<String, dynamic>)
-          as ReturnType;
-    case 'RecipeIngredient':
-      return RecipeIngredient.fromJson(value as Map<String, dynamic>)
-          as ReturnType;
-    case 'RecipeIngredientComparison':
-      return RecipeIngredientComparison.fromJson(value as Map<String, dynamic>)
-          as ReturnType;
-    case 'RecipeIngredientDisplay':
-      return RecipeIngredientDisplay.fromJson(value as Map<String, dynamic>)
-          as ReturnType;
-    case 'RecipeIngredientDisplayOut':
-      return RecipeIngredientDisplayOut.fromJson(value as Map<String, dynamic>)
-          as ReturnType;
-    case 'RecipeIntent':
-      return RecipeIntent.fromJson(value as Map<String, dynamic>) as ReturnType;
-    case 'RecipeList':
-      return RecipeList.fromJson(value as Map<String, dynamic>) as ReturnType;
-    case 'RecipeListItem':
-      return RecipeListItem.fromJson(value as Map<String, dynamic>)
-          as ReturnType;
-    case 'RecipeMoldConversionOut':
-      return RecipeMoldConversionOut.fromJson(value as Map<String, dynamic>)
-          as ReturnType;
-    case 'RecipeMoldConversionRequest':
-      return RecipeMoldConversionRequest.fromJson(value as Map<String, dynamic>)
-          as ReturnType;
-    case 'RecipeQuantificationOut':
-      return RecipeQuantificationOut.fromJson(value as Map<String, dynamic>)
-          as ReturnType;
-    case 'RecipeQuestion':
-      return RecipeQuestion.fromJson(value as Map<String, dynamic>)
-          as ReturnType;
-    case 'RecipeReplacement':
-      return RecipeReplacement.fromJson(value as Map<String, dynamic>)
-          as ReturnType;
-    case 'RecipeReplacementAllergens':
-      return RecipeReplacementAllergens.fromJson(value as Map<String, dynamic>)
-          as ReturnType;
-    case 'RecipeReproducibilityCheckOut':
-      return RecipeReproducibilityCheckOut.fromJson(
-            value as Map<String, dynamic>,
-          )
-          as ReturnType;
-    case 'RecipeReproducibilityCheckRequest':
-      return RecipeReproducibilityCheckRequest.fromJson(
-            value as Map<String, dynamic>,
-          )
-          as ReturnType;
-    case 'RecipeReproducibilityResult':
-      return RecipeReproducibilityResult.fromJson(value as Map<String, dynamic>)
-          as ReturnType;
-    case 'RecipeSafetyCheckOut':
-      return RecipeSafetyCheckOut.fromJson(value as Map<String, dynamic>)
-          as ReturnType;
-    case 'RecipeSafetyCheckRequest':
-      return RecipeSafetyCheckRequest.fromJson(value as Map<String, dynamic>)
-          as ReturnType;
-    case 'RecipeSafetyFinding':
-      return RecipeSafetyFinding.fromJson(value as Map<String, dynamic>)
-          as ReturnType;
-    case 'RecipeSafetyResult':
-      return RecipeSafetyResult.fromJson(value as Map<String, dynamic>)
-          as ReturnType;
-    case 'RecipeServingConversionOut':
-      return RecipeServingConversionOut.fromJson(value as Map<String, dynamic>)
-          as ReturnType;
-    case 'RecipeSnapshot':
-      return RecipeSnapshot.fromJson(value as Map<String, dynamic>)
-          as ReturnType;
-    case 'RecipeStep':
-      return RecipeStep.fromJson(value as Map<String, dynamic>) as ReturnType;
-    case 'RecipeVersionCreate':
-      return RecipeVersionCreate.fromJson(value as Map<String, dynamic>)
-          as ReturnType;
-    case 'RecipeVersionHistory':
-      return RecipeVersionHistory.fromJson(value as Map<String, dynamic>)
-          as ReturnType;
-    case 'RecipeVersionOut':
-      return RecipeVersionOut.fromJson(value as Map<String, dynamic>)
-          as ReturnType;
-    case 'RecipeVersionSummary':
-      return RecipeVersionSummary.fromJson(value as Map<String, dynamic>)
-          as ReturnType;
-    case 'RefreshRequest':
-      return RefreshRequest.fromJson(value as Map<String, dynamic>)
-          as ReturnType;
-    case 'RejectionReason':
-      return RejectionReason.fromJson(value as Map<String, dynamic>)
-          as ReturnType;
-    case 'ReleaseNote':
-      return ReleaseNote.fromJson(value as Map<String, dynamic>) as ReturnType;
-    case 'ReproducibilityPosition':
-      return ReproducibilityPosition.fromJson(value as Map<String, dynamic>)
-          as ReturnType;
-    case 'ReproducibilityProblem':
-      return ReproducibilityProblem.fromJson(value as Map<String, dynamic>)
-          as ReturnType;
-    case 'RetrievalResult':
-      return RetrievalResult.fromJson(value as Map<String, dynamic>)
-          as ReturnType;
-    case 'SearchIngredientOut':
-      return SearchIngredientOut.fromJson(value as Map<String, dynamic>)
-          as ReturnType;
-    case 'SearchQuery':
-      return SearchQuery.fromJson(value as Map<String, dynamic>) as ReturnType;
-    case 'SearchResult':
-      return SearchResult.fromJson(value as Map<String, dynamic>) as ReturnType;
-    case 'ServingConversion':
-      return ServingConversion.fromJson(value as Map<String, dynamic>)
-          as ReturnType;
-    case 'ServingConversionIngredient':
-      return ServingConversionIngredient.fromJson(value as Map<String, dynamic>)
-          as ReturnType;
-    case 'ServingConversionStep':
-      return ServingConversionStep.fromJson(value as Map<String, dynamic>)
-          as ReturnType;
-    case 'ServingConversionWarning':
-      return ServingConversionWarning.fromJson(value as Map<String, dynamic>)
-          as ReturnType;
-    case 'SimilarRecipe':
-      return SimilarRecipe.fromJson(value as Map<String, dynamic>)
-          as ReturnType;
-    case 'SkipAdjustmentRequest':
-      return SkipAdjustmentRequest.fromJson(value as Map<String, dynamic>)
-          as ReturnType;
-    case 'SkipAdjustmentResult':
-      return SkipAdjustmentResult.fromJson(value as Map<String, dynamic>)
-          as ReturnType;
-    case 'SourceBasis':
-      return SourceBasis.fromJson(value as Map<String, dynamic>) as ReturnType;
-    case 'SourcedValue':
-      return SourcedValue.fromJson(value as Map<String, dynamic>) as ReturnType;
-    case 'StepComparisonChange':
-      return StepComparisonChange.fromJson(value as Map<String, dynamic>)
-          as ReturnType;
-    case 'StepComparisonRow':
-      return StepComparisonRow.fromJson(value as Map<String, dynamic>)
-          as ReturnType;
-    case 'StorageAdvice':
-      return StorageAdvice.fromJson(value as Map<String, dynamic>)
-          as ReturnType;
-    case 'StorageAttribute':
-      return StorageAttribute.fromJson(value as Map<String, dynamic>)
-          as ReturnType;
-    case 'TasteFlavorOut':
-      return TasteFlavorOut.fromJson(value as Map<String, dynamic>)
-          as ReturnType;
-    case 'TasteLevel':
-      return TasteLevel.fromJson(value as Map<String, dynamic>) as ReturnType;
-    case 'TasteProfileChangeOut':
-      return TasteProfileChangeOut.fromJson(value as Map<String, dynamic>)
-          as ReturnType;
-    case 'TasteProfileOut':
-      return TasteProfileOut.fromJson(value as Map<String, dynamic>)
-          as ReturnType;
-    case 'TasteProfilePatch':
-      return TasteProfilePatch.fromJson(value as Map<String, dynamic>)
-          as ReturnType;
-    case 'TasteScale':
-      return TasteScale.fromJson(value as Map<String, dynamic>) as ReturnType;
-    case 'TextAttribute':
-      return TextAttribute.fromJson(value as Map<String, dynamic>)
-          as ReturnType;
-    case 'TokenPair':
-      return TokenPair.fromJson(value as Map<String, dynamic>) as ReturnType;
-    case 'UnrecordedIngredientItem':
-      return UnrecordedIngredientItem.fromJson(value as Map<String, dynamic>)
-          as ReturnType;
-    case 'UserOut':
-      return UserOut.fromJson(value as Map<String, dynamic>) as ReturnType;
-    case 'ValueSource':
-      return ValueSource.fromJson(value as Map<String, dynamic>) as ReturnType;
-    case 'WriteBatch':
-      return WriteBatch.fromJson(value as Map<String, dynamic>) as ReturnType;
-    case 'WriteBatchResponse':
-      return WriteBatchResponse.fromJson(value as Map<String, dynamic>)
-          as ReturnType;
-    case 'WriteEnvelope':
-      return WriteEnvelope.fromJson(value as Map<String, dynamic>)
-          as ReturnType;
-    case 'WriteResourceResult':
-      return WriteResourceResult.fromJson(value as Map<String, dynamic>)
-          as ReturnType;
-    case 'WriteResult':
-      return WriteResult.fromJson(value as Map<String, dynamic>) as ReturnType;
-    default:
-      RegExpMatch? match;
+  ReturnType deserialize<ReturnType, BaseType>(dynamic value, String targetType, {bool growable= true}) {
+      switch (targetType) {
+        case 'String':
+          return '$value' as ReturnType;
+        case 'int':
+          return (value is int ? value : int.parse('$value')) as ReturnType;
+        case 'bool':
+          if (value is bool) {
+            return value as ReturnType;
+          }
+          final valueString = '$value'.toLowerCase();
+          return (valueString == 'true' || valueString == '1') as ReturnType;
+        case 'double':
+          return (value is double ? value : double.parse('$value')) as ReturnType;
+        case 'AIStatus':
+          return AIStatus.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'ActionDescriptor':
+          return ActionDescriptor.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'AllergensAttribute':
+          return AllergensAttribute.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'AllergiesOut':
+          return AllergiesOut.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'AllergiesWrite':
+          return AllergiesWrite.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'AllergyIngredientOut':
+          return AllergyIngredientOut.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'AnalyticsEventIn':
+          return AnalyticsEventIn.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'AnalyticsUploadRequest':
+          return AnalyticsUploadRequest.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'AppleLoginRequest':
+          return AppleLoginRequest.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'AppleReauthRequest':
+          return AppleReauthRequest.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'AssistedStepPair':
+          return AssistedStepPair.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'AttributeStatus':
+          
+          
+        case 'BatchAdvice':
+          return BatchAdvice.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'BatchAdviceInput':
+          return BatchAdviceInput.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'BatchRequest':
+          return BatchRequest.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'BatchResponse':
+          return BatchResponse.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'BatchStepAdvice':
+          return BatchStepAdvice.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'BindAppleRequest':
+          return BindAppleRequest.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'BindEmailRequest':
+          return BindEmailRequest.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'BoolAttribute':
+          return BoolAttribute.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'CacheInfo':
+          return CacheInfo.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'ChangeExplanationInput':
+          return ChangeExplanationInput.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'ChangeExplanationResult':
+          return ChangeExplanationResult.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'ChangesResponse':
+          return ChangesResponse.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'ClientConfig':
+          return ClientConfig.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'ComparisonChange':
+          return ComparisonChange.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'ComparisonVersion':
+          return ComparisonVersion.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'ComponentDescriptor':
+          return ComponentDescriptor.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'ComponentReason':
+          return ComponentReason.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'ComposeRequest':
+          return ComposeRequest.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'ConsentRecordInput':
+          return ConsentRecordInput.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'ConsentRecordOutput':
+          return ConsentRecordOutput.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'ConsentUpload':
+          return ConsentUpload.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'CookingConstraints':
+          return CookingConstraints.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'CookingConstraintsOut':
+          return CookingConstraintsOut.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'CookingEquipment':
+          return CookingEquipment.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'CookingMealTemplate':
+          return CookingMealTemplate.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'CookingMealTime':
+          return CookingMealTime.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'CookingRecordCreate':
+          return CookingRecordCreate.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'CookingRecordHistoryOut':
+          return CookingRecordHistoryOut.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'CookingRecordListOut':
+          return CookingRecordListOut.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'CookingRecordOut':
+          return CookingRecordOut.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'CookingRecordRevisionCreate':
+          return CookingRecordRevisionCreate.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'CookingRecordRevisionOut':
+          return CookingRecordRevisionOut.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'CountUnit':
+          return CountUnit.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'CountUnitsAttribute':
+          return CountUnitsAttribute.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'DeletionOut':
+          return DeletionOut.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'DensityAttribute':
+          return DensityAttribute.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'DishInput':
+          return DishInput.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'DishOut':
+          return DishOut.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'EmailCodeRequest':
+          return EmailCodeRequest.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'EmailCodeSent':
+          return EmailCodeSent.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'EmailLoginRequest':
+          return EmailLoginRequest.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'EmailReauthRequest':
+          return EmailReauthRequest.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'ErrorBody':
+          return ErrorBody.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'ErrorResponse':
+          return ErrorResponse.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'EventCorrelationIds':
+          return EventCorrelationIds.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'EventUploadItem':
+          return EventUploadItem.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'EventUploadRequest':
+          return EventUploadRequest.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'EventUploadResponse':
+          return EventUploadResponse.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'EventUploadResultItem':
+          return EventUploadResultItem.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'ExistingChoice':
+          return ExistingChoice.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'ExperimentInfo':
+          return ExperimentInfo.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'FallbackInfo':
+          return FallbackInfo.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'FamilyAllergiesOut':
+          return FamilyAllergiesOut.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'FamilyAllergiesWrite':
+          return FamilyAllergiesWrite.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'FamilyAvoidance':
+          return FamilyAvoidance.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'FamilyAvoidanceOut':
+          return FamilyAvoidanceOut.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'FamilyMemberOut':
+          return FamilyMemberOut.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'FamilyMemberWrite':
+          return FamilyMemberWrite.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'FamilyMembersOut':
+          return FamilyMembersOut.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'FlavorAttribute':
+          return FlavorAttribute.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'FlavorProfile':
+          return FlavorProfile.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'GenerateInput':
+          return GenerateInput.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'GeneratedDraft':
+          return GeneratedDraft.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'GenerationResult':
+          return GenerationResult.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'GradedComparisonChange':
+          return GradedComparisonChange.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'GradedIngredientComparisonRow':
+          return GradedIngredientComparisonRow.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'HTTPValidationError':
+          return HTTPValidationError.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'HealthChecks':
+          return HealthChecks.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'HealthResponse':
+          return HealthResponse.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'IdentityOut':
+          return IdentityOut.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'ImportInput':
+          return ImportInput.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'ImportOriginalOut':
+          return ImportOriginalOut.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'ImportOut':
+          return ImportOut.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'IngredientAttributes':
+          return IngredientAttributes.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'IngredientComparisonRow':
+          return IngredientComparisonRow.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'IngredientDetail':
+          return IngredientDetail.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'IngredientPreference':
+          return IngredientPreference.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'IngredientPreferenceOut':
+          return IngredientPreferenceOut.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'LocalCuisineOut':
+          return LocalCuisineOut.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'MeasureDisplayOut':
+          return MeasureDisplayOut.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'MeasureDisplayRequest':
+          return MeasureDisplayRequest.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'MeasureHistoryOut':
+          return MeasureHistoryOut.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'MeasureInputOut':
+          return MeasureInputOut.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'MeasureInputRequest':
+          return MeasureInputRequest.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'MergeRelation':
+          return MergeRelation.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'ModificationConfirmInput':
+          return ModificationConfirmInput.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'ModificationDecision':
+          return ModificationDecision.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'ModificationDecisionOut':
+          return ModificationDecisionOut.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'ModificationDecisionsInput':
+          return ModificationDecisionsInput.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'ModificationInput':
+          return ModificationInput.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'ModificationIntent':
+          return ModificationIntent.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'ModificationOperation':
+          return ModificationOperation.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'ModificationPreview':
+          return ModificationPreview.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'MoldConversion':
+          return MoldConversion.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'MoldConversionIngredient':
+          return MoldConversionIngredient.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'MoldConversionStep':
+          return MoldConversionStep.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'MoldConversionWarning':
+          return MoldConversionWarning.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'MoldSpec':
+          return MoldSpec.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'NormalizeCandidate':
+          return NormalizeCandidate.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'NormalizeItem':
+          return NormalizeItem.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'NormalizeRequest':
+          return NormalizeRequest.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'NormalizeResponse':
+          return NormalizeResponse.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'NormalizeResultItem':
+          return NormalizeResultItem.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'Nutrition':
+          return Nutrition.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'NutritionAttribute':
+          return NutritionAttribute.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'NutritionEstimate':
+          return NutritionEstimate.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'OneLineInput':
+          return OneLineInput.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'PageDescription':
+          return PageDescription.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'PageMeasureHistoryOut':
+          return PageMeasureHistoryOut.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'PagePersonalMeasureOut':
+          return PagePersonalMeasureOut.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'PageTasteProfileChangeOut':
+          return PageTasteProfileChangeOut.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'PageUnrecordedIngredientItem':
+          return PageUnrecordedIngredientItem.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'PersonalMeasureInput':
+          return PersonalMeasureInput.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'PersonalMeasureOut':
+          return PersonalMeasureOut.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'PersonalMeasureUpdate':
+          return PersonalMeasureUpdate.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'ProfileUpdate':
+          return ProfileUpdate.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'PurchaseUnit':
+          return PurchaseUnit.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'PurchaseUnitsAttribute':
+          return PurchaseUnitsAttribute.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'QuantificationDecision':
+          return QuantificationDecision.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'QuantificationDecisionsInput':
+          return QuantificationDecisionsInput.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'QuantificationInput':
+          return QuantificationInput.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'QuantificationSuggestion':
+          return QuantificationSuggestion.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'Question':
+          return Question.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'RecipeAnswer':
+          return RecipeAnswer.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'RecipeAuthor':
+          return RecipeAuthor.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'RecipeBatchAdviceOut':
+          return RecipeBatchAdviceOut.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'RecipeComparisonAssistance':
+          return RecipeComparisonAssistance.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'RecipeComparisonCandidate':
+          return RecipeComparisonCandidate.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'RecipeComparisonCandidates':
+          return RecipeComparisonCandidates.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'RecipeCreate':
+          return RecipeCreate.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'RecipeDerived':
+          return RecipeDerived.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'RecipeDetail':
+          return RecipeDetail.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'RecipeDisplayedIngredient':
+          return RecipeDisplayedIngredient.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'RecipeFlavorContribution':
+          return RecipeFlavorContribution.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'RecipeFullComparison':
+          return RecipeFullComparison.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'RecipeImageOut':
+          return RecipeImageOut.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'RecipeImageStagedOut':
+          return RecipeImageStagedOut.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'RecipeImageUpload':
+          return RecipeImageUpload.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'RecipeIngredient':
+          return RecipeIngredient.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'RecipeIngredientComparison':
+          return RecipeIngredientComparison.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'RecipeIngredientDisplay':
+          return RecipeIngredientDisplay.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'RecipeIngredientDisplayOut':
+          return RecipeIngredientDisplayOut.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'RecipeIntent':
+          return RecipeIntent.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'RecipeList':
+          return RecipeList.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'RecipeListItem':
+          return RecipeListItem.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'RecipeMoldConversionOut':
+          return RecipeMoldConversionOut.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'RecipeMoldConversionRequest':
+          return RecipeMoldConversionRequest.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'RecipeQuantificationOut':
+          return RecipeQuantificationOut.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'RecipeQuestion':
+          return RecipeQuestion.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'RecipeReplacement':
+          return RecipeReplacement.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'RecipeReplacementAllergens':
+          return RecipeReplacementAllergens.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'RecipeReproducibilityCheckOut':
+          return RecipeReproducibilityCheckOut.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'RecipeReproducibilityCheckRequest':
+          return RecipeReproducibilityCheckRequest.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'RecipeReproducibilityResult':
+          return RecipeReproducibilityResult.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'RecipeSafetyCheckOut':
+          return RecipeSafetyCheckOut.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'RecipeSafetyCheckRequest':
+          return RecipeSafetyCheckRequest.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'RecipeSafetyFinding':
+          return RecipeSafetyFinding.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'RecipeSafetyResult':
+          return RecipeSafetyResult.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'RecipeServingConversionOut':
+          return RecipeServingConversionOut.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'RecipeSnapshot':
+          return RecipeSnapshot.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'RecipeSource':
+          return RecipeSource.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'RecipeStep':
+          return RecipeStep.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'RecipeVersionCreate':
+          return RecipeVersionCreate.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'RecipeVersionHistory':
+          return RecipeVersionHistory.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'RecipeVersionOut':
+          return RecipeVersionOut.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'RecipeVersionSummary':
+          return RecipeVersionSummary.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'RefreshRequest':
+          return RefreshRequest.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'RejectionReason':
+          return RejectionReason.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'ReleaseNote':
+          return ReleaseNote.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'ReproducibilityPosition':
+          return ReproducibilityPosition.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'ReproducibilityProblem':
+          return ReproducibilityProblem.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'RetrievalResult':
+          return RetrievalResult.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'SearchIngredientOut':
+          return SearchIngredientOut.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'SearchQuery':
+          return SearchQuery.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'SearchResult':
+          return SearchResult.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'ServingConversion':
+          return ServingConversion.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'ServingConversionIngredient':
+          return ServingConversionIngredient.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'ServingConversionStep':
+          return ServingConversionStep.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'ServingConversionWarning':
+          return ServingConversionWarning.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'SimilarRecipe':
+          return SimilarRecipe.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'SkipAdjustmentRequest':
+          return SkipAdjustmentRequest.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'SkipAdjustmentResult':
+          return SkipAdjustmentResult.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'SourceBasis':
+          return SourceBasis.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'SourcedValue':
+          return SourcedValue.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'StepComparisonChange':
+          return StepComparisonChange.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'StepComparisonRow':
+          return StepComparisonRow.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'StorageAdvice':
+          return StorageAdvice.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'StorageAttribute':
+          return StorageAttribute.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'TasteFlavorOut':
+          return TasteFlavorOut.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'TasteLevel':
+          return TasteLevel.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'TasteProfileChangeOut':
+          return TasteProfileChangeOut.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'TasteProfileOut':
+          return TasteProfileOut.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'TasteProfilePatch':
+          return TasteProfilePatch.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'TasteScale':
+          return TasteScale.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'TextAttribute':
+          return TextAttribute.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'TokenPair':
+          return TokenPair.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'UnrecordedIngredientItem':
+          return UnrecordedIngredientItem.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'UserOut':
+          return UserOut.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'ValidationError':
+          return ValidationError.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'ValidationErrorLocInner':
+          return ValidationErrorLocInner.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'ValueSource':
+          return ValueSource.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'WriteBatch':
+          return WriteBatch.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'WriteBatchResponse':
+          return WriteBatchResponse.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'WriteEnvelope':
+          return WriteEnvelope.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'WriteResourceResult':
+          return WriteResourceResult.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'WriteResult':
+          return WriteResult.fromJson(value as Map<String, dynamic>) as ReturnType;
+        default:
+          RegExpMatch? match;
 
-      if (value is List && (match = _regList.firstMatch(targetType)) != null) {
-        targetType = match![1]!; // ignore: parameter_assignments
-        return value
-                .map<BaseType>(
-                  (dynamic v) => deserialize<BaseType, BaseType>(
-                    v,
-                    targetType,
-                    growable: growable,
-                  ),
-                )
-                .toList(growable: growable)
-            as ReturnType;
-      }
-      if (value is Set && (match = _regSet.firstMatch(targetType)) != null) {
-        targetType = match![1]!; // ignore: parameter_assignments
-        return value
-                .map<BaseType>(
-                  (dynamic v) => deserialize<BaseType, BaseType>(
-                    v,
-                    targetType,
-                    growable: growable,
-                  ),
-                )
-                .toSet()
-            as ReturnType;
-      }
-      if (value is Map && (match = _regMap.firstMatch(targetType)) != null) {
-        targetType = match![1]!.trim(); // ignore: parameter_assignments
-        return Map<String, BaseType>.fromIterables(
+          if (value is List && (match = _regList.firstMatch(targetType)) != null) {
+            targetType = match![1]!; // ignore: parameter_assignments
+            return value
+              .map<BaseType>((dynamic v) => deserialize<BaseType, BaseType>(v, targetType, growable: growable))
+              .toList(growable: growable) as ReturnType;
+          }
+          if (value is Set && (match = _regSet.firstMatch(targetType)) != null) {
+            targetType = match![1]!; // ignore: parameter_assignments
+            return value
+              .map<BaseType>((dynamic v) => deserialize<BaseType, BaseType>(v, targetType, growable: growable))
+              .toSet() as ReturnType;
+          }
+          if (value is Map && (match = _regMap.firstMatch(targetType)) != null) {
+            targetType = match![1]!.trim(); // ignore: parameter_assignments
+            return Map<String, BaseType>.fromIterables(
               value.keys as Iterable<String>,
-              value.values.map(
-                (dynamic v) => deserialize<BaseType, BaseType>(
-                  v,
-                  targetType,
-                  growable: growable,
-                ),
-              ),
-            )
-            as ReturnType;
-      }
-      break;
+              value.values.map((dynamic v) => deserialize<BaseType, BaseType>(v, targetType, growable: growable)),
+            ) as ReturnType;
+          }
+          break;
+    }
+    throw Exception('Cannot deserialize');
   }
-  throw Exception('Cannot deserialize');
-}

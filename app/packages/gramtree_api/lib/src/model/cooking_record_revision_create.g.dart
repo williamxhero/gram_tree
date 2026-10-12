@@ -98,19 +98,24 @@ extension $CookingRecordRevisionCreateCopyWith on CookingRecordRevisionCreate {
 
 CookingRecordRevisionCreate _$CookingRecordRevisionCreateFromJson(
   Map<String, dynamic> json,
-) => $checkedCreate('CookingRecordRevisionCreate', json, ($checkedConvert) {
-  $checkKeys(json, requiredKeys: const ['field', 'revision_id', 'value']);
-  final val = CookingRecordRevisionCreate(
-    field: $checkedConvert(
-      'field',
-      (v) => $enumDecode(_$CookingRecordRevisionCreateFieldEnumEnumMap, v),
-    ),
-    note: $checkedConvert('note', (v) => v as String? ?? ''),
-    revisionId: $checkedConvert('revision_id', (v) => v as String),
-    value: $checkedConvert('value', (v) => v as Object),
-  );
-  return val;
-}, fieldKeyMap: const {'revisionId': 'revision_id'});
+) => $checkedCreate(
+  'CookingRecordRevisionCreate',
+  json,
+  ($checkedConvert) {
+    $checkKeys(json, requiredKeys: const ['field', 'revision_id', 'value']);
+    final val = CookingRecordRevisionCreate(
+      field: $checkedConvert(
+        'field',
+        (v) => $enumDecode(_$CookingRecordRevisionCreateFieldEnumEnumMap, v),
+      ),
+      note: $checkedConvert('note', (v) => v as String? ?? ''),
+      revisionId: $checkedConvert('revision_id', (v) => v as String),
+      value: $checkedConvert('value', (v) => v as Object),
+    );
+    return val;
+  },
+  fieldKeyMap: const {'revisionId': 'revision_id'},
+);
 
 Map<String, dynamic> _$CookingRecordRevisionCreateToJson(
   CookingRecordRevisionCreate instance,

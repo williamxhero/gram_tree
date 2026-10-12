@@ -119,28 +119,33 @@ extension $CookingRecordRevisionOutCopyWith on CookingRecordRevisionOut {
 
 CookingRecordRevisionOut _$CookingRecordRevisionOutFromJson(
   Map<String, dynamic> json,
-) => $checkedCreate('CookingRecordRevisionOut', json, ($checkedConvert) {
-  $checkKeys(
-    json,
-    requiredKeys: const [
-      'created_at',
-      'field',
-      'note',
-      'revision',
-      'revision_id',
-      'value',
-    ],
-  );
-  final val = CookingRecordRevisionOut(
-    createdAt: $checkedConvert('created_at', (v) => v as String),
-    field: $checkedConvert('field', (v) => v as String),
-    note: $checkedConvert('note', (v) => v as String),
-    revision: $checkedConvert('revision', (v) => (v as num).toInt()),
-    revisionId: $checkedConvert('revision_id', (v) => v as String),
-    value: $checkedConvert('value', (v) => v as Object),
-  );
-  return val;
-}, fieldKeyMap: const {'createdAt': 'created_at', 'revisionId': 'revision_id'});
+) => $checkedCreate(
+  'CookingRecordRevisionOut',
+  json,
+  ($checkedConvert) {
+    $checkKeys(
+      json,
+      requiredKeys: const [
+        'created_at',
+        'field',
+        'note',
+        'revision',
+        'revision_id',
+        'value',
+      ],
+    );
+    final val = CookingRecordRevisionOut(
+      createdAt: $checkedConvert('created_at', (v) => v as String),
+      field: $checkedConvert('field', (v) => v as String),
+      note: $checkedConvert('note', (v) => v as String),
+      revision: $checkedConvert('revision', (v) => (v as num).toInt()),
+      revisionId: $checkedConvert('revision_id', (v) => v as String),
+      value: $checkedConvert('value', (v) => v as Object),
+    );
+    return val;
+  },
+  fieldKeyMap: const {'createdAt': 'created_at', 'revisionId': 'revision_id'},
+);
 
 Map<String, dynamic> _$CookingRecordRevisionOutToJson(
   CookingRecordRevisionOut instance,

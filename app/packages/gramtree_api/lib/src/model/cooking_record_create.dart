@@ -8,6 +8,7 @@ import 'package:json_annotation/json_annotation.dart';
 
 part 'cooking_record_create.g.dart';
 
+
 @CopyWith()
 @JsonSerializable(
   checked: true,
@@ -18,94 +19,193 @@ part 'cooking_record_create.g.dart';
 class CookingRecordCreate {
   /// Returns a new [CookingRecordCreate] instance.
   CookingRecordCreate({
-    this.adjustments,
 
-    required this.clientId,
+     this.adjustments,
 
-    this.dishName,
+    required  this.clientId,
 
-    this.meal,
+     this.dishName,
 
-    this.occurredAt,
+     this.meal,
 
-    this.recipeId,
+     this.occurredAt,
 
-    this.recipeVersionId,
+     this.recipeId,
 
-    this.snapshot,
+     this.recipeVersionId,
 
-    required this.source_,
+     this.snapshot,
 
-    this.sourceContext,
+    required  this.source_,
 
-    required this.verification,
+     this.sourceContext,
+
+    required  this.verification,
   });
 
-  @JsonKey(name: r'adjustments', required: false, includeIfNull: false)
+  @JsonKey(
+    
+    name: r'adjustments',
+    required: false,
+    includeIfNull: false,
+  )
+
+
   final List<Object>? adjustments;
 
-  @JsonKey(name: r'client_id', required: true, includeIfNull: false)
+
+
+  @JsonKey(
+    
+    name: r'client_id',
+    required: true,
+    includeIfNull: false,
+  )
+
+
   final String clientId;
 
-  @JsonKey(name: r'dish_name', required: false, includeIfNull: false)
+
+
+  @JsonKey(
+    
+    name: r'dish_name',
+    required: false,
+    includeIfNull: false,
+  )
+
+
   final String? dishName;
 
-  @JsonKey(name: r'meal', required: false, includeIfNull: false)
+
+
+  @JsonKey(
+    
+    name: r'meal',
+    required: false,
+    includeIfNull: false,
+  )
+
+
   final CookingRecordCreateMealEnum? meal;
 
-  @JsonKey(name: r'occurred_at', required: false, includeIfNull: false)
+
+
+  @JsonKey(
+    
+    name: r'occurred_at',
+    required: false,
+    includeIfNull: false,
+  )
+
+
   final DateTime? occurredAt;
 
-  @JsonKey(name: r'recipe_id', required: false, includeIfNull: false)
+
+
+  @JsonKey(
+    
+    name: r'recipe_id',
+    required: false,
+    includeIfNull: false,
+  )
+
+
   final String? recipeId;
 
-  @JsonKey(name: r'recipe_version_id', required: false, includeIfNull: false)
+
+
+  @JsonKey(
+    
+    name: r'recipe_version_id',
+    required: false,
+    includeIfNull: false,
+  )
+
+
   final String? recipeVersionId;
 
-  @JsonKey(name: r'snapshot', required: false, includeIfNull: false)
+
+
+  @JsonKey(
+    
+    name: r'snapshot',
+    required: false,
+    includeIfNull: false,
+  )
+
+
   final Object? snapshot;
 
-  @JsonKey(name: r'source', required: true, includeIfNull: false)
+
+
+  @JsonKey(
+    
+    name: r'source',
+    required: true,
+    includeIfNull: false,
+  )
+
+
   final CookingRecordCreateSource_Enum source_;
 
-  @JsonKey(name: r'source_context', required: false, includeIfNull: false)
+
+
+  @JsonKey(
+    
+    name: r'source_context',
+    required: false,
+    includeIfNull: false,
+  )
+
+
   final Object? sourceContext;
 
-  @JsonKey(name: r'verification', required: true, includeIfNull: false)
+
+
+  @JsonKey(
+    
+    name: r'verification',
+    required: true,
+    includeIfNull: false,
+  )
+
+
   final CookingRecordCreateVerificationEnum verification;
 
-  @override
-  bool operator ==(Object other) =>
-      identical(this, other) ||
-      other is CookingRecordCreate &&
-          other.adjustments == adjustments &&
-          other.clientId == clientId &&
-          other.dishName == dishName &&
-          other.meal == meal &&
-          other.occurredAt == occurredAt &&
-          other.recipeId == recipeId &&
-          other.recipeVersionId == recipeVersionId &&
-          other.snapshot == snapshot &&
-          other.source_ == source_ &&
-          other.sourceContext == sourceContext &&
-          other.verification == verification;
 
-  @override
-  int get hashCode =>
-      adjustments.hashCode +
-      clientId.hashCode +
-      (dishName == null ? 0 : dishName.hashCode) +
-      (meal == null ? 0 : meal.hashCode) +
-      (occurredAt == null ? 0 : occurredAt.hashCode) +
-      (recipeId == null ? 0 : recipeId.hashCode) +
-      (recipeVersionId == null ? 0 : recipeVersionId.hashCode) +
-      (snapshot == null ? 0 : snapshot.hashCode) +
-      source_.hashCode +
-      sourceContext.hashCode +
-      verification.hashCode;
 
-  factory CookingRecordCreate.fromJson(Map<String, dynamic> json) =>
-      _$CookingRecordCreateFromJson(json);
+
+
+    @override
+    bool operator ==(Object other) => identical(this, other) || other is CookingRecordCreate &&
+      other.adjustments == adjustments &&
+      other.clientId == clientId &&
+      other.dishName == dishName &&
+      other.meal == meal &&
+      other.occurredAt == occurredAt &&
+      other.recipeId == recipeId &&
+      other.recipeVersionId == recipeVersionId &&
+      other.snapshot == snapshot &&
+      other.source_ == source_ &&
+      other.sourceContext == sourceContext &&
+      other.verification == verification;
+
+    @override
+    int get hashCode =>
+        adjustments.hashCode +
+        clientId.hashCode +
+        (dishName == null ? 0 : dishName.hashCode) +
+        (meal == null ? 0 : meal.hashCode) +
+        (occurredAt == null ? 0 : occurredAt.hashCode) +
+        (recipeId == null ? 0 : recipeId.hashCode) +
+        (recipeVersionId == null ? 0 : recipeVersionId.hashCode) +
+        (snapshot == null ? 0 : snapshot.hashCode) +
+        source_.hashCode +
+        sourceContext.hashCode +
+        verification.hashCode;
+
+  factory CookingRecordCreate.fromJson(Map<String, dynamic> json) => _$CookingRecordCreateFromJson(json);
 
   Map<String, dynamic> toJson() => _$CookingRecordCreateToJson(this);
 
@@ -113,56 +213,64 @@ class CookingRecordCreate {
   String toString() {
     return toJson().toString();
   }
+
 }
+
 
 enum CookingRecordCreateMealEnum {
-  @JsonValue(r'breakfast')
-  breakfast(r'breakfast'),
-  @JsonValue(r'lunch')
-  lunch(r'lunch'),
-  @JsonValue(r'dinner')
-  dinner(r'dinner'),
-  @JsonValue(r'snack')
-  snack(r'snack');
+@JsonValue(r'breakfast')
+breakfast(r'breakfast'),
+@JsonValue(r'lunch')
+lunch(r'lunch'),
+@JsonValue(r'dinner')
+dinner(r'dinner'),
+@JsonValue(r'snack')
+snack(r'snack');
 
-  const CookingRecordCreateMealEnum(this.value);
+const CookingRecordCreateMealEnum(this.value);
 
-  final String value;
+final String value;
 
-  @override
-  String toString() => value;
+@override
+String toString() => value;
 }
+
+
 
 enum CookingRecordCreateSource_Enum {
-  @JsonValue(r'cooking_session')
-  cookingSession(r'cooking_session'),
-  @JsonValue(r'recommendation')
-  recommendation(r'recommendation'),
-  @JsonValue(r'calendar')
-  calendar(r'calendar'),
-  @JsonValue(r'external_cooking')
-  externalCooking(r'external_cooking'),
-  @JsonValue(r'dining')
-  dining(r'dining');
+@JsonValue(r'cooking_session')
+cookingSession(r'cooking_session'),
+@JsonValue(r'recommendation')
+recommendation(r'recommendation'),
+@JsonValue(r'calendar')
+calendar(r'calendar'),
+@JsonValue(r'external_cooking')
+externalCooking(r'external_cooking'),
+@JsonValue(r'dining')
+dining(r'dining');
 
-  const CookingRecordCreateSource_Enum(this.value);
+const CookingRecordCreateSource_Enum(this.value);
 
-  final String value;
+final String value;
 
-  @override
-  String toString() => value;
+@override
+String toString() => value;
 }
+
+
 
 enum CookingRecordCreateVerificationEnum {
-  @JsonValue(r'cooking_mode')
-  cookingMode(r'cooking_mode'),
-  @JsonValue(r'unverified')
-  unverified(r'unverified');
+@JsonValue(r'cooking_mode')
+cookingMode(r'cooking_mode'),
+@JsonValue(r'unverified')
+unverified(r'unverified');
 
-  const CookingRecordCreateVerificationEnum(this.value);
+const CookingRecordCreateVerificationEnum(this.value);
 
-  final String value;
+final String value;
 
-  @override
-  String toString() => value;
+@override
+String toString() => value;
 }
+
+
