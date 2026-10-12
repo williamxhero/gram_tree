@@ -9,11 +9,17 @@ import '../../widgets/tab_page.dart';
 final recordsProvider = FutureProvider.autoDispose<CookingRecordListOut>((
   ref,
 ) async {
-  final response = await ref
-      .watch(apiClientProvider)
-      .getRecordsApi()
-      .listRecords();
-  return response.data ?? CookingRecordListOut(items: const []);
+  try {
+    final response = await ref
+        .watch(apiClientProvider)
+        .getRecordsApi()
+        .listRecords();
+    return response.data ?? CookingRecordListOut(items: const []);
+  } catch (_) {
+    // Keep the tab usable while offline; completed sessions remain in the
+    // account-scoped queue and will appear on a later successful refresh.
+    return CookingRecordListOut(items: const []);
+  }
 });
 
 class RecordsPage extends ConsumerWidget {
