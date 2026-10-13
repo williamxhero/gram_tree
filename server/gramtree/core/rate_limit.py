@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import hashlib
 import hmac
+import uuid
+from contextlib import suppress
 from typing import Any, Literal, cast
 
 import jwt
@@ -12,6 +14,7 @@ from sqlalchemy.orm import Session
 
 from gramtree.core.errors import ApiError
 from gramtree.runtime_config import service as config
+from gramtree.runtime_config.registry import BY_KEY
 from gramtree.settings import Settings
 
 RateCategory = Literal["search_list", "detail", "write", "ai", "auth", "export"]
@@ -21,9 +24,16 @@ RateCategory = Literal["search_list", "detail", "write", "ai", "auth", "export"]
 _INCREMENT = """
 local exceeded = 0
 local retry = 0
+local distinct = ARGV[3 * #KEYS + 1]
 for i, key in ipairs(KEYS) do
-  local count = redis.call('INCR', key)
-  if count == 1 then redis.call('EXPIRE', key, ARGV[i]) end
+  local count
+  if ARGV[2 * #KEYS + i] == 'distinct' then
+    redis.call('SADD', key, distinct)
+    count = redis.call('SCARD', key)
+  else
+    count = redis.call('INCR', key)
+  end
+  if redis.call('TTL', key) < 0 then redis.call('EXPIRE', key, ARGV[i]) end
   local limit = tonumber(ARGV[i + #KEYS])
   if count > limit then
     exceeded = 1
@@ -55,12 +65,16 @@ def category(path: str, method: str) -> RateCategory | None:
         return "export"
     if "/ai/" in path:
         return "ai"
-    if method.upper() == "GET" and (path.endswith("/search") or path.endswith("/changes")):
+    if path.endswith("/search") or (method.upper() == "GET" and path.endswith("/changes")):
         return "search_list"
     if method.upper() == "GET" and (
         path in {"/v1/recipes", "/v1/ingredients", "/v1/records"}
         or path.endswith("/versions")
         or path.endswith("/candidates")
+        or path.endswith("/unrecorded")
+        or path.endswith("/family-members")
+        or path in {"/v1/me/measures", "/v1/examples/samples"}
+        or path.endswith("/history")
     ):
         return "search_list"
     if method.upper() == "GET":
@@ -69,11 +83,17 @@ def category(path: str, method: str) -> RateCategory | None:
 
 
 def _safe_limit(session: Session, key: str, fallback: int) -> int:
+    item = BY_KEY.get(key)
+    default = item.default if item is not None and type(item.default) is int else fallback
     try:
-        value = int(config.get(session, key))
-    except (KeyError, TypeError, ValueError):
-        return fallback
-    return value if value > 0 else fallback
+        value = config.get(session, key)
+        if type(value) is not int:
+            return default
+        if item is not None:
+            config.validate(item, value)
+    except (KeyError, TypeError, ValueError, OverflowError):
+        return default
+    return value if value > 0 else default
 
 
 def _subject_from_token(token: str | None, settings: Settings) -> str | None:
@@ -121,6 +141,12 @@ def enforce(
     keys: list[str] = []
     expirations: list[str] = []
     limits: list[str] = []
+    modes: list[str] = []
+    recipe_id = ""
+    path_parts = path.strip("/").split("/")
+    if kind == "detail" and len(path_parts) >= 3 and path_parts[:2] == ["v1", "recipes"]:
+        with suppress(ValueError):
+            recipe_id = str(uuid.UUID(path_parts[2]))
     for name, value in dimensions:
         for window, seconds, fallback in (
             ("minute", 60, 120),
@@ -130,8 +156,20 @@ def enforce(
             keys.append(key)
             expirations.append(str(seconds))
             limits.append(str(_safe_limit(session, f"rate.{kind}.{name}_per_{window}", fallback)))
+            modes.append("count")
+        if recipe_id:
+            keys.append(_key(settings, f"detail:distinct:day:{name}", str(value)))
+            expirations.append("86400")
+            limits.append(
+                str(_safe_limit(session, f"rate.detail.{name}_distinct_recipes_per_day", 1000))
+            )
+            modes.append("distinct")
     try:
-        result = cast(Any, redis.eval(_INCREMENT, len(keys), *keys, *expirations, *limits))
+        result = cast(
+            Any, redis.eval(_INCREMENT, len(keys), *keys, *expirations, *limits, *modes, recipe_id)
+        )
+        if not isinstance(result, (list, tuple)) or len(result) != 2:
+            raise ValueError("invalid quota result")
     except Exception as exc:
         # Fail closed: a quota outage must not silently expose a bulk endpoint.
         raise RateLimitError(60) from exc

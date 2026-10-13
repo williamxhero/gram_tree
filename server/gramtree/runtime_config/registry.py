@@ -477,6 +477,17 @@ ITEMS: tuple[ConfigItem, ...] = (
         for dimension in ("account", "device", "ip")
         for window, default in (("minute", default), ("day", default * 40))
     ),
+    *(
+        ConfigItem(
+            f"rate.detail.{dimension}_distinct_recipes_per_day",
+            "int",
+            1000,
+            f"详情接口按{dimension}维度每天访问不同菜谱的数量上限",
+            minimum=1,
+            maximum=1_000_000,
+        )
+        for dimension in ("account", "device", "ip")
+    ),
     # —— 规则型机器行为保护（SPEC-011.2） ——
     ConfigItem("risk.enabled", "bool", True, "是否启用机器行为风险规则"),
     ConfigItem(

@@ -64,8 +64,9 @@ def credential_hash(key: str, auth_secret: str) -> str:
     """Return the device credential persisted by the server.
 
     The value returned in a login response is this derived credential rather
-    than the random seed.  It is still opaque to clients, and lets the server
-    verify MACs without retaining a recoverable plaintext signing secret.
+    than the random seed. This derived value is itself a signing secret: HMAC
+    verification needs the same credential as the client. Never log or expose it
+    outside the login/refresh response.
     """
     return hmac.new(auth_secret.encode(), key.encode(), hashlib.sha256).hexdigest()
 
@@ -83,7 +84,7 @@ def _read_input(headers: dict[str, str]) -> SignatureInput:
     if (
         len(nonce) > 128
         or not nonce.isprintable()
-        or not signature.isprintable()
+        or any(character not in "0123456789abcdef" for character in signature)
         or len(signature) != hashlib.sha256().digest_size * 2
     ):
         raise SignatureError("signature_invalid")
@@ -134,7 +135,7 @@ def verify(
     if (
         device_session.previous_signing_secret_hash
         and device_session.previous_signing_secret_expires_at
-        and device_session.previous_signing_secret_expires_at >= current
+        and device_session.previous_signing_secret_expires_at > current
     ):
         candidates.append(device_session.previous_signing_secret_hash)
     message = canonical_message(
@@ -157,7 +158,14 @@ def verify(
         + hashlib.sha256(supplied.nonce.encode()).hexdigest()
     )
     try:
-        reserved = redis.set(nonce_key, "1", nx=True, ex=max(1, nonce_ttl_seconds))
+        # Retain even future-dated nonces until the entire acceptance window ends.
+        # A shorter configured TTL must never make the captured request replayable.
+        ttl = max(
+            1,
+            nonce_ttl_seconds,
+            supplied.timestamp + tolerance_seconds - int(current.timestamp()) + 1,
+        )
+        reserved = redis.set(nonce_key, "1", nx=True, ex=ttl)
     except Exception:
         # A replay-safe boundary must not silently become a bearer-token
         # boundary when Redis is unavailable.
