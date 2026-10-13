@@ -389,6 +389,8 @@ void main() {
     await journey.record(() async {
       await journey.login();
       await journey.savedEditor(request: '合成测试：做一道需要料酒的家常鸡丁');
+      const originalInstruction = '中火炒鸡肉至中心温度达到74°C，加入料酒翻炒收汁';
+      const replacementInstruction = '中火炒鸡肉至中心温度达到74°C，加入花生调味汁翻炒收汁';
       await journey.propose('没有料酒，换成花生调味汁');
       await journey.reveal('text-edit-substitution-notice');
       expect(find.textContaining('未收录不代表无过敏原'), findsOneWidget);
@@ -431,8 +433,8 @@ void main() {
       await journey.confirm();
       await journey.ingredientAmount('wine', '20');
       expect(find.text('花生调味汁'), findsOneWidget);
-      await journey.reveal('recipe-step-0');
-      expect(find.textContaining('加入花生调味汁', findRichText: true), findsWidgets);
+      await journey.reveal('recipe-step-1');
+      expect(journey.instruction(1, replacementInstruction), findsOneWidget);
       expect(find.textContaining('加入料酒', findRichText: true), findsNothing);
       await journey.tap('recipe-history-button');
       await journey.waitFor(journey.key('recipe-version-2'));
@@ -440,6 +442,8 @@ void main() {
       await journey.waitFor(journey.key('recipe-detail-content'));
       await journey.ingredientAmount('wine', '10');
       expect(find.text('料酒'), findsOneWidget);
+      await journey.reveal('recipe-step-1');
+      expect(journey.instruction(1, originalInstruction), findsOneWidget);
       await tester.binding.handlePopRoute();
       await tester.pumpAndSettle();
       await journey.tap('recipe-version-2');
@@ -448,6 +452,9 @@ void main() {
       expect(find.text('花生调味汁'), findsOneWidget);
       await journey.reveal('recipe-allergen-list');
       expect(find.textContaining('花生'), findsWidgets);
+      await journey.reveal('recipe-step-1');
+      expect(journey.instruction(1, replacementInstruction), findsOneWidget);
+      expect(find.textContaining('加入料酒', findRichText: true), findsNothing);
     });
   });
 
@@ -456,6 +463,8 @@ void main() {
     await journey.record(() async {
       await journey.login();
       await journey.savedEditor(request: '合成测试：做一道需要料酒的家常鸡丁');
+      const originalInstruction = '中火炒鸡肉至中心温度达到74°C，加入料酒翻炒收汁';
+      const omissionInstruction = '保持原火候翻炒收汁；省略料酒会减弱去腥和香气';
       const request = '没有料酒，不用替代，直接省略';
       await journey.propose(request);
       await journey.reveal('text-edit-operation-remove-wine');
@@ -483,15 +492,9 @@ void main() {
       await journey.choose('accept', 'remove-wine');
       await journey.enter('change-explanation-note', '缺料酒，确认省略并移除步骤引用。');
       await journey.confirm();
-      await journey.reveal('recipe-step-0');
+      await journey.reveal('recipe-step-1');
       expect(journey.key('recipe-ingredient-amount-wine'), findsNothing);
-      expect(
-        find.descendant(
-          of: journey.key('recipe-step-0'),
-          matching: find.textContaining('省略料酒会减弱去腥和香气', findRichText: true),
-        ),
-        findsOneWidget,
-      );
+      expect(journey.instruction(1, omissionInstruction), findsOneWidget);
       expect(find.textContaining('加入料酒', findRichText: true), findsNothing);
       await journey.tap('recipe-history-button');
       await journey.waitFor(journey.key('recipe-version-2'));
@@ -499,12 +502,16 @@ void main() {
       await journey.waitFor(journey.key('recipe-detail-content'));
       await journey.ingredientAmount('wine', '10');
       expect(find.text('料酒'), findsOneWidget);
+      await journey.reveal('recipe-step-1');
+      expect(journey.instruction(1, originalInstruction), findsOneWidget);
       await tester.binding.handlePopRoute();
       await tester.pumpAndSettle();
       await journey.tap('recipe-version-2');
       await journey.waitFor(journey.key('recipe-detail-content'));
-      await journey.reveal('recipe-step-0');
+      await journey.reveal('recipe-step-1');
       expect(journey.key('recipe-ingredient-amount-wine'), findsNothing);
+      expect(journey.instruction(1, omissionInstruction), findsOneWidget);
+      expect(find.textContaining('加入料酒', findRichText: true), findsNothing);
     });
   });
 
