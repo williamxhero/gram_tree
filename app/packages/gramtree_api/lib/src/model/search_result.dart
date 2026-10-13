@@ -9,7 +9,6 @@ import 'package:json_annotation/json_annotation.dart';
 
 part 'search_result.g.dart';
 
-
 @CopyWith()
 @JsonSerializable(
   checked: true,
@@ -19,50 +18,27 @@ part 'search_result.g.dart';
 )
 class SearchResult {
   /// Returns a new [SearchResult] instance.
-  SearchResult({
+  SearchResult({required this.items, this.nextCursor});
 
-    required  this.items,
-
-     this.nextCursor,
-  });
-
-  @JsonKey(
-    
-    name: r'items',
-    required: true,
-    includeIfNull: false,
-  )
-
-
+  @JsonKey(name: r'items', required: true, includeIfNull: false)
   final List<SearchIngredientOut> items;
 
-
-
-  @JsonKey(
-    
-    name: r'next_cursor',
-    required: false,
-    includeIfNull: false,
-  )
-
-
+  @JsonKey(name: r'next_cursor', required: false, includeIfNull: false)
   final String? nextCursor;
 
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is SearchResult &&
+          other.items == items &&
+          other.nextCursor == nextCursor;
 
+  @override
+  int get hashCode =>
+      items.hashCode + (nextCursor == null ? 0 : nextCursor.hashCode);
 
-
-
-    @override
-    bool operator ==(Object other) => identical(this, other) || other is SearchResult &&
-      other.items == items &&
-      other.nextCursor == nextCursor;
-
-    @override
-    int get hashCode =>
-        items.hashCode +
-        (nextCursor == null ? 0 : nextCursor.hashCode);
-
-  factory SearchResult.fromJson(Map<String, dynamic> json) => _$SearchResultFromJson(json);
+  factory SearchResult.fromJson(Map<String, dynamic> json) =>
+      _$SearchResultFromJson(json);
 
   Map<String, dynamic> toJson() => _$SearchResultToJson(this);
 
@@ -70,6 +46,4 @@ class SearchResult {
   String toString() {
     return toJson().toString();
   }
-
 }
-

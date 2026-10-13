@@ -14,16 +14,15 @@ import 'package:gramtree_api/src/model/write_batch.dart';
 import 'package:gramtree_api/src/model/write_batch_response.dart';
 
 class SyncApi {
-
   final Dio _dio;
 
   const SyncApi(this._dio);
 
   /// 按账号上传登记式离线写入；原子幂等处理，未知依赖暂缓
-  /// 
+  ///
   ///
   /// Parameters:
-  /// * [writeBatch] 
+  /// * [writeBatch]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -33,7 +32,7 @@ class SyncApi {
   ///
   /// Returns a [Future] containing a [Response] with a [WriteBatchResponse] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<WriteBatchResponse>> uploadWrites({ 
+  Future<Response<WriteBatchResponse>> uploadWrites({
     required WriteBatch writeBatch,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -45,16 +44,10 @@ class SyncApi {
     final _path = r'/v1/sync/writes';
     final _options = Options(
       method: r'POST',
-      headers: <String, dynamic>{
-        ...?headers,
-      },
+      headers: <String, dynamic>{...?headers},
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
-          {
-            'type': 'http',
-            'scheme': 'bearer',
-            'name': 'HTTPBearer',
-          },
+          {'type': 'http', 'scheme': 'bearer', 'name': 'HTTPBearer'},
         ],
         ...?extra,
       },
@@ -65,13 +58,10 @@ class SyncApi {
     dynamic _bodyData;
 
     try {
-_bodyData=jsonEncode(writeBatch);
-    } catch(error, stackTrace) {
+      _bodyData = jsonEncode(writeBatch);
+    } catch (error, stackTrace) {
       throw DioException(
-         requestOptions: _options.compose(
-          _dio.options,
-          _path,
-        ),
+        requestOptions: _options.compose(_dio.options, _path),
         type: DioExceptionType.unknown,
         error: error,
         stackTrace: stackTrace,
@@ -90,9 +80,14 @@ _bodyData=jsonEncode(writeBatch);
     WriteBatchResponse? _responseData;
 
     try {
-final rawData = _response.data;
-_responseData = rawData == null ? null : deserialize<WriteBatchResponse, WriteBatchResponse>(rawData, 'WriteBatchResponse', growable: true);
-
+      final rawData = _response.data;
+      _responseData = rawData == null
+          ? null
+          : deserialize<WriteBatchResponse, WriteBatchResponse>(
+              rawData,
+              'WriteBatchResponse',
+              growable: true,
+            );
     } catch (error, stackTrace) {
       throw DioException(
         requestOptions: _response.requestOptions,
@@ -114,5 +109,4 @@ _responseData = rawData == null ? null : deserialize<WriteBatchResponse, WriteBa
       extra: _response.extra,
     );
   }
-
 }

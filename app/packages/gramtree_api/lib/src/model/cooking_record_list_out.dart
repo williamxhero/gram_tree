@@ -9,7 +9,6 @@ import 'package:json_annotation/json_annotation.dart';
 
 part 'cooking_record_list_out.g.dart';
 
-
 @CopyWith()
 @JsonSerializable(
   checked: true,
@@ -19,50 +18,27 @@ part 'cooking_record_list_out.g.dart';
 )
 class CookingRecordListOut {
   /// Returns a new [CookingRecordListOut] instance.
-  CookingRecordListOut({
+  CookingRecordListOut({required this.items, this.nextCursor});
 
-    required  this.items,
-
-     this.nextCursor,
-  });
-
-  @JsonKey(
-    
-    name: r'items',
-    required: true,
-    includeIfNull: false,
-  )
-
-
+  @JsonKey(name: r'items', required: true, includeIfNull: false)
   final List<CookingRecordOut> items;
 
-
-
-  @JsonKey(
-    
-    name: r'next_cursor',
-    required: false,
-    includeIfNull: false,
-  )
-
-
+  @JsonKey(name: r'next_cursor', required: false, includeIfNull: false)
   final String? nextCursor;
 
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is CookingRecordListOut &&
+          other.items == items &&
+          other.nextCursor == nextCursor;
 
+  @override
+  int get hashCode =>
+      items.hashCode + (nextCursor == null ? 0 : nextCursor.hashCode);
 
-
-
-    @override
-    bool operator ==(Object other) => identical(this, other) || other is CookingRecordListOut &&
-      other.items == items &&
-      other.nextCursor == nextCursor;
-
-    @override
-    int get hashCode =>
-        items.hashCode +
-        (nextCursor == null ? 0 : nextCursor.hashCode);
-
-  factory CookingRecordListOut.fromJson(Map<String, dynamic> json) => _$CookingRecordListOutFromJson(json);
+  factory CookingRecordListOut.fromJson(Map<String, dynamic> json) =>
+      _$CookingRecordListOutFromJson(json);
 
   Map<String, dynamic> toJson() => _$CookingRecordListOutToJson(this);
 
@@ -70,6 +46,4 @@ class CookingRecordListOut {
   String toString() {
     return toJson().toString();
   }
-
 }
-

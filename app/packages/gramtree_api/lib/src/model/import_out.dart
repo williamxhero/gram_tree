@@ -9,7 +9,6 @@ import 'package:json_annotation/json_annotation.dart';
 
 part 'import_out.g.dart';
 
-
 @CopyWith()
 @JsonSerializable(
   checked: true,
@@ -20,145 +19,73 @@ part 'import_out.g.dart';
 class ImportOut {
   /// Returns a new [ImportOut] instance.
   ImportOut({
+    this.failedImages,
 
-     this.failedImages,
+    this.fieldStates,
 
-     this.fieldStates,
+    this.importId,
 
-     this.importId,
+    this.nextStep,
 
-     this.nextStep,
+    this.reason,
 
-     this.reason,
+    this.recipe,
 
-     this.recipe,
+    this.reproducibility,
 
-     this.reproducibility,
-
-    required  this.status,
+    required this.status,
   });
 
-  @JsonKey(
-    
-    name: r'failed_images',
-    required: false,
-    includeIfNull: false,
-  )
-
-
+  @JsonKey(name: r'failed_images', required: false, includeIfNull: false)
   final List<int>? failedImages;
 
-
-
-  @JsonKey(
-    
-    name: r'field_states',
-    required: false,
-    includeIfNull: false,
-  )
-
-
+  @JsonKey(name: r'field_states', required: false, includeIfNull: false)
   final Map<String, String>? fieldStates;
 
-
-
-  @JsonKey(
-    
-    name: r'import_id',
-    required: false,
-    includeIfNull: false,
-  )
-
-
+  @JsonKey(name: r'import_id', required: false, includeIfNull: false)
   final String? importId;
 
-
-
-  @JsonKey(
-    
-    name: r'next_step',
-    required: false,
-    includeIfNull: false,
-  )
-
-
+  @JsonKey(name: r'next_step', required: false, includeIfNull: false)
   final String? nextStep;
 
-
-
-  @JsonKey(
-    
-    name: r'reason',
-    required: false,
-    includeIfNull: false,
-  )
-
-
+  @JsonKey(name: r'reason', required: false, includeIfNull: false)
   final String? reason;
 
-
-
-  @JsonKey(
-    
-    name: r'recipe',
-    required: false,
-    includeIfNull: false,
-  )
-
-
+  @JsonKey(name: r'recipe', required: false, includeIfNull: false)
   final RecipeDetail? recipe;
 
-
-
-  @JsonKey(
-    
-    name: r'reproducibility',
-    required: false,
-    includeIfNull: false,
-  )
-
-
+  @JsonKey(name: r'reproducibility', required: false, includeIfNull: false)
   final Object? reproducibility;
 
-
-
-  @JsonKey(
-    
-    name: r'status',
-    required: true,
-    includeIfNull: false,
-  )
-
-
+  @JsonKey(name: r'status', required: true, includeIfNull: false)
   final String status;
 
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is ImportOut &&
+          other.failedImages == failedImages &&
+          other.fieldStates == fieldStates &&
+          other.importId == importId &&
+          other.nextStep == nextStep &&
+          other.reason == reason &&
+          other.recipe == recipe &&
+          other.reproducibility == reproducibility &&
+          other.status == status;
 
+  @override
+  int get hashCode =>
+      failedImages.hashCode +
+      fieldStates.hashCode +
+      (importId == null ? 0 : importId.hashCode) +
+      (nextStep == null ? 0 : nextStep.hashCode) +
+      (reason == null ? 0 : reason.hashCode) +
+      (recipe == null ? 0 : recipe.hashCode) +
+      (reproducibility == null ? 0 : reproducibility.hashCode) +
+      status.hashCode;
 
-
-
-    @override
-    bool operator ==(Object other) => identical(this, other) || other is ImportOut &&
-      other.failedImages == failedImages &&
-      other.fieldStates == fieldStates &&
-      other.importId == importId &&
-      other.nextStep == nextStep &&
-      other.reason == reason &&
-      other.recipe == recipe &&
-      other.reproducibility == reproducibility &&
-      other.status == status;
-
-    @override
-    int get hashCode =>
-        failedImages.hashCode +
-        fieldStates.hashCode +
-        (importId == null ? 0 : importId.hashCode) +
-        (nextStep == null ? 0 : nextStep.hashCode) +
-        (reason == null ? 0 : reason.hashCode) +
-        (recipe == null ? 0 : recipe.hashCode) +
-        (reproducibility == null ? 0 : reproducibility.hashCode) +
-        status.hashCode;
-
-  factory ImportOut.fromJson(Map<String, dynamic> json) => _$ImportOutFromJson(json);
+  factory ImportOut.fromJson(Map<String, dynamic> json) =>
+      _$ImportOutFromJson(json);
 
   Map<String, dynamic> toJson() => _$ImportOutToJson(this);
 
@@ -166,6 +93,4 @@ class ImportOut {
   String toString() {
     return toJson().toString();
   }
-
 }
-

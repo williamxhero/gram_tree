@@ -9,7 +9,6 @@ import 'package:json_annotation/json_annotation.dart';
 
 part 'recipe_list.g.dart';
 
-
 @CopyWith()
 @JsonSerializable(
   checked: true,
@@ -19,50 +18,27 @@ part 'recipe_list.g.dart';
 )
 class RecipeList {
   /// Returns a new [RecipeList] instance.
-  RecipeList({
+  RecipeList({required this.items, this.nextCursor});
 
-    required  this.items,
-
-     this.nextCursor,
-  });
-
-  @JsonKey(
-    
-    name: r'items',
-    required: true,
-    includeIfNull: false,
-  )
-
-
+  @JsonKey(name: r'items', required: true, includeIfNull: false)
   final List<RecipeListItem> items;
 
-
-
-  @JsonKey(
-    
-    name: r'next_cursor',
-    required: false,
-    includeIfNull: false,
-  )
-
-
+  @JsonKey(name: r'next_cursor', required: false, includeIfNull: false)
   final String? nextCursor;
 
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is RecipeList &&
+          other.items == items &&
+          other.nextCursor == nextCursor;
 
+  @override
+  int get hashCode =>
+      items.hashCode + (nextCursor == null ? 0 : nextCursor.hashCode);
 
-
-
-    @override
-    bool operator ==(Object other) => identical(this, other) || other is RecipeList &&
-      other.items == items &&
-      other.nextCursor == nextCursor;
-
-    @override
-    int get hashCode =>
-        items.hashCode +
-        (nextCursor == null ? 0 : nextCursor.hashCode);
-
-  factory RecipeList.fromJson(Map<String, dynamic> json) => _$RecipeListFromJson(json);
+  factory RecipeList.fromJson(Map<String, dynamic> json) =>
+      _$RecipeListFromJson(json);
 
   Map<String, dynamic> toJson() => _$RecipeListToJson(this);
 
@@ -70,6 +46,4 @@ class RecipeList {
   String toString() {
     return toJson().toString();
   }
-
 }
-

@@ -59,18 +59,13 @@ extension $QuantificationInputCopyWith on QuantificationInput {
 // **************************************************************************
 
 QuantificationInput _$QuantificationInputFromJson(Map<String, dynamic> json) =>
-    $checkedCreate(
-      'QuantificationInput',
-      json,
-      ($checkedConvert) {
-        $checkKeys(json, requiredKeys: const ['base_version_id']);
-        final val = QuantificationInput(
-          baseVersionId: $checkedConvert('base_version_id', (v) => v as String),
-        );
-        return val;
-      },
-      fieldKeyMap: const {'baseVersionId': 'base_version_id'},
-    );
+    $checkedCreate('QuantificationInput', json, ($checkedConvert) {
+      $checkKeys(json, requiredKeys: const ['base_version_id']);
+      final val = QuantificationInput(
+        baseVersionId: $checkedConvert('base_version_id', (v) => v as String),
+      );
+      return val;
+    }, fieldKeyMap: const {'baseVersionId': 'base_version_id'});
 
 Map<String, dynamic> _$QuantificationInputToJson(
   QuantificationInput instance,

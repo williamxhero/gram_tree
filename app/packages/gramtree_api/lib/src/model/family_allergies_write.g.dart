@@ -75,24 +75,19 @@ extension $FamilyAllergiesWriteCopyWith on FamilyAllergiesWrite {
 
 FamilyAllergiesWrite _$FamilyAllergiesWriteFromJson(
   Map<String, dynamic> json,
-) => $checkedCreate(
-  'FamilyAllergiesWrite',
-  json,
-  ($checkedConvert) {
-    final val = FamilyAllergiesWrite(
-      categories: $checkedConvert(
-        'categories',
-        (v) => (v as List<dynamic>?)?.map((e) => e as String).toList(),
-      ),
-      ingredientIds: $checkedConvert(
-        'ingredient_ids',
-        (v) => (v as List<dynamic>?)?.map((e) => e as String).toList(),
-      ),
-    );
-    return val;
-  },
-  fieldKeyMap: const {'ingredientIds': 'ingredient_ids'},
-);
+) => $checkedCreate('FamilyAllergiesWrite', json, ($checkedConvert) {
+  final val = FamilyAllergiesWrite(
+    categories: $checkedConvert(
+      'categories',
+      (v) => (v as List<dynamic>?)?.map((e) => e as String).toList(),
+    ),
+    ingredientIds: $checkedConvert(
+      'ingredient_ids',
+      (v) => (v as List<dynamic>?)?.map((e) => e as String).toList(),
+    ),
+  );
+  return val;
+}, fieldKeyMap: const {'ingredientIds': 'ingredient_ids'});
 
 Map<String, dynamic> _$FamilyAllergiesWriteToJson(
   FamilyAllergiesWrite instance,

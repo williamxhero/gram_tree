@@ -61,21 +61,16 @@ extension $RecipeMoldConversionRequestCopyWith on RecipeMoldConversionRequest {
 
 RecipeMoldConversionRequest _$RecipeMoldConversionRequestFromJson(
   Map<String, dynamic> json,
-) => $checkedCreate(
-  'RecipeMoldConversionRequest',
-  json,
-  ($checkedConvert) {
-    $checkKeys(json, requiredKeys: const ['target_mold']);
-    final val = RecipeMoldConversionRequest(
-      targetMold: $checkedConvert(
-        'target_mold',
-        (v) => MoldSpec.fromJson(v as Map<String, dynamic>),
-      ),
-    );
-    return val;
-  },
-  fieldKeyMap: const {'targetMold': 'target_mold'},
-);
+) => $checkedCreate('RecipeMoldConversionRequest', json, ($checkedConvert) {
+  $checkKeys(json, requiredKeys: const ['target_mold']);
+  final val = RecipeMoldConversionRequest(
+    targetMold: $checkedConvert(
+      'target_mold',
+      (v) => MoldSpec.fromJson(v as Map<String, dynamic>),
+    ),
+  );
+  return val;
+}, fieldKeyMap: const {'targetMold': 'target_mold'});
 
 Map<String, dynamic> _$RecipeMoldConversionRequestToJson(
   RecipeMoldConversionRequest instance,

@@ -8,7 +8,6 @@ import 'package:json_annotation/json_annotation.dart';
 
 part 'quantification_decision.g.dart';
 
-
 @CopyWith()
 @JsonSerializable(
   checked: true,
@@ -19,81 +18,45 @@ part 'quantification_decision.g.dart';
 class QuantificationDecision {
   /// Returns a new [QuantificationDecision] instance.
   QuantificationDecision({
+    required this.decision,
 
-    required  this.decision,
+    required this.problemId,
 
-    required  this.problemId,
+    this.unit,
 
-     this.unit,
-
-     this.value,
+    this.value,
   });
 
-  @JsonKey(
-    
-    name: r'decision',
-    required: true,
-    includeIfNull: false,
-  )
-
-
+  @JsonKey(name: r'decision', required: true, includeIfNull: false)
   final QuantificationDecisionDecisionEnum decision;
 
-
-
-  @JsonKey(
-    
-    name: r'problem_id',
-    required: true,
-    includeIfNull: false,
-  )
-
-
+  @JsonKey(name: r'problem_id', required: true, includeIfNull: false)
   final String problemId;
 
-
-
-  @JsonKey(
-    
-    name: r'unit',
-    required: false,
-    includeIfNull: false,
-  )
-
-
+  @JsonKey(name: r'unit', required: false, includeIfNull: false)
   final String? unit;
 
-
-
-  @JsonKey(
-    
-    name: r'value',
-    required: false,
-    includeIfNull: false,
-  )
-
-
+  @JsonKey(name: r'value', required: false, includeIfNull: false)
   final String? value;
 
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is QuantificationDecision &&
+          other.decision == decision &&
+          other.problemId == problemId &&
+          other.unit == unit &&
+          other.value == value;
 
+  @override
+  int get hashCode =>
+      decision.hashCode +
+      problemId.hashCode +
+      (unit == null ? 0 : unit.hashCode) +
+      (value == null ? 0 : value.hashCode);
 
-
-
-    @override
-    bool operator ==(Object other) => identical(this, other) || other is QuantificationDecision &&
-      other.decision == decision &&
-      other.problemId == problemId &&
-      other.unit == unit &&
-      other.value == value;
-
-    @override
-    int get hashCode =>
-        decision.hashCode +
-        problemId.hashCode +
-        (unit == null ? 0 : unit.hashCode) +
-        (value == null ? 0 : value.hashCode);
-
-  factory QuantificationDecision.fromJson(Map<String, dynamic> json) => _$QuantificationDecisionFromJson(json);
+  factory QuantificationDecision.fromJson(Map<String, dynamic> json) =>
+      _$QuantificationDecisionFromJson(json);
 
   Map<String, dynamic> toJson() => _$QuantificationDecisionToJson(this);
 
@@ -101,24 +64,20 @@ class QuantificationDecision {
   String toString() {
     return toJson().toString();
   }
-
 }
-
 
 enum QuantificationDecisionDecisionEnum {
-@JsonValue(r'accept')
-accept(r'accept'),
-@JsonValue(r'modify')
-modify(r'modify'),
-@JsonValue(r'ignore')
-ignore(r'ignore');
+  @JsonValue(r'accept')
+  accept(r'accept'),
+  @JsonValue(r'modify')
+  modify(r'modify'),
+  @JsonValue(r'ignore')
+  ignore(r'ignore');
 
-const QuantificationDecisionDecisionEnum(this.value);
+  const QuantificationDecisionDecisionEnum(this.value);
 
-final String value;
+  final String value;
 
-@override
-String toString() => value;
+  @override
+  String toString() => value;
 }
-
-

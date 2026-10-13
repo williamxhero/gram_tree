@@ -8,7 +8,6 @@ import 'package:json_annotation/json_annotation.dart';
 
 part 'cooking_record_revision_create.g.dart';
 
-
 @CopyWith()
 @JsonSerializable(
   checked: true,
@@ -19,27 +18,17 @@ part 'cooking_record_revision_create.g.dart';
 class CookingRecordRevisionCreate {
   /// Returns a new [CookingRecordRevisionCreate] instance.
   CookingRecordRevisionCreate({
+    required this.field,
 
-    required  this.field,
+    this.note = '',
 
-     this.note = '',
+    required this.revisionId,
 
-    required  this.revisionId,
-
-    required  this.value,
+    required this.value,
   });
 
-  @JsonKey(
-    
-    name: r'field',
-    required: true,
-    includeIfNull: false,
-  )
-
-
+  @JsonKey(name: r'field', required: true, includeIfNull: false)
   final CookingRecordRevisionCreateFieldEnum field;
-
-
 
   @JsonKey(
     defaultValue: '',
@@ -47,53 +36,29 @@ class CookingRecordRevisionCreate {
     required: false,
     includeIfNull: false,
   )
-
-
   final String? note;
 
-
-
-  @JsonKey(
-    
-    name: r'revision_id',
-    required: true,
-    includeIfNull: false,
-  )
-
-
+  @JsonKey(name: r'revision_id', required: true, includeIfNull: false)
   final String revisionId;
 
-
-
-  @JsonKey(
-    
-    name: r'value',
-    required: true,
-    includeIfNull: false,
-  )
-
-
+  @JsonKey(name: r'value', required: true, includeIfNull: false)
   final Object value;
 
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is CookingRecordRevisionCreate &&
+          other.field == field &&
+          other.note == note &&
+          other.revisionId == revisionId &&
+          other.value == value;
 
+  @override
+  int get hashCode =>
+      field.hashCode + note.hashCode + revisionId.hashCode + value.hashCode;
 
-
-
-    @override
-    bool operator ==(Object other) => identical(this, other) || other is CookingRecordRevisionCreate &&
-      other.field == field &&
-      other.note == note &&
-      other.revisionId == revisionId &&
-      other.value == value;
-
-    @override
-    int get hashCode =>
-        field.hashCode +
-        note.hashCode +
-        revisionId.hashCode +
-        value.hashCode;
-
-  factory CookingRecordRevisionCreate.fromJson(Map<String, dynamic> json) => _$CookingRecordRevisionCreateFromJson(json);
+  factory CookingRecordRevisionCreate.fromJson(Map<String, dynamic> json) =>
+      _$CookingRecordRevisionCreateFromJson(json);
 
   Map<String, dynamic> toJson() => _$CookingRecordRevisionCreateToJson(this);
 
@@ -101,24 +66,20 @@ class CookingRecordRevisionCreate {
   String toString() {
     return toJson().toString();
   }
-
 }
-
 
 enum CookingRecordRevisionCreateFieldEnum {
-@JsonValue(r'rating')
-rating(r'rating'),
-@JsonValue(r'feedback')
-feedback(r'feedback'),
-@JsonValue(r'tags')
-tags(r'tags');
+  @JsonValue(r'rating')
+  rating(r'rating'),
+  @JsonValue(r'feedback')
+  feedback(r'feedback'),
+  @JsonValue(r'tags')
+  tags(r'tags');
 
-const CookingRecordRevisionCreateFieldEnum(this.value);
+  const CookingRecordRevisionCreateFieldEnum(this.value);
 
-final String value;
+  final String value;
 
-@override
-String toString() => value;
+  @override
+  String toString() => value;
 }
-
-

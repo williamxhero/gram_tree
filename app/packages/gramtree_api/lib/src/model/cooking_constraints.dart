@@ -10,7 +10,6 @@ import 'package:json_annotation/json_annotation.dart';
 
 part 'cooking_constraints.g.dart';
 
-
 @CopyWith()
 @JsonSerializable(
   checked: true,
@@ -21,83 +20,47 @@ part 'cooking_constraints.g.dart';
 class CookingConstraints {
   /// Returns a new [CookingConstraints] instance.
   CookingConstraints({
+    this.equipment,
 
-     this.equipment,
+    this.householdServings,
 
-     this.householdServings,
+    this.mealTemplates,
 
-     this.mealTemplates,
-
-     this.mealTimes,
+    this.mealTimes,
   });
 
-  @JsonKey(
-    
-    name: r'equipment',
-    required: false,
-    includeIfNull: false,
-  )
-
-
+  @JsonKey(name: r'equipment', required: false, includeIfNull: false)
   final List<String>? equipment;
 
-
-
-          // minimum: 1
-          // maximum: 1000
-  @JsonKey(
-    
-    name: r'household_servings',
-    required: false,
-    includeIfNull: false,
-  )
-
-
+  // minimum: 1
+  // maximum: 1000
+  @JsonKey(name: r'household_servings', required: false, includeIfNull: false)
   final int? householdServings;
 
-
-
-  @JsonKey(
-    
-    name: r'meal_templates',
-    required: false,
-    includeIfNull: false,
-  )
-
-
+  @JsonKey(name: r'meal_templates', required: false, includeIfNull: false)
   final List<CookingMealTemplate>? mealTemplates;
 
-
-
-  @JsonKey(
-    
-    name: r'meal_times',
-    required: false,
-    includeIfNull: false,
-  )
-
-
+  @JsonKey(name: r'meal_times', required: false, includeIfNull: false)
   final List<CookingMealTime>? mealTimes;
 
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is CookingConstraints &&
+          other.equipment == equipment &&
+          other.householdServings == householdServings &&
+          other.mealTemplates == mealTemplates &&
+          other.mealTimes == mealTimes;
 
+  @override
+  int get hashCode =>
+      equipment.hashCode +
+      (householdServings == null ? 0 : householdServings.hashCode) +
+      mealTemplates.hashCode +
+      mealTimes.hashCode;
 
-
-
-    @override
-    bool operator ==(Object other) => identical(this, other) || other is CookingConstraints &&
-      other.equipment == equipment &&
-      other.householdServings == householdServings &&
-      other.mealTemplates == mealTemplates &&
-      other.mealTimes == mealTimes;
-
-    @override
-    int get hashCode =>
-        equipment.hashCode +
-        (householdServings == null ? 0 : householdServings.hashCode) +
-        mealTemplates.hashCode +
-        mealTimes.hashCode;
-
-  factory CookingConstraints.fromJson(Map<String, dynamic> json) => _$CookingConstraintsFromJson(json);
+  factory CookingConstraints.fromJson(Map<String, dynamic> json) =>
+      _$CookingConstraintsFromJson(json);
 
   Map<String, dynamic> toJson() => _$CookingConstraintsToJson(this);
 
@@ -105,6 +68,4 @@ class CookingConstraints {
   String toString() {
     return toJson().toString();
   }
-
 }
-

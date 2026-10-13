@@ -18,16 +18,15 @@ import 'package:gramtree_api/src/model/cooking_record_revision_out.dart';
 import 'package:gramtree_api/src/model/error_response.dart';
 
 class RecordsApi {
-
   final Dio _dio;
 
   const RecordsApi(this._dio);
 
   /// Create Record
-  /// 
+  ///
   ///
   /// Parameters:
-  /// * [cookingRecordCreate] 
+  /// * [cookingRecordCreate]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -37,7 +36,7 @@ class RecordsApi {
   ///
   /// Returns a [Future] containing a [Response] with a [CookingRecordOut] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<CookingRecordOut>> createRecord({ 
+  Future<Response<CookingRecordOut>> createRecord({
     required CookingRecordCreate cookingRecordCreate,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -49,16 +48,10 @@ class RecordsApi {
     final _path = r'/v1/records';
     final _options = Options(
       method: r'POST',
-      headers: <String, dynamic>{
-        ...?headers,
-      },
+      headers: <String, dynamic>{...?headers},
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
-          {
-            'type': 'http',
-            'scheme': 'bearer',
-            'name': 'HTTPBearer',
-          },
+          {'type': 'http', 'scheme': 'bearer', 'name': 'HTTPBearer'},
         ],
         ...?extra,
       },
@@ -69,13 +62,10 @@ class RecordsApi {
     dynamic _bodyData;
 
     try {
-_bodyData=jsonEncode(cookingRecordCreate);
-    } catch(error, stackTrace) {
+      _bodyData = jsonEncode(cookingRecordCreate);
+    } catch (error, stackTrace) {
       throw DioException(
-         requestOptions: _options.compose(
-          _dio.options,
-          _path,
-        ),
+        requestOptions: _options.compose(_dio.options, _path),
         type: DioExceptionType.unknown,
         error: error,
         stackTrace: stackTrace,
@@ -94,9 +84,14 @@ _bodyData=jsonEncode(cookingRecordCreate);
     CookingRecordOut? _responseData;
 
     try {
-final rawData = _response.data;
-_responseData = rawData == null ? null : deserialize<CookingRecordOut, CookingRecordOut>(rawData, 'CookingRecordOut', growable: true);
-
+      final rawData = _response.data;
+      _responseData = rawData == null
+          ? null
+          : deserialize<CookingRecordOut, CookingRecordOut>(
+              rawData,
+              'CookingRecordOut',
+              growable: true,
+            );
     } catch (error, stackTrace) {
       throw DioException(
         requestOptions: _response.requestOptions,
@@ -120,10 +115,10 @@ _responseData = rawData == null ? null : deserialize<CookingRecordOut, CookingRe
   }
 
   /// Get Record
-  /// 
+  ///
   ///
   /// Parameters:
-  /// * [recordId] 
+  /// * [recordId]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -133,7 +128,7 @@ _responseData = rawData == null ? null : deserialize<CookingRecordOut, CookingRe
   ///
   /// Returns a [Future] containing a [Response] with a [CookingRecordOut] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<CookingRecordOut>> getRecord({ 
+  Future<Response<CookingRecordOut>> getRecord({
     required String recordId,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -142,19 +137,18 @@ _responseData = rawData == null ? null : deserialize<CookingRecordOut, CookingRe
     ProgressCallback? onSendProgress,
     ProgressCallback? onReceiveProgress,
   }) async {
-    final _path = r'/v1/records/{record_id}'.replaceAll('{' r'record_id' '}', recordId.toString());
+    final _path = r'/v1/records/{record_id}'.replaceAll(
+      '{'
+      r'record_id'
+      '}',
+      recordId.toString(),
+    );
     final _options = Options(
       method: r'GET',
-      headers: <String, dynamic>{
-        ...?headers,
-      },
+      headers: <String, dynamic>{...?headers},
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
-          {
-            'type': 'http',
-            'scheme': 'bearer',
-            'name': 'HTTPBearer',
-          },
+          {'type': 'http', 'scheme': 'bearer', 'name': 'HTTPBearer'},
         ],
         ...?extra,
       },
@@ -172,9 +166,14 @@ _responseData = rawData == null ? null : deserialize<CookingRecordOut, CookingRe
     CookingRecordOut? _responseData;
 
     try {
-final rawData = _response.data;
-_responseData = rawData == null ? null : deserialize<CookingRecordOut, CookingRecordOut>(rawData, 'CookingRecordOut', growable: true);
-
+      final rawData = _response.data;
+      _responseData = rawData == null
+          ? null
+          : deserialize<CookingRecordOut, CookingRecordOut>(
+              rawData,
+              'CookingRecordOut',
+              growable: true,
+            );
     } catch (error, stackTrace) {
       throw DioException(
         requestOptions: _response.requestOptions,
@@ -198,7 +197,7 @@ _responseData = rawData == null ? null : deserialize<CookingRecordOut, CookingRe
   }
 
   /// List Records
-  /// 
+  ///
   ///
   /// Parameters:
   /// * [cursor] - 上一页返回的 next_cursor
@@ -212,7 +211,7 @@ _responseData = rawData == null ? null : deserialize<CookingRecordOut, CookingRe
   ///
   /// Returns a [Future] containing a [Response] with a [CookingRecordListOut] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<CookingRecordListOut>> listRecords({ 
+  Future<Response<CookingRecordListOut>> listRecords({
     String? cursor,
     int? limit = 20,
     CancelToken? cancelToken,
@@ -225,16 +224,10 @@ _responseData = rawData == null ? null : deserialize<CookingRecordOut, CookingRe
     final _path = r'/v1/records';
     final _options = Options(
       method: r'GET',
-      headers: <String, dynamic>{
-        ...?headers,
-      },
+      headers: <String, dynamic>{...?headers},
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
-          {
-            'type': 'http',
-            'scheme': 'bearer',
-            'name': 'HTTPBearer',
-          },
+          {'type': 'http', 'scheme': 'bearer', 'name': 'HTTPBearer'},
         ],
         ...?extra,
       },
@@ -258,9 +251,14 @@ _responseData = rawData == null ? null : deserialize<CookingRecordOut, CookingRe
     CookingRecordListOut? _responseData;
 
     try {
-final rawData = _response.data;
-_responseData = rawData == null ? null : deserialize<CookingRecordListOut, CookingRecordListOut>(rawData, 'CookingRecordListOut', growable: true);
-
+      final rawData = _response.data;
+      _responseData = rawData == null
+          ? null
+          : deserialize<CookingRecordListOut, CookingRecordListOut>(
+              rawData,
+              'CookingRecordListOut',
+              growable: true,
+            );
     } catch (error, stackTrace) {
       throw DioException(
         requestOptions: _response.requestOptions,
@@ -284,10 +282,10 @@ _responseData = rawData == null ? null : deserialize<CookingRecordListOut, Cooki
   }
 
   /// Record History
-  /// 
+  ///
   ///
   /// Parameters:
-  /// * [recordId] 
+  /// * [recordId]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -297,7 +295,7 @@ _responseData = rawData == null ? null : deserialize<CookingRecordListOut, Cooki
   ///
   /// Returns a [Future] containing a [Response] with a [CookingRecordHistoryOut] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<CookingRecordHistoryOut>> recordHistory({ 
+  Future<Response<CookingRecordHistoryOut>> recordHistory({
     required String recordId,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -306,19 +304,18 @@ _responseData = rawData == null ? null : deserialize<CookingRecordListOut, Cooki
     ProgressCallback? onSendProgress,
     ProgressCallback? onReceiveProgress,
   }) async {
-    final _path = r'/v1/records/{record_id}/history'.replaceAll('{' r'record_id' '}', recordId.toString());
+    final _path = r'/v1/records/{record_id}/history'.replaceAll(
+      '{'
+      r'record_id'
+      '}',
+      recordId.toString(),
+    );
     final _options = Options(
       method: r'GET',
-      headers: <String, dynamic>{
-        ...?headers,
-      },
+      headers: <String, dynamic>{...?headers},
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
-          {
-            'type': 'http',
-            'scheme': 'bearer',
-            'name': 'HTTPBearer',
-          },
+          {'type': 'http', 'scheme': 'bearer', 'name': 'HTTPBearer'},
         ],
         ...?extra,
       },
@@ -336,9 +333,14 @@ _responseData = rawData == null ? null : deserialize<CookingRecordListOut, Cooki
     CookingRecordHistoryOut? _responseData;
 
     try {
-final rawData = _response.data;
-_responseData = rawData == null ? null : deserialize<CookingRecordHistoryOut, CookingRecordHistoryOut>(rawData, 'CookingRecordHistoryOut', growable: true);
-
+      final rawData = _response.data;
+      _responseData = rawData == null
+          ? null
+          : deserialize<CookingRecordHistoryOut, CookingRecordHistoryOut>(
+              rawData,
+              'CookingRecordHistoryOut',
+              growable: true,
+            );
     } catch (error, stackTrace) {
       throw DioException(
         requestOptions: _response.requestOptions,
@@ -362,11 +364,11 @@ _responseData = rawData == null ? null : deserialize<CookingRecordHistoryOut, Co
   }
 
   /// Revise Record
-  /// 
+  ///
   ///
   /// Parameters:
-  /// * [recordId] 
-  /// * [cookingRecordRevisionCreate] 
+  /// * [recordId]
+  /// * [cookingRecordRevisionCreate]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -376,7 +378,7 @@ _responseData = rawData == null ? null : deserialize<CookingRecordHistoryOut, Co
   ///
   /// Returns a [Future] containing a [Response] with a [CookingRecordRevisionOut] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<CookingRecordRevisionOut>> reviseRecord({ 
+  Future<Response<CookingRecordRevisionOut>> reviseRecord({
     required String recordId,
     required CookingRecordRevisionCreate cookingRecordRevisionCreate,
     CancelToken? cancelToken,
@@ -386,19 +388,18 @@ _responseData = rawData == null ? null : deserialize<CookingRecordHistoryOut, Co
     ProgressCallback? onSendProgress,
     ProgressCallback? onReceiveProgress,
   }) async {
-    final _path = r'/v1/records/{record_id}/revisions'.replaceAll('{' r'record_id' '}', recordId.toString());
+    final _path = r'/v1/records/{record_id}/revisions'.replaceAll(
+      '{'
+      r'record_id'
+      '}',
+      recordId.toString(),
+    );
     final _options = Options(
       method: r'POST',
-      headers: <String, dynamic>{
-        ...?headers,
-      },
+      headers: <String, dynamic>{...?headers},
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
-          {
-            'type': 'http',
-            'scheme': 'bearer',
-            'name': 'HTTPBearer',
-          },
+          {'type': 'http', 'scheme': 'bearer', 'name': 'HTTPBearer'},
         ],
         ...?extra,
       },
@@ -409,13 +410,10 @@ _responseData = rawData == null ? null : deserialize<CookingRecordHistoryOut, Co
     dynamic _bodyData;
 
     try {
-_bodyData=jsonEncode(cookingRecordRevisionCreate);
-    } catch(error, stackTrace) {
+      _bodyData = jsonEncode(cookingRecordRevisionCreate);
+    } catch (error, stackTrace) {
       throw DioException(
-         requestOptions: _options.compose(
-          _dio.options,
-          _path,
-        ),
+        requestOptions: _options.compose(_dio.options, _path),
         type: DioExceptionType.unknown,
         error: error,
         stackTrace: stackTrace,
@@ -434,9 +432,14 @@ _bodyData=jsonEncode(cookingRecordRevisionCreate);
     CookingRecordRevisionOut? _responseData;
 
     try {
-final rawData = _response.data;
-_responseData = rawData == null ? null : deserialize<CookingRecordRevisionOut, CookingRecordRevisionOut>(rawData, 'CookingRecordRevisionOut', growable: true);
-
+      final rawData = _response.data;
+      _responseData = rawData == null
+          ? null
+          : deserialize<CookingRecordRevisionOut, CookingRecordRevisionOut>(
+              rawData,
+              'CookingRecordRevisionOut',
+              growable: true,
+            );
     } catch (error, stackTrace) {
       throw DioException(
         requestOptions: _response.requestOptions,
@@ -458,5 +461,4 @@ _responseData = rawData == null ? null : deserialize<CookingRecordRevisionOut, C
       extra: _response.extra,
     );
   }
-
 }

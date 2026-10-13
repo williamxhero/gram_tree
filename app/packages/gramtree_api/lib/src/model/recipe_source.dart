@@ -8,7 +8,6 @@ import 'package:json_annotation/json_annotation.dart';
 
 part 'recipe_source.g.dart';
 
-
 @CopyWith()
 @JsonSerializable(
   checked: true,
@@ -19,39 +18,20 @@ part 'recipe_source.g.dart';
 class RecipeSource {
   /// Returns a new [RecipeSource] instance.
   RecipeSource({
+    required this.kind,
 
-    required  this.kind,
+    this.note,
 
-     this.note,
+    this.platform = 'unknown',
 
-     this.platform = 'unknown',
-
-     this.url,
+    this.url,
   });
 
-  @JsonKey(
-    
-    name: r'kind',
-    required: true,
-    includeIfNull: false,
-  )
-
-
+  @JsonKey(name: r'kind', required: true, includeIfNull: false)
   final RecipeSourceKindEnum kind;
 
-
-
-  @JsonKey(
-    
-    name: r'note',
-    required: false,
-    includeIfNull: false,
-  )
-
-
+  @JsonKey(name: r'note', required: false, includeIfNull: false)
   final String? note;
-
-
 
   @JsonKey(
     defaultValue: 'unknown',
@@ -59,41 +39,29 @@ class RecipeSource {
     required: false,
     includeIfNull: false,
   )
-
-
   final String? platform;
 
-
-
-  @JsonKey(
-    
-    name: r'url',
-    required: false,
-    includeIfNull: false,
-  )
-
-
+  @JsonKey(name: r'url', required: false, includeIfNull: false)
   final String? url;
 
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is RecipeSource &&
+          other.kind == kind &&
+          other.note == note &&
+          other.platform == platform &&
+          other.url == url;
 
+  @override
+  int get hashCode =>
+      kind.hashCode +
+      (note == null ? 0 : note.hashCode) +
+      platform.hashCode +
+      (url == null ? 0 : url.hashCode);
 
-
-
-    @override
-    bool operator ==(Object other) => identical(this, other) || other is RecipeSource &&
-      other.kind == kind &&
-      other.note == note &&
-      other.platform == platform &&
-      other.url == url;
-
-    @override
-    int get hashCode =>
-        kind.hashCode +
-        (note == null ? 0 : note.hashCode) +
-        platform.hashCode +
-        (url == null ? 0 : url.hashCode);
-
-  factory RecipeSource.fromJson(Map<String, dynamic> json) => _$RecipeSourceFromJson(json);
+  factory RecipeSource.fromJson(Map<String, dynamic> json) =>
+      _$RecipeSourceFromJson(json);
 
   Map<String, dynamic> toJson() => _$RecipeSourceToJson(this);
 
@@ -101,20 +69,16 @@ class RecipeSource {
   String toString() {
     return toJson().toString();
   }
-
 }
-
 
 enum RecipeSourceKindEnum {
-@JsonValue(r'imported')
-imported(r'imported');
+  @JsonValue(r'imported')
+  imported(r'imported');
 
-const RecipeSourceKindEnum(this.value);
+  const RecipeSourceKindEnum(this.value);
 
-final String value;
+  final String value;
 
-@override
-String toString() => value;
+  @override
+  String toString() => value;
 }
-
-

@@ -9,7 +9,6 @@ import 'package:json_annotation/json_annotation.dart';
 
 part 'merge_relation.g.dart';
 
-
 @CopyWith()
 @JsonSerializable(
   checked: true,
@@ -19,68 +18,35 @@ part 'merge_relation.g.dart';
 )
 class MergeRelation {
   /// Returns a new [MergeRelation] instance.
-  MergeRelation({
+  MergeRelation({required this.fromId, this.identity, required this.toId});
 
-    required  this.fromId,
-
-     this.identity,
-
-    required  this.toId,
-  });
-
-      /// 被合并掉的旧标准 ID
-  @JsonKey(
-    
-    name: r'from_id',
-    required: true,
-    includeIfNull: false,
-  )
-
-
+  /// 被合并掉的旧标准 ID
+  @JsonKey(name: r'from_id', required: true, includeIfNull: false)
   final String fromId;
 
-
-
-  @JsonKey(
-    
-    name: r'identity',
-    required: false,
-    includeIfNull: false,
-  )
-
-
+  @JsonKey(name: r'identity', required: false, includeIfNull: false)
   final IngredientDetail? identity;
 
-
-
-      /// 合并后的标准 ID
-  @JsonKey(
-    
-    name: r'to_id',
-    required: true,
-    includeIfNull: false,
-  )
-
-
+  /// 合并后的标准 ID
+  @JsonKey(name: r'to_id', required: true, includeIfNull: false)
   final String toId;
 
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is MergeRelation &&
+          other.fromId == fromId &&
+          other.identity == identity &&
+          other.toId == toId;
 
+  @override
+  int get hashCode =>
+      fromId.hashCode +
+      (identity == null ? 0 : identity.hashCode) +
+      toId.hashCode;
 
-
-
-    @override
-    bool operator ==(Object other) => identical(this, other) || other is MergeRelation &&
-      other.fromId == fromId &&
-      other.identity == identity &&
-      other.toId == toId;
-
-    @override
-    int get hashCode =>
-        fromId.hashCode +
-        (identity == null ? 0 : identity.hashCode) +
-        toId.hashCode;
-
-  factory MergeRelation.fromJson(Map<String, dynamic> json) => _$MergeRelationFromJson(json);
+  factory MergeRelation.fromJson(Map<String, dynamic> json) =>
+      _$MergeRelationFromJson(json);
 
   Map<String, dynamic> toJson() => _$MergeRelationToJson(this);
 
@@ -88,6 +54,4 @@ class MergeRelation {
   String toString() {
     return toJson().toString();
   }
-
 }
-

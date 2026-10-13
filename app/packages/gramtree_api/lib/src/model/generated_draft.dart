@@ -9,7 +9,6 @@ import 'package:json_annotation/json_annotation.dart';
 
 part 'generated_draft.g.dart';
 
-
 @CopyWith()
 @JsonSerializable(
   checked: true,
@@ -20,65 +19,35 @@ part 'generated_draft.g.dart';
 class GeneratedDraft {
   /// Returns a new [GeneratedDraft] instance.
   GeneratedDraft({
+    required this.cuisine,
 
-    required  this.cuisine,
+    required this.rationale,
 
-    required  this.rationale,
-
-    required  this.recipe,
+    required this.recipe,
   });
 
-  @JsonKey(
-    
-    name: r'cuisine',
-    required: true,
-    includeIfNull: false,
-  )
-
-
+  @JsonKey(name: r'cuisine', required: true, includeIfNull: false)
   final String cuisine;
 
-
-
-  @JsonKey(
-    
-    name: r'rationale',
-    required: true,
-    includeIfNull: false,
-  )
-
-
+  @JsonKey(name: r'rationale', required: true, includeIfNull: false)
   final String rationale;
 
-
-
-  @JsonKey(
-    
-    name: r'recipe',
-    required: true,
-    includeIfNull: false,
-  )
-
-
+  @JsonKey(name: r'recipe', required: true, includeIfNull: false)
   final RecipeCreate recipe;
 
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is GeneratedDraft &&
+          other.cuisine == cuisine &&
+          other.rationale == rationale &&
+          other.recipe == recipe;
 
+  @override
+  int get hashCode => cuisine.hashCode + rationale.hashCode + recipe.hashCode;
 
-
-
-    @override
-    bool operator ==(Object other) => identical(this, other) || other is GeneratedDraft &&
-      other.cuisine == cuisine &&
-      other.rationale == rationale &&
-      other.recipe == recipe;
-
-    @override
-    int get hashCode =>
-        cuisine.hashCode +
-        rationale.hashCode +
-        recipe.hashCode;
-
-  factory GeneratedDraft.fromJson(Map<String, dynamic> json) => _$GeneratedDraftFromJson(json);
+  factory GeneratedDraft.fromJson(Map<String, dynamic> json) =>
+      _$GeneratedDraftFromJson(json);
 
   Map<String, dynamic> toJson() => _$GeneratedDraftToJson(this);
 
@@ -86,6 +55,4 @@ class GeneratedDraft {
   String toString() {
     return toJson().toString();
   }
-
 }
-

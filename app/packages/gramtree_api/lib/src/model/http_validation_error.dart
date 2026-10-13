@@ -9,7 +9,6 @@ import 'package:json_annotation/json_annotation.dart';
 
 part 'http_validation_error.g.dart';
 
-
 @CopyWith()
 @JsonSerializable(
   checked: true,
@@ -19,34 +18,21 @@ part 'http_validation_error.g.dart';
 )
 class HTTPValidationError {
   /// Returns a new [HTTPValidationError] instance.
-  HTTPValidationError({
+  HTTPValidationError({this.detail});
 
-     this.detail,
-  });
-
-  @JsonKey(
-    
-    name: r'detail',
-    required: false,
-    includeIfNull: false,
-  )
-
-
+  @JsonKey(name: r'detail', required: false, includeIfNull: false)
   final List<ValidationError>? detail;
 
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is HTTPValidationError && other.detail == detail;
 
+  @override
+  int get hashCode => detail.hashCode;
 
-
-
-    @override
-    bool operator ==(Object other) => identical(this, other) || other is HTTPValidationError &&
-      other.detail == detail;
-
-    @override
-    int get hashCode =>
-        detail.hashCode;
-
-  factory HTTPValidationError.fromJson(Map<String, dynamic> json) => _$HTTPValidationErrorFromJson(json);
+  factory HTTPValidationError.fromJson(Map<String, dynamic> json) =>
+      _$HTTPValidationErrorFromJson(json);
 
   Map<String, dynamic> toJson() => _$HTTPValidationErrorToJson(this);
 
@@ -54,6 +40,4 @@ class HTTPValidationError {
   String toString() {
     return toJson().toString();
   }
-
 }
-

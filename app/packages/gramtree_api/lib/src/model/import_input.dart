@@ -8,7 +8,6 @@ import 'package:json_annotation/json_annotation.dart';
 
 part 'import_input.g.dart';
 
-
 @CopyWith()
 @JsonSerializable(
   checked: true,
@@ -18,82 +17,38 @@ part 'import_input.g.dart';
 )
 class ImportInput {
   /// Returns a new [ImportInput] instance.
-  ImportInput({
+  ImportInput({this.imagesBase64, this.sourceNote, this.text, this.url});
 
-     this.imagesBase64,
-
-     this.sourceNote,
-
-     this.text,
-
-     this.url,
-  });
-
-  @JsonKey(
-    
-    name: r'images_base64',
-    required: false,
-    includeIfNull: false,
-  )
-
-
+  @JsonKey(name: r'images_base64', required: false, includeIfNull: false)
   final List<String>? imagesBase64;
 
-
-
-  @JsonKey(
-    
-    name: r'source_note',
-    required: false,
-    includeIfNull: false,
-  )
-
-
+  @JsonKey(name: r'source_note', required: false, includeIfNull: false)
   final String? sourceNote;
 
-
-
-  @JsonKey(
-    
-    name: r'text',
-    required: false,
-    includeIfNull: false,
-  )
-
-
+  @JsonKey(name: r'text', required: false, includeIfNull: false)
   final String? text;
 
-
-
-  @JsonKey(
-    
-    name: r'url',
-    required: false,
-    includeIfNull: false,
-  )
-
-
+  @JsonKey(name: r'url', required: false, includeIfNull: false)
   final String? url;
 
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is ImportInput &&
+          other.imagesBase64 == imagesBase64 &&
+          other.sourceNote == sourceNote &&
+          other.text == text &&
+          other.url == url;
 
+  @override
+  int get hashCode =>
+      imagesBase64.hashCode +
+      (sourceNote == null ? 0 : sourceNote.hashCode) +
+      (text == null ? 0 : text.hashCode) +
+      (url == null ? 0 : url.hashCode);
 
-
-
-    @override
-    bool operator ==(Object other) => identical(this, other) || other is ImportInput &&
-      other.imagesBase64 == imagesBase64 &&
-      other.sourceNote == sourceNote &&
-      other.text == text &&
-      other.url == url;
-
-    @override
-    int get hashCode =>
-        imagesBase64.hashCode +
-        (sourceNote == null ? 0 : sourceNote.hashCode) +
-        (text == null ? 0 : text.hashCode) +
-        (url == null ? 0 : url.hashCode);
-
-  factory ImportInput.fromJson(Map<String, dynamic> json) => _$ImportInputFromJson(json);
+  factory ImportInput.fromJson(Map<String, dynamic> json) =>
+      _$ImportInputFromJson(json);
 
   Map<String, dynamic> toJson() => _$ImportInputToJson(this);
 
@@ -101,6 +56,4 @@ class ImportInput {
   String toString() {
     return toJson().toString();
   }
-
 }
-

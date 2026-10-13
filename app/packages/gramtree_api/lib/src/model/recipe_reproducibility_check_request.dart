@@ -9,7 +9,6 @@ import 'package:json_annotation/json_annotation.dart';
 
 part 'recipe_reproducibility_check_request.g.dart';
 
-
 @CopyWith()
 @JsonSerializable(
   checked: true,
@@ -19,41 +18,28 @@ part 'recipe_reproducibility_check_request.g.dart';
 )
 class RecipeReproducibilityCheckRequest {
   /// Returns a new [RecipeReproducibilityCheckRequest] instance.
-  RecipeReproducibilityCheckRequest({
+  RecipeReproducibilityCheckRequest({required this.snapshot});
 
-    required  this.snapshot,
-  });
-
-  @JsonKey(
-    
-    name: r'snapshot',
-    required: true,
-    includeIfNull: false,
-  )
-
-
+  @JsonKey(name: r'snapshot', required: true, includeIfNull: false)
   final RecipeSnapshot snapshot;
 
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is RecipeReproducibilityCheckRequest && other.snapshot == snapshot;
 
+  @override
+  int get hashCode => snapshot.hashCode;
 
+  factory RecipeReproducibilityCheckRequest.fromJson(
+    Map<String, dynamic> json,
+  ) => _$RecipeReproducibilityCheckRequestFromJson(json);
 
-
-    @override
-    bool operator ==(Object other) => identical(this, other) || other is RecipeReproducibilityCheckRequest &&
-      other.snapshot == snapshot;
-
-    @override
-    int get hashCode =>
-        snapshot.hashCode;
-
-  factory RecipeReproducibilityCheckRequest.fromJson(Map<String, dynamic> json) => _$RecipeReproducibilityCheckRequestFromJson(json);
-
-  Map<String, dynamic> toJson() => _$RecipeReproducibilityCheckRequestToJson(this);
+  Map<String, dynamic> toJson() =>
+      _$RecipeReproducibilityCheckRequestToJson(this);
 
   @override
   String toString() {
     return toJson().toString();
   }
-
 }
-

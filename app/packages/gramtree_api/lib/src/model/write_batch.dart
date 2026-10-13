@@ -9,7 +9,6 @@ import 'package:json_annotation/json_annotation.dart';
 
 part 'write_batch.g.dart';
 
-
 @CopyWith()
 @JsonSerializable(
   checked: true,
@@ -19,34 +18,20 @@ part 'write_batch.g.dart';
 )
 class WriteBatch {
   /// Returns a new [WriteBatch] instance.
-  WriteBatch({
+  WriteBatch({required this.writes});
 
-    required  this.writes,
-  });
-
-  @JsonKey(
-    
-    name: r'writes',
-    required: true,
-    includeIfNull: false,
-  )
-
-
+  @JsonKey(name: r'writes', required: true, includeIfNull: false)
   final List<WriteEnvelope> writes;
 
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) || other is WriteBatch && other.writes == writes;
 
+  @override
+  int get hashCode => writes.hashCode;
 
-
-
-    @override
-    bool operator ==(Object other) => identical(this, other) || other is WriteBatch &&
-      other.writes == writes;
-
-    @override
-    int get hashCode =>
-        writes.hashCode;
-
-  factory WriteBatch.fromJson(Map<String, dynamic> json) => _$WriteBatchFromJson(json);
+  factory WriteBatch.fromJson(Map<String, dynamic> json) =>
+      _$WriteBatchFromJson(json);
 
   Map<String, dynamic> toJson() => _$WriteBatchToJson(this);
 
@@ -54,6 +39,4 @@ class WriteBatch {
   String toString() {
     return toJson().toString();
   }
-
 }
-

@@ -8,7 +8,6 @@ import 'package:json_annotation/json_annotation.dart';
 
 part 'generate_input.g.dart';
 
-
 @CopyWith()
 @JsonSerializable(
   checked: true,
@@ -18,52 +17,30 @@ part 'generate_input.g.dart';
 )
 class GenerateInput {
   /// Returns a new [GenerateInput] instance.
-  GenerateInput({
+  GenerateInput({this.cookware, this.servings});
 
-     this.cookware,
-
-     this.servings,
-  });
-
-  @JsonKey(
-    
-    name: r'cookware',
-    required: false,
-    includeIfNull: false,
-  )
-
-
+  @JsonKey(name: r'cookware', required: false, includeIfNull: false)
   final String? cookware;
 
-
-
-          // minimum: 1
-          // maximum: 1000
-  @JsonKey(
-    
-    name: r'servings',
-    required: false,
-    includeIfNull: false,
-  )
-
-
+  // minimum: 1
+  // maximum: 1000
+  @JsonKey(name: r'servings', required: false, includeIfNull: false)
   final int? servings;
 
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is GenerateInput &&
+          other.cookware == cookware &&
+          other.servings == servings;
 
+  @override
+  int get hashCode =>
+      (cookware == null ? 0 : cookware.hashCode) +
+      (servings == null ? 0 : servings.hashCode);
 
-
-
-    @override
-    bool operator ==(Object other) => identical(this, other) || other is GenerateInput &&
-      other.cookware == cookware &&
-      other.servings == servings;
-
-    @override
-    int get hashCode =>
-        (cookware == null ? 0 : cookware.hashCode) +
-        (servings == null ? 0 : servings.hashCode);
-
-  factory GenerateInput.fromJson(Map<String, dynamic> json) => _$GenerateInputFromJson(json);
+  factory GenerateInput.fromJson(Map<String, dynamic> json) =>
+      _$GenerateInputFromJson(json);
 
   Map<String, dynamic> toJson() => _$GenerateInputToJson(this);
 
@@ -71,6 +48,4 @@ class GenerateInput {
   String toString() {
     return toJson().toString();
   }
-
 }
-

@@ -9,7 +9,6 @@ import 'package:json_annotation/json_annotation.dart';
 
 part 'event_upload_response.g.dart';
 
-
 @CopyWith()
 @JsonSerializable(
   checked: true,
@@ -19,34 +18,21 @@ part 'event_upload_response.g.dart';
 )
 class EventUploadResponse {
   /// Returns a new [EventUploadResponse] instance.
-  EventUploadResponse({
+  EventUploadResponse({required this.results});
 
-    required  this.results,
-  });
-
-  @JsonKey(
-    
-    name: r'results',
-    required: true,
-    includeIfNull: false,
-  )
-
-
+  @JsonKey(name: r'results', required: true, includeIfNull: false)
   final List<EventUploadResultItem> results;
 
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is EventUploadResponse && other.results == results;
 
+  @override
+  int get hashCode => results.hashCode;
 
-
-
-    @override
-    bool operator ==(Object other) => identical(this, other) || other is EventUploadResponse &&
-      other.results == results;
-
-    @override
-    int get hashCode =>
-        results.hashCode;
-
-  factory EventUploadResponse.fromJson(Map<String, dynamic> json) => _$EventUploadResponseFromJson(json);
+  factory EventUploadResponse.fromJson(Map<String, dynamic> json) =>
+      _$EventUploadResponseFromJson(json);
 
   Map<String, dynamic> toJson() => _$EventUploadResponseToJson(this);
 
@@ -54,6 +40,4 @@ class EventUploadResponse {
   String toString() {
     return toJson().toString();
   }
-
 }
-

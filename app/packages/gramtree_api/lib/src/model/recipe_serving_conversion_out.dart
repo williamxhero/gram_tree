@@ -9,7 +9,6 @@ import 'package:json_annotation/json_annotation.dart';
 
 part 'recipe_serving_conversion_out.g.dart';
 
-
 @CopyWith()
 @JsonSerializable(
   checked: true,
@@ -20,65 +19,36 @@ part 'recipe_serving_conversion_out.g.dart';
 class RecipeServingConversionOut {
   /// Returns a new [RecipeServingConversionOut] instance.
   RecipeServingConversionOut({
+    required this.conversion,
 
-    required  this.conversion,
+    required this.recipeId,
 
-    required  this.recipeId,
-
-    required  this.versionId,
+    required this.versionId,
   });
 
-  @JsonKey(
-    
-    name: r'conversion',
-    required: true,
-    includeIfNull: false,
-  )
-
-
+  @JsonKey(name: r'conversion', required: true, includeIfNull: false)
   final ServingConversion conversion;
 
-
-
-  @JsonKey(
-    
-    name: r'recipe_id',
-    required: true,
-    includeIfNull: false,
-  )
-
-
+  @JsonKey(name: r'recipe_id', required: true, includeIfNull: false)
   final String recipeId;
 
-
-
-  @JsonKey(
-    
-    name: r'version_id',
-    required: true,
-    includeIfNull: false,
-  )
-
-
+  @JsonKey(name: r'version_id', required: true, includeIfNull: false)
   final String versionId;
 
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is RecipeServingConversionOut &&
+          other.conversion == conversion &&
+          other.recipeId == recipeId &&
+          other.versionId == versionId;
 
+  @override
+  int get hashCode =>
+      conversion.hashCode + recipeId.hashCode + versionId.hashCode;
 
-
-
-    @override
-    bool operator ==(Object other) => identical(this, other) || other is RecipeServingConversionOut &&
-      other.conversion == conversion &&
-      other.recipeId == recipeId &&
-      other.versionId == versionId;
-
-    @override
-    int get hashCode =>
-        conversion.hashCode +
-        recipeId.hashCode +
-        versionId.hashCode;
-
-  factory RecipeServingConversionOut.fromJson(Map<String, dynamic> json) => _$RecipeServingConversionOutFromJson(json);
+  factory RecipeServingConversionOut.fromJson(Map<String, dynamic> json) =>
+      _$RecipeServingConversionOutFromJson(json);
 
   Map<String, dynamic> toJson() => _$RecipeServingConversionOutToJson(this);
 
@@ -86,6 +56,4 @@ class RecipeServingConversionOut {
   String toString() {
     return toJson().toString();
   }
-
 }
-

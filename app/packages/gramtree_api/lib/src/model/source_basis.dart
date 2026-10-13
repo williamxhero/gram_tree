@@ -8,7 +8,6 @@ import 'package:json_annotation/json_annotation.dart';
 
 part 'source_basis.g.dart';
 
-
 @CopyWith()
 @JsonSerializable(
   checked: true,
@@ -18,68 +17,35 @@ part 'source_basis.g.dart';
 )
 class SourceBasis {
   /// Returns a new [SourceBasis] instance.
-  SourceBasis({
+  SourceBasis({this.citation, required this.reasonCode, required this.text});
 
-     this.citation,
-
-    required  this.reasonCode,
-
-    required  this.text,
-  });
-
-  @JsonKey(
-    
-    name: r'citation',
-    required: false,
-    includeIfNull: false,
-  )
-
-
+  @JsonKey(name: r'citation', required: false, includeIfNull: false)
   final String? citation;
 
-
-
-      /// 理由代码，供程序判断用
-  @JsonKey(
-    
-    name: r'reason_code',
-    required: true,
-    includeIfNull: false,
-  )
-
-
+  /// 理由代码，供程序判断用
+  @JsonKey(name: r'reason_code', required: true, includeIfNull: false)
   final String reasonCode;
 
-
-
-      /// 一句大白话说明
-  @JsonKey(
-    
-    name: r'text',
-    required: true,
-    includeIfNull: false,
-  )
-
-
+  /// 一句大白话说明
+  @JsonKey(name: r'text', required: true, includeIfNull: false)
   final String text;
 
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is SourceBasis &&
+          other.citation == citation &&
+          other.reasonCode == reasonCode &&
+          other.text == text;
 
+  @override
+  int get hashCode =>
+      (citation == null ? 0 : citation.hashCode) +
+      reasonCode.hashCode +
+      text.hashCode;
 
-
-
-    @override
-    bool operator ==(Object other) => identical(this, other) || other is SourceBasis &&
-      other.citation == citation &&
-      other.reasonCode == reasonCode &&
-      other.text == text;
-
-    @override
-    int get hashCode =>
-        (citation == null ? 0 : citation.hashCode) +
-        reasonCode.hashCode +
-        text.hashCode;
-
-  factory SourceBasis.fromJson(Map<String, dynamic> json) => _$SourceBasisFromJson(json);
+  factory SourceBasis.fromJson(Map<String, dynamic> json) =>
+      _$SourceBasisFromJson(json);
 
   Map<String, dynamic> toJson() => _$SourceBasisToJson(this);
 
@@ -87,6 +53,4 @@ class SourceBasis {
   String toString() {
     return toJson().toString();
   }
-
 }
-
