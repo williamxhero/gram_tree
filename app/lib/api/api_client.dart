@@ -270,18 +270,19 @@ class RequestProtectionInterceptor extends Interceptor {
       if (challengeId != null && _rebindRetryBearer(options)) {
         options.extra[_captchaRetried] = true;
         try {
-          final response = await _retryDio.get<Map<String, dynamic>>(
-            '/v1/risk/captcha/${Uri.encodeComponent(challengeId)}',
-            options: Options(
-              headers: {'Authorization': options.headers['Authorization']},
-              extra: {...options.extra},
-            ),
+          final riskApi = GramtreeApi(
+            dio: _retryDio,
+            interceptors: const [],
+          ).getRiskApi();
+          final response = await riskApi.getCaptchaChallenge(
+            challengeId: Uri.encodeComponent(challengeId),
+            headers: {'Authorization': options.headers['Authorization']},
+            extra: {...options.extra},
           );
           final challenge = response.data;
-          final imageUri = challenge?['image_data_uri'];
-          if (challenge?['challenge_id'] != challengeId ||
-              challenge?['prompt'] is! String ||
-              imageUri is! String ||
+          final imageUri = challenge?.imageDataUri;
+          if (challenge?.challengeId != challengeId ||
+              imageUri == null ||
               !imageUri.startsWith('data:image/png;base64,') ||
               imageUri.length > 1024 * 1024) {
             handler.next(err);
@@ -296,7 +297,7 @@ class RequestProtectionInterceptor extends Interceptor {
               .solve(
                 CaptchaChallenge(
                   id: challengeId,
-                  prompt: challenge!['prompt'] as String,
+                  prompt: challenge!.prompt,
                   image: base64Decode(
                     imageUri.substring('data:image/png;base64,'.length),
                   ),
@@ -306,15 +307,17 @@ class RequestProtectionInterceptor extends Interceptor {
               answer.isNotEmpty &&
               _rebindRetryBearer(options)) {
             // Preserve the original account fence through challenge, verification and replay.
-            await _retryDio.post<void>(
-              '/v1/risk/captcha',
-              data: {'challenge_id': challengeId, 'response': answer},
-              options: Options(
-                headers: {'Authorization': options.headers['Authorization']},
-                extra: {...options.extra, _captchaRetried: true},
+            final verification = await riskApi.verifyCaptcha(
+              captchaVerification: CaptchaVerification(
+                challengeId: challengeId,
+                response: answer,
               ),
+              headers: {'Authorization': options.headers['Authorization']},
+              extra: {...options.extra, _captchaRetried: true},
             );
-            if (!_rebindRetryBearer(options)) {
+            if (verification.data?.accepted != true ||
+                verification.data?.accessRestored != true ||
+                !_rebindRetryBearer(options)) {
               handler.next(err);
               return;
             }
