@@ -1,16 +1,18 @@
 <!doctype html>
 <html lang="zh-CN">
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>味谱 · 连带修改与恢复 · #168 #170 #173 #174</title>
+<title>味谱 · 连带修改与恢复 · #168 #169 #170 #172 #173 #174</title>
 <style>
 :root{--paper:#F7F4EE;--card:#FFFDF9;--ink:#1B1813;--line:#D8D0C2;--changed:#B0441E;color-scheme:light}
 :root.dark{--paper:#171511;--card:#221F1A;--ink:#F1ECE3;--line:#544C40;--changed:#E07A52;color-scheme:dark}
-*{box-sizing:border-box}body{margin:0;background:var(--paper);color:var(--ink);font:16px/1.7 'Noto Sans SC',sans-serif}main{max-width:760px;margin:auto;padding:24px}h1,h2{font-family:'Noto Serif SC',serif}section{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:20px;margin:16px 0}button,input,textarea{font:inherit;border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:8px;padding:10px;min-height:44px}input,textarea{width:100%}button{cursor:pointer}.primary{background:var(--ink);color:var(--paper)}.changed{color:var(--changed)}.why{border-style:dashed}.number{font-family:'DM Mono',monospace}.actions{display:flex;gap:8px;flex-wrap:wrap}.operation{border-top:1px solid var(--line);padding:12px 0}dialog{background:var(--card);color:var(--ink);border:1px solid var(--line);border-radius:16px;max-width:460px;padding:24px}button:disabled{opacity:.45}
+*{box-sizing:border-box}body{margin:0;background:var(--paper);color:var(--ink);font:16px/1.7 'Noto Sans SC',sans-serif}main{max-width:760px;margin:auto;padding:24px}h1,h2{font-family:'Noto Serif SC',serif}section{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:20px;margin:16px 0}button,input,textarea{font:inherit;border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:8px;padding:10px;min-height:44px}input,textarea{width:100%}button{cursor:pointer}.primary{background:var(--ink);color:var(--paper)}.changed{color:var(--changed)}.why{border-style:dashed}.number{font-family:'DM Mono',monospace}.actions{display:flex;gap:8px;flex-wrap:wrap}.operation{border-top:1px solid var(--line);padding:12px 0}dialog{background:var(--card);color:var(--ink);border:1px solid var(--line);border-radius:8px;max-width:460px;padding:24px}button:disabled{opacity:.45}
 </style>
 <main><header><p>味谱 / SPEC-003.2 / 连带修改交互样稿</p><h1>只保存你确认的改动</h1><button id="theme" aria-pressed="false">切换深色</button></header>
-<section><h2>想怎么改？</h2><input aria-label="一句话修改" value="改成空气炸锅"><p>支持文字、厨具、时间、难度和做法调整。调味和缺料规则尚未接入；不会硬改。</p><p>今日修改剩余 <span class="number">0</span> 次。已扣额度的失败请求可重试；新请求不可用，手动修改仍可保存。</p><p>已恢复本机逐条决定和作者后值。恢复后须重新检查，旧检查不能用于保存。</p><div class="actions"><button id="retry">重试同一修改请求</button><button id="manual">继续手动编辑</button></div><p id="error" aria-live="polite"></p></section>
+<section><h2>想怎么改？</h2><input aria-label="一句话修改" value="改成空气炸锅"><p>支持文字、厨具、时间、难度和做法调整。调味支持20%、25%、30%幅度；缺料按本菜谱作用提供替代或省略建议，未知不硬改。</p><p>今日修改剩余 <span class="number">0</span> 次。已扣额度的失败请求可重试；新请求不可用，手动修改仍可保存。</p><p>已恢复本机逐条决定和作者后值。恢复后须重新检查，旧检查不能用于保存。</p><div class="actions"><button id="retry">重试同一修改请求</button><button id="manual">继续手动编辑</button></div><p id="error" aria-live="polite"></p></section>
 <section><h2>步骤 2 · 换厨具</h2><p>前值：炒锅</p><p class="changed">建议后值：空气炸锅</p><button class="why" data-field="cookware">AI 估算 · 为什么</button><details><summary>明细</summary><p>意图：换空气炸锅；影响：仅步骤 2，不能代表家中已具备此厨具。</p><p>估算条件不保证成功。温度、时长、容器、说明、火候和成熟判断均依赖本条。</p></details><div class="actions"><button id="accept">接受</button><button id="reject">拒绝</button></div><p id="decision">待处理</p></section>
 <section><h2>步骤 2 · 连带条件</h2><p id="dependency">依赖：先确认厨具变更。拒绝厨具时，本组默认拒绝，不改其他步骤。</p><div id="conditions"></div></section>
+<section><h2>太咸了 · 多来源调味</h2><p>结论：按当前菜谱的咸味贡献分摊；功能性用料不动。未知贡献须补充，不能当作零。</p><div class="actions" id="amplitudes"><button data-percent="20">20%</button><button data-percent="25" aria-pressed="true">25%</button><button data-percent="30">30%</button></div><p>切换幅度会重新提出建议；以下数字为合成样稿，实际结果由服务端计算。</p><div id="seasonings"></div><p id="taste-risk" aria-live="polite"></p><button id="taste-check">检查并保存本组选择</button><p id="taste-saved" aria-live="polite"></p></section>
+<section><h2>没有料酒 · 按当前作用确认</h2><p>结论：登记替代为花生调味汁，10 ml → 20 ml，参考比例 2。替代不保证原风味或功能等效。</p><p>依据：当前菜谱登记参考；功能性标记和作者来源保留。花生过敏原必须显示；信息未知不能解释为安全。</p><button id="sub-why" class="why">按场景调整 · 为什么</button><div class="actions"><button id="sub-accept">接受替代与登记事实</button><button id="sub-reject">拒绝替代</button></div><label>作者确认后的用量（ml）<input id="sub-quantity" type="number" min="0" value="20"></label><p id="sub-result" aria-live="polite">待选择；实际仍为料酒10 ml。</p><details><summary>没有合适替代 · 省略的后果</summary><p>失去料酒带来的香气及去腥辅助；不承诺等效。省略依赖清理步骤引用并将“加入料酒”改为“继续翻炒”。功能性用料不能随意省略。</p><div class="actions"><button id="omit-accept">接受省略与步骤清理</button><button id="omit-reject">拒绝省略及清理</button></div><p id="omit-result" aria-live="polite">原步骤：加入料酒，继续翻炒。</p></details><button id="sub-save">检查并保存本组选择</button><p id="sub-saved" aria-live="polite"></p></section>
 <section><h2>实际待确认结果</h2><p>只应用已接受或修改的操作。缩短禽肉加热时长的熟透风险会显示，不会被 AI 理由覆盖。</p><p id="check" aria-live="polite">待逐条处理并重新检查。不可保存的安全问题会阻断确认；可复刻缺项按既有规则提示。</p><button id="recheck">重新检查所选改动</button></section>
 <section><h2>改动说明</h2><p>说明和标签仅根据本次真实最终操作生成；拒绝项不进入说明。表单修改也由服务端比较基准与新快照。</p><button id="explain">生成改动说明</button><label>这次改了什么<textarea id="note"></textarea></label><label>标签<input id="tags"></label><p>作者可修改；模型失败仍可手写保存，不把说明当作已验证证据。</p><button id="save" class="primary" disabled>确认并保存所选修改</button><p id="saved" aria-live="polite"></p></section></main>
 <dialog id="why"><h2>为什么</h2><p id="why-values"></p><p>来源：AI 估算。依据：当前不可变基准步骤。把握程度：中。</p><p>换热源需要同时核对温度、时长、容器和成熟判断。预览中的实际后值会重新跑安全与可复刻检查。估算没有实际验证记录。</p><button id="close">关闭</button></dialog>
@@ -125,5 +127,52 @@ byId('theme').onclick = () => {
   byId('theme').setAttribute('aria-pressed', String(dark));
   byId('theme').textContent = dark ? '切换浅色' : '切换深色';
 };
+let percent = 25;
+const seasoningFields = [
+  {id:'salt', name:'盐', quantity:3, unit:'g'},
+  {id:'soy', name:'酱油', quantity:15, unit:'ml'},
+  {id:'oyster', name:'蚝油', quantity:10, unit:'g'},
+  {id:'bean', name:'豆瓣', quantity:15, unit:'g'}
+];
+let tasteChoices = {};
+function renderTaste() {
+  byId('seasonings').replaceChildren();
+  for (const item of seasoningFields) {
+    const selected = tasteChoices[item.id] === 'accept';
+    const quantity = item.quantity * (1 - percent / 100);
+    const node = document.createElement('div');
+    node.className = 'operation';
+    node.innerHTML = '<p>' + item.name + '：' + item.quantity + item.unit + ' → <span class="changed number">' + quantity + item.unit + '</span></p><button data-taste-why="' + item.id + '">按场景调整 · 为什么</button><div class="actions"><button data-taste-accept="' + item.id + '">接受</button><button data-taste-reject="' + item.id + '">拒绝</button></div><p>' + (selected ? '已接受；实际 ' + quantity : tasteChoices[item.id] === 'reject' ? '已拒绝；实际 ' + item.quantity : '待处理；实际 ' + item.quantity) + item.unit + '</p>';
+    byId('seasonings').append(node);
+  }
+  document.querySelectorAll('[data-taste-accept]').forEach(button => button.onclick = () => {tasteChoices[button.dataset.tasteAccept] = 'accept'; byId('taste-saved').textContent = ''; renderTaste();});
+  document.querySelectorAll('[data-taste-reject]').forEach(button => button.onclick = () => {tasteChoices[button.dataset.tasteReject] = 'reject'; byId('taste-saved').textContent = ''; renderTaste();});
+  document.querySelectorAll('[data-taste-why]').forEach(button => button.onclick = () => {
+    const item = seasoningFields.find(item => item.id === button.dataset.tasteWhy);
+    byId('why-values').textContent = item.name + '：原值 ' + item.quantity + item.unit + '；建议 ' + item.quantity * (1-percent/100) + item.unit + '。依据：本菜谱贡献强度×基础量分摊；功能性用料受保护。来源：按场景调整，未实际验证。';
+    byId('why').showModal();
+  });
+  byId('taste-risk').textContent = (tasteChoices.soy === 'accept' ? '酱油减少：颜色可能变浅。' : '') + (tasteChoices.soy === 'accept' || tasteChoices.oyster === 'accept' ? '鲜味可能下降；补鲜建议须单独确认。' : '') + '拒绝来源不会将减量转移给其他来源。';
+}
+document.querySelectorAll('[data-percent]').forEach(button => button.onclick = () => {
+  percent = Number(button.dataset.percent); tasteChoices = {}; byId('taste-saved').textContent = '';
+  document.querySelectorAll('[data-percent]').forEach(other => other.setAttribute('aria-pressed', String(other === button)));
+  renderTaste();
+});
+byId('taste-check').onclick = () => {byId('taste-saved').textContent = seasoningFields.every(item => tasteChoices[item.id]) ? '样稿：重新检查实际选择后保存新版本；仅保存接受的来源，旧版本保持原值。实际 App 需服务端校验。' : '仍有未处理来源，先逐条确认。';};
+let substitute = 'pending', omit = 'pending';
+function renderSubstitute() {
+  const quantity = Number(byId('sub-quantity').value);
+  byId('sub-result').textContent = substitute === 'accept' ? '实际：花生调味汁 ' + quantity + ' ml。花生过敏提醒。' + (quantity !== 20 ? '作者用量偏离登记参考比例2，重新核对风味和功能。' : '') : '实际仍为料酒10 ml；' + (substitute === 'reject' ? '替代及伴随事实已拒绝。' : '待选择。');
+  byId('sub-saved').textContent = '';
+}
+byId('sub-accept').onclick = () => {substitute = 'accept'; omit = 'pending'; renderSubstitute();};
+byId('sub-reject').onclick = () => {substitute = 'reject'; renderSubstitute();};
+byId('sub-quantity').oninput = renderSubstitute;
+byId('sub-why').onclick = () => {byId('why-values').textContent = '料酒10 ml → 花生调味汁20 ml；比例2是本菜谱登记参考。实际后值 ' + byId('sub-quantity').value + ' ml。保留作者功能性与来源；不能保证等效或适合过敏者。'; byId('why').showModal();};
+byId('omit-accept').onclick = () => {omit = 'accept'; substitute = 'reject'; renderSubstitute(); byId('omit-result').textContent = '实际：料酒已省略，引用已清理；步骤：继续翻炒。香气与去腥辅助可能损失。';};
+byId('omit-reject').onclick = () => {omit = 'reject'; byId('sub-saved').textContent = ''; byId('omit-result').textContent = '拒绝省略，清理和步骤改写默认拒绝；保留料酒及原文：加入料酒，继续翻炒。';};
+byId('sub-save').onclick = () => {const valid = byId('sub-quantity').value.trim() !== '' && Number.isFinite(Number(byId('sub-quantity').value)) && Number(byId('sub-quantity').value) >= 0; byId('sub-saved').textContent = substitute === 'accept' && valid || omit === 'accept' ? '样稿：重新检查所选实际快照后保存新版本；可回看旧版本料酒10 ml。实际 App 需服务端安全与可复刻校验。' : '没有可保存的有效改动。';};
+renderTaste();
 render();
 </script></html>

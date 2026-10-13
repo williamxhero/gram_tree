@@ -7,6 +7,10 @@ part of 'modification_input.dart';
 // **************************************************************************
 
 abstract class _$ModificationInputCWProxy {
+  ModificationInput adjustmentPercent(
+    ModificationInputAdjustmentPercentEnum? adjustmentPercent,
+  );
+
   ModificationInput baseVersionId(String? baseVersionId);
 
   ModificationInput generationRequestId(String? generationRequestId);
@@ -26,6 +30,7 @@ abstract class _$ModificationInputCWProxy {
   /// ModificationInput(...).copyWith(id: 12, name: "My name")
   /// ````
   ModificationInput call({
+    ModificationInputAdjustmentPercentEnum? adjustmentPercent,
     String? baseVersionId,
     String? generationRequestId,
     String? recipeId,
@@ -40,6 +45,11 @@ class _$ModificationInputCWProxyImpl implements _$ModificationInputCWProxy {
   const _$ModificationInputCWProxyImpl(this._value);
 
   final ModificationInput _value;
+
+  @override
+  ModificationInput adjustmentPercent(
+    ModificationInputAdjustmentPercentEnum? adjustmentPercent,
+  ) => this(adjustmentPercent: adjustmentPercent);
 
   @override
   ModificationInput baseVersionId(String? baseVersionId) =>
@@ -70,6 +80,7 @@ class _$ModificationInputCWProxyImpl implements _$ModificationInputCWProxy {
   /// ModificationInput(...).copyWith(id: 12, name: "My name")
   /// ````
   ModificationInput call({
+    Object? adjustmentPercent = const $CopyWithPlaceholder(),
     Object? baseVersionId = const $CopyWithPlaceholder(),
     Object? generationRequestId = const $CopyWithPlaceholder(),
     Object? recipeId = const $CopyWithPlaceholder(),
@@ -78,6 +89,10 @@ class _$ModificationInputCWProxyImpl implements _$ModificationInputCWProxy {
     Object? text = const $CopyWithPlaceholder(),
   }) {
     return ModificationInput(
+      adjustmentPercent: adjustmentPercent == const $CopyWithPlaceholder()
+          ? _value.adjustmentPercent
+          // ignore: cast_nullable_to_non_nullable
+          : adjustmentPercent as ModificationInputAdjustmentPercentEnum?,
       baseVersionId: baseVersionId == const $CopyWithPlaceholder()
           ? _value.baseVersionId
           // ignore: cast_nullable_to_non_nullable
@@ -125,6 +140,13 @@ ModificationInput _$ModificationInputFromJson(
   ($checkedConvert) {
     $checkKeys(json, requiredKeys: const ['text']);
     final val = ModificationInput(
+      adjustmentPercent: $checkedConvert(
+        'adjustment_percent',
+        (v) => $enumDecodeNullable(
+          _$ModificationInputAdjustmentPercentEnumEnumMap,
+          v,
+        ),
+      ),
       baseVersionId: $checkedConvert('base_version_id', (v) => v as String?),
       generationRequestId: $checkedConvert(
         'generation_request_id',
@@ -138,6 +160,7 @@ ModificationInput _$ModificationInputFromJson(
     return val;
   },
   fieldKeyMap: const {
+    'adjustmentPercent': 'adjustment_percent',
     'baseVersionId': 'base_version_id',
     'generationRequestId': 'generation_request_id',
     'recipeId': 'recipe_id',
@@ -148,6 +171,9 @@ ModificationInput _$ModificationInputFromJson(
 
 Map<String, dynamic> _$ModificationInputToJson(ModificationInput instance) =>
     <String, dynamic>{
+      'adjustment_percent':
+          ?_$ModificationInputAdjustmentPercentEnumEnumMap[instance
+              .adjustmentPercent],
       'base_version_id': ?instance.baseVersionId,
       'generation_request_id': ?instance.generationRequestId,
       'recipe_id': ?instance.recipeId,
@@ -155,3 +181,9 @@ Map<String, dynamic> _$ModificationInputToJson(ModificationInput instance) =>
       'retry_failed': ?instance.retryFailed,
       'text': instance.text,
     };
+
+const _$ModificationInputAdjustmentPercentEnumEnumMap = {
+  ModificationInputAdjustmentPercentEnum.number20: 20,
+  ModificationInputAdjustmentPercentEnum.number25: 25,
+  ModificationInputAdjustmentPercentEnum.number30: 30,
+};

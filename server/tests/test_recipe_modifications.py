@@ -825,18 +825,18 @@ def test_ownership_stale_base_and_conflicting_receipt_are_guarded(modification_a
 @pytest.mark.parametrize(
     "category,confidence,error",
     [
-        (
-            c,
-            0.95,
-            "model_unavailable"
-            if c in ("cookware", "time_difficulty", "method")
-            else "unsupported_intent",
-        )
-        for c in ["taste", "cookware", "substitution", "time_difficulty", "method"]
-    ]
-    + [("unknown", 0.95, "uncertain_intent"), ("text", 0.4, "uncertain_intent")],
+        ("taste", 0.95, "cannot_modify"),
+        ("cookware", 0.95, "model_unavailable"),
+        ("substitution", 0.95, "cannot_modify"),
+        ("time_difficulty", 0.95, "model_unavailable"),
+        ("method", 0.95, "model_unavailable"),
+        ("unknown", 0.95, "uncertain_intent"),
+        ("text", 0.4, "uncertain_intent"),
+        ("taste", 0.4, "uncertain_intent"),
+        ("substitution", 0.4, "uncertain_intent"),
+    ],
 )
-def test_unsupported_or_uncertain_intent_is_explicit(modification_api, category, confidence, error):
+def test_intent_failures_are_explicit(modification_api, category, confidence, error):
     api, directory = modification_api
     headers = bearer(api.login(f"text-intent-{category}-{confidence}@example.com"))
     created = api.client.post("/v1/recipes", headers=headers, json=recipe_input()).json()
@@ -858,6 +858,14 @@ def test_unsupported_or_uncertain_intent_is_explicit(modification_api, category,
     assert response.status_code == 200, response.text
     assert response.json()["error"] == error and response.json()["operations"] == []
     assert response.json()["snapshot"] == created["version"]["snapshot"]
+    if error == "cannot_modify":
+        # Supported categories need their own parameters, not a text-edit target.
+        assert response.json()["warnings"] == [
+            {
+                "taste": "味型调整需要明确味型和增减方向",
+                "substitution": "请明确缺料在这道菜里的具体作用；同名食材不能合并替代",
+            }[category]
+        ]
     user_id = api.client.get("/v1/me", headers=headers).json()["id"]
     assert [c["capability"] for c in cli("ai", "audit", "--user", user_id)["calls"]] == (
         ["modify_intent", "modify"]

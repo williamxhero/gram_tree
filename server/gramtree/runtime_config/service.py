@@ -67,6 +67,10 @@ def parse_value(cfg: ConfigItem, raw: str) -> int | float | bool | str | dict[st
 
 
 def validate(cfg: ConfigItem, value: int | float | bool | str | dict[str, Any]) -> None:
+    if cfg.key == "taste.adjustment_percent" and (
+        isinstance(value, bool) or value not in (0.2, 0.25, 0.3)
+    ):
+        raise ConfigError("taste.adjustment_percent 只能是 0.2、0.25 或 0.3")
     # Comparison runs during an ordinary recipe save, so reject malformed policy
     # at the audited write boundary rather than breaking saves afterwards.
     if cfg.key in {"recipe.comparison_main_groups", "recipe.comparison_heating_actions"}:

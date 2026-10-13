@@ -70,6 +70,14 @@ ITEMS: tuple[ConfigItem, ...] = (
         "口味系数范围、默认值及五档映射（占位；取用时校验完整形状）",
     ),
     ConfigItem(
+        "taste.adjustment_percent",
+        "float",
+        0.25,
+        "味型调整默认幅度；只允许需求约定的 20%、25% 或 30%",
+        minimum=0.20,
+        maximum=0.30,
+    ),
+    ConfigItem(
         "taste.learning_weights",
         "json",
         {

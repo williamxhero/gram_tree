@@ -8,6 +8,7 @@ import 'package:gramtree_api/gramtree_api.dart';
 
 import '../../api/api_client.dart';
 import '../../auth/auth_controller.dart';
+import '../../app/theme.dart';
 import '../../l10n/app_localizations.dart';
 import '../../recipes/recipe_draft.dart';
 import '../../recipes/recipe_repository.dart';
@@ -21,6 +22,7 @@ import '../../ui_protocol/source_types.dart';
 import '../../util/ids.dart';
 import 'reproducibility_card.dart';
 import 'change_explanation_panel.dart';
+import 'recipe_source_badge.dart';
 
 /// A shared, locally recoverable preview. Only the confirm intent saves a recipe.
 class TextEditPanel extends ConsumerStatefulWidget {
@@ -62,7 +64,9 @@ class _TextEditPanelState extends ConsumerState<TextEditPanel>
   ModificationPreview? _confirmingPreview;
   Map<String, dynamic>? _pendingConfirmation;
   RecipeDetail? _savedDetail;
-  bool get _locked => _busy || _pendingConfirmation != null;
+  bool _proposalDispatchPending = false;
+  bool get _locked =>
+      _busy || _proposalDispatchPending || _pendingConfirmation != null;
   String _changeNote = '';
   bool? _changeNoteAuthored;
   bool? _tagsAuthored;
@@ -72,6 +76,8 @@ class _TextEditPanelState extends ConsumerState<TextEditPanel>
   _confirmingExplanation;
   String? _error;
   String? _requestId;
+  String? _previewText;
+  int? _adjustmentPercent;
   bool _failedRequest = false;
   bool _busy = false;
   bool _checking = false;
@@ -131,6 +137,8 @@ class _TextEditPanelState extends ConsumerState<TextEditPanel>
       ];
       _text.text = payload['text'] as String;
       _requestId = payload['request_id'] as String?;
+      _previewText = payload['preview_text'] as String? ?? _text.text;
+      _adjustmentPercent = payload['adjustment_percent'] as int?;
       _failedRequest = payload['failed_request'] == true;
       _afterInputs.addAll(
         Map<String, String>.from(payload['after_inputs'] as Map? ?? {}),
@@ -178,6 +186,8 @@ class _TextEditPanelState extends ConsumerState<TextEditPanel>
     payload: {
       'text': _text.text,
       'request_id': _requestId,
+      'preview_text': _previewText,
+      'adjustment_percent': _adjustmentPercent,
       'failed_request': _failedRequest,
       'after_inputs': Map<String, String>.from(_afterInputs),
       'invalid_after': Map<String, String>.from(_invalidAfter),
@@ -250,14 +260,23 @@ class _TextEditPanelState extends ConsumerState<TextEditPanel>
     }
   }
 
-  Future<void> _propose(String text) async {
-    if (_locked ||
+  Future<void> _propose(String text, {int? adjustmentPercent}) async {
+    if (_busy ||
+        _pendingConfirmation != null ||
         _checking ||
         _pendingChoices > 0 ||
         widget.manualEdits ||
         text.trim().isEmpty) {
       return;
     }
+    // A changed amplitude is a new proposal against the same immutable baseline.
+    // A retry keeps its exact text, explicit amplitude and charged request ID.
+    if (adjustmentPercent != null &&
+        (!_failedRequest || _adjustmentPercent != adjustmentPercent)) {
+      _requestId = null;
+      _failedRequest = false;
+    }
+    if (adjustmentPercent != null) _adjustmentPercent = adjustmentPercent;
     final targetRevision = ++_targetRevision;
     setState(() {
       _busy = true;
@@ -275,6 +294,8 @@ class _TextEditPanelState extends ConsumerState<TextEditPanel>
           'base_version_id': widget.baseVersionId,
           'generation_request_id': widget.generationRequestId,
           'retry_failed': _failedRequest,
+          if (_adjustmentPercent != null)
+            'adjustment_percent': _adjustmentPercent,
         }),
       );
       if (!mounted || targetRevision != _targetRevision) return;
@@ -291,6 +312,7 @@ class _TextEditPanelState extends ConsumerState<TextEditPanel>
         // A failed later request must not erase the last usable checked result.
         if (preview.error == null) {
           _preview = preview;
+          _previewText = text.trim();
           _choices.clear();
           _afterInputs.clear();
           _invalidAfter.clear();
@@ -399,7 +421,10 @@ class _TextEditPanelState extends ConsumerState<TextEditPanel>
   bool get _canConfirm {
     final preview = _preview;
     if (_pendingConfirmation != null) {
-      return preview != null && !_busy && !widget.manualEdits;
+      return preview != null &&
+          !_busy &&
+          !_proposalDispatchPending &&
+          !widget.manualEdits;
     }
     return preview != null &&
         preview.error == null &&
@@ -413,7 +438,7 @@ class _TextEditPanelState extends ConsumerState<TextEditPanel>
             preview.decisions!.any(
               (choice) => choice.decision.value != 'reject',
             )) &&
-        !_busy &&
+        !_locked &&
         !_checking &&
         _pendingChoices == 0 &&
         !_checksDirty &&
@@ -540,6 +565,8 @@ class _TextEditPanelState extends ConsumerState<TextEditPanel>
         _invalidAfter.clear();
         _checksDirty = false;
         _requestId = null;
+        _previewText = null;
+        _adjustmentPercent = null;
         _failedRequest = false;
         _changeNote = '';
         _changeNoteAuthored = null;
@@ -572,7 +599,16 @@ class _TextEditPanelState extends ConsumerState<TextEditPanel>
     Map<String, dynamic> params,
   ) async {
     final choosing = params['operation'] == 'text_choose';
+    final proposing = params['operation'] == 'text_preview';
     final confirming = params['operation'] == 'text_confirm';
+    if (proposing) {
+      if (_locked || _checking || _pendingChoices > 0 || widget.manualEdits) {
+        return;
+      }
+      // Bind this proposal before event persistence can yield to another edit
+      // or confirmation of the previously checked amplitude.
+      setState(() => _proposalDispatchPending = true);
+    }
     if (confirming) {
       if (!_canConfirm) return;
       // Bind this click and lock edits before asynchronous event persistence.
@@ -619,6 +655,9 @@ class _TextEditPanelState extends ConsumerState<TextEditPanel>
     } finally {
       // A failed dispatch must not strand the remaining input behind its tail.
       completion?.complete();
+      if (proposing && mounted) {
+        setState(() => _proposalDispatchPending = false);
+      }
       if (choosing && mounted) setState(() => _pendingChoices--);
       if (confirming) {
         _confirmingPreview = null;
@@ -837,6 +876,89 @@ class _TextEditPanelState extends ConsumerState<TextEditPanel>
     );
   }
 
+  Widget _tasteAdjustment(BuildContext context, ModificationIntent intent) {
+    final parameters = intent.parameters is Map
+        ? intent.parameters as Map
+        : const {};
+    final axis = switch (parameters['axis']) {
+      'salty' => '咸味',
+      'sweet' => '甜味',
+      'spicy' => '辣味',
+      'sour' => '酸味',
+      'oily' => '油脂',
+      'umami' => '鲜味',
+      'numbing' => '麻味',
+      _ => '味道',
+    };
+    final direction = switch (parameters['direction']) {
+      'decrease' || 'reduce' => '降低',
+      'increase' => '增加',
+      _ => '调整',
+    };
+    final percent = parameters['adjustment_percent'];
+    final percentLabel = percent is num && percent % 1 == 0
+        ? percent.toInt().toString()
+        : percent?.toString();
+    return ComponentCard(
+      key: const ValueKey('text-edit-taste-adjustment'),
+      detail: ComponentDescriptorDetailEnum.standard,
+      conclusion: Text.rich(
+        TextSpan(
+          children: [
+            TextSpan(text: '$axis · $direction'),
+            if (percent is num)
+              TextSpan(
+                text: ' $percentLabel%',
+                style: GramTreeColors.of(context).numberStyle(
+                  Theme.of(context).textTheme.bodyMedium ?? const TextStyle(),
+                ),
+              ),
+          ],
+        ),
+      ),
+      conclusionSemanticsText: '调味幅度，$axis，$direction，${percent ?? '未明确'}',
+      basisText: '用量和功能性边界由服务端计算；每条建议仍需你确认。',
+      standardExtra: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text('选择幅度后重新提议，会消耗一次修改额度；新建议需要重新逐条处理。'),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              for (final value in tasteAdjustmentPercents)
+                ChoiceChip(
+                  key: ValueKey('text-edit-adjustment-$value'),
+                  label: Text(
+                    '$value%',
+                    style: GramTreeColors.of(context).numberStyle(
+                      Theme.of(context).textTheme.labelLarge ??
+                          const TextStyle(),
+                    ),
+                  ),
+                  selected: percent == value,
+                  onSelected:
+                      _locked ||
+                          _checking ||
+                          _pendingChoices > 0 ||
+                          widget.manualEdits ||
+                          !(_status?.available == true ||
+                              (_canRequest && _adjustmentPercent == value)) ||
+                          _text.text.trim() != _previewText
+                      ? null
+                      : (_) => _dispatch(context, {
+                          'operation': 'text_preview',
+                          'text': _previewText!,
+                          'adjustment_percent': value,
+                        }),
+                ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   void dispose() {
     _editTimer?.cancel();
@@ -850,7 +972,10 @@ class _TextEditPanelState extends ConsumerState<TextEditPanel>
     final l10n = AppLocalizations.of(context);
     return RecipeOperationScope(
       handlers: {
-        'text_preview': (params) => _propose(params['text'] as String),
+        'text_preview': (params) => _propose(
+          params['text'] as String,
+          adjustmentPercent: params['adjustment_percent'] as int?,
+        ),
         'text_choose': _choose,
         'text_confirm': (_) => _confirm(),
         'text_cancel': (_) => _cancel(),
@@ -896,6 +1021,7 @@ class _TextEditPanelState extends ConsumerState<TextEditPanel>
               onChanged: (_) {
                 setState(() {
                   _requestId = null;
+                  _adjustmentPercent = null;
                   _failedRequest = false;
                 });
                 _persistLater();
@@ -939,6 +1065,19 @@ class _TextEditPanelState extends ConsumerState<TextEditPanel>
                 ),
             ],
             if (_preview != null && _preview!.error == null) ...[
+              if (_preview!.intent?.category ==
+                  ModificationIntentCategoryEnum.taste)
+                _tasteAdjustment(context, _preview!.intent!),
+              if (_preview!.intent?.category ==
+                  ModificationIntentCategoryEnum.substitution)
+                const Text(
+                  '替代或省略需逐条确认。请核对原料、换算用量、味型与功能差异及过敏提醒；未收录不代表无过敏原。',
+                  key: ValueKey('text-edit-substitution-notice'),
+                ),
+              // Proposal warnings explain limits even before any operation is
+              // accepted. They must remain visible while selections recheck.
+              for (final warning in _preview!.warnings ?? const <String>[])
+                Semantics(liveRegion: true, child: Text(warning)),
               for (final operation
                   in _preview!.operations ?? const <ModificationOperation>[])
                 _operation(context, operation),
@@ -946,15 +1085,50 @@ class _TextEditPanelState extends ConsumerState<TextEditPanel>
               if (_checksDirty || _checking || _pendingChoices > 0)
                 const Text('选择或后值已改变，正在更新检查。旧检查不可用于确认。')
               else ...[
+                for (final ingredient
+                    in _preview!.snapshot.ingredients ??
+                        const <RecipeIngredient>[]) ...[
+                  Text.rich(
+                    TextSpan(
+                      children: [
+                        TextSpan(text: '待确认食材：${ingredient.displayName} '),
+                        TextSpan(
+                          text: '${ingredient.quantity} ${ingredient.unit}',
+                          style: GramTreeColors.of(context).numberStyle(
+                            Theme.of(context).textTheme.bodyMedium ??
+                                const TextStyle(),
+                          ),
+                        ),
+                      ],
+                    ),
+                    key: ValueKey(
+                      'text-edit-result-ingredient-${ingredient.id}',
+                    ),
+                  ),
+                  RecipeSourceBadge(
+                    key: ValueKey('text-edit-result-source-${ingredient.id}'),
+                    source: ingredient.quantitySource,
+                    value: '${ingredient.quantity} ${ingredient.unit}',
+                    fieldId: 'text-edit-result-${ingredient.id}-quantity',
+                  ),
+                ],
                 for (final step
                     in _preview!.snapshot.steps ?? const <RecipeStep>[])
                   Text('待确认步骤 ${step.id}：${step.instruction}'),
-                FoodSafetyCard(result: _preview!.safety),
-                AllergenCard(result: _preview!.safety),
                 ReproducibilityCard(result: _preview!.reproducibility),
-                for (final warning in _preview!.warnings ?? const <String>[])
-                  Text(warning),
               ],
+              FoodSafetyCard(
+                result: _preview!.safety,
+                statusMessage: _checksDirty || _checking || _pendingChoices > 0
+                    ? '以下为上次检查提醒，当前选择尚待重新检查。'
+                    : null,
+              ),
+              AllergenCard(
+                result: _preview!.safety,
+                statusMessage: _checksDirty || _checking || _pendingChoices > 0
+                    ? '以下为上次检查提醒，当前选择尚待重新检查。'
+                    : null,
+              ),
               if (_checksDirty && !_checking && _pendingChoices == 0)
                 TextButton(
                   key: const ValueKey('text-edit-retry-checks'),
@@ -1018,7 +1192,8 @@ class _TextEditPanelState extends ConsumerState<TextEditPanel>
               ),
               TextButton(
                 key: const ValueKey('text-edit-cancel'),
-                onPressed: _busy || _pendingChoices > 0
+                onPressed:
+                    _busy || _proposalDispatchPending || _pendingChoices > 0
                     ? null
                     : () => _dispatch(context, {'operation': 'text_cancel'}),
                 child: const Text('取消预览，继续手动编辑'),

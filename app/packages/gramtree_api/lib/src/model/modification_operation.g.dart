@@ -267,6 +267,8 @@ const _$ModificationOperationTypeEnumEnumMap = {
   ModificationOperationTypeEnum.changeGroupOrOptional:
       'change_group_or_optional',
   ModificationOperationTypeEnum.changeFunctional: 'change_functional',
+  ModificationOperationTypeEnum.changeFlavorContribution:
+      'change_flavor_contribution',
   ModificationOperationTypeEnum.changeScaling: 'change_scaling',
   ModificationOperationTypeEnum.changeReplacement: 'change_replacement',
   ModificationOperationTypeEnum.addIngredient: 'add_ingredient',

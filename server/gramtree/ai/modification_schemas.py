@@ -19,6 +19,7 @@ class ModificationInput(BaseModel):
     text: str = Field(min_length=1, max_length=1000, pattern=r"\S")
     request_id: IdV4 | None = None
     retry_failed: bool = False
+    adjustment_percent: Literal[20, 25, 30] | None = None
     recipe_id: IdV4 | None = None
     base_version_id: IdV4 | None = None
     generation_request_id: IdV4 | None = None
@@ -59,6 +60,7 @@ class ModificationOperation(BaseModel):
         "change_quantity",
         "change_group_or_optional",
         "change_functional",
+        "change_flavor_contribution",
         "change_scaling",
         "change_replacement",
         "add_ingredient",

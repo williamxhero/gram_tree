@@ -2239,7 +2239,7 @@ abstract class AppLocalizations {
   /// No description provided for @textEditSupportedChanges.
   ///
   /// In zh, this message translates to:
-  /// **'支持改文字、换厨具、调整时间或难度、调整做法；口味和缺料替代暂未支持。确认前不会保存。'**
+  /// **'支持调味、缺料替代、改文字、换厨具、调整时间或难度、调整做法。确认前不会保存。'**
   String get textEditSupportedChanges;
 
   /// No description provided for @textEditRequestLabel.
@@ -2263,7 +2263,7 @@ abstract class AppLocalizations {
   /// No description provided for @textEditUnsupportedIntent.
   ///
   /// In zh, this message translates to:
-  /// **'这类修改暂未支持，不会应用。支持改文字、换厨具、调整时间或难度、调整做法；口味和缺料替代请手动编辑。'**
+  /// **'这类修改暂未支持，不会应用。请换个说法，或继续手动编辑。'**
   String get textEditUnsupportedIntent;
 
   /// No description provided for @recipeSaveVersion.
