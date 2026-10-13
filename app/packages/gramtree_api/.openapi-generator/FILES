@@ -187,6 +187,8 @@ lib/src/model/recipe_list.dart
 lib/src/model/recipe_list_item.dart
 lib/src/model/recipe_mold_conversion_out.dart
 lib/src/model/recipe_mold_conversion_request.dart
+lib/src/model/recipe_personal_safety.dart
+lib/src/model/recipe_personal_safety_alert.dart
 lib/src/model/recipe_quantification_out.dart
 lib/src/model/recipe_question.dart
 lib/src/model/recipe_replacement.dart
