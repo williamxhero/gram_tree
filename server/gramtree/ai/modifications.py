@@ -12,7 +12,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from gramtree.accounts.models import User
-from gramtree.ai import gateway
+from gramtree.ai import context, gateway
 from gramtree.ai import service as generation
 from gramtree.ai.models import GenerationRequest, RecipeModification
 from gramtree.ai.modification_schemas import (
@@ -31,7 +31,7 @@ from gramtree.core.errors import ApiError, NotFound
 from gramtree.core.time import utcnow
 from gramtree.events import service as events
 from gramtree.events.registry import RecipeModificationContentV1
-from gramtree.recipes import food_safety, reproducibility
+from gramtree.recipes import food_safety, personal_safety, reproducibility
 from gramtree.recipes import service as recipes
 from gramtree.recipes.models import RecipeVersion
 from gramtree.recipes.schemas import (
@@ -161,8 +161,16 @@ def _owned(session: Session, owner: User, request_id: uuid.UUID) -> RecipeModifi
 
 def _fresh(session: Session, owner: User, row: RecipeModification) -> None:
     baseline = _target(session, owner, ModificationInput.model_validate(row.request))
-    if baseline != row.baseline:
-        raise ApiError(409, "stale_modification", "基准内容已更新，请重新提出修改")
+    current = context.build(session, owner, session.info["settings"])
+    if row.baseline.get("context_dependency") != current.dependency:
+        raise ApiError(409, "stale_modification", "口味或家庭授权已变化，请重新提出修改")
+    stored_recipe_baseline = {
+        key: row.baseline[key]
+        for key in ("snapshot", "dish_name", "dish_aliases", "draft")
+        if key in row.baseline
+    }
+    if baseline != stored_recipe_baseline:
+        raise ApiError(409, "stale_modification", "菜谱已有新版本，请重新提出修改")
 
 
 def _node(snapshot: RecipeSnapshot, op: ModificationOperation):
@@ -567,6 +575,7 @@ def preview(
         safety=food_safety.check(
             session, changed, row.baseline["dish_name"], descriptions=row.baseline["dish_aliases"]
         ),
+        personal_safety=personal_safety.check(session, changed, owner.id, settings),
         reproducibility=reproducibility.check(changed),
         status=status,
         warnings=row.proposal.get("warnings", []),
@@ -634,7 +643,19 @@ def propose(
             existing.error = "pending"
             existing.revision += 1
             row = existing
-    baseline = row.baseline if row is not None else _target(session, owner, body)
+    authorized = context.build(session, owner, settings)
+    context_payload = {
+        key: value for key, value in authorized.model_payload.items() if value is not None
+    }
+    baseline = (
+        row.baseline
+        if row is not None
+        else {
+            **_target(session, owner, body),
+            "context_dependency": authorized.dependency,
+            "authorized_context": context_payload,
+        }
+    )
     if row is None:
         row = RecipeModification(
             id=body.request_id or uuid.uuid4(),
@@ -669,7 +690,10 @@ def propose(
             settings,
             owner.id,
             "modify_intent",
-            {"text": body.text},
+            {
+                "text": body.text,
+                **({"context": context_payload} if context_payload else {}),
+            },
             row.id,
             content_id=body.base_version_id or body.generation_request_id,
         )
@@ -684,6 +708,11 @@ def propose(
                 "text": body.text,
                 "snapshot": baseline["snapshot"],
                 "intent": proposal["intent"],
+                **(
+                    {"context": baseline["authorized_context"]}
+                    if baseline.get("authorized_context")
+                    else {}
+                ),
             }
             for repair in range(2):
                 raw = gateway.call(

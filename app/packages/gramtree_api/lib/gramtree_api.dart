@@ -191,6 +191,8 @@ export 'package:gramtree_api/src/model/recipe_list.dart';
 export 'package:gramtree_api/src/model/recipe_list_item.dart';
 export 'package:gramtree_api/src/model/recipe_mold_conversion_out.dart';
 export 'package:gramtree_api/src/model/recipe_mold_conversion_request.dart';
+export 'package:gramtree_api/src/model/recipe_personal_safety.dart';
+export 'package:gramtree_api/src/model/recipe_personal_safety_alert.dart';
 export 'package:gramtree_api/src/model/recipe_quantification_out.dart';
 export 'package:gramtree_api/src/model/recipe_question.dart';
 export 'package:gramtree_api/src/model/recipe_replacement.dart';

@@ -1633,6 +1633,15 @@
             "title": "Client Id",
             "type": "string"
           },
+          "co_diner_ids": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "maxItems": 50,
+            "title": "Co Diner Ids",
+            "type": "array"
+          },
           "dish_name": {
             "anyOf": [
               {
@@ -1802,6 +1811,14 @@
             "title": "Client Id",
             "type": "string"
           },
+          "co_diner_ids": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "title": "Co Diner Ids",
+            "type": "array"
+          },
           "counts_as_cooked": {
             "title": "Counts As Cooked",
             "type": "boolean"
@@ -1899,6 +1916,11 @@
             "title": "Source Context",
             "type": "object"
           },
+          "taste_summary": {
+            "additionalProperties": true,
+            "title": "Taste Summary",
+            "type": "object"
+          },
           "verification": {
             "enum": [
               "cooking_mode",
@@ -1922,6 +1944,8 @@
           "snapshot",
           "adjustments",
           "source_context",
+          "taste_summary",
+          "co_diner_ids",
           "created_at"
         ],
         "title": "CookingRecordOut",
@@ -4691,6 +4715,9 @@
             "title": "Operations",
             "type": "array"
           },
+          "personal_safety": {
+            "$ref": "#/components/schemas/RecipePersonalSafety"
+          },
           "recipe_id": {
             "anyOf": [
               {
@@ -4732,6 +4759,7 @@
           "revision",
           "snapshot",
           "safety",
+          "personal_safety",
           "reproducibility",
           "status"
         ],
@@ -7468,6 +7496,87 @@
           "target_mold"
         ],
         "title": "RecipeMoldConversionRequest",
+        "type": "object"
+      },
+      "RecipePersonalSafety": {
+        "description": "Private cross-check result for the authorized viewer only.",
+        "properties": {
+          "alerts": {
+            "items": {
+              "$ref": "#/components/schemas/RecipePersonalSafetyAlert"
+            },
+            "title": "Alerts",
+            "type": "array"
+          },
+          "incomplete": {
+            "default": false,
+            "title": "Incomplete",
+            "type": "boolean"
+          },
+          "status": {
+            "enum": [
+              "available",
+              "not_authorized"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "unknown_ingredients": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Unknown Ingredients",
+            "type": "array"
+          }
+        },
+        "required": [
+          "status"
+        ],
+        "title": "RecipePersonalSafety",
+        "type": "object"
+      },
+      "RecipePersonalSafetyAlert": {
+        "description": "A transient owner/family match; never stored with a recipe version.",
+        "properties": {
+          "ingredient": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Ingredient",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "allergy",
+              "avoidance"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "person": {
+            "maxLength": 40,
+            "minLength": 1,
+            "title": "Person",
+            "type": "string"
+          },
+          "replacement": {
+            "default": false,
+            "title": "Replacement",
+            "type": "boolean"
+          },
+          "target": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Target",
+            "type": "string"
+          }
+        },
+        "required": [
+          "person",
+          "kind",
+          "target",
+          "ingredient"
+        ],
+        "title": "RecipePersonalSafetyAlert",
         "type": "object"
       },
       "RecipeQuantificationOut": {
