@@ -199,9 +199,7 @@ def test_safe_substitute_updates_steps_even_without_ingredient_references(
     consent(api, headers)
     state = api.client.get(ALLERGIES, headers=headers).json()
     assert save(api, headers, state, ["花生"]).status_code == 200
-    body = recipe(
-        [ingredient("花生", "peanut", replacement=replacement)], "最后加入花生拌匀"
-    )
+    body = recipe([ingredient("花生", "peanut", replacement=replacement)], "最后加入花生拌匀")
     if not referenced:
         body["snapshot"]["steps"][0]["ingredient_ids"] = []
     detail = create(api, headers, body)
@@ -235,9 +233,7 @@ def test_ai_draft_allergen_free_attributes_cannot_prove_safe_replacement(
     consent(api, headers)
     state = api.client.get(ALLERGIES, headers=headers).json()
     assert save(api, headers, state, ["花生"]).status_code == 200
-    detail = create(
-        api, headers, recipe([ingredient("花生", "peanut", replacement="葱")])
-    )
+    detail = create(api, headers, recipe([ingredient("花生", "peanut", replacement="葱")]))
     result = project(api, headers, detail)
     assert result["ingredients"][0]["display_name"] == "花生"
     assert result["blocked"] is True
