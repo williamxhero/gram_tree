@@ -498,7 +498,13 @@ def main() -> None:
     engine = make_engine(Settings().database_url)
     try:
         with Session(engine) as library_session:
-            for scenario in (taste, substitution):
+            # The substitution scenario registers replacement ingredients that only
+            # exist after the synthetic library import, and its snapshots cannot be
+            # validated without them. Callers that skip the import (plain unit tests
+            # of the replay tooling) therefore get the taste scenario only, instead
+            # of a corpus that references ingredients their database does not have.
+            scenarios = (taste, substitution) if args.import_substitution_library else (taste,)
+            for scenario in scenarios:
                 generated = consequential_draft(scenario)
                 records.append(("intent", {"text": scenario["generation_text"]}, corpus["intent"]))
                 for item, match in zip(
