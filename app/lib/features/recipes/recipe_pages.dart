@@ -2484,12 +2484,14 @@ class _PersonalizedIngredientRow extends StatelessWidget {
     required this.item,
     required this.profileVersion,
     required this.componentId,
+    this.ingredient,
     this.dense = false,
   });
 
   final PersonalizedIngredientOut item;
   final int profileVersion;
   final String componentId;
+  final RecipeIngredient? ingredient;
   final bool dense;
 
   @override
@@ -2504,8 +2506,22 @@ class _PersonalizedIngredientRow extends StatelessWidget {
         ),
       ),
     ),
-    subtitle: Text(
-      '${item.changed ? '原值 ${item.originalQuantity} ${item.originalUnit} · ' : ''}${item.reason}',
+    subtitle: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          '${item.changed ? '原值 ${item.originalQuantity} ${item.originalUnit} · ' : ''}${item.reason}',
+        ),
+        if (ingredient case final ingredient?)
+          RecipeFlavorSummary(
+            key: ValueKey('recipe-flavor-detail-${ingredient.id}'),
+            id: ingredient.id,
+            contribution: ingredient.flavorContribution,
+            flavorSource: ingredient.flavorSource,
+            functional: ingredient.functional == true,
+            functionalSource: ingredient.functionalSource,
+          ),
+      ],
     ),
     leading: Icon(
       item.changed ? Icons.tune : Icons.restaurant,
@@ -3930,6 +3946,28 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
                       ),
               ),
           };
+    // A neutral taste profile still returns a projection. Ordinary serving and
+    // mold conversions must retain measure formatting and the author's evidence.
+    final personalizedDetails = <String, PersonalizedIngredientOut>{};
+    if (!_showOriginal) {
+      final personalizedById = _personalizedIngredients;
+      for (final ingredient in snapshot.ingredients ?? const []) {
+        final item = personalizedById[ingredient.id];
+        final convertedQuantity =
+            contractById[ingredient.id]?.convertedQuantity ??
+            (_scaleMode == _RecipeScaleMode.servings
+                ? convertedServingById[ingredient.id]?.displayQuantity
+                : convertedMoldById[ingredient.id]?.displayQuantity) ??
+            ingredient.quantity;
+        if (item != null &&
+            (item.rule == 'functional_protected' ||
+                item.displayQuantity != convertedQuantity ||
+                item.displayName != ingredient.displayName ||
+                item.displayUnit != ingredient.unit)) {
+          personalizedDetails[ingredient.id] = item;
+        }
+      }
+    }
     if (routeIsCurrent && (!offline || _offlineRecomputed)) {
       unawaited(
         _persistDisplayed(
@@ -4204,12 +4242,13 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
             const SizedBox(height: 8),
             Text(entry.key, style: Theme.of(context).textTheme.titleMedium),
             for (final ingredient in entry.value)
-              !_showOriginal && _personalizedIngredients[ingredient.id] != null
+              personalizedDetails[ingredient.id] != null
                   ? _PersonalizedIngredientRow(
                       key: ValueKey('personalized-detail-${ingredient.id}'),
-                      item: _personalizedIngredients[ingredient.id]!,
+                      item: personalizedDetails[ingredient.id]!,
                       profileVersion: _personalized!.profileVersion,
                       componentId: 'personalized-detail-${ingredient.id}',
+                      ingredient: ingredient,
                     )
                   : _IngredientDetailRow(
                       ingredient: ingredient,

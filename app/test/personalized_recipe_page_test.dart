@@ -254,6 +254,75 @@ Finder _key(String key) => find.byKey(ValueKey(key));
 Finder _start() => _key('start-cooking-button');
 
 void main() {
+  for (final neutral in [true, false]) {
+    testWidgets('个性化详情保留作者味型和用量来源，普通份数换算仍用量具显示 $neutral', (tester) async {
+      final salt = _snapshot().ingredients!.first.copyWith(
+        flavorContribution: RecipeFlavorContribution(salty: 3, umami: 2),
+        flavorSource: ValueSource(source_: ValueSourceSource_Enum.authorFilled),
+        quantitySource: ValueSource(
+          source_: ValueSourceSource_Enum.aiEstimated,
+          original: '一小撮',
+          basis: '合成量化依据',
+        ),
+      );
+      final snapshot = _snapshot().copyWith(
+        ingredients: [salt, _snapshot().ingredients!.last],
+      );
+      final server = _server(
+        response: (inputs, original) {
+          final result = _projection(inputs, original: neutral || original);
+          final servings = inputs.targetServings ?? 2;
+          return result.copyWith(
+            view: RecipePersonalizedOutViewEnum.personalized,
+            ingredients: [
+              for (final item in result.ingredients)
+                item.copyWith(
+                  displayQuantity: item.displayQuantity * servings / 2,
+                  changed: item.changed || servings != 2,
+                  rule: neutral
+                      ? (servings == 2 ? 'unchanged' : 'servings')
+                      : item.rule,
+                ),
+            ],
+          );
+        },
+      );
+      final detail = _detail();
+      server.on(
+        'GET',
+        '/v1/recipes/$_recipeId',
+        (_) => (
+          200,
+          detail
+              .copyWith(version: detail.version.copyWith(snapshot: snapshot))
+              .toJson(),
+        ),
+      );
+      await _open(tester, server);
+      final flavor = find.descendant(
+        of: _key('recipe-flavor-detail-salt'),
+        matching: find.textContaining('咸 3'),
+      );
+      await _reveal(tester, flavor);
+      expect(flavor, findsOneWidget);
+      await _tap(tester, _key('recipe-flavor-source-salt'));
+      expect(find.textContaining('作者按这道菜'), findsWidgets);
+      await tester.tapAt(const Offset(10, 10));
+      await _settle(tester);
+      if (neutral) {
+        await _tap(tester, _key('recipe-source-mark-salt'));
+        expect(find.text('原来：一小撮'), findsOneWidget);
+        expect(find.textContaining('合成量化依据'), findsWidgets);
+        await tester.tapAt(const Offset(10, 10));
+        await _settle(tester);
+        await _tap(tester, _key('recipe-serving-increase'));
+        await _reveal(tester, _key('recipe-ingredient-amount-salt'));
+        expect(find.text('15 克'), findsOneWidget);
+      }
+      expect(tester.takeException(), isNull);
+    });
+  }
+
   testWidgets('首个换算请求等待时修改档案，迟到旧响应不能恢复做菜权限', (tester) async {
     final oldResponse = Completer<RecipePersonalizedOut>();
     PersonalizationRequest? oldInputs;

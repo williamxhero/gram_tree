@@ -38,6 +38,20 @@ void main() {
     await tester.pumpAndSettle();
   }
 
+  Future<void> increaseServings(WidgetTester tester, int target) async {
+    // The personalization response can resize content above the serving card.
+    // Re-reveal the control before each tap and verify the visible selection.
+    await reveal(tester, find.byKey(const ValueKey('recipe-serving-increase')));
+    await tester.tap(find.byKey(const ValueKey('recipe-serving-increase')));
+    await waitFor(
+      tester,
+      find.descendant(
+        of: find.byKey(const ValueKey('recipe-serving-control')),
+        matching: find.text('$target'),
+      ),
+    );
+  }
+
   Future<void> runWithDiagnostics(
     WidgetTester tester,
     Future<void> Function() body,
@@ -158,15 +172,9 @@ void main() {
         tester,
         find.byKey(const ValueKey('recipe-history-button')),
       );
-      await reveal(
-        tester,
-        find.byKey(const ValueKey('recipe-serving-increase')),
-      );
-      await tester.tap(find.byKey(const ValueKey('recipe-serving-increase')));
-      await tester.pumpAndSettle();
+      await increaseServings(tester, 3);
       expect(find.text('AI 建议时间'), findsNothing);
-      await tester.tap(find.byKey(const ValueKey('recipe-serving-increase')));
-      await tester.pumpAndSettle();
+      await increaseServings(tester, 4);
       await reveal(tester, find.text('AI 建议时间'));
       expect(find.text('AI 建议 · 只读，不修改菜谱'), findsNothing);
       await tester.tap(find.text('AI 建议时间'));
@@ -201,14 +209,8 @@ void main() {
         tester,
         find.byKey(const ValueKey('edit-old-recipe-button')),
       );
-      await reveal(
-        tester,
-        find.byKey(const ValueKey('recipe-serving-increase')),
-      );
-      for (var i = 0; i < 2; i++) {
-        await tester.tap(find.byKey(const ValueKey('recipe-serving-increase')));
-        await tester.pumpAndSettle();
-      }
+      await increaseServings(tester, 3);
+      await increaseServings(tester, 4);
       await reveal(tester, find.text('AI 建议时间'));
       expect(find.text('AI 建议 · 只读，不修改菜谱'), findsNothing);
       await tester.tap(find.text('AI 建议时间'));
