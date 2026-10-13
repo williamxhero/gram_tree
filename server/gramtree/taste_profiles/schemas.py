@@ -100,7 +100,7 @@ class TasteProfileChangeOut(BaseModel):
     old_value: dict[str, Any]
     new_value: dict[str, Any]
     reason: str
-    source: str
+    source: Literal["manual", "learning"]
     origin: Literal["manual", "auto", "explicit_save"] = "manual"
     status: Literal["active", "reverted", "pending", "confirmed"]
     source_record_ids: list[str] = Field(default_factory=list)
