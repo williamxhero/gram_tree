@@ -1,22 +1,36 @@
 import 'dart:async';
+import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../app/theme.dart';
 import '../auth/session.dart';
+import '../l10n/app_localizations.dart';
+
+class CaptchaChallenge {
+  const CaptchaChallenge({
+    required this.id,
+    required this.prompt,
+    required this.image,
+  });
+  final String id;
+  final String prompt;
+  final Uint8List image;
+}
 
 abstract interface class CaptchaAdapter {
-  Future<String?> solve(String challengeId);
+  Future<String?> solve(CaptchaChallenge challenge);
 }
 
 class AccessNotice {
   const AccessNotice({
     this.retryAt,
-    this.challengeId,
+    this.challenge,
     this.paginationLimited = false,
   });
   final DateTime? retryAt;
-  final String? challengeId;
+  final CaptchaChallenge? challenge;
   final bool paginationLimited;
 }
 
@@ -46,7 +60,7 @@ class AccessProtection extends Notifier<AccessNotice>
   void paginationLimit(bool limited) {
     state = AccessNotice(
       retryAt: state.retryAt,
-      challengeId: state.challengeId,
+      challenge: state.challenge,
       paginationLimited: limited,
     );
   }
@@ -54,26 +68,34 @@ class AccessProtection extends Notifier<AccessNotice>
   void rateLimited(int seconds) {
     state = AccessNotice(
       retryAt: DateTime.now().add(Duration(seconds: seconds)),
-      challengeId: state.challengeId,
+      challenge: state.challenge,
+      paginationLimited: state.paginationLimited,
     );
   }
 
   @override
-  Future<String?> solve(String challengeId) {
+  Future<String?> solve(CaptchaChallenge challenge) {
     if (_answer != null) {
-      return state.challengeId == challengeId
+      return state.challenge?.id == challenge.id
           ? _answer!.future
           : Future.value(null);
     }
     _answer = Completer<String?>();
-    state = AccessNotice(retryAt: state.retryAt, challengeId: challengeId);
+    state = AccessNotice(
+      retryAt: state.retryAt,
+      challenge: challenge,
+      paginationLimited: state.paginationLimited,
+    );
     return _answer!.future;
   }
 
   void answer(String? value) {
     final pending = _answer;
     _answer = null;
-    state = AccessNotice(retryAt: state.retryAt);
+    state = AccessNotice(
+      retryAt: state.retryAt,
+      paginationLimited: state.paginationLimited,
+    );
     pending?.complete(value);
   }
 }
@@ -100,25 +122,45 @@ class AccessProtectionHost extends ConsumerStatefulWidget {
 }
 
 class _AccessProtectionHostState extends ConsumerState<AccessProtectionHost> {
+  DialogRoute<String>? _captchaRoute;
+
   @override
   void initState() {
     super.initState();
     ref.listenManual(accessProtectionProvider, (previous, next) {
-      if (next.challengeId == null ||
-          previous?.challengeId == next.challengeId) {
+      final challenge = next.challenge;
+      if (challenge == null) {
+        final route = _captchaRoute;
+        // An identity reset cancels the pending solve and closes only its own modal.
+        if (route != null && route.isActive) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted && route.isActive) route.navigator?.removeRoute(route);
+          });
+        }
         return;
       }
+      if (previous?.challenge?.id == challenge.id) return;
       WidgetsBinding.instance.addPostFrameCallback((_) async {
         final context = widget.navigatorKey.currentContext;
-        if (context == null || !mounted) {
+        if (!mounted) return;
+        if (ref.read(accessProtectionProvider).challenge?.id != challenge.id) {
+          return;
+        }
+        if (context == null) {
           ref.read(accessProtectionProvider.notifier).answer(null);
           return;
         }
-        final answer = await showDialog<String>(
+        final route = DialogRoute<String>(
           context: context,
-          builder: (_) => const _CaptchaDialog(),
+          builder: (_) => _CaptchaDialog(challenge: challenge),
         );
-        if (mounted) ref.read(accessProtectionProvider.notifier).answer(answer);
+        _captchaRoute = route;
+        final answer = await Navigator.of(context).push(route);
+        if (identical(_captchaRoute, route)) _captchaRoute = null;
+        if (mounted &&
+            ref.read(accessProtectionProvider).challenge?.id == challenge.id) {
+          ref.read(accessProtectionProvider.notifier).answer(answer);
+        }
       });
     });
   }
@@ -130,6 +172,9 @@ class _AccessProtectionHostState extends ConsumerState<AccessProtectionHost> {
         ((notice.retryAt?.difference(DateTime.now()).inMilliseconds ?? 0) /
                 1000)
             .ceil();
+    // The host lives above MaterialApp's Navigator, whose dialog context supplies
+    // the same localized resources as routed pages.
+    final l10n = AppLocalizations.of(context);
     return Column(
       children: [
         if (notice.paginationLimited)
@@ -140,18 +185,22 @@ class _AccessProtectionHostState extends ConsumerState<AccessProtectionHost> {
                 padding: const EdgeInsets.all(12),
                 child: Row(
                   children: [
-                    const Expanded(
+                    Expanded(
                       child: Text(
-                        '已到翻页上限，请换搜索条件',
-                        key: ValueKey('pagination-limit-notice'),
+                        l10n.paginationLimitNotice,
+                        key: const ValueKey('pagination-limit-notice'),
                       ),
                     ),
-                    IconButton(
-                      tooltip: '关闭提示',
-                      onPressed: () => ref
-                          .read(accessProtectionProvider.notifier)
-                          .paginationLimit(false),
-                      icon: const Icon(Icons.close),
+                    // This banner sits above Navigator's Overlay; a Tooltip
+                    // cannot be presented here. Keep an accessible button label.
+                    Semantics(
+                      label: l10n.dismissNotice,
+                      child: IconButton(
+                        onPressed: () => ref
+                            .read(accessProtectionProvider.notifier)
+                            .paginationLimit(false),
+                        icon: const Icon(Icons.close),
+                      ),
                     ),
                   ],
                 ),
@@ -174,8 +223,11 @@ class _AccessProtectionHostState extends ConsumerState<AccessProtectionHost> {
                       child: Padding(
                         padding: const EdgeInsets.all(12),
                         child: Text(
-                          '操作太频繁，请稍后再试 · $remaining 秒后可重试',
+                          l10n.accessRetryCountdown(remaining),
                           key: const ValueKey('access-retry-countdown'),
+                          style: GramTreeColors.of(context).numberStyle(
+                            Theme.of(context).textTheme.bodyMedium!,
+                          ),
                         ),
                       ),
                     ),
@@ -188,7 +240,8 @@ class _AccessProtectionHostState extends ConsumerState<AccessProtectionHost> {
 }
 
 class _CaptchaDialog extends StatefulWidget {
-  const _CaptchaDialog();
+  const _CaptchaDialog({required this.challenge});
+  final CaptchaChallenge challenge;
   @override
   State<_CaptchaDialog> createState() => _CaptchaDialogState();
 }
@@ -202,27 +255,39 @@ class _CaptchaDialogState extends State<_CaptchaDialog> {
   }
 
   @override
-  Widget build(BuildContext context) => AlertDialog(
-    title: const Text('安全验证'),
-    content: Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        const Text('请完成验证码后继续。验证码服务由平台配置。'),
-        TextField(
-          controller: _response,
-          decoration: const InputDecoration(labelText: '验证结果'),
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    return AlertDialog(
+      title: Text(l10n.captchaTitle),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(widget.challenge.prompt),
+          const SizedBox(height: 12),
+          Image.memory(
+            widget.challenge.image,
+            key: const ValueKey('captcha-image'),
+            excludeFromSemantics: true,
+            width: 240,
+            height: 96,
+          ),
+          TextField(
+            key: const ValueKey('captcha-response'),
+            controller: _response,
+            decoration: InputDecoration(labelText: l10n.captchaResponse),
+          ),
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: Text(l10n.cancel),
+        ),
+        FilledButton(
+          onPressed: () => Navigator.pop(context, _response.text.trim()),
+          child: Text(l10n.captchaContinue),
         ),
       ],
-    ),
-    actions: [
-      TextButton(
-        onPressed: () => Navigator.pop(context),
-        child: const Text('取消'),
-      ),
-      FilledButton(
-        onPressed: () => Navigator.pop(context, _response.text.trim()),
-        child: const Text('验证并继续'),
-      ),
-    ],
-  );
+    );
+  }
 }

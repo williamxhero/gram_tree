@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
@@ -449,7 +450,11 @@ class FakeServer extends Interceptor {
       headers: Headers.fromMap(
         responseHeaders['${options.method} ${options.uri.path}'] ?? {},
       ),
-      data: data == null ? null : jsonDecode(jsonEncode(data)),
+      data: data == null
+          ? null
+          : options.responseType == ResponseType.bytes && data is List<int>
+          ? Uint8List.fromList(data)
+          : jsonDecode(jsonEncode(data)),
     );
     if (status >= 200 && status < 300) {
       handler.resolve(response, true);

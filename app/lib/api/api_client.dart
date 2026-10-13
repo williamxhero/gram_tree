@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -148,29 +149,31 @@ final dioProvider = Provider<Dio>((ref) {
   // 续期拦截是排队执行的，在它里面再走同一条拦截链，重试失败时会互相等待、永远卡住
   final plainDio = _baseDio(ref);
   final signer = RequestSigner(ref.watch(sessionStoreProvider));
-  // Retries bypass the queued auth interceptor, but never request protection.
+  final auth = AuthInterceptor(
+    retryDio: plainDio,
+    session: ref.watch(sessionStoreProvider),
+    refresh: (token) async {
+      final api = GramtreeApi(dio: plainDio, interceptors: const []);
+      final resp = await api.getAuthApi().refreshTokens(
+        refreshRequest: RefreshRequest(refreshToken: token),
+      );
+      return resp.data!;
+    },
+    canRefresh: () =>
+        !ref.read(offlineSimulationProvider) &&
+        ref.read(apiReachabilityProvider) != ApiReachability.unavailable,
+    onSessionExpired: () =>
+        ref.read(sessionStoreProvider).expire(reason: 'refresh_failed'),
+  );
+  // A clock/captcha replay may encounter token expiry. Apply the same fenced,
+  // once-only recovery without entering the queued interceptor recursively.
+  // The auth_retried flag prevents a refresh-retry from refreshing again.
+  plainDio.interceptors.add(InterceptorsWrapper(onError: auth.onError));
   plainDio.interceptors.add(
     RequestProtectionInterceptor(plainDio, signer, ref),
   );
   _addFakeServer(ref, plainDio);
-  dio.interceptors.add(
-    AuthInterceptor(
-      retryDio: plainDio,
-      session: ref.watch(sessionStoreProvider),
-      refresh: (token) async {
-        final api = GramtreeApi(dio: plainDio, interceptors: const []);
-        final resp = await api.getAuthApi().refreshTokens(
-          refreshRequest: RefreshRequest(refreshToken: token),
-        );
-        return resp.data!;
-      },
-      canRefresh: () =>
-          !ref.read(offlineSimulationProvider) &&
-          ref.read(apiReachabilityProvider) != ApiReachability.unavailable,
-      onSessionExpired: () =>
-          ref.read(sessionStoreProvider).expire(reason: 'refresh_failed'),
-    ),
-  );
+  dio.interceptors.add(auth);
   dio.interceptors.add(RequestProtectionInterceptor(plainDio, signer, ref));
   _addFakeServer(ref, dio);
   return dio;
@@ -184,6 +187,34 @@ class RequestProtectionInterceptor extends Interceptor {
   final Ref _ref;
   static const _clockRetried = 'signing_clock_retried';
   static const _captchaRetried = 'captcha_retried';
+
+  bool _rebindRetryBearer(RequestOptions options) {
+    final revocation = options.extra['auth_revocation_session'];
+    if (options.extra['auth_revocation'] == true &&
+        options.method == 'POST' &&
+        options.uri.path == '/v1/auth/logout' &&
+        revocation is AuthSession &&
+        options.headers['Authorization'] ==
+            'Bearer ${revocation.accessToken}') {
+      // Revocation is explicitly authorized for this captured, already-logged-out
+      // session; never replace its bearer with the next account's credential.
+      return true;
+    }
+    final session = _ref.read(sessionStoreProvider);
+    if (options.extra['auth_identity_epoch'] != session.identityEpoch ||
+        options.extra['auth_owner_id'] != session.current?.user.id) {
+      return false;
+    }
+    // Security subrequests can rotate credentials while the original operation
+    // waits for a challenge. Rebind only its already-captured login generation.
+    if (options.headers['Authorization'] != null &&
+        session.current != null &&
+        options.extra['auth_revocation'] != true) {
+      options.headers['Authorization'] =
+          'Bearer ${session.current!.accessToken}';
+    }
+    return true;
+  }
 
   @override
   Future<void> onRequest(
@@ -234,16 +265,47 @@ class RequestProtectionInterceptor extends Interceptor {
     if (body is Map &&
         body['code'] == 'risk_captcha_required' &&
         options.extra[_captchaRetried] != true &&
-        options.uri.path != '/v1/risk/captcha') {
+        !options.uri.path.startsWith('/v1/risk/captcha')) {
       final challengeId = headers?.value('x-risk-challenge');
-      if (challengeId != null) {
-        final answer = await _ref
-            .read(captchaAdapterProvider)
-            .solve(challengeId);
-        if (answer != null && answer.isNotEmpty) {
-          options.extra[_captchaRetried] = true;
-          try {
-            // Preserve the original account fence through both verification and replay.
+      if (challengeId != null && _rebindRetryBearer(options)) {
+        options.extra[_captchaRetried] = true;
+        try {
+          final response = await _retryDio.get<Map<String, dynamic>>(
+            '/v1/risk/captcha/${Uri.encodeComponent(challengeId)}',
+            options: Options(
+              headers: {'Authorization': options.headers['Authorization']},
+              extra: {...options.extra},
+            ),
+          );
+          final challenge = response.data;
+          final imageUri = challenge?['image_data_uri'];
+          if (challenge?['challenge_id'] != challengeId ||
+              challenge?['prompt'] is! String ||
+              imageUri is! String ||
+              !imageUri.startsWith('data:image/png;base64,') ||
+              imageUri.length > 1024 * 1024) {
+            handler.next(err);
+            return;
+          }
+          if (!_rebindRetryBearer(options)) {
+            handler.next(err);
+            return;
+          }
+          final answer = await _ref
+              .read(captchaAdapterProvider)
+              .solve(
+                CaptchaChallenge(
+                  id: challengeId,
+                  prompt: challenge!['prompt'] as String,
+                  image: base64Decode(
+                    imageUri.substring('data:image/png;base64,'.length),
+                  ),
+                ),
+              );
+          if (answer != null &&
+              answer.isNotEmpty &&
+              _rebindRetryBearer(options)) {
+            // Preserve the original account fence through challenge, verification and replay.
             await _retryDio.post<void>(
               '/v1/risk/captcha',
               data: {'challenge_id': challengeId, 'response': answer},
@@ -252,18 +314,26 @@ class RequestProtectionInterceptor extends Interceptor {
                 extra: {...options.extra, _captchaRetried: true},
               ),
             );
+            if (!_rebindRetryBearer(options)) {
+              handler.next(err);
+              return;
+            }
             handler.resolve(await _retryDio.fetch<dynamic>(options));
             return;
-          } on DioException catch (retryError) {
-            handler.next(retryError);
-            return;
           }
+        } on DioException catch (retryError) {
+          handler.next(retryError);
+          return;
+        } on FormatException {
+          handler.next(err);
+          return;
         }
       }
     }
     if (body is! Map ||
         body['code'] != 'signature_clock_skew' ||
         options.extra[_clockRetried] == true ||
+        !_rebindRetryBearer(options) ||
         !_signer.correctServerTime(body['server_time'])) {
       handler.next(err);
       return;
@@ -329,8 +399,11 @@ class AuthInterceptor extends QueuedInterceptor {
   bool _sensitiveOriginMatches(RequestOptions options) {
     final owner = options.extra['sensitive_account_id'];
     if (owner == null) return true;
+    final epoch = options.extra['sensitive_identity_epoch'];
     return session.current?.user.id == owner &&
-        identical(options.extra['sensitive_session'], session.current);
+        (epoch != null
+            ? epoch == session.identityEpoch
+            : identical(options.extra['sensitive_session'], session.current));
   }
 
   bool _matchesIdentity(RequestOptions options) {
@@ -373,7 +446,20 @@ class AuthInterceptor extends QueuedInterceptor {
         if (!session.matches(identity) || !identical(session.current, legacy)) {
           throw StateError('account_changed');
         }
+        if (tokens.user.id != legacy.user.id) {
+          throw StateError('account_changed');
+        }
         await session.saveRefreshed(tokens, identity: identity);
+        if (!session.matches(identity)) throw StateError('account_changed');
+        // Only this verified same-login rotation may update a sensitive capture.
+        if (identical(options.extra['sensitive_session'], legacy)) {
+          options.extra['sensitive_session'] = session.current;
+        }
+        if (options.headers['Authorization'] ==
+            'Bearer ${legacy.accessToken}') {
+          options.headers['Authorization'] =
+              'Bearer ${session.current!.accessToken}';
+        }
       } catch (error) {
         handler.reject(
           DioException(
@@ -384,11 +470,6 @@ class AuthInterceptor extends QueuedInterceptor {
         );
         return;
       }
-    }
-    if (_isPublicShareRequest(options)) {
-      options.headers.remove('Authorization');
-      handler.next(options);
-      return;
     }
     // Confirmed local logout fences the session before HTTP dispatch. Allow
     // only this captured-token revocation, never inject a new account's token.
@@ -414,7 +495,10 @@ class AuthInterceptor extends QueuedInterceptor {
     options.extra['auth_owner_id'] = session.current?.user.id;
     options.extra['auth_identity_epoch'] = session.identityEpoch;
     final token = session.current?.accessToken;
-    if (token != null && !options.headers.containsKey('Authorization')) {
+    if (token != null &&
+        (!options.headers.containsKey('Authorization') ||
+            options.extra['sensitive_identity_epoch'] ==
+                session.identityEpoch)) {
       options.headers['Authorization'] = 'Bearer $token';
     }
     if (token != null) {
@@ -471,6 +555,11 @@ class AuthInterceptor extends QueuedInterceptor {
         );
         expected = session.current!;
         await saving;
+        if (identical(err.requestOptions.extra['sensitive_session'], current) &&
+            _matchesIdentity(err.requestOptions) &&
+            identical(session.current, expected)) {
+          err.requestOptions.extra['sensitive_session'] = expected;
+        }
       }
     } catch (error) {
       // A transport outage is not a revoked login. Return the transport error

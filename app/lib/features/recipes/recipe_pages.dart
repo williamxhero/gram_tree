@@ -2,6 +2,8 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:developer' as developer;
 
+import 'package:flutter/foundation.dart' show kIsWeb;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -22,8 +24,6 @@ import '../../recipes/recipe_draft.dart';
 import '../../recipes/offline_recipe_repository.dart';
 import '../../events/event_uploader.dart';
 import '../../recipes/recipe_repository.dart';
-import '../../recipes/recipe_sharing.dart';
-import '../../platform/system_share.dart';
 import '../../recipes/recipe_snapshot.dart';
 import '../../recipes/recipe_snapshot_provider.dart';
 import '../../recipes/recipe_snapshot_render.dart';
@@ -108,6 +108,7 @@ class _RecipeListPageState extends ConsumerState<RecipeListPage> {
   bool get _cursorInvalid => const {
     'cursor_expired',
     'cursor_invalid',
+    'invalid_cursor',
     'cursor_query_mismatch',
     'page_limit_reached',
     'pagination_limit_reached',
@@ -210,8 +211,8 @@ class _RecipeListPageState extends ConsumerState<RecipeListPage> {
                       _cursorInvalid
                           ? ApiFailure.from(_loadMoreError!).code ==
                                     'pagination_limit_reached'
-                                ? '已到翻页上限，请换搜索条件'
-                                : '列表已过期，请刷新'
+                                ? l10n.paginationLimitNotice
+                                : l10n.recipeCursorExpired
                           : _loadMoreError == null
                           ? l10n.recipeLoadMore
                           : l10n.recipeLoadMoreRetry,
@@ -2923,11 +2924,27 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
     if (_sharing) return;
     setState(() => _sharing = true);
     try {
-      final link = await ref
-          .read(recipeSharingProvider)
-          .create(widget.recipeId);
-      if (!mounted) return;
-      await ref.read(systemShareProvider).shareText(link.url);
+      final image = _detail?.version.images?.firstOrNull;
+      final shared = await ref
+          .read(intentDispatcherProvider)
+          .dispatch(
+            context,
+            compositionId: CompositionIdScope.of(context),
+            componentId: 'recipe-share-button',
+            action: ActionDescriptor(
+              intent: 'share_recipe',
+              params: {
+                'recipe_id': widget.recipeId,
+                if (image != null) 'image_id': image.id,
+                if (image != null) 'image_content_type': image.contentType,
+              },
+            ),
+          );
+      if (shared == true && mounted && kIsWeb) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(AppLocalizations.of(context).shareCopied)),
+        );
+      }
     } catch (error) {
       if (!mounted) return;
       final failure = ApiFailure.from(error);
@@ -3267,10 +3284,12 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
             onPressed: () =>
                 context.push('/recipes/${widget.recipeId}/history'),
           ),
-          if (widget.versionId == null && detail.visibility.value == 'public')
+          if (widget.versionId == null &&
+              detail.visibility.value == 'public' &&
+              ref.watch(featureEnabledProvider(Feature.publicRecipes)))
             IconButton(
               key: const ValueKey('recipe-share-button'),
-              tooltip: '分享菜谱',
+              tooltip: l10n.shareRecipeAction,
               icon: _sharing
                   ? const SizedBox(
                       width: 20,

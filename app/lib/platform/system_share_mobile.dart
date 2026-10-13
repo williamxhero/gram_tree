@@ -10,6 +10,13 @@ class _MobileSystemShare implements SystemShare {
   static const _channel = MethodChannel('app.gramtree/share');
 
   @override
-  Future<void> shareText(String text) =>
-      _channel.invokeMethod<void>('shareText', text);
+  Future<void> shareText(
+    String text, {
+    Uint8List? imageBytes,
+    String? imageContentType,
+  }) => _channel.invokeMethod<void>('shareRecipe', {
+    'text': text,
+    'imageBytes': ?imageBytes,
+    if (imageBytes != null) 'imageContentType': imageContentType,
+  });
 }

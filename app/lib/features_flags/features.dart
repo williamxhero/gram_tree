@@ -15,7 +15,8 @@ import '../storage/local_store.dart';
 enum Feature {
   evolutionTree('evolution_tree'),
   cookingQa('cooking_qa'),
-  receiptScan('receipt_scan');
+  receiptScan('receipt_scan'),
+  publicRecipes('public_recipes');
 
   const Feature(this.key);
 

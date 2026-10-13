@@ -25,6 +25,114 @@ Future<void> pumpUntilVisible(WidgetTester tester, Finder finder) async {
 }
 
 void main() {
+  testWidgets(
+    'clock replay can refresh expired tokens without a second clock or auth retry',
+    (tester) async {
+      final env = SharingTestEnv();
+      var calls = 0;
+      env.server.on('GET', '/v1/recipes/$sharedRecipeId', (_) {
+        calls++;
+        if (calls == 1) {
+          return (
+            401,
+            {
+              'error': {
+                'code': 'signature_clock_skew',
+                'server_time': '2028-01-02T03:04:05Z',
+              },
+            },
+          );
+        }
+        if (calls == 2) {
+          return FakeServer.error(401, 'token_expired', 'expired');
+        }
+        return (200, sharedDetail().toJson());
+      });
+      await openProtectedRecipe(tester, env);
+      await tester.pumpAndSettle();
+      expect(find.byKey(const ValueKey('recipe-share-button')), findsOneWidget);
+      expect(calls, 3);
+      expect(env.server.calls('POST', '/v1/auth/refresh'), hasLength(1));
+    },
+  );
+
+  testWidgets(
+    'captcha challenge read can rotate tokens before verification and replay',
+    (tester) async {
+      final env = SharingTestEnv();
+      var recipeCalls = 0;
+      var challengeCalls = 0;
+      env.server.responseHeaders['GET /v1/recipes/$sharedRecipeId'] = {
+        'x-risk-challenge': ['challenge-123'],
+      };
+      env.server.on(
+        'GET',
+        '/v1/recipes/$sharedRecipeId',
+        (_) => ++recipeCalls == 1
+            ? FakeServer.error(403, 'risk_captcha_required', '需要安全验证')
+            : (200, sharedDetail().toJson()),
+      );
+      env.server.on(
+        'GET',
+        '/v1/risk/captcha/challenge-123',
+        (_) => ++challengeCalls == 1
+            ? FakeServer.error(401, 'token_expired', 'expired')
+            : (
+                200,
+                {
+                  'challenge_id': 'challenge-123',
+                  'prompt': '输入图中的字符',
+                  'image_data_uri': 'data:image/png;base64,$testPngBase64',
+                },
+              ),
+      );
+      env.server.on(
+        'POST',
+        '/v1/risk/captcha',
+        (_) => (200, {'accepted': true, 'access_restored': true}),
+      );
+      await openProtectedRecipe(tester, env);
+      await pumpUntilVisible(tester, find.text('安全验证'));
+      await tester.enterText(
+        find.byKey(const ValueKey('captcha-response')),
+        'verified',
+      );
+      await tester.tap(find.text('验证并继续'));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const ValueKey('recipe-share-button')), findsOneWidget);
+      expect(recipeCalls, 2);
+      expect(challengeCalls, 2);
+      expect(env.server.calls('POST', '/v1/auth/refresh'), hasLength(1));
+      expect(env.server.calls('POST', '/v1/risk/captcha'), hasLength(1));
+    },
+  );
+
+  testWidgets(
+    'cancelled captcha shows original failure and sends no verification or replay',
+    (tester) async {
+      final env = SharingTestEnv();
+      env.server.responseHeaders['GET /v1/recipes/$sharedRecipeId'] = {
+        'x-risk-challenge': ['challenge-123'],
+      };
+      env.server.on(
+        'GET',
+        '/v1/recipes/$sharedRecipeId',
+        (_) => FakeServer.error(403, 'risk_captcha_required', '需要安全验证'),
+      );
+      await openProtectedRecipe(tester, env);
+      await pumpUntilVisible(tester, find.text('安全验证'));
+      await tester.tap(find.text('取消'));
+      await tester.pumpAndSettle();
+      expect(find.text('安全验证'), findsNothing);
+      expect(env.server.calls('POST', '/v1/risk/captcha'), isEmpty);
+      expect(
+        env.server.calls('GET', '/v1/recipes/$sharedRecipeId'),
+        hasLength(1),
+      );
+      expect(find.byKey(const ValueKey('recipe-share-button')), findsNothing);
+    },
+  );
+
   for (final repeated in [false, true]) {
     testWidgets('clock correction retries once, repeated=$repeated', (
       tester,
@@ -127,7 +235,12 @@ void main() {
         });
         await openProtectedRecipe(tester, env);
         await pumpUntilVisible(tester, find.text('安全验证'));
-        await tester.enterText(find.byType(TextField).last, 'verified');
+        expect(find.text('输入图中的字符'), findsOneWidget);
+        expect(find.byKey(const ValueKey('captcha-image')), findsOneWidget);
+        await tester.enterText(
+          find.byKey(const ValueKey('captcha-response')),
+          'verified',
+        );
         await tester.tap(find.text('验证并继续'));
         await tester.pumpAndSettle();
         expect(count, 2);

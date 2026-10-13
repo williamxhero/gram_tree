@@ -47,10 +47,13 @@ class RequestSigner {
             (epoch != null && epoch != _session.identityEpoch) ||
             (sensitiveOwner != null &&
                 (sensitiveOwner != captured?.user.id ||
-                    !identical(
-                      options.extra['sensitive_session'],
-                      captured,
-                    ))) ||
+                    (options.extra['sensitive_identity_epoch'] != null
+                        ? options.extra['sensitive_identity_epoch'] !=
+                              _session.identityEpoch
+                        : !identical(
+                            options.extra['sensitive_session'],
+                            captured,
+                          )))) ||
             (options.extra['sync_owner_id'] != null &&
                 (identity == null || !_session.canUpload(identity))))) {
       throw StateError('account_changed');

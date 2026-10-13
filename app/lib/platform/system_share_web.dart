@@ -8,7 +8,11 @@ class _WebSystemShare implements SystemShare {
   const _WebSystemShare();
 
   @override
-  Future<void> shareText(String text) async {
+  Future<void> shareText(
+    String text, {
+    Uint8List? imageBytes,
+    String? imageContentType,
+  }) async {
     try {
       await Clipboard.setData(ClipboardData(text: text));
     } on PlatformException {

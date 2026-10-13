@@ -5,6 +5,11 @@ import android.view.WindowManager
 import android.app.AlarmManager
 import android.app.PendingIntent
 import android.content.Intent
+import android.content.ClipData
+import android.os.Handler
+import android.os.Looper
+import androidx.core.content.FileProvider
+import java.io.File
 import android.content.pm.ApplicationInfo
 import android.net.Uri
 import android.os.Build
@@ -14,6 +19,15 @@ import io.flutter.plugin.common.MethodChannel
 class MainActivity : FlutterActivity() {
     private var receivedLink: String? = null
     private var shareChooserStarted = false
+    private var sharedImage = false
+    private val shareCacheLifetime = 24 * 60 * 60 * 1000L
+
+    private fun cleanShareCache() {
+        val directory = File(cacheDir, "recipe_shares")
+        directory.listFiles()?.filter {
+            System.currentTimeMillis() - it.lastModified() >= shareCacheLifetime
+        }?.forEach { it.delete() }
+    }
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
@@ -22,20 +36,50 @@ class MainActivity : FlutterActivity() {
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
+        cleanShareCache()
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "app.gramtree/share")
             .setMethodCallHandler { call, result ->
-                if (call.method != "shareText" || call.arguments !is String) {
+                val args = call.arguments as? Map<*, *>
+                val text = args?.get("text") as? String
+                if (call.method != "shareRecipe" || text == null) {
                     result.notImplemented()
                     return@setMethodCallHandler
                 }
-                val intent = Intent(Intent.ACTION_SEND)
-                    .setType("text/plain")
-                    .putExtra(Intent.EXTRA_TEXT, call.arguments as String)
+                var temporaryImage: File? = null
                 try {
+                    cleanShareCache()
+                    val intent = Intent(Intent.ACTION_SEND)
+                        .setType("text/plain")
+                        .putExtra(Intent.EXTRA_TEXT, text)
+                    val bytes = args?.get("imageBytes") as? ByteArray
+                    if (bytes != null) {
+                        val mime = args?.get("imageContentType") as? String
+                        val extension = when (mime) {
+                            "image/jpeg" -> "jpg"
+                            "image/png" -> "png"
+                            "image/webp" -> "webp"
+                            else -> throw IllegalArgumentException("Unsupported image")
+                        }
+                        require(bytes.isNotEmpty() && bytes.size <= 8 * 1024 * 1024)
+                        val directory = File(cacheDir, "recipe_shares").apply { mkdirs() }
+                        val file = File.createTempFile("recipe_", ".$extension", directory)
+                        temporaryImage = file
+                        file.writeBytes(bytes)
+                        val uri = FileProvider.getUriForFile(this, "$packageName.recipe_shares", file)
+                        intent.setType(mime).putExtra(Intent.EXTRA_STREAM, uri)
+                        intent.clipData = ClipData.newUri(contentResolver, "Recipe image", uri)
+                        intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                    }
                     startActivity(Intent.createChooser(intent, null))
                     shareChooserStarted = true
+                    sharedImage = bytes != null
+                    // Do not delete while the selected target may still read the grant.
+                    temporaryImage?.let { file ->
+                        Handler(Looper.getMainLooper()).postDelayed({ file.delete() }, shareCacheLifetime)
+                    }
                     result.success(null)
                 } catch (error: Exception) {
+                    temporaryImage?.delete()
                     result.error("share_unavailable", "System sharing is unavailable", null)
                 }
             }
@@ -68,6 +112,7 @@ class MainActivity : FlutterActivity() {
                         "evidence" -> result.success(mapOf(
                             "receivedLink" to receivedLink,
                             "shareChooserStarted" to shareChooserStarted,
+                            "sharedImage" to sharedImage,
                         ))
                         else -> result.notImplemented()
                     }

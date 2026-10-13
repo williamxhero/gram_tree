@@ -18,12 +18,25 @@ import UserNotifications
       binaryMessenger: engineBridge.binaryMessenger
     )
     shareChannel.setMethodCallHandler { call, result in
-      guard call.method == "shareText", let text = call.arguments as? String else {
+      guard call.method == "shareRecipe",
+            let args = call.arguments as? [String: Any],
+            let text = args["text"] as? String else {
         result(FlutterMethodNotImplemented)
         return
       }
+      var items: [Any] = [text]
+      if let bytes = args["imageBytes"] as? FlutterStandardTypedData {
+        guard bytes.data.count <= 8 * 1024 * 1024,
+              let image = UIImage(data: bytes.data) else {
+          result(FlutterError(code: "share_unavailable", message: "Invalid image", details: nil))
+          return
+        }
+        // UIImage supplies the image through the system activity panel without
+        // persisting a remotely supplied URI or a temporary file on iOS.
+        items.append(image)
+      }
       DispatchQueue.main.async {
-        let controller = UIActivityViewController(activityItems: [text], applicationActivities: nil)
+        let controller = UIActivityViewController(activityItems: items, applicationActivities: nil)
         if let presenter = UIApplication.shared.connectedScenes
           .compactMap({ $0 as? UIWindowScene })
           .flatMap({ $0.windows })

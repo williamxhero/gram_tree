@@ -40,6 +40,7 @@ Map<String, dynamic> sensitiveAccountExtra(SessionStore store) {
   // not replace the originating account with whichever account is current.
   return {
     'sensitive_account_id': session.user.id,
+    'sensitive_identity_epoch': store.identityEpoch,
     'sensitive_session': session,
   };
 }
