@@ -3708,8 +3708,86 @@ abstract class AppLocalizations {
   /// No description provided for @tasteHistoryReadonly.
   ///
   /// In zh, this message translates to:
-  /// **'只读查看原因和历史，暂不提供撤销或锁定。'**
+  /// **'每条变更都有原因和来源，可以确认、撤销或锁定对应口味。'**
   String get tasteHistoryReadonly;
+
+  /// No description provided for @tasteSource.
+  ///
+  /// In zh, this message translates to:
+  /// **'来源'**
+  String get tasteSource;
+
+  /// No description provided for @tasteSourceManual.
+  ///
+  /// In zh, this message translates to:
+  /// **'你手动修改'**
+  String get tasteSourceManual;
+
+  /// No description provided for @tasteSourceAuto.
+  ///
+  /// In zh, this message translates to:
+  /// **'系统按你的做菜记录学习'**
+  String get tasteSourceAuto;
+
+  /// No description provided for @tasteSourceExplicitSave.
+  ///
+  /// In zh, this message translates to:
+  /// **'你在做菜时选择存进口味'**
+  String get tasteSourceExplicitSave;
+
+  /// No description provided for @tasteSourceRecords.
+  ///
+  /// In zh, this message translates to:
+  /// **'来源记录'**
+  String get tasteSourceRecords;
+
+  /// No description provided for @tasteSourceRecordHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'查看这条变更来自哪次做菜'**
+  String get tasteSourceRecordHint;
+
+  /// No description provided for @tasteConfirm.
+  ///
+  /// In zh, this message translates to:
+  /// **'确认'**
+  String get tasteConfirm;
+
+  /// No description provided for @tasteRevert.
+  ///
+  /// In zh, this message translates to:
+  /// **'撤销'**
+  String get tasteRevert;
+
+  /// No description provided for @tasteLock.
+  ///
+  /// In zh, this message translates to:
+  /// **'锁定'**
+  String get tasteLock;
+
+  /// No description provided for @tasteUnlock.
+  ///
+  /// In zh, this message translates to:
+  /// **'解锁'**
+  String get tasteUnlock;
+
+  /// No description provided for @tasteLockedHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'已锁定：自动学习不再改动这项，你仍可手动修改。'**
+  String get tasteLockedHint;
+
+  /// No description provided for @tastePending.
+  ///
+  /// In zh, this message translates to:
+  /// **'待确认'**
+  String get tastePending;
+
+  /// No description provided for @tasteConfirmed.
+  ///
+  /// In zh, this message translates to:
+  /// **'已确认'**
+  String get tasteConfirmed;
 
   /// No description provided for @tasteLocal.
   ///

@@ -61,6 +61,7 @@ TasteProfileChangeOut privateFamilyHistory(FamilyMemberOut member) =>
       oldValue: const {},
       newValue: {...member.toJson()}..remove('id'),
       reason: '你手动修改',
+      origin: TasteProfileChangeOutOriginEnum.manual,
       source_: TasteProfileChangeOutSource_Enum.manual,
       status: TasteProfileChangeOutStatusEnum.active,
       createdAt: '2026-10-08T10:00:00Z',

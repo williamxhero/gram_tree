@@ -12,6 +12,9 @@ def test_client_config_defaults(client: TestClient) -> None:
         "evolution_tree": False,
         "cooking_qa": False,
         "receipt_scan": False,
+        # SPEC-005.3：口味自动学习与「存进我的口味」随本子 SPEC 一起下发。
+        "taste_auto_learning": True,
+        "save_to_taste": True,
     }
     # 运维类配置不下发给 App
     assert not any(key.startswith("ops.") for key in body["params"])

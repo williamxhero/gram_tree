@@ -35,6 +35,42 @@ def purge_ai_logs() -> dict[str, object]:
         return indexing.purge(session)
 
 
+@celery_app.task(name="gramtree.tasks.jobs.run_taste_learning")
+def run_taste_learning(owner_id: str | None = None) -> dict[str, int]:
+    """Apply durable cooking evidence outside the request transaction."""
+    import uuid
+
+    from sqlalchemy import select
+
+    from gramtree.records.models import CookingRecord
+    from gramtree.taste_profiles import learning, service
+    from gramtree.taste_profiles.models import TasteProfile
+
+    applied = 0
+    signals = 0
+    with _session_factory()() as session:
+        owners = (
+            [uuid.UUID(owner_id)]
+            if owner_id
+            else list(session.scalars(select(TasteProfile.owner_id)))
+        )
+        for current_owner in owners:
+            if not learning.automation_enabled(session):
+                continue
+            profile = service.locked_profile(session, current_owner, service.scale_for(session))
+            records = session.scalars(
+                select(CookingRecord)
+                .where(CookingRecord.owner_id == current_owner)
+                .order_by(CookingRecord.created_at, CookingRecord.id)
+            )
+            for record in records:
+                signals += learning.collect_signals(session, profile, record)
+            outcome = learning.apply_learning(session, profile)
+            applied += len(outcome.applied)
+        session.commit()
+    return {"signals": signals, "changes": applied}
+
+
 @celery_app.task(name="gramtree.tasks.jobs.record_heartbeat")
 def record_heartbeat(source: str) -> str:
     with _session_factory()() as session:
