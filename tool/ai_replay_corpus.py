@@ -9,6 +9,7 @@ import hashlib
 import json
 from copy import deepcopy
 from pathlib import Path
+from typing import Any
 
 ROOT = Path(__file__).resolve().parent.parent
 TEXT = "想做一道小朋友能吃的、不辣的宫保鸡丁"
@@ -19,7 +20,7 @@ def main() -> None:
     parser.add_argument("--out", type=Path, required=True)
     args = parser.parse_args()
     corpus = json.loads((ROOT / "server/tests/fixtures/ai/recipe_corpus.json").read_text("utf-8"))
-    records = [("intent", {"text": TEXT}, corpus["intent"])]
+    records: list[tuple[str, dict[str, Any], Any]] = [("intent", {"text": TEXT}, corpus["intent"])]
     # A fresh account has no profile until the first profile-dependent request,
     # while a later journey may have materialized the default profile. Both are
     # the same synthetic user context and must resolve to the same draft.
@@ -368,6 +369,24 @@ def main() -> None:
                     {"operations": operations},
                 )
             )
+    # Modification requests omit context when all authorized values are None.
+    # Saved-editor journeys have materialized the synthetic default profile;
+    # register its minimized payload too, without changing any legacy key or
+    # including sensitive data, owner IDs, or dependency receipts.
+    for capability, payload, output in list(records):
+        if capability not in ("modify_intent", "modify"):
+            continue
+        for profile in profiles:
+            authorized_payload = {
+                "profile": profile,
+                "family": None,
+                "cookware_profile": None,
+            }
+            model_context = {
+                key: value for key, value in authorized_payload.items() if value is not None
+            }
+            if model_context:
+                records.append((capability, {**payload, "context": model_context}, output))
     args.out.mkdir(parents=True, exist_ok=True)
     for capability, payload, output in records:
         canonical = json.dumps(
