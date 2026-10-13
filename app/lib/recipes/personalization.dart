@@ -118,7 +118,9 @@ RecipePersonalizedOut offlinePersonalization({
     ],
     steps: const [],
   );
-  final servingById = {for (final item in conversion.ingredients) item.id: item};
+  final servingById = {
+    for (final item in conversion.ingredients) item.id: item,
+  };
   final flavors = {
     for (final entry in profile.flavors.entries)
       entry.key: entry.value.coefficient.toDouble(),
@@ -192,13 +194,16 @@ RecipePersonalizedOut offlinePersonalization({
   final blockedSafety = RecipePersonalSafety(
     incomplete: true,
     status: RecipePersonalSafetyStatusEnum.available,
-    unknownIngredients: [for (final item in sourceIngredients) item.displayName],
+    unknownIngredients: [
+      for (final item in sourceIngredients) item.displayName,
+    ],
   );
   return RecipePersonalizedOut(
     adjustmentLimit: adjustmentLimit,
     authorizationVersion: 0,
     blocked: true,
-    cacheKey: 'offline:${detail.version.id}:$targetServings:${profile.version}:$originalView',
+    cacheKey:
+        'offline:${detail.version.id}:$targetServings:${profile.version}:$originalView',
     effectiveFlavors: flavors,
     fallback: '离线仅计算份数、味型和功能性用料；安全检查未完成，联网前不能开始做菜。',
     foodSafety: RecipeSafetyResult(
@@ -217,10 +222,7 @@ RecipePersonalizedOut offlinePersonalization({
     profileVersion: profile.version,
     recipeId: detail.id,
     safety: blockedSafety,
-    snapshot: source.copyWith(
-      ingredients: execution,
-      servings: targetServings,
-    ),
+    snapshot: source.copyWith(ingredients: execution, servings: targetServings),
     snapshotUnchanged: true,
     steps: [
       for (final item in source.steps ?? const <RecipeStep>[])

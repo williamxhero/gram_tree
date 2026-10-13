@@ -302,29 +302,47 @@ void main() {
       final inputs = PersonalizationRequest.fromJson(
         Map<String, dynamic>.from(request.body as Map),
       );
-      return (200, _cached().copyWith(
-        profileVersion: profile.version,
-        inputs: inputs,
-      ).toJson());
+      return (
+        200,
+        _cached()
+            .copyWith(profileVersion: profile.version, inputs: inputs)
+            .toJson(),
+      );
     });
     final online = TestEnv.signedIn(server: server);
     final cache = TasteProfileCache(online.secure);
-    await cache.writeAllergies(_account, _allergies(), stillCurrent: () => true);
+    await cache.writeAllergies(
+      _account,
+      _allergies(),
+      stillCurrent: () => true,
+    );
     await cache.writeFamily(_account, _family(), stillCurrent: () => true);
     await _openDetail(tester, online);
-    await _reveal(tester, find.byKey(const ValueKey('personalized-detail-main')));
+    await _reveal(
+      tester,
+      find.byKey(const ValueKey('personalized-detail-main')),
+    );
     expect(find.text('豆腐  80 g'), findsOneWidget);
     await tester.pumpWidget(const SizedBox.shrink());
     await _settle(tester);
-    await _openDetail(tester, TestEnv(
-      server: server,
-      local: online.local,
-      secure: online.secure,
-      offline: true,
-    ));
-    await _reveal(tester, find.byKey(const ValueKey('personalized-detail-main')));
+    await _openDetail(
+      tester,
+      TestEnv(
+        server: server,
+        local: online.local,
+        secure: online.secure,
+        offline: true,
+      ),
+    );
+    await _reveal(
+      tester,
+      find.byKey(const ValueKey('personalized-detail-main')),
+    );
     expect(find.text('豆腐  80 g'), findsOneWidget);
-    expect(server.calls('POST', '/v1/recipes/$_account/personalized').length, 1);
+    expect(
+      server.calls('POST', '/v1/recipes/$_account/personalized').length,
+      1,
+    );
     expect(tester.takeException(), isNull);
   });
 

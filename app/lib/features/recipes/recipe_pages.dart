@@ -2767,7 +2767,9 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
     });
     ref.listenManual(tasteProfileProvider, (previous, next) {
       final profile = next.value;
-      if (mounted && profile != null && previous?.value == null &&
+      if (mounted &&
+          profile != null &&
+          previous?.value == null &&
           _networkUnavailable &&
           (_showOriginal ? _originalSafety : _personalized) == null) {
         _seedOfflineProjection();
@@ -3110,8 +3112,7 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
     final result = offlinePersonalization(
       detail: detail,
       profile: profile,
-      targetServings:
-          _targetServings ?? detail.version.snapshot.servings,
+      targetServings: _targetServings ?? detail.version.snapshot.servings,
       minServings: config.minServings,
       maxServings: config.maxServings,
       originalView: useOriginal,

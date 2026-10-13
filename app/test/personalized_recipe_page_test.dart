@@ -264,16 +264,21 @@ void main() {
       kind: RecipePersonalSafetyAlertKindEnum.allergy,
       target: '当前档案风险',
     );
-    final server = _server(response: (inputs, original) {
-      if (oldInputs == null) {
-        oldInputs = inputs;
-        return oldResponse.future;
-      }
-      return _projection(inputs, alerts: [alert]).copyWith(profileVersion: 8);
-    });
+    final server = _server(
+      response: (inputs, original) {
+        if (oldInputs == null) {
+          oldInputs = inputs;
+          return oldResponse.future;
+        }
+        return _projection(inputs, alerts: [alert]).copyWith(profileVersion: 8);
+      },
+    );
     server.on('GET', '/v1/me/taste-profile', (_) => (200, profile.toJson()));
     server.on('PATCH', '/v1/me/taste-profile', (_) {
-      profile = profileFixture(saltyLevel: 1, manual: true).copyWith(version: 8);
+      profile = profileFixture(
+        saltyLevel: 1,
+        manual: true,
+      ).copyWith(version: 8);
       return (200, profile.toJson());
     });
     await _open(tester, server);
@@ -295,7 +300,10 @@ void main() {
     await _reveal(tester, _start());
     expect(tester.widget<FilledButton>(_start()).onPressed, isNull);
     await _reveal(tester, find.textContaining('当前档案风险'));
-    expect(server.calls('POST', '/v1/recipes/$_recipeId/personalized').length, 2);
+    expect(
+      server.calls('POST', '/v1/recipes/$_recipeId/personalized').length,
+      2,
+    );
     expect(tester.takeException(), isNull);
   });
 
@@ -511,23 +519,25 @@ void main() {
     final env = TestEnv.signedIn(server: _server(), offline: true);
     final detail = _detail().copyWith.version(
       _detail().version.copyWith.snapshot(
-        _snapshot().copyWith(ingredients: [
-          RecipeIngredient(
-            id: 'salt',
-            displayName: '盐',
-            quantity: 10,
-            unit: 'g',
-            flavorContribution: RecipeFlavorContribution(salty: 3),
-          ),
-          RecipeIngredient(
-            id: 'sugar',
-            displayName: '发面糖',
-            quantity: 20,
-            unit: 'g',
-            functional: true,
-            flavorContribution: RecipeFlavorContribution(sweet: 3),
-          ),
-        ]),
+        _snapshot().copyWith(
+          ingredients: [
+            RecipeIngredient(
+              id: 'salt',
+              displayName: '盐',
+              quantity: 10,
+              unit: 'g',
+              flavorContribution: RecipeFlavorContribution(salty: 3),
+            ),
+            RecipeIngredient(
+              id: 'sugar',
+              displayName: '发面糖',
+              quantity: 20,
+              unit: 'g',
+              functional: true,
+              flavorContribution: RecipeFlavorContribution(sweet: 3),
+            ),
+          ],
+        ),
       ),
     );
     await RecipeSnapshotStore(env.local, accountId: testUser().id).save(
