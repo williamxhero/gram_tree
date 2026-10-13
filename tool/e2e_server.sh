@@ -52,7 +52,10 @@ with psycopg.connect(url, autocommit=True) as conn:
     conn.execute(sql.SQL("CREATE DATABASE {}").format(sql.Identifier(database)))
 redis.Redis.from_url(Settings().redis_url).flushdb()
 EOF
-  uv run alembic upgrade head >/dev/null
+  if ! uv run alembic upgrade head >"$LOG_FILE" 2>&1; then
+    cat "$LOG_FILE" >&2
+    return 1
+  fi
   # All acceptance files share one server/IP. Keep production limits unchanged,
   # but allow the isolated test database enough codes for the complete suite.
   uv run gramtree config set auth.email_code_daily_limit 1000 \

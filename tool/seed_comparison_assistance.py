@@ -1,12 +1,15 @@
 """Seed synthetic comparison acceptance through public HTTP; export no credentials."""
 
 import argparse
+import hashlib
+import hmac
 import json
+import secrets
 import time
 import uuid
 from copy import deepcopy
 from pathlib import Path
-from urllib.parse import urlsplit
+from urllib.parse import quote, urlsplit
 
 import httpx
 
@@ -26,7 +29,8 @@ def main() -> None:
         (ROOT / "server/tests/fixtures/ai/comparison_assistance_corpus.json").read_text("utf-8")
     )
     email = f"comparison-assistance-{uuid.uuid4().hex}@example.com"
-    with httpx.Client(base_url=args.api, timeout=30) as client:
+    device_id = str(uuid.uuid4())
+    with httpx.Client(base_url=args.api, timeout=30, headers={"x-device-id": device_id}) as client:
         sent = client.post("/v1/auth/email/code", json={"email": email, "purpose": "login"})
         sent.raise_for_status()
         not_before = int((time.time() + sent.json()["resend_after_seconds"] + 2) * 1000)
@@ -36,7 +40,29 @@ def main() -> None:
             "/v1/auth/email/login", json={"email": email, "code": code.json()["code"]}
         )
         login.raise_for_status()
-        client.headers["Authorization"] = f"Bearer {login.json()['access_token']}"
+        credentials = login.json()
+        client.headers["Authorization"] = f"Bearer {credentials['access_token']}"
+        signing_key = credentials["request_signing_key"]
+
+        def sign_request(request: httpx.Request) -> None:
+            timestamp = str(int(time.time()))
+            nonce = secrets.token_hex(16)
+            fields = (
+                request.method,
+                request.url.path,
+                request.url.query.decode("ascii"),
+                timestamp,
+                nonce,
+                hashlib.sha256(request.content).hexdigest(),
+            )
+            message = "\n".join(quote(field, safe="/-_.~=&%") for field in fields).encode()
+            request.headers["X-Request-Timestamp"] = timestamp
+            request.headers["X-Request-Nonce"] = nonce
+            request.headers["X-Request-Signature"] = hmac.new(
+                signing_key.encode(), message, hashlib.sha256
+            ).hexdigest()
+
+        client.event_hooks["request"].append(sign_request)
         defines = {
             "E2E_ASSISTANCE_EMAIL": email,
             "E2E_ASSISTANCE_LOGIN_NOT_BEFORE_MS": str(not_before),
