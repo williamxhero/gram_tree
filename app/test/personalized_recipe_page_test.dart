@@ -323,6 +323,81 @@ void main() {
     });
   }
 
+  testWidgets('中性口味的功能性用料仍可切换自家量具并查看显示依据', (tester) async {
+    final ingredient = RecipeIngredient(
+      id: 'salt',
+      displayName: '功能性液体',
+      quantity: 30,
+      unit: 'ml',
+      functional: true,
+    );
+    final detail = _detail();
+    final server = _server(
+      response: (inputs, original) {
+        final result = _projection(inputs, original: true);
+        return result.copyWith(
+          view: RecipePersonalizedOutViewEnum.personalized,
+          ingredients: [
+            result.ingredients.first.copyWith(
+              displayName: ingredient.displayName,
+              originalName: ingredient.displayName,
+              displayQuantity: 30,
+              originalQuantity: 30,
+              displayUnit: 'ml',
+              originalUnit: 'ml',
+              rule: 'functional_protected',
+              reason: '功能性用料保护',
+            ),
+          ],
+        );
+      },
+    );
+    server.on(
+      'GET',
+      '/v1/recipes/$_recipeId',
+      (_) => (
+        200,
+        detail
+            .copyWith(
+              version: detail.version.copyWith(
+                snapshot: _snapshot().copyWith(ingredients: [ingredient]),
+              ),
+            )
+            .toJson(),
+      ),
+    );
+    server.on(
+      'GET',
+      '/v1/me/measures',
+      (_) => (
+        200,
+        {
+          'items': [
+            {
+              'id': '66666666-6666-4666-8666-666666666666',
+              'name': '白瓷勺',
+              'kind': 'spoon',
+              'capacity_ml': 15,
+              'created_at': '2026-10-02T00:00:00Z',
+              'updated_at': '2026-10-02T00:00:00Z',
+            },
+          ],
+          'next_cursor': null,
+        },
+      ),
+    );
+    await _open(tester, server);
+    await _tap(tester, _key('recipe-display-mode-home'));
+    await _tap(tester, _key('recipe-measure-picker'));
+    await tester.tap(find.textContaining('白瓷勺').last);
+    await _settle(tester);
+    await _reveal(tester, _key('recipe-ingredient-amount-salt'));
+    expect(find.text('约 2 白瓷勺（30 毫升） · 功能性用料'), findsOneWidget);
+    await _tap(tester, _key('recipe-source-mark-salt'));
+    expect(find.text('现在：约 2 白瓷勺（30 毫升）'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('首个换算请求等待时修改档案，迟到旧响应不能恢复做菜权限', (tester) async {
     final oldResponse = Completer<RecipePersonalizedOut>();
     PersonalizationRequest? oldInputs;

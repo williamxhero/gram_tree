@@ -3960,7 +3960,8 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
                 : convertedMoldById[ingredient.id]?.displayQuantity) ??
             ingredient.quantity;
         if (item != null &&
-            (item.rule == 'functional_protected' ||
+            ((item.rule == 'functional_protected' &&
+                    _displayMode == MeasureDisplayMode.base) ||
                 item.displayQuantity != convertedQuantity ||
                 item.displayName != ingredient.displayName ||
                 item.displayUnit != ingredient.unit)) {
