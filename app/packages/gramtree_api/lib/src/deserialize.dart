@@ -22,6 +22,7 @@ import 'package:gramtree_api/src/model/bind_apple_request.dart';
 import 'package:gramtree_api/src/model/bind_email_request.dart';
 import 'package:gramtree_api/src/model/bool_attribute.dart';
 import 'package:gramtree_api/src/model/cache_info.dart';
+import 'package:gramtree_api/src/model/captcha_challenge_out.dart';
 import 'package:gramtree_api/src/model/captcha_verification.dart';
 import 'package:gramtree_api/src/model/captcha_verification_out.dart';
 import 'package:gramtree_api/src/model/change_explanation_input.dart';
@@ -321,6 +322,9 @@ ReturnType deserialize<ReturnType, BaseType>(
           as ReturnType;
     case 'CacheInfo':
       return CacheInfo.fromJson(value as Map<String, dynamic>) as ReturnType;
+    case 'CaptchaChallengeOut':
+      return CaptchaChallengeOut.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
     case 'CaptchaVerification':
       return CaptchaVerification.fromJson(value as Map<String, dynamic>)
           as ReturnType;

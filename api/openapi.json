@@ -833,6 +833,29 @@
         "title": "CacheInfo",
         "type": "object"
       },
+      "CaptchaChallengeOut": {
+        "properties": {
+          "challenge_id": {
+            "title": "Challenge Id",
+            "type": "string"
+          },
+          "image_data_uri": {
+            "title": "Image Data Uri",
+            "type": "string"
+          },
+          "prompt": {
+            "title": "Prompt",
+            "type": "string"
+          }
+        },
+        "required": [
+          "challenge_id",
+          "prompt",
+          "image_data_uri"
+        ],
+        "title": "CaptchaChallengeOut",
+        "type": "object"
+      },
       "CaptchaVerification": {
         "properties": {
           "challenge_id": {
@@ -26563,6 +26586,73 @@
           }
         ],
         "summary": "完成访问安全验证",
+        "tags": [
+          "risk"
+        ]
+      }
+    },
+    "/v1/risk/captcha/{challenge_id}": {
+      "get": {
+        "operationId": "get_captcha_challenge",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "challenge_id",
+            "required": true,
+            "schema": {
+              "title": "Challenge Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CaptchaChallengeOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "参数错误"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "服务端错误"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "读取已签发的安全验证图片",
         "tags": [
           "risk"
         ]
