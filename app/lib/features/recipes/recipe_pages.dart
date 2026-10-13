@@ -18,6 +18,11 @@ import '../../network/reachability.dart';
 import '../../recipes/decimal_rounding.dart';
 import '../../recipes/measure_display.dart';
 import '../../recipes/personal_measure_repository.dart';
+import '../../recipes/personalization.dart';
+import '../../events/event_recorder.dart';
+import '../me/family_members_data.dart';
+import '../me/taste_profile_data.dart';
+import '../me/taste_profile_cache.dart';
 import '../../recipes/recipe_draft.dart';
 import '../../recipes/offline_recipe_repository.dart';
 import '../../events/event_uploader.dart';
@@ -2472,6 +2477,213 @@ class RecipeDetailPage extends ConsumerStatefulWidget {
   ConsumerState<RecipeDetailPage> createState() => _RecipeDetailPageState();
 }
 
+class _PersonalizedIngredientRow extends StatelessWidget {
+  const _PersonalizedIngredientRow({required this.item});
+
+  final PersonalizedIngredientOut item;
+
+  @override
+  Widget build(BuildContext context) => ListTile(
+    key: ValueKey('personalized-detail-${item.id}'),
+    title: Text(
+      '${item.displayName}  ${item.displayQuantity} ${item.displayUnit}',
+      style: const TextStyle(fontWeight: FontWeight.w600),
+    ),
+    subtitle: Text(
+      '${item.changed ? '原值 ${item.originalQuantity} ${item.originalUnit} · ' : ''}${item.reason}',
+    ),
+    leading: Icon(
+      item.changed ? Icons.tune : Icons.restaurant,
+      color: item.changed ? GramTreeColors.of(context).accent : null,
+    ),
+    trailing: SourceMark(
+      sourceType: sourceTypeTasteAdjusted,
+      componentId: 'personalized-ingredient-${item.id}',
+      value: '${item.displayName} ${item.displayQuantity} ${item.displayUnit}',
+      originalValue:
+          '${item.originalName} ${item.originalQuantity} ${item.originalUnit}',
+      basisText: '${item.rule}：${item.reason}',
+      neutral: !item.changed,
+      required: false,
+      feedbackEnabled: false,
+      onAction: null,
+    ),
+  );
+}
+
+class _PersonalizedStepRow extends StatelessWidget {
+  const _PersonalizedStepRow({required this.item, required this.child});
+
+  final PersonalizedStepOut item;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) => Column(
+    key: ValueKey('personalized-step-${item.id}'),
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      child,
+      if (item.changed == true)
+        SourceMark(
+          sourceType: item.source_ == PersonalizedStepOutSource_Enum.aiEstimated
+              ? sourceTypeAiEstimated
+              : sourceTypeScenarioAdjusted,
+          componentId: 'personalized-step-${item.id}',
+          value: item.instruction,
+          originalValue: item.originalInstruction,
+          basisText: item.source_ == PersonalizedStepOutSource_Enum.aiEstimated
+              ? '按本次可用厨具改写；以成熟判断为准'
+              : '按同吃成员和替代食材调整',
+          labelOverride:
+              item.source_ == PersonalizedStepOutSource_Enum.aiEstimated
+              ? 'AI 改写'
+              : null,
+          required: false,
+          feedbackEnabled: false,
+          onAction: null,
+        ),
+    ],
+  );
+}
+
+class _PersonalizationViewCard extends StatelessWidget {
+  const _PersonalizationViewCard({
+    required this.result,
+    required this.loading,
+    required this.error,
+    required this.showOriginal,
+    required this.onChanged,
+    required this.onConfirmAllergyRisk,
+    required this.members,
+    required this.selectedDiners,
+    required this.primaryDinerId,
+    required this.onDinersChanged,
+    required this.onPrimaryDinerChanged,
+  });
+
+  final RecipePersonalizedOut? result;
+  final bool loading;
+  final String? error;
+  final bool showOriginal;
+  final ValueChanged<bool> onChanged;
+  final VoidCallback onConfirmAllergyRisk;
+  final List<FamilyMemberOut> members;
+  final Set<String> selectedDiners;
+  final String? primaryDinerId;
+  final ValueChanged<Set<String>> onDinersChanged;
+  final ValueChanged<String?> onPrimaryDinerChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final changes =
+        result?.ingredients.where((item) => item.changed).toList() ?? const [];
+    final alerts = result?.safety.alerts ?? const [];
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        SegmentedButton<bool>(
+          segments: const [
+            ButtonSegment(
+              value: false,
+              label: Text('按我的口味'),
+              icon: Icon(Icons.tune),
+            ),
+            ButtonSegment(
+              value: true,
+              label: Text('原版'),
+              icon: Icon(Icons.menu_book),
+            ),
+          ],
+          selected: {showOriginal},
+          onSelectionChanged: (value) => onChanged(value.first),
+        ),
+        if (loading) const LinearProgressIndicator(),
+        if (error != null) Text(error!),
+        if (members.isNotEmpty && !showOriginal) ...[
+          const SizedBox(height: 8),
+          const Text('这顿饭一起吃的人'),
+          for (final member in members)
+            CheckboxListTile(
+              key: ValueKey('personalized-diner-${member.id}'),
+              dense: true,
+              contentPadding: EdgeInsets.zero,
+              title: Text(member.nickname),
+              value: selectedDiners.contains(member.id),
+              onChanged: (checked) {
+                final next = {...selectedDiners};
+                if (checked == true) {
+                  next.add(member.id);
+                } else {
+                  next.remove(member.id);
+                }
+                onDinersChanged(next);
+              },
+            ),
+          if (selectedDiners.isNotEmpty)
+            DropdownButtonFormField<String>(
+              key: const ValueKey('personalized-primary-diner'),
+              initialValue: selectedDiners.contains(primaryDinerId)
+                  ? primaryDinerId
+                  : null,
+              decoration: const InputDecoration(labelText: '主要食客（可选）'),
+              items: [
+                const DropdownMenuItem<String>(
+                  value: null,
+                  child: Text('折中口味'),
+                ),
+                for (final member in members)
+                  if (selectedDiners.contains(member.id))
+                    DropdownMenuItem(
+                      value: member.id,
+                      child: Text(member.nickname),
+                    ),
+              ],
+              onChanged: onPrimaryDinerChanged,
+            ),
+        ],
+        if (result != null && !showOriginal)
+          Padding(
+            padding: const EdgeInsets.only(top: 8),
+            child: Text('已按口味档案第 ${result!.profileVersion} 版换算；原版菜谱未改动。'),
+          ),
+        for (final item in changes)
+          ListTile(
+            key: ValueKey('personalized-ingredient-${item.id}'),
+            dense: true,
+            title: Text(
+              '${item.displayName}  ${item.displayQuantity} ${item.displayUnit}',
+            ),
+            subtitle: Text(
+              '原值 ${item.originalQuantity} ${item.originalUnit} · ${item.reason}',
+            ),
+            leading: const Icon(Icons.tune),
+          ),
+        for (final alert in alerts.where(
+          (item) => item.kind == RecipePersonalSafetyAlertKindEnum.allergy,
+        ))
+          ListTile(
+            key: ValueKey('personalized-allergy-${alert.ingredient}'),
+            dense: true,
+            title: Text('含过敏原：${alert.person} · ${alert.target}'),
+            subtitle: Text('命中食材：${alert.ingredient}；开始做前需要确认'),
+            leading: const Icon(Icons.warning_amber),
+          ),
+        if (result?.blocked == true) ...[
+          const Text('已阻断开始做菜，请先明确确认过敏风险。'),
+          const SizedBox(height: 4),
+          OutlinedButton.icon(
+            key: const ValueKey('confirm-personalized-allergy-risk'),
+            onPressed: onConfirmAllergyRisk,
+            icon: const Icon(Icons.verified_user_outlined),
+            label: const Text('我已确认过敏风险，继续显示结果'),
+          ),
+        ],
+        for (final notice in result?.notices ?? const <String>[]) Text(notice),
+      ],
+    );
+  }
+}
+
 enum _RecipeScaleMode { servings, mold }
 
 class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
@@ -2494,14 +2706,47 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
   String? _lastCapture;
   String? _capacityMessage;
   bool _offline = false;
+  bool _offlineRecomputed = false;
   LocalRecipeVersion? _localVersion;
   int _loadGeneration = 0;
   String? _viewAccountId;
+  RecipePersonalizedOut? _personalized;
+  bool _showOriginal = false;
+  bool _personalizationLoading = false;
+  String? _personalizationError;
+  int _personalizationGeneration = 0;
+  RecipePersonalizedOut? _originalSafety;
+  final Set<String> _dinerIds = {};
+  String? _primaryDinerId;
+
+  Map<String, PersonalizedIngredientOut> get _personalizedIngredients => {
+    for (final item in _personalized?.ingredients ?? const []) item.id: item,
+  };
+
+  Map<String, PersonalizedStepOut> get _personalizedSteps => {
+    for (final item in _personalized?.steps ?? const []) item.id: item,
+  };
 
   @override
   void initState() {
     super.initState();
     _viewAccountId = ref.read(authProvider).value?.id;
+    ref.listenManual(tasteProfileProvider, (_, next) {
+      final profile = next.value;
+      if (!mounted ||
+          profile == null ||
+          _personalized == null ||
+          profile.version == _personalized!.profileVersion) {
+        return;
+      }
+      setState(() {
+        _personalizationGeneration++;
+        _personalized = null;
+        _originalSafety = null;
+        _personalizationError = '口味档案已变化，请联网更新个性化结果。';
+      });
+      if (!_networkUnavailable) unawaited(_loadPersonalization());
+    });
     ref.listenManual(localRecipeVersionsProvider, (_, next) {
       if (mounted &&
           next.hasValue &&
@@ -2516,6 +2761,14 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
       _viewAccountId = accountId;
       _loadGeneration++;
       setState(() {
+        _personalizationGeneration++;
+        _personalized = null;
+        _originalSafety = null;
+        _dinerIds.clear();
+        _primaryDinerId = null;
+        _showOriginal = false;
+        _personalizationLoading = false;
+        _personalizationError = null;
         _detail = null;
         _error = null;
         _snapshotStore = null;
@@ -2525,6 +2778,7 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
         _lastCapture = null;
         _capacityMessage = null;
         _offline = false;
+        _offlineRecomputed = false;
         _localVersion = null;
         _targetServings = null;
         _targetMold = null;
@@ -2546,6 +2800,9 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.recipeId != widget.recipeId ||
         oldWidget.versionId != widget.versionId) {
+      _personalizationGeneration++;
+      _personalized = null;
+      _originalSafety = null;
       _detail = null;
       _displayContract = null;
       _displayContractKey = null;
@@ -2572,6 +2829,10 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
         accountId == ref.read(authProvider).value?.id;
     if (mounted) {
       setState(() {
+        _personalizationGeneration++;
+        _personalized = null;
+        _originalSafety = null;
+        _personalizationLoading = false;
         _error = null;
         _detail = null;
         _lastCapture = null;
@@ -2580,6 +2841,7 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
         _frozenRender = null;
         _frozenSnapshot = null;
         _offline = false;
+        _offlineRecomputed = false;
         _localVersion = null;
         _capacityMessage = null;
         _measures = const [];
@@ -2626,6 +2888,7 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
             detail.defaultServings ?? detail.version.snapshot.servings;
         _targetMold ??= detail.version.snapshot.baseMold;
       });
+      unawaited(_loadPersonalization());
       unawaited(_loadDisplayMetadata(detail));
     } catch (error, stack) {
       developer.log(
@@ -2689,13 +2952,79 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
                 .firstOrNull ??
             MeasureDisplayMode.base;
         _displayContract = _frozenRender?.contract;
+        _personalized = null;
+        _originalSafety = null;
+        final authorSnapshot = frozen.inputs['author_snapshot'];
+        if (authorSnapshot is Map) {
+          _detail = frozen.detail.copyWith.version(
+            frozen.detail.version.copyWith.snapshot(
+              RecipeSnapshot.fromJson(
+                Map<String, dynamic>.from(authorSnapshot),
+              ),
+            ),
+          );
+        }
+        _dinerIds.addAll(_personalized?.inputs.dinerMemberIds ?? const []);
+        _primaryDinerId = _personalized?.inputs.primaryDinerId;
+        final knownProfile = ref.read(tasteProfileProvider).value;
+        if (knownProfile != null &&
+            _personalized != null &&
+            knownProfile.version != _personalized!.profileVersion) {
+          _personalized = null;
+          _originalSafety = null;
+          _personalizationError = '口味档案已变化，离线显示原版；请联网更新。';
+        }
+        _showOriginal = frozen.inputs['personalized_view'] == 'original';
         final measure = frozen.inputs['personal_measure'];
         _measures = measure == null
             ? const []
             : [PersonalMeasureOut.fromJson(measure)];
         _selectedMeasureId = _measures.firstOrNull?.id;
       });
+      unawaited(
+        _restorePrivatePersonalization(
+          accountId,
+          frozen.inputs['personalized_cache_key'] as String?,
+          frozen.inputs['original_cache_key'] as String?,
+        ),
+      );
     }
+  }
+
+  Future<void> _restorePrivatePersonalization(
+    String? accountId,
+    String? personalizedKey,
+    String? originalKey,
+  ) async {
+    if (accountId == null || (personalizedKey == null && originalKey == null)) return;
+    final cache = ref.read(tasteProfileCacheProvider);
+    final personalized = personalizedKey == null
+        ? null
+        : await cache.readPersonalization(accountId, personalizedKey);
+    final original = originalKey == null
+        ? null
+        : await cache.readPersonalization(accountId, originalKey);
+    if (!mounted || accountId != ref.read(authProvider).value?.id) return;
+    final profile = ref.read(tasteProfileProvider).value;
+    RecipePersonalizedOut? decode(Map<String, dynamic>? value) => value == null
+        ? null
+        : RecipePersonalizedOut.fromJson(value);
+    final nextPersonalized = decode(personalized);
+    final nextOriginal = decode(original);
+    if (profile != null &&
+        ((nextPersonalized != null && profile.version != nextPersonalized.profileVersion) ||
+            (nextOriginal != null && profile.version != nextOriginal.profileVersion))) {
+      setState(() => _personalizationError = '口味档案已变化，离线显示原版；请联网更新。');
+      return;
+    }
+    setState(() {
+      _personalized = nextPersonalized;
+      _originalSafety = nextOriginal;
+      _dinerIds
+        ..clear()
+        ..addAll(nextPersonalized?.inputs.dinerMemberIds ?? const []);
+      _primaryDinerId = nextPersonalized?.inputs.primaryDinerId;
+    });
   }
 
   Future<void> _persistDisplayed(
@@ -2705,8 +3034,27 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
     RecipeConversionConfig config,
   ) async {
     final cache = _snapshotStore;
-    if (cache == null || _networkUnavailable) {
+    if (cache == null || (_networkUnavailable && !_offlineRecomputed)) {
       return;
+    }
+    final privateCache = ref.read(tasteProfileCacheProvider);
+    final personalizedKey = _personalized?.cacheKey;
+    final originalKey = _originalSafety?.cacheKey;
+    if (personalizedKey != null) {
+      await privateCache.writePersonalization(
+        _viewAccountId!,
+        personalizedKey,
+        _personalized!.toJson(),
+        stillCurrent: () => mounted && _viewAccountId == ref.read(authProvider).value?.id,
+      );
+    }
+    if (originalKey != null) {
+      await privateCache.writePersonalization(
+        _viewAccountId!,
+        originalKey,
+        _originalSafety!.toJson(),
+        stillCurrent: () => mounted && _viewAccountId == ref.read(authProvider).value?.id,
+      );
     }
     final inputs = <String, dynamic>{
       'scale_mode': _scaleMode.name,
@@ -2714,6 +3062,10 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
       'target_mold': _targetMold?.toJson(),
       'display_mode': _displayMode.name,
       'personal_measure': measure?.toJson(),
+      'personalized_view': _showOriginal ? 'original' : 'personalized',
+      'personalized_cache_key': personalizedKey,
+      'original_cache_key': originalKey,
+      'author_snapshot': detail.version.snapshot.toJson(),
     };
     final dependencies = <String, String?>{
       'recipe_version': detail.version.id,
@@ -2728,8 +3080,8 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
         'round_deviation_threshold': config.roundDeviationThreshold,
         'batch_multiplier': config.batchMultiplier,
       }),
-      'taste_profile': null,
-      'taste_rules': null,
+      'taste_profile': _personalized?.profileVersion.toString(),
+      'taste_rules': _personalized == null ? null : 'personalization-v1',
       'safety_rules':
           (detail.version.safety ?? detail.version.safetyAtSave)?.rulesVersion,
     };
@@ -2817,6 +3169,176 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
           ? _selectedMeasureId
           : null;
     });
+  }
+
+  Future<void> _loadPersonalization({bool? confirmAllergyRisk}) async {
+    final detail = _detail;
+    if (detail == null || _networkUnavailable) return;
+    final generation = ++_personalizationGeneration;
+    final account = _viewAccountId;
+    final original = _showOriginal;
+    bool current() =>
+        mounted &&
+        generation == _personalizationGeneration &&
+        account == _viewAccountId &&
+        identical(_detail, detail);
+    if (mounted) {
+      setState(() {
+        _personalizationLoading = true;
+        _personalizationError = null;
+      });
+    }
+    try {
+      final result = await ref
+          .read(recipeRepositoryProvider)
+          .personalize(
+            widget.recipeId,
+            versionId: detail.version.id,
+            targetServings: _scaleMode == _RecipeScaleMode.servings
+                ? (_targetServings ?? detail.version.snapshot.servings)
+                : null,
+            targetMold: _scaleMode == _RecipeScaleMode.mold
+                ? _targetMold
+                : null,
+            dinerMemberIds: _dinerIds.toList(),
+            primaryDinerId: _primaryDinerId,
+            confirmAllergyRisk: confirmAllergyRisk ?? false,
+            original: original,
+          );
+      if (!current()) return;
+      setState(() {
+        if (original) {
+          _originalSafety = result;
+        } else {
+          _personalized = result;
+        }
+      });
+    } catch (error, stack) {
+      developer.log(
+        'recipe personalization load failed',
+        name: 'recipe_detail',
+        error: error,
+        stackTrace: stack,
+      );
+      if (current()) {
+        setState(() => _personalizationError = '按我的口味暂时不可用，仍显示原版内容。');
+      }
+    } finally {
+      if (current()) setState(() => _personalizationLoading = false);
+    }
+  }
+
+  Future<void> _confirmAllergyRisk() async {
+    final result = _showOriginal ? _originalSafety : _personalized;
+    if (result == null || !result.blocked || _networkUnavailable) return;
+    final allergies =
+        result.safety.alerts
+            ?.where(
+              (alert) =>
+                  alert.kind == RecipePersonalSafetyAlertKindEnum.allergy,
+            )
+            .toList() ??
+        const <RecipePersonalSafetyAlert>[];
+    if (allergies.isEmpty ||
+        (result.foodSafety.findings ?? const []).any(
+          (finding) => finding.ruleId.startsWith('infant_'),
+        )) {
+      return;
+    }
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('确认过敏风险'),
+        content: Text(
+          '${allergies.map((alert) => '${alert.person}：${alert.target}（${alert.ingredient}）').join('\n')}\n确认后也请不要让有风险的人食用。',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('取消'),
+          ),
+          FilledButton(
+            key: const ValueKey('confirm-allergy-risk-dialog'),
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('确认风险'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true) {
+      unawaited(_loadPersonalization(confirmAllergyRisk: true));
+    }
+  }
+
+  void _setPersonalizedView(bool original) {
+    if (original == _showOriginal) return;
+    setState(() => _showOriginal = original);
+    unawaited(
+      ref
+          .read(eventRecorderProvider)
+          .record(
+            eventType: 'recipe.personalized_view_changed',
+            typeVersion: 1,
+            correlation: EventCorrelationIds(
+              recipeVersionId: _detail?.version.id,
+            ),
+            content: {'view': original ? 'original' : 'personalized'},
+          ),
+    );
+    if (!_networkUnavailable) unawaited(_loadPersonalization());
+  }
+
+  void _changeDiners(Set<String> next) {
+    setState(() {
+      _dinerIds
+        ..clear()
+        ..addAll(next);
+      if (_primaryDinerId != null && !_dinerIds.contains(_primaryDinerId)) {
+        _primaryDinerId = null;
+      }
+      _personalized = null;
+      _originalSafety = null;
+    });
+    if (!_networkUnavailable) unawaited(_loadPersonalization());
+  }
+
+  void _changePrimaryDiner(String? id) {
+    setState(() {
+      _primaryDinerId = id;
+      _personalized = null;
+      _originalSafety = null;
+    });
+    if (!_networkUnavailable) unawaited(_loadPersonalization());
+  }
+
+  void _changeServings(int servings) {
+    final result = _personalized;
+    if (_networkUnavailable &&
+        result != null &&
+        result.inputs.targetMold == null) {
+      final config = ref.read(recipeConversionConfigProvider);
+      final updated = recompilePersonalizedServings(
+        original: _detail!.version.snapshot,
+        cached: result,
+        targetServings: servings,
+        minServings: config.minServings,
+        maxServings: config.maxServings,
+      );
+      setState(() {
+        _targetServings = servings;
+        _personalized = updated;
+        _offlineRecomputed = true;
+      });
+    } else {
+      setState(() {
+        _targetServings = servings;
+        if (!_networkUnavailable) {
+          _personalized = null;
+          _originalSafety = null;
+        }
+      });
+      unawaited(_loadPersonalization());
+    }
   }
 
   Future<void> _refreshDisplayMetadata() async {
@@ -2927,15 +3449,42 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
 
   Future<void> _startCooking() async {
     final store = ref.read(cookingSessionStoreProvider);
-    final snapshot = _frozenSnapshot;
-    if (store == null || snapshot == null || snapshot.render == null) return;
-    final session = await store.start(snapshot);
+    final frozen = _frozenSnapshot;
+    final detail = _detail;
+    if (store == null ||
+        frozen == null ||
+        frozen.render == null ||
+        detail == null) {
+      return;
+    }
+    final personalizedSnapshot = !_showOriginal
+        ? _personalized?.snapshot
+        : null;
+    final execution = personalizedSnapshot == null
+        ? frozen
+        : FrozenRecipeSnapshot(
+            detail: detail.copyWith.version(
+              detail.version.copyWith.snapshot(personalizedSnapshot),
+            ),
+            capturedAt: DateTime.now(),
+            inputs: {
+              ...frozen.inputs,
+              'personalized_view': 'personalized',
+              'personalized_result': _personalized?.toJson(),
+            },
+            render: frozen.render,
+            dependencies: frozen.dependencies,
+          );
+    final session = await store.start(execution);
     if (mounted) context.push('/cooking/${session.id}');
   }
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
+    final familyMembers =
+        ref.watch(familyMembersProvider).value?.items ??
+        const <FamilyMemberOut>[];
     final accountId = ref.watch(authProvider).value?.id;
     final offline =
         _offline ||
@@ -3041,7 +3590,7 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
     final targetServings = _targetServings ?? snapshot.servings;
     late final ServingConversionResult servingConversion;
     try {
-      servingConversion = offline
+      servingConversion = offline && !_offlineRecomputed
           ? _frozenRender!.serving
           : _recipeServingConversion(
               snapshot,
@@ -3152,7 +3701,7 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
     // Only a contract computed from the version on screen may replace the
     // local kernel's values.
     final displayedContract = offline
-        ? _frozenRender!.contract
+        ? (_offlineRecomputed ? null : _frozenRender!.contract)
         : _displayContract;
     final contract = displayedContract?.display.versionId == detail.version.id
         ? displayedContract
@@ -3161,7 +3710,7 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
       for (final item in contract?.display.ingredients ?? const [])
         item.id: item,
     };
-    final displayedById = offline
+    final displayedById = offline && !_offlineRecomputed
         ? _frozenRender!.amounts
         : <String, DisplayedAmount?>{
             for (final ingredient in snapshot.ingredients ?? const [])
@@ -3195,7 +3744,7 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
                       ),
               ),
           };
-    if (routeIsCurrent && !offline) {
+    if (routeIsCurrent && (!offline || _offlineRecomputed)) {
       unawaited(
         _persistDisplayed(
           detail,
@@ -3318,10 +3867,27 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
             detail.dish.name,
             style: Theme.of(context).textTheme.headlineSmall,
           ),
+          _PersonalizationViewCard(
+            result: _personalized,
+            loading: _personalizationLoading,
+            error: _personalizationError,
+            showOriginal: _showOriginal,
+            onChanged: (original) => _setPersonalizedView(original),
+            onConfirmAllergyRisk: _confirmAllergyRisk,
+            members: familyMembers,
+            selectedDiners: _dinerIds,
+            primaryDinerId: _primaryDinerId,
+            onDinersChanged: _changeDiners,
+            onPrimaryDinerChanged: _changePrimaryDiner,
+          ),
           const SizedBox(height: 12),
           FilledButton.icon(
             key: const ValueKey('start-cooking-button'),
-            onPressed: _frozenSnapshot?.render == null ? null : _startCooking,
+            onPressed:
+                _frozenSnapshot?.render == null ||
+                    (!_showOriginal && _personalized?.blocked == true)
+                ? null
+                : _startCooking,
             icon: const Icon(Icons.play_arrow),
             label: const Text('开始做菜'),
           ),
@@ -3389,9 +3955,8 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
               _ServingControl(
                 conversion: servingConversion,
                 ingredientNames: ingredientNames,
-                onChanged: (value) => setState(() => _targetServings = value),
-                onReset: () =>
-                    setState(() => _targetServings = snapshot.servings),
+                onChanged: _changeServings,
+                onReset: () => _changeServings(snapshot.servings),
               ),
               const SizedBox(height: 8),
             ] else
@@ -3425,8 +3990,21 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
               onManageMeasures: () => context.push(PersonalMeasuresPage.path),
               onChanged: (mode) => setState(() => _displayMode = mode),
             ),
-          ] else
-            _SmallHint(text: '已保存 $targetServings 份的用量与换算结果；离线只读，修改换算需要联网。'),
+          ] else ...[
+            if (_personalized != null &&
+                _personalized!.inputs.targetMold == null)
+              _ServingControl(
+                conversion: servingConversion,
+                ingredientNames: ingredientNames,
+                onChanged: _changeServings,
+                onReset: () => _changeServings(snapshot.servings),
+              ),
+            _SmallHint(
+              text: _personalized == null
+                  ? '已保存 $targetServings 份的用量与换算结果；缺少口味结果，修改换算需要联网。'
+                  : '离线可重算份数和口味；替换、厨具和安全检查沿用最近结果。',
+            ),
+          ],
           const SizedBox(height: 16),
           _NutritionSection(nutrition: derived.nutritionPerServing),
           if ((derived.cookware ?? const []).isNotEmpty)
@@ -3441,20 +4019,25 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
             const SizedBox(height: 8),
             Text(entry.key, style: Theme.of(context).textTheme.titleMedium),
             for (final ingredient in entry.value)
-              _IngredientDetailRow(
-                ingredient: ingredient,
-                converted: _scaleMode == _RecipeScaleMode.servings
-                    ? convertedServingById[ingredient.id]
-                    : null,
-                moldConverted: _scaleMode == _RecipeScaleMode.mold
-                    ? convertedMoldById[ingredient.id]
-                    : null,
-                conversionTargetChanged: _scaleMode == _RecipeScaleMode.servings
-                    ? targetServings != snapshot.servings
-                    : snapshot.baseMold != _targetMold,
-                displayed: displayedById[ingredient.id],
-                contract: contractById[ingredient.id],
-              ),
+              !_showOriginal && _personalizedIngredients[ingredient.id] != null
+                  ? _PersonalizedIngredientRow(
+                      item: _personalizedIngredients[ingredient.id]!,
+                    )
+                  : _IngredientDetailRow(
+                      ingredient: ingredient,
+                      converted: _scaleMode == _RecipeScaleMode.servings
+                          ? convertedServingById[ingredient.id]
+                          : null,
+                      moldConverted: _scaleMode == _RecipeScaleMode.mold
+                          ? convertedMoldById[ingredient.id]
+                          : null,
+                      conversionTargetChanged:
+                          _scaleMode == _RecipeScaleMode.servings
+                          ? targetServings != snapshot.servings
+                          : snapshot.baseMold != _targetMold,
+                      displayed: displayedById[ingredient.id],
+                      contract: contractById[ingredient.id],
+                    ),
           ],
           const SizedBox(height: 16),
           // Preserve ordinary serving/ingredient visibility and trailing steps.
@@ -3470,27 +4053,53 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
             style: Theme.of(context).textTheme.titleLarge,
           ),
           if ((snapshot.steps ?? const []).isEmpty) Text(l10n.recipeNoSteps),
-          for (final (index, step) in (snapshot.steps ?? const []).indexed)
-            _StepDetailTile(
-              // Lazy scrolling recreates tiles; retain expanded requirements
-              // only for this immutable version and stable step identity.
-              key: PageStorageKey('step-${detail.version.id}-${step.id}'),
-              index: index,
-              step: step,
-              converted: _scaleMode == _RecipeScaleMode.servings
-                  ? convertedServingStepsById[step.id]
-                  : null,
-              moldConverted: _scaleMode == _RecipeScaleMode.mold
-                  ? convertedMoldStepsById[step.id]
-                  : null,
-              ingredientNames: ingredientNames,
-              stepLabels: stepLabels,
-              safetyFindings:
-                  (detail.version.safety ?? detail.version.safetyAtSave)
-                      ?.findings ??
-                  const [],
-              l10n: l10n,
-            ),
+          for (final (index, step)
+              in ((!_showOriginal ? _personalized?.snapshot.steps : null) ??
+                      snapshot.steps ??
+                      const <RecipeStep>[])
+                  .indexed)
+            !_showOriginal && _personalizedSteps[step.id] != null
+                ? _PersonalizedStepRow(
+                    item: _personalizedSteps[step.id]!,
+                    child: _StepDetailTile(
+                      key: PageStorageKey(
+                        'personalized-step-${detail.version.id}-${step.id}',
+                      ),
+                      index: index,
+                      step: step,
+                      ingredientNames: {
+                        for (final item in _personalized!.ingredients)
+                          item.id: item.displayName,
+                      },
+                      stepLabels: {
+                        for (final (i, item) in _personalized!.steps.indexed)
+                          item.id: '${i + 1}. ${item.instruction}',
+                      },
+                      safetyFindings:
+                          _personalized!.foodSafety.findings ?? const [],
+                      l10n: l10n,
+                    ),
+                  )
+                : _StepDetailTile(
+                    // Lazy scrolling recreates tiles; retain expanded requirements
+                    // only for this immutable version and stable step identity.
+                    key: PageStorageKey('step-${detail.version.id}-${step.id}'),
+                    index: index,
+                    step: step,
+                    converted: _scaleMode == _RecipeScaleMode.servings
+                        ? convertedServingStepsById[step.id]
+                        : null,
+                    moldConverted: _scaleMode == _RecipeScaleMode.mold
+                        ? convertedMoldStepsById[step.id]
+                        : null,
+                    ingredientNames: ingredientNames,
+                    stepLabels: stepLabels,
+                    safetyFindings:
+                        (detail.version.safety ?? detail.version.safetyAtSave)
+                            ?.findings ??
+                        const [],
+                    l10n: l10n,
+                  ),
           const SizedBox(height: 16),
           TextButton(
             key: const ValueKey('delete-recipe-button'),

@@ -1,0 +1,28 @@
+{
+  "format_version": 1,
+  "cases": [
+    {
+      "name": "servings_then_taste_filter_and_functional_protection",
+      "original_servings": 2,
+      "target_servings": 4,
+      "flavors": {"salty": 0.5},
+      "ingredients": [
+        {"id": "salt", "display_name": "盐", "quantity": 10, "unit": "g", "scaling_mode": "proportional", "contribution": {"salty": 3}, "functional": false, "expected": 14},
+        {"id": "soy_sauce", "display_name": "生抽", "quantity": 8, "unit": "ml", "scaling_mode": "proportional", "contribution": {"salty": 3}, "functional": false, "expected": 11.2},
+        {"id": "oyster_sauce", "display_name": "蚝油", "quantity": 6, "unit": "g", "scaling_mode": "proportional", "contribution": {"salty": 3}, "functional": false, "expected": 8.4},
+        {"id": "bean_paste", "display_name": "豆瓣酱", "quantity": 4, "unit": "g", "scaling_mode": "proportional", "contribution": {"salty": 3}, "functional": false, "expected": 5.6},
+        {"id": "main", "display_name": "主料", "quantity": 100, "unit": "g", "scaling_mode": "proportional", "contribution": null, "functional": false, "expected": 200},
+        {"id": "functional_sugar", "display_name": "发酵用糖", "quantity": 5, "unit": "g", "scaling_mode": "proportional", "contribution": {"sweet": 3}, "functional": true, "expected": 10}
+      ]
+    },
+    {
+      "name": "bounded_upward_adjustment",
+      "original_servings": 1,
+      "target_servings": 1,
+      "flavors": {"spicy": 2.0},
+      "ingredients": [
+        {"id": "chili", "display_name": "辣椒", "quantity": 3, "unit": "g", "scaling_mode": "proportional", "contribution": {"spicy": 3}, "functional": false, "expected": 3.9}
+      ]
+    }
+  ]
+}

@@ -17,6 +17,7 @@ class TasteProfileCacheSnapshot {
     this.allergies,
     this.constraints,
     this.family,
+    this.personalizations = const {},
   });
 
   final String accountId;
@@ -25,6 +26,7 @@ class TasteProfileCacheSnapshot {
   final AllergiesOut? allergies;
   final CookingConstraintsOut? constraints;
   final FamilyMembersOut? family;
+  final Map<String, dynamic> personalizations;
 
   factory TasteProfileCacheSnapshot.fromJson(Map<String, dynamic> json) {
     final profile = json['profile'];
@@ -33,6 +35,7 @@ class TasteProfileCacheSnapshot {
     final family = json['family'];
     return TasteProfileCacheSnapshot(
       accountId: json['account_id'] as String,
+      personalizations: Map<String, dynamic>.from(json['personalizations'] as Map? ?? {}),
       cachedAt: DateTime.parse(json['cached_at'] as String).toUtc(),
       profile: profile is Map
           ? TasteProfileOut.fromJson(Map<String, dynamic>.from(profile))
@@ -58,6 +61,7 @@ class TasteProfileCacheSnapshot {
     if (allergies != null) 'allergies': allergies!.toJson(),
     if (constraints != null) 'constraints': constraints!.toJson(),
     if (family != null) 'family': family!.toJson(),
+    'personalizations': personalizations,
   };
 
   bool get hasCurrentProfile =>
@@ -80,6 +84,7 @@ class TasteProfileCacheSnapshot {
     FamilyMembersOut? family,
     bool clearAllergies = false,
     bool clearFamily = false,
+    Map<String, dynamic>? personalizations,
   }) => TasteProfileCacheSnapshot(
     accountId: accountId,
     cachedAt: cachedAt ?? this.cachedAt,
@@ -87,6 +92,7 @@ class TasteProfileCacheSnapshot {
     allergies: clearAllergies ? null : allergies ?? this.allergies,
     constraints: constraints ?? this.constraints,
     family: clearFamily ? null : family ?? this.family,
+    personalizations: personalizations ?? this.personalizations,
   );
 }
 
@@ -195,6 +201,28 @@ class TasteProfileCache {
       ),
     );
   });
+
+  Future<void> writePersonalization(
+    String accountId,
+    String key,
+    Map<String, dynamic> value, {
+    required bool Function() stillCurrent,
+  }) => _write(accountId, stillCurrent, (old) {
+    final current = old ?? _empty(accountId);
+    return current.copyWith(
+      cachedAt: DateTime.now().toUtc(),
+      personalizations: {...current.personalizations, key: value},
+    );
+  });
+
+  Future<Map<String, dynamic>?> readPersonalization(
+    String accountId,
+    String key,
+  ) async {
+    final current = await read(accountId);
+    final value = current?.personalizations[key];
+    return value is Map ? Map<String, dynamic>.from(value) : null;
+  }
 
   Future<void> clearSensitive(
     String accountId, {

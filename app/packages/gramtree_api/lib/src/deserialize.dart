@@ -114,6 +114,9 @@ import 'package:gramtree_api/src/model/page_unrecorded_ingredient_item.dart';
 import 'package:gramtree_api/src/model/personal_measure_input.dart';
 import 'package:gramtree_api/src/model/personal_measure_out.dart';
 import 'package:gramtree_api/src/model/personal_measure_update.dart';
+import 'package:gramtree_api/src/model/personalization_request.dart';
+import 'package:gramtree_api/src/model/personalized_ingredient_out.dart';
+import 'package:gramtree_api/src/model/personalized_step_out.dart';
 import 'package:gramtree_api/src/model/profile_update.dart';
 import 'package:gramtree_api/src/model/purchase_unit.dart';
 import 'package:gramtree_api/src/model/purchase_units_attribute.dart';
@@ -146,6 +149,9 @@ import 'package:gramtree_api/src/model/recipe_list.dart';
 import 'package:gramtree_api/src/model/recipe_list_item.dart';
 import 'package:gramtree_api/src/model/recipe_mold_conversion_out.dart';
 import 'package:gramtree_api/src/model/recipe_mold_conversion_request.dart';
+import 'package:gramtree_api/src/model/recipe_personal_safety.dart';
+import 'package:gramtree_api/src/model/recipe_personal_safety_alert.dart';
+import 'package:gramtree_api/src/model/recipe_personalized_out.dart';
 import 'package:gramtree_api/src/model/recipe_quantification_out.dart';
 import 'package:gramtree_api/src/model/recipe_question.dart';
 import 'package:gramtree_api/src/model/recipe_replacement.dart';
@@ -561,6 +567,15 @@ ReturnType deserialize<ReturnType, BaseType>(
     case 'PersonalMeasureUpdate':
       return PersonalMeasureUpdate.fromJson(value as Map<String, dynamic>)
           as ReturnType;
+    case 'PersonalizationRequest':
+      return PersonalizationRequest.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'PersonalizedIngredientOut':
+      return PersonalizedIngredientOut.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'PersonalizedStepOut':
+      return PersonalizedStepOut.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
     case 'ProfileUpdate':
       return ProfileUpdate.fromJson(value as Map<String, dynamic>)
           as ReturnType;
@@ -650,6 +665,15 @@ ReturnType deserialize<ReturnType, BaseType>(
           as ReturnType;
     case 'RecipeMoldConversionRequest':
       return RecipeMoldConversionRequest.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'RecipePersonalSafety':
+      return RecipePersonalSafety.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'RecipePersonalSafetyAlert':
+      return RecipePersonalSafetyAlert.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'RecipePersonalizedOut':
+      return RecipePersonalizedOut.fromJson(value as Map<String, dynamic>)
           as ReturnType;
     case 'RecipeQuantificationOut':
       return RecipeQuantificationOut.fromJson(value as Map<String, dynamic>)
