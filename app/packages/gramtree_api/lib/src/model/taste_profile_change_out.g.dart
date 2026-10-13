@@ -23,7 +23,7 @@ abstract class _$TasteProfileChangeOutCWProxy {
 
   TasteProfileChangeOut revertedAt(String? revertedAt);
 
-  TasteProfileChangeOut source_(String source_);
+  TasteProfileChangeOut source_(TasteProfileChangeOutSource_Enum source_);
 
   TasteProfileChangeOut sourceRecordIds(List<String>? sourceRecordIds);
 
@@ -46,7 +46,7 @@ abstract class _$TasteProfileChangeOutCWProxy {
     TasteProfileChangeOutOriginEnum origin,
     String reason,
     String? revertedAt,
-    String source_,
+    TasteProfileChangeOutSource_Enum source_,
     List<String>? sourceRecordIds,
     TasteProfileChangeOutStatusEnum status,
     int version,
@@ -88,7 +88,8 @@ class _$TasteProfileChangeOutCWProxyImpl
       this(revertedAt: revertedAt);
 
   @override
-  TasteProfileChangeOut source_(String source_) => this(source_: source_);
+  TasteProfileChangeOut source_(TasteProfileChangeOutSource_Enum source_) =>
+      this(source_: source_);
 
   @override
   TasteProfileChangeOut sourceRecordIds(List<String>? sourceRecordIds) =>
@@ -158,7 +159,7 @@ class _$TasteProfileChangeOutCWProxyImpl
       source_: source_ == const $CopyWithPlaceholder()
           ? _value.source_
           // ignore: cast_nullable_to_non_nullable
-          : source_ as String,
+          : source_ as TasteProfileChangeOutSource_Enum,
       sourceRecordIds: sourceRecordIds == const $CopyWithPlaceholder()
           ? _value.sourceRecordIds
           // ignore: cast_nullable_to_non_nullable
@@ -219,7 +220,10 @@ TasteProfileChangeOut _$TasteProfileChangeOutFromJson(
       ),
       reason: $checkedConvert('reason', (v) => v as String),
       revertedAt: $checkedConvert('reverted_at', (v) => v as String?),
-      source_: $checkedConvert('source', (v) => v as String),
+      source_: $checkedConvert(
+        'source',
+        (v) => $enumDecode(_$TasteProfileChangeOutSource_EnumEnumMap, v),
+      ),
       sourceRecordIds: $checkedConvert(
         'source_record_ids',
         (v) => (v as List<dynamic>?)?.map((e) => e as String).toList(),
@@ -253,7 +257,7 @@ Map<String, dynamic> _$TasteProfileChangeOutToJson(
   'origin': _$TasteProfileChangeOutOriginEnumEnumMap[instance.origin]!,
   'reason': instance.reason,
   'reverted_at': ?instance.revertedAt,
-  'source': instance.source_,
+  'source': _$TasteProfileChangeOutSource_EnumEnumMap[instance.source_]!,
   'source_record_ids': ?instance.sourceRecordIds,
   'status': _$TasteProfileChangeOutStatusEnumEnumMap[instance.status]!,
   'version': instance.version,
@@ -263,6 +267,11 @@ const _$TasteProfileChangeOutOriginEnumEnumMap = {
   TasteProfileChangeOutOriginEnum.manual: 'manual',
   TasteProfileChangeOutOriginEnum.auto: 'auto',
   TasteProfileChangeOutOriginEnum.explicitSave: 'explicit_save',
+};
+
+const _$TasteProfileChangeOutSource_EnumEnumMap = {
+  TasteProfileChangeOutSource_Enum.manual: 'manual',
+  TasteProfileChangeOutSource_Enum.learning: 'learning',
 };
 
 const _$TasteProfileChangeOutStatusEnumEnumMap = {

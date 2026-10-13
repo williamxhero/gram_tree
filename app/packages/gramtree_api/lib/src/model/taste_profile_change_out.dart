@@ -68,7 +68,7 @@ class TasteProfileChangeOut {
   final String? revertedAt;
 
   @JsonKey(name: r'source', required: true, includeIfNull: false)
-  final String source_;
+  final TasteProfileChangeOutSource_Enum source_;
 
   @JsonKey(name: r'source_record_ids', required: false, includeIfNull: false)
   final List<String>? sourceRecordIds;
@@ -131,6 +131,20 @@ enum TasteProfileChangeOutOriginEnum {
   explicitSave(r'explicit_save');
 
   const TasteProfileChangeOutOriginEnum(this.value);
+
+  final String value;
+
+  @override
+  String toString() => value;
+}
+
+enum TasteProfileChangeOutSource_Enum {
+  @JsonValue(r'manual')
+  manual(r'manual'),
+  @JsonValue(r'learning')
+  learning(r'learning');
+
+  const TasteProfileChangeOutSource_Enum(this.value);
 
   final String value;
 

@@ -9661,6 +9661,10 @@
             "title": "Reverted At"
           },
           "source": {
+            "enum": [
+              "manual",
+              "learning"
+            ],
             "title": "Source",
             "type": "string"
           },
