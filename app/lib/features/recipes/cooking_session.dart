@@ -236,20 +236,54 @@ class CookingSessionStore {
     return next;
   }
 
+  /// Older builds embedded the full private personalization response here.
+  /// Remove that legacy field before any session can be read or rewritten.
+  bool _stripLegacyPrivateResults(Map<String, dynamic> root) {
+    var changed = false;
+    final accounts = root['accounts'];
+    if (accounts is! Map) return false;
+    for (final account in accounts.values) {
+      if (account is! Map || account['sessions'] is! Map) continue;
+      for (final raw in (account['sessions'] as Map).values) {
+        if (raw is! Map) continue;
+        final snapshot = raw['snapshot'];
+        final inputs = snapshot is Map ? snapshot['inputs'] : null;
+        if (inputs is Map && inputs.remove('personalized_result') != null) {
+          changed = true;
+        }
+      }
+    }
+    return changed;
+  }
+
   Future<void> _save(Map<String, dynamic> root) =>
       store.setString(_cookingStoreKey, jsonEncode(root));
 
+  String _executionKey(FrozenRecipeSnapshot snapshot) => jsonEncode([
+    snapshot.detail.toJson(),
+    snapshot.inputs,
+    snapshot.render,
+    snapshot.dependencies,
+  ]);
+
   Future<CookingSession> start(FrozenRecipeSnapshot snapshot) async {
     final root = _load();
+    final legacyRemoved = _stripLegacyPrivateResults(root);
     final account = _account(root);
     final sessions = account['sessions'] as Map;
+    final executionKey = _executionKey(snapshot);
     final existing = [
       for (final raw in sessions.values)
         if (CookingSession.fromJson(raw) case final item?)
-          if (item.snapshot.versionId == snapshot.versionId && !item.isComplete)
+          if (item.snapshot.versionId == snapshot.versionId &&
+              !item.isComplete &&
+              _executionKey(item.snapshot) == executionKey)
             item,
     ].firstOrNull;
-    if (existing != null) return existing;
+    if (existing != null) {
+      if (legacyRemoved) await _save(root);
+      return existing;
+    }
     final session = CookingSession(
       id: newUuidV4(),
       snapshot: snapshot,
@@ -262,7 +296,12 @@ class CookingSessionStore {
 
   Future<CookingSession?> read(String id) async {
     final root = _load();
-    return CookingSession.fromJson((_account(root)['sessions'] as Map)[id]);
+    final legacyRemoved = _stripLegacyPrivateResults(root);
+    final session = CookingSession.fromJson(
+      (_account(root)['sessions'] as Map)[id],
+    );
+    if (legacyRemoved) await _save(root);
+    return session;
   }
 
   Future<void> write(CookingSession session) async {
@@ -299,10 +338,12 @@ class _CookingPageState extends ConsumerState<CookingPage>
   PressAndHoldVoiceQuestion? _voiceRecorder;
   OfflineCookingVoiceListener? _voiceListener;
   bool _voiceUnavailable = false;
+  late final DeviceCapabilities _deviceCapabilities;
 
   @override
   void initState() {
     super.initState();
+    _deviceCapabilities = ref.read(deviceCapabilitiesProvider);
     WidgetsBinding.instance.addObserver(this);
     unawaited(_load());
     _ticker = Timer.periodic(const Duration(seconds: 1), (_) {
@@ -321,7 +362,7 @@ class _CookingPageState extends ConsumerState<CookingPage>
     unawaited(_voiceRecorder?.dispose());
     unawaited(_voiceListener?.dispose());
     WidgetsBinding.instance.removeObserver(this);
-    unawaited(ref.read(deviceCapabilitiesProvider).setKeepScreenOn(false));
+    unawaited(_deviceCapabilities.setKeepScreenOn(false));
     super.dispose();
   }
 
@@ -942,7 +983,9 @@ class _CookingPageState extends ConsumerState<CookingPage>
                       const [])
                 ListTile(
                   title: Text(ingredient.displayName),
-                  trailing: Text('${ingredient.quantity} ${ingredient.unit}'),
+                  trailing: Text(
+                    '${ingredient.quantity == ingredient.quantity.roundToDouble() ? ingredient.quantity.toInt() : ingredient.quantity} ${ingredient.unit}',
+                  ),
                 ),
               FilledButton.icon(
                 onPressed: () => _move(1),

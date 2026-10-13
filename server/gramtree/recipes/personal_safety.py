@@ -70,7 +70,7 @@ def _target(
         ingredient_id=str(ingredient.id),
         category=ingredient.category,
         allergens=frozenset(attrs.allergens.value if attrs.allergens is not None else ()),
-        unknown=attrs.allergens is None,
+        unknown=attrs.allergens is None or attrs.allergens.estimate,
         replacement=replacement,
         recipe_ingredient_id=item.id,
     )

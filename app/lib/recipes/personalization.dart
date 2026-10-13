@@ -88,6 +88,168 @@ PersonalizationResult personalizeIngredients({
   return PersonalizationResult(quantities: quantities, rules: rules);
 }
 
+/// Builds a display-only projection when the recipe and taste profile are cached.
+/// Safety remains blocked until the server can validate the result.
+RecipePersonalizedOut offlinePersonalization({
+  required RecipeDetail detail,
+  required TasteProfileOut profile,
+  required int targetServings,
+  required int minServings,
+  required int maxServings,
+  required bool originalView,
+  double adjustmentLimit = .30,
+}) {
+  final source = detail.version.snapshot;
+  final sourceIngredients = source.ingredients ?? const <RecipeIngredient>[];
+  final conversion = convertServings(
+    originalServings: source.servings,
+    targetServings: targetServings,
+    minServings: minServings,
+    maxServings: maxServings,
+    ingredients: [
+      for (final item in sourceIngredients)
+        ServingIngredientInput(
+          id: item.id,
+          displayName: item.displayName,
+          quantity: item.quantity.toDouble(),
+          unit: item.unit,
+          scalingMode: item.scalingMode?.value ?? 'proportional',
+        ),
+    ],
+    steps: const [],
+  );
+  final servingById = {for (final item in conversion.ingredients) item.id: item};
+  final flavors = {
+    for (final entry in profile.flavors.entries)
+      entry.key: entry.value.coefficient.toDouble(),
+  };
+  final result = originalView
+      ? PersonalizationResult(
+          quantities: {
+            for (final item in conversion.ingredients)
+              item.id: item.displayQuantity,
+          },
+          rules: {
+            for (final item in conversion.ingredients) item.id: item.rule,
+          },
+        )
+      : personalizeIngredients(
+          ingredients: sourceIngredients,
+          originalServings: source.servings,
+          targetServings: targetServings,
+          flavors: flavors,
+          minServings: minServings,
+          maxServings: maxServings,
+          adjustmentLimit: adjustmentLimit,
+        );
+  final now = DateTime.now().toUtc().toIso8601String();
+  final execution = <RecipeIngredient>[];
+  final display = <PersonalizedIngredientOut>[];
+  for (final item in sourceIngredients) {
+    final serving = servingById[item.id]!;
+    final quantity = result.quantities[item.id]!;
+    var base = item.baseQuantity == null || item.quantity == 0
+        ? null
+        : DecimalValue.fromNum(item.baseQuantity!)
+              .multipliedBy(DecimalValue.fromNum(serving.displayQuantity))
+              .dividedBy(DecimalValue.fromNum(item.quantity))
+              .toDouble();
+    if (base != null &&
+        quantity != serving.displayQuantity &&
+        serving.displayQuantity != 0) {
+      base = DecimalValue.fromNum(base)
+          .multipliedBy(DecimalValue.fromNum(quantity))
+          .dividedBy(DecimalValue.fromNum(serving.displayQuantity))
+          .quantizedHalfUp(2)
+          .toDouble();
+    }
+    execution.add(item.copyWith(quantity: quantity, baseQuantity: base));
+    final rule = result.rules[item.id] ?? serving.rule;
+    final changed = quantity != item.quantity || serving.rule != 'unchanged';
+    final reason = switch (rule) {
+      'taste_filter' => '按味型贡献和口味档案换算',
+      'functional_protected' => '功能性用料保护',
+      'servings' => '份数换算',
+      'rounding' => '份数换算与取整',
+      _ => '作者填写',
+    };
+    display.add(
+      PersonalizedIngredientOut(
+        changed: changed,
+        displayName: item.displayName,
+        displayQuantity: quantity,
+        displayUnit: item.unit,
+        factor: item.quantity == 0 ? 1 : quantity / item.quantity,
+        id: item.id,
+        originalName: item.displayName,
+        originalQuantity: item.quantity,
+        originalUnit: item.unit,
+        reason: reason,
+        rule: rule,
+      ),
+    );
+  }
+  final blockedSafety = RecipePersonalSafety(
+    incomplete: true,
+    status: RecipePersonalSafetyStatusEnum.available,
+    unknownIngredients: [for (final item in sourceIngredients) item.displayName],
+  );
+  return RecipePersonalizedOut(
+    adjustmentLimit: adjustmentLimit,
+    authorizationVersion: 0,
+    blocked: true,
+    cacheKey: 'offline:${detail.version.id}:$targetServings:${profile.version}:$originalView',
+    effectiveFlavors: flavors,
+    fallback: '离线仅计算份数、味型和功能性用料；安全检查未完成，联网前不能开始做菜。',
+    foodSafety: RecipeSafetyResult(
+      allergensIncomplete: true,
+      canSave: false,
+      checkedAt: now,
+      rulesVersion: 'offline-unchecked',
+      stale: true,
+    ),
+    ingredients: display,
+    inputs: PersonalizationRequest(
+      targetServings: targetServings,
+      versionId: detail.version.id,
+    ),
+    notices: const ['过敏与食品安全尚未检查'],
+    profileVersion: profile.version,
+    recipeId: detail.id,
+    safety: blockedSafety,
+    snapshot: source.copyWith(
+      ingredients: execution,
+      servings: targetServings,
+    ),
+    snapshotUnchanged: true,
+    steps: [
+      for (final item in source.steps ?? const <RecipeStep>[])
+        PersonalizedStepOut(
+          id: item.id,
+          instruction: item.instruction,
+          originalInstruction: item.instruction,
+          source_: PersonalizedStepOutSource_Enum.recipe,
+        ),
+    ],
+    versionId: detail.version.id,
+    view: originalView
+        ? RecipePersonalizedOutViewEnum.original
+        : RecipePersonalizedOutViewEnum.personalized,
+  );
+}
+
+/// Confirmation is scoped to one attempt, never restored from private storage.
+RecipePersonalizedOut requirePersonalizationConfirmation(
+  RecipePersonalizedOut result,
+) => result.copyWith(
+  inputs: result.inputs.copyWith(confirmAllergyRisk: false),
+  blocked:
+      result.blocked ||
+      (result.safety.alerts ?? const []).any(
+        (alert) => alert.kind == RecipePersonalSafetyAlertKindEnum.allergy,
+      ),
+);
+
 /// Recomputes from the author snapshot, never repeatedly scales a rounded result.
 /// Server-only substitutions and equipment steps remain the last accepted values.
 RecipePersonalizedOut recompilePersonalizedServings({
@@ -97,20 +259,48 @@ RecipePersonalizedOut recompilePersonalizedServings({
   required int minServings,
   required int maxServings,
 }) {
-  final flavors = cached.effectiveFlavors.map(
-    (key, value) => MapEntry(key, value.toDouble()),
-  );
-  PersonalizationResult compile(int servings) => personalizeIngredients(
-    ingredients: original.ingredients ?? const [],
+  final originalView = cached.view == RecipePersonalizedOutViewEnum.original;
+  final servingOnly = convertServings(
     originalServings: original.servings,
-    targetServings: servings,
-    flavors: flavors,
+    targetServings: targetServings,
     minServings: minServings,
     maxServings: maxServings,
-    adjustmentLimit: cached.adjustmentLimit.toDouble(),
+    ingredients: [
+      for (final item in original.ingredients ?? <RecipeIngredient>[])
+        ServingIngredientInput(
+          id: item.id,
+          displayName: item.displayName,
+          quantity: item.quantity.toDouble(),
+          unit: item.unit,
+          scalingMode: item.scalingMode?.value ?? 'proportional',
+        ),
+    ],
+    steps: const [],
   );
-  final before = compile(cached.inputs.targetServings ?? original.servings);
-  final next = compile(targetServings);
+  final servingQuantities = {
+    for (final item in servingOnly.ingredients) item.id: item.displayQuantity,
+  };
+  final next = originalView
+      ? PersonalizationResult(
+          quantities: {
+            for (final item in servingOnly.ingredients)
+              item.id: item.displayQuantity,
+          },
+          rules: {
+            for (final item in servingOnly.ingredients) item.id: item.rule,
+          },
+        )
+      : personalizeIngredients(
+          ingredients: original.ingredients ?? const [],
+          originalServings: original.servings,
+          targetServings: targetServings,
+          flavors: cached.effectiveFlavors.map(
+            (key, value) => MapEntry(key, value.toDouble()),
+          ),
+          minServings: minServings,
+          maxServings: maxServings,
+          adjustmentLimit: cached.adjustmentLimit.toDouble(),
+        );
   final sources = {
     for (final item in original.ingredients ?? <RecipeIngredient>[])
       item.id: item,
@@ -123,22 +313,49 @@ RecipePersonalizedOut recompilePersonalizedServings({
   final execution = <RecipeIngredient>[];
   for (final item in cached.ingredients) {
     final source = sources[item.id]!;
-    var quantity = next.quantities[item.id]!;
-    if (item.rule == 'substitution' && before.quantities[item.id]! != 0) {
-      quantity = DecimalValue.fromNum(quantity)
-          .multipliedBy(DecimalValue.fromNum(item.displayQuantity))
-          .dividedBy(DecimalValue.fromNum(before.quantities[item.id]!))
-          .quantizedHalfUp(2)
-          .toDouble();
-    }
     final current = accepted[item.id]!;
-    final base = current.baseQuantity == null || current.quantity == 0
-        ? null
-        : DecimalValue.fromNum(current.baseQuantity!)
-              .multipliedBy(DecimalValue.fromNum(quantity))
-              .dividedBy(DecimalValue.fromNum(current.quantity))
+    final servingQuantity = servingQuantities[item.id]!;
+    var quantity = next.quantities[item.id]!;
+    var base = source.baseQuantity?.toDouble();
+    if (base != null && source.quantity != 0) {
+      base = DecimalValue.fromNum(base)
+          .multipliedBy(DecimalValue.fromNum(servingQuantity))
+          .dividedBy(DecimalValue.fromNum(source.quantity))
+          .toDouble();
+      if (quantity != servingQuantity && servingQuantity != 0) {
+        base = DecimalValue.fromNum(base)
+            .multipliedBy(DecimalValue.fromNum(quantity))
+            .dividedBy(DecimalValue.fromNum(servingQuantity))
+            .quantizedHalfUp(2)
+            .toDouble();
+      }
+    }
+    const adaptedRules = {'substitution', 'ai_substitution', 'child_portion'};
+    if (!originalView && adaptedRules.contains(item.rule)) {
+      final factors = item.adaptationFactors;
+      if (factors == null || factors.isEmpty) {
+        throw const FormatException('替换比例缺失，需要联网更新后才能换算份数。');
+      }
+      final substituted =
+          current.displayName != source.displayName ||
+          current.ingredientId != source.ingredientId;
+      for (var index = 0; index < factors.length; index++) {
+        final factor = factors[index];
+        quantity = DecimalValue.fromNum(quantity)
+            .multipliedBy(DecimalValue.fromNum(factor))
+            .quantizedHalfUp(2)
+            .toDouble();
+        if (substituted && index == 0) {
+          // A substitute cannot inherit the author's density conversion.
+          base = current.unit == 'g' || current.unit == 'ml' ? quantity : null;
+        } else if (base != null) {
+          base = DecimalValue.fromNum(base)
+              .multipliedBy(DecimalValue.fromNum(factor))
               .quantizedHalfUp(2)
               .toDouble();
+        }
+      }
+    }
     execution.add(current.copyWith(quantity: quantity, baseQuantity: base));
     ingredients.add(
       item.copyWith(
@@ -146,7 +363,7 @@ RecipePersonalizedOut recompilePersonalizedServings({
         changed:
             quantity != source.quantity ||
             current.displayName != source.displayName,
-        rule: item.rule == 'substitution'
+        rule: !originalView && adaptedRules.contains(item.rule)
             ? item.rule
             : (next.rules[item.id] ?? item.rule),
         reason: '份数换算；${item.reason}',
@@ -170,6 +387,8 @@ RecipePersonalizedOut recompilePersonalizedServings({
         (cached.safety.alerts ?? const []).any(
           (alert) => alert.kind == RecipePersonalSafetyAlertKindEnum.allergy,
         ),
-    fallback: '离线已重算份数和口味；替换与厨具步骤沿用最近结果，安全检查需联网更新。',
+    fallback: cached.foodSafety.rulesVersion == 'offline-unchecked'
+        ? '离线仅计算份数、味型和功能性用料；安全检查未完成，联网前不能开始做菜。'
+        : '离线已重算份数和口味；替换与厨具步骤沿用最近结果，安全检查需联网更新。',
   );
 }

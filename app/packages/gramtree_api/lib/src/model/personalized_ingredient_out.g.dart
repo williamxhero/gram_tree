@@ -7,6 +7,8 @@ part of 'personalized_ingredient_out.dart';
 // **************************************************************************
 
 abstract class _$PersonalizedIngredientOutCWProxy {
+  PersonalizedIngredientOut adaptationFactors(List<num>? adaptationFactors);
+
   PersonalizedIngredientOut changed(bool changed);
 
   PersonalizedIngredientOut displayName(String displayName);
@@ -36,6 +38,7 @@ abstract class _$PersonalizedIngredientOutCWProxy {
   /// PersonalizedIngredientOut(...).copyWith(id: 12, name: "My name")
   /// ````
   PersonalizedIngredientOut call({
+    List<num>? adaptationFactors,
     bool changed,
     String displayName,
     num displayQuantity,
@@ -56,6 +59,10 @@ class _$PersonalizedIngredientOutCWProxyImpl
   const _$PersonalizedIngredientOutCWProxyImpl(this._value);
 
   final PersonalizedIngredientOut _value;
+
+  @override
+  PersonalizedIngredientOut adaptationFactors(List<num>? adaptationFactors) =>
+      this(adaptationFactors: adaptationFactors);
 
   @override
   PersonalizedIngredientOut changed(bool changed) => this(changed: changed);
@@ -104,6 +111,7 @@ class _$PersonalizedIngredientOutCWProxyImpl
   /// PersonalizedIngredientOut(...).copyWith(id: 12, name: "My name")
   /// ````
   PersonalizedIngredientOut call({
+    Object? adaptationFactors = const $CopyWithPlaceholder(),
     Object? changed = const $CopyWithPlaceholder(),
     Object? displayName = const $CopyWithPlaceholder(),
     Object? displayQuantity = const $CopyWithPlaceholder(),
@@ -117,6 +125,10 @@ class _$PersonalizedIngredientOutCWProxyImpl
     Object? rule = const $CopyWithPlaceholder(),
   }) {
     return PersonalizedIngredientOut(
+      adaptationFactors: adaptationFactors == const $CopyWithPlaceholder()
+          ? _value.adaptationFactors
+          // ignore: cast_nullable_to_non_nullable
+          : adaptationFactors as List<num>?,
       changed: changed == const $CopyWithPlaceholder()
           ? _value.changed
           // ignore: cast_nullable_to_non_nullable
@@ -199,6 +211,10 @@ PersonalizedIngredientOut _$PersonalizedIngredientOutFromJson(
       ],
     );
     final val = PersonalizedIngredientOut(
+      adaptationFactors: $checkedConvert(
+        'adaptation_factors',
+        (v) => (v as List<dynamic>?)?.map((e) => e as num).toList(),
+      ),
       changed: $checkedConvert('changed', (v) => v as bool),
       displayName: $checkedConvert('display_name', (v) => v as String),
       displayQuantity: $checkedConvert('display_quantity', (v) => v as num),
@@ -214,6 +230,7 @@ PersonalizedIngredientOut _$PersonalizedIngredientOutFromJson(
     return val;
   },
   fieldKeyMap: const {
+    'adaptationFactors': 'adaptation_factors',
     'displayName': 'display_name',
     'displayQuantity': 'display_quantity',
     'displayUnit': 'display_unit',
@@ -226,6 +243,7 @@ PersonalizedIngredientOut _$PersonalizedIngredientOutFromJson(
 Map<String, dynamic> _$PersonalizedIngredientOutToJson(
   PersonalizedIngredientOut instance,
 ) => <String, dynamic>{
+  'adaptation_factors': ?instance.adaptationFactors,
   'changed': instance.changed,
   'display_name': instance.displayName,
   'display_quantity': instance.displayQuantity,

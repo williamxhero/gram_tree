@@ -60,9 +60,9 @@ def substitute(
     *,
     redis: Redis,
     version_id: uuid.UUID,
-) -> tuple[RecipeSnapshot, dict[str, str], list[str]]:
+) -> tuple[RecipeSnapshot, dict[str, tuple[str, float, bool]], list[str]]:
     result = snapshot.model_copy(deep=True)
-    reasons: dict[str, str] = {}
+    reasons: dict[str, tuple[str, float, bool]] = {}
     notices: list[str] = []
     for item in result.ingredients:
         single = RecipeSnapshot(servings=snapshot.servings, ingredients=[item])
@@ -77,6 +77,8 @@ def substitute(
         if not matches.alerts:
             continue
         replacement = item.replacement
+        if isinstance(replacement, str):
+            replacement = RecipeReplacement(display_name=replacement)
         if replacement is None and item.display_name in COMMON_REPLACEMENTS:
             name = COMMON_REPLACEMENTS[item.display_name]
             row = session.scalar(select(Ingredient).where(Ingredient.standard_name == name))
@@ -147,19 +149,17 @@ def substitute(
                 reason = f"已替换：{item.display_name} → {candidate.display_name}；" + (
                     "AI 建议，已重新检查" if suggested else "按明确替代比例，已重新检查"
                 )
-                reasons[item.id] = reason
+                reasons[item.id] = (reason, replacement.ratio, suggested)
                 result.ingredients[result.ingredients.index(item)] = candidate
                 # Stable ingredient references stay intact; executable text must
                 # also use the alternative that is shown in the ingredient list.
                 for step in result.steps:
-                    if item.id in step.ingredient_ids:
-                        step.instruction = step.instruction.replace(
-                            item.display_name, candidate.display_name
-                        )
-                        if step.action:
-                            step.action = step.action.replace(
-                                item.display_name, candidate.display_name
-                            )
+                    # Legacy/manual steps may omit ingredient references.
+                    step.instruction = step.instruction.replace(
+                        item.display_name, candidate.display_name
+                    )
+                    if step.action:
+                        step.action = step.action.replace(item.display_name, candidate.display_name)
                 continue
         notices.append(f"这道菜可能不适合你：{item.display_name}没有明确安全替代，已保留原料")
     return result, reasons, notices
@@ -216,7 +216,9 @@ def suggest_replacement(
         return None, "AI 或替换缓存暂不可用；忌口替换暂缺，前三步换算仍可用"
 
 
-def split_children(snapshot: RecipeSnapshot, constraints: AuthorizedConstraints) -> RecipeSnapshot:
+def split_children(
+    snapshot: RecipeSnapshot, constraints: AuthorizedConstraints
+) -> tuple[RecipeSnapshot, dict[str, float]]:
     children = [
         m
         for m in constraints.family
@@ -224,14 +226,14 @@ def split_children(snapshot: RecipeSnapshot, constraints: AuthorizedConstraints)
         and (m.flavors or {}).get("spicy", 1) == 0
     ]
     if not children:
-        return snapshot
+        return snapshot, {}
     spicy = {
         item.id
         for item in snapshot.ingredients
         if item.flavor_contribution is not None and (item.flavor_contribution.spicy or 0) > 0
     }
     if not spicy:
-        return snapshot
+        return snapshot, {}
     additions = [s for s in snapshot.steps if spicy.intersection(s.ingredient_ids)]
     target = additions[0] if len(additions) == 1 else None
     # Only an explicit late addition to an already cooked base can be divided.
@@ -241,7 +243,7 @@ def split_children(snapshot: RecipeSnapshot, constraints: AuthorizedConstraints)
         or not target.depends_on
         or not any(token in target.instruction for token in ("最后", "出锅前", "后加"))
     ):
-        return snapshot
+        return snapshot, {}
     result = snapshot.model_copy(deep=True)
     target = next(s for s in result.steps if s.id == target.id)
     split_id = "personalized-child-portion"
@@ -270,7 +272,7 @@ def split_children(snapshot: RecipeSnapshot, constraints: AuthorizedConstraints)
     )
     target.depends_on = [split_id]
     result.steps.insert(result.steps.index(target), split)
-    return result
+    return result, {item_id: 1 - portion for item_id in spicy}
 
 
 class EquipmentRewrite(BaseModel):
@@ -279,7 +281,7 @@ class EquipmentRewrite(BaseModel):
 
 
 def equipment_payload(snapshot: RecipeSnapshot, equipment: list[str]) -> dict[str, Any]:
-    # No allergies, family identities, profile values, provenance or measure receipts.
+    # Called before family-specific child steps are added; omit private profile data.
     fields = {
         "id",
         "action",
@@ -402,6 +404,7 @@ def adapt_equipment(
                         "heat",
                         "temperature_celsius",
                         "doneness",
+                        "unattended",
                     ):
                         setattr(before, field, getattr(rewritten, field))
             return result, missing, None

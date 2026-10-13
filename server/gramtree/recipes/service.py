@@ -1387,25 +1387,55 @@ def personalize_recipe(
         adjustment_limit=float(config.get(session, "recipe.personalization_adjustment_limit")),
     )
     rule_input = source_snapshot.model_copy(deep=True)
+    converted_original = source_snapshot.model_copy(deep=True)
     if body.target_servings is not None:
         # Validate even an identity request; do not let malformed inputs bypass rules.
-        _convert_snapshot_servings(
+        serving_conversion = _convert_snapshot_servings(
             session,
             source_snapshot,
             RecipeDerived.model_validate(version.derived),
             body.target_servings,
         )
+        converted_by_id = {item.id: item for item in serving_conversion.ingredients}
+        for item in converted_original.ingredients:
+            source_quantity = item.quantity
+            item.quantity = converted_by_id[item.id].display_quantity
+            if item.base_quantity is not None and source_quantity:
+                item.base_quantity = item.base_quantity * item.quantity / source_quantity
+        converted_steps = {step.id: step for step in serving_conversion.steps}
+        for step in converted_original.steps:
+            step.instruction = converted_steps[step.id].instruction
+            step.duration_seconds = converted_steps[step.id].duration_seconds
+        converted_original.servings = body.target_servings
+        rule_input = converted_original.model_copy(deep=True)
     if body.target_mold is not None:
         mold = _convert_snapshot_mold(session, source_snapshot, body.target_mold)
         for item, scaled in zip(rule_input.ingredients, mold.ingredients, strict=True):
+            source_quantity = item.quantity
             item.quantity = scaled.display_quantity
+            if item.base_quantity is not None and source_quantity:
+                item.base_quantity = item.base_quantity * item.quantity / source_quantity
+            original_item = next(
+                item for item in converted_original.ingredients if item.id == scaled.id
+            )
+            original_item.quantity = scaled.display_quantity
+            original_item.base_quantity = item.base_quantity
+        rule_input.base_mold = body.target_mold
+        converted_original.base_mold = body.target_mold
     if view == "original":
-        projected = source_snapshot.model_copy(deep=True)
+        projected = converted_original
         changes: list[dict[str, Any]] = []
         notices: list[str] = []
     else:
         projected, changes, notices = personalization.compile_rules(rule_input, request)
     change_by_id = {item["ingredient_id"]: item for item in changes}
+    for item, source in zip(rule_input.ingredients, source_snapshot.ingredients, strict=True):
+        if item.quantity != source.quantity:
+            row = change_by_id.setdefault(item.id, {})
+            reason = "模具换算" if body.target_mold is not None else "份数换算"
+            row["reason"] = reason + ("；" + row["reason"] if row.get("reason") else "")
+            if row.get("rule", "unchanged") == "unchanged":
+                row["rule"] = "mold_ratio" if body.target_mold is not None else "servings"
     ai_steps: set[str] = set()
     fallback = None
     if view == "personalized":
@@ -1413,26 +1443,27 @@ def personalize_recipe(
             session, settings, owner.id, projected, constraints, redis=redis, version_id=version.id
         )
         notices.extend(replacement_notices)
-        for item_id, reason in replacements.items():
+        for item_id, (reason, ratio, suggested) in replacements.items():
             row = change_by_id.setdefault(item_id, {})
             row["reason"] = (row.get("reason", "") + "；" + reason).strip("；")
-            row["rule"] = "ai_substitution" if "AI 建议" in reason else "substitution"
-        before_split = projected
-        projected = adaptations.split_children(projected, constraints)
-        if projected is not before_split:
-            for item, before in zip(projected.ingredients, before_split.ingredients, strict=True):
-                if item.quantity != before.quantity:
-                    row = change_by_id.setdefault(item.id, {})
-                    row["reason"] = row.get("reason", "") + "；先盛儿童份，辣味用量按其余人数换算"
-                    row["rule"] = "child_portion"
+            row["rule"] = "ai_substitution" if suggested else "substitution"
+            row["adaptation_factors"] = [ratio]
+        projected, ai_steps, fallback = adaptations.adapt_equipment(
+            session, redis, settings, owner.id, version.id, projected, equipment
+        )
+        # Family-specific child serving instructions must never enter AI payloads.
+        projected, child_factors = adaptations.split_children(projected, constraints)
+        if child_factors:
+            for item_id, ratio in child_factors.items():
+                row = change_by_id.setdefault(item_id, {})
+                row["reason"] = row.get("reason", "") + "；先盛儿童份，辣味用量按其余人数换算"
+                row["rule"] = "child_portion"
+                row.setdefault("adaptation_factors", []).append(ratio)
         elif any(
             m.age_band != "adult" and (m.flavors or {}).get("spicy") == 0
             for m in constraints.family
         ):
             notices.append("原步骤未明确允许安全后加辣味，未自动分盛；请为不吃辣的成员另做一份")
-        projected, ai_steps, fallback = adaptations.adapt_equipment(
-            session, redis, settings, owner.id, version.id, projected, equipment
-        )
         # Gateway accounting commits around I/O. Reacquire and reject concurrent
         # profile/consent changes instead of returning private stale constraints.
         profile = taste_service.locked_profile(session, owner.id, taste_service.scale_for(session))
@@ -1481,6 +1512,7 @@ def personalize_recipe(
             original_unit=source.unit,
             display_unit=item.unit,
             factor=float(change_by_id.get(item.id, {}).get("factor", 1.0)),
+            adaptation_factors=change_by_id.get(item.id, {}).get("adaptation_factors", []),
             rule=str(change_by_id.get(item.id, {}).get("rule", "unchanged")),
             reason=str(change_by_id.get(item.id, {}).get("reason", "原版用量")),
             changed=item.quantity != source.quantity

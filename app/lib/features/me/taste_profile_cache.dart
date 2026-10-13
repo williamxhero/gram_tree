@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:math' as math;
 
 import 'package:cryptography/cryptography.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -18,6 +19,7 @@ class TasteProfileCacheSnapshot {
     this.constraints,
     this.family,
     this.personalizations = const {},
+    this.personalizationAuthorizationFloor = 0,
   });
 
   final String accountId;
@@ -27,6 +29,17 @@ class TasteProfileCacheSnapshot {
   final CookingConstraintsOut? constraints;
   final FamilyMembersOut? family;
   final Map<String, dynamic> personalizations;
+  // Retain only the revocation boundary, not the withdrawn sensitive values.
+  final int personalizationAuthorizationFloor;
+
+  int get nextAuthorizationFloor => math.max(
+    personalizationAuthorizationFloor,
+    math.max(
+          allergies?.authorizationVersion ?? 0,
+          family?.authorizationVersion ?? 0,
+        ) +
+        1,
+  );
 
   factory TasteProfileCacheSnapshot.fromJson(Map<String, dynamic> json) {
     final profile = json['profile'];
@@ -35,7 +48,11 @@ class TasteProfileCacheSnapshot {
     final family = json['family'];
     return TasteProfileCacheSnapshot(
       accountId: json['account_id'] as String,
-      personalizations: Map<String, dynamic>.from(json['personalizations'] as Map? ?? {}),
+      personalizationAuthorizationFloor:
+          json['personalization_authorization_floor'] as int? ?? 0,
+      personalizations: Map<String, dynamic>.from(
+        json['personalizations'] as Map? ?? {},
+      ),
       cachedAt: DateTime.parse(json['cached_at'] as String).toUtc(),
       profile: profile is Map
           ? TasteProfileOut.fromJson(Map<String, dynamic>.from(profile))
@@ -62,6 +79,7 @@ class TasteProfileCacheSnapshot {
     if (constraints != null) 'constraints': constraints!.toJson(),
     if (family != null) 'family': family!.toJson(),
     'personalizations': personalizations,
+    'personalization_authorization_floor': personalizationAuthorizationFloor,
   };
 
   bool get hasCurrentProfile =>
@@ -85,6 +103,7 @@ class TasteProfileCacheSnapshot {
     bool clearAllergies = false,
     bool clearFamily = false,
     Map<String, dynamic>? personalizations,
+    int? personalizationAuthorizationFloor,
   }) => TasteProfileCacheSnapshot(
     accountId: accountId,
     cachedAt: cachedAt ?? this.cachedAt,
@@ -92,7 +111,31 @@ class TasteProfileCacheSnapshot {
     allergies: clearAllergies ? null : allergies ?? this.allergies,
     constraints: constraints ?? this.constraints,
     family: clearFamily ? null : family ?? this.family,
-    personalizations: personalizations ?? this.personalizations,
+    personalizationAuthorizationFloor:
+        personalizationAuthorizationFloor ??
+        ((clearAllergies || clearFamily) &&
+                (this.allergies?.consentId != null ||
+                    this.family?.consentId != null)
+            ? nextAuthorizationFloor
+            : this.personalizationAuthorizationFloor),
+    personalizations:
+        (profile != null && profile.version != this.profile?.version) ||
+            (allergies != null &&
+                (allergies.profileVersion != this.allergies?.profileVersion ||
+                    allergies.authorizationVersion !=
+                        this.allergies?.authorizationVersion)) ||
+            (family != null &&
+                (family.profileVersion != this.family?.profileVersion ||
+                    family.authorizationVersion !=
+                        this.family?.authorizationVersion)) ||
+            (constraints != null &&
+                constraints.profileVersion !=
+                    this.constraints?.profileVersion) ||
+            ((clearAllergies || clearFamily) &&
+                (this.allergies?.consentId != null ||
+                    this.family?.consentId != null))
+        ? const {}
+        : personalizations ?? this.personalizations,
   );
 }
 
@@ -180,7 +223,11 @@ class TasteProfileCache {
     accountId,
     stillCurrent,
     (old) => value.consentId == null
-        ? old?.copyWith(cachedAt: DateTime.now().toUtc(), clearFamily: true)
+        ? old?.copyWith(
+            cachedAt: DateTime.now().toUtc(),
+            clearAllergies: true,
+            clearFamily: true,
+          )
         : (old ?? _empty(accountId)).copyWith(
             cachedAt: DateTime.now().toUtc(),
             family: value,
@@ -209,6 +256,7 @@ class TasteProfileCache {
     required bool Function() stillCurrent,
   }) => _write(accountId, stillCurrent, (old) {
     final current = old ?? _empty(accountId);
+    if (!_personalizationMatches(current, value)) return old;
     return current.copyWith(
       cachedAt: DateTime.now().toUtc(),
       personalizations: {...current.personalizations, key: value},
@@ -221,7 +269,32 @@ class TasteProfileCache {
   ) async {
     final current = await read(accountId);
     final value = current?.personalizations[key];
-    return value is Map ? Map<String, dynamic>.from(value) : null;
+    if (current == null || value is! Map) return null;
+    final result = Map<String, dynamic>.from(value);
+    return _personalizationMatches(current, result) ? result : null;
+  }
+
+  bool _personalizationMatches(
+    TasteProfileCacheSnapshot current,
+    Map<String, dynamic> value,
+  ) {
+    final profileVersions = [
+      current.profile?.version,
+      current.allergies?.profileVersion,
+      current.constraints?.profileVersion,
+      current.family?.profileVersion,
+    ].whereType<int>();
+    final authorizationVersions = [
+      current.allergies?.authorizationVersion,
+      current.family?.authorizationVersion,
+    ].whereType<int>();
+    final authorization = value['authorization_version'];
+    return authorization is int &&
+        authorization >= current.personalizationAuthorizationFloor &&
+        (profileVersions.isEmpty ||
+            value['profile_version'] == profileVersions.reduce(math.max)) &&
+        (authorizationVersions.isEmpty ||
+            authorization == authorizationVersions.reduce(math.max));
   }
 
   Future<void> clearSensitive(
@@ -230,10 +303,13 @@ class TasteProfileCache {
   }) => _write(
     accountId,
     stillCurrent,
-    (old) => old?.copyWith(
+    (old) => (old ?? _empty(accountId)).copyWith(
       cachedAt: DateTime.now().toUtc(),
       clearAllergies: true,
       clearFamily: true,
+      personalizations: const {},
+      personalizationAuthorizationFloor:
+          (old ?? _empty(accountId)).nextAuthorizationFloor,
     ),
   );
 

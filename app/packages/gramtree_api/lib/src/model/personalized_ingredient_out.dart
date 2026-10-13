@@ -18,6 +18,8 @@ part 'personalized_ingredient_out.g.dart';
 class PersonalizedIngredientOut {
   /// Returns a new [PersonalizedIngredientOut] instance.
   PersonalizedIngredientOut({
+    this.adaptationFactors,
+
     required this.changed,
 
     required this.displayName,
@@ -40,6 +42,9 @@ class PersonalizedIngredientOut {
 
     required this.rule,
   });
+
+  @JsonKey(name: r'adaptation_factors', required: false, includeIfNull: false)
+  final List<num>? adaptationFactors;
 
   @JsonKey(name: r'changed', required: true, includeIfNull: false)
   final bool changed;
@@ -78,6 +83,7 @@ class PersonalizedIngredientOut {
   bool operator ==(Object other) =>
       identical(this, other) ||
       other is PersonalizedIngredientOut &&
+          other.adaptationFactors == adaptationFactors &&
           other.changed == changed &&
           other.displayName == displayName &&
           other.displayQuantity == displayQuantity &&
@@ -92,6 +98,7 @@ class PersonalizedIngredientOut {
 
   @override
   int get hashCode =>
+      adaptationFactors.hashCode +
       changed.hashCode +
       displayName.hashCode +
       displayQuantity.hashCode +

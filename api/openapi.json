@@ -5557,6 +5557,13 @@
       },
       "PersonalizedIngredientOut": {
         "properties": {
+          "adaptation_factors": {
+            "items": {
+              "type": "number"
+            },
+            "title": "Adaptation Factors",
+            "type": "array"
+          },
           "changed": {
             "title": "Changed",
             "type": "boolean"

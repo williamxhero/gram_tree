@@ -21,6 +21,7 @@ import '../../recipes/personal_measure_repository.dart';
 import '../../recipes/personalization.dart';
 import '../../events/event_recorder.dart';
 import '../me/family_members_data.dart';
+import '../me/allergies_data.dart';
 import '../me/taste_profile_data.dart';
 import '../me/taste_profile_cache.dart';
 import '../../recipes/recipe_draft.dart';
@@ -2478,16 +2479,30 @@ class RecipeDetailPage extends ConsumerStatefulWidget {
 }
 
 class _PersonalizedIngredientRow extends StatelessWidget {
-  const _PersonalizedIngredientRow({required this.item});
+  const _PersonalizedIngredientRow({
+    super.key,
+    required this.item,
+    required this.profileVersion,
+    required this.componentId,
+    this.dense = false,
+  });
 
   final PersonalizedIngredientOut item;
+  final int profileVersion;
+  final String componentId;
+  final bool dense;
 
   @override
   Widget build(BuildContext context) => ListTile(
-    key: ValueKey('personalized-detail-${item.id}'),
+    dense: dense,
     title: Text(
       '${item.displayName}  ${item.displayQuantity} ${item.displayUnit}',
-      style: const TextStyle(fontWeight: FontWeight.w600),
+      style: GramTreeColors.of(context).numberStyle(
+        TextStyle(
+          fontWeight: FontWeight.w600,
+          color: item.changed ? GramTreeColors.of(context).accent : null,
+        ),
+      ),
     ),
     subtitle: Text(
       '${item.changed ? '原值 ${item.originalQuantity} ${item.originalUnit} · ' : ''}${item.reason}',
@@ -2497,12 +2512,18 @@ class _PersonalizedIngredientRow extends StatelessWidget {
       color: item.changed ? GramTreeColors.of(context).accent : null,
     ),
     trailing: SourceMark(
-      sourceType: sourceTypeTasteAdjusted,
-      componentId: 'personalized-ingredient-${item.id}',
+      sourceType: !item.changed
+          ? sourceTypeAuthorFilled
+          : item.rule == 'ai_substitution'
+          ? sourceTypeAiEstimated
+          : item.rule == 'child_portion'
+          ? sourceTypeScenarioAdjusted
+          : sourceTypeTasteAdjusted,
+      componentId: componentId,
       value: '${item.displayName} ${item.displayQuantity} ${item.displayUnit}',
       originalValue:
           '${item.originalName} ${item.originalQuantity} ${item.originalUnit}',
-      basisText: '${item.rule}：${item.reason}',
+      basisText: '${item.rule}：${item.reason}；口味档案第 $profileVersion 版',
       neutral: !item.changed,
       required: false,
       feedbackEnabled: false,
@@ -2647,16 +2668,12 @@ class _PersonalizationViewCard extends StatelessWidget {
             child: Text('已按口味档案第 ${result!.profileVersion} 版换算；原版菜谱未改动。'),
           ),
         for (final item in changes)
-          ListTile(
-            key: ValueKey('personalized-ingredient-${item.id}'),
+          _PersonalizedIngredientRow(
+            key: ValueKey('personalized-summary-${item.id}'),
+            item: item,
+            profileVersion: result!.profileVersion,
+            componentId: 'personalized-summary-${item.id}',
             dense: true,
-            title: Text(
-              '${item.displayName}  ${item.displayQuantity} ${item.displayUnit}',
-            ),
-            subtitle: Text(
-              '原值 ${item.originalQuantity} ${item.originalUnit} · ${item.reason}',
-            ),
-            leading: const Icon(Icons.tune),
           ),
         for (final alert in alerts.where(
           (item) => item.kind == RecipePersonalSafetyAlertKindEnum.allergy,
@@ -2678,6 +2695,7 @@ class _PersonalizationViewCard extends StatelessWidget {
             label: const Text('我已确认过敏风险，继续显示结果'),
           ),
         ],
+        if (result?.fallback != null) Text(result!.fallback!),
         for (final notice in result?.notices ?? const <String>[]) Text(notice),
       ],
     );
@@ -2731,12 +2749,38 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
   void initState() {
     super.initState();
     _viewAccountId = ref.read(authProvider).value?.id;
-    ref.listenManual(tasteProfileProvider, (_, next) {
+    ref.listenManual(sensitiveMemoryProvider, (_, next) {
+      if (!mounted) return;
+      setState(() {
+        _personalizationGeneration++;
+        _personalized = null;
+        _originalSafety = null;
+        _personalizationLoading = false;
+        _dinerIds.clear();
+        _primaryDinerId = null;
+        _lastCapture = null;
+        if (next.suppressed) _personalizationError = '敏感信息已撤回，个性化安全结果已清除。';
+      });
+      if (!next.suppressed && !_networkUnavailable) {
+        unawaited(_loadPersonalization());
+      }
+    });
+    ref.listenManual(tasteProfileProvider, (previous, next) {
       final profile = next.value;
+      if (mounted && profile != null && previous?.value == null &&
+          _networkUnavailable &&
+          (_showOriginal ? _originalSafety : _personalized) == null) {
+        _seedOfflineProjection();
+        return;
+      }
       if (!mounted ||
           profile == null ||
-          _personalized == null ||
-          profile.version == _personalized!.profileVersion) {
+          ((previous?.value == null ||
+                  previous!.value!.version == profile.version) &&
+              (_personalized == null ||
+                  profile.version == _personalized!.profileVersion) &&
+              (_originalSafety == null ||
+                  profile.version == _originalSafety!.profileVersion))) {
         return;
       }
       setState(() {
@@ -2922,6 +2966,7 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
           _loadedAccountId = accountId;
           _offline = true;
         });
+        _seedOfflineProjection();
         return;
       }
       final frozen = await cache?.read(
@@ -2996,7 +3041,10 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
     String? personalizedKey,
     String? originalKey,
   ) async {
-    if (accountId == null || (personalizedKey == null && originalKey == null)) return;
+    if (accountId == null) return;
+    final generation = _personalizationGeneration;
+    final sensitive = ref.read(sensitiveMemoryProvider);
+    if (sensitive.suppressed) return;
     final cache = ref.read(tasteProfileCacheProvider);
     final personalized = personalizedKey == null
         ? null
@@ -3004,16 +3052,31 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
     final original = originalKey == null
         ? null
         : await cache.readPersonalization(accountId, originalKey);
-    if (!mounted || accountId != ref.read(authProvider).value?.id) return;
+    if (!mounted ||
+        accountId != ref.read(authProvider).value?.id ||
+        generation != _personalizationGeneration ||
+        sensitive != ref.read(sensitiveMemoryProvider)) {
+      return;
+    }
     final profile = ref.read(tasteProfileProvider).value;
-    RecipePersonalizedOut? decode(Map<String, dynamic>? value) => value == null
-        ? null
-        : RecipePersonalizedOut.fromJson(value);
+    RecipePersonalizedOut? decode(Map<String, dynamic>? value) {
+      if (value == null) return null;
+      try {
+        return requirePersonalizationConfirmation(
+          RecipePersonalizedOut.fromJson(value),
+        );
+      } catch (_) {
+        return null;
+      }
+    }
+
     final nextPersonalized = decode(personalized);
     final nextOriginal = decode(original);
     if (profile != null &&
-        ((nextPersonalized != null && profile.version != nextPersonalized.profileVersion) ||
-            (nextOriginal != null && profile.version != nextOriginal.profileVersion))) {
+        ((nextPersonalized != null &&
+                profile.version != nextPersonalized.profileVersion) ||
+            (nextOriginal != null &&
+                profile.version != nextOriginal.profileVersion))) {
       setState(() => _personalizationError = '口味档案已变化，离线显示原版；请联网更新。');
       return;
     }
@@ -3024,6 +3087,43 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
         ..clear()
         ..addAll(nextPersonalized?.inputs.dinerMemberIds ?? const []);
       _primaryDinerId = nextPersonalized?.inputs.primaryDinerId;
+    });
+    if (nextPersonalized == null || nextOriginal == null) {
+      _seedOfflineProjection();
+    }
+  }
+
+  void _seedOfflineProjection({bool? originalView}) {
+    final detail = _detail;
+    final profile = ref.read(tasteProfileProvider).value;
+    final sensitive = ref.read(sensitiveMemoryProvider);
+    if (!_networkUnavailable ||
+        detail == null ||
+        profile == null ||
+        sensitive.suppressed ||
+        _scaleMode != _RecipeScaleMode.servings) {
+      return;
+    }
+    final config = ref.read(recipeConversionConfigProvider);
+    final useOriginal = originalView ?? _showOriginal;
+    if ((useOriginal ? _originalSafety : _personalized) != null) return;
+    final result = offlinePersonalization(
+      detail: detail,
+      profile: profile,
+      targetServings:
+          _targetServings ?? detail.version.snapshot.servings,
+      minServings: config.minServings,
+      maxServings: config.maxServings,
+      originalView: useOriginal,
+    );
+    setState(() {
+      if (useOriginal) {
+        _originalSafety = result;
+      } else {
+        _personalized = result;
+      }
+      _personalizationError = null;
+      _offlineRecomputed = true;
     });
   }
 
@@ -3038,22 +3138,32 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
       return;
     }
     final privateCache = ref.read(tasteProfileCacheProvider);
-    final personalizedKey = _personalized?.cacheKey;
-    final originalKey = _originalSafety?.cacheKey;
+    final generation = _personalizationGeneration;
+    final sensitive = ref.read(sensitiveMemoryProvider);
+    final personalized = _personalized;
+    final original = _originalSafety;
+    final personalizedKey = personalized?.cacheKey;
+    final originalKey = original?.cacheKey;
+    bool current() =>
+        mounted &&
+        _viewAccountId == ref.read(authProvider).value?.id &&
+        generation == _personalizationGeneration &&
+        !sensitive.suppressed &&
+        sensitive == ref.read(sensitiveMemoryProvider);
     if (personalizedKey != null) {
       await privateCache.writePersonalization(
         _viewAccountId!,
         personalizedKey,
-        _personalized!.toJson(),
-        stillCurrent: () => mounted && _viewAccountId == ref.read(authProvider).value?.id,
+        requirePersonalizationConfirmation(personalized!).toJson(),
+        stillCurrent: current,
       );
     }
     if (originalKey != null) {
       await privateCache.writePersonalization(
         _viewAccountId!,
         originalKey,
-        _originalSafety!.toJson(),
-        stillCurrent: () => mounted && _viewAccountId == ref.read(authProvider).value?.id,
+        requirePersonalizationConfirmation(original!).toJson(),
+        stillCurrent: current,
       );
     }
     final inputs = <String, dynamic>{
@@ -3173,7 +3283,8 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
 
   Future<void> _loadPersonalization({bool? confirmAllergyRisk}) async {
     final detail = _detail;
-    if (detail == null || _networkUnavailable) return;
+    final sensitive = ref.read(sensitiveMemoryProvider);
+    if (detail == null || _networkUnavailable || sensitive.suppressed) return;
     final generation = ++_personalizationGeneration;
     final account = _viewAccountId;
     final original = _showOriginal;
@@ -3181,6 +3292,7 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
         mounted &&
         generation == _personalizationGeneration &&
         account == _viewAccountId &&
+        sensitive == ref.read(sensitiveMemoryProvider) &&
         identical(_detail, detail);
     if (mounted) {
       setState(() {
@@ -3206,6 +3318,11 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
             original: original,
           );
       if (!current()) return;
+      final profile = ref.read(tasteProfileProvider).value;
+      if (profile != null && result.profileVersion != profile.version) {
+        setState(() => _personalizationError = '口味档案已变化，请重新联网换算。');
+        return;
+      }
       setState(() {
         if (original) {
           _originalSafety = result;
@@ -3265,14 +3382,28 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
         ],
       ),
     );
-    if (confirmed == true) {
+    if (confirmed == true &&
+        mounted &&
+        identical(result, _showOriginal ? _originalSafety : _personalized)) {
       unawaited(_loadPersonalization(confirmAllergyRisk: true));
     }
   }
 
   void _setPersonalizedView(bool original) {
     if (original == _showOriginal) return;
-    setState(() => _showOriginal = original);
+    _personalizationGeneration++;
+    setState(() {
+      _showOriginal = original;
+      if (_personalized != null) {
+        _personalized = requirePersonalizationConfirmation(_personalized!);
+      }
+      if (_originalSafety != null) {
+        _originalSafety = requirePersonalizationConfirmation(_originalSafety!);
+      }
+    });
+    if (_networkUnavailable) {
+      _seedOfflineProjection(originalView: original);
+    }
     unawaited(
       ref
           .read(eventRecorderProvider)
@@ -3289,7 +3420,9 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
   }
 
   void _changeDiners(Set<String> next) {
+    _personalizationGeneration++;
     setState(() {
+      _personalizationLoading = false;
       _dinerIds
         ..clear()
         ..addAll(next);
@@ -3303,6 +3436,7 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
   }
 
   void _changePrimaryDiner(String? id) {
+    _personalizationGeneration++;
     setState(() {
       _primaryDinerId = id;
       _personalized = null;
@@ -3311,34 +3445,60 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
     if (!_networkUnavailable) unawaited(_loadPersonalization());
   }
 
+  void _changeMold(MoldSpec mold) {
+    _personalizationGeneration++;
+    setState(() {
+      _targetMold = mold;
+      _personalized = null;
+      _originalSafety = null;
+    });
+    if (!_networkUnavailable) unawaited(_loadPersonalization());
+  }
+
   void _changeServings(int servings) {
-    final result = _personalized;
-    if (_networkUnavailable &&
-        result != null &&
-        result.inputs.targetMold == null) {
-      final config = ref.read(recipeConversionConfigProvider);
-      final updated = recompilePersonalizedServings(
-        original: _detail!.version.snapshot,
-        cached: result,
-        targetServings: servings,
-        minServings: config.minServings,
-        maxServings: config.maxServings,
-      );
+    _personalizationGeneration++;
+    final config = ref.read(recipeConversionConfigProvider);
+    RecipePersonalizedOut? recompile(RecipePersonalizedOut? result) =>
+        result == null || result.inputs.targetMold != null
+        ? null
+        : recompilePersonalizedServings(
+            original: _detail!.version.snapshot,
+            cached: result,
+            targetServings: servings,
+            minServings: config.minServings,
+            maxServings: config.maxServings,
+          );
+    try {
+      final personalized = _networkUnavailable
+          ? recompile(_personalized)
+          : null;
+      final original = _networkUnavailable ? recompile(_originalSafety) : null;
       setState(() {
         _targetServings = servings;
-        _personalized = updated;
-        _offlineRecomputed = true;
+        _personalized = personalized;
+        _originalSafety = original;
+        _offlineRecomputed = _networkUnavailable;
       });
-    } else {
-      setState(() {
-        _targetServings = servings;
-        if (!_networkUnavailable) {
-          _personalized = null;
-          _originalSafety = null;
-        }
-      });
-      unawaited(_loadPersonalization());
+      if (!_networkUnavailable) unawaited(_loadPersonalization());
+    } on FormatException catch (error) {
+      setState(() => _personalizationError = error.message);
     }
+  }
+
+  void _changeScaleMode(_RecipeScaleMode mode) {
+    _personalizationGeneration++;
+    setState(() {
+      _scaleMode = mode;
+      if (mode == _RecipeScaleMode.servings) {
+        _targetServings = _detail!.version.snapshot.servings;
+      }
+      if (mode == _RecipeScaleMode.mold) {
+        _targetMold ??= _detail!.version.snapshot.baseMold;
+      }
+      _personalized = null;
+      _originalSafety = null;
+    });
+    unawaited(_loadPersonalization());
   }
 
   Future<void> _refreshDisplayMetadata() async {
@@ -3457,26 +3617,51 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
         detail == null) {
       return;
     }
-    final personalizedSnapshot = !_showOriginal
-        ? _personalized?.snapshot
-        : null;
-    final execution = personalizedSnapshot == null
-        ? frozen
-        : FrozenRecipeSnapshot(
-            detail: detail.copyWith.version(
-              detail.version.copyWith.snapshot(personalizedSnapshot),
-            ),
-            capturedAt: DateTime.now(),
-            inputs: {
-              ...frozen.inputs,
-              'personalized_view': 'personalized',
-              'personalized_result': _personalized?.toJson(),
+    final result = _showOriginal ? _originalSafety : _personalized;
+    if (result == null ||
+        result.blocked ||
+        _personalizationLoading ||
+        ref.read(sensitiveMemoryProvider).suppressed) {
+      return;
+    }
+    final displayedSnapshot = result.snapshot;
+    final execution = FrozenRecipeSnapshot(
+      detail: detail.copyWith.version(
+        detail.version.copyWith.snapshot(displayedSnapshot),
+      ),
+      capturedAt: DateTime.now(),
+      inputs: {
+        ...frozen.inputs,
+        'personalized_view': _showOriginal ? 'original' : 'personalized',
+        // Execution evidence contains rules, not family names or allergies.
+        'personalization_rules': [
+          for (final item in result.ingredients)
+            {
+              'ingredient_id': item.id,
+              'rule': item.rule,
+              'factor': item.factor,
+              'adaptation_factors': item.adaptationFactors ?? const [],
             },
-            render: frozen.render,
-            dependencies: frozen.dependencies,
-          );
+        ],
+        'personalization_step_sources': [
+          for (final step in result.steps)
+            {'step_id': step.id, 'source': step.source_.value},
+        ],
+      },
+      render: frozen.render,
+      dependencies: frozen.dependencies,
+    );
     final session = await store.start(execution);
-    if (mounted) context.push('/cooking/${session.id}');
+    if (!mounted) return;
+    setState(() {
+      if (_personalized != null) {
+        _personalized = requirePersonalizationConfirmation(_personalized!);
+      }
+      if (_originalSafety != null) {
+        _originalSafety = requirePersonalizationConfirmation(_originalSafety!);
+      }
+    });
+    context.push('/cooking/${session.id}');
   }
 
   @override
@@ -3546,7 +3731,7 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
         ),
       );
     }
-    if (offline && _frozenRender == null) {
+    if (offline && _frozenRender == null && !_offlineRecomputed) {
       return Scaffold(
         appBar: AppBar(title: Text(detail.dish.name)),
         body: ListView(
@@ -3620,8 +3805,8 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
     MoldConversionResult? moldConversion;
     String? moldConversionError;
     if (offline) {
-      moldConversion = _frozenRender!.mold;
-      moldConversionError = _frozenRender!.moldError;
+      moldConversion = _frozenRender?.mold;
+      moldConversionError = _frozenRender?.moldError;
     } else if (snapshot.baseMold != null && _targetMold != null) {
       try {
         moldConversion = _recipeMoldConversion(
@@ -3868,7 +4053,7 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
             style: Theme.of(context).textTheme.headlineSmall,
           ),
           _PersonalizationViewCard(
-            result: _personalized,
+            result: _showOriginal ? _originalSafety : _personalized,
             loading: _personalizationLoading,
             error: _personalizationError,
             showOriginal: _showOriginal,
@@ -3885,7 +4070,9 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
             key: const ValueKey('start-cooking-button'),
             onPressed:
                 _frozenSnapshot?.render == null ||
-                    (!_showOriginal && _personalized?.blocked == true)
+                    _personalizationLoading ||
+                    (_showOriginal ? _originalSafety : _personalized) == null ||
+                    (_showOriginal ? _originalSafety : _personalized)!.blocked
                 ? null
                 : _startCooking,
             icon: const Icon(Icons.play_arrow),
@@ -3936,14 +4123,8 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
             if (snapshot.baseMold != null) ...[
               _ScaleModeControl(
                 mode: _scaleMode,
-                onServing: () => setState(() {
-                  _scaleMode = _RecipeScaleMode.servings;
-                  _targetServings = snapshot.servings;
-                }),
-                onMold: () => setState(() {
-                  _scaleMode = _RecipeScaleMode.mold;
-                  _targetMold ??= snapshot.baseMold;
-                }),
+                onServing: () => _changeScaleMode(_RecipeScaleMode.servings),
+                onMold: () => _changeScaleMode(_RecipeScaleMode.mold),
               ),
               const SizedBox(height: 8),
             ] else
@@ -3966,8 +4147,8 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
                 conversion: moldConversion,
                 errorText: moldConversionError,
                 ingredientNames: ingredientNames,
-                onTargetChanged: (value) => setState(() => _targetMold = value),
-                onReset: () => setState(() => _targetMold = snapshot.baseMold),
+                onTargetChanged: _changeMold,
+                onReset: () => _changeMold(snapshot.baseMold!),
               ),
             if (_scaleMode == _RecipeScaleMode.servings &&
                 targetServings >=
@@ -3991,8 +4172,11 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
               onChanged: (mode) => setState(() => _displayMode = mode),
             ),
           ] else ...[
-            if (_personalized != null &&
-                _personalized!.inputs.targetMold == null)
+            if ((_showOriginal ? _originalSafety : _personalized) != null &&
+                (_showOriginal ? _originalSafety : _personalized)!
+                        .inputs
+                        .targetMold ==
+                    null)
               _ServingControl(
                 conversion: servingConversion,
                 ingredientNames: ingredientNames,
@@ -4021,7 +4205,10 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
             for (final ingredient in entry.value)
               !_showOriginal && _personalizedIngredients[ingredient.id] != null
                   ? _PersonalizedIngredientRow(
+                      key: ValueKey('personalized-detail-${ingredient.id}'),
                       item: _personalizedIngredients[ingredient.id]!,
+                      profileVersion: _personalized!.profileVersion,
+                      componentId: 'personalized-detail-${ingredient.id}',
                     )
                   : _IngredientDetailRow(
                       ingredient: ingredient,

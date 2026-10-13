@@ -618,6 +618,8 @@ class PersonalizedIngredientOut(BaseModel):
     original_unit: str
     display_unit: str
     factor: float
+    # Keep exact sequential multipliers; rounded amounts cannot recover them offline.
+    adaptation_factors: list[float] = Field(default_factory=list)
     rule: str
     reason: str
     changed: bool

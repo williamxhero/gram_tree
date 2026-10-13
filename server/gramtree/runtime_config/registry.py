@@ -157,8 +157,13 @@ ITEMS: tuple[ConfigItem, ...] = (
         public=True,
     ),
     ConfigItem(
-        "recipe.personalization_adjustment_limit", "float", 0.30,
-        "个性化味型滤镜单次调整上下限", minimum=0, maximum=0.50, public=True,
+        "recipe.personalization_adjustment_limit",
+        "float",
+        0.30,
+        "个性化味型滤镜单次调整上下限",
+        minimum=0,
+        maximum=0.50,
+        public=True,
     ),
     # —— 菜谱份数换算（SPEC-002.3） ——
     ConfigItem(

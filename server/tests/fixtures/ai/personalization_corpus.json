@@ -1,0 +1,34 @@
+{
+  "description": "Synthetic SPEC-005.2 HTTP acceptance recordings and reviewed test catalogue; no user data or live model calls.",
+  "catalogue": [
+    {"id": "00000000-0000-4000-8000-000000000101", "standard_name": "香菜", "pinyin": "xiangcai", "pinyin_initials": "xc", "category": "蔬菜", "attributes": {"allergens": {"value": [], "source": "synthetic acceptance fixture", "status": "verified"}}},
+    {"id": "00000000-0000-4000-8000-000000000102", "standard_name": "葱", "pinyin": "cong", "pinyin_initials": "c", "category": "蔬菜", "attributes": {"allergens": {"value": [], "source": "synthetic acceptance fixture", "status": "verified"}}},
+    {"id": "00000000-0000-4000-8000-000000000103", "standard_name": "花生", "pinyin": "huasheng", "pinyin_initials": "hs", "category": "坚果干货", "attributes": {"allergens": {"value": ["花生"], "source": "synthetic acceptance fixture", "status": "verified"}}},
+    {"id": "00000000-0000-4000-8000-000000000104", "standard_name": "豆腐", "pinyin": "doufu", "pinyin_initials": "df", "category": "豆制品", "attributes": {"allergens": {"value": ["大豆"], "source": "synthetic acceptance fixture", "status": "verified"}}},
+    {"id": "00000000-0000-4000-8000-000000000105", "standard_name": "鸡肉", "pinyin": "jirou", "pinyin_initials": "jr", "category": "肉禽", "attributes": {"allergens": {"value": [], "source": "synthetic acceptance fixture", "status": "verified"}}},
+    {"id": "00000000-0000-4000-8000-000000000106", "standard_name": "盐", "pinyin": "yan", "pinyin_initials": "y", "category": "调料", "attributes": {"allergens": {"value": [], "source": "synthetic acceptance fixture", "status": "verified"}}},
+    {"id": "00000000-0000-4000-8000-000000000107", "standard_name": "糖", "pinyin": "tang", "pinyin_initials": "t", "category": "调料", "attributes": {"allergens": {"value": [], "source": "synthetic acceptance fixture", "status": "verified"}}},
+    {"id": "00000000-0000-4000-8000-000000000108", "standard_name": "辣椒", "pinyin": "lajiao", "pinyin_initials": "lj", "category": "蔬菜", "attributes": {"allergens": {"value": [], "source": "synthetic acceptance fixture", "status": "verified"}}},
+    {"id": "00000000-0000-4000-8000-000000000109", "standard_name": "蜂蜜", "pinyin": "fengmi", "pinyin_initials": "fm", "category": "调料", "attributes": {"allergens": {"value": [], "source": "synthetic acceptance fixture", "status": "verified"}}}
+  ],
+  "no_replacement": {"replacement": null},
+  "suggested_replacement": {"replacement": {"display_name": "鸡肉", "ratio": 1}},
+  "equipment_recipe": {
+    "dish_name": "烤鸡肉",
+    "snapshot": {
+      "servings": 2,
+      "ingredients": [
+        {"id": "chicken", "ingredient_id": "00000000-0000-4000-8000-000000000105", "display_name": "鸡肉", "quantity": 300, "unit": "g", "group": "主料", "scaling_mode": "proportional"},
+        {"id": "salt", "ingredient_id": "00000000-0000-4000-8000-000000000106", "display_name": "盐", "quantity": 10, "unit": "g", "flavor_contribution": {"salty": 3}, "scaling_mode": "proportional"}
+      ],
+      "steps": [
+        {"id": "cook", "action": "烤", "instruction": "鸡肉加盐，用烤箱烤至中心温度达到 74°C", "ingredient_ids": ["chicken", "salt"], "duration_seconds": 1200, "heat": "中火", "temperature_celsius": 180, "cookware": "烤箱", "doneness": "中心温度达到 74°C", "depends_on": [], "unattended": true}
+      ]
+    }
+  },
+  "equipment_rewrite": {
+    "steps": [
+      {"id": "cook", "action": "炒", "instruction": "鸡肉加盐，用炒锅中火翻炒并测量中心温度达到 74°C", "ingredient_ids": ["chicken", "salt"], "duration_seconds": 600, "heat": "中火", "temperature_celsius": null, "cookware": "炒锅", "doneness": "中心温度达到 74°C", "depends_on": [], "unattended": false}
+    ]
+  }
+}
