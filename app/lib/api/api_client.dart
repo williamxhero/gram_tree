@@ -366,8 +366,9 @@ class AuthInterceptor extends QueuedInterceptor {
         _sensitiveOriginMatches(options)) {
       final identity = session.identity!;
       try {
-        if (canRefresh?.call() == false)
+        if (canRefresh?.call() == false) {
           throw StateError('refresh_waiting_for_network');
+        }
         final tokens = await refresh(legacy.refreshToken);
         if (!session.matches(identity) || !identical(session.current, legacy)) {
           throw StateError('account_changed');

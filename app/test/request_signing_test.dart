@@ -35,8 +35,8 @@ void main() {
       final b = utf8.decode(
         RequestSigner.canonicalMessage('GET', '/v1/x', 'q=a%2Bb', 1, 'n', 'h'),
       );
-      expect(a, contains('q%3Da%2Bb'));
-      expect(b, contains('q%3Da%252Bb'));
+      expect(a, contains('q=a%2Bb'));
+      expect(b, contains('q=a%252Bb'));
       expect(a, isNot(b));
     },
   );

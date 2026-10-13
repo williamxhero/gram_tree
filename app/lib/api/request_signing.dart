@@ -83,8 +83,9 @@ class RequestSigner {
           (buffer, chunk) => buffer..addAll(chunk),
         );
       } else {
-        if (data is Map || data is List)
+        if (data is Map || data is List) {
           options.contentType ??= Headers.jsonContentType;
+        }
         final transformed = transformer != null
             ? await transformer.transformRequest(options)
             : await Transformer.defaultTransformRequest(options, jsonEncode);

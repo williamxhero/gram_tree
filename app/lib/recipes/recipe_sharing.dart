@@ -24,8 +24,9 @@ class ApiRecipeSharing implements RecipeSharing {
       recipeId: recipeId,
     );
     final data = response.data;
-    if (data == null)
+    if (data == null) {
       throw const FormatException('Missing recipe share response');
+    }
     final url = Uri.parse(data.url);
     if (url.scheme != 'https' ||
         url.host.isEmpty ||
