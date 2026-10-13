@@ -39,7 +39,7 @@ def signed_headers(
         random,
         hashlib.sha256(body).hexdigest(),
     )
-    message = "\n".join(quote(value, safe="/-_.~=&%") for value in fields).encode()
+    message = "\n".join(quote(value, safe="/-_.~=&") for value in fields).encode()
     signature = hmac.new(
         (key or tokens["request_signing_key"]).encode(), message, hashlib.sha256
     ).hexdigest()

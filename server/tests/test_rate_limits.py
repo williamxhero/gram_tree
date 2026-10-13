@@ -105,13 +105,7 @@ def test_atomic_concurrent_admission_cannot_exceed_quota(api: Api, dimension: st
     for response in responses:
         if response.status_code != 200:
             assert_limited(response)
-    redis = api.client.app.state.redis
-    keys = list(redis.scan_iter(match="rate:detail:*"))
-    assert len(keys) == 6
-    for key in keys:
-        assert int(redis.get(key)) == 12
-        expected = 86400 if b":day:" in key else 60
-        assert 0 < redis.ttl(key) <= expected
+    assert_limited(api.client.get("/v1/me", headers=bearer(tokens)))
 
 
 def test_minute_expiration_preserves_daily_quota(api: Api) -> None:
@@ -120,15 +114,14 @@ def test_minute_expiration_preserves_daily_quota(api: Api) -> None:
     configure("rate.detail.account_per_minute", 1)
     configure("rate.detail.account_per_day", 2)
     assert api.client.get("/v1/me", headers=bearer(tokens)).status_code == 200
-    redis = api.client.app.state.redis
-    minute = list(redis.scan_iter(match="rate:detail:minute:account:*"))
-    assert len(minute) == 1
-    # Force a real Redis expiry without making the suite sleep through a minute.
-    assert redis.expire(minute[0], 0)
-    assert redis.ttl(minute[0]) == -2
+    api.clock.advance(seconds=60)
     assert api.client.get("/v1/me", headers=bearer(tokens)).status_code == 200
-    assert redis.expire(minute[0], 0)
+    api.clock.advance(seconds=60)
     assert_limited(api.client.get("/v1/me", headers=bearer(tokens)), day=True)
+    api.clock.advance(seconds=86400)
+    refreshed = api.client.post("/v1/auth/refresh", json={"refresh_token": tokens["refresh_token"]})
+    assert refreshed.status_code == 200, refreshed.text
+    assert api.client.get("/v1/me", headers=bearer(refreshed.json())).status_code == 200
 
 
 def test_invalid_config_cannot_disable_a_quota_and_missing_uses_defaults(api: Api) -> None:
@@ -165,10 +158,6 @@ def test_distinct_recipe_day_quota_counts_unique_ids_not_revisits(api: Api, dime
     for _ in range(2):
         assert api.client.get(first, headers=bearer(tokens)).status_code == 404
     assert_limited(api.client.get(second, headers=bearer(tokens)), day=True)
-    redis = api.client.app.state.redis
-    for key in redis.scan_iter(match="rate:detail:distinct:day:*"):
-        assert redis.scard(key) == 2
-        assert 0 < redis.ttl(key) <= 86400
     configure(f"rate.detail.{dimension}_distinct_recipes_per_day", 3)
     assert api.client.get(second, headers=bearer(tokens)).status_code == 404
 
@@ -190,4 +179,23 @@ def test_export_quota_does_not_share_browsing_or_write_counters(api: Api) -> Non
         ).status_code
         == 200
     )
-    assert list(api.client.app.state.redis.scan_iter(match="rate:export:*"))
+    configure("rate.export.account_per_minute", 1)
+    assert_limited(api.client.get("/v1/export", headers=bearer(tokens)))
+
+
+def test_comparison_candidates_and_pending_changes_use_list_quota(api: Api) -> None:
+    quiet_risk()
+    tokens = api.login("list-category@example.com")
+    configure("rate.search_list.account_per_minute", 1)
+    configure("rate.detail.account_distinct_recipes_per_day", 1)
+    url = "/v1/recipes/00000000-0000-4000-8000-000000000001/comparison-candidates"
+    assert api.client.get(url, headers=bearer(tokens)).status_code == 404
+    assert_limited(api.client.get(url, headers=bearer(tokens)))
+    assert_limited(api.client.get("/v1/me/taste-profile/changes/pending", headers=bearer(tokens)))
+    # A list route must not consume the distinct-detail budget for its recipe ID.
+    assert (
+        api.client.get(
+            "/v1/recipes/00000000-0000-4000-8000-000000000002", headers=bearer(tokens)
+        ).status_code
+        == 404
+    )

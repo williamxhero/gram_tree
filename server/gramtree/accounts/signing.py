@@ -41,7 +41,7 @@ def canonical_message(
     # The raw query string is intentional: reordering or re-encoding parameters
     # must invalidate a captured signature.
     fields = (method.upper(), path, query, str(timestamp), nonce, body_hash)
-    return "\n".join(quote(field, safe="/-_.~=&%") for field in fields).encode()
+    return "\n".join(quote(field, safe="/-_.~=&") for field in fields).encode()
 
 
 def sign(

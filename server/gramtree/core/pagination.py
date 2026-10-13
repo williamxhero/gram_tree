@@ -11,7 +11,7 @@ import uuid
 from collections.abc import AsyncIterator
 from contextvars import ContextVar
 from dataclasses import dataclass
-from datetime import UTC, datetime, timedelta
+from datetime import datetime
 from typing import Annotated, Generic, TypeVar
 
 import jwt
@@ -227,38 +227,6 @@ def decode_cursor(cursor: str) -> tuple[datetime, uuid.UUID]:
         raise ApiError(422, "invalid_cursor", "请求参数有误", "cursor 无法解析") from exc
 
 
-def encode_signed_cursor(
-    created_at: datetime,
-    id_: uuid.UUID,
-    *,
-    secret: str,
-    subject: str,
-    query: str,
-    page: int = 1,
-    ttl_seconds: int = 600,
-    now: datetime | None = None,
-) -> str | None:
-    """Create an opaque, user/query-bound cursor with an expiration and page bound."""
-    if _cursor_context.get() is not None:
-        return encode_cursor(created_at, id_)
-    issued_at = now or datetime.now(UTC)
-    if issued_at.tzinfo is None:
-        issued_at = issued_at.replace(tzinfo=UTC)
-    payload: dict[str, object] = {
-        "a": created_at.isoformat(),
-        "e": int((issued_at + timedelta(seconds=max(1, ttl_seconds))).timestamp()),
-        "i": str(id_),
-        "p": page,
-        "q": hmac.new(secret.encode(), query.encode(), "sha256").hexdigest(),
-        "s": hmac.new(secret.encode(), subject.encode(), "sha256").hexdigest(),
-        "t": int(issued_at.timestamp()),
-        "v": 1,
-    }
-    unsigned = _b64_json(payload)
-    signature = hmac.new(secret.encode(), unsigned.encode(), "sha256").hexdigest()
-    return _b64_json({"d": unsigned, "m": signature})
-
-
 def decode_signed_cursor(
     cursor: str,
     *,
@@ -268,53 +236,12 @@ def decode_signed_cursor(
     max_pages: int,
     now: datetime | None = None,
 ) -> tuple[datetime, uuid.UUID, int]:
-    """Verify a cursor without revealing whether parsing, binding, or expiry failed."""
+    """Compatibility facade for recipe services; PageDep owns the single policy."""
     context = _cursor_context.get()
-    if context is not None:
-        timestamp, row_id = decode_cursor(cursor)
-        return timestamp, row_id, context.page
-    try:
-        envelope = _decode_b64_json(cursor)
-        if not isinstance(envelope, dict) or set(envelope) != {"d", "m"}:
-            raise ValueError
-        unsigned = envelope["d"]
-        supplied_mac = envelope["m"]
-        if not isinstance(unsigned, str) or not isinstance(supplied_mac, str):
-            raise ValueError
-        expected_mac = hmac.new(secret.encode(), unsigned.encode(), "sha256").hexdigest()
-        if not hmac.compare_digest(supplied_mac, expected_mac):
-            raise ValueError
-        payload = _decode_b64_json(unsigned)
-        if not isinstance(payload, dict) or set(payload) != {
-            "a",
-            "e",
-            "i",
-            "p",
-            "q",
-            "s",
-            "t",
-            "v",
-        }:
-            raise ValueError
-        expected_query = hmac.new(secret.encode(), query.encode(), "sha256").hexdigest()
-        expected_subject = hmac.new(secret.encode(), subject.encode(), "sha256").hexdigest()
-        if payload["q"] != expected_query or payload["s"] != expected_subject or payload["v"] != 1:
-            raise ValueError
-        page = payload["p"]
-        if not isinstance(page, int) or isinstance(page, bool) or page < 1:
-            raise ValueError
-        if page > max(1, max_pages):
-            raise ApiError(422, "pagination_limit_reached", "请换搜索条件")
-        current = now or datetime.now(UTC)
-        if current.tzinfo is None:
-            current = current.replace(tzinfo=UTC)
-        if not isinstance(payload["e"], int) or payload["e"] < int(current.timestamp()):
-            raise ValueError
-        return datetime.fromisoformat(str(payload["a"])), uuid.UUID(str(payload["i"])), page
-    except ApiError:
-        raise
-    except (ValueError, TypeError, KeyError, json.JSONDecodeError, UnicodeDecodeError) as exc:
-        raise _cursor_error() from exc
+    if context is None:
+        raise RuntimeError("signed pagination requires page_params")
+    timestamp, row_id = decode_cursor(cursor)
+    return timestamp, row_id, context.page
 
 
 def next_signed_cursor(
@@ -329,21 +256,10 @@ def next_signed_cursor(
     ttl_seconds: int,
     now: datetime | None = None,
 ) -> str | None:
-    if _cursor_context.get() is not None:
-        return encode_cursor(created_at, id_)
-    next_page = current_page + 1
-    if next_page > max_pages:
-        return None
-    return encode_signed_cursor(
-        created_at,
-        id_,
-        secret=secret,
-        subject=subject,
-        query=query,
-        page=next_page,
-        ttl_seconds=ttl_seconds,
-        now=now,
-    )
+    """Compatibility facade; never issue an alternative unsigned/v1 HTTP cursor."""
+    if _cursor_context.get() is None:
+        raise RuntimeError("signed pagination requires page_params")
+    return encode_cursor(created_at, id_)
 
 
 def encode_parts(parts: list[int | str]) -> str | None:

@@ -6,6 +6,7 @@ import hashlib
 import hmac
 import uuid
 from contextlib import suppress
+from datetime import UTC, datetime
 from typing import Any, Literal, cast
 
 import jwt
@@ -71,6 +72,8 @@ def category(path: str, method: str) -> RateCategory | None:
         path in {"/v1/recipes", "/v1/ingredients", "/v1/records"}
         or path.endswith("/versions")
         or path.endswith("/candidates")
+        or path.endswith("/comparison-candidates")
+        or path.endswith("/changes/pending")
         or path.endswith("/unrecorded")
         or path.endswith("/family-members")
         or path in {"/v1/me/measures", "/v1/examples/samples"}
@@ -127,11 +130,13 @@ def enforce(
     token: str | None,
     device_id: str | None,
     ip: str | None,
+    now: datetime | None = None,
 ) -> None:
     """Count all known dimensions and reject if any fixed window is exhausted."""
     kind = category(path, method)
     if kind is None:
         return
+    current = int((now or datetime.now(UTC)).timestamp())
     account = _subject_from_token(token, settings)
     dimensions = [("account", account), ("device", device_id), ("ip", ip)]
     dimensions = [(name, value) for name, value in dimensions if value]
@@ -152,14 +157,19 @@ def enforce(
             ("minute", 60, 120),
             ("day", 86400, 5000),
         ):
-            key = _key(settings, f"{kind}:{window}:{name}", str(value))
+            # UTC bucket identity and Redis expiration share the business clock.
+            # Counts cannot leak into the next minute/day even if cleanup lags.
+            bucket = current // seconds
+            key = _key(settings, f"{kind}:{window}:{name}:{bucket}", str(value))
             keys.append(key)
-            expirations.append(str(seconds))
+            expirations.append(str(seconds - current % seconds))
             limits.append(str(_safe_limit(session, f"rate.{kind}.{name}_per_{window}", fallback)))
             modes.append("count")
         if recipe_id:
-            keys.append(_key(settings, f"detail:distinct:day:{name}", str(value)))
-            expirations.append("86400")
+            keys.append(
+                _key(settings, f"detail:distinct:day:{name}:{current // 86400}", str(value))
+            )
+            expirations.append(str(86400 - current % 86400))
             limits.append(
                 str(_safe_limit(session, f"rate.detail.{name}_distinct_recipes_per_day", 1000))
             )

@@ -1,6 +1,7 @@
 """Device signing acceptance through HTTP and the real Redis nonce store."""
 
 import json
+import time
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
 
@@ -155,19 +156,49 @@ def test_nonce_is_atomic_expiring_session_scoped_and_not_consumed_by_bad_mac(api
     for response in responses:
         if response.status_code != 200:
             assert_signature_error(response, "nonce_replayed")
-    redis = api.client.app.state.redis
-    keys = list(redis.scan_iter(match="signing:nonce:*"))
-    assert len(keys) == 1
-    assert (
-        55 <= redis.ttl(keys[0]) <= 61
-    )  # Cannot replay a still-valid future-dated request after 1s.
+    # Redis expiry uses wall time, not the injectable business clock. A bounded
+    # wait proves that a configured 1s TTL cannot reopen this valid replay window.
+    time.sleep(1.1)
+    api.clock.advance(seconds=1)
+    assert_signature_error(api.client.get("/v1/me", headers=supplied), "nonce_replayed")
     assert (
         api.client.get(
             "/v1/me", headers=headers(api, second, nonce="same-nonce", device="second-device")
         ).status_code
         == 200
     )
-    assert all(0 < redis.ttl(key) <= 61 for key in redis.scan_iter(match="signing:nonce:*"))
+
+
+@pytest.mark.parametrize("component", ["nonce", "query"])
+def test_literal_percent_cannot_collide_with_encoded_plus(api: Api, component: str) -> None:
+    quiet_risk()
+    tokens = api.login("encoding@example.com")
+    original = "/v1/me?q=a+b" if component == "query" else "/v1/me"
+    changed = "/v1/me?q=a%2Bb" if component == "query" else original
+    supplied = headers(api, tokens, url=original, nonce="a+b")
+    assert api.client.get(original, headers=supplied).status_code == 200
+    if component == "nonce":
+        supplied["X-Request-Nonce"] = "a%2Bb"
+    assert_signature_error(api.client.get(changed, headers=supplied), "signature_invalid")
+    fresh = headers(api, tokens, url=changed, nonce="a%2Bb")
+    assert api.client.get(changed, headers=fresh).status_code == 200
+
+
+def test_expired_nonce_can_be_reused_only_with_a_fresh_signed_timestamp(api: Api) -> None:
+    quiet_risk()
+    tokens = api.login("nonce-expiry@example.com")
+    configure("auth.signing_clock_tolerance_seconds", 1)
+    configure("auth.signing_nonce_ttl_seconds", 1)
+    supplied = signed_headers(
+        tokens, "GET", "/v1/me", timestamp=int(api.clock().timestamp()) - 1, nonce="expiring"
+    )
+    assert api.client.get("/v1/me", headers=supplied).status_code == 200
+    time.sleep(1.1)
+    api.clock.advance(seconds=2)
+    assert_signature_error(api.client.get("/v1/me", headers=supplied), "signature_clock_skew")
+    fresh = headers(api, tokens, nonce="expiring")
+    assert api.client.get("/v1/me", headers=fresh).status_code == 200
+    assert_signature_error(api.client.get("/v1/me", headers=fresh), "nonce_replayed")
 
 
 @pytest.mark.parametrize("other_account", [False, True])

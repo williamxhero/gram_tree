@@ -11,6 +11,7 @@ from tests.accounts_support import Api, bearer
 from tests.test_cooking_records import _record
 from tests.test_recipes import recipe_input
 from tests.test_request_signing import configure, quiet_risk
+from tests.test_taste_learning import create, run_learning
 
 PRIVATE_LISTS = [
     "/v1/recipes",
@@ -20,6 +21,7 @@ PRIVATE_LISTS = [
     "/v1/me/measures/00000000-0000-4000-8000-000000000001/history",
     "/v1/records",
     "/v1/me/taste-profile/changes",
+    "/v1/me/taste-profile/changes/pending",
     "/v1/me/taste-profile/allergies/changes",
     "/v1/me/taste-profile/family-members",
     "/v1/me/taste-profile/family-members/changes",
@@ -222,6 +224,38 @@ def test_non_collection_lists_keep_valid_paging_shape_and_signed_boundary(
     assert len(second.json()["items"]) == 1
     assert second.json()["items"] != first.json()["items"]
     assert_refresh(api.client.get(url, params={"limit": 2, "cursor": cursor}, headers=h))
+
+
+def test_pending_changes_continue_without_repeating_the_first_page(api: Api) -> None:
+    quiet_risk()
+    tokens = api.login("pending-cursor@example.com")
+    for ingredient in ("香菜", "葱", "蒜"):
+        snapshot = {
+            "format_version": 1,
+            "dish_name": "测试菜",
+            "ingredients": [
+                {"display_name": ingredient, "disposition": "deleted", "category": "蔬菜"}
+            ],
+        }
+        for _ in range(2):
+            create(api, tokens, snapshot=snapshot, adjustments=[{"text": f"去掉{ingredient}"}])
+    suggestions = run_learning(api, tokens)["pending_suggestions"]
+    assert len(suggestions) == 3
+    url = "/v1/me/taste-profile/changes/pending"
+    seen = []
+    cursor = None
+    for _ in range(3):
+        params = {"limit": 1}
+        if cursor is not None:
+            params["cursor"] = cursor
+        response = api.client.get(url, params=params, headers=bearer(tokens))
+        assert response.status_code == 200, response.text
+        page = response.json()
+        assert len(page["items"]) == 1
+        seen.append(page["items"][0]["id"])
+        cursor = page["next_cursor"]
+    assert set(seen) == {row["id"] for row in suggestions}
+    assert cursor is None
 
 
 def test_public_search_cursor_stable_subject_body_binding_expiry_and_request_isolation(
