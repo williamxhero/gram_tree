@@ -152,6 +152,8 @@ import 'package:gramtree_api/src/model/recipe_list.dart';
 import 'package:gramtree_api/src/model/recipe_list_item.dart';
 import 'package:gramtree_api/src/model/recipe_mold_conversion_out.dart';
 import 'package:gramtree_api/src/model/recipe_mold_conversion_request.dart';
+import 'package:gramtree_api/src/model/recipe_personal_safety.dart';
+import 'package:gramtree_api/src/model/recipe_personal_safety_alert.dart';
 import 'package:gramtree_api/src/model/recipe_quantification_out.dart';
 import 'package:gramtree_api/src/model/recipe_question.dart';
 import 'package:gramtree_api/src/model/recipe_replacement.dart';
@@ -674,6 +676,12 @@ ReturnType deserialize<ReturnType, BaseType>(
           as ReturnType;
     case 'RecipeMoldConversionRequest':
       return RecipeMoldConversionRequest.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'RecipePersonalSafety':
+      return RecipePersonalSafety.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'RecipePersonalSafetyAlert':
+      return RecipePersonalSafetyAlert.fromJson(value as Map<String, dynamic>)
           as ReturnType;
     case 'RecipeQuantificationOut':
       return RecipeQuantificationOut.fromJson(value as Map<String, dynamic>)

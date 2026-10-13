@@ -22,6 +22,8 @@ class CookingRecordOut {
 
     required this.clientId,
 
+    required this.coDinerIds,
+
     required this.countsAsCooked,
 
     required this.createdAt,
@@ -44,6 +46,8 @@ class CookingRecordOut {
 
     required this.sourceContext,
 
+    required this.tasteSummary,
+
     required this.verification,
   });
 
@@ -52,6 +56,9 @@ class CookingRecordOut {
 
   @JsonKey(name: r'client_id', required: true, includeIfNull: false)
   final String clientId;
+
+  @JsonKey(name: r'co_diner_ids', required: true, includeIfNull: false)
+  final List<String> coDinerIds;
 
   @JsonKey(name: r'counts_as_cooked', required: true, includeIfNull: false)
   final bool countsAsCooked;
@@ -86,6 +93,9 @@ class CookingRecordOut {
   @JsonKey(name: r'source_context', required: true, includeIfNull: false)
   final Object sourceContext;
 
+  @JsonKey(name: r'taste_summary', required: true, includeIfNull: false)
+  final Object tasteSummary;
+
   @JsonKey(name: r'verification', required: true, includeIfNull: false)
   final CookingRecordOutVerificationEnum verification;
 
@@ -95,6 +105,7 @@ class CookingRecordOut {
       other is CookingRecordOut &&
           other.adjustments == adjustments &&
           other.clientId == clientId &&
+          other.coDinerIds == coDinerIds &&
           other.countsAsCooked == countsAsCooked &&
           other.createdAt == createdAt &&
           other.dishName == dishName &&
@@ -106,12 +117,14 @@ class CookingRecordOut {
           other.snapshot == snapshot &&
           other.source_ == source_ &&
           other.sourceContext == sourceContext &&
+          other.tasteSummary == tasteSummary &&
           other.verification == verification;
 
   @override
   int get hashCode =>
       adjustments.hashCode +
       clientId.hashCode +
+      coDinerIds.hashCode +
       countsAsCooked.hashCode +
       createdAt.hashCode +
       (dishName == null ? 0 : dishName.hashCode) +
@@ -123,6 +136,7 @@ class CookingRecordOut {
       (snapshot == null ? 0 : snapshot.hashCode) +
       source_.hashCode +
       sourceContext.hashCode +
+      tasteSummary.hashCode +
       verification.hashCode;
 
   factory CookingRecordOut.fromJson(Map<String, dynamic> json) =>

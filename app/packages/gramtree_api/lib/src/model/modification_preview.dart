@@ -7,6 +7,7 @@ import 'package:gramtree_api/src/model/ai_status.dart';
 import 'package:gramtree_api/src/model/modification_intent.dart';
 import 'package:gramtree_api/src/model/recipe_snapshot.dart';
 import 'package:gramtree_api/src/model/modification_decision_out.dart';
+import 'package:gramtree_api/src/model/recipe_personal_safety.dart';
 import 'package:gramtree_api/src/model/recipe_reproducibility_result.dart';
 import 'package:gramtree_api/src/model/recipe_safety_result.dart';
 import 'package:gramtree_api/src/model/modification_operation.dart';
@@ -40,6 +41,9 @@ class ModificationPreview {
      this.intent,
 
      this.operations,
+    required this.personalSafety,
+
+    this.recipeId,
 
      this.recipeId,
 
@@ -138,8 +142,6 @@ class ModificationPreview {
 
   final List<ModificationOperation>? operations;
 
-
-
   @JsonKey(
     
     name: r'recipe_id',
@@ -148,6 +150,10 @@ class ModificationPreview {
   )
 
 
+  @JsonKey(name: r'personal_safety', required: true, includeIfNull: false)
+  final RecipePersonalSafety personalSafety;
+
+  @JsonKey(name: r'recipe_id', required: false, includeIfNull: false)
   final String? recipeId;
 
 
@@ -222,43 +228,43 @@ class ModificationPreview {
 
   final List<String>? warnings;
 
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is ModificationPreview &&
+          other.baseVersionId == baseVersionId &&
+          other.decisions == decisions &&
+          other.error == error &&
+          other.generationRequestId == generationRequestId &&
+          other.id == id &&
+          other.intent == intent &&
+          other.operations == operations &&
+          other.personalSafety == personalSafety &&
+          other.recipeId == recipeId &&
+          other.reproducibility == reproducibility &&
+          other.revision == revision &&
+          other.safety == safety &&
+          other.snapshot == snapshot &&
+          other.status == status &&
+          other.warnings == warnings;
 
-
-
-
-    @override
-    bool operator ==(Object other) => identical(this, other) || other is ModificationPreview &&
-      other.baseVersionId == baseVersionId &&
-      other.decisions == decisions &&
-      other.error == error &&
-      other.generationRequestId == generationRequestId &&
-      other.id == id &&
-      other.intent == intent &&
-      other.operations == operations &&
-      other.recipeId == recipeId &&
-      other.reproducibility == reproducibility &&
-      other.revision == revision &&
-      other.safety == safety &&
-      other.snapshot == snapshot &&
-      other.status == status &&
-      other.warnings == warnings;
-
-    @override
-    int get hashCode =>
-        (baseVersionId == null ? 0 : baseVersionId.hashCode) +
-        decisions.hashCode +
-        (error == null ? 0 : error.hashCode) +
-        (generationRequestId == null ? 0 : generationRequestId.hashCode) +
-        id.hashCode +
-        intent.hashCode +
-        operations.hashCode +
-        (recipeId == null ? 0 : recipeId.hashCode) +
-        reproducibility.hashCode +
-        revision.hashCode +
-        safety.hashCode +
-        snapshot.hashCode +
-        status.hashCode +
-        warnings.hashCode;
+  @override
+  int get hashCode =>
+      (baseVersionId == null ? 0 : baseVersionId.hashCode) +
+      decisions.hashCode +
+      (error == null ? 0 : error.hashCode) +
+      (generationRequestId == null ? 0 : generationRequestId.hashCode) +
+      id.hashCode +
+      intent.hashCode +
+      operations.hashCode +
+      personalSafety.hashCode +
+      (recipeId == null ? 0 : recipeId.hashCode) +
+      reproducibility.hashCode +
+      revision.hashCode +
+      safety.hashCode +
+      snapshot.hashCode +
+      status.hashCode +
+      warnings.hashCode;
 
   factory ModificationPreview.fromJson(Map<String, dynamic> json) => _$ModificationPreviewFromJson(json);
 
