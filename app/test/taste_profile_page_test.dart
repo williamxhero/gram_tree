@@ -90,7 +90,7 @@ TasteProfileChangeOut historyFixture() => TasteProfileChangeOut(
   newValue: {'coefficient': 0.75, 'confidence': 'high'},
   reason: '你手动修改',
   origin: TasteProfileChangeOutOriginEnum.manual,
-  source_: 'manual',
+  source_: TasteProfileChangeOutSource_Enum.manual,
   status: TasteProfileChangeOutStatusEnum.active,
   createdAt: '2026-10-08T10:00:00Z',
 );
