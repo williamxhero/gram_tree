@@ -313,6 +313,30 @@ ITEMS: tuple[ConfigItem, ...] = (
         minimum=1,
         maximum=120,
     ),
+    ConfigItem(
+        "auth.signing_clock_tolerance_seconds",
+        "int",
+        300,
+        "请求签名允许的客户端时钟误差（秒）",
+        minimum=1,
+        maximum=3600,
+    ),
+    ConfigItem(
+        "auth.signing_nonce_ttl_seconds",
+        "int",
+        600,
+        "请求签名随机数的 Redis 保留时间（秒）",
+        minimum=1,
+        maximum=86400,
+    ),
+    ConfigItem(
+        "auth.signing_key_grace_seconds",
+        "int",
+        30,
+        "刷新令牌后旧请求签名密钥的过渡时间（秒）",
+        minimum=1,
+        maximum=300,
+    ),
     # —— 规则型机器行为保护（SPEC-011.2） ——
     ConfigItem("risk.enabled", "bool", True, "是否启用机器行为风险规则"),
     ConfigItem(

@@ -24,6 +24,7 @@ class ErrorBody(BaseModel):
     message: str
     detail: str | None = None
     request_id: str | None = None
+    server_time: str | None = None
 
 
 class ErrorResponse(BaseModel):
@@ -70,10 +71,17 @@ def error_response(
     detail: str | None,
     *,
     headers: dict[str, str] | None = None,
+    server_time: str | None = None,
 ) -> JSONResponse:
     request_id = get_request_id()
     body = ErrorResponse(
-        error=ErrorBody(code=code, message=message, detail=detail, request_id=request_id)
+        error=ErrorBody(
+            code=code,
+            message=message,
+            detail=detail,
+            request_id=request_id,
+            server_time=server_time,
+        )
     )
     all_headers = dict(headers or {})
     if request_id:
@@ -96,8 +104,14 @@ def install_error_handlers(app: FastAPI) -> None:
         headers = dict(getattr(exc, "headers", {}))
         if retry_after is not None:
             headers["Retry-After"] = str(retry_after)
+        server_time = getattr(exc, "server_time", None)
         return error_response(
-            exc.status, exc.code, exc.message, exc.detail, headers=headers or None
+            exc.status,
+            exc.code,
+            exc.message,
+            exc.detail,
+            headers=headers or None,
+            server_time=server_time.isoformat() if server_time is not None else None,
         )
 
     @app.exception_handler(RequestValidationError)

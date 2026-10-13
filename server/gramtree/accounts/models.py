@@ -115,6 +115,10 @@ class DeviceSession(Base):
     reauthenticated_at: Mapped[datetime | None] = mapped_column(default=None)
     revoked_at: Mapped[datetime | None] = mapped_column(default=None)
     revoked_reason: Mapped[str | None] = mapped_column(String(32), default=None)
+    # Only the hash is persisted; the plaintext is returned once at login/refresh.
+    signing_secret_hash: Mapped[str | None] = mapped_column(String(128), default=None)
+    previous_signing_secret_hash: Mapped[str | None] = mapped_column(String(128), default=None)
+    previous_signing_secret_expires_at: Mapped[datetime | None] = mapped_column(default=None)
 
 
 class RefreshToken(Base):

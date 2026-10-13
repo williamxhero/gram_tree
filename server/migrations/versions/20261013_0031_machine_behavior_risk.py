@@ -1,7 +1,7 @@
 """Rule-based machine behaviour risk and graduated enforcement.
 
 Revision ID: 0031
-Revises: 0030
+Revises: 0028
 """
 
 import sqlalchemy as sa
@@ -9,7 +9,7 @@ from alembic import op
 from sqlalchemy.dialects import postgresql
 
 revision = "0031"
-down_revision = "0030"
+down_revision = "0028"
 branch_labels = None
 depends_on = None
 
