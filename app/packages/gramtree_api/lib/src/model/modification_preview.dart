@@ -7,6 +7,7 @@ import 'package:gramtree_api/src/model/ai_status.dart';
 import 'package:gramtree_api/src/model/modification_intent.dart';
 import 'package:gramtree_api/src/model/recipe_snapshot.dart';
 import 'package:gramtree_api/src/model/modification_decision_out.dart';
+import 'package:gramtree_api/src/model/recipe_personal_safety.dart';
 import 'package:gramtree_api/src/model/recipe_reproducibility_result.dart';
 import 'package:gramtree_api/src/model/recipe_safety_result.dart';
 import 'package:gramtree_api/src/model/modification_operation.dart';
@@ -38,6 +39,8 @@ class ModificationPreview {
     this.intent,
 
     this.operations,
+
+    required this.personalSafety,
 
     this.recipeId,
 
@@ -79,6 +82,9 @@ class ModificationPreview {
   @JsonKey(name: r'operations', required: false, includeIfNull: false)
   final List<ModificationOperation>? operations;
 
+  @JsonKey(name: r'personal_safety', required: true, includeIfNull: false)
+  final RecipePersonalSafety personalSafety;
+
   @JsonKey(name: r'recipe_id', required: false, includeIfNull: false)
   final String? recipeId;
 
@@ -111,6 +117,7 @@ class ModificationPreview {
           other.id == id &&
           other.intent == intent &&
           other.operations == operations &&
+          other.personalSafety == personalSafety &&
           other.recipeId == recipeId &&
           other.reproducibility == reproducibility &&
           other.revision == revision &&
@@ -128,6 +135,7 @@ class ModificationPreview {
       id.hashCode +
       intent.hashCode +
       operations.hashCode +
+      personalSafety.hashCode +
       (recipeId == null ? 0 : recipeId.hashCode) +
       reproducibility.hashCode +
       revision.hashCode +

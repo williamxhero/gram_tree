@@ -26,6 +26,16 @@ def clear_user_content(session: Session, user_id: uuid.UUID) -> None:
         .where(GenerationRequest.user_id == user_id)
         .values(text="", intent={}, questions=[], draft=None, context_dependency={})
     )
+    from gramtree.records.models import CookingRecord
+
+    session.execute(
+        update(CookingRecord)
+        .where(CookingRecord.owner_id == user_id)
+        .values(
+            co_diner_ids=[],
+            taste_summary={"flavors": {}, "avoidance_count": 0, "child_diner": False},
+        )
+    )
 
 
 def clear_request_content(session: Session, request_ids: set[uuid.UUID]) -> None:

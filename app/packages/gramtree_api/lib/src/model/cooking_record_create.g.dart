@@ -11,6 +11,8 @@ abstract class _$CookingRecordCreateCWProxy {
 
   CookingRecordCreate clientId(String clientId);
 
+  CookingRecordCreate coDinerIds(List<String>? coDinerIds);
+
   CookingRecordCreate dishName(String? dishName);
 
   CookingRecordCreate meal(CookingRecordCreateMealEnum? meal);
@@ -40,6 +42,7 @@ abstract class _$CookingRecordCreateCWProxy {
   CookingRecordCreate call({
     List<Object>? adjustments,
     String clientId,
+    List<String>? coDinerIds,
     String? dishName,
     CookingRecordCreateMealEnum? meal,
     DateTime? occurredAt,
@@ -64,6 +67,10 @@ class _$CookingRecordCreateCWProxyImpl implements _$CookingRecordCreateCWProxy {
 
   @override
   CookingRecordCreate clientId(String clientId) => this(clientId: clientId);
+
+  @override
+  CookingRecordCreate coDinerIds(List<String>? coDinerIds) =>
+      this(coDinerIds: coDinerIds);
 
   @override
   CookingRecordCreate dishName(String? dishName) => this(dishName: dishName);
@@ -109,6 +116,7 @@ class _$CookingRecordCreateCWProxyImpl implements _$CookingRecordCreateCWProxy {
   CookingRecordCreate call({
     Object? adjustments = const $CopyWithPlaceholder(),
     Object? clientId = const $CopyWithPlaceholder(),
+    Object? coDinerIds = const $CopyWithPlaceholder(),
     Object? dishName = const $CopyWithPlaceholder(),
     Object? meal = const $CopyWithPlaceholder(),
     Object? occurredAt = const $CopyWithPlaceholder(),
@@ -128,6 +136,10 @@ class _$CookingRecordCreateCWProxyImpl implements _$CookingRecordCreateCWProxy {
           ? _value.clientId
           // ignore: cast_nullable_to_non_nullable
           : clientId as String,
+      coDinerIds: coDinerIds == const $CopyWithPlaceholder()
+          ? _value.coDinerIds
+          // ignore: cast_nullable_to_non_nullable
+          : coDinerIds as List<String>?,
       dishName: dishName == const $CopyWithPlaceholder()
           ? _value.dishName
           // ignore: cast_nullable_to_non_nullable
@@ -194,6 +206,10 @@ CookingRecordCreate _$CookingRecordCreateFromJson(Map<String, dynamic> json) =>
             (v) => (v as List<dynamic>?)?.map((e) => e as Object).toList(),
           ),
           clientId: $checkedConvert('client_id', (v) => v as String),
+          coDinerIds: $checkedConvert(
+            'co_diner_ids',
+            (v) => (v as List<dynamic>?)?.map((e) => e as String).toList(),
+          ),
           dishName: $checkedConvert('dish_name', (v) => v as String?),
           meal: $checkedConvert(
             'meal',
@@ -223,6 +239,7 @@ CookingRecordCreate _$CookingRecordCreateFromJson(Map<String, dynamic> json) =>
       },
       fieldKeyMap: const {
         'clientId': 'client_id',
+        'coDinerIds': 'co_diner_ids',
         'dishName': 'dish_name',
         'occurredAt': 'occurred_at',
         'recipeId': 'recipe_id',
@@ -237,6 +254,7 @@ Map<String, dynamic> _$CookingRecordCreateToJson(
 ) => <String, dynamic>{
   'adjustments': ?instance.adjustments,
   'client_id': instance.clientId,
+  'co_diner_ids': ?instance.coDinerIds,
   'dish_name': ?instance.dishName,
   'meal': ?_$CookingRecordCreateMealEnumEnumMap[instance.meal],
   'occurred_at': ?instance.occurredAt?.toIso8601String(),

@@ -253,6 +253,7 @@ void _installModificationApi(
       'problems': [],
     },
     'status': status.toJson(),
+    'personal_safety': {'status': 'available'},
     'warnings': [],
     'error': ?error,
   }).toJson();

@@ -15,6 +15,7 @@ def get_app_settings(request: Request) -> Settings:
 def get_session(request: Request) -> Iterator[Session]:
     factory: sessionmaker[Session] = request.app.state.session_factory
     with factory() as session:
+        session.info["settings"] = request.app.state.settings
         yield session
 
 

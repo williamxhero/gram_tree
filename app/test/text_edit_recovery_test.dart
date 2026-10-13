@@ -319,6 +319,7 @@ class _Fixture {
       'problems': [],
     },
     'status': AIStatus(available: true, remaining: 48).toJson(),
+    'personal_safety': {'status': 'available'},
     'warnings': [],
   }).toJson();
 }
