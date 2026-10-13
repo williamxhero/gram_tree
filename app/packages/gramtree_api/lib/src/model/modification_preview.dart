@@ -7,7 +7,6 @@ import 'package:gramtree_api/src/model/ai_status.dart';
 import 'package:gramtree_api/src/model/modification_intent.dart';
 import 'package:gramtree_api/src/model/recipe_snapshot.dart';
 import 'package:gramtree_api/src/model/modification_decision_out.dart';
-import 'package:gramtree_api/src/model/recipe_personal_safety.dart';
 import 'package:gramtree_api/src/model/recipe_reproducibility_result.dart';
 import 'package:gramtree_api/src/model/recipe_safety_result.dart';
 import 'package:gramtree_api/src/model/modification_operation.dart';
@@ -15,7 +14,6 @@ import 'package:copy_with_extension/copy_with_extension.dart';
 import 'package:json_annotation/json_annotation.dart';
 
 part 'modification_preview.g.dart';
-
 
 @CopyWith()
 @JsonSerializable(
@@ -27,205 +25,79 @@ part 'modification_preview.g.dart';
 class ModificationPreview {
   /// Returns a new [ModificationPreview] instance.
   ModificationPreview({
+    this.baseVersionId,
 
-     this.baseVersionId,
+    this.decisions,
 
-     this.decisions,
+    this.error,
 
-     this.error,
+    this.generationRequestId,
 
-     this.generationRequestId,
+    required this.id,
 
-    required  this.id,
+    this.intent,
 
-     this.intent,
-
-     this.operations,
-    required this.personalSafety,
+    this.operations,
 
     this.recipeId,
 
-     this.recipeId,
+    required this.reproducibility,
 
-    required  this.reproducibility,
+    required this.revision,
 
-    required  this.revision,
+    required this.safety,
 
-    required  this.safety,
+    required this.snapshot,
 
-    required  this.snapshot,
+    required this.status,
 
-    required  this.status,
-
-     this.warnings,
+    this.warnings,
   });
 
-  @JsonKey(
-    
-    name: r'base_version_id',
-    required: false,
-    includeIfNull: false,
-  )
-
-
+  @JsonKey(name: r'base_version_id', required: false, includeIfNull: false)
   final String? baseVersionId;
 
-
-
-  @JsonKey(
-    
-    name: r'decisions',
-    required: false,
-    includeIfNull: false,
-  )
-
-
+  @JsonKey(name: r'decisions', required: false, includeIfNull: false)
   final List<ModificationDecisionOut>? decisions;
 
-
-
-  @JsonKey(
-    
-    name: r'error',
-    required: false,
-    includeIfNull: false,
-  )
-
-
+  @JsonKey(name: r'error', required: false, includeIfNull: false)
   final String? error;
 
-
-
   @JsonKey(
-    
     name: r'generation_request_id',
     required: false,
     includeIfNull: false,
   )
-
-
   final String? generationRequestId;
 
-
-
-  @JsonKey(
-    
-    name: r'id',
-    required: true,
-    includeIfNull: false,
-  )
-
-
+  @JsonKey(name: r'id', required: true, includeIfNull: false)
   final String id;
 
-
-
-  @JsonKey(
-    
-    name: r'intent',
-    required: false,
-    includeIfNull: false,
-  )
-
-
+  @JsonKey(name: r'intent', required: false, includeIfNull: false)
   final ModificationIntent? intent;
 
-
-
-  @JsonKey(
-    
-    name: r'operations',
-    required: false,
-    includeIfNull: false,
-  )
-
-
+  @JsonKey(name: r'operations', required: false, includeIfNull: false)
   final List<ModificationOperation>? operations;
-
-  @JsonKey(
-    
-    name: r'recipe_id',
-    required: false,
-    includeIfNull: false,
-  )
-
-
-  @JsonKey(name: r'personal_safety', required: true, includeIfNull: false)
-  final RecipePersonalSafety personalSafety;
 
   @JsonKey(name: r'recipe_id', required: false, includeIfNull: false)
   final String? recipeId;
 
-
-
-  @JsonKey(
-    
-    name: r'reproducibility',
-    required: true,
-    includeIfNull: false,
-  )
-
-
+  @JsonKey(name: r'reproducibility', required: true, includeIfNull: false)
   final RecipeReproducibilityResult reproducibility;
 
-
-
-  @JsonKey(
-    
-    name: r'revision',
-    required: true,
-    includeIfNull: false,
-  )
-
-
+  @JsonKey(name: r'revision', required: true, includeIfNull: false)
   final int revision;
 
-
-
-  @JsonKey(
-    
-    name: r'safety',
-    required: true,
-    includeIfNull: false,
-  )
-
-
+  @JsonKey(name: r'safety', required: true, includeIfNull: false)
   final RecipeSafetyResult safety;
 
-
-
-  @JsonKey(
-    
-    name: r'snapshot',
-    required: true,
-    includeIfNull: false,
-  )
-
-
+  @JsonKey(name: r'snapshot', required: true, includeIfNull: false)
   final RecipeSnapshot snapshot;
 
-
-
-  @JsonKey(
-    
-    name: r'status',
-    required: true,
-    includeIfNull: false,
-  )
-
-
+  @JsonKey(name: r'status', required: true, includeIfNull: false)
   final AIStatus status;
 
-
-
-  @JsonKey(
-    
-    name: r'warnings',
-    required: false,
-    includeIfNull: false,
-  )
-
-
+  @JsonKey(name: r'warnings', required: false, includeIfNull: false)
   final List<String>? warnings;
 
   @override
@@ -239,7 +111,6 @@ class ModificationPreview {
           other.id == id &&
           other.intent == intent &&
           other.operations == operations &&
-          other.personalSafety == personalSafety &&
           other.recipeId == recipeId &&
           other.reproducibility == reproducibility &&
           other.revision == revision &&
@@ -257,7 +128,6 @@ class ModificationPreview {
       id.hashCode +
       intent.hashCode +
       operations.hashCode +
-      personalSafety.hashCode +
       (recipeId == null ? 0 : recipeId.hashCode) +
       reproducibility.hashCode +
       revision.hashCode +
@@ -266,7 +136,8 @@ class ModificationPreview {
       status.hashCode +
       warnings.hashCode;
 
-  factory ModificationPreview.fromJson(Map<String, dynamic> json) => _$ModificationPreviewFromJson(json);
+  factory ModificationPreview.fromJson(Map<String, dynamic> json) =>
+      _$ModificationPreviewFromJson(json);
 
   Map<String, dynamic> toJson() => _$ModificationPreviewToJson(this);
 
@@ -274,6 +145,4 @@ class ModificationPreview {
   String toString() {
     return toJson().toString();
   }
-
 }
-

@@ -8,7 +8,6 @@ import 'package:json_annotation/json_annotation.dart';
 
 part 'bind_email_request.g.dart';
 
-
 @CopyWith()
 @JsonSerializable(
   checked: true,
@@ -18,50 +17,24 @@ part 'bind_email_request.g.dart';
 )
 class BindEmailRequest {
   /// Returns a new [BindEmailRequest] instance.
-  BindEmailRequest({
+  BindEmailRequest({required this.code, required this.email});
 
-    required  this.code,
-
-    required  this.email,
-  });
-
-  @JsonKey(
-    
-    name: r'code',
-    required: true,
-    includeIfNull: false,
-  )
-
-
+  @JsonKey(name: r'code', required: true, includeIfNull: false)
   final String code;
 
-
-
-  @JsonKey(
-    
-    name: r'email',
-    required: true,
-    includeIfNull: false,
-  )
-
-
+  @JsonKey(name: r'email', required: true, includeIfNull: false)
   final String email;
 
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is BindEmailRequest && other.code == code && other.email == email;
 
+  @override
+  int get hashCode => code.hashCode + email.hashCode;
 
-
-
-    @override
-    bool operator ==(Object other) => identical(this, other) || other is BindEmailRequest &&
-      other.code == code &&
-      other.email == email;
-
-    @override
-    int get hashCode =>
-        code.hashCode +
-        email.hashCode;
-
-  factory BindEmailRequest.fromJson(Map<String, dynamic> json) => _$BindEmailRequestFromJson(json);
+  factory BindEmailRequest.fromJson(Map<String, dynamic> json) =>
+      _$BindEmailRequestFromJson(json);
 
   Map<String, dynamic> toJson() => _$BindEmailRequestToJson(this);
 
@@ -69,6 +42,4 @@ class BindEmailRequest {
   String toString() {
     return toJson().toString();
   }
-
 }
-

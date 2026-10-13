@@ -8,7 +8,6 @@ import 'package:json_annotation/json_annotation.dart';
 
 part 'recipe_question.g.dart';
 
-
 @CopyWith()
 @JsonSerializable(
   checked: true,
@@ -18,34 +17,21 @@ part 'recipe_question.g.dart';
 )
 class RecipeQuestion {
   /// Returns a new [RecipeQuestion] instance.
-  RecipeQuestion({
+  RecipeQuestion({required this.question});
 
-    required  this.question,
-  });
-
-  @JsonKey(
-    
-    name: r'question',
-    required: true,
-    includeIfNull: false,
-  )
-
-
+  @JsonKey(name: r'question', required: true, includeIfNull: false)
   final String question;
 
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is RecipeQuestion && other.question == question;
 
+  @override
+  int get hashCode => question.hashCode;
 
-
-
-    @override
-    bool operator ==(Object other) => identical(this, other) || other is RecipeQuestion &&
-      other.question == question;
-
-    @override
-    int get hashCode =>
-        question.hashCode;
-
-  factory RecipeQuestion.fromJson(Map<String, dynamic> json) => _$RecipeQuestionFromJson(json);
+  factory RecipeQuestion.fromJson(Map<String, dynamic> json) =>
+      _$RecipeQuestionFromJson(json);
 
   Map<String, dynamic> toJson() => _$RecipeQuestionToJson(this);
 
@@ -53,6 +39,4 @@ class RecipeQuestion {
   String toString() {
     return toJson().toString();
   }
-
 }
-

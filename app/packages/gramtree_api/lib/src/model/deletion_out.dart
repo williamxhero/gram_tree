@@ -8,7 +8,6 @@ import 'package:json_annotation/json_annotation.dart';
 
 part 'deletion_out.g.dart';
 
-
 @CopyWith()
 @JsonSerializable(
   checked: true,
@@ -18,50 +17,27 @@ part 'deletion_out.g.dart';
 )
 class DeletionOut {
   /// Returns a new [DeletionOut] instance.
-  DeletionOut({
+  DeletionOut({required this.deletionDueAt, required this.status});
 
-    required  this.deletionDueAt,
-
-    required  this.status,
-  });
-
-  @JsonKey(
-    
-    name: r'deletion_due_at',
-    required: true,
-    includeIfNull: true,
-  )
-
-
+  @JsonKey(name: r'deletion_due_at', required: true, includeIfNull: true)
   final String? deletionDueAt;
 
-
-
-  @JsonKey(
-    
-    name: r'status',
-    required: true,
-    includeIfNull: false,
-  )
-
-
+  @JsonKey(name: r'status', required: true, includeIfNull: false)
   final DeletionOutStatusEnum status;
 
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is DeletionOut &&
+          other.deletionDueAt == deletionDueAt &&
+          other.status == status;
 
+  @override
+  int get hashCode =>
+      (deletionDueAt == null ? 0 : deletionDueAt.hashCode) + status.hashCode;
 
-
-
-    @override
-    bool operator ==(Object other) => identical(this, other) || other is DeletionOut &&
-      other.deletionDueAt == deletionDueAt &&
-      other.status == status;
-
-    @override
-    int get hashCode =>
-        (deletionDueAt == null ? 0 : deletionDueAt.hashCode) +
-        status.hashCode;
-
-  factory DeletionOut.fromJson(Map<String, dynamic> json) => _$DeletionOutFromJson(json);
+  factory DeletionOut.fromJson(Map<String, dynamic> json) =>
+      _$DeletionOutFromJson(json);
 
   Map<String, dynamic> toJson() => _$DeletionOutToJson(this);
 
@@ -69,24 +45,20 @@ class DeletionOut {
   String toString() {
     return toJson().toString();
   }
-
 }
-
 
 enum DeletionOutStatusEnum {
-@JsonValue(r'active')
-active(r'active'),
-@JsonValue(r'deleting')
-deleting(r'deleting'),
-@JsonValue(r'deleted')
-deleted(r'deleted');
+  @JsonValue(r'active')
+  active(r'active'),
+  @JsonValue(r'deleting')
+  deleting(r'deleting'),
+  @JsonValue(r'deleted')
+  deleted(r'deleted');
 
-const DeletionOutStatusEnum(this.value);
+  const DeletionOutStatusEnum(this.value);
 
-final String value;
+  final String value;
 
-@override
-String toString() => value;
+  @override
+  String toString() => value;
 }
-
-

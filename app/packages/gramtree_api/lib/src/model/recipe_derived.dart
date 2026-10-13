@@ -9,7 +9,6 @@ import 'package:json_annotation/json_annotation.dart';
 
 part 'recipe_derived.g.dart';
 
-
 @CopyWith()
 @JsonSerializable(
   checked: true,
@@ -20,43 +19,24 @@ part 'recipe_derived.g.dart';
 class RecipeDerived {
   /// Returns a new [RecipeDerived] instance.
   RecipeDerived({
+    required this.activeTimeSeconds,
 
-    required  this.activeTimeSeconds,
+    this.allergens,
 
-     this.allergens,
+    this.allergensIncomplete = false,
 
-     this.allergensIncomplete = false,
+    this.cookware,
 
-     this.cookware,
+    this.nutritionPerServing,
 
-     this.nutritionPerServing,
-
-    required  this.totalTimeSeconds,
+    required this.totalTimeSeconds,
   });
 
-  @JsonKey(
-    
-    name: r'active_time_seconds',
-    required: true,
-    includeIfNull: false,
-  )
-
-
+  @JsonKey(name: r'active_time_seconds', required: true, includeIfNull: false)
   final int activeTimeSeconds;
 
-
-
-  @JsonKey(
-    
-    name: r'allergens',
-    required: false,
-    includeIfNull: false,
-  )
-
-
+  @JsonKey(name: r'allergens', required: false, includeIfNull: false)
   final List<String>? allergens;
-
-
 
   @JsonKey(
     defaultValue: false,
@@ -64,69 +44,43 @@ class RecipeDerived {
     required: false,
     includeIfNull: false,
   )
-
-
   final bool? allergensIncomplete;
 
-
-
-  @JsonKey(
-    
-    name: r'cookware',
-    required: false,
-    includeIfNull: false,
-  )
-
-
+  @JsonKey(name: r'cookware', required: false, includeIfNull: false)
   final List<String>? cookware;
 
-
-
   @JsonKey(
-    
     name: r'nutrition_per_serving',
     required: false,
     includeIfNull: false,
   )
-
-
   final NutritionEstimate? nutritionPerServing;
 
-
-
-  @JsonKey(
-    
-    name: r'total_time_seconds',
-    required: true,
-    includeIfNull: false,
-  )
-
-
+  @JsonKey(name: r'total_time_seconds', required: true, includeIfNull: false)
   final int totalTimeSeconds;
 
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is RecipeDerived &&
+          other.activeTimeSeconds == activeTimeSeconds &&
+          other.allergens == allergens &&
+          other.allergensIncomplete == allergensIncomplete &&
+          other.cookware == cookware &&
+          other.nutritionPerServing == nutritionPerServing &&
+          other.totalTimeSeconds == totalTimeSeconds;
 
+  @override
+  int get hashCode =>
+      activeTimeSeconds.hashCode +
+      allergens.hashCode +
+      allergensIncomplete.hashCode +
+      cookware.hashCode +
+      nutritionPerServing.hashCode +
+      totalTimeSeconds.hashCode;
 
-
-
-    @override
-    bool operator ==(Object other) => identical(this, other) || other is RecipeDerived &&
-      other.activeTimeSeconds == activeTimeSeconds &&
-      other.allergens == allergens &&
-      other.allergensIncomplete == allergensIncomplete &&
-      other.cookware == cookware &&
-      other.nutritionPerServing == nutritionPerServing &&
-      other.totalTimeSeconds == totalTimeSeconds;
-
-    @override
-    int get hashCode =>
-        activeTimeSeconds.hashCode +
-        allergens.hashCode +
-        allergensIncomplete.hashCode +
-        cookware.hashCode +
-        nutritionPerServing.hashCode +
-        totalTimeSeconds.hashCode;
-
-  factory RecipeDerived.fromJson(Map<String, dynamic> json) => _$RecipeDerivedFromJson(json);
+  factory RecipeDerived.fromJson(Map<String, dynamic> json) =>
+      _$RecipeDerivedFromJson(json);
 
   Map<String, dynamic> toJson() => _$RecipeDerivedToJson(this);
 
@@ -134,6 +88,4 @@ class RecipeDerived {
   String toString() {
     return toJson().toString();
   }
-
 }
-

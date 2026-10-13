@@ -8,7 +8,6 @@ import 'package:json_annotation/json_annotation.dart';
 
 part 'family_avoidance.g.dart';
 
-
 @CopyWith()
 @JsonSerializable(
   checked: true,
@@ -18,50 +17,28 @@ part 'family_avoidance.g.dart';
 )
 class FamilyAvoidance {
   /// Returns a new [FamilyAvoidance] instance.
-  FamilyAvoidance({
+  FamilyAvoidance({this.category, this.ingredientId});
 
-     this.category,
-
-     this.ingredientId,
-  });
-
-  @JsonKey(
-    
-    name: r'category',
-    required: false,
-    includeIfNull: false,
-  )
-
-
+  @JsonKey(name: r'category', required: false, includeIfNull: false)
   final String? category;
 
-
-
-  @JsonKey(
-    
-    name: r'ingredient_id',
-    required: false,
-    includeIfNull: false,
-  )
-
-
+  @JsonKey(name: r'ingredient_id', required: false, includeIfNull: false)
   final String? ingredientId;
 
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is FamilyAvoidance &&
+          other.category == category &&
+          other.ingredientId == ingredientId;
 
+  @override
+  int get hashCode =>
+      (category == null ? 0 : category.hashCode) +
+      (ingredientId == null ? 0 : ingredientId.hashCode);
 
-
-
-    @override
-    bool operator ==(Object other) => identical(this, other) || other is FamilyAvoidance &&
-      other.category == category &&
-      other.ingredientId == ingredientId;
-
-    @override
-    int get hashCode =>
-        (category == null ? 0 : category.hashCode) +
-        (ingredientId == null ? 0 : ingredientId.hashCode);
-
-  factory FamilyAvoidance.fromJson(Map<String, dynamic> json) => _$FamilyAvoidanceFromJson(json);
+  factory FamilyAvoidance.fromJson(Map<String, dynamic> json) =>
+      _$FamilyAvoidanceFromJson(json);
 
   Map<String, dynamic> toJson() => _$FamilyAvoidanceToJson(this);
 
@@ -69,6 +46,4 @@ class FamilyAvoidance {
   String toString() {
     return toJson().toString();
   }
-
 }
-

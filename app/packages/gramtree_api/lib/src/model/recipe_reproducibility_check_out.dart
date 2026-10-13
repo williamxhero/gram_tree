@@ -9,7 +9,6 @@ import 'package:json_annotation/json_annotation.dart';
 
 part 'recipe_reproducibility_check_out.g.dart';
 
-
 @CopyWith()
 @JsonSerializable(
   checked: true,
@@ -19,34 +18,21 @@ part 'recipe_reproducibility_check_out.g.dart';
 )
 class RecipeReproducibilityCheckOut {
   /// Returns a new [RecipeReproducibilityCheckOut] instance.
-  RecipeReproducibilityCheckOut({
+  RecipeReproducibilityCheckOut({required this.result});
 
-    required  this.result,
-  });
-
-  @JsonKey(
-    
-    name: r'result',
-    required: true,
-    includeIfNull: false,
-  )
-
-
+  @JsonKey(name: r'result', required: true, includeIfNull: false)
   final RecipeReproducibilityResult result;
 
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is RecipeReproducibilityCheckOut && other.result == result;
 
+  @override
+  int get hashCode => result.hashCode;
 
-
-
-    @override
-    bool operator ==(Object other) => identical(this, other) || other is RecipeReproducibilityCheckOut &&
-      other.result == result;
-
-    @override
-    int get hashCode =>
-        result.hashCode;
-
-  factory RecipeReproducibilityCheckOut.fromJson(Map<String, dynamic> json) => _$RecipeReproducibilityCheckOutFromJson(json);
+  factory RecipeReproducibilityCheckOut.fromJson(Map<String, dynamic> json) =>
+      _$RecipeReproducibilityCheckOutFromJson(json);
 
   Map<String, dynamic> toJson() => _$RecipeReproducibilityCheckOutToJson(this);
 
@@ -54,6 +40,4 @@ class RecipeReproducibilityCheckOut {
   String toString() {
     return toJson().toString();
   }
-
 }
-

@@ -9,7 +9,6 @@ import 'package:json_annotation/json_annotation.dart';
 
 part 'recipe_ingredient_display_out.g.dart';
 
-
 @CopyWith()
 @JsonSerializable(
   checked: true,
@@ -19,34 +18,21 @@ part 'recipe_ingredient_display_out.g.dart';
 )
 class RecipeIngredientDisplayOut {
   /// Returns a new [RecipeIngredientDisplayOut] instance.
-  RecipeIngredientDisplayOut({
+  RecipeIngredientDisplayOut({required this.display});
 
-    required  this.display,
-  });
-
-  @JsonKey(
-    
-    name: r'display',
-    required: true,
-    includeIfNull: false,
-  )
-
-
+  @JsonKey(name: r'display', required: true, includeIfNull: false)
   final RecipeIngredientDisplay display;
 
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is RecipeIngredientDisplayOut && other.display == display;
 
+  @override
+  int get hashCode => display.hashCode;
 
-
-
-    @override
-    bool operator ==(Object other) => identical(this, other) || other is RecipeIngredientDisplayOut &&
-      other.display == display;
-
-    @override
-    int get hashCode =>
-        display.hashCode;
-
-  factory RecipeIngredientDisplayOut.fromJson(Map<String, dynamic> json) => _$RecipeIngredientDisplayOutFromJson(json);
+  factory RecipeIngredientDisplayOut.fromJson(Map<String, dynamic> json) =>
+      _$RecipeIngredientDisplayOutFromJson(json);
 
   Map<String, dynamic> toJson() => _$RecipeIngredientDisplayOutToJson(this);
 
@@ -54,6 +40,4 @@ class RecipeIngredientDisplayOut {
   String toString() {
     return toJson().toString();
   }
-
 }
-

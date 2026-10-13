@@ -71,22 +71,17 @@ extension $SkipAdjustmentResultCopyWith on SkipAdjustmentResult {
 
 SkipAdjustmentResult _$SkipAdjustmentResultFromJson(
   Map<String, dynamic> json,
-) => $checkedCreate(
-  'SkipAdjustmentResult',
-  json,
-  ($checkedConvert) {
-    $checkKeys(json, requiredKeys: const ['component_id', 'source']);
-    final val = SkipAdjustmentResult(
-      componentId: $checkedConvert('component_id', (v) => v as String),
-      source_: $checkedConvert(
-        'source',
-        (v) => SourcedValue.fromJson(v as Map<String, dynamic>),
-      ),
-    );
-    return val;
-  },
-  fieldKeyMap: const {'componentId': 'component_id', 'source_': 'source'},
-);
+) => $checkedCreate('SkipAdjustmentResult', json, ($checkedConvert) {
+  $checkKeys(json, requiredKeys: const ['component_id', 'source']);
+  final val = SkipAdjustmentResult(
+    componentId: $checkedConvert('component_id', (v) => v as String),
+    source_: $checkedConvert(
+      'source',
+      (v) => SourcedValue.fromJson(v as Map<String, dynamic>),
+    ),
+  );
+  return val;
+}, fieldKeyMap: const {'componentId': 'component_id', 'source_': 'source'});
 
 Map<String, dynamic> _$SkipAdjustmentResultToJson(
   SkipAdjustmentResult instance,

@@ -11,7 +11,6 @@ import 'package:json_annotation/json_annotation.dart';
 
 part 'recipe_detail.g.dart';
 
-
 @CopyWith()
 @JsonSerializable(
   checked: true,
@@ -22,193 +21,98 @@ part 'recipe_detail.g.dart';
 class RecipeDetail {
   /// Returns a new [RecipeDetail] instance.
   RecipeDetail({
+    required this.author,
 
-    required  this.author,
+    required this.createdAt,
 
-    required  this.createdAt,
+    this.defaultServings,
 
-     this.defaultServings,
+    required this.dish,
 
-    required  this.dish,
+    required this.id,
 
-    required  this.id,
+    this.rootRecipeId,
 
-     this.rootRecipeId,
+    this.sourceVersionId,
 
-     this.sourceVersionId,
+    this.tasteProfileVersion,
 
-     this.tasteProfileVersion,
+    required this.updatedAt,
 
-    required  this.updatedAt,
+    required this.version,
 
-    required  this.version,
-
-    required  this.visibility,
+    required this.visibility,
   });
 
-  @JsonKey(
-    
-    name: r'author',
-    required: true,
-    includeIfNull: false,
-  )
-
-
+  @JsonKey(name: r'author', required: true, includeIfNull: false)
   final RecipeAuthor author;
 
-
-
-  @JsonKey(
-    
-    name: r'created_at',
-    required: true,
-    includeIfNull: false,
-  )
-
-
+  @JsonKey(name: r'created_at', required: true, includeIfNull: false)
   final String createdAt;
 
-
-
-  @JsonKey(
-    
-    name: r'default_servings',
-    required: false,
-    includeIfNull: false,
-  )
-
-
+  @JsonKey(name: r'default_servings', required: false, includeIfNull: false)
   final int? defaultServings;
 
-
-
-  @JsonKey(
-    
-    name: r'dish',
-    required: true,
-    includeIfNull: false,
-  )
-
-
+  @JsonKey(name: r'dish', required: true, includeIfNull: false)
   final DishOut dish;
 
-
-
-  @JsonKey(
-    
-    name: r'id',
-    required: true,
-    includeIfNull: false,
-  )
-
-
+  @JsonKey(name: r'id', required: true, includeIfNull: false)
   final String id;
 
-
-
-  @JsonKey(
-    
-    name: r'root_recipe_id',
-    required: false,
-    includeIfNull: false,
-  )
-
-
+  @JsonKey(name: r'root_recipe_id', required: false, includeIfNull: false)
   final String? rootRecipeId;
 
-
-
-  @JsonKey(
-    
-    name: r'source_version_id',
-    required: false,
-    includeIfNull: false,
-  )
-
-
+  @JsonKey(name: r'source_version_id', required: false, includeIfNull: false)
   final String? sourceVersionId;
 
-
-
   @JsonKey(
-    
     name: r'taste_profile_version',
     required: false,
     includeIfNull: false,
   )
-
-
   final int? tasteProfileVersion;
 
-
-
-  @JsonKey(
-    
-    name: r'updated_at',
-    required: true,
-    includeIfNull: false,
-  )
-
-
+  @JsonKey(name: r'updated_at', required: true, includeIfNull: false)
   final String updatedAt;
 
-
-
-  @JsonKey(
-    
-    name: r'version',
-    required: true,
-    includeIfNull: false,
-  )
-
-
+  @JsonKey(name: r'version', required: true, includeIfNull: false)
   final RecipeVersionOut version;
 
-
-
-  @JsonKey(
-    
-    name: r'visibility',
-    required: true,
-    includeIfNull: false,
-  )
-
-
+  @JsonKey(name: r'visibility', required: true, includeIfNull: false)
   final RecipeDetailVisibilityEnum visibility;
 
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is RecipeDetail &&
+          other.author == author &&
+          other.createdAt == createdAt &&
+          other.defaultServings == defaultServings &&
+          other.dish == dish &&
+          other.id == id &&
+          other.rootRecipeId == rootRecipeId &&
+          other.sourceVersionId == sourceVersionId &&
+          other.tasteProfileVersion == tasteProfileVersion &&
+          other.updatedAt == updatedAt &&
+          other.version == version &&
+          other.visibility == visibility;
 
+  @override
+  int get hashCode =>
+      author.hashCode +
+      createdAt.hashCode +
+      (defaultServings == null ? 0 : defaultServings.hashCode) +
+      dish.hashCode +
+      id.hashCode +
+      (rootRecipeId == null ? 0 : rootRecipeId.hashCode) +
+      (sourceVersionId == null ? 0 : sourceVersionId.hashCode) +
+      (tasteProfileVersion == null ? 0 : tasteProfileVersion.hashCode) +
+      updatedAt.hashCode +
+      version.hashCode +
+      visibility.hashCode;
 
-
-
-    @override
-    bool operator ==(Object other) => identical(this, other) || other is RecipeDetail &&
-      other.author == author &&
-      other.createdAt == createdAt &&
-      other.defaultServings == defaultServings &&
-      other.dish == dish &&
-      other.id == id &&
-      other.rootRecipeId == rootRecipeId &&
-      other.sourceVersionId == sourceVersionId &&
-      other.tasteProfileVersion == tasteProfileVersion &&
-      other.updatedAt == updatedAt &&
-      other.version == version &&
-      other.visibility == visibility;
-
-    @override
-    int get hashCode =>
-        author.hashCode +
-        createdAt.hashCode +
-        (defaultServings == null ? 0 : defaultServings.hashCode) +
-        dish.hashCode +
-        id.hashCode +
-        (rootRecipeId == null ? 0 : rootRecipeId.hashCode) +
-        (sourceVersionId == null ? 0 : sourceVersionId.hashCode) +
-        (tasteProfileVersion == null ? 0 : tasteProfileVersion.hashCode) +
-        updatedAt.hashCode +
-        version.hashCode +
-        visibility.hashCode;
-
-  factory RecipeDetail.fromJson(Map<String, dynamic> json) => _$RecipeDetailFromJson(json);
+  factory RecipeDetail.fromJson(Map<String, dynamic> json) =>
+      _$RecipeDetailFromJson(json);
 
   Map<String, dynamic> toJson() => _$RecipeDetailToJson(this);
 
@@ -216,20 +120,16 @@ class RecipeDetail {
   String toString() {
     return toJson().toString();
   }
-
 }
-
 
 enum RecipeDetailVisibilityEnum {
-@JsonValue(r'private')
-private(r'private');
+  @JsonValue(r'private')
+  private(r'private');
 
-const RecipeDetailVisibilityEnum(this.value);
+  const RecipeDetailVisibilityEnum(this.value);
 
-final String value;
+  final String value;
 
-@override
-String toString() => value;
+  @override
+  String toString() => value;
 }
-
-

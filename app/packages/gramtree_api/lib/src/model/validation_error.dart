@@ -3,12 +3,10 @@
 //
 
 // ignore_for_file: unused_element
-import 'package:gramtree_api/src/model/validation_error_loc_inner.dart';
 import 'package:copy_with_extension/copy_with_extension.dart';
 import 'package:json_annotation/json_annotation.dart';
 
 part 'validation_error.g.dart';
-
 
 @CopyWith()
 @JsonSerializable(
@@ -20,97 +18,52 @@ part 'validation_error.g.dart';
 class ValidationError {
   /// Returns a new [ValidationError] instance.
   ValidationError({
+    this.ctx,
 
-     this.ctx,
+    this.input,
 
-     this.input,
+    required this.loc,
 
-    required  this.loc,
+    required this.msg,
 
-    required  this.msg,
-
-    required  this.type,
+    required this.type,
   });
 
-  @JsonKey(
-    
-    name: r'ctx',
-    required: false,
-    includeIfNull: false,
-  )
-
-
+  @JsonKey(name: r'ctx', required: false, includeIfNull: false)
   final Object? ctx;
 
-
-
-  @JsonKey(
-    
-    name: r'input',
-    required: false,
-    includeIfNull: false,
-  )
-
-
+  @JsonKey(name: r'input', required: false, includeIfNull: false)
   final Object? input;
 
+  @JsonKey(name: r'loc', required: true, includeIfNull: false)
+  final List<Object> loc;
 
-
-  @JsonKey(
-    
-    name: r'loc',
-    required: true,
-    includeIfNull: false,
-  )
-
-
-  final List<ValidationErrorLocInner> loc;
-
-
-
-  @JsonKey(
-    
-    name: r'msg',
-    required: true,
-    includeIfNull: false,
-  )
-
-
+  @JsonKey(name: r'msg', required: true, includeIfNull: false)
   final String msg;
 
-
-
-  @JsonKey(
-    
-    name: r'type',
-    required: true,
-    includeIfNull: false,
-  )
-
-
+  @JsonKey(name: r'type', required: true, includeIfNull: false)
   final String type;
 
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is ValidationError &&
+          other.ctx == ctx &&
+          other.input == input &&
+          other.loc == loc &&
+          other.msg == msg &&
+          other.type == type;
 
+  @override
+  int get hashCode =>
+      ctx.hashCode +
+      (input == null ? 0 : input.hashCode) +
+      loc.hashCode +
+      msg.hashCode +
+      type.hashCode;
 
-
-
-    @override
-    bool operator ==(Object other) => identical(this, other) || other is ValidationError &&
-      other.ctx == ctx &&
-      other.input == input &&
-      other.loc == loc &&
-      other.msg == msg &&
-      other.type == type;
-
-    @override
-    int get hashCode =>
-        ctx.hashCode +
-        (input == null ? 0 : input.hashCode) +
-        loc.hashCode +
-        msg.hashCode +
-        type.hashCode;
-
-  factory ValidationError.fromJson(Map<String, dynamic> json) => _$ValidationErrorFromJson(json);
+  factory ValidationError.fromJson(Map<String, dynamic> json) =>
+      _$ValidationErrorFromJson(json);
 
   Map<String, dynamic> toJson() => _$ValidationErrorToJson(this);
 
@@ -118,6 +71,4 @@ class ValidationError {
   String toString() {
     return toJson().toString();
   }
-
 }
-

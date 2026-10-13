@@ -8,7 +8,6 @@ export 'package:gramtree_api/src/auth/basic_auth.dart';
 export 'package:gramtree_api/src/auth/bearer_auth.dart';
 export 'package:gramtree_api/src/auth/oauth.dart';
 
-
 export 'package:gramtree_api/src/api/account_api.dart';
 export 'package:gramtree_api/src/api/allergies_api.dart';
 export 'package:gramtree_api/src/api/analytics_api.dart';
@@ -240,11 +239,9 @@ export 'package:gramtree_api/src/model/token_pair.dart';
 export 'package:gramtree_api/src/model/unrecorded_ingredient_item.dart';
 export 'package:gramtree_api/src/model/user_out.dart';
 export 'package:gramtree_api/src/model/validation_error.dart';
-export 'package:gramtree_api/src/model/validation_error_loc_inner.dart';
 export 'package:gramtree_api/src/model/value_source.dart';
 export 'package:gramtree_api/src/model/write_batch.dart';
 export 'package:gramtree_api/src/model/write_batch_response.dart';
 export 'package:gramtree_api/src/model/write_envelope.dart';
 export 'package:gramtree_api/src/model/write_resource_result.dart';
 export 'package:gramtree_api/src/model/write_result.dart';
-

@@ -8,7 +8,6 @@ import 'package:json_annotation/json_annotation.dart';
 
 part 'recipe_intent.g.dart';
 
-
 @CopyWith()
 @JsonSerializable(
   checked: true,
@@ -19,99 +18,54 @@ part 'recipe_intent.g.dart';
 class RecipeIntent {
   /// Returns a new [RecipeIntent] instance.
   RecipeIntent({
+    this.cookware,
 
-     this.cookware,
+    required this.dishName,
 
-    required  this.dishName,
+    this.restrictions,
 
-     this.restrictions,
+    this.servings,
 
-     this.servings,
-
-     this.taste,
+    this.taste,
   });
 
-  @JsonKey(
-    
-    name: r'cookware',
-    required: false,
-    includeIfNull: false,
-  )
-
-
+  @JsonKey(name: r'cookware', required: false, includeIfNull: false)
   final List<String>? cookware;
 
-
-
-  @JsonKey(
-    
-    name: r'dish_name',
-    required: true,
-    includeIfNull: false,
-  )
-
-
+  @JsonKey(name: r'dish_name', required: true, includeIfNull: false)
   final String dishName;
 
-
-
-  @JsonKey(
-    
-    name: r'restrictions',
-    required: false,
-    includeIfNull: false,
-  )
-
-
+  @JsonKey(name: r'restrictions', required: false, includeIfNull: false)
   final List<String>? restrictions;
 
-
-
-          // minimum: 1
-          // maximum: 1000
-  @JsonKey(
-    
-    name: r'servings',
-    required: false,
-    includeIfNull: false,
-  )
-
-
+  // minimum: 1
+  // maximum: 1000
+  @JsonKey(name: r'servings', required: false, includeIfNull: false)
   final int? servings;
 
-
-
-  @JsonKey(
-    
-    name: r'taste',
-    required: false,
-    includeIfNull: false,
-  )
-
-
+  @JsonKey(name: r'taste', required: false, includeIfNull: false)
   final List<String>? taste;
 
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is RecipeIntent &&
+          other.cookware == cookware &&
+          other.dishName == dishName &&
+          other.restrictions == restrictions &&
+          other.servings == servings &&
+          other.taste == taste;
 
+  @override
+  int get hashCode =>
+      cookware.hashCode +
+      dishName.hashCode +
+      restrictions.hashCode +
+      (servings == null ? 0 : servings.hashCode) +
+      taste.hashCode;
 
-
-
-    @override
-    bool operator ==(Object other) => identical(this, other) || other is RecipeIntent &&
-      other.cookware == cookware &&
-      other.dishName == dishName &&
-      other.restrictions == restrictions &&
-      other.servings == servings &&
-      other.taste == taste;
-
-    @override
-    int get hashCode =>
-        cookware.hashCode +
-        dishName.hashCode +
-        restrictions.hashCode +
-        (servings == null ? 0 : servings.hashCode) +
-        taste.hashCode;
-
-  factory RecipeIntent.fromJson(Map<String, dynamic> json) => _$RecipeIntentFromJson(json);
+  factory RecipeIntent.fromJson(Map<String, dynamic> json) =>
+      _$RecipeIntentFromJson(json);
 
   Map<String, dynamic> toJson() => _$RecipeIntentToJson(this);
 
@@ -119,6 +73,4 @@ class RecipeIntent {
   String toString() {
     return toJson().toString();
   }
-
 }
-

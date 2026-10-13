@@ -101,24 +101,19 @@ extension $IngredientPreferenceOutCopyWith on IngredientPreferenceOut {
 
 IngredientPreferenceOut _$IngredientPreferenceOutFromJson(
   Map<String, dynamic> json,
-) => $checkedCreate(
-  'IngredientPreferenceOut',
-  json,
-  ($checkedConvert) {
-    $checkKeys(json, requiredKeys: const ['name', 'preference']);
-    final val = IngredientPreferenceOut(
-      category: $checkedConvert('category', (v) => v as String?),
-      ingredientId: $checkedConvert('ingredient_id', (v) => v as String?),
-      name: $checkedConvert('name', (v) => v as String),
-      preference: $checkedConvert(
-        'preference',
-        (v) => $enumDecode(_$IngredientPreferenceOutPreferenceEnumEnumMap, v),
-      ),
-    );
-    return val;
-  },
-  fieldKeyMap: const {'ingredientId': 'ingredient_id'},
-);
+) => $checkedCreate('IngredientPreferenceOut', json, ($checkedConvert) {
+  $checkKeys(json, requiredKeys: const ['name', 'preference']);
+  final val = IngredientPreferenceOut(
+    category: $checkedConvert('category', (v) => v as String?),
+    ingredientId: $checkedConvert('ingredient_id', (v) => v as String?),
+    name: $checkedConvert('name', (v) => v as String),
+    preference: $checkedConvert(
+      'preference',
+      (v) => $enumDecode(_$IngredientPreferenceOutPreferenceEnumEnumMap, v),
+    ),
+  );
+  return val;
+}, fieldKeyMap: const {'ingredientId': 'ingredient_id'});
 
 Map<String, dynamic> _$IngredientPreferenceOutToJson(
   IngredientPreferenceOut instance,

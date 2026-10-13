@@ -8,7 +8,6 @@ import 'package:json_annotation/json_annotation.dart';
 
 part 'allergy_ingredient_out.g.dart';
 
-
 @CopyWith()
 @JsonSerializable(
   checked: true,
@@ -18,50 +17,26 @@ part 'allergy_ingredient_out.g.dart';
 )
 class AllergyIngredientOut {
   /// Returns a new [AllergyIngredientOut] instance.
-  AllergyIngredientOut({
+  AllergyIngredientOut({required this.ingredientId, required this.name});
 
-    required  this.ingredientId,
-
-    required  this.name,
-  });
-
-  @JsonKey(
-    
-    name: r'ingredient_id',
-    required: true,
-    includeIfNull: false,
-  )
-
-
+  @JsonKey(name: r'ingredient_id', required: true, includeIfNull: false)
   final String ingredientId;
 
-
-
-  @JsonKey(
-    
-    name: r'name',
-    required: true,
-    includeIfNull: false,
-  )
-
-
+  @JsonKey(name: r'name', required: true, includeIfNull: false)
   final String name;
 
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is AllergyIngredientOut &&
+          other.ingredientId == ingredientId &&
+          other.name == name;
 
+  @override
+  int get hashCode => ingredientId.hashCode + name.hashCode;
 
-
-
-    @override
-    bool operator ==(Object other) => identical(this, other) || other is AllergyIngredientOut &&
-      other.ingredientId == ingredientId &&
-      other.name == name;
-
-    @override
-    int get hashCode =>
-        ingredientId.hashCode +
-        name.hashCode;
-
-  factory AllergyIngredientOut.fromJson(Map<String, dynamic> json) => _$AllergyIngredientOutFromJson(json);
+  factory AllergyIngredientOut.fromJson(Map<String, dynamic> json) =>
+      _$AllergyIngredientOutFromJson(json);
 
   Map<String, dynamic> toJson() => _$AllergyIngredientOutToJson(this);
 
@@ -69,6 +44,4 @@ class AllergyIngredientOut {
   String toString() {
     return toJson().toString();
   }
-
 }
-

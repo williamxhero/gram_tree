@@ -16,13 +16,12 @@ import 'package:gramtree_api/src/model/page_taste_profile_change_out.dart';
 import 'package:gramtree_api/src/model/taste_profile_change_out.dart';
 
 class AllergiesApi {
-
   final Dio _dio;
 
   const AllergiesApi(this._dio);
 
   /// Get Allergies
-  /// 
+  ///
   ///
   /// Parameters:
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
@@ -34,7 +33,7 @@ class AllergiesApi {
   ///
   /// Returns a [Future] containing a [Response] with a [AllergiesOut] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<AllergiesOut>> getAllergies({ 
+  Future<Response<AllergiesOut>> getAllergies({
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
     Map<String, dynamic>? extra,
@@ -45,16 +44,10 @@ class AllergiesApi {
     final _path = r'/v1/me/taste-profile/allergies';
     final _options = Options(
       method: r'GET',
-      headers: <String, dynamic>{
-        ...?headers,
-      },
+      headers: <String, dynamic>{...?headers},
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
-          {
-            'type': 'http',
-            'scheme': 'bearer',
-            'name': 'HTTPBearer',
-          },
+          {'type': 'http', 'scheme': 'bearer', 'name': 'HTTPBearer'},
         ],
         ...?extra,
       },
@@ -72,9 +65,14 @@ class AllergiesApi {
     AllergiesOut? _responseData;
 
     try {
-final rawData = _response.data;
-_responseData = rawData == null ? null : deserialize<AllergiesOut, AllergiesOut>(rawData, 'AllergiesOut', growable: true);
-
+      final rawData = _response.data;
+      _responseData = rawData == null
+          ? null
+          : deserialize<AllergiesOut, AllergiesOut>(
+              rawData,
+              'AllergiesOut',
+              growable: true,
+            );
     } catch (error, stackTrace) {
       throw DioException(
         requestOptions: _response.requestOptions,
@@ -98,10 +96,10 @@ _responseData = rawData == null ? null : deserialize<AllergiesOut, AllergiesOut>
   }
 
   /// Get Allergy Change
-  /// 
+  ///
   ///
   /// Parameters:
-  /// * [changeId] 
+  /// * [changeId]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -111,7 +109,7 @@ _responseData = rawData == null ? null : deserialize<AllergiesOut, AllergiesOut>
   ///
   /// Returns a [Future] containing a [Response] with a [TasteProfileChangeOut] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<TasteProfileChangeOut>> getAllergyChange({ 
+  Future<Response<TasteProfileChangeOut>> getAllergyChange({
     required String changeId,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -120,19 +118,19 @@ _responseData = rawData == null ? null : deserialize<AllergiesOut, AllergiesOut>
     ProgressCallback? onSendProgress,
     ProgressCallback? onReceiveProgress,
   }) async {
-    final _path = r'/v1/me/taste-profile/allergies/changes/{change_id}'.replaceAll('{' r'change_id' '}', changeId.toString());
+    final _path = r'/v1/me/taste-profile/allergies/changes/{change_id}'
+        .replaceAll(
+          '{'
+          r'change_id'
+          '}',
+          changeId.toString(),
+        );
     final _options = Options(
       method: r'GET',
-      headers: <String, dynamic>{
-        ...?headers,
-      },
+      headers: <String, dynamic>{...?headers},
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
-          {
-            'type': 'http',
-            'scheme': 'bearer',
-            'name': 'HTTPBearer',
-          },
+          {'type': 'http', 'scheme': 'bearer', 'name': 'HTTPBearer'},
         ],
         ...?extra,
       },
@@ -150,9 +148,14 @@ _responseData = rawData == null ? null : deserialize<AllergiesOut, AllergiesOut>
     TasteProfileChangeOut? _responseData;
 
     try {
-final rawData = _response.data;
-_responseData = rawData == null ? null : deserialize<TasteProfileChangeOut, TasteProfileChangeOut>(rawData, 'TasteProfileChangeOut', growable: true);
-
+      final rawData = _response.data;
+      _responseData = rawData == null
+          ? null
+          : deserialize<TasteProfileChangeOut, TasteProfileChangeOut>(
+              rawData,
+              'TasteProfileChangeOut',
+              growable: true,
+            );
     } catch (error, stackTrace) {
       throw DioException(
         requestOptions: _response.requestOptions,
@@ -176,7 +179,7 @@ _responseData = rawData == null ? null : deserialize<TasteProfileChangeOut, Tast
   }
 
   /// List Allergy Changes
-  /// 
+  ///
   ///
   /// Parameters:
   /// * [cursor] - 上一页返回的 next_cursor
@@ -190,7 +193,7 @@ _responseData = rawData == null ? null : deserialize<TasteProfileChangeOut, Tast
   ///
   /// Returns a [Future] containing a [Response] with a [PageTasteProfileChangeOut] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<PageTasteProfileChangeOut>> listAllergyChanges({ 
+  Future<Response<PageTasteProfileChangeOut>> listAllergyChanges({
     String? cursor,
     int? limit = 20,
     CancelToken? cancelToken,
@@ -203,16 +206,10 @@ _responseData = rawData == null ? null : deserialize<TasteProfileChangeOut, Tast
     final _path = r'/v1/me/taste-profile/allergies/changes';
     final _options = Options(
       method: r'GET',
-      headers: <String, dynamic>{
-        ...?headers,
-      },
+      headers: <String, dynamic>{...?headers},
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
-          {
-            'type': 'http',
-            'scheme': 'bearer',
-            'name': 'HTTPBearer',
-          },
+          {'type': 'http', 'scheme': 'bearer', 'name': 'HTTPBearer'},
         ],
         ...?extra,
       },
@@ -236,9 +233,14 @@ _responseData = rawData == null ? null : deserialize<TasteProfileChangeOut, Tast
     PageTasteProfileChangeOut? _responseData;
 
     try {
-final rawData = _response.data;
-_responseData = rawData == null ? null : deserialize<PageTasteProfileChangeOut, PageTasteProfileChangeOut>(rawData, 'PageTasteProfileChangeOut', growable: true);
-
+      final rawData = _response.data;
+      _responseData = rawData == null
+          ? null
+          : deserialize<PageTasteProfileChangeOut, PageTasteProfileChangeOut>(
+              rawData,
+              'PageTasteProfileChangeOut',
+              growable: true,
+            );
     } catch (error, stackTrace) {
       throw DioException(
         requestOptions: _response.requestOptions,
@@ -262,10 +264,10 @@ _responseData = rawData == null ? null : deserialize<PageTasteProfileChangeOut, 
   }
 
   /// Set Allergies
-  /// 
+  ///
   ///
   /// Parameters:
-  /// * [allergiesWrite] 
+  /// * [allergiesWrite]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -275,7 +277,7 @@ _responseData = rawData == null ? null : deserialize<PageTasteProfileChangeOut, 
   ///
   /// Returns a [Future] containing a [Response] with a [AllergiesOut] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<AllergiesOut>> setAllergies({ 
+  Future<Response<AllergiesOut>> setAllergies({
     required AllergiesWrite allergiesWrite,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -287,16 +289,10 @@ _responseData = rawData == null ? null : deserialize<PageTasteProfileChangeOut, 
     final _path = r'/v1/me/taste-profile/allergies';
     final _options = Options(
       method: r'PUT',
-      headers: <String, dynamic>{
-        ...?headers,
-      },
+      headers: <String, dynamic>{...?headers},
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
-          {
-            'type': 'http',
-            'scheme': 'bearer',
-            'name': 'HTTPBearer',
-          },
+          {'type': 'http', 'scheme': 'bearer', 'name': 'HTTPBearer'},
         ],
         ...?extra,
       },
@@ -307,13 +303,10 @@ _responseData = rawData == null ? null : deserialize<PageTasteProfileChangeOut, 
     dynamic _bodyData;
 
     try {
-_bodyData=jsonEncode(allergiesWrite);
-    } catch(error, stackTrace) {
+      _bodyData = jsonEncode(allergiesWrite);
+    } catch (error, stackTrace) {
       throw DioException(
-         requestOptions: _options.compose(
-          _dio.options,
-          _path,
-        ),
+        requestOptions: _options.compose(_dio.options, _path),
         type: DioExceptionType.unknown,
         error: error,
         stackTrace: stackTrace,
@@ -332,9 +325,14 @@ _bodyData=jsonEncode(allergiesWrite);
     AllergiesOut? _responseData;
 
     try {
-final rawData = _response.data;
-_responseData = rawData == null ? null : deserialize<AllergiesOut, AllergiesOut>(rawData, 'AllergiesOut', growable: true);
-
+      final rawData = _response.data;
+      _responseData = rawData == null
+          ? null
+          : deserialize<AllergiesOut, AllergiesOut>(
+              rawData,
+              'AllergiesOut',
+              growable: true,
+            );
     } catch (error, stackTrace) {
       throw DioException(
         requestOptions: _response.requestOptions,
@@ -356,5 +354,4 @@ _responseData = rawData == null ? null : deserialize<AllergiesOut, AllergiesOut>
       extra: _response.extra,
     );
   }
-
 }

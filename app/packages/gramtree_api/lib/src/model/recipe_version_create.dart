@@ -9,7 +9,6 @@ import 'package:json_annotation/json_annotation.dart';
 
 part 'recipe_version_create.g.dart';
 
-
 @CopyWith()
 @JsonSerializable(
   checked: true,
@@ -20,20 +19,19 @@ part 'recipe_version_create.g.dart';
 class RecipeVersionCreate {
   /// Returns a new [RecipeVersionCreate] instance.
   RecipeVersionCreate({
+    this.aiAssisted = false,
 
-     this.aiAssisted = false,
+    this.baseVersionId,
 
-     this.baseVersionId,
+    this.changeNote = '',
 
-     this.changeNote = '',
+    this.expectedCurrentVersionId,
 
-     this.expectedCurrentVersionId,
+    this.explanationFingerprint,
 
-     this.explanationFingerprint,
+    this.imageIds,
 
-     this.imageIds,
-
-    required  this.snapshot,
+    required this.snapshot,
   });
 
   @JsonKey(
@@ -42,23 +40,10 @@ class RecipeVersionCreate {
     required: false,
     includeIfNull: false,
   )
-
-
   final bool? aiAssisted;
 
-
-
-  @JsonKey(
-    
-    name: r'base_version_id',
-    required: false,
-    includeIfNull: false,
-  )
-
-
+  @JsonKey(name: r'base_version_id', required: false, includeIfNull: false)
   final String? baseVersionId;
-
-
 
   @JsonKey(
     defaultValue: '',
@@ -66,84 +51,55 @@ class RecipeVersionCreate {
     required: false,
     includeIfNull: false,
   )
-
-
   final String? changeNote;
 
-
-
-      /// 可选并发保护；不改变显式从历史版分支的行为
+  /// 可选并发保护；不改变显式从历史版分支的行为
   @JsonKey(
-    
     name: r'expected_current_version_id',
     required: false,
     includeIfNull: false,
   )
-
-
   final String? expectedCurrentVersionId;
 
-
-
   @JsonKey(
-    
     name: r'explanation_fingerprint',
     required: false,
     includeIfNull: false,
   )
-
-
   final String? explanationFingerprint;
 
-
-
-  @JsonKey(
-    
-    name: r'image_ids',
-    required: false,
-    includeIfNull: false,
-  )
-
-
+  @JsonKey(name: r'image_ids', required: false, includeIfNull: false)
   final List<String>? imageIds;
 
-
-
-  @JsonKey(
-    
-    name: r'snapshot',
-    required: true,
-    includeIfNull: false,
-  )
-
-
+  @JsonKey(name: r'snapshot', required: true, includeIfNull: false)
   final RecipeSnapshot snapshot;
 
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is RecipeVersionCreate &&
+          other.aiAssisted == aiAssisted &&
+          other.baseVersionId == baseVersionId &&
+          other.changeNote == changeNote &&
+          other.expectedCurrentVersionId == expectedCurrentVersionId &&
+          other.explanationFingerprint == explanationFingerprint &&
+          other.imageIds == imageIds &&
+          other.snapshot == snapshot;
 
+  @override
+  int get hashCode =>
+      aiAssisted.hashCode +
+      (baseVersionId == null ? 0 : baseVersionId.hashCode) +
+      changeNote.hashCode +
+      (expectedCurrentVersionId == null
+          ? 0
+          : expectedCurrentVersionId.hashCode) +
+      (explanationFingerprint == null ? 0 : explanationFingerprint.hashCode) +
+      imageIds.hashCode +
+      snapshot.hashCode;
 
-
-
-    @override
-    bool operator ==(Object other) => identical(this, other) || other is RecipeVersionCreate &&
-      other.aiAssisted == aiAssisted &&
-      other.baseVersionId == baseVersionId &&
-      other.changeNote == changeNote &&
-      other.expectedCurrentVersionId == expectedCurrentVersionId &&
-      other.explanationFingerprint == explanationFingerprint &&
-      other.imageIds == imageIds &&
-      other.snapshot == snapshot;
-
-    @override
-    int get hashCode =>
-        aiAssisted.hashCode +
-        (baseVersionId == null ? 0 : baseVersionId.hashCode) +
-        changeNote.hashCode +
-        (expectedCurrentVersionId == null ? 0 : expectedCurrentVersionId.hashCode) +
-        (explanationFingerprint == null ? 0 : explanationFingerprint.hashCode) +
-        imageIds.hashCode +
-        snapshot.hashCode;
-
-  factory RecipeVersionCreate.fromJson(Map<String, dynamic> json) => _$RecipeVersionCreateFromJson(json);
+  factory RecipeVersionCreate.fromJson(Map<String, dynamic> json) =>
+      _$RecipeVersionCreateFromJson(json);
 
   Map<String, dynamic> toJson() => _$RecipeVersionCreateToJson(this);
 
@@ -151,6 +107,4 @@ class RecipeVersionCreate {
   String toString() {
     return toJson().toString();
   }
-
 }
-

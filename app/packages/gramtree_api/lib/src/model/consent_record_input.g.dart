@@ -116,42 +116,32 @@ extension $ConsentRecordInputCopyWith on ConsentRecordInput {
 // JsonSerializableGenerator
 // **************************************************************************
 
-ConsentRecordInput _$ConsentRecordInputFromJson(Map<String, dynamic> json) =>
-    $checkedCreate(
-      'ConsentRecordInput',
-      json,
-      ($checkedConvert) {
-        $checkKeys(
-          json,
-          requiredKeys: const [
-            'action',
-            'id',
-            'kind',
-            'occurred_at',
-            'version',
-          ],
-        );
-        final val = ConsentRecordInput(
-          action: $checkedConvert(
-            'action',
-            (v) => $enumDecode(_$ConsentRecordInputActionEnumEnumMap, v),
-          ),
-          deviceId: $checkedConvert('device_id', (v) => v as String?),
-          id: $checkedConvert('id', (v) => v as String),
-          kind: $checkedConvert(
-            'kind',
-            (v) => $enumDecode(_$ConsentRecordInputKindEnumEnumMap, v),
-          ),
-          occurredAt: $checkedConvert(
-            'occurred_at',
-            (v) => DateTime.parse(v as String),
-          ),
-          version: $checkedConvert('version', (v) => v as String),
-        );
-        return val;
-      },
-      fieldKeyMap: const {'deviceId': 'device_id', 'occurredAt': 'occurred_at'},
-    );
+ConsentRecordInput _$ConsentRecordInputFromJson(
+  Map<String, dynamic> json,
+) => $checkedCreate('ConsentRecordInput', json, ($checkedConvert) {
+  $checkKeys(
+    json,
+    requiredKeys: const ['action', 'id', 'kind', 'occurred_at', 'version'],
+  );
+  final val = ConsentRecordInput(
+    action: $checkedConvert(
+      'action',
+      (v) => $enumDecode(_$ConsentRecordInputActionEnumEnumMap, v),
+    ),
+    deviceId: $checkedConvert('device_id', (v) => v as String?),
+    id: $checkedConvert('id', (v) => v as String),
+    kind: $checkedConvert(
+      'kind',
+      (v) => $enumDecode(_$ConsentRecordInputKindEnumEnumMap, v),
+    ),
+    occurredAt: $checkedConvert(
+      'occurred_at',
+      (v) => DateTime.parse(v as String),
+    ),
+    version: $checkedConvert('version', (v) => v as String),
+  );
+  return val;
+}, fieldKeyMap: const {'deviceId': 'device_id', 'occurredAt': 'occurred_at'});
 
 Map<String, dynamic> _$ConsentRecordInputToJson(ConsentRecordInput instance) =>
     <String, dynamic>{

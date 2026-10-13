@@ -8,7 +8,6 @@ import 'package:json_annotation/json_annotation.dart';
 
 part 'cache_info.g.dart';
 
-
 @CopyWith()
 @JsonSerializable(
   checked: true,
@@ -18,53 +17,27 @@ part 'cache_info.g.dart';
 )
 class CacheInfo {
   /// Returns a new [CacheInfo] instance.
-  CacheInfo({
+  CacheInfo({this.dependsOn, required this.ttlS});
 
-     this.dependsOn,
-
-    required  this.ttlS,
-  });
-
-      /// 依赖的内容版本
-  @JsonKey(
-    
-    name: r'depends_on',
-    required: false,
-    includeIfNull: false,
-  )
-
-
+  /// 依赖的内容版本
+  @JsonKey(name: r'depends_on', required: false, includeIfNull: false)
   final Map<String, String>? dependsOn;
 
-
-
-      /// 缓存有效期（秒）
-          // minimum: 0
-  @JsonKey(
-    
-    name: r'ttl_s',
-    required: true,
-    includeIfNull: false,
-  )
-
-
+  /// 缓存有效期（秒）
+  // minimum: 0
+  @JsonKey(name: r'ttl_s', required: true, includeIfNull: false)
   final int ttlS;
 
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is CacheInfo && other.dependsOn == dependsOn && other.ttlS == ttlS;
 
+  @override
+  int get hashCode => dependsOn.hashCode + ttlS.hashCode;
 
-
-
-    @override
-    bool operator ==(Object other) => identical(this, other) || other is CacheInfo &&
-      other.dependsOn == dependsOn &&
-      other.ttlS == ttlS;
-
-    @override
-    int get hashCode =>
-        dependsOn.hashCode +
-        ttlS.hashCode;
-
-  factory CacheInfo.fromJson(Map<String, dynamic> json) => _$CacheInfoFromJson(json);
+  factory CacheInfo.fromJson(Map<String, dynamic> json) =>
+      _$CacheInfoFromJson(json);
 
   Map<String, dynamic> toJson() => _$CacheInfoToJson(this);
 
@@ -72,6 +45,4 @@ class CacheInfo {
   String toString() {
     return toJson().toString();
   }
-
 }
-

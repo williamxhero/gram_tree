@@ -86,23 +86,18 @@ extension $ServingConversionWarningCopyWith on ServingConversionWarning {
 
 ServingConversionWarning _$ServingConversionWarningFromJson(
   Map<String, dynamic> json,
-) => $checkedCreate(
-  'ServingConversionWarning',
-  json,
-  ($checkedConvert) {
-    $checkKeys(json, requiredKeys: const ['code', 'message']);
-    final val = ServingConversionWarning(
-      code: $checkedConvert(
-        'code',
-        (v) => $enumDecode(_$ServingConversionWarningCodeEnumEnumMap, v),
-      ),
-      ingredientId: $checkedConvert('ingredient_id', (v) => v as String?),
-      message: $checkedConvert('message', (v) => v as String),
-    );
-    return val;
-  },
-  fieldKeyMap: const {'ingredientId': 'ingredient_id'},
-);
+) => $checkedCreate('ServingConversionWarning', json, ($checkedConvert) {
+  $checkKeys(json, requiredKeys: const ['code', 'message']);
+  final val = ServingConversionWarning(
+    code: $checkedConvert(
+      'code',
+      (v) => $enumDecode(_$ServingConversionWarningCodeEnumEnumMap, v),
+    ),
+    ingredientId: $checkedConvert('ingredient_id', (v) => v as String?),
+    message: $checkedConvert('message', (v) => v as String),
+  );
+  return val;
+}, fieldKeyMap: const {'ingredientId': 'ingredient_id'});
 
 Map<String, dynamic> _$ServingConversionWarningToJson(
   ServingConversionWarning instance,

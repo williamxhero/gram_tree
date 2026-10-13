@@ -10,7 +10,6 @@ import 'package:json_annotation/json_annotation.dart';
 
 part 'purchase_units_attribute.g.dart';
 
-
 @CopyWith()
 @JsonSerializable(
   checked: true,
@@ -21,84 +20,45 @@ part 'purchase_units_attribute.g.dart';
 class PurchaseUnitsAttribute {
   /// Returns a new [PurchaseUnitsAttribute] instance.
   PurchaseUnitsAttribute({
+    required this.estimate,
 
-    required  this.estimate,
+    required this.source_,
 
-    required  this.source_,
+    required this.status,
 
-    required  this.status,
-
-    required  this.value,
+    required this.value,
   });
 
-      /// 没经人工校对的字段按估算处理
-  @JsonKey(
-    
-    name: r'estimate',
-    required: true,
-    includeIfNull: false,
-  )
-
-
+  /// 没经人工校对的字段按估算处理
+  @JsonKey(name: r'estimate', required: true, includeIfNull: false)
   final bool estimate;
 
-
-
-      /// 这项数据的来源
-  @JsonKey(
-    
-    name: r'source',
-    required: true,
-    includeIfNull: false,
-  )
-
-
+  /// 这项数据的来源
+  @JsonKey(name: r'source', required: true, includeIfNull: false)
   final String source_;
 
-
-
-      /// ai_draft：AI 起草；verified：人工校对过
-  @JsonKey(
-    
-    name: r'status',
-    required: true,
-    includeIfNull: false,
-  )
-
-
+  /// ai_draft：AI 起草；verified：人工校对过
+  @JsonKey(name: r'status', required: true, includeIfNull: false)
   final AttributeStatus status;
 
-
-
-  @JsonKey(
-    
-    name: r'value',
-    required: true,
-    includeIfNull: false,
-  )
-
-
+  @JsonKey(name: r'value', required: true, includeIfNull: false)
   final List<PurchaseUnit> value;
 
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is PurchaseUnitsAttribute &&
+          other.estimate == estimate &&
+          other.source_ == source_ &&
+          other.status == status &&
+          other.value == value;
 
+  @override
+  int get hashCode =>
+      estimate.hashCode + source_.hashCode + status.hashCode + value.hashCode;
 
-
-
-    @override
-    bool operator ==(Object other) => identical(this, other) || other is PurchaseUnitsAttribute &&
-      other.estimate == estimate &&
-      other.source_ == source_ &&
-      other.status == status &&
-      other.value == value;
-
-    @override
-    int get hashCode =>
-        estimate.hashCode +
-        source_.hashCode +
-        status.hashCode +
-        value.hashCode;
-
-  factory PurchaseUnitsAttribute.fromJson(Map<String, dynamic> json) => _$PurchaseUnitsAttributeFromJson(json);
+  factory PurchaseUnitsAttribute.fromJson(Map<String, dynamic> json) =>
+      _$PurchaseUnitsAttributeFromJson(json);
 
   Map<String, dynamic> toJson() => _$PurchaseUnitsAttributeToJson(this);
 
@@ -106,6 +66,4 @@ class PurchaseUnitsAttribute {
   String toString() {
     return toJson().toString();
   }
-
 }
-
