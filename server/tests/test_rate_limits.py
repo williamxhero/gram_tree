@@ -66,7 +66,8 @@ def test_each_dimension_and_window_blocks_independently_and_hot_updates(
             "/v1/auth/email/code",
             {"email": "category@example.com", "purpose": "login"},
         ),
-        ("auth", "POST", "/v1/risk/captcha", {"challenge_id": "missing", "response": "ok"}),
+        ("captcha", "POST", "/v1/risk/captcha", {"challenge_id": "missing-id", "response": "ok"}),
+        ("captcha", "GET", "/v1/risk/captcha/missing-id", None),
         # Export is reserved for the future own-data SPEC. 404 proves routing was
         # reached; this deliberately does not claim that data export exists yet.
         ("export", "GET", "/v1/export", None),
@@ -181,6 +182,108 @@ def test_export_quota_does_not_share_browsing_or_write_counters(api: Api) -> Non
     )
     configure("rate.export.account_per_minute", 1)
     assert_limited(api.client.get("/v1/export", headers=bearer(tokens)))
+
+
+@pytest.mark.parametrize("dimension", ["account", "device", "ip"])
+@pytest.mark.parametrize("window", ["minute", "day"])
+@pytest.mark.parametrize("first_method", ["GET", "POST"])
+def test_captcha_recovery_has_finite_shared_read_solve_budget(
+    api: Api, dimension: str, window: str, first_method: str
+) -> None:
+    quiet_risk()
+    tokens = api.login("captcha-quota@example.com", "captcha-device")
+    configure(f"rate.captcha.{dimension}_per_{window}", 1)
+    urls = {"GET": "/v1/risk/captcha/missing-id", "POST": "/v1/risk/captcha"}
+    body = {"challenge_id": "missing-id", "response": "wrong"}
+    first = api.client.request(
+        first_method,
+        urls[first_method],
+        json=body if first_method == "POST" else None,
+        headers=bearer(tokens),
+    )
+    assert first.status_code == 400, first.text
+    assert first.json()["error"]["code"] == "captcha_invalid"
+    other_method = "POST" if first_method == "GET" else "GET"
+    assert_limited(
+        api.client.request(
+            other_method,
+            urls[other_method],
+            json=body if other_method == "POST" else None,
+            headers=bearer(tokens),
+        ),
+        day=window == "day",
+    )
+    configure(f"rate.captcha.{dimension}_per_{window}", 3)
+    restored = api.client.get(urls["GET"], headers=bearer(tokens))
+    assert restored.status_code == 400, restored.text
+    assert restored.json()["error"]["code"] == "captcha_invalid"
+
+
+@pytest.mark.parametrize("dimension", ["account", "device", "ip"])
+@pytest.mark.parametrize("window", ["minute", "day"])
+def test_exhausted_ordinary_and_login_budgets_do_not_deadlock_recovery(
+    api: Api, dimension: str, window: str
+) -> None:
+    quiet_risk()
+    tokens = api.login("captcha-recovery@example.com", "recovery-device")
+    for kind in ("auth", "detail", "write"):
+        configure(f"rate.{kind}.{dimension}_per_{window}", 1)
+    with TestClient(
+        api.client.app, client=("198.51.100.55", 10000), raise_server_exceptions=False
+    ) as client:
+        assert client.get("/v1/me", headers=bearer(tokens)).status_code == 200
+        assert_limited(client.get("/v1/me", headers=bearer(tokens)), day=window == "day")
+        assert (
+            client.patch(
+                "/v1/me", json={"nickname": "recovery"}, headers=bearer(tokens)
+            ).status_code
+            == 200
+        )
+        assert_limited(
+            client.patch("/v1/me", json={"nickname": "blocked"}, headers=bearer(tokens)),
+            day=window == "day",
+        )
+        # The daily account/device login budget may already include this login.
+        client.post("/v1/auth/refresh", json={"refresh_token": "invalid"}, headers=bearer(tokens))
+        assert_limited(
+            client.post(
+                "/v1/auth/refresh", json={"refresh_token": "invalid"}, headers=bearer(tokens)
+            ),
+            day=window == "day",
+        )
+        for response in (
+            client.get("/v1/risk/captcha/missing-id", headers=bearer(tokens)),
+            client.post(
+                "/v1/risk/captcha",
+                json={"challenge_id": "missing-id", "response": "wrong"},
+                headers=bearer(tokens),
+            ),
+        ):
+            assert response.status_code == 400, response.text
+            assert response.json()["error"]["code"] == "captcha_invalid"
+
+
+@pytest.mark.parametrize(
+    ("method", "url", "kind", "status"),
+    [
+        ("GET", "/v1/risk/captcha", "detail", 405),
+        ("GET", "/v1/risk/captcha/missing-id/extra", "detail", 404),
+        ("GET", "/v1/risk/captcha-other", "detail", 404),
+        ("POST", "/v1/risk/captcha/missing-id", "write", 405),
+    ],
+)
+def test_captcha_budget_does_not_exempt_other_paths_or_methods(
+    api: Api, method: str, url: str, kind: str, status: int
+) -> None:
+    quiet_risk()
+    tokens = api.login("captcha-path@example.com")
+    configure("rate.captcha.account_per_minute", 1)
+    configure(f"rate.{kind}.account_per_minute", 1)
+    assert api.client.get("/v1/risk/captcha/missing-id", headers=bearer(tokens)).status_code == 400
+    assert_limited(api.client.get("/v1/risk/captcha/missing-id", headers=bearer(tokens)))
+    ordinary = api.client.request(method, url, headers=bearer(tokens))
+    assert ordinary.status_code == status, ordinary.text
+    assert_limited(api.client.request(method, url, headers=bearer(tokens)))
 
 
 def test_comparison_candidates_and_pending_changes_use_list_quota(api: Api) -> None:

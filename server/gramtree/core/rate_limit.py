@@ -18,7 +18,7 @@ from gramtree.runtime_config import service as config
 from gramtree.runtime_config.registry import BY_KEY
 from gramtree.settings import Settings
 
-RateCategory = Literal["search_list", "detail", "write", "ai", "auth", "export"]
+RateCategory = Literal["search_list", "detail", "write", "ai", "auth", "captcha", "export"]
 
 # INCR + EXPIRE must be one Redis operation so concurrent requests cannot leave
 # an unbounded counter or observe a half-updated set of dimensions.
@@ -58,8 +58,15 @@ class RateLimitError(ApiError):
 def category(path: str, method: str) -> RateCategory | None:
     if path in {"/v1/health", "/v1/client-config"} or path.startswith("/v1/dev/"):
         return None
-    if path.startswith("/v1/risk/captcha"):
-        return "auth"
+    # Recovery must survive exhausted ordinary/login quotas, but it still has
+    # its own finite multi-dimensional budget. Match only the two recovery routes.
+    captcha_root = "/v1/risk/captcha"
+    if method.upper() == "POST" and path == captcha_root:
+        return "captcha"
+    if method.upper() == "GET" and path.startswith(captcha_root + "/"):
+        challenge_id = path[len(captcha_root) + 1 :]
+        if challenge_id and "/" not in challenge_id:
+            return "captcha"
     if path.startswith("/v1/auth/"):
         return "auth"
     if path.startswith("/v1/export"):

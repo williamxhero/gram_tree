@@ -472,6 +472,7 @@ ITEMS: tuple[ConfigItem, ...] = (
             ("write", 60),
             ("ai", 30),
             ("auth", 30),
+            ("captcha", 30),
             ("export", 10),
         )
         for dimension in ("account", "device", "ip")
