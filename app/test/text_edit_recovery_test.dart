@@ -78,6 +78,10 @@ class _Fixture {
   bool failConfirmation = false;
   bool loseConfirmationResponse = false;
   bool numeric = false;
+  bool taste = false;
+  String tasteAxis = 'salty';
+  int adjustmentPercent = 25;
+  final requestAmounts = <String, int?>{};
   Completer<void>? checkGate;
   Completer<void>? confirmationGate;
   List<Map<String, dynamic>> decisions = [];
@@ -168,8 +172,24 @@ class _Fixture {
         ).toJson(),
       ),
     );
-    env.server.on('POST', '/v1/ai/recipes/modifications', (_) {
+    env.server.on('POST', '/v1/ai/recipes/modifications', (request) {
       if (failProposal) return FakeServer.error(503, 'unavailable', '模型请求超时');
+      if (taste) {
+        final body = request.body as Map;
+        final requestId = body['request_id'] as String;
+        final amount = body['adjustment_percent'] as int?;
+        if (requestAmounts.containsKey(requestId) &&
+            requestAmounts[requestId] != amount) {
+          return FakeServer.error(
+            409,
+            'modification_request_conflict',
+            '请求编号已用于另一幅度',
+          );
+        }
+        requestAmounts[requestId] = amount;
+        adjustmentPercent = amount ?? 25;
+        decisions = [];
+      }
       return (200, preview());
     });
     env.server.on(
@@ -213,7 +233,17 @@ class _Fixture {
   Map<String, dynamic> preview() => ModificationPreview.fromJson({
     'id': _modification,
     'revision': revision,
-    'intent': {'category': 'text', 'parameters': {}, 'confidence': 0.95},
+    'intent': {
+      'category': taste ? 'taste' : 'text',
+      'parameters': taste
+          ? {
+              'axis': tasteAxis,
+              'direction': 'decrease',
+              'adjustment_percent': adjustmentPercent,
+            }
+          : {},
+      'confidence': 0.95,
+    },
     'operations': [
       for (final (id, field, after, dependencies) in [
         (
@@ -429,6 +459,429 @@ class _SlowEvents extends FakeEventQueue {
 }
 
 void main() {
+  testWidgets('麻味调幅显示实际味型而不是泛化为味道', (tester) async {
+    final fixture = _Fixture()
+      ..taste = true
+      ..tasteAxis = 'numbing';
+    await pumpApp(tester, env: fixture.env);
+    await _route(tester, '/recipes/$_recipe/edit');
+    await tester.enterText(
+      find.byKey(const ValueKey('text-edit-input')),
+      '少一点麻味',
+    );
+    await _tap(tester, 'text-edit-preview');
+    await _reveal(tester, 'text-edit-taste-adjustment');
+    expect(find.text('麻味 · 降低 25%', findRichText: true), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('调味显示服务端实际幅度，20/30/25重新提议须重新逐条确认', (tester) async {
+    final fixture = _Fixture()..taste = true;
+    await pumpApp(tester, env: fixture.env);
+    await _route(tester, '/recipes/$_recipe/edit');
+    await tester.enterText(
+      find.byKey(const ValueKey('text-edit-input')),
+      '太咸了',
+    );
+    await _tap(tester, 'text-edit-preview');
+    await _reveal(tester, 'text-edit-taste-adjustment');
+    expect(find.text('咸味 · 降低 25%', findRichText: true), findsOneWidget);
+    for (final percent in [20, 30, 25]) {
+      await _tap(tester, 'text-edit-accept-clarify');
+      await _tap(tester, 'text-edit-reject-remind');
+      await _tap(tester, 'text-edit-adjustment-$percent');
+      await _reveal(tester, 'text-edit-taste-adjustment');
+      expect(
+        find.text('咸味 · 降低 $percent%', findRichText: true),
+        findsOneWidget,
+      );
+      await _reveal(tester, 'text-edit-operation-clarify');
+      expect(find.text('本条处理：待处理'), findsWidgets);
+      await _reveal(tester, 'text-edit-confirm');
+      await _tap(tester, 'text-edit-confirm');
+      expect(
+        tester
+            .widget<FilledButton>(
+              find.byKey(const ValueKey('text-edit-confirm')),
+            )
+            .onPressed,
+        isNull,
+      );
+      expect(
+        find.byKey(const ValueKey('recipe-editor-content')),
+        findsOneWidget,
+      );
+    }
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('调幅意图等待本机事件保存时不能确认旧幅度，失败保留原决定并可重试', (tester) async {
+    final events = _SlowEvents();
+    final fixture = _Fixture(events: events)..taste = true;
+    await _selected(tester, fixture);
+    final gate = Completer<void>();
+    events.gate = gate;
+    addTearDown(() {
+      if (!gate.isCompleted) gate.complete();
+    });
+    await _reveal(tester, 'text-edit-adjustment-30');
+    await tester.tap(find.byKey(const ValueKey('text-edit-adjustment-30')));
+    await tester.pump();
+    await _reveal(tester, 'text-edit-confirm', settle: false);
+    await tester.tap(find.byKey(const ValueKey('text-edit-confirm')));
+    await tester.pump();
+    expect(
+      tester
+          .widget<FilledButton>(find.byKey(const ValueKey('text-edit-confirm')))
+          .onPressed,
+      isNull,
+    );
+    expect(find.byKey(const ValueKey('recipe-editor-content')), findsOneWidget);
+    fixture.failProposal = true;
+    events.gate = null;
+    gate.complete();
+    await tester.pumpAndSettle();
+    await _reveal(tester, 'text-edit-taste-adjustment');
+    expect(find.text('咸味 · 降低 25%', findRichText: true), findsOneWidget);
+    await _reveal(tester, 'text-edit-after-clarify');
+    expect(find.text('我确认的文字：中心达到 74°C。'), findsOneWidget);
+    await restartApp(tester, fixture.env);
+    await _route(tester, '/recipes/$_recipe/edit');
+    fixture.failProposal = false;
+    await _tap(tester, 'text-edit-preview');
+    await _reveal(tester, 'text-edit-taste-adjustment');
+    expect(find.text('咸味 · 降低 30%', findRichText: true), findsOneWidget);
+    await _reveal(tester, 'text-edit-operation-clarify');
+    expect(find.text('本条处理：待处理'), findsWidgets);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('额度耗尽只允许原失败调幅重试，不可换幅度丢失重试身份', (tester) async {
+    final fixture = _Fixture()..taste = true;
+    await _selected(tester, fixture);
+    final quota = AIStatus(
+      available: false,
+      remaining: 0,
+      reason: 'daily_quota',
+    );
+    Map? chargedRequest;
+    fixture.env.server.on('POST', '/v1/ai/recipes/modifications', (request) {
+      chargedRequest = Map.from(request.body as Map);
+      return (
+        200,
+        fixture.preview()
+          ..['error'] = 'model_failure'
+          ..['status'] = quota.toJson(),
+      );
+    });
+    fixture.env.server.on(
+      'GET',
+      '/v1/ai/recipes/modifications/status',
+      (_) => (200, quota.toJson()),
+    );
+    await _tap(tester, 'text-edit-adjustment-30');
+    await restartApp(tester, fixture.env);
+    await _route(tester, '/recipes/$_recipe/edit');
+    await _reveal(tester, 'text-edit-taste-adjustment');
+    for (final percent in [20, 25]) {
+      await _tap(tester, 'text-edit-adjustment-$percent');
+      expect(
+        tester
+            .widget<ChoiceChip>(
+              find.byKey(ValueKey('text-edit-adjustment-$percent')),
+            )
+            .onSelected,
+        isNull,
+      );
+      expect(find.text('咸味 · 降低 25%', findRichText: true), findsOneWidget);
+    }
+    fixture.env.server.on('POST', '/v1/ai/recipes/modifications', (request) {
+      // External replay fixture accepts only an exact retry of the charged request.
+      final body = request.body as Map;
+      if (body['request_id'] != chargedRequest!['request_id'] ||
+          body['text'] != chargedRequest!['text'] ||
+          body['retry_failed'] != true ||
+          body['adjustment_percent'] != 30) {
+        return FakeServer.error(
+          409,
+          'modification_request_conflict',
+          '必须重试原幅度请求',
+        );
+      }
+      fixture.adjustmentPercent = 30;
+      fixture.decisions = [];
+      return (200, fixture.preview()..['status'] = quota.toJson());
+    });
+    await _tap(tester, 'text-edit-adjustment-30');
+    await _reveal(tester, 'text-edit-taste-adjustment');
+    expect(find.text('咸味 · 降低 30%', findRichText: true), findsOneWidget);
+    expect(find.byKey(const ValueKey('text-edit-error')), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
+  for (final brightness in [Brightness.light, Brightness.dark]) {
+    for (final scale in [1.3, 1.6]) {
+      testWidgets('调幅控件可在$brightness字号$scale下逐项操作', (tester) async {
+        final fixture = _Fixture()..taste = true;
+        await pumpApp(
+          tester,
+          env: fixture.env,
+          brightness: brightness,
+          textScale: scale,
+          size: const Size(320, 640),
+        );
+        await _route(tester, '/recipes/$_recipe/edit');
+        await tester.enterText(
+          find.byKey(const ValueKey('text-edit-input')),
+          '太咸了',
+        );
+        await _tap(tester, 'text-edit-preview');
+        await _tap(tester, 'text-edit-adjustment-20');
+        await _reveal(tester, 'text-edit-taste-adjustment');
+        expect(find.text('咸味 · 降低 20%', findRichText: true), findsOneWidget);
+        expect(tester.takeException(), isNull);
+      });
+    }
+  }
+
+  testWidgets('缺料预览逐条核对替代差异、花生提醒及实际用量，保存后重看', (tester) async {
+    final fixture = _Fixture();
+    final original = _snapshot().copyWith(
+      ingredients: [
+        ..._snapshot().ingredients!,
+        RecipeIngredient(
+          id: 'wine',
+          displayName: '料酒',
+          quantity: 10,
+          unit: 'ml',
+        ),
+      ],
+    );
+    var savedSnapshot = original;
+    bool accepted(String id) => fixture.decisions.any(
+      (d) => d['operation_id'] == id && d['decision'] == 'accept',
+    );
+    RecipeSnapshot selectedSnapshot() {
+      if (!accepted('replace-wine')) return original;
+      final quantityChoice = fixture.decisions
+          .where((d) => d['operation_id'] == 'quantity-wine')
+          .firstOrNull;
+      return original.copyWith(
+        ingredients: [
+          original.ingredients!.first,
+          original.ingredients!.last.copyWith(
+            ingredientId: 'peanut-id',
+            displayName: accepted('name-wine') ? '花生调味汁' : '料酒',
+            quantity: quantityChoice?['decision'] == 'modify'
+                ? quantityChoice!['after'] as num
+                : accepted('quantity-wine')
+                ? 20
+                : 10,
+            quantitySource: accepted('quantity-wine')
+                ? ValueSource.fromJson({
+                    'source': 'ai_estimated',
+                    'original': '10 ml',
+                    'basis': '换算比例为2；味型不同，仅用于本菜，不是通用替代',
+                    'confidence': 0.8,
+                  })
+                : null,
+          ),
+        ],
+      );
+    }
+
+    Map<String, dynamic> preview() {
+      final accepted = fixture.decisions.any(
+        (d) => d['operation_id'] == 'replace-wine' && d['decision'] == 'accept',
+      );
+      final rejected = fixture.decisions.any(
+        (d) => d['operation_id'] == 'replace-wine' && d['decision'] == 'reject',
+      );
+      return fixture.preview()
+        ..['intent'] = {
+          'category': 'substitution',
+          'parameters': {'ingredient_id': 'wine'},
+          'confidence': 0.8,
+        }
+        ..['operations'] = [
+          for (final (id, type, field, before, after, depends) in [
+            (
+              'replace-wine',
+              'replace_ingredient',
+              'ingredient_id',
+              null,
+              'peanut-id',
+              <String>[],
+            ),
+            (
+              'name-wine',
+              'change_display_name',
+              'display_name',
+              '料酒',
+              '花生调味汁',
+              ['replace-wine'],
+            ),
+            (
+              'quantity-wine',
+              'change_quantity',
+              'quantity',
+              10,
+              20,
+              ['replace-wine'],
+            ),
+          ])
+            {
+              'operation_id': id,
+              'type': type,
+              'id': 'wine',
+              'field': field,
+              'before': before,
+              'after': after,
+              'scope': ['ingredients:wine'],
+              'intent': '缺料替代',
+              'reason': '换算比例为2；味型不同，仅用于本菜，不是通用替代',
+              'risk': '替代品含花生；功能性用途需另行核对',
+              'confidence': 0.8,
+              'depends_on': depends,
+            },
+        ]
+        ..['decisions'] = [
+          for (final id in ['replace-wine', 'name-wine', 'quantity-wine'])
+            {
+              'operation_id': id,
+              'decision': 'pending',
+              'blocked_by': <String>[],
+              ...?fixture.decisions
+                  .where((d) => d['operation_id'] == id)
+                  .firstOrNull,
+              if (rejected && id != 'replace-wine') ...{
+                'decision': 'reject',
+                'blocked_by': ['replace-wine'],
+              },
+            },
+        ]
+        ..['snapshot'] = selectedSnapshot().toJson()
+        ..['safety'] = _safety()
+            .copyWith(
+              allergens: accepted ? ['花生'] : [],
+              allergensIncomplete: true,
+            )
+            .toJson()
+        ..['warnings'] = ['花生调味汁含花生；未收录数据不能视为无过敏原。'];
+    }
+
+    RecipeDetail detail() =>
+        _detail(version: fixture.saved ? 'saved' : 'baseline').copyWith(
+          version: _detail().version.copyWith(
+            id: fixture.saved ? 'saved' : 'baseline',
+            snapshot: fixture.saved ? savedSnapshot : original,
+            safety: _safety().copyWith(allergens: fixture.saved ? ['花生'] : []),
+          ),
+        );
+    fixture.env.server.on(
+      'GET',
+      '/v1/recipes/$_recipe',
+      (_) => (200, detail().toJson()),
+    );
+    fixture.env.server.on('POST', '/v1/ai/recipes/modifications', (_) {
+      fixture.decisions = [];
+      return (200, preview());
+    });
+    fixture.env.server.on(
+      'POST',
+      '/v1/ai/recipes/modifications/$_modification/decisions',
+      (r) async {
+        await fixture.checkGate?.future;
+        fixture.decisions = [
+          for (final d in (r.body as Map)['decisions'] as List)
+            Map<String, dynamic>.from(d as Map),
+        ];
+        fixture.revision++;
+        return (200, preview());
+      },
+    );
+    fixture.env.server.on(
+      'POST',
+      '/v1/ai/recipes/modifications/$_modification/confirm',
+      (_) {
+        savedSnapshot = selectedSnapshot();
+        fixture.saved = true;
+        return (201, detail().toJson());
+      },
+    );
+    await pumpApp(tester, env: fixture.env);
+    await _route(tester, '/recipes/$_recipe/edit');
+    await tester.enterText(
+      find.byKey(const ValueKey('text-edit-input')),
+      '没有料酒',
+    );
+    await _tap(tester, 'text-edit-preview');
+    await _reveal(tester, 'text-edit-substitution-notice');
+    expect(find.textContaining('未收录不代表无过敏原'), findsOneWidget);
+    expect(find.text('花生调味汁含花生；未收录数据不能视为无过敏原。'), findsOneWidget);
+    await _tap(tester, 'text-edit-reject-replace-wine');
+    await _reveal(tester, 'text-edit-operation-quantity-wine');
+    expect(find.text('依赖被拒绝，已默认拒绝：replace-wine'), findsWidgets);
+    await _reveal(tester, 'text-edit-result-ingredient-wine');
+    expect(find.text('待确认食材：料酒 10 ml', findRichText: true), findsOneWidget);
+    await _tap(tester, 'text-edit-preview');
+    await _tap(tester, 'text-edit-accept-replace-wine');
+    await _reveal(tester, 'text-edit-result-ingredient-wine');
+    expect(find.text('待确认食材：料酒 10 ml', findRichText: true), findsOneWidget);
+    await _tap(tester, 'text-edit-accept-name-wine');
+    await _reveal(tester, 'text-edit-result-ingredient-wine');
+    expect(find.text('待确认食材：花生调味汁 10 ml', findRichText: true), findsOneWidget);
+    await _tap(tester, 'text-edit-accept-quantity-wine');
+    await _tap(tester, 'text-edit-result-source-wine');
+    final why = find.byKey(const ValueKey('why-panel'));
+    expect(why, findsOneWidget);
+    expect(
+      find.descendant(of: why, matching: find.textContaining('换算比例为2；味型不同')),
+      findsOneWidget,
+    );
+    Navigator.of(tester.element(why)).pop();
+    await tester.pumpAndSettle();
+    await _tap(tester, 'text-edit-modify-quantity-wine');
+    await _reveal(tester, 'text-edit-after-quantity-wine');
+    final checks = Completer<void>();
+    fixture.checkGate = checks;
+    addTearDown(() {
+      if (!checks.isCompleted) checks.complete();
+    });
+    await tester.enterText(
+      find.byKey(const ValueKey('text-edit-after-quantity-wine')),
+      '18',
+    );
+    await tester.pump(const Duration(milliseconds: 300));
+    await _reveal(tester, 'recipe-allergen-list', settle: false);
+    expect(find.textContaining('花生'), findsWidgets);
+    expect(find.text('以下为上次检查提醒，当前选择尚待重新检查。'), findsWidgets);
+    checks.complete();
+    fixture.checkGate = null;
+    await tester.pumpAndSettle();
+    await _reveal(tester, 'text-edit-result-ingredient-wine');
+    expect(find.text('待确认食材：花生调味汁 18 ml', findRichText: true), findsOneWidget);
+    await _reveal(tester, 'recipe-allergen-list');
+    expect(find.textContaining('花生'), findsWidgets);
+    expect(find.textContaining('不完整'), findsWidgets);
+    await _tap(tester, 'text-edit-confirm');
+    await _route(tester, '/recipes');
+    await _route(tester, '/recipes/$_recipe');
+    await _reveal(tester, 'recipe-detail-content');
+    await tester.scrollUntilVisible(
+      find.text('花生调味汁'),
+      250,
+      scrollable: find.byType(Scrollable).first,
+      maxScrolls: 60,
+    );
+    expect(find.text('花生调味汁'), findsOneWidget);
+    final amount = tester.widget<Text>(
+      find.byKey(const ValueKey('recipe-ingredient-amount-wine')),
+    );
+    expect(amount.textSpan?.toPlainText(), startsWith('18 '));
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets(
     'adopted AI explanation survives unchanged server recheck after restart',
     (tester) async {

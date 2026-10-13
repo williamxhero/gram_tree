@@ -964,7 +964,7 @@ void main() {
     );
     expect(find.byKey(const ValueKey('text-edit-input')), findsOneWidget);
     expect(
-      find.text('支持改文字、换厨具、调整时间或难度、调整做法；口味和缺料替代暂未支持。确认前不会保存。'),
+      find.text('支持调味、缺料替代、改文字、换厨具、调整时间或难度、调整做法。确认前不会保存。'),
       findsOneWidget,
     );
     expect(

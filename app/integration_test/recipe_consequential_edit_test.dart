@@ -225,6 +225,17 @@ class _Journey {
     await enabled('text-edit-preview');
   }
 
+  Future<void> ingredientAmount(String id, String amount) async {
+    final value = 'recipe-ingredient-amount-$id';
+    await reveal(value);
+    final text = tester.widget<Text>(key(value));
+    expect(
+      text.data ?? text.textSpan?.toPlainText(),
+      startsWith('$amount '),
+      reason: phase,
+    );
+  }
+
   Future<void> confirm() async {
     phase = 'confirm-and-save';
     await reveal('text-edit-confirm');
@@ -289,6 +300,213 @@ class _Journey {
 
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
+
+  testWidgets('太咸了调幅20/30/25，独立拒绝副作用后保存并重看旧新版', (tester) async {
+    final journey = _Journey(tester);
+    await journey.record(() async {
+      await journey.login();
+      await journey.savedEditor(request: '合成测试：做一道包含盐、生抽、蚝油和豆瓣酱的家常鸡丁');
+      await journey.propose('太咸了');
+      await journey.reveal('text-edit-taste-adjustment');
+      expect(find.text('咸味 · 降低 25%', findRichText: true), findsOneWidget);
+      for (final (percent, saltQuantity) in [
+        (20, '2.4'),
+        (30, '2.1'),
+        (25, '2.25'),
+      ]) {
+        await journey.tap('text-edit-adjustment-$percent');
+        await journey.enabled('text-edit-preview');
+        await journey.reveal('text-edit-taste-adjustment');
+        expect(
+          find.text('咸味 · 降低 $percent%', findRichText: true),
+          findsOneWidget,
+        );
+        await journey.reveal('text-edit-operation-reduce-salt');
+        expect(
+          find.descendant(
+            of: journey.key('text-edit-operation-reduce-salt'),
+            matching: find.textContaining('建议后值：$saltQuantity'),
+          ),
+          findsOneWidget,
+        );
+        expect(
+          find.descendant(
+            of: journey.key('text-edit-operation-reduce-salt'),
+            matching: find.text('本条处理：待处理'),
+          ),
+          findsOneWidget,
+        );
+      }
+      for (final id in [
+        'reduce-salt',
+        'reduce-soy',
+        'reduce-oyster',
+        'reduce-bean',
+      ]) {
+        await journey.choose('accept', id);
+      }
+      for (final id in ['color-notes', 'umami-why', 'reduction-instruction']) {
+        await journey.choose('reject', id);
+      }
+      await journey.reveal('text-edit-result-ingredient-soy');
+      expect(
+        find.textContaining('待确认食材：生抽 11.25', findRichText: true),
+        findsOneWidget,
+      );
+      await journey.enter('change-explanation-note', '咸味降低25%，保留原来的上色与收汁步骤。');
+      await journey.confirm();
+      for (final (id, amount) in [
+        ('salt', '2.25'),
+        ('soy', '11.25'),
+        ('oyster', '7.5'),
+        ('bean', '11.25'),
+      ]) {
+        await journey.ingredientAmount(id, amount);
+      }
+      await journey.tap('recipe-history-button');
+      await journey.waitFor(journey.key('recipe-version-2'));
+      await journey.tap('recipe-version-1');
+      await journey.waitFor(journey.key('recipe-detail-content'));
+      for (final (id, amount) in [
+        ('salt', '3'),
+        ('soy', '15'),
+        ('oyster', '10'),
+        ('bean', '15'),
+      ]) {
+        await journey.ingredientAmount(id, amount);
+      }
+      await tester.binding.handlePopRoute();
+      await tester.pumpAndSettle();
+      await journey.tap('recipe-version-2');
+      await journey.waitFor(journey.key('recipe-detail-content'));
+      await journey.ingredientAmount('salt', '2.25');
+      await journey.ingredientAmount('soy', '11.25');
+    });
+  });
+
+  testWidgets('没有料酒显示替代与花生提醒，逐条确认后保存重看', (tester) async {
+    final journey = _Journey(tester);
+    await journey.record(() async {
+      await journey.login();
+      await journey.savedEditor(request: '合成测试：做一道需要料酒的家常鸡丁');
+      await journey.propose('没有料酒，换成花生调味汁');
+      await journey.reveal('text-edit-substitution-notice');
+      expect(find.textContaining('未收录不代表无过敏原'), findsOneWidget);
+      await journey.choose('reject', 'replace-wine');
+      await journey.reveal('text-edit-operation-quantity-wine');
+      expect(
+        find.descendant(
+          of: journey.key('text-edit-operation-quantity-wine'),
+          matching: find.textContaining('依赖被拒绝，已默认拒绝：replace-wine'),
+        ),
+        findsOneWidget,
+      );
+      await journey.reveal('text-edit-result-ingredient-wine');
+      expect(
+        find.textContaining('待确认食材：料酒 10', findRichText: true),
+        findsOneWidget,
+      );
+      await journey.propose('没有料酒，换成花生调味汁');
+      for (final id in [
+        'replace-wine',
+        'name-wine',
+        'flavor-wine',
+        'relation-wine',
+        'quantity-wine',
+        'replace-wine-instruction-cook',
+      ]) {
+        await journey.choose('accept', id);
+      }
+      await journey.reveal('recipe-allergen-list');
+      expect(find.textContaining('花生'), findsWidgets);
+      await journey.reveal('text-edit-result-ingredient-wine');
+      expect(
+        find.textContaining('待确认食材：花生调味汁 20', findRichText: true),
+        findsOneWidget,
+      );
+      await journey.enter(
+        'change-explanation-note',
+        '缺料酒，确认用20ml花生调味汁替代，已查看花生提醒。',
+      );
+      await journey.confirm();
+      await journey.ingredientAmount('wine', '20');
+      expect(find.text('花生调味汁'), findsOneWidget);
+      await journey.reveal('recipe-step-0');
+      expect(find.textContaining('加入花生调味汁', findRichText: true), findsWidgets);
+      expect(find.textContaining('加入料酒', findRichText: true), findsNothing);
+      await journey.tap('recipe-history-button');
+      await journey.waitFor(journey.key('recipe-version-2'));
+      await journey.tap('recipe-version-1');
+      await journey.waitFor(journey.key('recipe-detail-content'));
+      await journey.ingredientAmount('wine', '10');
+      expect(find.text('料酒'), findsOneWidget);
+      await tester.binding.handlePopRoute();
+      await tester.pumpAndSettle();
+      await journey.tap('recipe-version-2');
+      await journey.waitFor(journey.key('recipe-detail-content'));
+      await journey.ingredientAmount('wine', '20');
+      expect(find.text('花生调味汁'), findsOneWidget);
+      await journey.reveal('recipe-allergen-list');
+      expect(find.textContaining('花生'), findsWidgets);
+    });
+  });
+
+  testWidgets('没有合适替代时先展示省略后果，拒绝清理默认拒绝删除，确认后保存重看', (tester) async {
+    final journey = _Journey(tester);
+    await journey.record(() async {
+      await journey.login();
+      await journey.savedEditor(request: '合成测试：做一道需要料酒的家常鸡丁');
+      const request = '没有料酒，不用替代，直接省略';
+      await journey.propose(request);
+      await journey.reveal('text-edit-operation-remove-wine');
+      expect(
+        find.descendant(
+          of: journey.key('text-edit-operation-remove-wine'),
+          matching: find.textContaining('风险：'),
+        ),
+        findsOneWidget,
+      );
+      await journey.choose('reject', 'clean-wine-reference');
+      await journey.reveal('text-edit-operation-remove-wine');
+      expect(
+        find.textContaining('依赖被拒绝，已默认拒绝：clean-wine-reference'),
+        findsOneWidget,
+      );
+      await journey.reveal('text-edit-result-ingredient-wine');
+      expect(
+        find.textContaining('待确认食材：料酒 10', findRichText: true),
+        findsOneWidget,
+      );
+      await journey.propose(request);
+      await journey.choose('accept', 'clean-wine-reference');
+      await journey.choose('accept', 'omit-wine-instruction');
+      await journey.choose('accept', 'remove-wine');
+      await journey.enter('change-explanation-note', '缺料酒，确认省略并移除步骤引用。');
+      await journey.confirm();
+      await journey.reveal('recipe-step-0');
+      expect(journey.key('recipe-ingredient-amount-wine'), findsNothing);
+      expect(
+        find.descendant(
+          of: journey.key('recipe-step-0'),
+          matching: find.textContaining('省略料酒会减弱去腥和香气', findRichText: true),
+        ),
+        findsOneWidget,
+      );
+      expect(find.textContaining('加入料酒', findRichText: true), findsNothing);
+      await journey.tap('recipe-history-button');
+      await journey.waitFor(journey.key('recipe-version-2'));
+      await journey.tap('recipe-version-1');
+      await journey.waitFor(journey.key('recipe-detail-content'));
+      await journey.ingredientAmount('wine', '10');
+      expect(find.text('料酒'), findsOneWidget);
+      await tester.binding.handlePopRoute();
+      await tester.pumpAndSettle();
+      await journey.tap('recipe-version-2');
+      await journey.waitFor(journey.key('recipe-detail-content'));
+      await journey.reveal('recipe-step-0');
+      expect(journey.key('recipe-ingredient-amount-wine'), findsNothing);
+    });
+  });
 
   testWidgets('换厨具展示全部联动与安全提醒，拒绝依赖后修正保存并重看旧新版', (tester) async {
     final journey = _Journey(tester);

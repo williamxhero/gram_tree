@@ -1169,7 +1169,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get textEditSupportedChanges =>
-      '支持改文字、换厨具、调整时间或难度、调整做法；口味和缺料替代暂未支持。确认前不会保存。';
+      '支持调味、缺料替代、改文字、换厨具、调整时间或难度、调整做法。确认前不会保存。';
 
   @override
   String get textEditRequestLabel => '想怎样修改菜谱？';
@@ -1181,8 +1181,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get textEditRetrySaveCleanup => '重试保存与本机清理';
 
   @override
-  String get textEditUnsupportedIntent =>
-      '这类修改暂未支持，不会应用。支持改文字、换厨具、调整时间或难度、调整做法；口味和缺料替代请手动编辑。';
+  String get textEditUnsupportedIntent => '这类修改暂未支持，不会应用。请换个说法，或继续手动编辑。';
 
   @override
   String get recipeSaveVersion => '保存为新版本';

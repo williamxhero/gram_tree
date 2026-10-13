@@ -6,6 +6,8 @@ import 'package:gramtree_api/gramtree_api.dart';
 
 /// Concrete SPEC-002.4 actions. The registry validates serializable parameters;
 /// the mounted editor supplies state adapters, never callbacks in action data.
+const tasteAdjustmentPercents = [20, 25, 30];
+
 const recipeOperations = {
   'check',
   'quantify',
@@ -26,10 +28,17 @@ bool validateRecipeOperation(Map<String, dynamic> params) {
   final operation = params['operation'];
   if (!recipeOperations.contains(operation)) return false;
   if (operation == 'text_preview') {
-    return params.keys.every({'operation', 'text'}.contains) &&
+    return params.keys.every(
+          {'operation', 'text', 'adjustment_percent'}.contains,
+        ) &&
         params['text'] is String &&
         (params['text'] as String).trim().isNotEmpty &&
-        (params['text'] as String).length <= 1000;
+        (params['text'] as String).length <= 1000 &&
+        (!params.containsKey('adjustment_percent') ||
+            (params['adjustment_percent'] is int &&
+                tasteAdjustmentPercents.contains(
+                  params['adjustment_percent'],
+                )));
   }
   if (operation == 'text_choose') {
     return params.keys.every(
