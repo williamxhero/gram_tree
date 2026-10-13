@@ -19,8 +19,10 @@ import 'package:gramtree_api/src/api/ingredients_api.dart';
 import 'package:gramtree_api/src/api/personal_measures_api.dart';
 import 'package:gramtree_api/src/api/recipe_ai_api.dart';
 import 'package:gramtree_api/src/api/recipe_imports_api.dart';
+import 'package:gramtree_api/src/api/recipe_sharing_api.dart';
 import 'package:gramtree_api/src/api/recipes_api.dart';
 import 'package:gramtree_api/src/api/records_api.dart';
+import 'package:gramtree_api/src/api/risk_api.dart';
 import 'package:gramtree_api/src/api/sync_api.dart';
 import 'package:gramtree_api/src/api/taste_profile_api.dart';
 import 'package:gramtree_api/src/api/ui_protocol_api.dart';
@@ -166,6 +168,12 @@ class GramtreeApi {
     return RecipeImportsApi(dio);
   }
 
+  /// Get RecipeSharingApi instance, base route and serializer can be overridden by a given but be careful,
+  /// by doing that all interceptors will not be executed
+  RecipeSharingApi getRecipeSharingApi() {
+    return RecipeSharingApi(dio);
+  }
+
   /// Get RecipesApi instance, base route and serializer can be overridden by a given but be careful,
   /// by doing that all interceptors will not be executed
   RecipesApi getRecipesApi() {
@@ -176,6 +184,12 @@ class GramtreeApi {
   /// by doing that all interceptors will not be executed
   RecordsApi getRecordsApi() {
     return RecordsApi(dio);
+  }
+
+  /// Get RiskApi instance, base route and serializer can be overridden by a given but be careful,
+  /// by doing that all interceptors will not be executed
+  RiskApi getRiskApi() {
+    return RiskApi(dio);
   }
 
   /// Get SyncApi instance, base route and serializer can be overridden by a given but be careful,

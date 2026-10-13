@@ -25,6 +25,8 @@ class TokenPair {
 
     required this.refreshToken,
 
+    required this.requestSigningKey,
+
     required this.user,
   });
 
@@ -39,6 +41,10 @@ class TokenPair {
   @JsonKey(name: r'refresh_token', required: true, includeIfNull: false)
   final String refreshToken;
 
+  /// 当前设备请求签名密钥；仅在登录或刷新响应中返回，不会写入日志
+  @JsonKey(name: r'request_signing_key', required: true, includeIfNull: false)
+  final String requestSigningKey;
+
   @JsonKey(name: r'user', required: true, includeIfNull: false)
   final UserOut user;
 
@@ -49,6 +55,7 @@ class TokenPair {
           other.accessExpiresIn == accessExpiresIn &&
           other.accessToken == accessToken &&
           other.refreshToken == refreshToken &&
+          other.requestSigningKey == requestSigningKey &&
           other.user == user;
 
   @override
@@ -56,6 +63,7 @@ class TokenPair {
       accessExpiresIn.hashCode +
       accessToken.hashCode +
       refreshToken.hashCode +
+      requestSigningKey.hashCode +
       user.hashCode;
 
   factory TokenPair.fromJson(Map<String, dynamic> json) =>

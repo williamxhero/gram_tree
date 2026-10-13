@@ -22,6 +22,8 @@ import 'package:gramtree_api/src/model/bind_apple_request.dart';
 import 'package:gramtree_api/src/model/bind_email_request.dart';
 import 'package:gramtree_api/src/model/bool_attribute.dart';
 import 'package:gramtree_api/src/model/cache_info.dart';
+import 'package:gramtree_api/src/model/captcha_verification.dart';
+import 'package:gramtree_api/src/model/captcha_verification_out.dart';
 import 'package:gramtree_api/src/model/change_explanation_input.dart';
 import 'package:gramtree_api/src/model/change_explanation_result.dart';
 import 'package:gramtree_api/src/model/changes_response.dart';
@@ -131,6 +133,7 @@ import 'package:gramtree_api/src/model/personal_measure_input.dart';
 import 'package:gramtree_api/src/model/personal_measure_out.dart';
 import 'package:gramtree_api/src/model/personal_measure_update.dart';
 import 'package:gramtree_api/src/model/profile_update.dart';
+import 'package:gramtree_api/src/model/public_recipe_projection.dart';
 import 'package:gramtree_api/src/model/purchase_unit.dart';
 import 'package:gramtree_api/src/model/purchase_units_attribute.dart';
 import 'package:gramtree_api/src/model/quantification_decision.dart';
@@ -176,6 +179,8 @@ import 'package:gramtree_api/src/model/recipe_safety_check_request.dart';
 import 'package:gramtree_api/src/model/recipe_safety_finding.dart';
 import 'package:gramtree_api/src/model/recipe_safety_result.dart';
 import 'package:gramtree_api/src/model/recipe_serving_conversion_out.dart';
+import 'package:gramtree_api/src/model/recipe_share_link.dart';
+import 'package:gramtree_api/src/model/recipe_share_target.dart';
 import 'package:gramtree_api/src/model/recipe_snapshot.dart';
 import 'package:gramtree_api/src/model/recipe_source.dart';
 import 'package:gramtree_api/src/model/recipe_step.dart';
@@ -196,6 +201,8 @@ import 'package:gramtree_api/src/model/serving_conversion.dart';
 import 'package:gramtree_api/src/model/serving_conversion_ingredient.dart';
 import 'package:gramtree_api/src/model/serving_conversion_step.dart';
 import 'package:gramtree_api/src/model/serving_conversion_warning.dart';
+import 'package:gramtree_api/src/model/share_complaint_input.dart';
+import 'package:gramtree_api/src/model/share_complaint_receipt.dart';
 import 'package:gramtree_api/src/model/similar_recipe.dart';
 import 'package:gramtree_api/src/model/skip_adjustment_request.dart';
 import 'package:gramtree_api/src/model/skip_adjustment_result.dart';
@@ -314,6 +321,12 @@ ReturnType deserialize<ReturnType, BaseType>(
           as ReturnType;
     case 'CacheInfo':
       return CacheInfo.fromJson(value as Map<String, dynamic>) as ReturnType;
+    case 'CaptchaVerification':
+      return CaptchaVerification.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'CaptchaVerificationOut':
+      return CaptchaVerificationOut.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
     case 'ChangeExplanationInput':
       return ChangeExplanationInput.fromJson(value as Map<String, dynamic>)
           as ReturnType;
@@ -631,6 +644,9 @@ ReturnType deserialize<ReturnType, BaseType>(
     case 'ProfileUpdate':
       return ProfileUpdate.fromJson(value as Map<String, dynamic>)
           as ReturnType;
+    case 'PublicRecipeProjection':
+      return PublicRecipeProjection.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
     case 'PurchaseUnit':
       return PurchaseUnit.fromJson(value as Map<String, dynamic>) as ReturnType;
     case 'PurchaseUnitsAttribute':
@@ -764,6 +780,12 @@ ReturnType deserialize<ReturnType, BaseType>(
     case 'RecipeServingConversionOut':
       return RecipeServingConversionOut.fromJson(value as Map<String, dynamic>)
           as ReturnType;
+    case 'RecipeShareLink':
+      return RecipeShareLink.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'RecipeShareTarget':
+      return RecipeShareTarget.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
     case 'RecipeSnapshot':
       return RecipeSnapshot.fromJson(value as Map<String, dynamic>)
           as ReturnType;
@@ -818,6 +840,12 @@ ReturnType deserialize<ReturnType, BaseType>(
           as ReturnType;
     case 'ServingConversionWarning':
       return ServingConversionWarning.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'ShareComplaintInput':
+      return ShareComplaintInput.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'ShareComplaintReceipt':
+      return ShareComplaintReceipt.fromJson(value as Map<String, dynamic>)
           as ReturnType;
     case 'SimilarRecipe':
       return SimilarRecipe.fromJson(value as Map<String, dynamic>)
