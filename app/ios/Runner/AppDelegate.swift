@@ -13,6 +13,32 @@ import UserNotifications
 
   func didInitializeImplicitFlutterEngine(_ engineBridge: FlutterImplicitEngineBridge) {
     GeneratedPluginRegistrant.register(with: engineBridge.pluginRegistry)
+    let shareChannel = FlutterMethodChannel(
+      name: "app.gramtree/share",
+      binaryMessenger: engineBridge.binaryMessenger
+    )
+    shareChannel.setMethodCallHandler { call, result in
+      guard call.method == "shareText", let text = call.arguments as? String else {
+        result(FlutterMethodNotImplemented)
+        return
+      }
+      DispatchQueue.main.async {
+        let controller = UIActivityViewController(activityItems: [text], applicationActivities: nil)
+        if let presenter = UIApplication.shared.connectedScenes
+          .compactMap({ $0 as? UIWindowScene })
+          .flatMap({ $0.windows })
+          .first(where: \.isKeyWindow)?.rootViewController {
+          controller.popoverPresentationController?.sourceView = presenter.view
+          controller.popoverPresentationController?.sourceRect = CGRect(
+            x: presenter.view.bounds.midX, y: presenter.view.bounds.midY, width: 0, height: 0
+          )
+          presenter.present(controller, animated: true)
+          result(nil)
+        } else {
+          result(FlutterError(code: "share_unavailable", message: nil, details: nil))
+        }
+      }
+    }
     let channel = FlutterMethodChannel(
       name: "app.gramtree/device_capabilities",
       binaryMessenger: engineBridge.binaryMessenger

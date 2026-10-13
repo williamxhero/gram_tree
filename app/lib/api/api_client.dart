@@ -5,6 +5,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gramtree_api/gramtree_api.dart';
 
 import '../auth/session.dart';
+import 'request_signing.dart';
+import 'access_protection.dart';
 import '../config/app_config.dart';
 import '../privacy/consent.dart';
 import '../network/reachability.dart';
@@ -44,6 +46,11 @@ final offlineSimulationProvider = NotifierProvider<OfflineSimulation, bool>(
 );
 
 const deviceIdHeader = 'X-Device-ID';
+
+bool _isPublicShareRequest(RequestOptions options) =>
+    options.extra['public_request'] == true &&
+    options.method == 'GET' &&
+    RegExp(r'^/v1/shares/[^/?#]+$').hasMatch(options.uri.path);
 
 Dio _baseDio(Ref ref) {
   final config = ref.watch(appConfigProvider);
@@ -120,7 +127,9 @@ Dio _baseDio(Ref ref) {
   dio.interceptors.add(
     InterceptorsWrapper(
       onRequest: (options, handler) {
-        options.headers[deviceIdHeader] = ref.read(deviceIdProvider);
+        if (!_isPublicShareRequest(options)) {
+          options.headers[deviceIdHeader] = ref.read(deviceIdProvider);
+        }
         handler.next(options);
       },
     ),
@@ -138,6 +147,11 @@ final dioProvider = Provider<Dio>((ref) {
   // 续期和续期后的重试都用单独的 Dio，不经过下面的续期拦截：
   // 续期拦截是排队执行的，在它里面再走同一条拦截链，重试失败时会互相等待、永远卡住
   final plainDio = _baseDio(ref);
+  final signer = RequestSigner(ref.watch(sessionStoreProvider));
+  // Retries bypass the queued auth interceptor, but never request protection.
+  plainDio.interceptors.add(
+    RequestProtectionInterceptor(plainDio, signer, ref),
+  );
   _addFakeServer(ref, plainDio);
   dio.interceptors.add(
     AuthInterceptor(
@@ -157,9 +171,111 @@ final dioProvider = Provider<Dio>((ref) {
           ref.read(sessionStoreProvider).expire(reason: 'refresh_failed'),
     ),
   );
+  dio.interceptors.add(RequestProtectionInterceptor(plainDio, signer, ref));
   _addFakeServer(ref, dio);
   return dio;
 });
+
+class RequestProtectionInterceptor extends Interceptor {
+  RequestProtectionInterceptor(this._retryDio, this._signer, this._ref);
+
+  final Dio _retryDio;
+  final RequestSigner _signer;
+  final Ref _ref;
+  static const _clockRetried = 'signing_clock_retried';
+  static const _captchaRetried = 'captcha_retried';
+
+  @override
+  Future<void> onRequest(
+    RequestOptions options,
+    RequestInterceptorHandler handler,
+  ) async {
+    try {
+      await _signer.sign(options, transformer: _retryDio.transformer);
+      handler.next(options);
+    } catch (error) {
+      handler.reject(
+        DioException(
+          requestOptions: options,
+          type: DioExceptionType.cancel,
+          error: error,
+        ),
+      );
+    }
+  }
+
+  @override
+  void onResponse(
+    Response<dynamic> response,
+    ResponseInterceptorHandler handler,
+  ) {
+    if (response.headers.value('x-pagination-limit-reached') == 'true') {
+      _ref.read(accessProtectionProvider.notifier).paginationLimit(true);
+    }
+    handler.next(response);
+  }
+
+  @override
+  Future<void> onError(
+    DioException err,
+    ErrorInterceptorHandler handler,
+  ) async {
+    final options = err.requestOptions;
+    final data = err.response?.data;
+    final body = data is Map ? data['error'] : null;
+    final headers = err.response?.headers;
+    if (body is Map && body['code'] == 'pagination_limit_reached') {
+      _ref.read(accessProtectionProvider.notifier).paginationLimit(true);
+    }
+    final retrySeconds = int.tryParse(headers?.value('retry-after') ?? '');
+    if (err.response?.statusCode == 429 && retrySeconds != null) {
+      _ref.read(accessProtectionProvider.notifier).rateLimited(retrySeconds);
+    }
+    if (body is Map &&
+        body['code'] == 'risk_captcha_required' &&
+        options.extra[_captchaRetried] != true &&
+        options.uri.path != '/v1/risk/captcha') {
+      final challengeId = headers?.value('x-risk-challenge');
+      if (challengeId != null) {
+        final answer = await _ref
+            .read(captchaAdapterProvider)
+            .solve(challengeId);
+        if (answer != null && answer.isNotEmpty) {
+          options.extra[_captchaRetried] = true;
+          try {
+            // Preserve the original account fence through both verification and replay.
+            await _retryDio.post<void>(
+              '/v1/risk/captcha',
+              data: {'challenge_id': challengeId, 'response': answer},
+              options: Options(
+                headers: {'Authorization': options.headers['Authorization']},
+                extra: {...options.extra, _captchaRetried: true},
+              ),
+            );
+            handler.resolve(await _retryDio.fetch<dynamic>(options));
+            return;
+          } on DioException catch (retryError) {
+            handler.next(retryError);
+            return;
+          }
+        }
+      }
+    }
+    if (body is! Map ||
+        body['code'] != 'signature_clock_skew' ||
+        options.extra[_clockRetried] == true ||
+        !_signer.correctServerTime(body['server_time'])) {
+      handler.next(err);
+      return;
+    }
+    options.extra[_clockRetried] = true;
+    try {
+      handler.resolve(await _retryDio.fetch<dynamic>(options));
+    } on DioException catch (retryError) {
+      handler.next(retryError);
+    }
+  }
+}
 
 /// 同意之前拒绝一切请求：请求根本不会交给网络层。
 class ConsentGate extends Interceptor {
@@ -169,7 +285,7 @@ class ConsentGate extends Interceptor {
 
   @override
   void onRequest(RequestOptions options, RequestInterceptorHandler handler) {
-    if (_consented()) {
+    if (_consented() || _isPublicShareRequest(options)) {
       handler.next(options);
     } else {
       handler.reject(
@@ -231,7 +347,48 @@ class AuthInterceptor extends QueuedInterceptor {
   }
 
   @override
-  void onRequest(RequestOptions options, RequestInterceptorHandler handler) {
+  Future<void> onRequest(
+    RequestOptions options,
+    RequestInterceptorHandler handler,
+  ) async {
+    if (_isPublicShareRequest(options)) {
+      options.headers.remove('Authorization');
+      handler.next(options);
+      return;
+    }
+    // Upgrade an older saved login before dispatching any protected request.
+    // The refresh endpoint is token-authenticated and does not need a bearer MAC.
+    final legacy = session.current;
+    if (legacy != null &&
+        legacy.requestSigningKey == null &&
+        options.extra['auth_revocation'] != true &&
+        _matchesIdentity(options) &&
+        _sensitiveOriginMatches(options)) {
+      final identity = session.identity!;
+      try {
+        if (canRefresh?.call() == false)
+          throw StateError('refresh_waiting_for_network');
+        final tokens = await refresh(legacy.refreshToken);
+        if (!session.matches(identity) || !identical(session.current, legacy)) {
+          throw StateError('account_changed');
+        }
+        await session.saveRefreshed(tokens, identity: identity);
+      } catch (error) {
+        handler.reject(
+          DioException(
+            requestOptions: options,
+            type: DioExceptionType.cancel,
+            error: error,
+          ),
+        );
+        return;
+      }
+    }
+    if (_isPublicShareRequest(options)) {
+      options.headers.remove('Authorization');
+      handler.next(options);
+      return;
+    }
     // Confirmed local logout fences the session before HTTP dispatch. Allow
     // only this captured-token revocation, never inject a new account's token.
     if (options.extra['auth_revocation'] == true &&

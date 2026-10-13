@@ -22,6 +22,8 @@ import '../../recipes/recipe_draft.dart';
 import '../../recipes/offline_recipe_repository.dart';
 import '../../events/event_uploader.dart';
 import '../../recipes/recipe_repository.dart';
+import '../../recipes/recipe_sharing.dart';
+import '../../platform/system_share.dart';
 import '../../recipes/recipe_snapshot.dart';
 import '../../recipes/recipe_snapshot_provider.dart';
 import '../../recipes/recipe_snapshot_render.dart';
@@ -102,6 +104,14 @@ class _RecipeListPageState extends ConsumerState<RecipeListPage> {
   String? _nextCursor;
   bool _loadingMore = false;
   Object? _loadMoreError;
+
+  bool get _cursorInvalid => const {
+    'cursor_expired',
+    'cursor_invalid',
+    'cursor_query_mismatch',
+    'page_limit_reached',
+    'pagination_limit_reached',
+  }.contains(ApiFailure.from(_loadMoreError ?? '').code);
 
   Future<void> _loadMore() async {
     final cursor = _nextCursor;
@@ -184,7 +194,11 @@ class _RecipeListPageState extends ConsumerState<RecipeListPage> {
                   const SizedBox(height: 8),
                   OutlinedButton.icon(
                     key: const ValueKey('recipe-load-more'),
-                    onPressed: _loadingMore ? null : _loadMore,
+                    onPressed: _loadingMore
+                        ? null
+                        : _cursorInvalid
+                        ? () => ref.invalidate(myRecipesProvider)
+                        : _loadMore,
                     icon: _loadingMore
                         ? const SizedBox(
                             width: 18,
@@ -193,7 +207,12 @@ class _RecipeListPageState extends ConsumerState<RecipeListPage> {
                           )
                         : const Icon(Icons.expand_more),
                     label: Text(
-                      _loadMoreError == null
+                      _cursorInvalid
+                          ? ApiFailure.from(_loadMoreError!).code ==
+                                    'pagination_limit_reached'
+                                ? '已到翻页上限，请换搜索条件'
+                                : '列表已过期，请刷新'
+                          : _loadMoreError == null
                           ? l10n.recipeLoadMore
                           : l10n.recipeLoadMoreRetry,
                     ),
@@ -2494,6 +2513,7 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
   String? _lastCapture;
   String? _capacityMessage;
   bool _offline = false;
+  bool _sharing = false;
   LocalRecipeVersion? _localVersion;
   int _loadGeneration = 0;
   String? _viewAccountId;
@@ -2899,6 +2919,25 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
     }
   }
 
+  Future<void> _share() async {
+    if (_sharing) return;
+    setState(() => _sharing = true);
+    try {
+      final link = await ref
+          .read(recipeSharingProvider)
+          .create(widget.recipeId);
+      if (!mounted) return;
+      await ref.read(systemShareProvider).shareText(link.url);
+    } catch (error) {
+      if (!mounted) return;
+      final failure = ApiFailure.from(error);
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(failure.message)));
+    } finally {
+      if (mounted) setState(() => _sharing = false);
+    }
+  }
+
   Future<void> _delete() async {
     final l10n = AppLocalizations.of(context);
     final confirmed = await showDialog<bool>(
@@ -3228,6 +3267,19 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
             onPressed: () =>
                 context.push('/recipes/${widget.recipeId}/history'),
           ),
+          if (widget.versionId == null && detail.visibility.value == 'public')
+            IconButton(
+              key: const ValueKey('recipe-share-button'),
+              tooltip: '分享菜谱',
+              icon: _sharing
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.share_outlined),
+              onPressed: _sharing ? null : _share,
+            ),
           if (widget.versionId == null)
             IconButton(
               key: const ValueKey('edit-recipe-button'),
