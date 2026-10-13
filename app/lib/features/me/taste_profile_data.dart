@@ -189,13 +189,14 @@ class TasteFieldLocks extends Notifier<Set<String>> {
   @override
   Set<String> build() => <String>{};
 
-  void mark(String field, bool locked) => state = locked
-      ? <String>{...state, field}
-      : <String>{...state}..remove(field);
+  void mark(String field, bool locked) =>
+      state = locked ? <String>{...state, field} : <String>{...state}
+        ..remove(field);
 }
 
-final tasteFieldLocksProvider =
-    NotifierProvider<TasteFieldLocks, Set<String>>(TasteFieldLocks.new);
+final tasteFieldLocksProvider = NotifierProvider<TasteFieldLocks, Set<String>>(
+  TasteFieldLocks.new,
+);
 
 final tasteProfileRepositoryProvider =
     Provider.autoDispose<TasteProfileRepository>((ref) {
@@ -225,6 +226,6 @@ final tasteProfileChangesProvider =
       (ref) => ref.watch(tasteProfileRepositoryProvider).changes(),
     );
 
-final tasteAutomationProvider = FutureProvider.autoDispose<TasteAutomation>((
-  ref,
-) => ref.watch(tasteProfileRepositoryProvider).automation());
+final tasteAutomationProvider = FutureProvider.autoDispose<TasteAutomation>(
+  (ref) => ref.watch(tasteProfileRepositoryProvider).automation(),
+);
