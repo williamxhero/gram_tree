@@ -1,15 +1,15 @@
 """SPEC-005.3 change origin, traceability and statuses (SPEC-005.1 table).
 
-Revision ID: 00292
-Revises: 0029
+Revision ID: 0031
+Revises: 0030
 """
 
 import sqlalchemy as sa
 from alembic import op
 from sqlalchemy.dialects import postgresql
 
-revision = "00292"
-down_revision = "0029"
+revision = "0031"
+down_revision = "0030"
 branch_labels = None
 depends_on = None
 
