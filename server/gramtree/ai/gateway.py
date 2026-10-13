@@ -189,6 +189,12 @@ def _invoke(
                 "batch_advice": BatchAdvice,
             }[capability]
             prompt += "\nJSON schema: " + json.dumps(schema.model_json_schema(), ensure_ascii=False)
+        if capability == "recipe_import":
+            from gramtree.ai.schemas import GeneratedDraft
+
+            prompt += "\nGeneratedDraft JSON schema: " + json.dumps(
+                GeneratedDraft.model_json_schema(), ensure_ascii=False
+            )
         if capability == "comparison":
             from gramtree.recipes.comparison_assistance import ComparisonModelOutput
 
@@ -222,6 +228,24 @@ def _invoke(
                 EquipmentRewrite if capability == "personalize_equipment" else ReplacementSuggestion
             )
             prompt += "\nJSON schema: " + json.dumps(schema.model_json_schema(), ensure_ascii=False)
+        user_content: Any = json.dumps(payload, ensure_ascii=False)
+        if capability == "recipe_import" and payload.get("images_base64"):
+            user_content = [
+                {
+                    "type": "text",
+                    "text": json.dumps(
+                        {key: value for key, value in payload.items() if key != "images_base64"},
+                        ensure_ascii=False,
+                    ),
+                }
+            ]
+            user_content.extend(
+                {
+                    "type": "image_url",
+                    "image_url": {"url": f"data:image/jpeg;base64,{image}"},
+                }
+                for image in payload["images_base64"]
+            )
         body = {
             "model": model.model,
             "temperature": 0,
@@ -229,7 +253,7 @@ def _invoke(
             "response_format": {"type": "json_object"},
             "messages": [
                 {"role": "system", "content": prompt},
-                {"role": "user", "content": json.dumps(payload, ensure_ascii=False)},
+                {"role": "user", "content": user_content},
             ],
         }
     response = httpx.post(

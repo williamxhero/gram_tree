@@ -163,6 +163,20 @@ class RecipeGenerationContentV1(BaseModel):
     version_id: str | None = None
 
 
+class RecipeImportContentV1(BaseModel):
+    """Import outcomes and completeness counts; never include source text or URLs."""
+
+    import_id: str
+    mode: Literal["text", "link", "image"]
+    status: Literal["success", "partial", "failed"]
+    reason: str | None = None
+    image_count: int = 0
+    failed_image_count: int = 0
+    recognized_fields: int = 0
+    estimated_fields: int = 0
+    incomplete_fields: int = 0
+
+
 class TasteProfileChangedContentV1(BaseModel):
     """All necessary metadata lives in the owner-checked correlation ID."""
 
@@ -211,7 +225,24 @@ class CookingSessionContentV1(BaseModel):
     source: Literal["cooking_session"] = "cooking_session"
 
 
+class CookingRecordCreatedContentV1(BaseModel):
+    """Authoritative creation fact for one account-scoped cooking record."""
+
+    record_id: str
+    client_id: str
+    source: Literal["cooking_session", "recommendation", "calendar", "external_cooking", "dining"]
+    verification: Literal["cooking_mode", "unverified"]
+    counts_as_cooked: bool
+
+
 ITEMS: tuple[EventTypeSpec, ...] = (
+    EventTypeSpec(
+        event_type="recipe.import",
+        version=1,
+        description="外部菜谱导入方式、结果和补全字段数量；不包含原文或来源链接。",
+        exportable=True,
+        content_schema=RecipeImportContentV1,
+    ),
     EventTypeSpec(
         event_type="ai.recipe_modification",
         version=1,
@@ -227,6 +258,14 @@ ITEMS: tuple[EventTypeSpec, ...] = (
         correlation_fields=("recipe_version_id",),
         exportable=True,
         content_schema=CookingSessionContentV1,
+    ),
+    EventTypeSpec(
+        event_type="cooking.record_created",
+        version=1,
+        description="做过记录创建事实；按客户端记录 ID 唯一计数。",
+        correlation_fields=("cooking_record_id", "recipe_version_id"),
+        exportable=True,
+        content_schema=CookingRecordCreatedContentV1,
     ),
     EventTypeSpec(
         event_type="taste_profile.changed",
