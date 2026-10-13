@@ -227,41 +227,6 @@ def decode_cursor(cursor: str) -> tuple[datetime, uuid.UUID]:
         raise ApiError(422, "invalid_cursor", "请求参数有误", "cursor 无法解析") from exc
 
 
-def decode_signed_cursor(
-    cursor: str,
-    *,
-    secret: str,
-    subject: str,
-    query: str,
-    max_pages: int,
-    now: datetime | None = None,
-) -> tuple[datetime, uuid.UUID, int]:
-    """Compatibility facade for recipe services; PageDep owns the single policy."""
-    context = _cursor_context.get()
-    if context is None:
-        raise RuntimeError("signed pagination requires page_params")
-    timestamp, row_id = decode_cursor(cursor)
-    return timestamp, row_id, context.page
-
-
-def next_signed_cursor(
-    created_at: datetime,
-    id_: uuid.UUID,
-    *,
-    secret: str,
-    subject: str,
-    query: str,
-    current_page: int,
-    max_pages: int,
-    ttl_seconds: int,
-    now: datetime | None = None,
-) -> str | None:
-    """Compatibility facade; never issue an alternative unsigned/v1 HTTP cursor."""
-    if _cursor_context.get() is None:
-        raise RuntimeError("signed pagination requires page_params")
-    return encode_cursor(created_at, id_)
-
-
 def encode_parts(parts: list[int | str]) -> str | None:
     """把一组标量编成不透明游标。
 

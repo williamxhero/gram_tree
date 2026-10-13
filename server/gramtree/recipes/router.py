@@ -127,7 +127,7 @@ def create_recipe(
 
 @router.get("", response_model=RecipeList, responses=_errors(401))
 def list_recipes(
-    request: Request, auth: CurrentAuth, session: SessionDep, settings: SettingsDep, page: PageDep
+    request: Request, auth: CurrentAuth, session: SessionDep, page: PageDep
 ) -> RecipeList:
     result = service.list_recipes(
         session,
@@ -135,10 +135,6 @@ def list_recipes(
         cursor=page.cursor,
         limit=page.limit,
         maximum=int(config.get(session, "api.page_size_max")),
-        signing_secret=settings.auth_secret,
-        signing_subject=str(auth.user.id),
-        cursor_ttl_seconds=int(config.get(session, "api.cursor_ttl_seconds")),
-        cursor_max_pages=int(config.get(session, "api.cursor_max_pages")),
     )
     # Access logging receives only validated content IDs, never recipe snapshots.
     request.scope["gramtree.content_ids"] = [item.id for item in result.items]
@@ -270,7 +266,6 @@ def list_recipe_comparison_candidates(
     request: Request,
     auth: CurrentAuth,
     session: SessionDep,
-    settings: SettingsDep,
     page: PageDep,
 ) -> RecipeComparisonCandidates:
     result = service.list_comparison_candidates(
@@ -280,10 +275,6 @@ def list_recipe_comparison_candidates(
         cursor=page.cursor,
         limit=page.limit,
         maximum=int(config.get(session, "api.page_size_max")),
-        signing_secret=settings.auth_secret,
-        signing_subject=str(auth.user.id),
-        cursor_ttl_seconds=int(config.get(session, "api.cursor_ttl_seconds")),
-        cursor_max_pages=int(config.get(session, "api.cursor_max_pages")),
     )
     request.scope["gramtree.content_ids"] = [item.id for item in result.items]
     return result
@@ -405,7 +396,6 @@ def list_recipe_versions(
     request: Request,
     auth: CurrentAuth,
     session: SessionDep,
-    settings: SettingsDep,
     page: PageDep,
 ) -> RecipeVersionHistory:
     result = service.list_versions(
@@ -415,10 +405,6 @@ def list_recipe_versions(
         cursor=page.cursor,
         limit=page.limit,
         maximum=int(config.get(session, "api.page_size_max")),
-        signing_secret=settings.auth_secret,
-        signing_subject=str(auth.user.id),
-        cursor_ttl_seconds=int(config.get(session, "api.cursor_ttl_seconds")),
-        cursor_max_pages=int(config.get(session, "api.cursor_max_pages")),
     )
     request.scope["gramtree.content_ids"] = [item.id for item in result.items]
     return result
