@@ -25,7 +25,7 @@ from gramtree.recipes import router as recipes
 from gramtree.recipes import sharing as recipe_sharing
 from gramtree.records import router as records
 from gramtree.risk import router as risk
-from gramtree.risk.captcha import RejectingCaptchaAdapter
+from gramtree.risk.captcha import ImageCaptchaAdapter
 from gramtree.risk.middleware import RiskMiddleware
 from gramtree.settings import Settings, get_settings
 from gramtree.taste_profiles import allergy_router as allergies
@@ -61,9 +61,23 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     )
     app.state.mailer = make_mail_sender(settings)
     app.state.apple = AppleClient(settings, HttpAppleTransport())
-    app.state.captcha = RejectingCaptchaAdapter()
+    app.state.captcha = ImageCaptchaAdapter(app.state.redis, settings.auth_secret)
 
     install_error_handlers(app)
+    app.add_middleware(
+        RiskMiddleware,
+        session_factory=app.state.session_factory,
+        redis=app.state.redis,
+        settings=settings,
+        captcha=app.state.captcha,
+    )
+    app.add_middleware(
+        RateLimitMiddleware,
+        session_factory=app.state.session_factory,
+        redis=app.state.redis,
+        settings=settings,
+    )
+    # Added last among guards: browsers must see early risk/rate responses too.
     app.add_middleware(
         CORSMiddleware,
         allow_origins=[o.strip() for o in settings.cors_origins.split(",") if o.strip()],
@@ -80,19 +94,6 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             "X-Risk-Challenge",
             "X-Pagination-Limit-Reached",
         ],
-    )
-    app.add_middleware(
-        RiskMiddleware,
-        session_factory=app.state.session_factory,
-        redis=app.state.redis,
-        settings=settings,
-        captcha=app.state.captcha,
-    )
-    app.add_middleware(
-        RateLimitMiddleware,
-        session_factory=app.state.session_factory,
-        redis=app.state.redis,
-        settings=settings,
     )
     app.add_middleware(RequestContextMiddleware)
 

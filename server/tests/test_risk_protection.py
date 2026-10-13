@@ -1,8 +1,10 @@
 """Real HTTP observations exercise rules; no Redis counter/state injection."""
 
+import base64
 import json
 import subprocess
 import uuid
+from concurrent.futures import ThreadPoolExecutor
 from typing import Any, cast
 
 from gramtree.cli import main as cli
@@ -53,7 +55,7 @@ def solve(api: Api, response, headers: dict[str, str] | None = None) -> None:
 
 def test_captcha_is_bound_to_requester_and_consumed_once(api: Api) -> None:
     api.client.app.state.captcha = MemoryCaptchaAdapter()
-    configure(short_request_limit=2)
+    configure(short_request_limit=2, throttle_points=10)
     headers = {"X-Device-ID": "owner-device"}
     assert api.client.get("/v1/me", headers=headers).status_code == 401
     challenged = api.client.get("/v1/me", headers=headers)
@@ -73,7 +75,14 @@ def test_captcha_is_bound_to_requester_and_consumed_once(api: Api) -> None:
 
 def test_rule_tiers_audit_expiration_and_manual_device_release(api: Api, capsys) -> None:
     api.client.app.state.captcha = MemoryCaptchaAdapter()
-    configure(short_request_limit=2, throttle_seconds=1, temporary_block_seconds=1)
+    configure(
+        short_request_limit=2,
+        throttle_seconds=1,
+        temporary_block_seconds=1,
+        throttle_points=10,
+        temporary_block_points=10,
+        permanent_block_points=10,
+    )
     device = {"X-Device-ID": "tier-device"}
     assert api.client.get("/v1/me", headers=device).status_code == 401
     challenged = api.client.get("/v1/me", headers=device)
@@ -118,7 +127,9 @@ def test_rule_tiers_audit_expiration_and_manual_device_release(api: Api, capsys)
 
 def test_throttle_allows_reduced_budget_without_new_rule(api: Api) -> None:
     api.client.app.state.captcha = MemoryCaptchaAdapter()
-    configure(short_request_limit=2, short_window_seconds=10, throttle_seconds=30)
+    configure(
+        short_request_limit=2, short_window_seconds=10, throttle_seconds=30, throttle_points=10
+    )
     headers = {"X-Device-ID": "throttle-budget-device"}
     api.client.get("/v1/me", headers=headers)
     solve(api, api.client.get("/v1/me", headers=headers), headers)
@@ -252,3 +263,146 @@ def test_authenticated_account_burst_can_recover_without_risk_dependency_deadloc
     assert actions(capsys)[0]["subject_type"] == "account"
     solve(api, challenged, headers)
     assert api.client.get("/v1/me", headers=headers).status_code == 200
+
+
+def test_recurrence_waits_for_configured_score_thresholds(api: Api, capsys) -> None:
+    api.client.app.state.captcha = MemoryCaptchaAdapter()
+    configure(
+        short_request_limit=2,
+        throttle_seconds=1,
+        temporary_block_seconds=1,
+        throttle_points=20,
+        temporary_block_points=40,
+        permanent_block_points=80,
+    )
+    headers = {"X-Device-ID": "configured-tier-device"}
+    source = 0
+
+    def request():
+        nonlocal source
+        source += 1
+        cast(Any, api.client._transport).client = (f"198.51.100.{source}", 50000)
+        return api.client.get("/v1/me", headers=headers)
+
+    assert request().status_code == 401
+    solve(api, request(), headers)
+    assert request().status_code == 401  # one recovery grace observation
+    assert request().status_code == 401  # score 10 is not throttle 20
+    assert request().json()["error"]["code"] == "risk_slowed"
+    api.clock.advance(seconds=2)
+    assert request().status_code == 401  # score 30 is not temporary 40
+    assert request().json()["error"]["code"] == "risk_temporarily_blocked"
+    api.clock.advance(seconds=2)
+    for _ in range(3):
+        assert request().status_code == 401  # scores 50, 60, 70 are not permanent 80
+    assert request().json()["error"]["code"] == "risk_permanently_blocked"
+    assert [row["level"] for row in actions(capsys) if row["subject_type"] == "device"] == [
+        "captcha",
+        "throttle",
+        "temporary_block",
+        "permanent_block",
+    ]
+
+
+def test_one_captcha_recovers_companion_active_subjects_and_audits_each(api: Api, capsys) -> None:
+    api.client.app.state.captcha = MemoryCaptchaAdapter()
+    configure(short_request_limit=2)
+    headers = {"X-Device-ID": "companion-device"}
+    assert api.client.get("/v1/me", headers=headers).status_code == 401
+    device = api.client.get("/v1/me", headers=headers)
+    ip = api.client.get("/v1/me")
+    assert device.status_code == ip.status_code == 403
+    assert device.headers["X-Risk-Challenge"] != ip.headers["X-Risk-Challenge"]
+    solve(api, device, headers)
+    assert api.client.get("/v1/me", headers=headers).status_code == 401
+    rows = actions(capsys)
+    assert len(rows) == 2
+    assert all(row["lifted_at"] and row["lift_reason"] == "captcha" for row in rows)
+
+
+def test_parallel_challenges_and_single_use_recovery_keep_one_audited_action(
+    api: Api, capsys
+) -> None:
+    api.client.app.state.captcha = MemoryCaptchaAdapter()
+    configure(short_request_limit=2)
+    headers = {"X-Device-ID": "parallel-challenge-device"}
+    assert api.client.get("/v1/me", headers=headers).status_code == 401
+    with ThreadPoolExecutor(max_workers=6) as pool:
+        challenged = list(pool.map(lambda _: api.client.get("/v1/me", headers=headers), range(6)))
+    assert all(response.status_code == 403 for response in challenged)
+    challenge_ids = {response.headers["X-Risk-Challenge"] for response in challenged}
+    assert len(challenge_ids) == 1
+    body = {"challenge_id": next(iter(challenge_ids)), "response": "ok"}
+    with ThreadPoolExecutor(max_workers=6) as pool:
+        responses = list(
+            pool.map(
+                lambda _: api.client.post("/v1/risk/captcha", headers=headers, json=body), range(6)
+            )
+        )
+    assert sorted(response.status_code for response in responses) == [200, 400, 400, 400, 400, 400]
+    rows = actions(capsys)
+    assert len(rows) == 1 and rows[0]["lift_reason"] == "captcha" and rows[0]["lifted_at"]
+
+
+def test_challenge_read_is_bound_non_issuing_no_store_and_expires_after_solve(api: Api) -> None:
+    api.client.app.state.captcha = MemoryCaptchaAdapter()
+    configure(short_request_limit=2)
+    headers = {"X-Device-ID": "image-challenge-device"}
+    api.client.get("/v1/me", headers=headers)
+    challenged = api.client.get("/v1/me", headers=headers)
+    challenge_id = challenged.headers["X-Risk-Challenge"]
+    path = f"/v1/risk/captcha/{challenge_id}"
+    assert api.client.get(path, headers={"X-Device-ID": "wrong-device"}).status_code == 400
+    for _ in range(2):
+        presentation = api.client.get(path, headers=headers)
+        assert presentation.status_code == 200, presentation.text
+        assert presentation.headers["Cache-Control"] == "no-store"
+        body = presentation.json()
+        assert set(body) == {"challenge_id", "prompt", "image_data_uri"}
+        assert body["challenge_id"] == challenge_id and body["prompt"]
+        assert body["image_data_uri"].startswith("data:image/png;base64,")
+        assert base64.b64decode(body["image_data_uri"].split(",", 1)[1]).startswith(
+            b"\x89PNG\r\n\x1a\n"
+        )
+    solve(api, challenged, headers)
+    assert api.client.get(path, headers=headers).status_code == 400
+    assert api.client.get("/v1/me", headers=headers).status_code == 401
+
+
+def test_real_image_provider_rejects_wrong_answer_without_plaintext_answer(api: Api) -> None:
+    configure(short_request_limit=2)
+    headers = {"X-Device-ID": "real-image-device"}
+    api.client.get("/v1/me", headers=headers)
+    challenged = api.client.get("/v1/me", headers=headers)
+    challenge_id = challenged.headers["X-Risk-Challenge"]
+    presentation = api.client.get(f"/v1/risk/captcha/{challenge_id}", headers=headers)
+    assert presentation.status_code == 200
+    assert set(presentation.json()) == {"challenge_id", "prompt", "image_data_uri"}
+    rejected = api.client.post(
+        "/v1/risk/captcha",
+        headers=headers,
+        json={"challenge_id": challenge_id, "response": "wrong-answer"},
+    )
+    assert rejected.status_code == 400 and rejected.json()["error"]["code"] == "captcha_invalid"
+    assert api.client.get(f"/v1/risk/captcha/{challenge_id}", headers=headers).status_code == 200
+
+
+def test_cors_protection_headers_cover_early_risk_and_rate_responses(api: Api) -> None:
+    api.client.app.state.captcha = MemoryCaptchaAdapter()
+    configure(short_request_limit=2)
+    origin = "http://localhost:40000"
+    headers = {"Origin": origin, "X-Device-ID": "cors-device"}
+    assert api.client.get("/v1/me", headers=headers).status_code == 401
+    challenged = api.client.get("/v1/me", headers=headers)
+    assert challenged.status_code == 403
+    assert challenged.headers["Access-Control-Allow-Origin"] == origin
+    exposed = challenged.headers["Access-Control-Expose-Headers"].lower()
+    assert "x-risk-challenge" in exposed and "retry-after" in exposed
+    set_config("risk.enabled", "false")
+    set_config("rate.detail.ip_per_minute", "1")
+    api.clock.advance(seconds=61)
+    assert api.client.get("/v1/me", headers=headers).status_code == 401
+    limited = api.client.get("/v1/me", headers=headers)
+    assert limited.status_code == 429 and limited.headers["Retry-After"]
+    assert limited.headers["Access-Control-Allow-Origin"] == origin
+    assert "retry-after" in limited.headers["Access-Control-Expose-Headers"].lower()

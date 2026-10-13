@@ -8,18 +8,20 @@ import logging
 import re
 import time
 import uuid
+from collections.abc import Iterator
+from contextlib import contextmanager
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from typing import Any, Literal, cast
 
 from redis import Redis
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from gramtree.accounts.models import User
 from gramtree.core.errors import ApiError
 from gramtree.core.time import utcnow
-from gramtree.risk.captcha import CaptchaAdapter, CaptchaChallenge
+from gramtree.risk.captcha import CaptchaAdapter, CaptchaChallenge, CaptchaPresentation
 from gramtree.risk.models import RiskAction, RiskEvent
 from gramtree.risk.rules import OBSERVE, RECOVER
 from gramtree.runtime_config import service as config
@@ -29,7 +31,19 @@ logger = logging.getLogger("gramtree.risk")
 RiskLevel = Literal["captcha", "throttle", "temporary_block", "permanent_block"]
 _SUBJECTS = ("account", "device", "ip")
 _DETAIL_RE = re.compile(r"^/v1/(?:recipes|ingredients)/([^/]+)(?:/|$)")
-_BYPASS_PREFIXES = ("/v1/health", "/v1/dev", "/v1/client-config", "/v1/risk/captcha")
+_BYPASS_PREFIXES = ("/v1/health", "/v1/dev", "/v1/client-config")
+
+
+def is_recovery_route(path: str, method: str) -> bool:
+    if method.upper() == "POST" and path == "/v1/risk/captcha":
+        return True
+    prefix = "/v1/risk/captcha/"
+    return (
+        method.upper() == "GET"
+        and path.startswith(prefix)
+        and bool(path[len(prefix) :])
+        and "/" not in path[len(prefix) :]
+    )
 
 
 class RiskActionError(ApiError):
@@ -143,6 +157,19 @@ def _subject_key(subject: Subject) -> str:
     return f"risk:{subject.kind}:{subject.value}"
 
 
+@contextmanager
+def _audit_session(session: Session, subjects: list[Subject]) -> Iterator[Session]:
+    # Hold locks through the durable commit: Redis publication must not overtake
+    # action insertion or a companion-subject lift. Never commit the caller's
+    # account/recipe transaction as a side effect of a risk observation.
+    with Session(session.get_bind(), expire_on_commit=False) as audit:
+        for name in sorted({_subject_key(subject) for subject in subjects}):
+            lock_id = int.from_bytes(hashlib.sha256(name.encode()).digest()[:8], signed=True)
+            audit.execute(select(func.pg_advisory_xact_lock(lock_id)))
+        yield audit
+        audit.commit()
+
+
 def _record(
     session: Session,
     subject: Subject,
@@ -172,9 +199,18 @@ def _challenge(
     adapter: CaptchaAdapter,
 ) -> str:
     key = f"risk:captcha:{subject.kind}:{subject.value}"
-    existing = cast(Any, redis.hget(key, "challenge_id"))
-    if existing:
-        return existing.decode() if isinstance(existing, bytes) else str(existing)
+    existing = cast(Any, redis.hgetall(key))
+    stored_id = existing.get(b"challenge_id") or existing.get("challenge_id")
+    stored_action = existing.get(b"action_id") or existing.get("action_id")
+    expires_at = existing.get(b"expires_at") or existing.get("expires_at") or 0
+    if (
+        stored_id
+        and float(expires_at) > now.timestamp()
+        and (stored_action.decode() if isinstance(stored_action, bytes) else stored_action)
+        == action_id
+    ):
+        return stored_id.decode() if isinstance(stored_id, bytes) else str(stored_id)
+    redis.delete(key)
     issued = adapter.issue(subject.value, now)
     binding = hashlib.sha256(f"{subject.kind}:{subject.value}".encode()).hexdigest()
     redis.hset(
@@ -206,6 +242,30 @@ def _run(
     captcha: CaptchaAdapter,
 ) -> RiskDecision | None:
     cfg = _config(session)
+    with _audit_session(session, [subject]) as audit:
+        return _run_locked(
+            redis,
+            audit,
+            subject,
+            cfg=cfg,
+            mode=mode,
+            input_data=input_data,
+            now=now,
+            captcha=captcha,
+        )
+
+
+def _run_locked(
+    redis: Redis,
+    session: Session,
+    subject: Subject,
+    *,
+    cfg: dict[str, int],
+    mode: str,
+    input_data: dict[str, object],
+    now: datetime,
+    captcha: CaptchaAdapter,
+) -> RiskDecision | None:
     action_id = str(uuid.uuid4())
     input_data["action_id"] = action_id
     input_data["can_ban"] = subject.kind in {"account", "device"}
@@ -255,7 +315,6 @@ def _run(
             if level == "captcha"
             else None
         )
-        session.commit()
         logger.warning(
             "risk action",
             extra={
@@ -266,8 +325,6 @@ def _run(
             },
         )
         return RiskDecision(level, int(result.get("retry") or 0) or None, challenge_id)
-    if rule or old_id:
-        session.commit()
     if level == "captcha":
         challenge_id = _challenge(
             redis, session, subject, str(result.get("action_id")), now, captcha
@@ -449,6 +506,60 @@ def record_security_failure(
     )
 
 
+def _find_challenge(
+    redis: Redis,
+    settings: Settings,
+    challenge_id: str,
+    choices: list[tuple[str, str]],
+    now: datetime,
+) -> tuple[Subject, str] | None:
+    for kind, value in choices:
+        if kind not in _SUBJECTS or not value:
+            continue
+        subject = _subject(kind, value[:256], settings)
+        key = f"risk:captcha:{subject.kind}:{subject.value}"
+        raw = cast(Any, redis.hgetall(key))
+        stored = {
+            k.decode() if isinstance(k, bytes) else str(k): v.decode()
+            if isinstance(v, bytes)
+            else str(v)
+            for k, v in raw.items()
+        }
+        if stored.get("challenge_id") != challenge_id:
+            continue
+        binding = hashlib.sha256(f"{subject.kind}:{subject.value}".encode()).hexdigest()
+        active_id = cast(Any, redis.hget(f"{_subject_key(subject)}:state", "action_id"))
+        active_id = active_id.decode() if isinstance(active_id, bytes) else active_id
+        if (
+            hmac.compare_digest(stored.get("binding", ""), binding)
+            and float(stored.get("expires_at", "0")) > now.timestamp()
+            and stored.get("action_id") == active_id
+        ):
+            return subject, key
+    return None
+
+
+def get_captcha_challenge(
+    redis: Redis,
+    session: Session,
+    settings: Settings,
+    adapter: CaptchaAdapter,
+    *,
+    challenge_id: str,
+    candidates: list[tuple[str, str]],
+    now: datetime,
+) -> CaptchaPresentation | None:
+    subjects = [
+        _subject(kind, value[:256], settings)
+        for kind, value in candidates
+        if kind in _SUBJECTS and value
+    ]
+    with _audit_session(session, subjects):
+        if _find_challenge(redis, settings, challenge_id, candidates, now) is None:
+            return None
+        return adapter.presentation(CaptchaChallenge(challenge_id, "请完成安全验证"), now)
+
+
 def verify_captcha(
     redis: Redis,
     session: Session,
@@ -465,29 +576,45 @@ def verify_captcha(
     choices = candidates or (
         [(subject_type, subject_value)] if subject_type and subject_value else []
     )
-    found: tuple[Subject, str] | None = None
-    for kind, value in choices:
-        if kind not in _SUBJECTS or not value:
-            continue
-        candidate = _subject(kind, value[:256], settings)
-        candidate_key = f"risk:captcha:{candidate.kind}:{candidate.value}"
-        stored = cast(Any, redis.hget(candidate_key, "challenge_id"))
-        if (
-            stored
-            and (stored.decode() if isinstance(stored, bytes) else str(stored)) == challenge_id
-        ):
-            found = candidate, candidate_key
-            break
+    subjects = [
+        _subject(kind, value[:256], settings)
+        for kind, value in choices
+        if kind in _SUBJECTS and value
+    ]
+    with _audit_session(session, subjects) as audit:
+        return _verify_captcha_locked(
+            redis,
+            audit,
+            settings,
+            adapter,
+            challenge_id=challenge_id,
+            response=response,
+            now=now,
+            candidates=choices,
+        )
+
+
+def _verify_captcha_locked(
+    redis: Redis,
+    session: Session,
+    settings: Settings,
+    adapter: CaptchaAdapter,
+    *,
+    challenge_id: str,
+    response: str,
+    now: datetime,
+    subject_type: str | None = None,
+    subject_value: str | None = None,
+    candidates: list[tuple[str, str]] | None = None,
+) -> bool:
+    choices = candidates or (
+        [(subject_type, subject_value)] if subject_type and subject_value else []
+    )
+    found = _find_challenge(redis, settings, challenge_id, choices, now)
     if found is None:
         return False
     subject, key = found
     binding = hashlib.sha256(f"{subject.kind}:{subject.value}".encode()).hexdigest()
-    stored_binding = cast(Any, redis.hget(key, "binding"))
-    if not stored_binding or not hmac.compare_digest(
-        stored_binding.decode() if isinstance(stored_binding, bytes) else str(stored_binding),
-        binding,
-    ):
-        return False
     if not adapter.verify(CaptchaChallenge(challenge_id, "请完成安全验证"), response, now):
         return False
     state_keys = list(
@@ -514,14 +641,12 @@ def verify_captcha(
     )
     if not action_id:
         return False
-    action = session.get(
-        RiskAction,
-        uuid.UUID(action_id.decode() if isinstance(action_id, bytes) else str(action_id)),
-    )
-    if action is not None and action.lifted_at is None:
-        action.lifted_at = now
-        action.lift_reason = "captcha"
-    session.commit()
+    lifted_ids = json.loads(action_id.decode() if isinstance(action_id, bytes) else action_id)
+    for lifted in lifted_ids:
+        action = session.get(RiskAction, uuid.UUID(lifted["id"]))
+        if action is not None and action.lifted_at is None:
+            action.lifted_at = now
+            action.lift_reason = lifted["reason"]
     return True
 
 
@@ -562,6 +687,17 @@ def lift_permanent_ban(
     redis: Redis, session: Session, *, action_id: str, now: datetime, reason: str
 ) -> bool:
     action = session.get(RiskAction, uuid.UUID(action_id))
+    if action is None:
+        return False
+    subject = Subject(action.subject_type, action.subject_key_hash)
+    with _audit_session(session, [subject]) as audit:
+        return _lift_permanent_ban_locked(redis, audit, action_id=action_id, now=now, reason=reason)
+
+
+def _lift_permanent_ban_locked(
+    redis: Redis, session: Session, *, action_id: str, now: datetime, reason: str
+) -> bool:
+    action = session.get(RiskAction, uuid.UUID(action_id))
     if action is None or action.level != "permanent_block" or action.lifted_at is not None:
         return False
     base = f"risk:{action.subject_type}:{action.subject_key_hash}"
@@ -582,5 +718,4 @@ def lift_permanent_ban(
     )
     action.lifted_at = now
     action.lift_reason = f"manual:{reason[:24]}"
-    session.commit()
     return True

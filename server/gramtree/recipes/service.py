@@ -653,6 +653,20 @@ def _detail(
         else None
     )
     household = profile.cooking_constraints.get("household_servings") if profile else None
+    version_out = _version_out(session, settings, version, recipe.id)
+    if not include_owner_defaults:
+        # Edit evidence and notes describe the private baseline, not just this
+        # approved snapshot. Public readers cannot receive those historical values.
+        version_out = version_out.model_copy(
+            update={
+                "edit_operations": [],
+                "change_note": "",
+                "previous_version_id": None,
+                "base_version_id": None,
+                "conclusion": None,
+                "reproducibility": None,
+            }
+        )
     return RecipeDetail(
         default_servings=household,
         taste_profile_version=profile.version if profile else None,
@@ -664,7 +678,7 @@ def _detail(
         root_recipe_id=recipe.root_recipe_id,
         created_at=recipe.created_at,
         updated_at=recipe.updated_at,
-        version=_version_out(session, settings, version, recipe.id),
+        version=version_out,
     )
 
 

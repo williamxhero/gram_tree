@@ -224,8 +224,17 @@ def create_recipe_share(
     if row is None:
         raise NotFound()
     # Serialize first issuance so concurrent taps return the same stable share ID.
-    recipe = session.scalar(select(Recipe).where(Recipe.id == recipe_id).with_for_update())
-    if recipe is None:
+    recipe = session.scalar(
+        select(Recipe)
+        .where(Recipe.id == recipe_id)
+        .with_for_update()
+        .execution_options(populate_existing=True)
+    )
+    if (
+        recipe is None
+        or recipe.visibility != "public"
+        or recipe.approved_public_version_id != recipe.current_version_id
+    ):
         raise NotFound()
     if not bool(config.get(session, "feature.public_recipes")):
         raise NotFound()

@@ -61,6 +61,33 @@ def cmd_config(args: argparse.Namespace) -> int:
 
 
 def cmd_recipes(args: argparse.Namespace) -> int:
+    if args.action == "seed-sharing-state":
+        # Publication moderation is not available yet. Match existing test-only
+        # fixture CLIs rather than granting a production approval backdoor.
+        if get_settings().env != "test":
+            print("这个命令只允许在 test 环境使用", file=sys.stderr)
+            return 1
+        from gramtree.recipes.models import Recipe
+
+        with _session() as session:
+            recipe = session.get(Recipe, uuid.UUID(args.recipe_id))
+            if recipe is None:
+                return 1
+            recipe.visibility = args.visibility
+            recipe.approved_public_version_id = recipe.current_version_id if args.approved else None
+            session.commit()
+        print(
+            _fmt(
+                {
+                    "recipe_id": args.recipe_id,
+                    "visibility": args.visibility,
+                    "approved": args.approved,
+                    "by": args.by,
+                    "reason": args.reason,
+                }
+            )
+        )
+        return 0
     if args.action in {"safety-recheck", "safety-status", "safety-validate"}:
         from sqlalchemy import func, select
 
@@ -606,6 +633,16 @@ def build_parser() -> argparse.ArgumentParser:
         help="仅测试环境：把版本首个食材标记为旧版空缩放方式",
     )
     legacy_scaling.add_argument("version_id")
+    sharing_seed = recipes_sub.add_parser(
+        "seed-sharing-state", help="仅测试环境：构造公开批准或不可见分享状态"
+    )
+    sharing_seed.add_argument("recipe_id")
+    sharing_seed.add_argument(
+        "--visibility", choices=("private", "public", "removed"), required=True
+    )
+    sharing_seed.add_argument("--approved", action="store_true")
+    sharing_seed.add_argument("--by", required=True)
+    sharing_seed.add_argument("--reason", required=True)
     receipt = recipes_sub.add_parser(
         "save-event-receipt",
         help="输出一条菜谱版本经验事件的验收收据",

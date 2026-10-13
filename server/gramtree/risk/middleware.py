@@ -45,6 +45,10 @@ class RiskMiddleware:
         client = scope.get("client")
         ip = client[0] if client else None
         path = scope.get("path", "")
+        if service.is_recovery_route(path, scope.get("method", "")):
+            # Recovery has its own finite rate category and identity-only auth.
+            await self.app(scope, receive, send)
+            return
         state = getattr(scope.get("app"), "state", None)
         clock = getattr(state, "clock", None)
         now = clock() if clock else datetime.now(UTC)

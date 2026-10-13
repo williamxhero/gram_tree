@@ -116,3 +116,20 @@ def test_access_log_retention_defaults_to_180_days_and_changes_live(
     assert cli(["access-logs", "purge", "--as-of", (now + timedelta(days=2)).isoformat()]) == 0
     capsys.readouterr()
     assert _read_logs(capsys, request_id) == []
+
+
+def test_cors_preflight_still_has_request_log_and_id(client: TestClient, capsys) -> None:
+    request_id = str(uuid.uuid4())
+    response = client.options(
+        "/v1/me",
+        headers={
+            "Origin": "http://localhost:40000",
+            "Access-Control-Request-Method": "GET",
+            "X-Request-ID": request_id,
+        },
+    )
+    assert response.status_code == 200
+    assert response.headers["Access-Control-Allow-Origin"] == "http://localhost:40000"
+    assert response.headers["X-Request-ID"] == request_id
+    rows = _read_logs(capsys, request_id)
+    assert len(rows) == 1 and rows[0]["method"] == "OPTIONS" and rows[0]["status_code"] == 200

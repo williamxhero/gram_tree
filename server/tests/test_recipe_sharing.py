@@ -1,36 +1,49 @@
 """#261 public HTTP behavior, guarded by approved-current-version metadata."""
 
 import json
+import subprocess
 import uuid
+from concurrent.futures import ThreadPoolExecutor
 
 import pytest
-from sqlalchemy import select
 
 from gramtree.cli import main as cli
-from gramtree.recipes.models import Recipe
-from gramtree.runtime_config import service as config
 from tests.accounts_support import Api, bearer
 from tests.test_recipes import _image_payload, recipe_input
 
 
-def _make_public(client, recipe_id: str, headers: dict[str, str], *, approved: bool = True) -> None:
-    with client.app.state.session_factory() as session:
-        recipe = session.scalar(select(Recipe).where(Recipe.id == recipe_id))
-        assert recipe is not None
-        recipe.visibility = "public"
-        recipe.approved_public_version_id = recipe.current_version_id if approved else None
-        session.commit()
-    with client.app.state.session_factory() as session:
-        config.set_value(session, "feature.public_recipes", "true", "test", "sharing test")
-        config.set_value(
-            session, "sharing.public_base_url", "https://share.example.test", "test", "sharing test"
-        )
-        config.set_value(
-            session, "sharing.complaint_contact", "rights@example.test", "test", "sharing test"
-        )
-        config.set_value(
-            session, "sharing.download_url", "https://example.test/app", "test", "sharing test"
-        )
+def _command(*args: str) -> None:
+    result = subprocess.run(["gramtree", *args], capture_output=True, text=True)
+    assert result.returncode == 0, result.stderr
+
+
+def _configure(key: str, value: str) -> None:
+    _command("config", "set", key, value, "--by", "test", "--reason", "sharing acceptance")
+
+
+def _seed_state(recipe_id: str, visibility: str = "public", *, approved: bool = True) -> None:
+    _command(
+        "recipes",
+        "seed-sharing-state",
+        recipe_id,
+        "--visibility",
+        visibility,
+        "--by",
+        "test",
+        "--reason",
+        "public approval fixture",
+        *(["--approved"] if approved else []),
+    )
+
+
+def _make_public(
+    _client, recipe_id: str, _headers: dict[str, str], *, approved: bool = True
+) -> None:
+    _seed_state(recipe_id, approved=approved)
+    _configure("feature.public_recipes", "true")
+    _configure("sharing.public_base_url", "https://share.example.test")
+    _configure("sharing.complaint_contact", "rights@example.test")
+    _configure("sharing.download_url", "https://example.test/app")
 
 
 def _recipe(api: Api, email: str = "sharing@example.com"):
@@ -100,11 +113,7 @@ def test_share_page_releases_only_allowlisted_projection_and_unavailable_is_unif
     ):
         assert forbidden not in html
 
-    with api.client.app.state.session_factory() as session:
-        recipe = session.scalar(select(Recipe).where(Recipe.id == saved["id"]))
-        assert recipe is not None
-        recipe.approved_public_version_id = None
-        session.commit()
+    _seed_state(saved["id"], approved=False)
     unavailable = api.client.get(f"/s/{link['share_id']}")
     assert unavailable.status_code == 404
     assert unavailable.text == api.client.get("/s/does-not-exist").text
@@ -143,17 +152,13 @@ def test_all_unavailable_share_states_have_identical_html_and_resolver(
     _make_public(api.client, saved["id"], owner)
     link = api.client.post(f"/v1/recipes/{saved['id']}/share", headers=owner).json()
     if state == "flag_off":
-        with api.client.app.state.session_factory() as session:
-            config.set_value(session, "feature.public_recipes", "false", "test", "hidden sharing")
+        _configure("feature.public_recipes", "false")
     else:
-        with api.client.app.state.session_factory() as session:
-            recipe = session.get(Recipe, uuid.UUID(saved["id"]))
-            assert recipe is not None
-            if state == "unapproved":
-                recipe.approved_public_version_id = None
-            else:
-                recipe.visibility = state
-            session.commit()
+        _seed_state(
+            saved["id"],
+            "public" if state == "unapproved" else state,
+            approved=state != "unapproved",
+        )
     response = api.client.get(f"/s/{link['share_id']}")
     missing = api.client.get("/s/" + "x" * 43)
     assert response.status_code == missing.status_code == 404
@@ -239,18 +244,14 @@ def test_share_crawlers_configuration_ip_limits_and_access_log(api: Api, capsys)
     saved, owner = _recipe(api)
     _make_public(api.client, saved["id"], owner)
     link = api.client.post(f"/v1/recipes/{saved['id']}/share", headers=owner).json()
-    with api.client.app.state.session_factory() as session:
-        config.set_value(
-            session, "sharing.ai_crawlers", '{"values":["ExampleTrainingBot"]}', "test", "robots"
-        )
+    _configure("sharing.ai_crawlers", '{"values":["ExampleTrainingBot"]}')
     assert "User-agent: ExampleTrainingBot\nDisallow: /" in api.client.get("/robots.txt").text
     denied = api.client.get(
         f"/s/{link['share_id']}", headers={"User-Agent": "ExampleTrainingBot/1.0"}
     )
     assert denied.status_code == 403 and saved["dish"]["name"] not in denied.text
     assert "ingredients" not in denied.text
-    with api.client.app.state.session_factory() as session:
-        config.set_value(session, "rate.detail.ip_per_minute", "1", "test", "share IP limit")
+    _configure("rate.detail.ip_per_minute", "1")
     # Move into the next quota minute without resetting any counters.
     api.clock.advance(seconds=61)
     request_id = str(uuid.uuid4())
@@ -332,8 +333,7 @@ def test_public_rights_complaint_is_pending_private_bounded_and_reviewable(
         "/v1/shares/missing-share/complaints", json={"contact": contact, "message": message}
     )
     assert accepted.status_code == 201 and accepted.json() == {"accepted": True}
-    with api.client.app.state.session_factory() as session:
-        config.set_value(session, "rate.write.ip_per_minute", "1", "test", "complaint IP limit")
+    _configure("rate.write.ip_per_minute", "1")
     api.clock.advance(seconds=61)
     assert (
         api.client.post("/complaints", data={"contact": contact, "message": message}).status_code
@@ -341,3 +341,44 @@ def test_public_rights_complaint_is_pending_private_bounded_and_reviewable(
     )
     limited = api.client.post("/complaints", data={"contact": contact, "message": message})
     assert limited.status_code == 429 and int(limited.headers["Retry-After"]) > 0
+
+
+def test_public_detail_redacts_private_edit_evidence_and_notes(api: Api) -> None:
+    saved, owner = _recipe(api)
+    snapshot = saved["version"]["snapshot"]
+    snapshot["ingredients"][0]["display_name"] = "公开食材"
+    snapshot["steps"][0]["instruction"] = "公开腌制说明"
+    changed = api.client.post(
+        f"/v1/recipes/{saved['id']}/versions",
+        headers=owner,
+        json={"snapshot": snapshot, "change_note": "private-history-note"},
+    )
+    assert changed.status_code == 201, changed.text
+    owned = changed.json()["version"]
+    assert owned["edit_operations"]
+    assert "鸡腿肉" in json.dumps(owned["edit_operations"], ensure_ascii=False)
+    _make_public(api.client, saved["id"], owner)
+    outsider = bearer(api.login("projection-reader@example.com"))
+    for path in (
+        f"/v1/recipes/{saved['id']}",
+        f"/v1/recipes/{saved['id']}/versions/{owned['id']}",
+    ):
+        response = api.client.get(path, headers=outsider)
+        assert response.status_code == 200, response.text
+        version = response.json()["version"]
+        assert version["edit_operations"] == [] and version["change_note"] == ""
+        assert version["previous_version_id"] is None and version["base_version_id"] is None
+        assert "private-history-note" not in response.text
+        assert "鸡腿肉" not in response.text and "鸡腿肉加盐腌制" not in response.text
+
+
+def test_concurrent_first_share_issuance_returns_one_stable_link(api: Api) -> None:
+    saved, owner = _recipe(api)
+    _make_public(api.client, saved["id"], owner)
+    path = f"/v1/recipes/{saved['id']}/share"
+    with ThreadPoolExecutor(max_workers=6) as pool:
+        responses = list(pool.map(lambda _: api.client.post(path, headers=owner), range(6)))
+    assert all(response.status_code == 201 for response in responses)
+    links = [response.json() for response in responses]
+    assert all(link == links[0] for link in links)
+    assert api.client.get(f"/v1/shares/{links[0]['share_id']}").status_code == 200

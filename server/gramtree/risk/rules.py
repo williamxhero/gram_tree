@@ -155,11 +155,12 @@ if rule ~= '' then
   end
   local not_advanced = previous ~= '' and order[previous]
     and (not order[level] or order[level] <= order[previous])
-  if not_advanced then
-    if previous == 'captcha' then level = 'throttle'
-    elseif previous == 'throttle' then level = 'temporary_block'
-    elseif previous == 'temporary_block' and input.can_ban then level = 'permanent_block'
-    else level = previous end
+  if not_advanced and not
+      (previous == 'temporary_block' and not input.can_ban and level == 'temporary_block') then
+    -- Recurrence remembers ordering, not eligibility: accumulate enough score
+    -- for the configured next tier rather than banning below its threshold.
+    return finish(active, math.max(0,ends-now),
+      redis.call('HGET', state, 'action_id') or '', rule, evidence, points, old)
   end
   if level ~= '' then
     local end_at = 0
@@ -195,12 +196,31 @@ local action = redis.call('HGET', challenge, 'action_id')
 local primary = base .. ':state'
 if redis.call('HGET', primary, 'action_id') ~= action or
    redis.call('HGET', primary, 'active') ~= 'captcha' then return '' end
+local lifted = {}
+-- A successful answer must not claim restored access while another verified
+-- subject still has a higher-tier ban. Leave the challenge usable in that case.
+for i=2,#KEYS do
+  local active = redis.call('HGET', KEYS[i], 'active')
+  local ends = tonumber(redis.call('HGET', KEYS[i], 'ends') or '0')
+  if active and active ~= 'captcha' and (ends == 0 or ends > tonumber(ARGV[2])) then
+    return ''
+  end
+end
 redis.call('DEL', challenge)
 for i=2,#KEYS do
   local state = KEYS[i]
-  if state == primary or not redis.call('HGET', state, 'active') then
+  local active = redis.call('HGET', state, 'active')
+  if active then
+    local id = redis.call('HGET', state, 'action_id')
+    local ends = tonumber(redis.call('HGET', state, 'ends') or '0')
+    local reason = ends > 0 and ends <= tonumber(ARGV[2]) and 'expired' or 'captcha'
+    if id then lifted[#lifted+1] = {id=id, reason=reason} end
+  end
+  -- The preflight rejected every unexpired higher tier; these subjects are
+  -- inactive, challenged, or expired and may all recover together.
     local subject_base = string.sub(state, 1, string.len(state)-6)
-    redis.call('DEL', subject_base .. ':requests', subject_base .. ':details',
+    redis.call('DEL', string.gsub(subject_base, '^risk:', 'risk:captcha:'),
+      subject_base .. ':requests', subject_base .. ':details',
       subject_base .. ':uniform', subject_base .. ':accounts', subject_base .. ':new-accounts',
       subject_base .. ':security', subject_base .. ':throttle')
     redis.call('HDEL', state, 'active', 'ends', 'action_id', 'detail_at', 'detail_gap',
@@ -210,7 +230,6 @@ for i=2,#KEYS do
     if not levels[prior] or levels[prior] < levels.captcha then prior = 'captcha' end
     redis.call('HSET', state, 'score', 0, 'last_level', prior, 'grace', 1)
     redis.call('EXPIRE', state, ARGV[3])
-  end
 end
-return action
+return cjson.encode(lifted)
 """
