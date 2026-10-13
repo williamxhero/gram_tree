@@ -508,14 +508,41 @@ def main() -> None:
             for scenario in scenarios:
                 generated = consequential_draft(scenario)
                 records.append(("intent", {"text": scenario["generation_text"]}, corpus["intent"]))
-                for item, match in zip(
-                    generated.recipe.snapshot.ingredients,
-                    matching.normalize(
-                        library_session,
-                        [item.display_name for item in generated.recipe.snapshot.ingredients],
-                    ),
-                    strict=True,
-                ):
+                ingredients = generated.recipe.snapshot.ingredients
+                matches = matching.normalize(
+                    library_session, [item.display_name for item in ingredients]
+                )
+                # Generation only sends unresolved names to normalization. Retain
+                # the original two-name key and register each synthetic library's
+                # exact request without inventing a match or skipping confirmation.
+                unresolved = [
+                    item.display_name
+                    for item, match in zip(ingredients, matches, strict=True)
+                    if match.confidence not in ("exact", "alias")
+                ]
+                if unresolved:
+                    records.append(
+                        (
+                            "normalize",
+                            {
+                                "names": unresolved,
+                                "candidates": sorted(
+                                    {
+                                        candidate.standard_name
+                                        for match in matches
+                                        for candidate in match.candidates
+                                    }
+                                ),
+                            },
+                            {
+                                "matches": [
+                                    {"name": name, "standard_name": None, "confidence": 0.2}
+                                    for name in unresolved
+                                ]
+                            },
+                        )
+                    )
+                for item, match in zip(ingredients, matches, strict=True):
                     item.ingredient_id = (
                         match.ingredient.id
                         if match.confidence in ("exact", "alias") and match.ingredient

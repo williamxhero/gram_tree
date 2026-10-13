@@ -50,8 +50,8 @@ void main() {
         await tester.pump(const Duration(milliseconds: 100));
       }
     }
-    expect(finder, findsOneWidget);
-    await tester.ensureVisible(finder);
+    expect(finder, findsWidgets);
+    await tester.ensureVisible(finder.last);
     await settle(tester);
   }
 
@@ -81,7 +81,8 @@ void main() {
       find.byKey(const ValueKey('code-input')),
       code.data!['code'] as String,
     );
-    await waitFor(tester, find.text('先添加一道你常做的菜'));
+    // The composed home page may replace the fallback empty-state wording.
+    await waitFor(tester, find.byKey(const ValueKey('primary-create-button')));
 
     await tapText(tester, '我的');
     await waitFor(tester, find.byKey(const ValueKey('taste-profile-entry')));
@@ -91,7 +92,7 @@ void main() {
     await settle(tester);
     await tapText(tester, '淡一点');
     await waitFor(tester, find.textContaining('把握高'));
-    await tester.pageBack();
+    await tester.tap(find.byType(BackButton).last);
     await settle(tester);
     await tapText(tester, '今天');
     await waitFor(tester, find.byKey(const ValueKey('primary-create-button')));
@@ -140,10 +141,14 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('save-recipe-button')));
     await waitFor(tester, find.byKey(const ValueKey('recipe-history-button')));
 
-    final personalized = find.text('按我的口味').last;
+    final personalized = find.text('按我的口味');
+    await waitFor(tester, personalized);
     await reveal(tester, personalized);
     await waitFor(tester, find.textContaining('已按口味档案第'));
-    expect(tester.getSemantics(personalized), isSemantics(isSelected: true));
+    expect(
+      tester.getSemantics(personalized.last),
+      isSemantics(isSelected: true),
+    );
     await reveal(tester, find.text('盐  7.5 g'));
     await reveal(tester, personalized);
     final original = find.text('原版').last;
@@ -154,7 +159,7 @@ void main() {
     await reveal(tester, find.text('10 克'));
     await reveal(tester, find.textContaining('煮熟后加盐'));
     await reveal(tester, personalized);
-    await tester.tap(personalized);
+    await tester.tap(personalized.last);
     await settle(tester);
     await reveal(tester, find.text('盐  7.5 g'));
     final start = find.byKey(const ValueKey('start-cooking-button'));
