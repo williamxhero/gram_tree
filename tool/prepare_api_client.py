@@ -22,6 +22,22 @@ def client_schema(value: Any) -> Any:
         # no recursive JSON union; the server validates each registered field.
         return {}
     variants = result.get("anyOf")
+    if not isinstance(variants, list) or not variants:
+        return result
+    scalars = {"string", "number", "integer", "boolean"}
+    non_null = [item for item in variants if item != {"type": "null"}]
+    if (
+        {"type": "null"} not in variants
+        and non_null
+        and all(item.get("type") in scalars for item in non_null)
+    ):
+        # FastAPI's ValidationError.loc is List[Union[str, int]]. A pure scalar
+        # union has no Dart class, and dart-dio 7.16 emits a propertyless model
+        # whose ==/hashCode are invalid Dart. Dropping the union makes the
+        # generator fall back to Object?, matching the scalar-union branch below.
+        result.pop("anyOf")
+        result.pop("title", None)
+        return result
     if not isinstance(variants, list) or {"type": "null"} not in variants:
         return result
     non_null = [item for item in variants if item != {"type": "null"}]
@@ -110,7 +126,13 @@ def main() -> None:
                 "FieldLock",
                 "Automation",
             )
-        ) or name in {"NutritionEstimate", "ValueSource", "TasteProfilePatch"}:
+        ) or name in {
+            "NutritionEstimate",
+            "ValueSource",
+            "TasteProfilePatch",
+            "ValidationError",
+            "HTTPValidationError",
+        }:
             document["components"]["schemas"][name] = project_schema(schema)
     document["components"]["schemas"].pop("JsonValue", None)
     target.write_text(

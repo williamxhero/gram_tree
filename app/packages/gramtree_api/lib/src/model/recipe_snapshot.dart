@@ -6,6 +6,7 @@
 import 'package:gramtree_api/src/model/recipe_ingredient.dart';
 import 'package:gramtree_api/src/model/recipe_step.dart';
 import 'package:gramtree_api/src/model/mold_spec.dart';
+import 'package:gramtree_api/src/model/recipe_source.dart';
 import 'package:gramtree_api/src/model/value_source.dart';
 import 'package:copy_with_extension/copy_with_extension.dart';
 import 'package:json_annotation/json_annotation.dart';
@@ -43,6 +44,8 @@ class RecipeSnapshot {
     required this.servings,
 
     this.servingsSource,
+
+    this.source_,
 
     this.steps,
 
@@ -97,6 +100,9 @@ class RecipeSnapshot {
   @JsonKey(name: r'servings_source', required: false, includeIfNull: false)
   final ValueSource? servingsSource;
 
+  @JsonKey(name: r'source', required: false, includeIfNull: false)
+  final RecipeSource? source_;
+
   @JsonKey(name: r'steps', required: false, includeIfNull: false)
   final List<RecipeStep>? steps;
 
@@ -131,6 +137,7 @@ class RecipeSnapshot {
           other.ingredients == ingredients &&
           other.servings == servings &&
           other.servingsSource == servingsSource &&
+          other.source_ == source_ &&
           other.steps == steps &&
           other.tags == tags &&
           other.textSource == textSource &&
@@ -149,6 +156,7 @@ class RecipeSnapshot {
       ingredients.hashCode +
       servings.hashCode +
       servingsSource.hashCode +
+      source_.hashCode +
       steps.hashCode +
       tags.hashCode +
       textSource.hashCode +

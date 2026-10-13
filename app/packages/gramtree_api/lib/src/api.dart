@@ -18,6 +18,7 @@ import 'package:gramtree_api/src/api/health_api.dart';
 import 'package:gramtree_api/src/api/ingredients_api.dart';
 import 'package:gramtree_api/src/api/personal_measures_api.dart';
 import 'package:gramtree_api/src/api/recipe_ai_api.dart';
+import 'package:gramtree_api/src/api/recipe_imports_api.dart';
 import 'package:gramtree_api/src/api/recipes_api.dart';
 import 'package:gramtree_api/src/api/records_api.dart';
 import 'package:gramtree_api/src/api/sync_api.dart';
@@ -157,6 +158,12 @@ class GramtreeApi {
   /// by doing that all interceptors will not be executed
   RecipeAiApi getRecipeAiApi() {
     return RecipeAiApi(dio);
+  }
+
+  /// Get RecipeImportsApi instance, base route and serializer can be overridden by a given but be careful,
+  /// by doing that all interceptors will not be executed
+  RecipeImportsApi getRecipeImportsApi() {
+    return RecipeImportsApi(dio);
   }
 
   /// Get RecipesApi instance, base route and serializer can be overridden by a given but be careful,

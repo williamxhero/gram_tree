@@ -168,6 +168,7 @@ ITEMS: tuple[ConfigItem, ...] = (
         {
             "intent": "small",
             "generate": "large",
+            "recipe_import": "large",
             "normalize": "small",
             "embedding": "vector",
             "explain": "large",
@@ -196,6 +197,7 @@ ITEMS: tuple[ConfigItem, ...] = (
         {
             "intent": {"timeout": 15, "retries": 1, "daily_limit": 100},
             "generate": {"timeout": 60, "retries": 1, "daily_limit": 50},
+            "recipe_import": {"timeout": 60, "retries": 0, "daily_limit": 50},
             "explain": {"timeout": 30, "retries": 1, "daily_limit": 50},
             "normalize": {"timeout": 15, "retries": 0, "daily_limit": 100},
             "embedding": {"timeout": 15, "retries": 1, "daily_limit": 500},

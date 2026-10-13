@@ -80,9 +80,13 @@ import 'package:gramtree_api/src/model/generated_draft.dart';
 import 'package:gramtree_api/src/model/generation_result.dart';
 import 'package:gramtree_api/src/model/graded_comparison_change.dart';
 import 'package:gramtree_api/src/model/graded_ingredient_comparison_row.dart';
+import 'package:gramtree_api/src/model/http_validation_error.dart';
 import 'package:gramtree_api/src/model/health_checks.dart';
 import 'package:gramtree_api/src/model/health_response.dart';
 import 'package:gramtree_api/src/model/identity_out.dart';
+import 'package:gramtree_api/src/model/import_input.dart';
+import 'package:gramtree_api/src/model/import_original_out.dart';
+import 'package:gramtree_api/src/model/import_out.dart';
 import 'package:gramtree_api/src/model/ingredient_attributes.dart';
 import 'package:gramtree_api/src/model/ingredient_comparison_row.dart';
 import 'package:gramtree_api/src/model/ingredient_detail.dart';
@@ -171,6 +175,7 @@ import 'package:gramtree_api/src/model/recipe_safety_finding.dart';
 import 'package:gramtree_api/src/model/recipe_safety_result.dart';
 import 'package:gramtree_api/src/model/recipe_serving_conversion_out.dart';
 import 'package:gramtree_api/src/model/recipe_snapshot.dart';
+import 'package:gramtree_api/src/model/recipe_source.dart';
 import 'package:gramtree_api/src/model/recipe_step.dart';
 import 'package:gramtree_api/src/model/recipe_version_create.dart';
 import 'package:gramtree_api/src/model/recipe_version_history.dart';
@@ -209,6 +214,7 @@ import 'package:gramtree_api/src/model/text_attribute.dart';
 import 'package:gramtree_api/src/model/token_pair.dart';
 import 'package:gramtree_api/src/model/unrecorded_ingredient_item.dart';
 import 'package:gramtree_api/src/model/user_out.dart';
+import 'package:gramtree_api/src/model/validation_error.dart';
 import 'package:gramtree_api/src/model/value_source.dart';
 import 'package:gramtree_api/src/model/write_batch.dart';
 import 'package:gramtree_api/src/model/write_batch_response.dart';
@@ -475,6 +481,9 @@ ReturnType deserialize<ReturnType, BaseType>(
             value as Map<String, dynamic>,
           )
           as ReturnType;
+    case 'HTTPValidationError':
+      return HTTPValidationError.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
     case 'HealthChecks':
       return HealthChecks.fromJson(value as Map<String, dynamic>) as ReturnType;
     case 'HealthResponse':
@@ -482,6 +491,13 @@ ReturnType deserialize<ReturnType, BaseType>(
           as ReturnType;
     case 'IdentityOut':
       return IdentityOut.fromJson(value as Map<String, dynamic>) as ReturnType;
+    case 'ImportInput':
+      return ImportInput.fromJson(value as Map<String, dynamic>) as ReturnType;
+    case 'ImportOriginalOut':
+      return ImportOriginalOut.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'ImportOut':
+      return ImportOut.fromJson(value as Map<String, dynamic>) as ReturnType;
     case 'IngredientAttributes':
       return IngredientAttributes.fromJson(value as Map<String, dynamic>)
           as ReturnType;
@@ -743,6 +759,8 @@ ReturnType deserialize<ReturnType, BaseType>(
     case 'RecipeSnapshot':
       return RecipeSnapshot.fromJson(value as Map<String, dynamic>)
           as ReturnType;
+    case 'RecipeSource':
+      return RecipeSource.fromJson(value as Map<String, dynamic>) as ReturnType;
     case 'RecipeStep':
       return RecipeStep.fromJson(value as Map<String, dynamic>) as ReturnType;
     case 'RecipeVersionCreate':
@@ -847,6 +865,9 @@ ReturnType deserialize<ReturnType, BaseType>(
           as ReturnType;
     case 'UserOut':
       return UserOut.fromJson(value as Map<String, dynamic>) as ReturnType;
+    case 'ValidationError':
+      return ValidationError.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
     case 'ValueSource':
       return ValueSource.fromJson(value as Map<String, dynamic>) as ReturnType;
     case 'WriteBatch':
