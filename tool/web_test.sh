@@ -24,7 +24,7 @@ else
   mapfile -t targets < <(find integration_test -name '*_test.dart' | sort)
 fi
 
-"$CHROMEDRIVER" --port="$PORT" >"${CHROMEDRIVER_LOG:-/tmp/chromedriver.log}" 2>&1 &
+"$CHROMEDRIVER" --port="$PORT" >"${CHROMEDRIVER_LOG:-${TMPDIR:-/tmp}/chromedriver.log}" 2>&1 &
 driver_pid=$!
 fixtures_created=0
 fixture_file="${GRAMTREE_E2E_ASSISTANCE_DEFINES:-${TMPDIR:-/tmp}/gramtree_e2e_server_${GRAMTREE_E2E_PORT:-8000}.assistance.json}"
@@ -36,7 +36,7 @@ if [[ " ${targets[*]} " == *api_reachability_test.dart* ]]; then
   if command -v cygpath >/dev/null 2>&1; then
     reachability_fixture="$(cygpath -m "$reachability_fixture")"
   fi
-  python3 "$reachability_fixture" --port="${REACHABILITY_TEST_PORT:-8766}" >/tmp/reachability-test.log 2>&1 &
+  python3 "$reachability_fixture" --port="${REACHABILITY_TEST_PORT:-8766}" >"${TMPDIR:-/tmp}/reachability-test.log" 2>&1 &
   reachability_pid=$!
 fi
 cleanup() {

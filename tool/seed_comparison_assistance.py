@@ -55,7 +55,7 @@ def main() -> None:
                 nonce,
                 hashlib.sha256(request.content).hexdigest(),
             )
-            message = "\n".join(quote(field, safe="/-_.~=&%") for field in fields).encode()
+            message = "\n".join(quote(field, safe="/-_.~=&") for field in fields).encode()
             request.headers["X-Request-Timestamp"] = timestamp
             request.headers["X-Request-Nonce"] = nonce
             request.headers["X-Request-Signature"] = hmac.new(
