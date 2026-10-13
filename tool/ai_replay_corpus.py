@@ -9,6 +9,8 @@ import hashlib
 import json
 from copy import deepcopy
 from pathlib import Path
+from tempfile import TemporaryDirectory
+from typing import Any
 
 ROOT = Path(__file__).resolve().parent.parent
 TEXT = "想做一道小朋友能吃的、不辣的宫保鸡丁"
@@ -17,9 +19,10 @@ TEXT = "想做一道小朋友能吃的、不辣的宫保鸡丁"
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--out", type=Path, required=True)
+    parser.add_argument("--import-substitution-library", action="store_true")
     args = parser.parse_args()
     corpus = json.loads((ROOT / "server/tests/fixtures/ai/recipe_corpus.json").read_text("utf-8"))
-    records = [("intent", {"text": TEXT}, corpus["intent"])]
+    records: list[tuple[str, dict[str, Any], Any]] = [("intent", {"text": TEXT}, corpus["intent"])]
     # A fresh account has no profile until the first profile-dependent request,
     # while a later journey may have materialized the default profile. Both are
     # the same synthetic user context and must resolve to the same draft.
@@ -164,12 +167,16 @@ def main() -> None:
     from gramtree.ai.service import _mark_sources
     from gramtree.recipes.service import _operations, _validate_snapshot
 
-    def editor_snapshot(snapshot: RecipeSnapshot) -> RecipeSnapshot:
+    def editor_snapshot(
+        snapshot: RecipeSnapshot, library_session: Session | None = None
+    ) -> RecipeSnapshot:
         # dart-dio omits null sources but sends functional=False. Derive the
         # saved provenance through the same validation as the public save path.
         incoming = snapshot.model_dump(mode="json", exclude_none=True)
         incoming["difficulty"] = ""
-        # Synthetic ingredients have no library IDs, so no database is needed.
+        if library_session is not None:
+            return _validate_snapshot(library_session, RecipeSnapshot.model_validate(incoming))
+        # Original synthetic ingredients have no library IDs, so no database is needed.
         with Session() as session:
             return _validate_snapshot(session, RecipeSnapshot.model_validate(incoming))
 
@@ -220,9 +227,10 @@ def main() -> None:
     from gramtree.ai.explanations import facts
     from gramtree.ai.modification_schemas import (
         ModificationDecision,
+        ModificationIntent,
         ModificationOperation,
     )
-    from gramtree.ai.modifications import _apply
+    from gramtree.ai.modifications import _apply, _substitution_facts, _taste_expected_quantities
 
     for modification_snapshot in modification_snapshots:
         step = next(s for s in modification_snapshot.steps if s.id == "cook")
@@ -368,6 +376,386 @@ def main() -> None:
                     {"operations": operations},
                 )
             )
+    consequential = json.loads(
+        (ROOT / "server/tests/fixtures/ai/taste_substitution_modification_corpus.json").read_text(
+            "utf-8"
+        )
+    )
+    taste, substitution = consequential["taste"], consequential["substitution"]
+    zero_flavor = dict.fromkeys(("salty", "sweet", "sour", "spicy", "umami", "numbing", "oily"), 0)
+
+    def consequential_draft(scenario: dict) -> GeneratedDraft:
+        raw = deepcopy(corpus["valid"])
+        snapshot = raw["recipe"]["snapshot"]
+        chicken = snapshot["ingredients"][0]
+        chicken.update(flavor_contribution=zero_flavor.copy(), functional=False)
+        snapshot["ingredients"] = [chicken]
+        if scenario is taste:
+            snapshot["ingredients"].extend(
+                {
+                    **deepcopy(item),
+                    "flavor_contribution": {**zero_flavor, **item["flavor_contribution"]},
+                    "functional": False,
+                    "group": "调味",
+                    "scaling_mode": "proportional",
+                }
+                for item in taste["ingredients"]
+            )
+            snapshot["steps"][1]["instruction"] = "中火炒鸡肉至中心温度达到74°C，加入调料收汁"
+        else:
+            snapshot["ingredients"].append(
+                {
+                    "id": "wine",
+                    "display_name": "料酒",
+                    "quantity": substitution["original_quantity"],
+                    "unit": "ml",
+                    "group": "调味",
+                    "functional": False,
+                    "flavor_contribution": {**zero_flavor, "umami": 2},
+                    "preparation": "出锅前加入",
+                    "replacement": {
+                        "ingredient_id": substitution["white_wine_id"],
+                        "display_name": substitution["white_wine_name"],
+                        "ratio": substitution["ratio"],
+                        "note": "本菜谱作者登记1:2换算，适用于出锅前去腥",
+                    },
+                }
+            )
+            snapshot["steps"][1]["instruction"] = "中火炒鸡肉至中心温度达到74°C，加入料酒翻炒收汁"
+        snapshot["steps"][1]["ingredient_ids"] = [i["id"] for i in snapshot["ingredients"]]
+        return GeneratedDraft.model_validate(raw)
+
+    def consequential_operation(snapshot: RecipeSnapshot, change: dict, scenario: dict) -> dict:
+        collection = "steps" if change["type"].startswith("change_step") else "ingredients"
+        node = next(item for item in getattr(snapshot, collection) if item.id == change["id"])
+        before = node.model_dump(mode="json")
+        if change["type"] != "remove_ingredient":
+            before = before[change["field"]]
+        return {
+            "before": before,
+            "scope": [collection],
+            "intent": "降低咸度" if scenario is taste else "缺料替代",
+            "reason": scenario["reason"],
+            "risk": scenario["risk"],
+            "confidence": 0.85,
+            "depends_on": [],
+            **change,
+        }
+
+    # These cases contain real synthetic library IDs. Derive provenance and unit
+    # conversions from the imported acceptance library rather than inventing them.
+    # The caller must migrate and import fixtures before materializing this corpus.
+    from gramtree.ai.schemas import RecipeIntent
+    from gramtree.ai.service import _validate_draft
+    from gramtree.db import make_engine
+    from gramtree.ingredients import matching
+    from gramtree.settings import Settings
+
+    if args.import_substitution_library:
+        from gramtree.cli import main as cli
+
+        checked = {"source": "人工整理", "status": "verified"}
+        # Imports are complete releases, not patches: retain the base acceptance IDs.
+        library = json.loads((ROOT / "server/tests/data/ingredients/test.json").read_text("utf-8"))
+        for key, name, flavor, allergens in (
+            ("wine_id", "料酒", {**zero_flavor, "umami": 1}, []),
+            ("white_wine_id", substitution["white_wine_name"], {**zero_flavor, "sour": 1}, []),
+            (
+                "peanut_id",
+                substitution["peanut_name"],
+                {**zero_flavor, "salty": 1, "oily": 2},
+                ["花生"],
+            ),
+            ("unknown_id", "未完善资料调味汁", None, None),
+        ):
+            entry = {
+                "id": substitution[key],
+                "standard_name": name,
+                "aliases": [],
+                "pinyin": "ceshi",
+                "pinyin_initials": "c",
+                "category": "调料",
+            }
+            if flavor is not None:
+                entry["attributes"] = {
+                    "base_unit": {"value": "毫升", **checked},
+                    "flavor": {"value": flavor, **checked},
+                    "allergens": {"value": allergens, **checked},
+                    "functional": {"value": False, **checked},
+                }
+            library.append(entry)
+        with TemporaryDirectory(prefix="gramtree-substitution-") as temporary:
+            directory = Path(temporary)
+            (directory / "manifest.json").write_text(
+                json.dumps({"version": "172.1.0", "changelog": "合成浏览器替代用例"}),
+                encoding="utf-8",
+            )
+            (directory / "data.json").write_text(
+                json.dumps(library, ensure_ascii=False), encoding="utf-8"
+            )
+            if cli(["ingredients", "import", str(directory)]) != 0:
+                raise RuntimeError("Synthetic substitution library import failed")
+
+    engine = make_engine(Settings().database_url)
+    try:
+        with Session(engine) as library_session:
+            # The substitution scenario registers replacement ingredients that only
+            # exist after the synthetic library import, and its snapshots cannot be
+            # validated without them. Callers that skip the import (plain unit tests
+            # of the replay tooling) therefore get the taste scenario only, instead
+            # of a corpus that references ingredients their database does not have.
+            scenarios = (taste, substitution) if args.import_substitution_library else (taste,)
+            for scenario in scenarios:
+                generated = consequential_draft(scenario)
+                records.append(("intent", {"text": scenario["generation_text"]}, corpus["intent"]))
+                for item, match in zip(
+                    generated.recipe.snapshot.ingredients,
+                    matching.normalize(
+                        library_session,
+                        [item.display_name for item in generated.recipe.snapshot.ingredients],
+                    ),
+                    strict=True,
+                ):
+                    item.ingredient_id = (
+                        match.ingredient.id
+                        if match.confidence in ("exact", "alias") and match.ingredient
+                        else None
+                    )
+                _mark_sources(generated)
+                _validate_draft(
+                    library_session,
+                    generated,
+                    RecipeIntent.model_validate({**corpus["intent"], "servings": 2}),
+                )
+                for profile in profiles:
+                    records.append(
+                        (
+                            "generate",
+                            {
+                                "text": scenario["generation_text"],
+                                "intent": {**corpus["intent"], "servings": 2},
+                                "profile": profile,
+                                "family": None,
+                                "cookware_profile": None,
+                            },
+                            generated.model_dump(mode="json"),
+                        )
+                    )
+                first_save = normalize_sources(generated.recipe.snapshot)
+                form_save = normalize_sources(editor_snapshot(first_save, library_session))
+                for scenario_snapshot in (
+                    generated.recipe.snapshot,
+                    first_save,
+                    form_save,
+                    editor_snapshot(form_save, library_session),
+                ):
+                    if scenario is taste:
+                        records.append(("modify_intent", {"text": taste["text"]}, taste["intent"]))
+                        for percent, expected in taste["quantities"].items():
+                            intent = deepcopy(taste["intent"])
+                            intent["parameters"]["adjustment_percent"] = int(percent)
+                            amounts = _taste_expected_quantities(
+                                library_session,
+                                scenario_snapshot,
+                                ModificationIntent.model_validate(intent),
+                            )
+                            if amounts != expected:
+                                raise ValueError("Synthetic taste calculation differs from corpus")
+                            changes = [
+                                {
+                                    "operation_id": f"reduce-{item_id}",
+                                    "type": "change_quantity",
+                                    "id": item_id,
+                                    "field": "quantity",
+                                    "after": amount,
+                                }
+                                for item_id, amount in amounts.items()
+                            ] + deepcopy(taste["side_effects"])
+                            records.append(
+                                (
+                                    "modify",
+                                    {
+                                        "text": taste["text"],
+                                        "snapshot": scenario_snapshot.model_dump(mode="json"),
+                                        "intent": intent,
+                                        "taste_quantities": amounts,
+                                    },
+                                    {
+                                        "operations": [
+                                            consequential_operation(
+                                                scenario_snapshot, change, taste
+                                            )
+                                            for change in changes
+                                        ]
+                                    },
+                                )
+                            )
+                    else:
+                        substitution_facts = _substitution_facts(
+                            library_session,
+                            next(
+                                item for item in scenario_snapshot.ingredients if item.id == "wine"
+                            ),
+                        )
+                        for text, target, flavor in (
+                            (substitution["text"], "white_wine", {**zero_flavor, "sour": 1}),
+                            (
+                                substitution["peanut_text"],
+                                "peanut",
+                                {**zero_flavor, "salty": 1, "oily": 2},
+                            ),
+                            (substitution["omit_text"], None, None),
+                        ):
+                            records.append(
+                                ("modify_intent", {"text": text}, substitution["intent"])
+                            )
+                            if target is None:
+                                step = next(s for s in scenario_snapshot.steps if s.id == "cook")
+                                changes = [
+                                    {
+                                        "operation_id": "clean-wine-reference",
+                                        "type": "change_step_ingredients",
+                                        "id": "cook",
+                                        "field": "ingredient_ids",
+                                        "after": [i for i in step.ingredient_ids if i != "wine"],
+                                    },
+                                    {
+                                        "operation_id": "omit-wine-instruction",
+                                        "type": "change_step_field",
+                                        "id": "cook",
+                                        "field": "instruction",
+                                        "after": "保持原火候翻炒收汁；省略料酒会减弱去腥和香气",
+                                    },
+                                    {
+                                        "operation_id": "remove-wine",
+                                        "type": "remove_ingredient",
+                                        "id": "wine",
+                                        "field": "ingredients",
+                                        "after": None,
+                                        "depends_on": [
+                                            "clean-wine-reference",
+                                            "omit-wine-instruction",
+                                        ],
+                                    },
+                                ]
+                                reasons = {
+                                    **substitution,
+                                    "reason": substitution["omit_reason"],
+                                    "risk": substitution["omit_risk"],
+                                }
+                            else:
+                                target_id = substitution[f"{target}_id"]
+                                target_name = substitution[f"{target}_name"]
+                                changes = [
+                                    {
+                                        "operation_id": operation_id,
+                                        "type": kind,
+                                        "id": "wine",
+                                        "field": field,
+                                        "after": after,
+                                        "depends_on": []
+                                        if operation_id == "replace-wine"
+                                        else ["replace-wine"],
+                                    }
+                                    for operation_id, kind, field, after in (
+                                        (
+                                            "replace-wine",
+                                            "replace_ingredient",
+                                            "ingredient_id",
+                                            target_id,
+                                        ),
+                                        (
+                                            "name-wine",
+                                            "change_display_name",
+                                            "display_name",
+                                            target_name,
+                                        ),
+                                        (
+                                            "flavor-wine",
+                                            "change_flavor_contribution",
+                                            "flavor_contribution",
+                                            flavor,
+                                        ),
+                                        (
+                                            "relation-wine",
+                                            "change_replacement",
+                                            "replacement",
+                                            {
+                                                "ingredient_id": target_id,
+                                                "display_name": target_name,
+                                                "ratio": substitution["ratio"],
+                                                "note": (
+                                                    "由料酒10ml换算而来；"
+                                                    "本次替代比1:2，去腥和风味不等效"
+                                                ),
+                                            },
+                                        ),
+                                        (
+                                            "quantity-wine",
+                                            "change_quantity",
+                                            "quantity",
+                                            substitution["replacement_quantity"],
+                                        ),
+                                    )
+                                ]
+                                changes.extend(
+                                    {
+                                        "operation_id": f"replace-wine-instruction-{step.id}",
+                                        "type": "change_step_field",
+                                        "id": step.id,
+                                        "field": "instruction",
+                                        "after": step.instruction.replace("料酒", target_name),
+                                        "depends_on": ["replace-wine"],
+                                    }
+                                    for step in scenario_snapshot.steps
+                                    if "wine" in step.ingredient_ids and "料酒" in step.instruction
+                                )
+                                reasons = substitution
+                            records.append(
+                                (
+                                    "modify",
+                                    {
+                                        "text": text,
+                                        "snapshot": scenario_snapshot.model_dump(mode="json"),
+                                        "intent": substitution["intent"],
+                                        "substitution_facts": substitution_facts,
+                                    },
+                                    {
+                                        "operations": [
+                                            consequential_operation(
+                                                scenario_snapshot, change, reasons
+                                            )
+                                            for change in changes
+                                        ]
+                                    },
+                                )
+                            )
+                search_text = " ".join(
+                    [generated.recipe.dish_name]
+                    + [i.display_name for i in generated.recipe.snapshot.ingredients]
+                    + [s.action or s.instruction for s in generated.recipe.snapshot.steps]
+                )
+                records.append(("embedding", {"text": search_text}, corpus["embedding"]))
+    finally:
+        engine.dispose()
+    # Modification requests omit context when all authorized values are None.
+    # Saved-editor journeys have materialized the synthetic default profile;
+    # register its minimized payload too, without changing any legacy key or
+    # including sensitive data, owner IDs, or dependency receipts.
+    for capability, payload, output in list(records):
+        if capability not in ("modify_intent", "modify"):
+            continue
+        for profile in profiles:
+            authorized_payload = {
+                "profile": profile,
+                "family": None,
+                "cookware_profile": None,
+            }
+            model_context = {
+                key: value for key, value in authorized_payload.items() if value is not None
+            }
+            if model_context:
+                records.append((capability, {**payload, "context": model_context}, output))
     args.out.mkdir(parents=True, exist_ok=True)
     for capability, payload, output in records:
         canonical = json.dumps(

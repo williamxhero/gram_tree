@@ -22,6 +22,8 @@ class CookingRecordCreate {
 
     required this.clientId,
 
+    this.coDinerIds,
+
     this.dishName,
 
     this.meal,
@@ -46,6 +48,9 @@ class CookingRecordCreate {
 
   @JsonKey(name: r'client_id', required: true, includeIfNull: false)
   final String clientId;
+
+  @JsonKey(name: r'co_diner_ids', required: false, includeIfNull: false)
+  final List<String>? coDinerIds;
 
   @JsonKey(name: r'dish_name', required: false, includeIfNull: false)
   final String? dishName;
@@ -80,6 +85,7 @@ class CookingRecordCreate {
       other is CookingRecordCreate &&
           other.adjustments == adjustments &&
           other.clientId == clientId &&
+          other.coDinerIds == coDinerIds &&
           other.dishName == dishName &&
           other.meal == meal &&
           other.occurredAt == occurredAt &&
@@ -94,6 +100,7 @@ class CookingRecordCreate {
   int get hashCode =>
       adjustments.hashCode +
       clientId.hashCode +
+      coDinerIds.hashCode +
       (dishName == null ? 0 : dishName.hashCode) +
       (meal == null ? 0 : meal.hashCode) +
       (occurredAt == null ? 0 : occurredAt.hashCode) +

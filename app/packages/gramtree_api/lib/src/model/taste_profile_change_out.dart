@@ -28,9 +28,15 @@ class TasteProfileChangeOut {
 
     required this.oldValue,
 
+    required this.origin,
+
     required this.reason,
 
+    this.revertedAt,
+
     required this.source_,
+
+    this.sourceRecordIds,
 
     required this.status,
 
@@ -52,11 +58,20 @@ class TasteProfileChangeOut {
   @JsonKey(name: r'old_value', required: true, includeIfNull: false)
   final Object oldValue;
 
+  @JsonKey(name: r'origin', required: true, includeIfNull: false)
+  final TasteProfileChangeOutOriginEnum origin;
+
   @JsonKey(name: r'reason', required: true, includeIfNull: false)
   final String reason;
 
+  @JsonKey(name: r'reverted_at', required: false, includeIfNull: false)
+  final String? revertedAt;
+
   @JsonKey(name: r'source', required: true, includeIfNull: false)
   final TasteProfileChangeOutSource_Enum source_;
+
+  @JsonKey(name: r'source_record_ids', required: false, includeIfNull: false)
+  final List<String>? sourceRecordIds;
 
   @JsonKey(name: r'status', required: true, includeIfNull: false)
   final TasteProfileChangeOutStatusEnum status;
@@ -73,8 +88,11 @@ class TasteProfileChangeOut {
           other.id == id &&
           other.newValue == newValue &&
           other.oldValue == oldValue &&
+          other.origin == origin &&
           other.reason == reason &&
+          other.revertedAt == revertedAt &&
           other.source_ == source_ &&
+          other.sourceRecordIds == sourceRecordIds &&
           other.status == status &&
           other.version == version;
 
@@ -85,8 +103,11 @@ class TasteProfileChangeOut {
       id.hashCode +
       newValue.hashCode +
       oldValue.hashCode +
+      origin.hashCode +
       reason.hashCode +
+      (revertedAt == null ? 0 : revertedAt.hashCode) +
       source_.hashCode +
+      sourceRecordIds.hashCode +
       status.hashCode +
       version.hashCode;
 
@@ -101,9 +122,27 @@ class TasteProfileChangeOut {
   }
 }
 
+enum TasteProfileChangeOutOriginEnum {
+  @JsonValue(r'manual')
+  manual(r'manual'),
+  @JsonValue(r'auto')
+  auto(r'auto'),
+  @JsonValue(r'explicit_save')
+  explicitSave(r'explicit_save');
+
+  const TasteProfileChangeOutOriginEnum(this.value);
+
+  final String value;
+
+  @override
+  String toString() => value;
+}
+
 enum TasteProfileChangeOutSource_Enum {
   @JsonValue(r'manual')
-  manual(r'manual');
+  manual(r'manual'),
+  @JsonValue(r'learning')
+  learning(r'learning');
 
   const TasteProfileChangeOutSource_Enum(this.value);
 
@@ -117,7 +156,11 @@ enum TasteProfileChangeOutStatusEnum {
   @JsonValue(r'active')
   active(r'active'),
   @JsonValue(r'reverted')
-  reverted(r'reverted');
+  reverted(r'reverted'),
+  @JsonValue(r'pending')
+  pending(r'pending'),
+  @JsonValue(r'confirmed')
+  confirmed(r'confirmed');
 
   const TasteProfileChangeOutStatusEnum(this.value);
 

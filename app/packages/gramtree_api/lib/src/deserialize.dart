@@ -9,6 +9,10 @@ import 'package:gramtree_api/src/model/analytics_upload_request.dart';
 import 'package:gramtree_api/src/model/apple_login_request.dart';
 import 'package:gramtree_api/src/model/apple_reauth_request.dart';
 import 'package:gramtree_api/src/model/assisted_step_pair.dart';
+import 'package:gramtree_api/src/model/attribution_answer.dart';
+import 'package:gramtree_api/src/model/attribution_out.dart';
+import 'package:gramtree_api/src/model/attribution_state_out.dart';
+import 'package:gramtree_api/src/model/automation_out.dart';
 import 'package:gramtree_api/src/model/batch_advice.dart';
 import 'package:gramtree_api/src/model/batch_advice_input.dart';
 import 'package:gramtree_api/src/model/batch_request.dart';
@@ -68,6 +72,7 @@ import 'package:gramtree_api/src/model/family_avoidance_out.dart';
 import 'package:gramtree_api/src/model/family_member_out.dart';
 import 'package:gramtree_api/src/model/family_member_write.dart';
 import 'package:gramtree_api/src/model/family_members_out.dart';
+import 'package:gramtree_api/src/model/field_lock_write.dart';
 import 'package:gramtree_api/src/model/flavor_attribute.dart';
 import 'package:gramtree_api/src/model/flavor_profile.dart';
 import 'package:gramtree_api/src/model/generate_input.dart';
@@ -87,6 +92,7 @@ import 'package:gramtree_api/src/model/ingredient_comparison_row.dart';
 import 'package:gramtree_api/src/model/ingredient_detail.dart';
 import 'package:gramtree_api/src/model/ingredient_preference.dart';
 import 'package:gramtree_api/src/model/ingredient_preference_out.dart';
+import 'package:gramtree_api/src/model/learning_run_out.dart';
 import 'package:gramtree_api/src/model/local_cuisine_out.dart';
 import 'package:gramtree_api/src/model/measure_display_out.dart';
 import 'package:gramtree_api/src/model/measure_display_request.dart';
@@ -203,6 +209,7 @@ import 'package:gramtree_api/src/model/step_comparison_change.dart';
 import 'package:gramtree_api/src/model/step_comparison_row.dart';
 import 'package:gramtree_api/src/model/storage_advice.dart';
 import 'package:gramtree_api/src/model/storage_attribute.dart';
+import 'package:gramtree_api/src/model/taste_change_status_out.dart';
 import 'package:gramtree_api/src/model/taste_flavor_out.dart';
 import 'package:gramtree_api/src/model/taste_level.dart';
 import 'package:gramtree_api/src/model/taste_profile_change_out.dart';
@@ -275,6 +282,18 @@ ReturnType deserialize<ReturnType, BaseType>(
       return AssistedStepPair.fromJson(value as Map<String, dynamic>)
           as ReturnType;
     case 'AttributeStatus':
+    case 'AttributionAnswer':
+      return AttributionAnswer.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'AttributionOut':
+      return AttributionOut.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'AttributionStateOut':
+      return AttributionStateOut.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'AutomationOut':
+      return AutomationOut.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
     case 'BatchAdvice':
       return BatchAdvice.fromJson(value as Map<String, dynamic>) as ReturnType;
     case 'BatchAdviceInput':
@@ -442,6 +461,9 @@ ReturnType deserialize<ReturnType, BaseType>(
     case 'FamilyMembersOut':
       return FamilyMembersOut.fromJson(value as Map<String, dynamic>)
           as ReturnType;
+    case 'FieldLockWrite':
+      return FieldLockWrite.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
     case 'FlavorAttribute':
       return FlavorAttribute.fromJson(value as Map<String, dynamic>)
           as ReturnType;
@@ -496,6 +518,9 @@ ReturnType deserialize<ReturnType, BaseType>(
           as ReturnType;
     case 'IngredientPreferenceOut':
       return IngredientPreferenceOut.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'LearningRunOut':
+      return LearningRunOut.fromJson(value as Map<String, dynamic>)
           as ReturnType;
     case 'LocalCuisineOut':
       return LocalCuisineOut.fromJson(value as Map<String, dynamic>)
@@ -834,6 +859,9 @@ ReturnType deserialize<ReturnType, BaseType>(
           as ReturnType;
     case 'StorageAttribute':
       return StorageAttribute.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'TasteChangeStatusOut':
+      return TasteChangeStatusOut.fromJson(value as Map<String, dynamic>)
           as ReturnType;
     case 'TasteFlavorOut':
       return TasteFlavorOut.fromJson(value as Map<String, dynamic>)

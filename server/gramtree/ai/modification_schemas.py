@@ -6,7 +6,12 @@ from pydantic import BaseModel, ConfigDict, Field, JsonValue, model_validator
 
 from gramtree.ai.schemas import AIStatus
 from gramtree.core.ids import IdV4
-from gramtree.recipes.schemas import RecipeReproducibilityResult, RecipeSafetyResult, RecipeSnapshot
+from gramtree.recipes.schemas import (
+    RecipePersonalSafety,
+    RecipeReproducibilityResult,
+    RecipeSafetyResult,
+    RecipeSnapshot,
+)
 
 
 class ModificationInput(BaseModel):
@@ -14,6 +19,7 @@ class ModificationInput(BaseModel):
     text: str = Field(min_length=1, max_length=1000, pattern=r"\S")
     request_id: IdV4 | None = None
     retry_failed: bool = False
+    adjustment_percent: Literal[20, 25, 30] | None = None
     recipe_id: IdV4 | None = None
     base_version_id: IdV4 | None = None
     generation_request_id: IdV4 | None = None
@@ -54,6 +60,7 @@ class ModificationOperation(BaseModel):
         "change_quantity",
         "change_group_or_optional",
         "change_functional",
+        "change_flavor_contribution",
         "change_scaling",
         "change_replacement",
         "add_ingredient",
@@ -135,6 +142,7 @@ class ModificationPreview(BaseModel):
     decisions: list[ModificationDecisionOut] = Field(default_factory=list)
     snapshot: RecipeSnapshot
     safety: RecipeSafetyResult
+    personal_safety: RecipePersonalSafety
     reproducibility: RecipeReproducibilityResult
     status: AIStatus
     warnings: list[str] = Field(default_factory=list)

@@ -16,6 +16,7 @@ import '../../util/ids.dart';
 import 'cooking_voice.dart';
 import 'press_hold_voice_question.dart';
 import '../records/records_repository.dart';
+import '../../features/me/family_members_data.dart';
 
 const _cookingStoreKey = 'cooking_sessions:v1';
 
@@ -635,7 +636,9 @@ class _CookingPageState extends ConsumerState<CookingPage>
       finishedAt: DateTime.now().toUtc(),
     );
     await _save(finished, event: 'completed');
-    await ref.read(recordsRepositoryProvider).saveCompletedSession(finished);
+    await ref
+        .read(recordsRepositoryProvider)
+        .saveCompletedSession(finished, coDinerIds: await _selectedCoDiners());
     for (final timer in session.timers) {
       if (timer.status == 'running' || timer.status == 'paused') {
         await ref
@@ -643,6 +646,53 @@ class _CookingPageState extends ConsumerState<CookingPage>
             .cancelTimerReminder(timer.id);
       }
     }
+  }
+
+  Future<List<String>> _selectedCoDiners() async {
+    FamilyMembersOut? members;
+    try {
+      members = await ref.read(familyMembersProvider.future);
+    } catch (_) {
+      return const [];
+    }
+    if (!mounted || members == null || members.items.isEmpty) return const [];
+    final selected = <String>[];
+    await showDialog<void>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('同吃的人（可选）'),
+        content: StatefulBuilder(
+          builder: (context, setState) => Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              for (final member in members!.items)
+                CheckboxListTile(
+                  value: selected.contains(member.id),
+                  title: Text(member.nickname),
+                  onChanged: (value) => setState(() {
+                    if (value == true) {
+                      selected.add(member.id);
+                    } else {
+                      selected.remove(member.id);
+                    }
+                  }),
+                ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('不选择'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('保存记录'),
+          ),
+        ],
+      ),
+    );
+    return selected;
   }
 
   Future<void> _skipCurrent() async {

@@ -15,6 +15,7 @@ from gramtree.events.sync_contract import (
     WriteResourceResult,
     WriteTypeSpec,
 )
+from gramtree.records import context as record_context
 from gramtree.records.models import CookingRecord
 from gramtree.records.schemas import CookingRecordCreate
 from gramtree.records.service import record_created_event
@@ -45,6 +46,10 @@ def _authorize(session: Session, owner: uuid.UUID, payload: BaseModel) -> None:
             raise WriteFailure("reference_forbidden")
     if parsed.source == "cooking_session" and parsed.recipe_version_id is None:
         raise WriteFailure("reference_required")
+    try:
+        record_context.build(session, owner, parsed.co_diner_ids, session.info["settings"])
+    except Exception as exc:
+        raise WriteFailure("invalid_co_diners") from exc
 
 
 def _resolve(
@@ -65,6 +70,9 @@ def _apply(
     now,
 ) -> WriteApplication:
     parsed = CookingRecordWritePayload.model_validate(payload).record
+    taste_summary, co_diner_ids = record_context.build(
+        session, owner, parsed.co_diner_ids, session.info["settings"]
+    )
     existing = session.scalar(
         select(CookingRecord).where(
             CookingRecord.owner_id == owner,
@@ -89,6 +97,8 @@ def _apply(
             snapshot=parsed.snapshot,
             adjustments=parsed.adjustments,
             source_context=parsed.source_context,
+            taste_summary=taste_summary,
+            co_diner_ids=[str(item) for item in co_diner_ids],
         )
         session.add(row)
         session.flush()
