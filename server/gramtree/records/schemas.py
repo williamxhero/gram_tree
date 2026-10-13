@@ -47,7 +47,7 @@ class CookingRecordOut(BaseModel):
 
 class CookingRecordRevisionCreate(BaseModel):
     revision_id: IdV4
-    field: Literal["rating", "feedback", "tags"]
+    field: Literal["rating", "feedback", "tags", "adjustments"]
     value: dict[str, Any]
     note: str = ""
 

@@ -74,7 +74,9 @@ enum CookingRecordRevisionCreateFieldEnum {
   @JsonValue(r'feedback')
   feedback(r'feedback'),
   @JsonValue(r'tags')
-  tags(r'tags');
+  tags(r'tags'),
+  @JsonValue(r'adjustments')
+  adjustments(r'adjustments');
 
   const CookingRecordRevisionCreateFieldEnum(this.value);
 

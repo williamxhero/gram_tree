@@ -29,6 +29,10 @@ def make_celery() -> Celery:
                 "schedule": 600.0,
                 "args": ("beat",),
             },
+            "taste-learning": {
+                "task": "gramtree.tasks.jobs.run_taste_learning",
+                "schedule": 60.0,
+            },
             # 每天 UTC 19:00（北京时间凌晨 3 点）备份数据库
             "backup-database": {
                 "task": "gramtree.tasks.jobs.backup_database",

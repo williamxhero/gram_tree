@@ -76,6 +76,8 @@ class FieldChange:
     old_value: dict[str, Any]
     new_value: dict[str, Any]
     id: uuid.UUID | None = None
+    attribution_record_id: uuid.UUID | None = None
+    source_record_ids: list[str] | None = None
 
 
 def record_changes(
@@ -85,6 +87,10 @@ def record_changes(
     *,
     reason: str = "你手动修改",
     source: str = "manual",
+    origin: str = "manual",
+    status: str = "active",
+    source_record_ids: list[str] | None = None,
+    apply_value: bool = True,
 ) -> list[TasteProfileChange]:
     actual = [change for change in changes if change.old_value != change.new_value]
     if not actual:
@@ -102,6 +108,13 @@ def record_changes(
             new_value=change.new_value,
             reason=reason,
             source=source,
+            origin=origin,
+            status=status,
+            source_record_ids=list(
+                change.source_record_ids
+                if change.source_record_ids is not None
+                else source_record_ids or []
+            ),
             created_at=profile.updated_at,
         )
         for change in actual
@@ -111,6 +124,13 @@ def record_changes(
     for row in rows:
         record_taste_profile_changed(session, profile.owner_id, row.id, now=row.created_at)
     return rows
+
+
+def record_change_event(session: Session, profile: TasteProfile, row: TasteProfileChange) -> None:
+    """Append the revert/unlock fact with its own event ID (never reuse change ID)."""
+    record_taste_profile_changed(
+        session, profile.owner_id, new_id(), now=row.reverted_at or utcnow()
+    )
 
 
 def mutate_profile(

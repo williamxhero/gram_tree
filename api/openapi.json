@@ -402,6 +402,160 @@
         "title": "AttributeStatus",
         "type": "string"
       },
+      "AttributionAnswer": {
+        "additionalProperties": false,
+        "properties": {
+          "answer": {
+            "enum": [
+              "personal",
+              "recipe",
+              "unanswered"
+            ],
+            "title": "Answer",
+            "type": "string"
+          }
+        },
+        "required": [
+          "answer"
+        ],
+        "title": "AttributionAnswer",
+        "type": "object"
+      },
+      "AttributionOut": {
+        "properties": {
+          "answered": {
+            "title": "Answered",
+            "type": "boolean"
+          },
+          "asked": {
+            "title": "Asked",
+            "type": "boolean"
+          },
+          "decision_source": {
+            "enum": [
+              "rule",
+              "user",
+              "unanswered"
+            ],
+            "title": "Decision Source",
+            "type": "string"
+          },
+          "flavors": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "Flavors",
+            "type": "object"
+          },
+          "learning_eligibility": {
+            "enum": [
+              "strong",
+              "reduced",
+              "excluded"
+            ],
+            "title": "Learning Eligibility",
+            "type": "string"
+          },
+          "reason_code": {
+            "title": "Reason Code",
+            "type": "string"
+          },
+          "recipe_version_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Recipe Version Id"
+          },
+          "record_id": {
+            "title": "Record Id",
+            "type": "string"
+          },
+          "rules_version": {
+            "title": "Rules Version",
+            "type": "string"
+          },
+          "sample_size": {
+            "title": "Sample Size",
+            "type": "integer"
+          },
+          "updated_at": {
+            "title": "Updated At",
+            "type": "string"
+          },
+          "verdict": {
+            "enum": [
+              "personal",
+              "recipe",
+              "pending"
+            ],
+            "title": "Verdict",
+            "type": "string"
+          }
+        },
+        "required": [
+          "record_id",
+          "verdict",
+          "decision_source",
+          "reason_code",
+          "rules_version",
+          "sample_size",
+          "flavors",
+          "learning_eligibility",
+          "asked",
+          "answered",
+          "updated_at"
+        ],
+        "title": "AttributionOut",
+        "type": "object"
+      },
+      "AttributionStateOut": {
+        "properties": {
+          "attribution": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AttributionOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "reason_text": {
+            "title": "Reason Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "attribution",
+          "reason_text"
+        ],
+        "title": "AttributionStateOut",
+        "type": "object"
+      },
+      "AutomationOut": {
+        "description": "Capability switch consumed by the app and by sibling tickets.",
+        "properties": {
+          "automatic_learning": {
+            "title": "Automatic Learning",
+            "type": "boolean"
+          },
+          "save_to_taste": {
+            "title": "Save To Taste",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "automatic_learning",
+          "save_to_taste"
+        ],
+        "title": "AutomationOut",
+        "type": "object"
+      },
       "BatchAdvice": {
         "additionalProperties": false,
         "properties": {
@@ -1779,7 +1933,8 @@
             "enum": [
               "rating",
               "feedback",
-              "tags"
+              "tags",
+              "adjustments"
             ],
             "title": "Field",
             "type": "string"
@@ -2771,6 +2926,27 @@
         "title": "FamilyMembersOut",
         "type": "object"
       },
+      "FieldLockWrite": {
+        "additionalProperties": false,
+        "properties": {
+          "field": {
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Field",
+            "type": "string"
+          },
+          "locked": {
+            "title": "Locked",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "field",
+          "locked"
+        ],
+        "title": "FieldLockWrite",
+        "type": "object"
+      },
       "FlavorAttribute": {
         "additionalProperties": false,
         "properties": {
@@ -3117,6 +3293,19 @@
         "title": "GradedIngredientComparisonRow",
         "type": "object"
       },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "title": "Detail",
+            "type": "array"
+          }
+        },
+        "title": "HTTPValidationError",
+        "type": "object"
+      },
       "HealthChecks": {
         "properties": {
           "api": {
@@ -3207,6 +3396,152 @@
           "created_at"
         ],
         "title": "IdentityOut",
+        "type": "object"
+      },
+      "ImportInput": {
+        "additionalProperties": false,
+        "properties": {
+          "images_base64": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 9,
+            "title": "Images Base64",
+            "type": "array"
+          },
+          "source_note": {
+            "anyOf": [
+              {
+                "maxLength": 500,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Note"
+          },
+          "text": {
+            "anyOf": [
+              {
+                "maxLength": 20000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Text"
+          },
+          "url": {
+            "anyOf": [
+              {
+                "maxLength": 2048,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Url"
+          }
+        },
+        "title": "ImportInput",
+        "type": "object"
+      },
+      "ImportOriginalOut": {
+        "properties": {
+          "original_text": {
+            "title": "Original Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "original_text"
+        ],
+        "title": "ImportOriginalOut",
+        "type": "object"
+      },
+      "ImportOut": {
+        "properties": {
+          "failed_images": {
+            "items": {
+              "type": "integer"
+            },
+            "title": "Failed Images",
+            "type": "array"
+          },
+          "field_states": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "title": "Field States",
+            "type": "object"
+          },
+          "import_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Import Id"
+          },
+          "next_step": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Step"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          },
+          "recipe": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RecipeDetail"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "reproducibility": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reproducibility"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status"
+        ],
+        "title": "ImportOut",
         "type": "object"
       },
       "IngredientAttributes": {
@@ -3554,6 +3889,35 @@
         "type": "object"
       },
       "JsonValue": {},
+      "LearningRunOut": {
+        "properties": {
+          "applied_changes": {
+            "items": {
+              "$ref": "#/components/schemas/TasteProfileChangeOut"
+            },
+            "title": "Applied Changes",
+            "type": "array"
+          },
+          "pending_suggestions": {
+            "items": {
+              "$ref": "#/components/schemas/TasteProfileChangeOut"
+            },
+            "title": "Pending Suggestions",
+            "type": "array"
+          },
+          "signals_considered": {
+            "title": "Signals Considered",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "applied_changes",
+          "pending_suggestions",
+          "signals_considered"
+        ],
+        "title": "LearningRunOut",
+        "type": "object"
+      },
       "LocalCuisineOut": {
         "properties": {
           "adjustments": {
@@ -7702,6 +8066,16 @@
               }
             ]
           },
+          "source": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RecipeSource"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "steps": {
             "items": {
               "$ref": "#/components/schemas/RecipeStep"
@@ -7740,6 +8114,49 @@
           "servings"
         ],
         "title": "RecipeSnapshot",
+        "type": "object"
+      },
+      "RecipeSource": {
+        "additionalProperties": false,
+        "properties": {
+          "kind": {
+            "const": "imported",
+            "default": "imported",
+            "title": "Kind",
+            "type": "string"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "maxLength": 500,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "platform": {
+            "default": "unknown",
+            "maxLength": 255,
+            "title": "Platform",
+            "type": "string"
+          },
+          "url": {
+            "anyOf": [
+              {
+                "maxLength": 2048,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Url"
+          }
+        },
+        "title": "RecipeSource",
         "type": "object"
       },
       "RecipeStep": {
@@ -9133,6 +9550,25 @@
         "title": "StorageAttribute",
         "type": "object"
       },
+      "TasteChangeStatusOut": {
+        "description": "Revert-rate facts for SPEC-012 (auto changes only).",
+        "properties": {
+          "auto_changes": {
+            "title": "Auto Changes",
+            "type": "integer"
+          },
+          "auto_reverted": {
+            "title": "Auto Reverted",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "auto_changes",
+          "auto_reverted"
+        ],
+        "title": "TasteChangeStatusOut",
+        "type": "object"
+      },
       "TasteFlavorOut": {
         "properties": {
           "coefficient": {
@@ -9216,19 +9652,52 @@
             "title": "Old Value",
             "type": "object"
           },
+          "origin": {
+            "default": "manual",
+            "enum": [
+              "manual",
+              "auto",
+              "explicit_save"
+            ],
+            "title": "Origin",
+            "type": "string"
+          },
           "reason": {
             "title": "Reason",
             "type": "string"
           },
+          "reverted_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reverted At"
+          },
           "source": {
-            "const": "manual",
+            "enum": [
+              "manual",
+              "learning"
+            ],
             "title": "Source",
             "type": "string"
+          },
+          "source_record_ids": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Source Record Ids",
+            "type": "array"
           },
           "status": {
             "enum": [
               "active",
-              "reverted"
+              "reverted",
+              "pending",
+              "confirmed"
             ],
             "title": "Status",
             "type": "string"
@@ -9543,6 +10012,46 @@
           "created_at"
         ],
         "title": "UserOut",
+        "type": "object"
+      },
+      "ValidationError": {
+        "properties": {
+          "ctx": {
+            "title": "Context",
+            "type": "object"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "title": "Location",
+            "type": "array"
+          },
+          "msg": {
+            "title": "Message",
+            "type": "string"
+          },
+          "type": {
+            "title": "Error Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError",
         "type": "object"
       },
       "ValueSource": {
@@ -13666,6 +14175,178 @@
         ]
       }
     },
+    "/v1/me/taste-profile/automation": {
+      "get": {
+        "operationId": "get_automation",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AutomationOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "服务端错误"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Automation",
+        "tags": [
+          "taste-profile"
+        ]
+      }
+    },
+    "/v1/me/taste-profile/change-facts": {
+      "get": {
+        "operationId": "change_facts",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TasteChangeStatusOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "服务端错误"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Change Facts",
+        "tags": [
+          "taste-profile"
+        ]
+      }
+    },
     "/v1/me/taste-profile/changes": {
       "get": {
         "operationId": "list_taste_profile_changes",
@@ -13775,6 +14456,125 @@
         ]
       }
     },
+    "/v1/me/taste-profile/changes/pending": {
+      "get": {
+        "operationId": "list_pending_changes",
+        "parameters": [
+          {
+            "description": "上一页返回的 next_cursor",
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "上一页返回的 next_cursor",
+              "title": "Cursor"
+            }
+          },
+          {
+            "description": "每页条数，上限见配置项 api.page_size_max",
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "description": "每页条数，上限见配置项 api.page_size_max",
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page_TasteProfileChangeOut_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "服务端错误"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Pending Changes",
+        "tags": [
+          "taste-profile"
+        ]
+      }
+    },
     "/v1/me/taste-profile/changes/{change_id}": {
       "get": {
         "operationId": "get_taste_profile_change",
@@ -13858,6 +14658,202 @@
           }
         ],
         "summary": "Get Taste Profile Change",
+        "tags": [
+          "taste-profile"
+        ]
+      }
+    },
+    "/v1/me/taste-profile/changes/{change_id}/confirm": {
+      "post": {
+        "operationId": "confirm_change",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "change_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Change Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TasteProfileChangeOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "服务端错误"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Confirm Change",
+        "tags": [
+          "taste-profile"
+        ]
+      }
+    },
+    "/v1/me/taste-profile/changes/{change_id}/revert": {
+      "post": {
+        "operationId": "revert_change",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "change_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Change Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TasteProfileChangeOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "服务端错误"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Revert Change",
         "tags": [
           "taste-profile"
         ]
@@ -14797,6 +15793,290 @@
         ]
       }
     },
+    "/v1/me/taste-profile/learning/run": {
+      "post": {
+        "operationId": "run_learning",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LearningRunOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "服务端错误"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Run Learning",
+        "tags": [
+          "taste-profile"
+        ]
+      }
+    },
+    "/v1/me/taste-profile/locks": {
+      "put": {
+        "operationId": "set_field_lock",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FieldLockWrite"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AutomationOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "服务端错误"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Set Field Lock",
+        "tags": [
+          "taste-profile"
+        ]
+      }
+    },
+    "/v1/me/taste-profile/records/{record_id}/save-to-taste": {
+      "post": {
+        "operationId": "save_to_taste",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "record_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Record Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/TasteProfileChangeOut"
+                  },
+                  "title": "Response Save To Taste",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "服务端错误"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Save To Taste",
+        "tags": [
+          "taste-profile"
+        ]
+      }
+    },
     "/v1/me/taste-profile/reset": {
       "post": {
         "operationId": "reset_taste_profile",
@@ -14870,6 +16150,100 @@
         "summary": "Reset Taste Profile",
         "tags": [
           "taste-profile"
+        ]
+      }
+    },
+    "/v1/recipe-imports": {
+      "post": {
+        "operationId": "import_recipe",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ImportInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImportOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Import Recipe",
+        "tags": [
+          "recipe-imports"
+        ]
+      }
+    },
+    "/v1/recipe-imports/{import_id}/original": {
+      "get": {
+        "operationId": "get_import_original",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "import_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Import Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImportOriginalOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Import Original",
+        "tags": [
+          "recipe-imports"
         ]
       }
     },
@@ -17509,6 +18883,210 @@
           }
         ],
         "summary": "Get Record",
+        "tags": [
+          "records"
+        ]
+      }
+    },
+    "/v1/records/{record_id}/attribution": {
+      "get": {
+        "operationId": "get_attribution",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "record_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Record Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AttributionStateOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "服务端错误"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Attribution",
+        "tags": [
+          "records"
+        ]
+      },
+      "put": {
+        "operationId": "answer_attribution",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "record_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Record Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AttributionAnswer"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AttributionStateOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "服务端错误"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Answer Attribution",
         "tags": [
           "records"
         ]
