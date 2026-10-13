@@ -9,7 +9,6 @@ import 'package:json_annotation/json_annotation.dart';
 
 part 'recipe_list_item.g.dart';
 
-
 @CopyWith()
 @JsonSerializable(
   checked: true,
@@ -20,161 +19,80 @@ part 'recipe_list_item.g.dart';
 class RecipeListItem {
   /// Returns a new [RecipeListItem] instance.
   RecipeListItem({
+    required this.activeTimeSeconds,
 
-    required  this.activeTimeSeconds,
+    this.difficulty,
 
-     this.difficulty,
+    required this.dish,
 
-    required  this.dish,
+    required this.id,
 
-    required  this.id,
+    required this.servings,
 
-    required  this.servings,
+    required this.totalTimeSeconds,
 
-    required  this.totalTimeSeconds,
+    required this.updatedAt,
 
-    required  this.updatedAt,
+    required this.versionNumber,
 
-    required  this.versionNumber,
-
-    required  this.visibility,
+    required this.visibility,
   });
 
-  @JsonKey(
-    
-    name: r'active_time_seconds',
-    required: true,
-    includeIfNull: false,
-  )
-
-
+  @JsonKey(name: r'active_time_seconds', required: true, includeIfNull: false)
   final int activeTimeSeconds;
 
-
-
-  @JsonKey(
-    
-    name: r'difficulty',
-    required: false,
-    includeIfNull: false,
-  )
-
-
+  @JsonKey(name: r'difficulty', required: false, includeIfNull: false)
   final String? difficulty;
 
-
-
-  @JsonKey(
-    
-    name: r'dish',
-    required: true,
-    includeIfNull: false,
-  )
-
-
+  @JsonKey(name: r'dish', required: true, includeIfNull: false)
   final DishOut dish;
 
-
-
-  @JsonKey(
-    
-    name: r'id',
-    required: true,
-    includeIfNull: false,
-  )
-
-
+  @JsonKey(name: r'id', required: true, includeIfNull: false)
   final String id;
 
-
-
-  @JsonKey(
-    
-    name: r'servings',
-    required: true,
-    includeIfNull: false,
-  )
-
-
+  @JsonKey(name: r'servings', required: true, includeIfNull: false)
   final int servings;
 
-
-
-  @JsonKey(
-    
-    name: r'total_time_seconds',
-    required: true,
-    includeIfNull: false,
-  )
-
-
+  @JsonKey(name: r'total_time_seconds', required: true, includeIfNull: false)
   final int totalTimeSeconds;
 
-
-
-  @JsonKey(
-    
-    name: r'updated_at',
-    required: true,
-    includeIfNull: false,
-  )
-
-
+  @JsonKey(name: r'updated_at', required: true, includeIfNull: false)
   final String updatedAt;
 
-
-
-  @JsonKey(
-    
-    name: r'version_number',
-    required: true,
-    includeIfNull: false,
-  )
-
-
+  @JsonKey(name: r'version_number', required: true, includeIfNull: false)
   final int versionNumber;
 
-
-
-  @JsonKey(
-    
-    name: r'visibility',
-    required: true,
-    includeIfNull: false,
-  )
-
-
+  @JsonKey(name: r'visibility', required: true, includeIfNull: false)
   final RecipeListItemVisibilityEnum visibility;
 
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is RecipeListItem &&
+          other.activeTimeSeconds == activeTimeSeconds &&
+          other.difficulty == difficulty &&
+          other.dish == dish &&
+          other.id == id &&
+          other.servings == servings &&
+          other.totalTimeSeconds == totalTimeSeconds &&
+          other.updatedAt == updatedAt &&
+          other.versionNumber == versionNumber &&
+          other.visibility == visibility;
 
+  @override
+  int get hashCode =>
+      activeTimeSeconds.hashCode +
+      (difficulty == null ? 0 : difficulty.hashCode) +
+      dish.hashCode +
+      id.hashCode +
+      servings.hashCode +
+      totalTimeSeconds.hashCode +
+      updatedAt.hashCode +
+      versionNumber.hashCode +
+      visibility.hashCode;
 
-
-
-    @override
-    bool operator ==(Object other) => identical(this, other) || other is RecipeListItem &&
-      other.activeTimeSeconds == activeTimeSeconds &&
-      other.difficulty == difficulty &&
-      other.dish == dish &&
-      other.id == id &&
-      other.servings == servings &&
-      other.totalTimeSeconds == totalTimeSeconds &&
-      other.updatedAt == updatedAt &&
-      other.versionNumber == versionNumber &&
-      other.visibility == visibility;
-
-    @override
-    int get hashCode =>
-        activeTimeSeconds.hashCode +
-        (difficulty == null ? 0 : difficulty.hashCode) +
-        dish.hashCode +
-        id.hashCode +
-        servings.hashCode +
-        totalTimeSeconds.hashCode +
-        updatedAt.hashCode +
-        versionNumber.hashCode +
-        visibility.hashCode;
-
-  factory RecipeListItem.fromJson(Map<String, dynamic> json) => _$RecipeListItemFromJson(json);
+  factory RecipeListItem.fromJson(Map<String, dynamic> json) =>
+      _$RecipeListItemFromJson(json);
 
   Map<String, dynamic> toJson() => _$RecipeListItemToJson(this);
 
@@ -182,20 +100,16 @@ class RecipeListItem {
   String toString() {
     return toJson().toString();
   }
-
 }
-
 
 enum RecipeListItemVisibilityEnum {
-@JsonValue(r'private')
-private(r'private');
+  @JsonValue(r'private')
+  private(r'private');
 
-const RecipeListItemVisibilityEnum(this.value);
+  const RecipeListItemVisibilityEnum(this.value);
 
-final String value;
+  final String value;
 
-@override
-String toString() => value;
+  @override
+  String toString() => value;
 }
-
-

@@ -99,40 +99,33 @@ extension $CookingMealTemplateCopyWith on CookingMealTemplate {
 // **************************************************************************
 
 CookingMealTemplate _$CookingMealTemplateFromJson(Map<String, dynamic> json) =>
-    $checkedCreate(
-      'CookingMealTemplate',
-      json,
-      ($checkedConvert) {
-        $checkKeys(
-          json,
-          requiredKeys: const ['composition', 'day_type', 'dish_count', 'meal'],
-        );
-        final val = CookingMealTemplate(
-          composition: $checkedConvert(
-            'composition',
-            (v) => (v as List<dynamic>)
-                .map(
-                  (e) => $enumDecode(
-                    _$CookingMealTemplateCompositionEnumEnumMap,
-                    e,
-                  ),
-                )
-                .toList(),
-          ),
-          dayType: $checkedConvert(
-            'day_type',
-            (v) => $enumDecode(_$CookingMealTemplateDayTypeEnumEnumMap, v),
-          ),
-          dishCount: $checkedConvert('dish_count', (v) => (v as num).toInt()),
-          meal: $checkedConvert(
-            'meal',
-            (v) => $enumDecode(_$CookingMealTemplateMealEnumEnumMap, v),
-          ),
-        );
-        return val;
-      },
-      fieldKeyMap: const {'dayType': 'day_type', 'dishCount': 'dish_count'},
-    );
+    $checkedCreate('CookingMealTemplate', json, ($checkedConvert) {
+      $checkKeys(
+        json,
+        requiredKeys: const ['composition', 'day_type', 'dish_count', 'meal'],
+      );
+      final val = CookingMealTemplate(
+        composition: $checkedConvert(
+          'composition',
+          (v) => (v as List<dynamic>)
+              .map(
+                (e) =>
+                    $enumDecode(_$CookingMealTemplateCompositionEnumEnumMap, e),
+              )
+              .toList(),
+        ),
+        dayType: $checkedConvert(
+          'day_type',
+          (v) => $enumDecode(_$CookingMealTemplateDayTypeEnumEnumMap, v),
+        ),
+        dishCount: $checkedConvert('dish_count', (v) => (v as num).toInt()),
+        meal: $checkedConvert(
+          'meal',
+          (v) => $enumDecode(_$CookingMealTemplateMealEnumEnumMap, v),
+        ),
+      );
+      return val;
+    }, fieldKeyMap: const {'dayType': 'day_type', 'dishCount': 'dish_count'});
 
 Map<String, dynamic> _$CookingMealTemplateToJson(
   CookingMealTemplate instance,

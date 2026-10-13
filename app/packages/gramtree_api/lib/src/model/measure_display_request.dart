@@ -8,7 +8,6 @@ import 'package:json_annotation/json_annotation.dart';
 
 part 'measure_display_request.g.dart';
 
-
 @CopyWith()
 @JsonSerializable(
   checked: true,
@@ -19,98 +18,53 @@ part 'measure_display_request.g.dart';
 class MeasureDisplayRequest {
   /// Returns a new [MeasureDisplayRequest] instance.
   MeasureDisplayRequest({
+    required this.baseQuantity,
 
-    required  this.baseQuantity,
+    required this.baseUnit,
 
-    required  this.baseUnit,
+    this.density,
 
-     this.density,
+    this.measureId,
 
-     this.measureId,
-
-    required  this.mode,
+    required this.mode,
   });
 
-          // minimum: 0.0
-  @JsonKey(
-    
-    name: r'base_quantity',
-    required: true,
-    includeIfNull: false,
-  )
-
-
+  // minimum: 0.0
+  @JsonKey(name: r'base_quantity', required: true, includeIfNull: false)
   final num baseQuantity;
 
-
-
-  @JsonKey(
-    
-    name: r'base_unit',
-    required: true,
-    includeIfNull: false,
-  )
-
-
+  @JsonKey(name: r'base_unit', required: true, includeIfNull: false)
   final MeasureDisplayRequestBaseUnitEnum baseUnit;
 
-
-
-  @JsonKey(
-    
-    name: r'density',
-    required: false,
-    includeIfNull: false,
-  )
-
-
+  @JsonKey(name: r'density', required: false, includeIfNull: false)
   final num? density;
 
-
-
-  @JsonKey(
-    
-    name: r'measure_id',
-    required: false,
-    includeIfNull: false,
-  )
-
-
+  @JsonKey(name: r'measure_id', required: false, includeIfNull: false)
   final String? measureId;
 
-
-
-  @JsonKey(
-    
-    name: r'mode',
-    required: true,
-    includeIfNull: false,
-  )
-
-
+  @JsonKey(name: r'mode', required: true, includeIfNull: false)
   final MeasureDisplayRequestModeEnum mode;
 
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is MeasureDisplayRequest &&
+          other.baseQuantity == baseQuantity &&
+          other.baseUnit == baseUnit &&
+          other.density == density &&
+          other.measureId == measureId &&
+          other.mode == mode;
 
+  @override
+  int get hashCode =>
+      baseQuantity.hashCode +
+      baseUnit.hashCode +
+      (density == null ? 0 : density.hashCode) +
+      (measureId == null ? 0 : measureId.hashCode) +
+      mode.hashCode;
 
-
-
-    @override
-    bool operator ==(Object other) => identical(this, other) || other is MeasureDisplayRequest &&
-      other.baseQuantity == baseQuantity &&
-      other.baseUnit == baseUnit &&
-      other.density == density &&
-      other.measureId == measureId &&
-      other.mode == mode;
-
-    @override
-    int get hashCode =>
-        baseQuantity.hashCode +
-        baseUnit.hashCode +
-        (density == null ? 0 : density.hashCode) +
-        (measureId == null ? 0 : measureId.hashCode) +
-        mode.hashCode;
-
-  factory MeasureDisplayRequest.fromJson(Map<String, dynamic> json) => _$MeasureDisplayRequestFromJson(json);
+  factory MeasureDisplayRequest.fromJson(Map<String, dynamic> json) =>
+      _$MeasureDisplayRequestFromJson(json);
 
   Map<String, dynamic> toJson() => _$MeasureDisplayRequestToJson(this);
 
@@ -118,40 +72,34 @@ class MeasureDisplayRequest {
   String toString() {
     return toJson().toString();
   }
-
 }
-
 
 enum MeasureDisplayRequestBaseUnitEnum {
-@JsonValue(r'g')
-g(r'g'),
-@JsonValue(r'ml')
-ml(r'ml');
+  @JsonValue(r'g')
+  g(r'g'),
+  @JsonValue(r'ml')
+  ml(r'ml');
 
-const MeasureDisplayRequestBaseUnitEnum(this.value);
+  const MeasureDisplayRequestBaseUnitEnum(this.value);
 
-final String value;
+  final String value;
 
-@override
-String toString() => value;
+  @override
+  String toString() => value;
 }
-
-
 
 enum MeasureDisplayRequestModeEnum {
-@JsonValue(r'base')
-base_(r'base'),
-@JsonValue(r'standard')
-standard(r'standard'),
-@JsonValue(r'home')
-home(r'home');
+  @JsonValue(r'base')
+  base_(r'base'),
+  @JsonValue(r'standard')
+  standard(r'standard'),
+  @JsonValue(r'home')
+  home(r'home');
 
-const MeasureDisplayRequestModeEnum(this.value);
+  const MeasureDisplayRequestModeEnum(this.value);
 
-final String value;
+  final String value;
 
-@override
-String toString() => value;
+  @override
+  String toString() => value;
 }
-
-

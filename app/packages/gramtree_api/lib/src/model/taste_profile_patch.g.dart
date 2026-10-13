@@ -76,32 +76,23 @@ extension $TasteProfilePatchCopyWith on TasteProfilePatch {
 // JsonSerializableGenerator
 // **************************************************************************
 
-TasteProfilePatch _$TasteProfilePatchFromJson(Map<String, dynamic> json) =>
-    $checkedCreate(
-      'TasteProfilePatch',
-      json,
-      ($checkedConvert) {
-        final val = TasteProfilePatch(
-          flavors: $checkedConvert(
-            'flavors',
-            (v) => (v as Map<String, dynamic>?)?.map(
-              (k, e) => MapEntry(k, e as num),
-            ),
-          ),
-          ingredientPreferences: $checkedConvert(
-            'ingredient_preferences',
-            (v) => (v as List<dynamic>?)
-                ?.map(
-                  (e) =>
-                      IngredientPreference.fromJson(e as Map<String, dynamic>),
-                )
-                .toList(),
-          ),
-        );
-        return val;
-      },
-      fieldKeyMap: const {'ingredientPreferences': 'ingredient_preferences'},
-    );
+TasteProfilePatch _$TasteProfilePatchFromJson(
+  Map<String, dynamic> json,
+) => $checkedCreate('TasteProfilePatch', json, ($checkedConvert) {
+  final val = TasteProfilePatch(
+    flavors: $checkedConvert(
+      'flavors',
+      (v) => (v as Map<String, dynamic>?)?.map((k, e) => MapEntry(k, e as num)),
+    ),
+    ingredientPreferences: $checkedConvert(
+      'ingredient_preferences',
+      (v) => (v as List<dynamic>?)
+          ?.map((e) => IngredientPreference.fromJson(e as Map<String, dynamic>))
+          .toList(),
+    ),
+  );
+  return val;
+}, fieldKeyMap: const {'ingredientPreferences': 'ingredient_preferences'});
 
 Map<String, dynamic> _$TasteProfilePatchToJson(TasteProfilePatch instance) =>
     <String, dynamic>{

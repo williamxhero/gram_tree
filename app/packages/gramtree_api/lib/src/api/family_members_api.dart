@@ -17,16 +17,15 @@ import 'package:gramtree_api/src/model/page_taste_profile_change_out.dart';
 import 'package:gramtree_api/src/model/taste_profile_change_out.dart';
 
 class FamilyMembersApi {
-
   final Dio _dio;
 
   const FamilyMembersApi(this._dio);
 
   /// Create Family Member
-  /// 
+  ///
   ///
   /// Parameters:
-  /// * [familyMemberWrite] 
+  /// * [familyMemberWrite]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -36,7 +35,7 @@ class FamilyMembersApi {
   ///
   /// Returns a [Future] containing a [Response] with a [FamilyMemberOut] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<FamilyMemberOut>> createFamilyMember({ 
+  Future<Response<FamilyMemberOut>> createFamilyMember({
     required FamilyMemberWrite familyMemberWrite,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -48,16 +47,10 @@ class FamilyMembersApi {
     final _path = r'/v1/me/taste-profile/family-members';
     final _options = Options(
       method: r'POST',
-      headers: <String, dynamic>{
-        ...?headers,
-      },
+      headers: <String, dynamic>{...?headers},
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
-          {
-            'type': 'http',
-            'scheme': 'bearer',
-            'name': 'HTTPBearer',
-          },
+          {'type': 'http', 'scheme': 'bearer', 'name': 'HTTPBearer'},
         ],
         ...?extra,
       },
@@ -68,13 +61,10 @@ class FamilyMembersApi {
     dynamic _bodyData;
 
     try {
-_bodyData=jsonEncode(familyMemberWrite);
-    } catch(error, stackTrace) {
+      _bodyData = jsonEncode(familyMemberWrite);
+    } catch (error, stackTrace) {
       throw DioException(
-         requestOptions: _options.compose(
-          _dio.options,
-          _path,
-        ),
+        requestOptions: _options.compose(_dio.options, _path),
         type: DioExceptionType.unknown,
         error: error,
         stackTrace: stackTrace,
@@ -93,9 +83,14 @@ _bodyData=jsonEncode(familyMemberWrite);
     FamilyMemberOut? _responseData;
 
     try {
-final rawData = _response.data;
-_responseData = rawData == null ? null : deserialize<FamilyMemberOut, FamilyMemberOut>(rawData, 'FamilyMemberOut', growable: true);
-
+      final rawData = _response.data;
+      _responseData = rawData == null
+          ? null
+          : deserialize<FamilyMemberOut, FamilyMemberOut>(
+              rawData,
+              'FamilyMemberOut',
+              growable: true,
+            );
     } catch (error, stackTrace) {
       throw DioException(
         requestOptions: _response.requestOptions,
@@ -119,10 +114,10 @@ _responseData = rawData == null ? null : deserialize<FamilyMemberOut, FamilyMemb
   }
 
   /// Delete Family Member
-  /// 
+  ///
   ///
   /// Parameters:
-  /// * [memberId] 
+  /// * [memberId]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -132,7 +127,7 @@ _responseData = rawData == null ? null : deserialize<FamilyMemberOut, FamilyMemb
   ///
   /// Returns a [Future]
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<void>> deleteFamilyMember({ 
+  Future<Response<void>> deleteFamilyMember({
     required String memberId,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -141,19 +136,18 @@ _responseData = rawData == null ? null : deserialize<FamilyMemberOut, FamilyMemb
     ProgressCallback? onSendProgress,
     ProgressCallback? onReceiveProgress,
   }) async {
-    final _path = r'/v1/me/taste-profile/family-members/{member_id}'.replaceAll('{' r'member_id' '}', memberId.toString());
+    final _path = r'/v1/me/taste-profile/family-members/{member_id}'.replaceAll(
+      '{'
+      r'member_id'
+      '}',
+      memberId.toString(),
+    );
     final _options = Options(
       method: r'DELETE',
-      headers: <String, dynamic>{
-        ...?headers,
-      },
+      headers: <String, dynamic>{...?headers},
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
-          {
-            'type': 'http',
-            'scheme': 'bearer',
-            'name': 'HTTPBearer',
-          },
+          {'type': 'http', 'scheme': 'bearer', 'name': 'HTTPBearer'},
         ],
         ...?extra,
       },
@@ -172,10 +166,10 @@ _responseData = rawData == null ? null : deserialize<FamilyMemberOut, FamilyMemb
   }
 
   /// Get Family Member
-  /// 
+  ///
   ///
   /// Parameters:
-  /// * [memberId] 
+  /// * [memberId]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -185,7 +179,7 @@ _responseData = rawData == null ? null : deserialize<FamilyMemberOut, FamilyMemb
   ///
   /// Returns a [Future] containing a [Response] with a [FamilyMemberOut] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<FamilyMemberOut>> getFamilyMember({ 
+  Future<Response<FamilyMemberOut>> getFamilyMember({
     required String memberId,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -194,19 +188,18 @@ _responseData = rawData == null ? null : deserialize<FamilyMemberOut, FamilyMemb
     ProgressCallback? onSendProgress,
     ProgressCallback? onReceiveProgress,
   }) async {
-    final _path = r'/v1/me/taste-profile/family-members/{member_id}'.replaceAll('{' r'member_id' '}', memberId.toString());
+    final _path = r'/v1/me/taste-profile/family-members/{member_id}'.replaceAll(
+      '{'
+      r'member_id'
+      '}',
+      memberId.toString(),
+    );
     final _options = Options(
       method: r'GET',
-      headers: <String, dynamic>{
-        ...?headers,
-      },
+      headers: <String, dynamic>{...?headers},
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
-          {
-            'type': 'http',
-            'scheme': 'bearer',
-            'name': 'HTTPBearer',
-          },
+          {'type': 'http', 'scheme': 'bearer', 'name': 'HTTPBearer'},
         ],
         ...?extra,
       },
@@ -224,9 +217,14 @@ _responseData = rawData == null ? null : deserialize<FamilyMemberOut, FamilyMemb
     FamilyMemberOut? _responseData;
 
     try {
-final rawData = _response.data;
-_responseData = rawData == null ? null : deserialize<FamilyMemberOut, FamilyMemberOut>(rawData, 'FamilyMemberOut', growable: true);
-
+      final rawData = _response.data;
+      _responseData = rawData == null
+          ? null
+          : deserialize<FamilyMemberOut, FamilyMemberOut>(
+              rawData,
+              'FamilyMemberOut',
+              growable: true,
+            );
     } catch (error, stackTrace) {
       throw DioException(
         requestOptions: _response.requestOptions,
@@ -250,10 +248,10 @@ _responseData = rawData == null ? null : deserialize<FamilyMemberOut, FamilyMemb
   }
 
   /// Get Family Member Change
-  /// 
+  ///
   ///
   /// Parameters:
-  /// * [changeId] 
+  /// * [changeId]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -263,7 +261,7 @@ _responseData = rawData == null ? null : deserialize<FamilyMemberOut, FamilyMemb
   ///
   /// Returns a [Future] containing a [Response] with a [TasteProfileChangeOut] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<TasteProfileChangeOut>> getFamilyMemberChange({ 
+  Future<Response<TasteProfileChangeOut>> getFamilyMemberChange({
     required String changeId,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -272,19 +270,19 @@ _responseData = rawData == null ? null : deserialize<FamilyMemberOut, FamilyMemb
     ProgressCallback? onSendProgress,
     ProgressCallback? onReceiveProgress,
   }) async {
-    final _path = r'/v1/me/taste-profile/family-members/changes/{change_id}'.replaceAll('{' r'change_id' '}', changeId.toString());
+    final _path = r'/v1/me/taste-profile/family-members/changes/{change_id}'
+        .replaceAll(
+          '{'
+          r'change_id'
+          '}',
+          changeId.toString(),
+        );
     final _options = Options(
       method: r'GET',
-      headers: <String, dynamic>{
-        ...?headers,
-      },
+      headers: <String, dynamic>{...?headers},
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
-          {
-            'type': 'http',
-            'scheme': 'bearer',
-            'name': 'HTTPBearer',
-          },
+          {'type': 'http', 'scheme': 'bearer', 'name': 'HTTPBearer'},
         ],
         ...?extra,
       },
@@ -302,9 +300,14 @@ _responseData = rawData == null ? null : deserialize<FamilyMemberOut, FamilyMemb
     TasteProfileChangeOut? _responseData;
 
     try {
-final rawData = _response.data;
-_responseData = rawData == null ? null : deserialize<TasteProfileChangeOut, TasteProfileChangeOut>(rawData, 'TasteProfileChangeOut', growable: true);
-
+      final rawData = _response.data;
+      _responseData = rawData == null
+          ? null
+          : deserialize<TasteProfileChangeOut, TasteProfileChangeOut>(
+              rawData,
+              'TasteProfileChangeOut',
+              growable: true,
+            );
     } catch (error, stackTrace) {
       throw DioException(
         requestOptions: _response.requestOptions,
@@ -328,7 +331,7 @@ _responseData = rawData == null ? null : deserialize<TasteProfileChangeOut, Tast
   }
 
   /// List Family Member Changes
-  /// 
+  ///
   ///
   /// Parameters:
   /// * [cursor] - 上一页返回的 next_cursor
@@ -342,7 +345,7 @@ _responseData = rawData == null ? null : deserialize<TasteProfileChangeOut, Tast
   ///
   /// Returns a [Future] containing a [Response] with a [PageTasteProfileChangeOut] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<PageTasteProfileChangeOut>> listFamilyMemberChanges({ 
+  Future<Response<PageTasteProfileChangeOut>> listFamilyMemberChanges({
     String? cursor,
     int? limit = 20,
     CancelToken? cancelToken,
@@ -355,16 +358,10 @@ _responseData = rawData == null ? null : deserialize<TasteProfileChangeOut, Tast
     final _path = r'/v1/me/taste-profile/family-members/changes';
     final _options = Options(
       method: r'GET',
-      headers: <String, dynamic>{
-        ...?headers,
-      },
+      headers: <String, dynamic>{...?headers},
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
-          {
-            'type': 'http',
-            'scheme': 'bearer',
-            'name': 'HTTPBearer',
-          },
+          {'type': 'http', 'scheme': 'bearer', 'name': 'HTTPBearer'},
         ],
         ...?extra,
       },
@@ -388,9 +385,14 @@ _responseData = rawData == null ? null : deserialize<TasteProfileChangeOut, Tast
     PageTasteProfileChangeOut? _responseData;
 
     try {
-final rawData = _response.data;
-_responseData = rawData == null ? null : deserialize<PageTasteProfileChangeOut, PageTasteProfileChangeOut>(rawData, 'PageTasteProfileChangeOut', growable: true);
-
+      final rawData = _response.data;
+      _responseData = rawData == null
+          ? null
+          : deserialize<PageTasteProfileChangeOut, PageTasteProfileChangeOut>(
+              rawData,
+              'PageTasteProfileChangeOut',
+              growable: true,
+            );
     } catch (error, stackTrace) {
       throw DioException(
         requestOptions: _response.requestOptions,
@@ -414,7 +416,7 @@ _responseData = rawData == null ? null : deserialize<PageTasteProfileChangeOut, 
   }
 
   /// List Family Members
-  /// 
+  ///
   ///
   /// Parameters:
   /// * [cursor] - 上一页返回的 next_cursor
@@ -428,7 +430,7 @@ _responseData = rawData == null ? null : deserialize<PageTasteProfileChangeOut, 
   ///
   /// Returns a [Future] containing a [Response] with a [FamilyMembersOut] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<FamilyMembersOut>> listFamilyMembers({ 
+  Future<Response<FamilyMembersOut>> listFamilyMembers({
     String? cursor,
     int? limit = 20,
     CancelToken? cancelToken,
@@ -441,16 +443,10 @@ _responseData = rawData == null ? null : deserialize<PageTasteProfileChangeOut, 
     final _path = r'/v1/me/taste-profile/family-members';
     final _options = Options(
       method: r'GET',
-      headers: <String, dynamic>{
-        ...?headers,
-      },
+      headers: <String, dynamic>{...?headers},
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
-          {
-            'type': 'http',
-            'scheme': 'bearer',
-            'name': 'HTTPBearer',
-          },
+          {'type': 'http', 'scheme': 'bearer', 'name': 'HTTPBearer'},
         ],
         ...?extra,
       },
@@ -474,9 +470,14 @@ _responseData = rawData == null ? null : deserialize<PageTasteProfileChangeOut, 
     FamilyMembersOut? _responseData;
 
     try {
-final rawData = _response.data;
-_responseData = rawData == null ? null : deserialize<FamilyMembersOut, FamilyMembersOut>(rawData, 'FamilyMembersOut', growable: true);
-
+      final rawData = _response.data;
+      _responseData = rawData == null
+          ? null
+          : deserialize<FamilyMembersOut, FamilyMembersOut>(
+              rawData,
+              'FamilyMembersOut',
+              growable: true,
+            );
     } catch (error, stackTrace) {
       throw DioException(
         requestOptions: _response.requestOptions,
@@ -500,11 +501,11 @@ _responseData = rawData == null ? null : deserialize<FamilyMembersOut, FamilyMem
   }
 
   /// Update Family Member
-  /// 
+  ///
   ///
   /// Parameters:
-  /// * [memberId] 
-  /// * [familyMemberWrite] 
+  /// * [memberId]
+  /// * [familyMemberWrite]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -514,7 +515,7 @@ _responseData = rawData == null ? null : deserialize<FamilyMembersOut, FamilyMem
   ///
   /// Returns a [Future] containing a [Response] with a [FamilyMemberOut] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<FamilyMemberOut>> updateFamilyMember({ 
+  Future<Response<FamilyMemberOut>> updateFamilyMember({
     required String memberId,
     required FamilyMemberWrite familyMemberWrite,
     CancelToken? cancelToken,
@@ -524,19 +525,18 @@ _responseData = rawData == null ? null : deserialize<FamilyMembersOut, FamilyMem
     ProgressCallback? onSendProgress,
     ProgressCallback? onReceiveProgress,
   }) async {
-    final _path = r'/v1/me/taste-profile/family-members/{member_id}'.replaceAll('{' r'member_id' '}', memberId.toString());
+    final _path = r'/v1/me/taste-profile/family-members/{member_id}'.replaceAll(
+      '{'
+      r'member_id'
+      '}',
+      memberId.toString(),
+    );
     final _options = Options(
       method: r'PUT',
-      headers: <String, dynamic>{
-        ...?headers,
-      },
+      headers: <String, dynamic>{...?headers},
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
-          {
-            'type': 'http',
-            'scheme': 'bearer',
-            'name': 'HTTPBearer',
-          },
+          {'type': 'http', 'scheme': 'bearer', 'name': 'HTTPBearer'},
         ],
         ...?extra,
       },
@@ -547,13 +547,10 @@ _responseData = rawData == null ? null : deserialize<FamilyMembersOut, FamilyMem
     dynamic _bodyData;
 
     try {
-_bodyData=jsonEncode(familyMemberWrite);
-    } catch(error, stackTrace) {
+      _bodyData = jsonEncode(familyMemberWrite);
+    } catch (error, stackTrace) {
       throw DioException(
-         requestOptions: _options.compose(
-          _dio.options,
-          _path,
-        ),
+        requestOptions: _options.compose(_dio.options, _path),
         type: DioExceptionType.unknown,
         error: error,
         stackTrace: stackTrace,
@@ -572,9 +569,14 @@ _bodyData=jsonEncode(familyMemberWrite);
     FamilyMemberOut? _responseData;
 
     try {
-final rawData = _response.data;
-_responseData = rawData == null ? null : deserialize<FamilyMemberOut, FamilyMemberOut>(rawData, 'FamilyMemberOut', growable: true);
-
+      final rawData = _response.data;
+      _responseData = rawData == null
+          ? null
+          : deserialize<FamilyMemberOut, FamilyMemberOut>(
+              rawData,
+              'FamilyMemberOut',
+              growable: true,
+            );
     } catch (error, stackTrace) {
       throw DioException(
         requestOptions: _response.requestOptions,
@@ -596,5 +598,4 @@ _responseData = rawData == null ? null : deserialize<FamilyMemberOut, FamilyMemb
       extra: _response.extra,
     );
   }
-
 }

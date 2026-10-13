@@ -15,16 +15,15 @@ import 'package:gramtree_api/src/model/import_original_out.dart';
 import 'package:gramtree_api/src/model/import_out.dart';
 
 class RecipeImportsApi {
-
   final Dio _dio;
 
   const RecipeImportsApi(this._dio);
 
   /// Get Import Original
-  /// 
+  ///
   ///
   /// Parameters:
-  /// * [importId] 
+  /// * [importId]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -34,7 +33,7 @@ class RecipeImportsApi {
   ///
   /// Returns a [Future] containing a [Response] with a [ImportOriginalOut] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<ImportOriginalOut>> getImportOriginal({ 
+  Future<Response<ImportOriginalOut>> getImportOriginal({
     required String importId,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -43,19 +42,18 @@ class RecipeImportsApi {
     ProgressCallback? onSendProgress,
     ProgressCallback? onReceiveProgress,
   }) async {
-    final _path = r'/v1/recipe-imports/{import_id}/original'.replaceAll('{' r'import_id' '}', importId.toString());
+    final _path = r'/v1/recipe-imports/{import_id}/original'.replaceAll(
+      '{'
+      r'import_id'
+      '}',
+      importId.toString(),
+    );
     final _options = Options(
       method: r'GET',
-      headers: <String, dynamic>{
-        ...?headers,
-      },
+      headers: <String, dynamic>{...?headers},
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
-          {
-            'type': 'http',
-            'scheme': 'bearer',
-            'name': 'HTTPBearer',
-          },
+          {'type': 'http', 'scheme': 'bearer', 'name': 'HTTPBearer'},
         ],
         ...?extra,
       },
@@ -73,9 +71,14 @@ class RecipeImportsApi {
     ImportOriginalOut? _responseData;
 
     try {
-final rawData = _response.data;
-_responseData = rawData == null ? null : deserialize<ImportOriginalOut, ImportOriginalOut>(rawData, 'ImportOriginalOut', growable: true);
-
+      final rawData = _response.data;
+      _responseData = rawData == null
+          ? null
+          : deserialize<ImportOriginalOut, ImportOriginalOut>(
+              rawData,
+              'ImportOriginalOut',
+              growable: true,
+            );
     } catch (error, stackTrace) {
       throw DioException(
         requestOptions: _response.requestOptions,
@@ -99,10 +102,10 @@ _responseData = rawData == null ? null : deserialize<ImportOriginalOut, ImportOr
   }
 
   /// Import Recipe
-  /// 
+  ///
   ///
   /// Parameters:
-  /// * [importInput] 
+  /// * [importInput]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -112,7 +115,7 @@ _responseData = rawData == null ? null : deserialize<ImportOriginalOut, ImportOr
   ///
   /// Returns a [Future] containing a [Response] with a [ImportOut] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<ImportOut>> importRecipe({ 
+  Future<Response<ImportOut>> importRecipe({
     required ImportInput importInput,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -124,16 +127,10 @@ _responseData = rawData == null ? null : deserialize<ImportOriginalOut, ImportOr
     final _path = r'/v1/recipe-imports';
     final _options = Options(
       method: r'POST',
-      headers: <String, dynamic>{
-        ...?headers,
-      },
+      headers: <String, dynamic>{...?headers},
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
-          {
-            'type': 'http',
-            'scheme': 'bearer',
-            'name': 'HTTPBearer',
-          },
+          {'type': 'http', 'scheme': 'bearer', 'name': 'HTTPBearer'},
         ],
         ...?extra,
       },
@@ -144,13 +141,10 @@ _responseData = rawData == null ? null : deserialize<ImportOriginalOut, ImportOr
     dynamic _bodyData;
 
     try {
-_bodyData=jsonEncode(importInput);
-    } catch(error, stackTrace) {
+      _bodyData = jsonEncode(importInput);
+    } catch (error, stackTrace) {
       throw DioException(
-         requestOptions: _options.compose(
-          _dio.options,
-          _path,
-        ),
+        requestOptions: _options.compose(_dio.options, _path),
         type: DioExceptionType.unknown,
         error: error,
         stackTrace: stackTrace,
@@ -169,9 +163,14 @@ _bodyData=jsonEncode(importInput);
     ImportOut? _responseData;
 
     try {
-final rawData = _response.data;
-_responseData = rawData == null ? null : deserialize<ImportOut, ImportOut>(rawData, 'ImportOut', growable: true);
-
+      final rawData = _response.data;
+      _responseData = rawData == null
+          ? null
+          : deserialize<ImportOut, ImportOut>(
+              rawData,
+              'ImportOut',
+              growable: true,
+            );
     } catch (error, stackTrace) {
       throw DioException(
         requestOptions: _response.requestOptions,
@@ -193,5 +192,4 @@ _responseData = rawData == null ? null : deserialize<ImportOut, ImportOut>(rawDa
       extra: _response.extra,
     );
   }
-
 }

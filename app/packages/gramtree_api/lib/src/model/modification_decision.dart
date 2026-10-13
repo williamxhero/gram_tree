@@ -8,7 +8,6 @@ import 'package:json_annotation/json_annotation.dart';
 
 part 'modification_decision.g.dart';
 
-
 @CopyWith()
 @JsonSerializable(
   checked: true,
@@ -19,65 +18,38 @@ part 'modification_decision.g.dart';
 class ModificationDecision {
   /// Returns a new [ModificationDecision] instance.
   ModificationDecision({
+    this.after,
 
-     this.after,
+    required this.decision,
 
-    required  this.decision,
-
-    required  this.operationId,
+    required this.operationId,
   });
 
-  @JsonKey(
-    
-    name: r'after',
-    required: false,
-    includeIfNull: false,
-  )
-
-
+  @JsonKey(name: r'after', required: false, includeIfNull: false)
   final Object? after;
 
-
-
-  @JsonKey(
-    
-    name: r'decision',
-    required: true,
-    includeIfNull: false,
-  )
-
-
+  @JsonKey(name: r'decision', required: true, includeIfNull: false)
   final ModificationDecisionDecisionEnum decision;
 
-
-
-  @JsonKey(
-    
-    name: r'operation_id',
-    required: true,
-    includeIfNull: false,
-  )
-
-
+  @JsonKey(name: r'operation_id', required: true, includeIfNull: false)
   final String operationId;
 
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is ModificationDecision &&
+          other.after == after &&
+          other.decision == decision &&
+          other.operationId == operationId;
 
+  @override
+  int get hashCode =>
+      (after == null ? 0 : after.hashCode) +
+      decision.hashCode +
+      operationId.hashCode;
 
-
-
-    @override
-    bool operator ==(Object other) => identical(this, other) || other is ModificationDecision &&
-      other.after == after &&
-      other.decision == decision &&
-      other.operationId == operationId;
-
-    @override
-    int get hashCode =>
-        (after == null ? 0 : after.hashCode) +
-        decision.hashCode +
-        operationId.hashCode;
-
-  factory ModificationDecision.fromJson(Map<String, dynamic> json) => _$ModificationDecisionFromJson(json);
+  factory ModificationDecision.fromJson(Map<String, dynamic> json) =>
+      _$ModificationDecisionFromJson(json);
 
   Map<String, dynamic> toJson() => _$ModificationDecisionToJson(this);
 
@@ -85,24 +57,20 @@ class ModificationDecision {
   String toString() {
     return toJson().toString();
   }
-
 }
-
 
 enum ModificationDecisionDecisionEnum {
-@JsonValue(r'accept')
-accept(r'accept'),
-@JsonValue(r'reject')
-reject(r'reject'),
-@JsonValue(r'modify')
-modify(r'modify');
+  @JsonValue(r'accept')
+  accept(r'accept'),
+  @JsonValue(r'reject')
+  reject(r'reject'),
+  @JsonValue(r'modify')
+  modify(r'modify');
 
-const ModificationDecisionDecisionEnum(this.value);
+  const ModificationDecisionDecisionEnum(this.value);
 
-final String value;
+  final String value;
 
-@override
-String toString() => value;
+  @override
+  String toString() => value;
 }
-
-

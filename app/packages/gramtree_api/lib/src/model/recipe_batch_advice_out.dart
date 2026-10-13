@@ -10,7 +10,6 @@ import 'package:json_annotation/json_annotation.dart';
 
 part 'recipe_batch_advice_out.g.dart';
 
-
 @CopyWith()
 @JsonSerializable(
   checked: true,
@@ -21,145 +20,73 @@ part 'recipe_batch_advice_out.g.dart';
 class RecipeBatchAdviceOut {
   /// Returns a new [RecipeBatchAdviceOut] instance.
   RecipeBatchAdviceOut({
+    this.advice,
 
-     this.advice,
+    required this.eligible,
 
-    required  this.eligible,
+    this.error,
 
-     this.error,
+    required this.originalServings,
 
-    required  this.originalServings,
+    required this.recipeId,
 
-    required  this.recipeId,
+    required this.status,
 
-    required  this.status,
+    required this.targetServings,
 
-    required  this.targetServings,
-
-    required  this.versionId,
+    required this.versionId,
   });
 
-  @JsonKey(
-    
-    name: r'advice',
-    required: false,
-    includeIfNull: false,
-  )
-
-
+  @JsonKey(name: r'advice', required: false, includeIfNull: false)
   final BatchAdvice? advice;
 
-
-
-  @JsonKey(
-    
-    name: r'eligible',
-    required: true,
-    includeIfNull: false,
-  )
-
-
+  @JsonKey(name: r'eligible', required: true, includeIfNull: false)
   final bool eligible;
 
-
-
-  @JsonKey(
-    
-    name: r'error',
-    required: false,
-    includeIfNull: false,
-  )
-
-
+  @JsonKey(name: r'error', required: false, includeIfNull: false)
   final String? error;
 
-
-
-  @JsonKey(
-    
-    name: r'original_servings',
-    required: true,
-    includeIfNull: false,
-  )
-
-
+  @JsonKey(name: r'original_servings', required: true, includeIfNull: false)
   final int originalServings;
 
-
-
-  @JsonKey(
-    
-    name: r'recipe_id',
-    required: true,
-    includeIfNull: false,
-  )
-
-
+  @JsonKey(name: r'recipe_id', required: true, includeIfNull: false)
   final String recipeId;
 
-
-
-  @JsonKey(
-    
-    name: r'status',
-    required: true,
-    includeIfNull: false,
-  )
-
-
+  @JsonKey(name: r'status', required: true, includeIfNull: false)
   final AIStatus status;
 
-
-
-  @JsonKey(
-    
-    name: r'target_servings',
-    required: true,
-    includeIfNull: false,
-  )
-
-
+  @JsonKey(name: r'target_servings', required: true, includeIfNull: false)
   final int targetServings;
 
-
-
-  @JsonKey(
-    
-    name: r'version_id',
-    required: true,
-    includeIfNull: false,
-  )
-
-
+  @JsonKey(name: r'version_id', required: true, includeIfNull: false)
   final String versionId;
 
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is RecipeBatchAdviceOut &&
+          other.advice == advice &&
+          other.eligible == eligible &&
+          other.error == error &&
+          other.originalServings == originalServings &&
+          other.recipeId == recipeId &&
+          other.status == status &&
+          other.targetServings == targetServings &&
+          other.versionId == versionId;
 
+  @override
+  int get hashCode =>
+      advice.hashCode +
+      eligible.hashCode +
+      (error == null ? 0 : error.hashCode) +
+      originalServings.hashCode +
+      recipeId.hashCode +
+      status.hashCode +
+      targetServings.hashCode +
+      versionId.hashCode;
 
-
-
-    @override
-    bool operator ==(Object other) => identical(this, other) || other is RecipeBatchAdviceOut &&
-      other.advice == advice &&
-      other.eligible == eligible &&
-      other.error == error &&
-      other.originalServings == originalServings &&
-      other.recipeId == recipeId &&
-      other.status == status &&
-      other.targetServings == targetServings &&
-      other.versionId == versionId;
-
-    @override
-    int get hashCode =>
-        advice.hashCode +
-        eligible.hashCode +
-        (error == null ? 0 : error.hashCode) +
-        originalServings.hashCode +
-        recipeId.hashCode +
-        status.hashCode +
-        targetServings.hashCode +
-        versionId.hashCode;
-
-  factory RecipeBatchAdviceOut.fromJson(Map<String, dynamic> json) => _$RecipeBatchAdviceOutFromJson(json);
+  factory RecipeBatchAdviceOut.fromJson(Map<String, dynamic> json) =>
+      _$RecipeBatchAdviceOutFromJson(json);
 
   Map<String, dynamic> toJson() => _$RecipeBatchAdviceOutToJson(this);
 
@@ -167,6 +94,4 @@ class RecipeBatchAdviceOut {
   String toString() {
     return toJson().toString();
   }
-
 }
-

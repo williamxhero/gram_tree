@@ -20,16 +20,15 @@ import 'package:gramtree_api/src/model/refresh_request.dart';
 import 'package:gramtree_api/src/model/token_pair.dart';
 
 class AuthApi {
-
   final Dio _dio;
 
   const AuthApi(this._dio);
 
   /// 通过 Apple 登录（首次登录自动创建账号）
-  /// 
+  ///
   ///
   /// Parameters:
-  /// * [appleLoginRequest] 
+  /// * [appleLoginRequest]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -39,7 +38,7 @@ class AuthApi {
   ///
   /// Returns a [Future] containing a [Response] with a [TokenPair] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<TokenPair>> appleLogin({ 
+  Future<Response<TokenPair>> appleLogin({
     required AppleLoginRequest appleLoginRequest,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -51,13 +50,8 @@ class AuthApi {
     final _path = r'/v1/auth/apple/login';
     final _options = Options(
       method: r'POST',
-      headers: <String, dynamic>{
-        ...?headers,
-      },
-      extra: <String, dynamic>{
-        'secure': <Map<String, String>>[],
-        ...?extra,
-      },
+      headers: <String, dynamic>{...?headers},
+      extra: <String, dynamic>{'secure': <Map<String, String>>[], ...?extra},
       contentType: 'application/json',
       validateStatus: validateStatus,
     );
@@ -65,13 +59,10 @@ class AuthApi {
     dynamic _bodyData;
 
     try {
-_bodyData=jsonEncode(appleLoginRequest);
-    } catch(error, stackTrace) {
+      _bodyData = jsonEncode(appleLoginRequest);
+    } catch (error, stackTrace) {
       throw DioException(
-         requestOptions: _options.compose(
-          _dio.options,
-          _path,
-        ),
+        requestOptions: _options.compose(_dio.options, _path),
         type: DioExceptionType.unknown,
         error: error,
         stackTrace: stackTrace,
@@ -90,9 +81,14 @@ _bodyData=jsonEncode(appleLoginRequest);
     TokenPair? _responseData;
 
     try {
-final rawData = _response.data;
-_responseData = rawData == null ? null : deserialize<TokenPair, TokenPair>(rawData, 'TokenPair', growable: true);
-
+      final rawData = _response.data;
+      _responseData = rawData == null
+          ? null
+          : deserialize<TokenPair, TokenPair>(
+              rawData,
+              'TokenPair',
+              growable: true,
+            );
     } catch (error, stackTrace) {
       throw DioException(
         requestOptions: _response.requestOptions,
@@ -116,10 +112,10 @@ _responseData = rawData == null ? null : deserialize<TokenPair, TokenPair>(rawDa
   }
 
   /// 用邮箱验证码登录（首次登录自动创建账号）
-  /// 
+  ///
   ///
   /// Parameters:
-  /// * [emailLoginRequest] 
+  /// * [emailLoginRequest]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -129,7 +125,7 @@ _responseData = rawData == null ? null : deserialize<TokenPair, TokenPair>(rawDa
   ///
   /// Returns a [Future] containing a [Response] with a [TokenPair] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<TokenPair>> emailLogin({ 
+  Future<Response<TokenPair>> emailLogin({
     required EmailLoginRequest emailLoginRequest,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -141,13 +137,8 @@ _responseData = rawData == null ? null : deserialize<TokenPair, TokenPair>(rawDa
     final _path = r'/v1/auth/email/login';
     final _options = Options(
       method: r'POST',
-      headers: <String, dynamic>{
-        ...?headers,
-      },
-      extra: <String, dynamic>{
-        'secure': <Map<String, String>>[],
-        ...?extra,
-      },
+      headers: <String, dynamic>{...?headers},
+      extra: <String, dynamic>{'secure': <Map<String, String>>[], ...?extra},
       contentType: 'application/json',
       validateStatus: validateStatus,
     );
@@ -155,13 +146,10 @@ _responseData = rawData == null ? null : deserialize<TokenPair, TokenPair>(rawDa
     dynamic _bodyData;
 
     try {
-_bodyData=jsonEncode(emailLoginRequest);
-    } catch(error, stackTrace) {
+      _bodyData = jsonEncode(emailLoginRequest);
+    } catch (error, stackTrace) {
       throw DioException(
-         requestOptions: _options.compose(
-          _dio.options,
-          _path,
-        ),
+        requestOptions: _options.compose(_dio.options, _path),
         type: DioExceptionType.unknown,
         error: error,
         stackTrace: stackTrace,
@@ -180,9 +168,14 @@ _bodyData=jsonEncode(emailLoginRequest);
     TokenPair? _responseData;
 
     try {
-final rawData = _response.data;
-_responseData = rawData == null ? null : deserialize<TokenPair, TokenPair>(rawData, 'TokenPair', growable: true);
-
+      final rawData = _response.data;
+      _responseData = rawData == null
+          ? null
+          : deserialize<TokenPair, TokenPair>(
+              rawData,
+              'TokenPair',
+              growable: true,
+            );
     } catch (error, stackTrace) {
       throw DioException(
         requestOptions: _response.requestOptions,
@@ -206,7 +199,7 @@ _responseData = rawData == null ? null : deserialize<TokenPair, TokenPair>(rawDa
   }
 
   /// 退出当前设备的登录
-  /// 
+  ///
   ///
   /// Parameters:
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
@@ -218,7 +211,7 @@ _responseData = rawData == null ? null : deserialize<TokenPair, TokenPair>(rawDa
   ///
   /// Returns a [Future]
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<void>> logout({ 
+  Future<Response<void>> logout({
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
     Map<String, dynamic>? extra,
@@ -229,16 +222,10 @@ _responseData = rawData == null ? null : deserialize<TokenPair, TokenPair>(rawDa
     final _path = r'/v1/auth/logout';
     final _options = Options(
       method: r'POST',
-      headers: <String, dynamic>{
-        ...?headers,
-      },
+      headers: <String, dynamic>{...?headers},
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
-          {
-            'type': 'http',
-            'scheme': 'bearer',
-            'name': 'HTTPBearer',
-          },
+          {'type': 'http', 'scheme': 'bearer', 'name': 'HTTPBearer'},
         ],
         ...?extra,
       },
@@ -257,10 +244,10 @@ _responseData = rawData == null ? null : deserialize<TokenPair, TokenPair>(rawDa
   }
 
   /// 通过 Apple 重新验证身份
-  /// 
+  ///
   ///
   /// Parameters:
-  /// * [appleReauthRequest] 
+  /// * [appleReauthRequest]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -270,7 +257,7 @@ _responseData = rawData == null ? null : deserialize<TokenPair, TokenPair>(rawDa
   ///
   /// Returns a [Future]
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<void>> reauthApple({ 
+  Future<Response<void>> reauthApple({
     required AppleReauthRequest appleReauthRequest,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -282,16 +269,10 @@ _responseData = rawData == null ? null : deserialize<TokenPair, TokenPair>(rawDa
     final _path = r'/v1/auth/reauth/apple';
     final _options = Options(
       method: r'POST',
-      headers: <String, dynamic>{
-        ...?headers,
-      },
+      headers: <String, dynamic>{...?headers},
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
-          {
-            'type': 'http',
-            'scheme': 'bearer',
-            'name': 'HTTPBearer',
-          },
+          {'type': 'http', 'scheme': 'bearer', 'name': 'HTTPBearer'},
         ],
         ...?extra,
       },
@@ -302,13 +283,10 @@ _responseData = rawData == null ? null : deserialize<TokenPair, TokenPair>(rawDa
     dynamic _bodyData;
 
     try {
-_bodyData=jsonEncode(appleReauthRequest);
-    } catch(error, stackTrace) {
+      _bodyData = jsonEncode(appleReauthRequest);
+    } catch (error, stackTrace) {
       throw DioException(
-         requestOptions: _options.compose(
-          _dio.options,
-          _path,
-        ),
+        requestOptions: _options.compose(_dio.options, _path),
         type: DioExceptionType.unknown,
         error: error,
         stackTrace: stackTrace,
@@ -328,10 +306,10 @@ _bodyData=jsonEncode(appleReauthRequest);
   }
 
   /// 用邮箱验证码重新验证身份（注销账号等敏感操作前）
-  /// 
+  ///
   ///
   /// Parameters:
-  /// * [emailReauthRequest] 
+  /// * [emailReauthRequest]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -341,7 +319,7 @@ _bodyData=jsonEncode(appleReauthRequest);
   ///
   /// Returns a [Future]
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<void>> reauthEmail({ 
+  Future<Response<void>> reauthEmail({
     required EmailReauthRequest emailReauthRequest,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -353,16 +331,10 @@ _bodyData=jsonEncode(appleReauthRequest);
     final _path = r'/v1/auth/reauth/email';
     final _options = Options(
       method: r'POST',
-      headers: <String, dynamic>{
-        ...?headers,
-      },
+      headers: <String, dynamic>{...?headers},
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
-          {
-            'type': 'http',
-            'scheme': 'bearer',
-            'name': 'HTTPBearer',
-          },
+          {'type': 'http', 'scheme': 'bearer', 'name': 'HTTPBearer'},
         ],
         ...?extra,
       },
@@ -373,13 +345,10 @@ _bodyData=jsonEncode(appleReauthRequest);
     dynamic _bodyData;
 
     try {
-_bodyData=jsonEncode(emailReauthRequest);
-    } catch(error, stackTrace) {
+      _bodyData = jsonEncode(emailReauthRequest);
+    } catch (error, stackTrace) {
       throw DioException(
-         requestOptions: _options.compose(
-          _dio.options,
-          _path,
-        ),
+        requestOptions: _options.compose(_dio.options, _path),
         type: DioExceptionType.unknown,
         error: error,
         stackTrace: stackTrace,
@@ -402,7 +371,7 @@ _bodyData=jsonEncode(emailReauthRequest);
   /// 每次续期都换发新的刷新令牌。旧的刷新令牌再被使用时，这台设备的登录全部失效。
   ///
   /// Parameters:
-  /// * [refreshRequest] 
+  /// * [refreshRequest]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -412,7 +381,7 @@ _bodyData=jsonEncode(emailReauthRequest);
   ///
   /// Returns a [Future] containing a [Response] with a [TokenPair] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<TokenPair>> refreshTokens({ 
+  Future<Response<TokenPair>> refreshTokens({
     required RefreshRequest refreshRequest,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -424,13 +393,8 @@ _bodyData=jsonEncode(emailReauthRequest);
     final _path = r'/v1/auth/refresh';
     final _options = Options(
       method: r'POST',
-      headers: <String, dynamic>{
-        ...?headers,
-      },
-      extra: <String, dynamic>{
-        'secure': <Map<String, String>>[],
-        ...?extra,
-      },
+      headers: <String, dynamic>{...?headers},
+      extra: <String, dynamic>{'secure': <Map<String, String>>[], ...?extra},
       contentType: 'application/json',
       validateStatus: validateStatus,
     );
@@ -438,13 +402,10 @@ _bodyData=jsonEncode(emailReauthRequest);
     dynamic _bodyData;
 
     try {
-_bodyData=jsonEncode(refreshRequest);
-    } catch(error, stackTrace) {
+      _bodyData = jsonEncode(refreshRequest);
+    } catch (error, stackTrace) {
       throw DioException(
-         requestOptions: _options.compose(
-          _dio.options,
-          _path,
-        ),
+        requestOptions: _options.compose(_dio.options, _path),
         type: DioExceptionType.unknown,
         error: error,
         stackTrace: stackTrace,
@@ -463,9 +424,14 @@ _bodyData=jsonEncode(refreshRequest);
     TokenPair? _responseData;
 
     try {
-final rawData = _response.data;
-_responseData = rawData == null ? null : deserialize<TokenPair, TokenPair>(rawData, 'TokenPair', growable: true);
-
+      final rawData = _response.data;
+      _responseData = rawData == null
+          ? null
+          : deserialize<TokenPair, TokenPair>(
+              rawData,
+              'TokenPair',
+              growable: true,
+            );
     } catch (error, stackTrace) {
       throw DioException(
         requestOptions: _response.requestOptions,
@@ -492,7 +458,7 @@ _responseData = rawData == null ? null : deserialize<TokenPair, TokenPair>(rawDa
   /// purpose&#x3D;login 不需要登录；bind（绑定新邮箱）和 reauth（重新验证身份）需要登录。
   ///
   /// Parameters:
-  /// * [emailCodeRequest] 
+  /// * [emailCodeRequest]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -502,7 +468,7 @@ _responseData = rawData == null ? null : deserialize<TokenPair, TokenPair>(rawDa
   ///
   /// Returns a [Future] containing a [Response] with a [EmailCodeSent] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<EmailCodeSent>> sendEmailCode({ 
+  Future<Response<EmailCodeSent>> sendEmailCode({
     required EmailCodeRequest emailCodeRequest,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -514,16 +480,10 @@ _responseData = rawData == null ? null : deserialize<TokenPair, TokenPair>(rawDa
     final _path = r'/v1/auth/email/code';
     final _options = Options(
       method: r'POST',
-      headers: <String, dynamic>{
-        ...?headers,
-      },
+      headers: <String, dynamic>{...?headers},
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
-          {
-            'type': 'http',
-            'scheme': 'bearer',
-            'name': 'HTTPBearer',
-          },
+          {'type': 'http', 'scheme': 'bearer', 'name': 'HTTPBearer'},
         ],
         ...?extra,
       },
@@ -534,13 +494,10 @@ _responseData = rawData == null ? null : deserialize<TokenPair, TokenPair>(rawDa
     dynamic _bodyData;
 
     try {
-_bodyData=jsonEncode(emailCodeRequest);
-    } catch(error, stackTrace) {
+      _bodyData = jsonEncode(emailCodeRequest);
+    } catch (error, stackTrace) {
       throw DioException(
-         requestOptions: _options.compose(
-          _dio.options,
-          _path,
-        ),
+        requestOptions: _options.compose(_dio.options, _path),
         type: DioExceptionType.unknown,
         error: error,
         stackTrace: stackTrace,
@@ -559,9 +516,14 @@ _bodyData=jsonEncode(emailCodeRequest);
     EmailCodeSent? _responseData;
 
     try {
-final rawData = _response.data;
-_responseData = rawData == null ? null : deserialize<EmailCodeSent, EmailCodeSent>(rawData, 'EmailCodeSent', growable: true);
-
+      final rawData = _response.data;
+      _responseData = rawData == null
+          ? null
+          : deserialize<EmailCodeSent, EmailCodeSent>(
+              rawData,
+              'EmailCodeSent',
+              growable: true,
+            );
     } catch (error, stackTrace) {
       throw DioException(
         requestOptions: _response.requestOptions,
@@ -583,5 +545,4 @@ _responseData = rawData == null ? null : deserialize<EmailCodeSent, EmailCodeSen
       extra: _response.extra,
     );
   }
-
 }

@@ -8,7 +8,6 @@ import 'package:json_annotation/json_annotation.dart';
 
 part 'purchase_unit.g.dart';
 
-
 @CopyWith()
 @JsonSerializable(
   checked: true,
@@ -18,52 +17,26 @@ part 'purchase_unit.g.dart';
 )
 class PurchaseUnit {
   /// Returns a new [PurchaseUnit] instance.
-  PurchaseUnit({
+  PurchaseUnit({required this.grams, required this.name});
 
-    required  this.grams,
-
-    required  this.name,
-  });
-
-      /// 一个购买单位大约多少克
-  @JsonKey(
-    
-    name: r'grams',
-    required: true,
-    includeIfNull: false,
-  )
-
-
+  /// 一个购买单位大约多少克
+  @JsonKey(name: r'grams', required: true, includeIfNull: false)
   final num grams;
 
-
-
-      /// 购买单位，例如 盒、把、瓶
-  @JsonKey(
-    
-    name: r'name',
-    required: true,
-    includeIfNull: false,
-  )
-
-
+  /// 购买单位，例如 盒、把、瓶
+  @JsonKey(name: r'name', required: true, includeIfNull: false)
   final String name;
 
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is PurchaseUnit && other.grams == grams && other.name == name;
 
+  @override
+  int get hashCode => grams.hashCode + name.hashCode;
 
-
-
-    @override
-    bool operator ==(Object other) => identical(this, other) || other is PurchaseUnit &&
-      other.grams == grams &&
-      other.name == name;
-
-    @override
-    int get hashCode =>
-        grams.hashCode +
-        name.hashCode;
-
-  factory PurchaseUnit.fromJson(Map<String, dynamic> json) => _$PurchaseUnitFromJson(json);
+  factory PurchaseUnit.fromJson(Map<String, dynamic> json) =>
+      _$PurchaseUnitFromJson(json);
 
   Map<String, dynamic> toJson() => _$PurchaseUnitToJson(this);
 
@@ -71,6 +44,4 @@ class PurchaseUnit {
   String toString() {
     return toJson().toString();
   }
-
 }
-

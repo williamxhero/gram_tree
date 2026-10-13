@@ -557,9 +557,15 @@ abstract class AppLocalizations {
   String get syncPermissionReason;
 
   /// No description provided for @syncRecipeValidationReason.
+  ///
+  /// In zh, this message translates to:
+  /// **'菜谱结构校验未通过；请检查食材和步骤后重新保存。'**
   String get syncRecipeValidationReason;
 
   /// No description provided for @syncRecipePolicyReason.
+  ///
+  /// In zh, this message translates to:
+  /// **'描述包含不允许的健康/治疗表述；请修改后重新保存。'**
   String get syncRecipePolicyReason;
 
   /// No description provided for @syncExhaustedReason.

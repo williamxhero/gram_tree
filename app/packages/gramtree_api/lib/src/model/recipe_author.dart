@@ -8,7 +8,6 @@ import 'package:json_annotation/json_annotation.dart';
 
 part 'recipe_author.g.dart';
 
-
 @CopyWith()
 @JsonSerializable(
   checked: true,
@@ -18,50 +17,24 @@ part 'recipe_author.g.dart';
 )
 class RecipeAuthor {
   /// Returns a new [RecipeAuthor] instance.
-  RecipeAuthor({
+  RecipeAuthor({required this.id, required this.nickname});
 
-    required  this.id,
-
-    required  this.nickname,
-  });
-
-  @JsonKey(
-    
-    name: r'id',
-    required: true,
-    includeIfNull: false,
-  )
-
-
+  @JsonKey(name: r'id', required: true, includeIfNull: false)
   final String id;
 
-
-
-  @JsonKey(
-    
-    name: r'nickname',
-    required: true,
-    includeIfNull: false,
-  )
-
-
+  @JsonKey(name: r'nickname', required: true, includeIfNull: false)
   final String nickname;
 
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is RecipeAuthor && other.id == id && other.nickname == nickname;
 
+  @override
+  int get hashCode => id.hashCode + nickname.hashCode;
 
-
-
-    @override
-    bool operator ==(Object other) => identical(this, other) || other is RecipeAuthor &&
-      other.id == id &&
-      other.nickname == nickname;
-
-    @override
-    int get hashCode =>
-        id.hashCode +
-        nickname.hashCode;
-
-  factory RecipeAuthor.fromJson(Map<String, dynamic> json) => _$RecipeAuthorFromJson(json);
+  factory RecipeAuthor.fromJson(Map<String, dynamic> json) =>
+      _$RecipeAuthorFromJson(json);
 
   Map<String, dynamic> toJson() => _$RecipeAuthorToJson(this);
 
@@ -69,6 +42,4 @@ class RecipeAuthor {
   String toString() {
     return toJson().toString();
   }
-
 }
-

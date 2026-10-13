@@ -76,27 +76,21 @@ extension $PageUnrecordedIngredientItemCopyWith
 
 PageUnrecordedIngredientItem _$PageUnrecordedIngredientItemFromJson(
   Map<String, dynamic> json,
-) => $checkedCreate(
-  'PageUnrecordedIngredientItem',
-  json,
-  ($checkedConvert) {
-    $checkKeys(json, requiredKeys: const ['items']);
-    final val = PageUnrecordedIngredientItem(
-      items: $checkedConvert(
-        'items',
-        (v) => (v as List<dynamic>)
-            .map(
-              (e) =>
-                  UnrecordedIngredientItem.fromJson(e as Map<String, dynamic>),
-            )
-            .toList(),
-      ),
-      nextCursor: $checkedConvert('next_cursor', (v) => v as String?),
-    );
-    return val;
-  },
-  fieldKeyMap: const {'nextCursor': 'next_cursor'},
-);
+) => $checkedCreate('PageUnrecordedIngredientItem', json, ($checkedConvert) {
+  $checkKeys(json, requiredKeys: const ['items']);
+  final val = PageUnrecordedIngredientItem(
+    items: $checkedConvert(
+      'items',
+      (v) => (v as List<dynamic>)
+          .map(
+            (e) => UnrecordedIngredientItem.fromJson(e as Map<String, dynamic>),
+          )
+          .toList(),
+    ),
+    nextCursor: $checkedConvert('next_cursor', (v) => v as String?),
+  );
+  return val;
+}, fieldKeyMap: const {'nextCursor': 'next_cursor'});
 
 Map<String, dynamic> _$PageUnrecordedIngredientItemToJson(
   PageUnrecordedIngredientItem instance,

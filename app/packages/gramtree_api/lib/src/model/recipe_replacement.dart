@@ -8,7 +8,6 @@ import 'package:json_annotation/json_annotation.dart';
 
 part 'recipe_replacement.g.dart';
 
-
 @CopyWith()
 @JsonSerializable(
   checked: true,
@@ -19,82 +18,51 @@ part 'recipe_replacement.g.dart';
 class RecipeReplacement {
   /// Returns a new [RecipeReplacement] instance.
   RecipeReplacement({
+    required this.displayName,
 
-    required  this.displayName,
+    this.ingredientId,
 
-     this.ingredientId,
+    this.note,
 
-     this.note,
-
-     this.ratio = 1,
+    this.ratio = 1,
   });
 
-  @JsonKey(
-    
-    name: r'display_name',
-    required: true,
-    includeIfNull: false,
-  )
-
-
+  @JsonKey(name: r'display_name', required: true, includeIfNull: false)
   final String displayName;
 
-
-
-  @JsonKey(
-    
-    name: r'ingredient_id',
-    required: false,
-    includeIfNull: false,
-  )
-
-
+  @JsonKey(name: r'ingredient_id', required: false, includeIfNull: false)
   final String? ingredientId;
 
-
-
-  @JsonKey(
-    
-    name: r'note',
-    required: false,
-    includeIfNull: false,
-  )
-
-
+  @JsonKey(name: r'note', required: false, includeIfNull: false)
   final String? note;
 
-
-
-          // maximum: 100.0
+  // maximum: 100.0
   @JsonKey(
     defaultValue: 1,
     name: r'ratio',
     required: false,
     includeIfNull: false,
   )
-
-
   final num? ratio;
 
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is RecipeReplacement &&
+          other.displayName == displayName &&
+          other.ingredientId == ingredientId &&
+          other.note == note &&
+          other.ratio == ratio;
 
+  @override
+  int get hashCode =>
+      displayName.hashCode +
+      ingredientId.hashCode +
+      note.hashCode +
+      ratio.hashCode;
 
-
-
-    @override
-    bool operator ==(Object other) => identical(this, other) || other is RecipeReplacement &&
-      other.displayName == displayName &&
-      other.ingredientId == ingredientId &&
-      other.note == note &&
-      other.ratio == ratio;
-
-    @override
-    int get hashCode =>
-        displayName.hashCode +
-        ingredientId.hashCode +
-        note.hashCode +
-        ratio.hashCode;
-
-  factory RecipeReplacement.fromJson(Map<String, dynamic> json) => _$RecipeReplacementFromJson(json);
+  factory RecipeReplacement.fromJson(Map<String, dynamic> json) =>
+      _$RecipeReplacementFromJson(json);
 
   Map<String, dynamic> toJson() => _$RecipeReplacementToJson(this);
 
@@ -102,6 +70,4 @@ class RecipeReplacement {
   String toString() {
     return toJson().toString();
   }
-
 }
-

@@ -11,7 +11,7 @@ abstract class _$ValidationErrorCWProxy {
 
   ValidationError input(Object? input);
 
-  ValidationError loc(List<ValidationErrorLocInner> loc);
+  ValidationError loc(List<Object> loc);
 
   ValidationError msg(String msg);
 
@@ -26,7 +26,7 @@ abstract class _$ValidationErrorCWProxy {
   ValidationError call({
     Object? ctx,
     Object? input,
-    List<ValidationErrorLocInner> loc,
+    List<Object> loc,
     String msg,
     String type,
   });
@@ -45,7 +45,7 @@ class _$ValidationErrorCWProxyImpl implements _$ValidationErrorCWProxy {
   ValidationError input(Object? input) => this(input: input);
 
   @override
-  ValidationError loc(List<ValidationErrorLocInner> loc) => this(loc: loc);
+  ValidationError loc(List<Object> loc) => this(loc: loc);
 
   @override
   ValidationError msg(String msg) => this(msg: msg);
@@ -79,7 +79,7 @@ class _$ValidationErrorCWProxyImpl implements _$ValidationErrorCWProxy {
       loc: loc == const $CopyWithPlaceholder()
           ? _value.loc
           // ignore: cast_nullable_to_non_nullable
-          : loc as List<ValidationErrorLocInner>,
+          : loc as List<Object>,
       msg: msg == const $CopyWithPlaceholder()
           ? _value.msg
           // ignore: cast_nullable_to_non_nullable
@@ -110,12 +110,7 @@ ValidationError _$ValidationErrorFromJson(Map<String, dynamic> json) =>
         input: $checkedConvert('input', (v) => v),
         loc: $checkedConvert(
           'loc',
-          (v) => (v as List<dynamic>)
-              .map(
-                (e) =>
-                    ValidationErrorLocInner.fromJson(e as Map<String, dynamic>),
-              )
-              .toList(),
+          (v) => (v as List<dynamic>).map((e) => e as Object).toList(),
         ),
         msg: $checkedConvert('msg', (v) => v as String),
         type: $checkedConvert('type', (v) => v as String),
@@ -127,7 +122,7 @@ Map<String, dynamic> _$ValidationErrorToJson(ValidationError instance) =>
     <String, dynamic>{
       'ctx': ?instance.ctx,
       'input': ?instance.input,
-      'loc': instance.loc.map((e) => e.toJson()).toList(),
+      'loc': instance.loc,
       'msg': instance.msg,
       'type': instance.type,
     };

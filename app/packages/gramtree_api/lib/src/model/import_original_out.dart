@@ -8,7 +8,6 @@ import 'package:json_annotation/json_annotation.dart';
 
 part 'import_original_out.g.dart';
 
-
 @CopyWith()
 @JsonSerializable(
   checked: true,
@@ -18,34 +17,21 @@ part 'import_original_out.g.dart';
 )
 class ImportOriginalOut {
   /// Returns a new [ImportOriginalOut] instance.
-  ImportOriginalOut({
+  ImportOriginalOut({required this.originalText});
 
-    required  this.originalText,
-  });
-
-  @JsonKey(
-    
-    name: r'original_text',
-    required: true,
-    includeIfNull: false,
-  )
-
-
+  @JsonKey(name: r'original_text', required: true, includeIfNull: false)
   final String originalText;
 
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is ImportOriginalOut && other.originalText == originalText;
 
+  @override
+  int get hashCode => originalText.hashCode;
 
-
-
-    @override
-    bool operator ==(Object other) => identical(this, other) || other is ImportOriginalOut &&
-      other.originalText == originalText;
-
-    @override
-    int get hashCode =>
-        originalText.hashCode;
-
-  factory ImportOriginalOut.fromJson(Map<String, dynamic> json) => _$ImportOriginalOutFromJson(json);
+  factory ImportOriginalOut.fromJson(Map<String, dynamic> json) =>
+      _$ImportOriginalOutFromJson(json);
 
   Map<String, dynamic> toJson() => _$ImportOriginalOutToJson(this);
 
@@ -53,6 +39,4 @@ class ImportOriginalOut {
   String toString() {
     return toJson().toString();
   }
-
 }
-
