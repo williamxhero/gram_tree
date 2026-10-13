@@ -100,6 +100,72 @@ class TasteProfileChangeOut(BaseModel):
     old_value: dict[str, Any]
     new_value: dict[str, Any]
     reason: str
-    source: Literal["manual"]
-    status: Literal["active", "reverted"]
+    source: str
+    origin: Literal["manual", "auto", "explicit_save"] = "manual"
+    status: Literal["active", "reverted", "pending", "confirmed"]
+    source_record_ids: list[str] = Field(default_factory=list)
     created_at: Timestamp
+    reverted_at: Timestamp | None = None
+
+
+LearningSignalKind = Literal[
+    "manual_adjustment",
+    "feedback_tag",
+    "feedback_unanswered",
+    "rating",
+    "repeat_cook",
+    "explicit_save",
+    "skipped_recommendation",
+    "favorite",
+]
+
+
+class TasteChangeStatusOut(BaseModel):
+    """Revert-rate facts for SPEC-012 (auto changes only)."""
+
+    auto_changes: int
+    auto_reverted: int
+
+
+class AttributionAnswer(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    answer: Literal["personal", "recipe", "unanswered"]
+
+
+class AutomationOut(BaseModel):
+    """Capability switch consumed by the app and by sibling tickets."""
+
+    automatic_learning: bool
+    save_to_taste: bool
+
+
+class LearningRunOut(BaseModel):
+    applied_changes: list[TasteProfileChangeOut]
+    pending_suggestions: list[TasteProfileChangeOut]
+    signals_considered: int
+
+
+class FieldLockWrite(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    field: str = Field(min_length=1, max_length=100)
+    locked: bool
+
+
+class AttributionOut(BaseModel):
+    record_id: str
+    recipe_version_id: str | None = None
+    verdict: Literal["personal", "recipe", "pending"]
+    decision_source: Literal["rule", "user", "unanswered"]
+    reason_code: str
+    rules_version: str
+    sample_size: int
+    flavors: dict[str, int]
+    learning_eligibility: Literal["strong", "reduced", "excluded"]
+    asked: bool
+    answered: bool
+    updated_at: Timestamp
+
+
+class AttributionStateOut(BaseModel):
+    attribution: AttributionOut | None
+    reason_text: str

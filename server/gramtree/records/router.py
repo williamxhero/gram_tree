@@ -175,9 +175,47 @@ def revise_record(
         note=body.note,
     )
     session.add(revision)
+    session.flush()
+    _learn_from_record(session, auth.user.id, row)
     session.commit()
+    from gramtree.tasks.jobs import run_taste_learning
+
+    run_taste_learning.delay(str(auth.user.id))
     session.refresh(revision)
     return CookingRecordRevisionOut.model_validate(revision, from_attributes=True)
+
+
+def _learn_from_record(session: Session, owner_id: uuid.UUID, row: CookingRecord) -> None:
+    """New feedback revisions update attribution and existing signals once."""
+    from gramtree.taste_profiles import learning
+    from gramtree.taste_profiles import service as taste_service
+
+    if not learning.automation_enabled(session):
+        return
+    scale = taste_service.scale_for(session)
+    profile = taste_service.locked_profile(session, owner_id, scale)
+    revisions = list(
+        session.scalars(
+            select(CookingRecordRevision).where(
+                CookingRecordRevision.record_id == row.id,
+                CookingRecordRevision.field == "feedback",
+            )
+        )
+    )
+    flavors = learning.feedback_flavors(revisions)
+    if flavors:
+        existing = session.get(learning.TasteAttribution, row.id)
+        if existing is None or existing.decision_source != "user":
+            verdict = learning.rule_verdict(session, row.recipe_version_id, owner_id, flavors)
+            learning.record_verdict(
+                session,
+                profile,
+                row,
+                verdict,
+                flavors,
+                learning._latest_feedback_revision_id(session, row.id),
+            )
+    learning.collect_signals(session, profile, row)
 
 
 @router.get(

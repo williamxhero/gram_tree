@@ -101,6 +101,14 @@ def main() -> None:
                 "IngredientPreference",
                 "Allerg",
                 "Family",
+                # SPEC-005.3 口味学习：nullable enum 的 default 会让 dart-dio
+                # 生成无效的 `const Enum._(...)`，按同一投影规则处理。
+                "TasteProfileChange",
+                "TasteChangeStatus",
+                "Attribution",
+                "LearningRun",
+                "FieldLock",
+                "Automation",
             )
         ) or name in {"NutritionEstimate", "ValueSource", "TasteProfilePatch"}:
             document["components"]["schemas"][name] = project_schema(schema)

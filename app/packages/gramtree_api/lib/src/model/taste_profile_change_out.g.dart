@@ -17,9 +17,15 @@ abstract class _$TasteProfileChangeOutCWProxy {
 
   TasteProfileChangeOut oldValue(Object oldValue);
 
+  TasteProfileChangeOut origin(TasteProfileChangeOutOriginEnum origin);
+
   TasteProfileChangeOut reason(String reason);
 
-  TasteProfileChangeOut source_(TasteProfileChangeOutSource_Enum source_);
+  TasteProfileChangeOut revertedAt(String? revertedAt);
+
+  TasteProfileChangeOut source_(String source_);
+
+  TasteProfileChangeOut sourceRecordIds(List<String>? sourceRecordIds);
 
   TasteProfileChangeOut status(TasteProfileChangeOutStatusEnum status);
 
@@ -37,8 +43,11 @@ abstract class _$TasteProfileChangeOutCWProxy {
     String id,
     Object newValue,
     Object oldValue,
+    TasteProfileChangeOutOriginEnum origin,
     String reason,
-    TasteProfileChangeOutSource_Enum source_,
+    String? revertedAt,
+    String source_,
+    List<String>? sourceRecordIds,
     TasteProfileChangeOutStatusEnum status,
     int version,
   });
@@ -68,11 +77,22 @@ class _$TasteProfileChangeOutCWProxyImpl
   TasteProfileChangeOut oldValue(Object oldValue) => this(oldValue: oldValue);
 
   @override
+  TasteProfileChangeOut origin(TasteProfileChangeOutOriginEnum origin) =>
+      this(origin: origin);
+
+  @override
   TasteProfileChangeOut reason(String reason) => this(reason: reason);
 
   @override
-  TasteProfileChangeOut source_(TasteProfileChangeOutSource_Enum source_) =>
-      this(source_: source_);
+  TasteProfileChangeOut revertedAt(String? revertedAt) =>
+      this(revertedAt: revertedAt);
+
+  @override
+  TasteProfileChangeOut source_(String source_) => this(source_: source_);
+
+  @override
+  TasteProfileChangeOut sourceRecordIds(List<String>? sourceRecordIds) =>
+      this(sourceRecordIds: sourceRecordIds);
 
   @override
   TasteProfileChangeOut status(TasteProfileChangeOutStatusEnum status) =>
@@ -94,8 +114,11 @@ class _$TasteProfileChangeOutCWProxyImpl
     Object? id = const $CopyWithPlaceholder(),
     Object? newValue = const $CopyWithPlaceholder(),
     Object? oldValue = const $CopyWithPlaceholder(),
+    Object? origin = const $CopyWithPlaceholder(),
     Object? reason = const $CopyWithPlaceholder(),
+    Object? revertedAt = const $CopyWithPlaceholder(),
     Object? source_ = const $CopyWithPlaceholder(),
+    Object? sourceRecordIds = const $CopyWithPlaceholder(),
     Object? status = const $CopyWithPlaceholder(),
     Object? version = const $CopyWithPlaceholder(),
   }) {
@@ -120,14 +143,26 @@ class _$TasteProfileChangeOutCWProxyImpl
           ? _value.oldValue
           // ignore: cast_nullable_to_non_nullable
           : oldValue as Object,
+      origin: origin == const $CopyWithPlaceholder()
+          ? _value.origin
+          // ignore: cast_nullable_to_non_nullable
+          : origin as TasteProfileChangeOutOriginEnum,
       reason: reason == const $CopyWithPlaceholder()
           ? _value.reason
           // ignore: cast_nullable_to_non_nullable
           : reason as String,
+      revertedAt: revertedAt == const $CopyWithPlaceholder()
+          ? _value.revertedAt
+          // ignore: cast_nullable_to_non_nullable
+          : revertedAt as String?,
       source_: source_ == const $CopyWithPlaceholder()
           ? _value.source_
           // ignore: cast_nullable_to_non_nullable
-          : source_ as TasteProfileChangeOutSource_Enum,
+          : source_ as String,
+      sourceRecordIds: sourceRecordIds == const $CopyWithPlaceholder()
+          ? _value.sourceRecordIds
+          // ignore: cast_nullable_to_non_nullable
+          : sourceRecordIds as List<String>?,
       status: status == const $CopyWithPlaceholder()
           ? _value.status
           // ignore: cast_nullable_to_non_nullable
@@ -165,6 +200,7 @@ TasteProfileChangeOut _$TasteProfileChangeOutFromJson(
         'id',
         'new_value',
         'old_value',
+        'origin',
         'reason',
         'source',
         'status',
@@ -177,10 +213,16 @@ TasteProfileChangeOut _$TasteProfileChangeOutFromJson(
       id: $checkedConvert('id', (v) => v as String),
       newValue: $checkedConvert('new_value', (v) => v as Object),
       oldValue: $checkedConvert('old_value', (v) => v as Object),
+      origin: $checkedConvert(
+        'origin',
+        (v) => $enumDecode(_$TasteProfileChangeOutOriginEnumEnumMap, v),
+      ),
       reason: $checkedConvert('reason', (v) => v as String),
-      source_: $checkedConvert(
-        'source',
-        (v) => $enumDecode(_$TasteProfileChangeOutSource_EnumEnumMap, v),
+      revertedAt: $checkedConvert('reverted_at', (v) => v as String?),
+      source_: $checkedConvert('source', (v) => v as String),
+      sourceRecordIds: $checkedConvert(
+        'source_record_ids',
+        (v) => (v as List<dynamic>?)?.map((e) => e as String).toList(),
       ),
       status: $checkedConvert(
         'status',
@@ -194,7 +236,9 @@ TasteProfileChangeOut _$TasteProfileChangeOutFromJson(
     'createdAt': 'created_at',
     'newValue': 'new_value',
     'oldValue': 'old_value',
+    'revertedAt': 'reverted_at',
     'source_': 'source',
+    'sourceRecordIds': 'source_record_ids',
   },
 );
 
@@ -206,17 +250,24 @@ Map<String, dynamic> _$TasteProfileChangeOutToJson(
   'id': instance.id,
   'new_value': instance.newValue,
   'old_value': instance.oldValue,
+  'origin': _$TasteProfileChangeOutOriginEnumEnumMap[instance.origin]!,
   'reason': instance.reason,
-  'source': _$TasteProfileChangeOutSource_EnumEnumMap[instance.source_]!,
+  'reverted_at': ?instance.revertedAt,
+  'source': instance.source_,
+  'source_record_ids': ?instance.sourceRecordIds,
   'status': _$TasteProfileChangeOutStatusEnumEnumMap[instance.status]!,
   'version': instance.version,
 };
 
-const _$TasteProfileChangeOutSource_EnumEnumMap = {
-  TasteProfileChangeOutSource_Enum.manual: 'manual',
+const _$TasteProfileChangeOutOriginEnumEnumMap = {
+  TasteProfileChangeOutOriginEnum.manual: 'manual',
+  TasteProfileChangeOutOriginEnum.auto: 'auto',
+  TasteProfileChangeOutOriginEnum.explicitSave: 'explicit_save',
 };
 
 const _$TasteProfileChangeOutStatusEnumEnumMap = {
   TasteProfileChangeOutStatusEnum.active: 'active',
   TasteProfileChangeOutStatusEnum.reverted: 'reverted',
+  TasteProfileChangeOutStatusEnum.pending: 'pending',
+  TasteProfileChangeOutStatusEnum.confirmed: 'confirmed',
 };
