@@ -12,6 +12,7 @@ from gramtree.api import client_config, health
 from gramtree.core.errors import install_error_handlers
 from gramtree.core.logging import configure_logging
 from gramtree.core.middleware import RequestContextMiddleware
+from gramtree.core.rate_limit_middleware import RateLimitMiddleware
 from gramtree.db import make_engine, make_session_factory
 from gramtree.events import dev as events_dev
 from gramtree.events import router as events
@@ -74,6 +75,12 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         redis=app.state.redis,
         settings=settings,
         captcha=app.state.captcha,
+    )
+    app.add_middleware(
+        RateLimitMiddleware,
+        session_factory=app.state.session_factory,
+        redis=app.state.redis,
+        settings=settings,
     )
     app.add_middleware(RequestContextMiddleware)
 

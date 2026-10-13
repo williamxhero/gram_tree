@@ -135,6 +135,22 @@ ITEMS: tuple[ConfigItem, ...] = (
         minimum=1,
         maximum=500,
     ),
+    ConfigItem(
+        "api.cursor_ttl_seconds",
+        "int",
+        600,
+        "分页游标有效期（秒）",
+        minimum=1,
+        maximum=86400,
+    ),
+    ConfigItem(
+        "api.cursor_max_pages",
+        "int",
+        100,
+        "单次查询最多可连续翻页的页数",
+        minimum=1,
+        maximum=10000,
+    ),
     # —— 已验证条件占位（SPEC-002.4；判定在 SPEC-007.3 实现） ——
     ConfigItem(
         "recipe.verification_min_distinct_cooks",
@@ -336,6 +352,27 @@ ITEMS: tuple[ConfigItem, ...] = (
         "刷新令牌后旧请求签名密钥的过渡时间（秒）",
         minimum=1,
         maximum=300,
+    ),
+    # —— 接口限流（SPEC-011.2） ——
+    *(
+        ConfigItem(
+            f"rate.{category}.{dimension}_per_{window}",
+            "int",
+            default,
+            f"{category} 接口按{dimension}维度的{window}窗口额度",
+            minimum=1,
+            maximum=10_000_000,
+        )
+        for category, default in (
+            ("search_list", 120),
+            ("detail", 120),
+            ("write", 60),
+            ("ai", 30),
+            ("auth", 30),
+            ("export", 10),
+        )
+        for dimension in ("account", "device", "ip")
+        for window, default in (("minute", default), ("day", default * 40))
     ),
     # —— 规则型机器行为保护（SPEC-011.2） ——
     ConfigItem("risk.enabled", "bool", True, "是否启用机器行为风险规则"),
