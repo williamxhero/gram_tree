@@ -12,6 +12,7 @@ from gramtree.api import client_config, health
 from gramtree.core.errors import install_error_handlers
 from gramtree.core.logging import configure_logging
 from gramtree.core.middleware import RequestContextMiddleware
+from gramtree.core.rate_limit_middleware import RateLimitMiddleware
 from gramtree.db import make_engine, make_session_factory
 from gramtree.events import dev as events_dev
 from gramtree.events import router as events
@@ -22,6 +23,9 @@ from gramtree.recipes import imports as recipe_imports
 from gramtree.recipes import measure_router as personal_measures
 from gramtree.recipes import router as recipes
 from gramtree.records import router as records
+from gramtree.risk import router as risk
+from gramtree.risk.captcha import RejectingCaptchaAdapter
+from gramtree.risk.middleware import RiskMiddleware
 from gramtree.settings import Settings, get_settings
 from gramtree.taste_profiles import allergy_router as allergies
 from gramtree.taste_profiles import constraint_router as cooking_constraints
@@ -56,6 +60,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     )
     app.state.mailer = make_mail_sender(settings)
     app.state.apple = AppleClient(settings, HttpAppleTransport())
+    app.state.captcha = RejectingCaptchaAdapter()
 
     install_error_handlers(app)
     app.add_middleware(
@@ -65,6 +70,19 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         allow_methods=["*"],
         allow_headers=["*"],
         expose_headers=["X-Request-ID", "X-Measure-Observed-Writes", "X-Measure-Snapshot-Version"],
+    )
+    app.add_middleware(
+        RiskMiddleware,
+        session_factory=app.state.session_factory,
+        redis=app.state.redis,
+        settings=settings,
+        captcha=app.state.captcha,
+    )
+    app.add_middleware(
+        RateLimitMiddleware,
+        session_factory=app.state.session_factory,
+        redis=app.state.redis,
+        settings=settings,
     )
     app.add_middleware(RequestContextMiddleware)
 
@@ -89,6 +107,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     v1.include_router(allergies.router)
     v1.include_router(family_members.router)
     v1.include_router(ui_protocol.router)
+    v1.include_router(risk.router)
     if settings.dev_tools_enabled:
         v1.include_router(accounts_dev.router)
         v1.include_router(events_dev.router)

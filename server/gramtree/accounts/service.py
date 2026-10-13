@@ -44,6 +44,7 @@ from gramtree.accounts.models import (
     User,
     UserStatus,
 )
+from gramtree.accounts.signing import credential_hash
 from gramtree.events.models import Event
 from gramtree.events.sync_models import WriteFactOutbox, WriteReceipt
 from gramtree.recipes.measure_models import PersonalMeasure
@@ -210,6 +211,7 @@ class IssuedTokens:
     access_token: str
     access_expires_in: int
     refresh_token: str
+    request_signing_key: str
     user: User
 
 
@@ -230,6 +232,16 @@ def _issue(
         algorithm="HS256",
     )
     refresh = secrets.token_urlsafe(32)
+    signing_seed = secrets.token_urlsafe(32)
+    # Persist only a derived verifier. A refresh rotates the credential and
+    # leaves a short overlap so an in-flight request is not invalidated mid-flight.
+    signing_key = credential_hash(signing_seed, settings.auth_secret)
+    if device_session.signing_secret_hash:
+        device_session.previous_signing_secret_hash = device_session.signing_secret_hash
+        device_session.previous_signing_secret_expires_at = now + timedelta(
+            seconds=int(config.get(session, "auth.signing_key_grace_seconds"))
+        )
+    device_session.signing_secret_hash = signing_key
     session.add(
         RefreshToken(
             session_id=device_session.id,
@@ -239,7 +251,7 @@ def _issue(
         )
     )
     session.commit()
-    return IssuedTokens(access, access_minutes * 60, refresh, user)
+    return IssuedTokens(access, access_minutes * 60, refresh, signing_key, user)
 
 
 def _start_session(

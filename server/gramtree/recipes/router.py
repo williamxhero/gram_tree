@@ -126,13 +126,19 @@ def create_recipe(
 
 
 @router.get("", response_model=RecipeList, responses=_errors(401))
-def list_recipes(auth: CurrentAuth, session: SessionDep, page: PageDep) -> RecipeList:
+def list_recipes(
+    auth: CurrentAuth, session: SessionDep, settings: SettingsDep, page: PageDep
+) -> RecipeList:
     return service.list_recipes(
         session,
         auth.user,
         cursor=page.cursor,
         limit=page.limit,
         maximum=int(config.get(session, "api.page_size_max")),
+        signing_secret=settings.auth_secret,
+        signing_subject=str(auth.user.id),
+        cursor_ttl_seconds=int(config.get(session, "api.cursor_ttl_seconds")),
+        cursor_max_pages=int(config.get(session, "api.cursor_max_pages")),
     )
 
 
@@ -257,7 +263,11 @@ def display_recipe_version_ingredients(
     responses=_errors(401, 404, 422),
 )
 def list_recipe_comparison_candidates(
-    recipe_id: IdV4, auth: CurrentAuth, session: SessionDep, page: PageDep
+    recipe_id: IdV4,
+    auth: CurrentAuth,
+    session: SessionDep,
+    settings: SettingsDep,
+    page: PageDep,
 ) -> RecipeComparisonCandidates:
     return service.list_comparison_candidates(
         session,
@@ -266,6 +276,10 @@ def list_recipe_comparison_candidates(
         cursor=page.cursor,
         limit=page.limit,
         maximum=int(config.get(session, "api.page_size_max")),
+        signing_secret=settings.auth_secret,
+        signing_subject=str(auth.user.id),
+        cursor_ttl_seconds=int(config.get(session, "api.cursor_ttl_seconds")),
+        cursor_max_pages=int(config.get(session, "api.cursor_max_pages")),
     )
 
 
@@ -381,7 +395,11 @@ def save_recipe_version(
     "/{recipe_id}/versions", response_model=RecipeVersionHistory, responses=_errors(401, 404)
 )
 def list_recipe_versions(
-    recipe_id: IdV4, auth: CurrentAuth, session: SessionDep, page: PageDep
+    recipe_id: IdV4,
+    auth: CurrentAuth,
+    session: SessionDep,
+    settings: SettingsDep,
+    page: PageDep,
 ) -> RecipeVersionHistory:
     return service.list_versions(
         session,
@@ -390,6 +408,10 @@ def list_recipe_versions(
         cursor=page.cursor,
         limit=page.limit,
         maximum=int(config.get(session, "api.page_size_max")),
+        signing_secret=settings.auth_secret,
+        signing_subject=str(auth.user.id),
+        cursor_ttl_seconds=int(config.get(session, "api.cursor_ttl_seconds")),
+        cursor_max_pages=int(config.get(session, "api.cursor_max_pages")),
     )
 
 
