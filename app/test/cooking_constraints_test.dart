@@ -84,6 +84,7 @@ void main() {
                 },
                 'reason': '你手动修改',
                 'source': 'manual',
+                'origin': 'manual',
                 'status': 'active',
                 'created_at': '2026-10-08T10:00:00Z',
               },
