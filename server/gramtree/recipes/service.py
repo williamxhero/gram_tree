@@ -635,6 +635,8 @@ def _detail(
     settings: Settings,
     recipe: Recipe,
     version: RecipeVersion | None = None,
+    *,
+    include_owner_defaults: bool = True,
 ) -> RecipeDetail:
     dish = session.get(Dish, recipe.dish_id)
     author = session.get(User, recipe.owner_id)
@@ -645,7 +647,11 @@ def _detail(
     # defaults into snapshots or derived author data.
     from gramtree.taste_profiles.models import TasteProfile
 
-    profile = session.scalar(select(TasteProfile).where(TasteProfile.owner_id == recipe.owner_id))
+    profile = (
+        session.scalar(select(TasteProfile).where(TasteProfile.owner_id == recipe.owner_id))
+        if include_owner_defaults
+        else None
+    )
     household = profile.cooking_constraints.get("household_servings") if profile else None
     return RecipeDetail(
         default_servings=household,
@@ -653,7 +659,7 @@ def _detail(
         id=recipe.id,
         dish=_dish_out(session, dish),
         author=RecipeAuthor(id=author.id, nickname=author.nickname),
-        visibility="private",
+        visibility=cast("Literal['private', 'public']", recipe.visibility),
         source_version_id=recipe.source_version_id,
         root_recipe_id=recipe.root_recipe_id,
         created_at=recipe.created_at,
@@ -1318,8 +1324,29 @@ def save_version(
 def get_recipe(
     session: Session, settings: Settings, owner: User, recipe_id: uuid.UUID
 ) -> RecipeDetail:
-    recipe = _owned_recipe(session, owner, recipe_id)
-    return _detail(session, settings, recipe)
+    recipe = _readable_recipe(session, owner, recipe_id)
+    return _detail(session, settings, recipe, include_owner_defaults=recipe.owner_id == owner.id)
+
+
+def _readable_recipe(session: Session, viewer: User, recipe_id: uuid.UUID) -> Recipe:
+    recipe = session.get(Recipe, recipe_id)
+    if recipe is None:
+        raise NotFound()
+    if recipe.owner_id == viewer.id:
+        return recipe
+    author = session.get(User, recipe.owner_id)
+    from gramtree.accounts.models import UserStatus
+
+    if (
+        not bool(config.get(session, "feature.public_recipes"))
+        or recipe.visibility != "public"
+        or recipe.current_version_id is None
+        or recipe.approved_public_version_id != recipe.current_version_id
+        or author is None
+        or author.status != UserStatus.active
+    ):
+        raise NotFound()
+    return recipe
 
 
 def get_version(
@@ -1329,7 +1356,9 @@ def get_version(
     recipe_id: uuid.UUID,
     version_id: uuid.UUID,
 ) -> RecipeDetail:
-    recipe = _owned_recipe(session, owner, recipe_id)
+    recipe = _readable_recipe(session, owner, recipe_id)
+    if recipe.owner_id != owner.id and version_id != recipe.approved_public_version_id:
+        raise NotFound()
     version = session.scalar(
         select(RecipeVersion).where(
             RecipeVersion.id == version_id, RecipeVersion.recipe_id == recipe.id
@@ -1337,7 +1366,9 @@ def get_version(
     )
     if version is None:
         raise NotFound()
-    return _detail(session, settings, recipe, version)
+    return _detail(
+        session, settings, recipe, version, include_owner_defaults=recipe.owner_id == owner.id
+    )
 
 
 def _owned_version(
@@ -2115,7 +2146,7 @@ def list_recipes(
             RecipeListItem(
                 id=recipe.id,
                 dish=_dish_out(session, dish),
-                visibility="private",
+                visibility=cast("Literal['private', 'public']", recipe.visibility),
                 version_number=version.version_number,
                 servings=snapshot.servings,
                 difficulty=snapshot.difficulty,

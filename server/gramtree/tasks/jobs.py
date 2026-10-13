@@ -156,6 +156,21 @@ def backup_database() -> str:
     return str(path)
 
 
+@celery_app.task(name="gramtree.tasks.jobs.purge_expired_access_logs")
+def purge_expired_access_logs(as_of: str | None = None) -> int:
+    """Delete access records beyond the configured privacy retention period."""
+    from datetime import datetime
+
+    from gramtree.core import access_log
+    from gramtree.core.time import utcnow
+    from gramtree.runtime_config import service as config
+
+    now = datetime.fromisoformat(as_of) if as_of else utcnow()
+    with _session_factory()() as session:
+        retention = int(config.get(session, "ops.access_log_retention_days"))
+        return access_log.purge_expired(session, now, retention)
+
+
 @celery_app.task(name="gramtree.tasks.jobs.purge_expired_analytics_events")
 def purge_expired_analytics_events(as_of: str | None = None) -> int:
     """清理超过保存期的产品埋点（SPEC-010.1 票 6，和经验层事件完全独立的通道）。"""

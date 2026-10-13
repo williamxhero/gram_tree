@@ -238,6 +238,125 @@ def cmd_recipes(args: argparse.Namespace) -> int:
     return 2
 
 
+def cmd_share_complaints(args: argparse.Namespace) -> int:
+    import uuid
+
+    from sqlalchemy import select
+
+    from gramtree.core.time import utcnow
+    from gramtree.recipes.models import ShareComplaint
+
+    with _session() as session:
+        if args.action == "review":
+            complaint = session.get(ShareComplaint, uuid.UUID(args.id))
+            if complaint is None:
+                print("投诉不存在", file=sys.stderr)
+                return 1
+            complaint.status = args.status
+            complaint.reviewed_by = args.by[:64]
+            complaint.reviewed_at = utcnow()
+            session.commit()
+            print(_fmt({"id": str(complaint.id), "status": complaint.status}))
+            return 0
+        rows = session.scalars(
+            select(ShareComplaint)
+            .where(ShareComplaint.status == args.status)
+            .order_by(ShareComplaint.created_at)
+            .limit(min(100, max(1, args.limit)))
+        )
+        print(
+            _fmt(
+                [
+                    {
+                        "id": str(row.id),
+                        "share_id": row.share_id,
+                        "contact": row.contact,
+                        "message": row.message,
+                        "status": row.status,
+                        "created_at": row.created_at.isoformat(),
+                        "reviewed_at": row.reviewed_at.isoformat() if row.reviewed_at else None,
+                        "reviewed_by": row.reviewed_by,
+                    }
+                    for row in rows
+                ]
+            )
+        )
+    return 0
+
+
+def cmd_risk(args: argparse.Namespace) -> int:
+    from redis import Redis
+    from sqlalchemy import select
+
+    from gramtree.core.time import utcnow
+    from gramtree.risk.models import RiskAction
+    from gramtree.risk.service import lift_permanent_ban
+
+    with _session() as session:
+        if args.action == "lift":
+            accepted = lift_permanent_ban(
+                Redis.from_url(get_settings().redis_url),
+                session,
+                action_id=args.id,
+                now=utcnow(),
+                reason=args.by,
+            )
+            print(_fmt({"lifted": accepted}))
+            return 0 if accepted else 1
+        rows = session.scalars(
+            select(RiskAction).order_by(RiskAction.started_at, RiskAction.id).limit(100)
+        )
+        print(
+            _fmt(
+                [
+                    {
+                        "id": str(row.id),
+                        "subject_type": row.subject_type,
+                        "rule": row.rule,
+                        "evidence": row.evidence,
+                        "level": row.level,
+                        "started_at": row.started_at.isoformat(),
+                        "ends_at": row.ends_at.isoformat() if row.ends_at else None,
+                        "lifted_at": row.lifted_at.isoformat() if row.lifted_at else None,
+                        "lift_reason": row.lift_reason,
+                    }
+                    for row in rows
+                ]
+            )
+        )
+    return 0
+
+
+def cmd_access_logs(args: argparse.Namespace) -> int:
+    from gramtree.core.access_log import recent
+    from gramtree.tasks.jobs import purge_expired_access_logs
+
+    if args.action == "purge":
+        print(_fmt({"deleted": purge_expired_access_logs(args.as_of)}))
+        return 0
+    with _session() as session:
+        rows = recent(session, request_id=args.request_id, limit=args.limit)
+        print(
+            _fmt(
+                [
+                    {
+                        "created_at": row.created_at.isoformat(),
+                        "request_id": row.request_id,
+                        "account_id": str(row.account_id) if row.account_id else None,
+                        "device_id": row.device_id,
+                        "ip_address": row.ip_address,
+                        "method": row.method,
+                        "endpoint": row.endpoint,
+                        "content_ids": row.content_ids,
+                        "status_code": row.status_code,
+                    }
+                    for row in rows
+                ]
+            )
+        )
+    return 0
+
+
 def cmd_openapi(args: argparse.Namespace) -> int:
     from gramtree.openapi_export import export
 
@@ -509,6 +628,36 @@ def build_parser() -> argparse.ArgumentParser:
         help="历史食材库目录；其中已有的标准 ID 不得从当前数据删除",
     )
     ing.set_defaults(func=cmd_ingredients)
+
+    complaints = sub.add_parser("share-complaints", help="人工复核权利投诉队列")
+    complaint_sub = complaints.add_subparsers(dest="action", required=True)
+    complaint_list = complaint_sub.add_parser("list")
+    complaint_list.add_argument(
+        "--status", choices=("pending", "reviewed", "dismissed"), default="pending"
+    )
+    complaint_list.add_argument("--limit", type=int, default=100)
+    complaint_review = complaint_sub.add_parser("review")
+    complaint_review.add_argument("id")
+    complaint_review.add_argument("--status", choices=("reviewed", "dismissed"), required=True)
+    complaint_review.add_argument("--by", required=True)
+    complaints.set_defaults(func=cmd_share_complaints)
+
+    risk = sub.add_parser("risk", help="风险处置审计和人工解除")
+    risk_sub = risk.add_subparsers(dest="action", required=True)
+    risk_sub.add_parser("actions")
+    risk_lift = risk_sub.add_parser("lift")
+    risk_lift.add_argument("id")
+    risk_lift.add_argument("--by", required=True)
+    risk.set_defaults(func=cmd_risk)
+
+    access = sub.add_parser("access-logs", help="查看或清理数据最小化的安全访问日志")
+    access_sub = access.add_subparsers(dest="action", required=True)
+    access_list = access_sub.add_parser("list", help="按时间倒序查看日志")
+    access_list.add_argument("--request-id")
+    access_list.add_argument("--limit", type=int, default=100)
+    access_purge = access_sub.add_parser("purge", help="清理过期日志")
+    access_purge.add_argument("--as-of", help="带时区 ISO 时间")
+    access.set_defaults(func=cmd_access_logs)
 
     openapi = sub.add_parser("openapi", help="导出 OpenAPI 描述")
     openapi.add_argument("--out")

@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Request
 from pydantic import BaseModel, Field
 
+from gramtree.accounts.deps import OptionalIdentityAuth
 from gramtree.core.errors import ERROR_RESPONSES, ApiError, ErrorResponse
 from gramtree.core.time import utcnow
 from gramtree.deps import RedisDep, SessionDep, SettingsDep
@@ -31,7 +32,19 @@ def verify_captcha(
     redis: RedisDep,
     session: SessionDep,
     settings: SettingsDep,
+    auth: OptionalIdentityAuth,
 ) -> CaptchaVerificationOut:
+    candidates = []
+    device_id = auth.device_session.device_id if auth else request.headers.get("X-Device-ID")
+    if device_id:
+        candidates.append(("device", device_id))
+    if request.client:
+        candidates.append(("ip", request.client.host))
+        subnet = service.request_subnet(request.client.host)
+        if subnet:
+            candidates.append(("ip", f"subnet:{subnet}"))
+    if auth is not None:
+        candidates.append(("account", str(auth.user.id)))
     accepted = service.verify_captcha(
         redis,
         session,
@@ -39,6 +52,7 @@ def verify_captcha(
         request.app.state.captcha,
         challenge_id=body.challenge_id,
         response=body.response,
+        candidates=candidates,
         now=request.app.state.clock() if hasattr(request.app.state, "clock") else utcnow(),
     )
     if not accepted:

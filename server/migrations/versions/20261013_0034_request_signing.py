@@ -1,14 +1,14 @@
 """Store per-session request signing verifiers.
 
-Revision ID: 0032
-Revises: 0031
+Revision ID: 0034
+Revises: 0033
 """
 
 import sqlalchemy as sa
 from alembic import op
 
-revision = "0032"
-down_revision = "0031"
+revision = "0034"
+down_revision = "0033"
 branch_labels = None
 depends_on = None
 

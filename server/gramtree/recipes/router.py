@@ -6,7 +6,7 @@ import json
 import uuid
 from typing import Annotated, Any, Literal
 
-from fastapi import APIRouter, Depends, Query, status
+from fastapi import APIRouter, Depends, Query, Request, status
 from fastapi.responses import Response
 
 from gramtree.accounts.deps import CurrentAuth
@@ -127,9 +127,9 @@ def create_recipe(
 
 @router.get("", response_model=RecipeList, responses=_errors(401))
 def list_recipes(
-    auth: CurrentAuth, session: SessionDep, settings: SettingsDep, page: PageDep
+    request: Request, auth: CurrentAuth, session: SessionDep, settings: SettingsDep, page: PageDep
 ) -> RecipeList:
-    return service.list_recipes(
+    result = service.list_recipes(
         session,
         auth.user,
         cursor=page.cursor,
@@ -140,6 +140,9 @@ def list_recipes(
         cursor_ttl_seconds=int(config.get(session, "api.cursor_ttl_seconds")),
         cursor_max_pages=int(config.get(session, "api.cursor_max_pages")),
     )
+    # Access logging receives only validated content IDs, never recipe snapshots.
+    request.scope["gramtree.content_ids"] = [item.id for item in result.items]
+    return result
 
 
 @router.post(
@@ -264,12 +267,13 @@ def display_recipe_version_ingredients(
 )
 def list_recipe_comparison_candidates(
     recipe_id: IdV4,
+    request: Request,
     auth: CurrentAuth,
     session: SessionDep,
     settings: SettingsDep,
     page: PageDep,
 ) -> RecipeComparisonCandidates:
-    return service.list_comparison_candidates(
+    result = service.list_comparison_candidates(
         session,
         auth.user,
         recipe_id,
@@ -281,6 +285,8 @@ def list_recipe_comparison_candidates(
         cursor_ttl_seconds=int(config.get(session, "api.cursor_ttl_seconds")),
         cursor_max_pages=int(config.get(session, "api.cursor_max_pages")),
     )
+    request.scope["gramtree.content_ids"] = [item.id for item in result.items]
+    return result
 
 
 @router.get(
@@ -396,12 +402,13 @@ def save_recipe_version(
 )
 def list_recipe_versions(
     recipe_id: IdV4,
+    request: Request,
     auth: CurrentAuth,
     session: SessionDep,
     settings: SettingsDep,
     page: PageDep,
 ) -> RecipeVersionHistory:
-    return service.list_versions(
+    result = service.list_versions(
         session,
         auth.user,
         recipe_id,
@@ -413,6 +420,8 @@ def list_recipe_versions(
         cursor_ttl_seconds=int(config.get(session, "api.cursor_ttl_seconds")),
         cursor_max_pages=int(config.get(session, "api.cursor_max_pages")),
     )
+    request.scope["gramtree.content_ids"] = [item.id for item in result.items]
+    return result
 
 
 @router.get(

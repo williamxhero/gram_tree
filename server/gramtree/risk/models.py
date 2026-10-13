@@ -37,6 +37,14 @@ class RiskAction(Base):
     __tablename__ = "risk_actions"
     __table_args__ = (
         Index("ix_risk_actions_subject_started", "subject_type", "subject_key_hash", "started_at"),
+        Index(
+            "ix_risk_actions_active_subject",
+            "subject_type",
+            "subject_key_hash",
+            "level",
+            "lifted_at",
+            "ends_at",
+        ),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=new_id)

@@ -22,6 +22,7 @@ from gramtree.legal import router as legal
 from gramtree.recipes import imports as recipe_imports
 from gramtree.recipes import measure_router as personal_measures
 from gramtree.recipes import router as recipes
+from gramtree.recipes import sharing as recipe_sharing
 from gramtree.records import router as records
 from gramtree.risk import router as risk
 from gramtree.risk.captcha import RejectingCaptchaAdapter
@@ -69,7 +70,16 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         allow_origin_regex=settings.cors_origin_regex,
         allow_methods=["*"],
         allow_headers=["*"],
-        expose_headers=["X-Request-ID", "X-Measure-Observed-Writes", "X-Measure-Snapshot-Version"],
+        expose_headers=[
+            "X-Request-ID",
+            "X-Measure-Observed-Writes",
+            "X-Measure-Snapshot-Version",
+            "Retry-After",
+            "Date",
+            "X-Risk-Level",
+            "X-Risk-Challenge",
+            "X-Pagination-Limit-Reached",
+        ],
     )
     app.add_middleware(
         RiskMiddleware,
@@ -96,6 +106,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     v1.include_router(analytics.router)
     v1.include_router(ingredients.router)
     v1.include_router(recipes.router)
+    v1.include_router(recipe_sharing.api_router)
+    v1.include_router(recipe_sharing.resolver_router)
     v1.include_router(records.router)
     v1.include_router(recipe_imports.router)
     v1.include_router(recipe_ai.router)
@@ -117,6 +129,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         v1.include_router(examples_router)
     app.include_router(v1)
     app.include_router(legal.router)
+    app.include_router(recipe_sharing.web_router)
     return app
 
 
