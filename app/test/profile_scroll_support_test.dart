@@ -3,7 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import '../integration_test/profile_scroll_support.dart';
+import 'profile_scroll_support.dart';
 
 void main() {
   for (final loadingGap in [false, true]) {

@@ -6,7 +6,7 @@ import 'package:gram_tree/main.dart' as app;
 import 'package:integration_test/integration_test.dart';
 
 import 'event_pipeline_support.dart' show resetLocalAppState;
-import 'profile_scroll_support.dart';
+import '../test/profile_scroll_support.dart';
 
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();

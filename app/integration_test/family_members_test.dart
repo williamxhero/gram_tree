@@ -11,7 +11,7 @@ import 'package:gramtree_api/gramtree_api.dart';
 import 'package:integration_test/integration_test.dart';
 
 import 'event_pipeline_support.dart' show containerOf;
-import 'profile_scroll_support.dart';
+import '../test/profile_scroll_support.dart';
 import 'signed_probe_support.dart';
 
 enum _FamilyStep {
