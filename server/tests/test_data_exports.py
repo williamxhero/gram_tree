@@ -6,6 +6,7 @@ import os
 import subprocess
 import sys
 from pathlib import Path
+from urllib.parse import parse_qs, urlencode, urlsplit, urlunsplit
 from zipfile import ZipFile
 
 from tests.accounts_support import Api, bearer
@@ -63,6 +64,29 @@ def test_export_requires_reauth_and_download_never_bypasses_owner_auth(api: Api)
     reauth(api, owner, email)
     recipe = api.client.post("/v1/recipes", json=recipe_input(), headers=bearer(owner))
     assert recipe.status_code == 201, recipe.text
+    recipe_id = recipe.json()["id"]
+    recipe_detail = api.client.get(f"/v1/recipes/{recipe_id}", headers=bearer(owner)).json()
+    record = api.client.post(
+        "/v1/records",
+        headers=bearer(owner),
+        json={
+            "client_id": "0d3c35da-57d3-4b3c-94a4-9f9a7d3f6b01",
+            "recipe_id": recipe_id,
+            "recipe_version_id": recipe_detail["version"]["id"],
+            "dish_name": "宫保鸡丁",
+        },
+    )
+    assert record.status_code == 201, record.text
+    revision = api.client.post(
+        f"/v1/records/{record.json()['id']}/revisions",
+        headers=bearer(owner),
+        json={
+            "revision_id": "9d6c4bfb-3f6c-4a1a-bf95-f7b1ea0da8b2",
+            "field": "rating",
+            "value": {"score": 5},
+        },
+    )
+    assert revision.status_code == 201, revision.text
     job = api.client.post("/v1/me/exports", headers=bearer(owner))
     assert job.status_code == 202, job.text
     job_id = job.json()["id"]
@@ -72,11 +96,19 @@ def test_export_requires_reauth_and_download_never_bypasses_owner_auth(api: Api)
     assert exported["recipes.json"]["items"][0]["id"] == recipe.json()["id"]
     assert exported["recipe_versions.json"]["items"][0]["snapshot"]["servings"] == 2
     assert exported["recipe_versions.json"]["items"][0]["reproducibility"]
+    assert exported["cooking_record_revisions.json"]["items"][0]["value"]["score"] == 5
     url = api.client.get(f"/v1/me/exports/{job_id}", headers=bearer(owner)).json()["download_url"]
     assert url.startswith("/v1/me/exports/")
     assert api.client.get(url).status_code == 401
     foreign = api.login("export-foreign@example.com")
     assert api.client.get(f"/v1/me/exports/{job_id}", headers=bearer(foreign)).status_code == 404
     assert api.client.get(url, headers=bearer(foreign)).status_code == 404
-    assert api.client.get(url + "x", headers=bearer(owner)).status_code == 403
+    parsed = urlsplit(url)
+    query = parse_qs(parsed.query)
+    query["signature"] = [
+        query["signature"][0][:-1] + ("0" if query["signature"][0][-1] != "0" else "1")
+    ]
+    tampered = urlunsplit(parsed._replace(query=urlencode(query, doseq=True)))
+    assert api.client.get(tampered, headers=bearer(owner)).status_code == 403
+    assert api.client.get(url + "x", headers=bearer(owner)).status_code == 422
     assert api.client.get("/data-export-format").status_code == 200

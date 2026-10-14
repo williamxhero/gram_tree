@@ -94,18 +94,22 @@ INTERNAL_KEYS = frozenset(
 )
 
 
-def portable(value: Any) -> Any:
+def portable(value: Any, *, preserve: frozenset[str] = frozenset()) -> Any:
     if isinstance(value, dict):
-        return {key: portable(item) for key, item in value.items() if key not in INTERNAL_KEYS}
+        return {
+            key: portable(item, preserve=preserve)
+            for key, item in value.items()
+            if key not in INTERNAL_KEYS or key in preserve
+        }
     if isinstance(value, list):
-        return [portable(item) for item in value]
+        return [portable(item, preserve=preserve) for item in value]
     if isinstance(value, (uuid.UUID, datetime)):
         return str(value) if isinstance(value, uuid.UUID) else value.isoformat()
     return value
 
 
-def fields(row: Any, names: str) -> dict[str, Any]:
-    return portable({name: getattr(row, name) for name in names.split()})
+def fields(row: Any, names: str, *, preserve: frozenset[str] = frozenset()) -> dict[str, Any]:
+    return portable({name: getattr(row, name) for name in names.split()}, preserve=preserve)
 
 
 def source_reference(session: Session, version_id: uuid.UUID | None) -> dict | None:
@@ -115,7 +119,7 @@ def source_reference(session: Session, version_id: uuid.UUID | None) -> dict | N
     if version is None:
         return None
     recipe = session.get(Recipe, version.recipe_id)
-    if recipe is None:
+    if recipe is None or recipe.visibility != "public":
         return None
     author = session.get(User, recipe.owner_id)
     dish = session.get(Dish, recipe.dish_id)
@@ -188,7 +192,11 @@ def build(session: Session, settings: Settings, owner: User, path: Path, now: da
         for row in session.scalars(select(CookingRecord).where(CookingRecord.owner_id == owner_id))
     ]
     entities["cooking_record_revisions"] = [
-        fields(row, "id record_id revision_id revision field value note created_at")
+        fields(
+            row,
+            "id record_id revision_id revision field value note created_at",
+            preserve=frozenset({"score"}) if row.field == "rating" else frozenset(),
+        )
         for row in session.scalars(
             select(CookingRecordRevision).where(CookingRecordRevision.owner_id == owner_id)
         )

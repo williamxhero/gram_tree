@@ -149,7 +149,17 @@ def run(
             session.rollback()
             continue
         if owner.status != UserStatus.active:
-            archive_path(settings, job.id).unlink(missing_ok=True)
+            try:
+                archive_path(settings, job.id).unlink(missing_ok=True)
+            except OSError:
+                session.rollback()
+                job = session.get(ExportJob, current_id)
+                if job is not None:
+                    job.status, job.error_code = "failed", "export_cleanup_failed"
+                    job.attempts += 1
+                    session.commit()
+                failed += 1
+                continue
             job.status, job.error_code = "expired", None
             session.commit()
             continue
