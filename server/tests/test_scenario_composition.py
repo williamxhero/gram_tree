@@ -458,6 +458,194 @@ def test_before_taste_change_recalculates_actual_prior_profile_and_preserves_cur
     )
 
 
+def test_prior_view_restores_earlier_change_that_was_reverted_after_target(api: Api) -> None:
+    headers = bearer(api.login("scene-history-revert@example.com"))
+    recipe = api.client.post("/v1/recipes", headers=headers, json=recipe_input()).json()
+    profile_path = "/v1/me/taste-profile"
+    assert (
+        api.client.patch(
+            profile_path, headers=headers, json={"flavors": {"sweet": 0.75}}
+        ).status_code
+        == 200
+    )
+    sweet_change = api.client.get(profile_path + "/changes", headers=headers).json()["items"][0]
+    assert (
+        api.client.patch(
+            profile_path, headers=headers, json={"flavors": {"salty": 1.25}}
+        ).status_code
+        == 200
+    )
+    target = api.client.get(profile_path + "/changes", headers=headers).json()["items"][0]
+    assert (
+        api.client.post(
+            profile_path + f"/changes/{sweet_change['id']}/revert", headers=headers
+        ).status_code
+        == 200
+    )
+    current = api.client.get(profile_path, headers=headers).json()
+    assert current["flavors"]["sweet"]["coefficient"] == 1.0
+    before = api.client.post(
+        f"/v1/recipes/{recipe['id']}/personalized/before-change/{target['id']}",
+        headers=headers,
+        json={},
+    )
+    assert before.status_code == 200, before.text
+    assert before.json()["effective_flavors"]["sweet"] == 0.75
+    assert before.json()["effective_flavors"]["salty"] == 1.0
+    assert api.client.get(profile_path, headers=headers).json() == current
+
+
+def test_prior_view_keeps_current_allergy_authorization_and_projected_safety(api: Api) -> None:
+    import base64
+    import os
+
+    from pydantic import SecretStr
+
+    from tests.test_allergies import PATH, consent, save
+
+    api.client.app.state.settings = api.client.app.state.settings.model_copy(
+        update={"sensitive_data_key": SecretStr(base64.urlsafe_b64encode(os.urandom(32)).decode())}
+    )
+    headers = bearer(api.login("scene-allergy-history@example.com"))
+    body = recipe_input()
+    body["snapshot"]["ingredients"].append(
+        {
+            "id": "peanut",
+            "display_name": "花生",
+            "quantity": 10,
+            "unit": "g",
+            "group": "配料",
+            "flavor_contribution": {"salty": 3},
+        }
+    )
+    recipe = api.client.post("/v1/recipes", headers=headers, json=body).json()
+    assert (
+        api.client.patch(
+            "/v1/me/taste-profile", headers=headers, json={"flavors": {"salty": 1.25}}
+        ).status_code
+        == 200
+    )
+    target = api.client.get("/v1/me/taste-profile/changes", headers=headers).json()["items"][0]
+    consent(api, headers)
+    state = api.client.get(PATH, headers=headers).json()
+    updated = save(api, headers, state, ["花生"])
+    assert updated.status_code == 200, updated.text
+    endpoint = f"/v1/recipes/{recipe['id']}/personalized/before-change/{target['id']}"
+    before = api.client.post(endpoint, headers=headers, json={})
+    assert before.status_code == 200, before.text
+    assert before.json()["effective_flavors"]["salty"] == 1.0
+    assert before.json()["safety"]["status"] == "available"
+    assert any(alert["target"] == "花生" for alert in before.json()["safety"]["alerts"])
+    prior = compose(api, headers, recipe, before_change_id=target["id"])
+    allergen = next(c for c in prior["components"] if c["type"] == "allergen_notice")
+    assert allergen["required"] is True
+    assert allergen["data"]["personal_safety"] == before.json()["safety"]
+    assert api.client.get(PATH, headers=headers).json() == updated.json()
+
+
+def test_failure_first_step_live_adjustments_and_latest_success(api: Api) -> None:
+    headers = bearer(api.login("scene-first-step@example.com"))
+    body = recipe_input()
+    body["snapshot"]["steps"] = [body["snapshot"]["steps"][1]]
+    body["snapshot"]["steps"][0]["depends_on"] = []
+    body["snapshot"]["steps"][0]["id"] = "cook:main"
+    body["snapshot"]["ingredients"].append(
+        {
+            "id": "salt",
+            "display_name": "盐",
+            "quantity": 10,
+            "unit": "g",
+            "group": "调味",
+            "flavor_contribution": {"salty": 3},
+        }
+    )
+    body["snapshot"]["steps"][0]["ingredient_ids"].append("salt")
+    recipe = api.client.post("/v1/recipes", headers=headers, json=body).json()
+    last = record(
+        api,
+        headers,
+        recipe,
+        adjustments=[{"flavor": "salty", "delta": -1}],
+        source_context={"completed_steps": ["cook:main"]},
+    )
+    path = f"/v1/records/{last['id']}/revisions"
+    assert (
+        api.client.post(
+            path,
+            headers=headers,
+            json={
+                "revision_id": new_uuid(),
+                "field": "feedback",
+                "value": {"taste_tags": ["肉柴"]},
+            },
+        ).status_code
+        == 201
+    )
+    result = compose(api, headers, recipe)
+    cards = [c for c in result["components"] if c["type"] == "failure_reminder"]
+    assert {(c["data"]["rule_id"], c["data"]["placement"]) for c in cards} == {
+        ("dry_meat", "before"),
+        ("dry_meat", "at"),
+        ("too_salty", "before"),
+        ("too_salty", "at"),
+    }
+    assert all(c["data"]["step_id"] == "cook:main" for c in cards)
+    assert (
+        api.client.post(
+            path,
+            headers=headers,
+            json={
+                "revision_id": new_uuid(),
+                "field": "adjustments",
+                "value": {"adjustments": []},
+            },
+        ).status_code
+        == 201
+    )
+    assert not any(
+        c["type"] == "failure_reminder" and c["data"]["rule_id"] == "too_salty"
+        for c in compose(api, headers, recipe)["components"]
+    )
+    dry = next(c for c in cards if c["data"]["rule_id"] == "dry_meat")
+    assert (
+        api.client.post(
+            "/v1/ui/scenario-feedback",
+            headers=headers,
+            json={
+                "component_id": dry["id"],
+                "source_type": "scenario_adjusted",
+            },
+        ).status_code
+        == 200
+    )
+    assert not any(
+        c["type"] == "failure_reminder" for c in compose(api, headers, recipe)["components"]
+    )
+    # A different owner of the same dish has independent feedback and history.
+    other = bearer(api.login("scene-first-step-other@example.com"))
+    other_recipe = api.client.post("/v1/recipes", headers=other, json=body).json()
+    other_record = record(api, other, other_recipe, source_context={"completed_steps": ["cook:main"]})
+    assert (
+        api.client.post(
+            f"/v1/records/{other_record['id']}/revisions",
+            headers=other,
+            json={
+                "revision_id": new_uuid(),
+                "field": "feedback",
+                "value": {"taste_tags": ["肉柴"]},
+            },
+        ).status_code
+        == 201
+    )
+    assert any(
+        c["type"] == "failure_reminder" for c in compose(api, other, other_recipe)["components"]
+    )
+    record(api, other, other_recipe, source_context={"completed_steps": ["cook:main"]})
+    assert not any(
+        c["type"] == "failure_reminder" for c in compose(api, other, other_recipe)["components"]
+    )
+
+
 def test_recipe_experiment_is_stable_and_explicit_preferences_win(api: Api) -> None:
     import json
 

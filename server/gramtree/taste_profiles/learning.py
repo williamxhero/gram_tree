@@ -918,6 +918,12 @@ def before_change_state(
     target = owned_change(session, profile.owner_id, change_id)
     if target.status not in ("active", "confirmed"):
         raise ApiError(409, "change_not_effective", "这条口味变化目前没有生效")
+    if not (
+        target.field.startswith("flavors.")
+        or target.field == "ingredient_preferences"
+        or target.field.startswith("ingredient_preferences.")
+    ):
+        raise ApiError(409, "change_not_supported", "这条变化不属于可重算的普通口味")
     if target.effective_at is None or target.effective_version is None:
         raise ApiError(409, "history_unavailable", "没有可靠的口味变化生效时间")
     flavors = deepcopy(profile.flavors)
@@ -930,6 +936,14 @@ def before_change_state(
         )
     )
     for row in rows:
+        # Sensitive allergy history is deliberately not replayed: today's consent
+        # and safety constraints apply in both views. Ignore unrelated fields too.
+        if not (
+            row.field.startswith("flavors.")
+            or row.field == "ingredient_preferences"
+            or row.field.startswith("ingredient_preferences.")
+        ):
+            continue
         if only_target and row.id != target.id:
             continue
         if row.effective_at is None or row.effective_version is None:

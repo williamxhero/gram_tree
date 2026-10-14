@@ -263,10 +263,10 @@ def feedback_scope(session: Session, user: User, component_id: str) -> tuple[str
             row = owned_change(session, user.id, uuid.UUID(parts[2]))
             return ("taste", str(row.id))
         if (len(parts) == 3 and parts[:2] == ["scene", "difference"]) or (
-            len(parts) == 6
+            len(parts) >= 6
             and parts[:2] == ["scene", "failure"]
             and parts[3] in FAILURE_RULES
-            and parts[5] in ("before", "at")
+            and parts[-1] in ("before", "at")
         ):
             recipe = session.get(Recipe, uuid.UUID(parts[2]))
             if recipe is not None and recipe.owner_id == user.id:
@@ -513,6 +513,7 @@ def taste_cards(
 ) -> list[ComponentDescriptor]:
     from gramtree.recipes import service as recipes
     from gramtree.taste_profiles import service as taste_service
+    from gramtree.taste_profiles.learning import before_change_state
 
     if before_change_id is not None or view == "original":
         return []
@@ -549,6 +550,9 @@ def taste_cards(
         elif not row.field.startswith("ingredient_preferences"):
             continue
         try:
+            # Only advertise a before-change action when full ordinary history is
+            # reconstructable; influence itself still isolates this single change.
+            before_change_state(session, profile, row.id)
             before = recipes.personalize_recipe(
                 session,
                 settings,
