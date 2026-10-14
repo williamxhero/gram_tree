@@ -21,20 +21,31 @@ cache` 模块顶部的设计说明），命中就直接返回上次的描述，�
 
 import logging
 import uuid
+from typing import Literal
 
 from fastapi import APIRouter
 from pydantic import BaseModel, Field, model_validator
 
 from gramtree.accounts.deps import CurrentAuth
 from gramtree.core.errors import ERROR_RESPONSES, ApiError
+from gramtree.core.time import utcnow
 from gramtree.deps import RedisDep, SessionDep, SettingsDep
 from gramtree.recipes import service as recipe_service
-from gramtree.ui_protocol import cache, composition_events, experiments, service, validation
+from gramtree.recipes.schemas import PersonalizationRequest, RecipeDerived
+from gramtree.ui_protocol import (
+    cache,
+    composition_events,
+    experiments,
+    scenarios,
+    service,
+    validation,
+)
 from gramtree.ui_protocol.protocol import (
     PageDescription,
     SkipAdjustmentRequest,
     SkipAdjustmentResult,
 )
+from gramtree.ui_protocol.scenarios import Preference
 
 logger = logging.getLogger("gramtree.ui_protocol")
 
@@ -63,12 +74,34 @@ class ComposeRequest(BaseModel):
         description="可选的不可变菜谱版本；不填使用当前版本",
     )
 
+    screen_width: int = Field(default=400, ge=1, le=16384, description="逻辑像素视口宽度")
+    detail_override: Preference | None = Field(
+        default=None, description="仅当前页面的详略切换；auto 恢复用户默认或自动决定"
+    )
+
+    personalization: PersonalizationRequest | None = None
+    before_change_id: uuid.UUID | None = None
+    personalization_view: Literal["personalized", "original"] = "personalized"
+    skipped_components: list[str] = Field(default_factory=list, max_length=32)
+
     @model_validator(mode="after")
     def validate_recipe_context(self) -> "ComposeRequest":
         if self.version_id is not None and self.recipe_id is None:
             raise ValueError("version_id 需要和 recipe_id 一起提供")
         if self.page_type == "recipe_detail" and self.recipe_id is None:
             raise ValueError("recipe_detail 需要提供 recipe_id")
+        if self.before_change_id is not None and self.personalization_view == "original":
+            raise ValueError("变化前口味不能与作者原版同时选择")
+        if (
+            self.before_change_id is not None or self.personalization is not None
+        ) and self.page_type != "recipe_detail":
+            raise ValueError("口味重算上下文只用于 recipe_detail")
+        if (
+            self.personalization
+            and self.version_id
+            and self.personalization.version_id not in (None, self.version_id)
+        ):
+            raise ValueError("换算与页面版本必须一致")
         return self
 
 
@@ -95,6 +128,13 @@ def compose(
     # Recipe compositions are deliberately uncached: safety must be recomputed from
     # the selected immutable version on every request.
     recipe_page = body.page_type in {"recipe_detail", "recipe_editor"}
+    if body.before_change_id is not None:
+        from gramtree.taste_profiles.learning import owned_change
+
+        owned_change(session, auth.user.id, body.before_change_id)
+    selected_version = body.version_id or (
+        body.personalization.version_id if body.personalization else None
+    )
     safety_context = None
     personal_safety = None
     safety_context_failed = False
@@ -105,10 +145,10 @@ def compose(
         # the standard server-error fallback still carries both mandatory safety cards.
         try:
             safety_context = recipe_service.recipe_safety_context(
-                session, auth.user, body.recipe_id, body.version_id
+                session, auth.user, body.recipe_id, selected_version
             )
             personal_safety = recipe_service.recipe_personal_safety_context(
-                session, settings, auth.user, body.recipe_id, body.version_id
+                session, settings, auth.user, body.recipe_id, selected_version
             )
         except ApiError as exc:
             if exc.status == 404:
@@ -120,7 +160,17 @@ def compose(
             logger.exception("读取菜谱安全上下文失败，整页退回安全标准布局")
 
     depends_on = service.dependency_versions(body.page_type, session)
-    key = cache.cache_key(auth.user.id, body.page_type, DEFAULT_SCENARIO, depends_on)
+    # Client capabilities are part of the cache identity: a narrow client must not
+    # receive another client's otherwise valid composition.
+    client_scenario = scenarios.digest(
+        [
+            DEFAULT_SCENARIO,
+            body.protocol_version,
+            sorted(set(body.supported_components)),
+            scenarios.calendar_signal(auth.user, utcnow()) if body.page_type == "today" else None,
+        ]
+    )
+    key = cache.cache_key(auth.user.id, body.page_type, client_scenario, depends_on)
     if not recipe_page:
         cached = cache.get(redis, key)
         if cached is not None:
@@ -135,6 +185,8 @@ def compose(
             assignment = (
                 experiments.assign_today_experiment(session, auth.user.id)
                 if body.page_type == "today"
+                else experiments.assign_recipe_experiment(session, auth.user.id)
+                if body.page_type == "recipe_detail"
                 else experiments.NO_EXPERIMENT
             )
             description = service.compose(
@@ -147,6 +199,116 @@ def compose(
                 safety_context=safety_context,
                 personal_safety=personal_safety,
             )
+            if body.page_type == "recipe_detail" and body.recipe_id is not None:
+                component, signals, rows = scenarios.summary(
+                    session,
+                    auth.user,
+                    body.recipe_id,
+                    screen_width=body.screen_width,
+                    override=body.detail_override if body.detail_override != "auto" else None,
+                )
+                experimental_detail = assignment.detail_overrides.get("scenario_summary")
+                if experimental_detail and signals["detail"]["source"] not in (
+                    "page_switch",
+                    "user_setting",
+                ):
+                    component.detail = experimental_detail
+                    text = "按稳定实验分组，展开自动详略；你的设置和页面选择优先。"
+                    component.reason.code = "experiment"
+                    component.reason.text = text
+                    component.data["conclusion"] = "详细步骤"
+                    component.data["source"] = scenarios.source(
+                        text, "experiment", "菜谱场景组合实验"
+                    )
+                    signals["detail"] = {"value": experimental_detail, "source": "experiment"}
+                inputs = body.personalization or PersonalizationRequest()
+                if body.version_id is not None:
+                    inputs = inputs.model_copy(update={"version_id": body.version_id})
+                projected = recipe_service.personalize_recipe(
+                    session,
+                    settings,
+                    auth.user,
+                    body.recipe_id,
+                    inputs,
+                    redis=redis,
+                    before_change_id=body.before_change_id,
+                    view=body.personalization_view,
+                )
+                # The same displayed projection and diner inputs govern mandatory
+                # safety, including before-change substitutions. Never reuse author
+                # results merely because the component skeleton is unchanged.
+                projected_safety = service.compose_recipe_safety(
+                    body.page_type,
+                    set(body.supported_components),
+                    session=session,
+                    safety_context=(
+                        projected.food_safety,
+                        RecipeDerived(
+                            total_time_seconds=projected.snapshot.total_time_seconds,
+                            active_time_seconds=projected.snapshot.active_time_seconds,
+                        ),
+                    ),
+                    personal_safety=projected.safety,
+                )
+                description.components = projected_safety.components
+                description.experiment = assignment.experiment
+                for safety_component in description.components:
+                    safety_component.reason.text = "依据本次显示换算及当前授权的安全检查结果"
+                optional = scenarios.failure_cards(
+                    session, body.recipe_id, rows, projected.snapshot
+                )
+                if signals["dish_history"]["value"] == "frequent":
+                    difference = scenarios.difference_card(body.recipe_id, rows, projected.snapshot)
+                    if difference is not None:
+                        optional.insert(0, difference)
+                optional.extend(
+                    scenarios.taste_cards(
+                        session,
+                        settings,
+                        redis,
+                        auth.user,
+                        body.recipe_id,
+                        inputs,
+                        projected.snapshot,
+                        before_change_id=body.before_change_id,
+                        view=body.personalization_view,
+                    )
+                )
+                signals["failure"] = {
+                    "value": bool(any(c.type == "failure_reminder" for c in optional)),
+                    "source": list(
+                        dict.fromkeys(
+                            c.data["record_id"] for c in optional if c.type == "failure_reminder"
+                        )
+                    ),
+                }
+                signals["taste_change"] = {
+                    "value": bool(any(c.type == "taste_change_notice" for c in optional)),
+                    "source": [
+                        c.data["change_id"] for c in optional if c.type == "taste_change_notice"
+                    ],
+                    "before_change_id": str(body.before_change_id)
+                    if body.before_change_id
+                    else None,
+                }
+                optional = [
+                    c
+                    for c in optional
+                    if c.type in body.supported_components
+                    and c.id not in body.skipped_components
+                    and not scenarios.suppressed(session, auth.user, c.id)
+                ]
+                component.data["steps_collapsed"] = any(
+                    c.type == "scenario_difference" for c in optional
+                )
+                description.scenario_signals = signals
+                if "scenario_summary" in body.supported_components:
+                    description.components.append(component)
+                description.components.extend(optional)
+            elif body.page_type == "today":
+                description.scenario_signals = {
+                    "calendar": scenarios.calendar_signal(auth.user, utcnow())
+                }
         except Exception:
             # 组合模块本身报错、或者实验分组时出了问题：不让这个错误往上冒（这个接口出
             # 任何问题都不能卡住做饭），记录下来方便排查，返回标准布局兜底
@@ -163,6 +325,48 @@ def compose(
     # 重新走一遍完整流程，不会一直下发同一份兜底结果。
     cache.set_(redis, key, description)
     return description
+
+
+class ScenarioFeedback(BaseModel):
+    component_id: str = Field(min_length=1, max_length=500)
+    source_type: Literal["scenario_adjusted"]
+
+
+@router.post("/scenario-feedback", response_model=ScenarioFeedback, responses=ERROR_RESPONSES)
+def scenario_feedback(
+    body: ScenarioFeedback, auth: CurrentAuth, session: SessionDep, redis: RedisDep
+) -> ScenarioFeedback:
+    scenarios.feedback_scope(session, auth.user, body.component_id)
+    scenarios.record_event(
+        session,
+        redis,
+        auth.user.id,
+        "ui.source_feedback",
+        {
+            **body.model_dump(),
+            "feedback": "never_again",
+        },
+    )
+    return body
+
+
+class DetailPreference(BaseModel):
+    detail: Preference
+
+
+@router.get("/preferences", response_model=DetailPreference, responses=ERROR_RESPONSES)
+def get_preferences(auth: CurrentAuth, session: SessionDep) -> DetailPreference:
+    return DetailPreference(detail=scenarios.preference(session, auth.user.id))
+
+
+@router.put("/preferences", response_model=DetailPreference, responses=ERROR_RESPONSES)
+def set_preferences(
+    body: DetailPreference, auth: CurrentAuth, session: SessionDep, redis: RedisDep
+) -> DetailPreference:
+    scenarios.record_event(
+        session, redis, auth.user.id, "ui.detail_preference", {"detail": body.detail}
+    )
+    return body
 
 
 @router.post(

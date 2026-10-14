@@ -26,7 +26,8 @@ import 'package:gram_tree/storage/device_id.dart';
 import 'package:gram_tree/storage/local_store.dart';
 import 'package:gram_tree/ui_protocol/composition_provider.dart';
 import 'package:gram_tree/ui_protocol/source_mark.dart';
-import 'package:gramtree_api/gramtree_api.dart' show TokenPair;
+import 'package:gramtree_api/gramtree_api.dart'
+    show PersonalizationRequest, TokenPair;
 import 'package:integration_test/integration_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -462,10 +463,25 @@ Future<void> _restore(
   // Mounting the real offline safety UI records one new fallback observation.
   // Its producer awaits durable enqueue before completing. Fence the already
   // mounted composition and config, never start a synthetic recorder/fetch here.
-  final compositionProvider = recipeCompositionProvider((
-    pageType: 'recipe_detail',
+  final compositionProvider = scenarioCompositionProvider((
     recipeId: parts[2],
     versionId: parts[4],
+    screenWidth: MediaQuery.sizeOf(
+      tester.element(find.byKey(const ValueKey('recipe-detail-content'))),
+    ).width.round().clamp(1, 16384),
+    detailOverride: null,
+    beforeChangeId: null,
+    personalizationView: frozen.inputs['personalized_view'] == 'original'
+        ? 'original'
+        : 'personalized',
+    personalizationJson: jsonEncode(
+      PersonalizationRequest(
+        versionId: frozen.versionId,
+        targetServings: frozen.inputs['target_servings'] as int?,
+        dinerMemberIds: const [],
+      ).toJson(),
+    ),
+    skippedComponentsJson: '[]',
   ));
   List<QueueEntry> preReplay = [];
   await _until(tester, () async {

@@ -139,7 +139,24 @@ class RecipeRepository {
     String? primaryDinerId,
     bool original = false,
     bool confirmAllergyRisk = false,
+    String? beforeChangeId,
   }) async {
+    if (beforeChangeId != null) {
+      final response = await _recipes.personalizeBeforeChange(
+        recipeId: recipeId,
+        changeId: beforeChangeId,
+        personalizationRequest: PersonalizationRequest(
+          versionId: versionId,
+          targetServings: targetServings,
+          targetMold: targetMold,
+          equipment: equipment,
+          dinerMemberIds: dinerMemberIds,
+          primaryDinerId: primaryDinerId,
+          confirmAllergyRisk: confirmAllergyRisk,
+        ),
+      );
+      return response.data!;
+    }
     final response = await _recipes.personalizeRecipe(
       recipeId: recipeId,
       personalizationRequest: PersonalizationRequest(

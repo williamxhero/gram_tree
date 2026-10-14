@@ -779,6 +779,14 @@ Future<void> tapTab(WidgetTester tester, int index) async {
 
 /// 在 [finder] 可见后点它（长页面里先滚动到它）。
 Future<void> tapVisible(WidgetTester tester, Finder finder) async {
+  // Lazy lists do not build distant entries until scrolling reaches them.
+  if (finder.evaluate().isEmpty) {
+    await tester.scrollUntilVisible(
+      finder,
+      200,
+      scrollable: find.byType(Scrollable).hitTestable().last,
+    );
+  }
   await tester.ensureVisible(finder);
   await tester.pumpAndSettle();
   await tester.tap(finder);

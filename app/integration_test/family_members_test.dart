@@ -748,6 +748,7 @@ void main() {
     await reveal(tester, find.text('设置'));
     await tester.tap(find.text('设置'));
     markStep(_FamilyStep.withdrawal);
+    await reveal(tester, key('sensitive-withdraw'));
     await waitFor(tester, key('sensitive-withdraw'));
     await tap(tester, key('sensitive-withdraw'));
     await tap(tester, key('sensitive-withdraw-confirm'));

@@ -1,14 +1,16 @@
 import 'dart:convert';
 
-import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gramtree_api/gramtree_api.dart';
 import 'package:gram_tree/recipes/personalization.dart';
 
-Future<void> main() async {
-  TestWidgetsFlutterBinding.ensureInitialized();
+import '../fixtures/conversion_cases.g.dart';
+
+void main() {
+  // Chrome's test binding cannot complete rootBundle platform asset requests.
+  // The generator keeps these bytes identical to the shared JSON source.
   final fixture = jsonDecode(
-    await rootBundle.loadString('assets/personalization_cases.json'),
+    embeddedConversionCases['assets/personalization_cases.json']!,
   ) as Map<String, dynamic>;
 
   for (final testCase in fixture['cases'] as List<dynamic>) {

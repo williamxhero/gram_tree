@@ -23,6 +23,8 @@ abstract class _$PageDescriptionCWProxy {
 
   PageDescription protocol(String protocol);
 
+  PageDescription scenarioSignals(Object? scenarioSignals);
+
   /// This function **does support** nullification of nullable fields. All `null` values passed to `non-nullable` fields will be ignored. You can also use `PageDescription(...).copyWith.fieldName(...)` to override fields one at a time with nullification support.
   ///
   /// Usage
@@ -38,6 +40,7 @@ abstract class _$PageDescriptionCWProxy {
     String generatedAt,
     String pageType,
     String protocol,
+    Object? scenarioSignals,
   });
 }
 
@@ -76,6 +79,10 @@ class _$PageDescriptionCWProxyImpl implements _$PageDescriptionCWProxy {
   PageDescription protocol(String protocol) => this(protocol: protocol);
 
   @override
+  PageDescription scenarioSignals(Object? scenarioSignals) =>
+      this(scenarioSignals: scenarioSignals);
+
+  @override
   /// This function **does support** nullification of nullable fields. All `null` values passed to `non-nullable` fields will be ignored. You can also use `PageDescription(...).copyWith.fieldName(...)` to override fields one at a time with nullification support.
   ///
   /// Usage
@@ -91,6 +98,7 @@ class _$PageDescriptionCWProxyImpl implements _$PageDescriptionCWProxy {
     Object? generatedAt = const $CopyWithPlaceholder(),
     Object? pageType = const $CopyWithPlaceholder(),
     Object? protocol = const $CopyWithPlaceholder(),
+    Object? scenarioSignals = const $CopyWithPlaceholder(),
   }) {
     return PageDescription(
       cache: cache == const $CopyWithPlaceholder()
@@ -125,6 +133,10 @@ class _$PageDescriptionCWProxyImpl implements _$PageDescriptionCWProxy {
           ? _value.protocol
           // ignore: cast_nullable_to_non_nullable
           : protocol as String,
+      scenarioSignals: scenarioSignals == const $CopyWithPlaceholder()
+          ? _value.scenarioSignals
+          // ignore: cast_nullable_to_non_nullable
+          : scenarioSignals as Object?,
     );
   }
 }
@@ -184,6 +196,7 @@ PageDescription _$PageDescriptionFromJson(Map<String, dynamic> json) =>
           generatedAt: $checkedConvert('generated_at', (v) => v as String),
           pageType: $checkedConvert('page_type', (v) => v as String),
           protocol: $checkedConvert('protocol', (v) => v as String),
+          scenarioSignals: $checkedConvert('scenario_signals', (v) => v),
         );
         return val;
       },
@@ -191,6 +204,7 @@ PageDescription _$PageDescriptionFromJson(Map<String, dynamic> json) =>
         'compositionId': 'composition_id',
         'generatedAt': 'generated_at',
         'pageType': 'page_type',
+        'scenarioSignals': 'scenario_signals',
       },
     );
 
@@ -204,4 +218,5 @@ Map<String, dynamic> _$PageDescriptionToJson(PageDescription instance) =>
       'generated_at': instance.generatedAt,
       'page_type': instance.pageType,
       'protocol': instance.protocol,
+      'scenario_signals': ?instance.scenarioSignals,
     };

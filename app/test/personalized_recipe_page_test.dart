@@ -706,7 +706,14 @@ void main() {
     await _reveal(tester, _key('personalized-detail-salt'));
     expect(find.text('盐  7.5 g'), findsWidgets);
     await _reveal(tester, _key('personalized-detail-sugar'));
-    expect(find.text('发面糖  20.0 g'), findsWidgets);
+    // JavaScript omits .0 for whole doubles; both spellings must remain 20 g.
+    expect(
+      find.descendant(
+        of: _key('personalized-detail-sugar'),
+        matching: find.textContaining(RegExp(r'^发面糖  20(?:\.0)? g$')),
+      ),
+      findsOneWidget,
+    );
     await _tap(tester, _key('recipe-serving-increase'));
     await _reveal(tester, _key('personalized-detail-salt'));
     expect(find.text('盐  11.25 g'), findsWidgets);

@@ -27,6 +27,35 @@ void main() {
     expect(finder, findsWidgets);
   }
 
+  Finder interactionTarget(WidgetTester tester, Finder finder) {
+    final widget = tester.widget(finder);
+    // An expanded tile's center may be in its body, not its tap target.
+    // History rows likewise have separate subtitle comparison actions.
+    if (widget is ExpansionTile) {
+      return find.descendant(
+        of: finder,
+        matching: find.byElementPredicate(
+          (element) => identical(
+            element.widget,
+            element.findAncestorWidgetOfExactType<ExpansionTile>()?.title,
+          ),
+        ),
+      );
+    }
+    if (widget is ListTile && widget.title != null) {
+      return find.descendant(
+        of: finder,
+        matching: find.byElementPredicate(
+          (element) => identical(
+            element.widget,
+            element.findAncestorWidgetOfExactType<ListTile>()?.title,
+          ),
+        ),
+      );
+    }
+    return finder;
+  }
+
   Future<void> reveal(WidgetTester tester, String key) async {
     tester.testTextInput.hide();
     await tester.pump();
@@ -68,29 +97,55 @@ void main() {
       await tester.pump(const Duration(milliseconds: 100));
     }
     expect(finder, findsOneWidget);
+    final target = interactionTarget(tester, finder);
     await Scrollable.ensureVisible(
-      tester.element(finder),
+      tester.element(target),
       alignment: 0.5,
       alignmentPolicy: ScrollPositionAlignmentPolicy.explicit,
     );
     await tester.pumpAndSettle();
-    expect(finder.hitTestable(), findsOneWidget);
+    expect(target.hitTestable(), findsOneWidget);
   }
 
   Future<void> tap(WidgetTester tester, String key) async {
     await reveal(tester, key);
     final finder = find.byKey(ValueKey(key));
-    final widget = tester.widget(finder);
-    // History rows contain separate comparison actions in their subtitle. The
-    // row center can hit one of those instead of opening the requested version.
-    final target = widget is ListTile && widget.title != null
-        ? find.descendant(of: finder, matching: find.byWidget(widget.title!))
-        : finder;
+    final target = interactionTarget(tester, finder);
     await Scrollable.ensureVisible(tester.element(target), alignment: 0.5);
     await tester.pumpAndSettle();
     expect(target.hitTestable(), findsOneWidget);
     await tester.tap(target);
     await tester.pumpAndSettle();
+  }
+
+  Future<void> ensureStepExpanded(WidgetTester tester, int index) async {
+    final key = 'recipe-step-$index';
+    await reveal(tester, key);
+    final finder = find.byKey(ValueKey(key));
+    final l10n = MaterialLocalizations.of(tester.element(finder));
+    // The public accessibility action reflects current expansion, including
+    // restored PageStorage state; initiallyExpanded cannot tell us that.
+    final hint = find.descendant(
+      of: finder,
+      matching: find.byWidgetPredicate(
+        (widget) =>
+            widget is Semantics &&
+            [
+              l10n.expansionTileExpandedTapHint,
+              l10n.expansionTileCollapsedTapHint,
+            ].contains(widget.properties.hintOverrides?.onTapHint),
+      ),
+    );
+    expect(hint, findsOneWidget);
+    if (tester.widget<Semantics>(hint).properties.hintOverrides?.onTapHint ==
+        l10n.expansionTileCollapsedTapHint) {
+      await tap(tester, key);
+      await reveal(tester, key);
+    }
+    expect(
+      tester.widget<Semantics>(hint).properties.hintOverrides?.onTapHint,
+      l10n.expansionTileExpandedTapHint,
+    );
   }
 
   Future<void> settledChoice(WidgetTester tester, String key) async {
@@ -279,7 +334,7 @@ void main() {
         tester,
         find.byKey(const ValueKey('recipe-detail-content')),
       );
-      await tap(tester, 'recipe-step-1');
+      await ensureStepExpanded(tester, 1);
       expect(find.textContaining(_original), findsOneWidget);
       expect(find.textContaining(_manualWhy), findsOneWidget);
 
@@ -291,7 +346,7 @@ void main() {
         tester,
         find.byKey(const ValueKey('recipe-detail-content')),
       );
-      await tap(tester, 'recipe-step-1');
+      await ensureStepExpanded(tester, 1);
       expect(find.textContaining(_original), findsOneWidget);
       expect(find.textContaining(_manualWhy), findsNothing);
       await tester.binding.handlePopRoute();
@@ -301,7 +356,7 @@ void main() {
         tester,
         find.byKey(const ValueKey('recipe-detail-content')),
       );
-      await tap(tester, 'recipe-step-1');
+      await ensureStepExpanded(tester, 1);
       expect(find.textContaining(_manualWhy), findsOneWidget);
       await backToShell(tester);
 

@@ -6,6 +6,8 @@ import 'package:gram_tree/config/app_config.dart';
 import 'package:gram_tree/main.dart' as app;
 import 'package:integration_test/integration_test.dart';
 
+import '../test/cooking_controls_support.dart';
+
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
   final server = Dio(
@@ -19,6 +21,11 @@ void main() {
   }
 
   Future<void> waitFor(WidgetTester tester, Finder finder) async {
+    final binding = IntegrationTestWidgetsFlutterBinding.instance;
+    binding.reportData = {
+      ...?binding.reportData,
+      'e2e_wait_for': finder.toString(describeSelf: true),
+    };
     for (var i = 0; i < 300 && finder.evaluate().isEmpty; i++) {
       await tester.pump(const Duration(milliseconds: 100));
     }
@@ -35,6 +42,12 @@ void main() {
   }
 
   Future<void> reveal(WidgetTester tester, Finder finder) async {
+    final binding = IntegrationTestWidgetsFlutterBinding.instance;
+    binding.reportData = {
+      ...?binding.reportData,
+      'e2e_wait_for': finder.toString(describeSelf: true),
+    };
+    FocusManager.instance.primaryFocus?.unfocus();
     tester.testTextInput.hide();
     final detail = find.byKey(const ValueKey('recipe-detail-content'));
     final body = detail.evaluate().isNotEmpty
@@ -60,117 +73,147 @@ void main() {
     tester.testTextInput.register();
     addTearDown(tester.testTextInput.unregister);
 
-    await app.main();
-    await settle(tester);
-    final consent = find.byKey(const ValueKey('consent-agree'));
-    if (consent.evaluate().isNotEmpty) {
-      await tester.tap(consent);
+    try {
+      await app.main();
       await settle(tester);
+      final consent = find.byKey(const ValueKey('consent-agree'));
+      if (consent.evaluate().isNotEmpty) {
+        await tester.tap(consent);
+        await settle(tester);
+      }
+      await waitFor(tester, find.text('登录味谱'));
+      final email =
+          'personalized-e2e-${DateTime.now().microsecondsSinceEpoch}@example.com';
+      await tester.enterText(find.byKey(const ValueKey('login-email')), email);
+      await tapText(tester, '发送验证码');
+      await waitFor(tester, find.byKey(const ValueKey('code-input')));
+      final code = await server.get<Map<String, dynamic>>(
+        '/v1/dev/latest-email-code',
+        queryParameters: {'email': email},
+      );
+      await tester.enterText(
+        find.byKey(const ValueKey('code-input')),
+        code.data!['code'] as String,
+      );
+      // The composed home page may replace the fallback empty-state wording.
+      await waitFor(
+        tester,
+        find.byKey(const ValueKey('primary-create-button')),
+      );
+
+      await tapText(tester, '我的');
+      await waitFor(tester, find.byKey(const ValueKey('taste-profile-entry')));
+      await tester.tap(find.byKey(const ValueKey('taste-profile-entry')));
+      await waitFor(tester, find.byKey(const ValueKey('taste-level-salty')));
+      await tester.tap(find.byKey(const ValueKey('taste-level-salty')));
+      await settle(tester);
+      await tapText(tester, '淡一点');
+      await waitFor(tester, find.textContaining('把握高'));
+      await tester.tap(find.byType(BackButton).last);
+      await settle(tester);
+      await tapText(tester, '今天');
+      await waitFor(
+        tester,
+        find.byKey(const ValueKey('primary-create-button')),
+      );
+      await tester.tap(find.byKey(const ValueKey('primary-create-button')));
+      await settle(tester);
+      await waitFor(tester, find.byKey(const ValueKey('create-recipe-entry')));
+      await tester.tap(find.byKey(const ValueKey('create-recipe-entry')));
+      await waitFor(tester, find.byKey(const ValueKey('recipe-dish-name')));
+      await tester.enterText(
+        find.byKey(const ValueKey('recipe-dish-name')),
+        '网页版个性化验收菜谱',
+      );
+      await reveal(
+        tester,
+        find.byKey(const ValueKey('recipe-ingredient-search')),
+      );
+      await tester.enterText(
+        find.byKey(const ValueKey('recipe-ingredient-search')),
+        '盐',
+      );
+      await reveal(
+        tester,
+        find.byKey(const ValueKey('recipe-ingredient-quantity')),
+      );
+      await tester.enterText(
+        find.byKey(const ValueKey('recipe-ingredient-quantity')),
+        '10',
+      );
+      await reveal(tester, find.text('这道菜的味型贡献'));
+      await tester.tap(find.text('这道菜的味型贡献'));
+      await settle(tester);
+      final saltyContribution = find.ancestor(
+        of: find.text('咸味贡献'),
+        matching: find.byType(DropdownButtonFormField<int>),
+      );
+      await reveal(tester, saltyContribution);
+      await tester.tap(saltyContribution);
+      await settle(tester);
+      await tapText(tester, '咸 3');
+      await reveal(
+        tester,
+        find.byKey(const ValueKey('recipe-step-instruction')),
+      );
+      await tester.enterText(
+        find.byKey(const ValueKey('recipe-step-instruction')),
+        '煮熟后加盐',
+      );
+      await reveal(tester, find.byKey(const ValueKey('save-recipe-button')));
+      await tester.tap(find.byKey(const ValueKey('save-recipe-button')));
+      await waitFor(
+        tester,
+        find.byKey(const ValueKey('recipe-history-button')),
+      );
+
+      final personalized = find.text('按我的口味');
+      await reveal(tester, personalized);
+      await waitFor(tester, personalized);
+      await waitFor(tester, find.textContaining('已按口味档案第'));
+      expect(
+        tester.getSemantics(personalized.last),
+        isSemantics(isSelected: true),
+      );
+      await reveal(tester, find.text('盐  7.5 g'));
+      await reveal(tester, personalized);
+      final original = find.text('原版').last;
+      await tester.tap(original);
+      await settle(tester);
+      expect(tester.getSemantics(original), isSemantics(isSelected: true));
+      expect(find.text('原版'), findsWidgets);
+      await reveal(tester, find.text('10 克'));
+      await reveal(tester, find.textContaining('煮熟后加盐'));
+      await reveal(tester, personalized);
+      await tester.tap(personalized.last);
+      await settle(tester);
+      await reveal(tester, find.text('盐  7.5 g'));
+      final start = find.byKey(const ValueKey('start-cooking-button'));
+      await reveal(tester, start);
+      expect(tester.widget<FilledButton>(start).onPressed, isNotNull);
+      await tester.tap(start);
+      await waitFor(tester, find.byTooltip('暂离'));
+      await revealCookingControl(tester, find.text('先准备食材'));
+      await revealCookingControl(tester, find.text('7.5 g'));
+      expect(find.text('7.5 g'), findsOneWidget);
+      expect(find.text('10 g'), findsNothing);
+      await revealCookingControl(tester, find.text('开始第一步'));
+      await tester.tap(find.text('开始第一步').hitTestable());
+      await settle(tester);
+      await revealCookingControl(
+        tester,
+        find.byKey(const ValueKey('cooking-action')),
+      );
+      expect(find.text('煮熟后加盐'), findsWidgets);
+      expect(tester.takeException(), isNull);
+    } catch (error, stack) {
+      final binding = IntegrationTestWidgetsFlutterBinding.instance;
+      binding.reportData = {
+        ...?binding.reportData,
+        'e2e_error': error.toString(),
+        'e2e_stack': stack.toString(),
+      };
+      rethrow;
     }
-    await waitFor(tester, find.text('登录味谱'));
-    final email =
-        'personalized-e2e-${DateTime.now().microsecondsSinceEpoch}@example.com';
-    await tester.enterText(find.byKey(const ValueKey('login-email')), email);
-    await tapText(tester, '发送验证码');
-    await waitFor(tester, find.byKey(const ValueKey('code-input')));
-    final code = await server.get<Map<String, dynamic>>(
-      '/v1/dev/latest-email-code',
-      queryParameters: {'email': email},
-    );
-    await tester.enterText(
-      find.byKey(const ValueKey('code-input')),
-      code.data!['code'] as String,
-    );
-    // The composed home page may replace the fallback empty-state wording.
-    await waitFor(tester, find.byKey(const ValueKey('primary-create-button')));
-
-    await tapText(tester, '我的');
-    await waitFor(tester, find.byKey(const ValueKey('taste-profile-entry')));
-    await tester.tap(find.byKey(const ValueKey('taste-profile-entry')));
-    await waitFor(tester, find.byKey(const ValueKey('taste-level-salty')));
-    await tester.tap(find.byKey(const ValueKey('taste-level-salty')));
-    await settle(tester);
-    await tapText(tester, '淡一点');
-    await waitFor(tester, find.textContaining('把握高'));
-    await tester.tap(find.byType(BackButton).last);
-    await settle(tester);
-    await tapText(tester, '今天');
-    await waitFor(tester, find.byKey(const ValueKey('primary-create-button')));
-    await tester.tap(find.byKey(const ValueKey('primary-create-button')));
-    await settle(tester);
-    await waitFor(tester, find.byKey(const ValueKey('create-recipe-entry')));
-    await tester.tap(find.byKey(const ValueKey('create-recipe-entry')));
-    await waitFor(tester, find.byKey(const ValueKey('recipe-dish-name')));
-    await tester.enterText(
-      find.byKey(const ValueKey('recipe-dish-name')),
-      '网页版个性化验收菜谱',
-    );
-    await reveal(
-      tester,
-      find.byKey(const ValueKey('recipe-ingredient-search')),
-    );
-    await tester.enterText(
-      find.byKey(const ValueKey('recipe-ingredient-search')),
-      '盐',
-    );
-    await reveal(
-      tester,
-      find.byKey(const ValueKey('recipe-ingredient-quantity')),
-    );
-    await tester.enterText(
-      find.byKey(const ValueKey('recipe-ingredient-quantity')),
-      '10',
-    );
-    await reveal(tester, find.text('这道菜的味型贡献'));
-    await tester.tap(find.text('这道菜的味型贡献'));
-    await settle(tester);
-    final saltyContribution = find.ancestor(
-      of: find.text('咸味贡献'),
-      matching: find.byType(DropdownButtonFormField<int>),
-    );
-    await reveal(tester, saltyContribution);
-    await tester.tap(saltyContribution);
-    await settle(tester);
-    await tapText(tester, '咸 3');
-    await reveal(tester, find.byKey(const ValueKey('recipe-step-instruction')));
-    await tester.enterText(
-      find.byKey(const ValueKey('recipe-step-instruction')),
-      '煮熟后加盐',
-    );
-    await reveal(tester, find.byKey(const ValueKey('save-recipe-button')));
-    await tester.tap(find.byKey(const ValueKey('save-recipe-button')));
-    await waitFor(tester, find.byKey(const ValueKey('recipe-history-button')));
-
-    final personalized = find.text('按我的口味');
-    await waitFor(tester, personalized);
-    await reveal(tester, personalized);
-    await waitFor(tester, find.textContaining('已按口味档案第'));
-    expect(
-      tester.getSemantics(personalized.last),
-      isSemantics(isSelected: true),
-    );
-    await reveal(tester, find.text('盐  7.5 g'));
-    await reveal(tester, personalized);
-    final original = find.text('原版').last;
-    await tester.tap(original);
-    await settle(tester);
-    expect(tester.getSemantics(original), isSemantics(isSelected: true));
-    expect(find.text('原版'), findsWidgets);
-    await reveal(tester, find.text('10 克'));
-    await reveal(tester, find.textContaining('煮熟后加盐'));
-    await reveal(tester, personalized);
-    await tester.tap(personalized.last);
-    await settle(tester);
-    await reveal(tester, find.text('盐  7.5 g'));
-    final start = find.byKey(const ValueKey('start-cooking-button'));
-    await reveal(tester, start);
-    expect(tester.widget<FilledButton>(start).onPressed, isNotNull);
-    await tester.tap(start);
-    await waitFor(tester, find.text('先准备食材'));
-    expect(find.text('7.5 g'), findsOneWidget);
-    expect(find.text('10 g'), findsNothing);
-    await tapText(tester, '开始第一步');
-    await waitFor(tester, find.text('煮熟后加盐'));
-    expect(tester.takeException(), isNull);
   }, timeout: const Timeout(Duration(minutes: 5)));
 }

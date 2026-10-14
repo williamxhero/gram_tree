@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://gramtree.app/contracts/ui_protocol/1.0/components/scenario_difference.schema.json",
+  "title": "与上次执行的差异",
+  "type": "object", "additionalProperties": false,
+  "required": ["conclusion", "record_id", "record_date", "differences", "source"],
+  "properties": {
+    "conclusion": {"type": "string", "minLength": 1},
+    "record_id": {"type": "string", "format": "uuid"},
+    "record_date": {"type": "string", "format": "date"},
+    "differences": {"type": "array", "items": {
+      "type": "object", "additionalProperties": false,
+      "required": ["kind", "label", "before", "after"],
+      "properties": {
+        "kind": {"type": "string", "minLength": 1},
+        "ingredient_id": {"type": "string", "minLength": 1},
+        "label": {"type": "string", "minLength": 1},
+        "before": {"type": "string"}, "after": {"type": "string"}
+      }
+    }},
+    "source": {"type": "object", "additionalProperties": false,
+      "required": ["source_type", "value", "basis"],
+      "properties": {
+        "source_type": {"const": "scenario_adjusted"},
+        "value": {"type": "string", "minLength": 1},
+        "basis": {"type": "object", "additionalProperties": false,
+          "required": ["reason_code", "text", "citation"],
+          "properties": {"reason_code": {"type": "string", "minLength": 1},
+            "text": {"type": "string", "minLength": 1},
+            "citation": {"type": "string", "minLength": 1}}
+        }
+      }
+    }
+  }
+}

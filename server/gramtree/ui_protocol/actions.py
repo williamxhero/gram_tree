@@ -212,7 +212,19 @@ class ActionSpec:
     validate_params: Callable[[Mapping[str, Any]], bool]
 
 
+def _validate_scenario_detail(params: Mapping[str, Any]) -> bool:
+    return set(params) == {"detail"} and params.get("detail") in ("auto", "brief", "detailed")
+
+
 ITEMS: tuple[ActionSpec, ...] = (
+    ActionSpec("set_scenario_detail", _validate_scenario_detail),
+    ActionSpec(
+        "show_before_taste_change",
+        lambda p: set(p) == {"change_id"} and _recipe_id(p.get("change_id")),
+    ),
+    ActionSpec(
+        "open_taste_change", lambda p: set(p) == {"change_id"} and _recipe_id(p.get("change_id"))
+    ),
     ActionSpec("open_page", _validate_open_page),
     ActionSpec("start_cooking", _validate_start_cooking),
     ActionSpec("open_record_card", _validate_open_record_card),

@@ -85,5 +85,8 @@ class TasteProfileChange(Base):
     # Traceability: which cooking records produced this change.
     source_record_ids: Mapped[list[str]] = mapped_column(JSONB, default=list)
     locked_fields: Mapped[list[str]] = mapped_column(JSONB, default=list)
+    # Suggestion creation is not effectiveness: pending confirmations apply later.
+    effective_at: Mapped[datetime | None] = mapped_column(nullable=True, default=None)
+    effective_version: Mapped[int | None] = mapped_column(nullable=True, default=None)
     reverted_at: Mapped[datetime | None] = mapped_column(nullable=True, default=None)
     created_at: Mapped[datetime] = mapped_column(default=utcnow)

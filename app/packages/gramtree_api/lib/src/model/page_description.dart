@@ -37,6 +37,8 @@ class PageDescription {
     required this.pageType,
 
     required this.protocol,
+
+    this.scenarioSignals,
   });
 
   @JsonKey(name: r'cache', required: true, includeIfNull: false)
@@ -64,6 +66,9 @@ class PageDescription {
   @JsonKey(name: r'protocol', required: true, includeIfNull: false)
   final String protocol;
 
+  @JsonKey(name: r'scenario_signals', required: false, includeIfNull: false)
+  final Object? scenarioSignals;
+
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -75,7 +80,8 @@ class PageDescription {
           other.fallback == fallback &&
           other.generatedAt == generatedAt &&
           other.pageType == pageType &&
-          other.protocol == protocol;
+          other.protocol == protocol &&
+          other.scenarioSignals == scenarioSignals;
 
   @override
   int get hashCode =>
@@ -86,7 +92,8 @@ class PageDescription {
       (fallback == null ? 0 : fallback.hashCode) +
       generatedAt.hashCode +
       pageType.hashCode +
-      protocol.hashCode;
+      protocol.hashCode +
+      (scenarioSignals == null ? 0 : scenarioSignals.hashCode);
 
   factory PageDescription.fromJson(Map<String, dynamic> json) =>
       _$PageDescriptionFromJson(json);

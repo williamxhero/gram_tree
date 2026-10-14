@@ -14,6 +14,7 @@ import 'package:gramtree_api/gramtree_api.dart'
 import '../recipes/personal_measure_repository.dart';
 
 import '../api/api_client.dart';
+import '../auth/session.dart';
 import '../events/event_recorder.dart';
 import '../recipes/recipe_repository.dart';
 import '../recipes/batch_advice.dart';
@@ -25,6 +26,8 @@ import 'ingredient_preference_actions.dart';
 import 'recipe_operations.dart';
 import 'source_overrides.dart';
 import 'source_types.dart';
+import 'scenario_detail_scope.dart';
+import 'scenario_actions.dart';
 
 /// App 内置意图登记表（SPEC-009.1 #81）：组件上的每个动作只能是这里登记过的意图，
 /// 按钮、菜单、以后的一句话输入都落到同一批意图，都走同一个处理器
@@ -269,6 +272,8 @@ Future<Object?> _handleSkipThisTime(
   final componentId = params['component_id'] as String;
   final sourceType = params['source_type'] as String;
   final compositionId = params['composition_id'] as String?;
+  final session = ref.read(sessionStoreProvider);
+  final identity = session.identity;
 
   await ref
       .read(eventRecorderProvider)
@@ -284,6 +289,22 @@ Future<Object?> _handleSkipThisTime(
           'feedback': 'skip_once',
         },
       );
+
+  if (sourceType == sourceTypeScenarioAdjusted &&
+      componentId.startsWith('scene:')) {
+    if (!context.mounted || (identity != null && !session.matches(identity))) {
+      return null;
+    }
+    final scope = ScenarioDetailScope.of(context);
+    if (componentId.startsWith('scene:taste:')) {
+      await scope?.onBeforeTaste?.call(
+        componentId.substring('scene:taste:'.length),
+      );
+    } else {
+      scope?.onSkip?.call(componentId);
+    }
+    return null;
+  }
 
   try {
     final response = await ref
@@ -326,6 +347,10 @@ Future<Object?> _handleDontDoAgain(
   final componentId = params['component_id'] as String;
   final sourceType = params['source_type'] as String;
   final compositionId = params['composition_id'] as String?;
+  if (sourceType == sourceTypeScenarioAdjusted &&
+      componentId.startsWith('scene:')) {
+    return handleScenarioFeedback(context, ref, params);
+  }
   await ref
       .read(eventRecorderProvider)
       .record(
@@ -352,7 +377,38 @@ Future<void> _handleRecipeOperation(
 /// SPEC-009.1 #81 登记的意图表：#77/#80 用到的 `open_page`/`start_cooking`/
 /// `open_record_card` 沿用之前的默认文案，新增 `call_operation` 和四个先只登记
 /// 名字的意图。
+bool _validateScenarioDetail(Map<String, dynamic> params) =>
+    params.length == 1 &&
+    const ['auto', 'brief', 'detailed'].contains(params['detail']);
+
+void _handleScenarioDetail(
+  BuildContext context,
+  Ref ref,
+  Map<String, dynamic> params,
+) => ScenarioDetailScope.change(context, params['detail'] as String);
+
+bool _validateTasteChange(Map<String, dynamic> params) =>
+    params.length == 1 && isRecipeId(params['change_id']);
+
 final defaultIntentRegistry = IntentRegistry([
+  const IntentSpec(
+    name: 'show_before_taste_change',
+    defaultLabel: '按调整前的口味显示',
+    validateParams: _validateTasteChange,
+    handler: handleBeforeTasteChange,
+  ),
+  const IntentSpec(
+    name: 'open_taste_change',
+    defaultLabel: '撤销这个变化',
+    validateParams: _validateTasteChange,
+    handler: handleOpenTasteChange,
+  ),
+  const IntentSpec(
+    name: 'set_scenario_detail',
+    defaultLabel: '切换本页详略',
+    validateParams: _validateScenarioDetail,
+    handler: _handleScenarioDetail,
+  ),
   ...allergyIntentSpecs,
   ...cookingConstraintIntentSpecs,
   ...familyIntentSpecs,

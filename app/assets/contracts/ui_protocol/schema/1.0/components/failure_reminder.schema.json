@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://gramtree.app/contracts/ui_protocol/1.0/components/failure_reminder.schema.json",
+  "title": "失败经验步骤提醒",
+  "type": "object", "additionalProperties": false,
+  "required": ["conclusion", "problem", "advice", "rule_id", "record_id", "record_date", "step_id", "placement", "source"],
+  "properties": {
+    "conclusion": {"type": "string", "minLength": 1},
+    "problem": {"type": "string", "minLength": 1},
+    "advice": {"type": "string", "minLength": 1},
+    "rule_id": {"type": "string", "minLength": 1},
+    "record_id": {"type": "string", "format": "uuid"},
+    "record_date": {"type": "string", "format": "date"},
+    "step_id": {"type": "string", "minLength": 1},
+    "placement": {"enum": ["before", "at"]},
+    "source": {"type": "object", "additionalProperties": false,
+      "required": ["source_type", "value", "basis"],
+      "properties": {
+        "source_type": {"const": "scenario_adjusted"},
+        "value": {"type": "string", "minLength": 1},
+        "basis": {"type": "object", "additionalProperties": false,
+          "required": ["reason_code", "text", "citation"],
+          "properties": {"reason_code": {"type": "string", "minLength": 1},
+            "text": {"type": "string", "minLength": 1},
+            "citation": {"type": "string", "minLength": 1}}
+        }
+      }
+    }
+  }
+}

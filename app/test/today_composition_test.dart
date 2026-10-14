@@ -33,6 +33,10 @@ void main() {
       'recipe_steps',
       'recipe_card',
       'source_demo',
+      'scenario_summary',
+      'scenario_difference',
+      'failure_reminder',
+      'taste_change_notice',
     });
   });
 

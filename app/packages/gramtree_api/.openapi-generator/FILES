@@ -80,6 +80,7 @@ lib/src/model/count_unit.dart
 lib/src/model/count_units_attribute.dart
 lib/src/model/deletion_out.dart
 lib/src/model/density_attribute.dart
+lib/src/model/detail_preference.dart
 lib/src/model/dish_input.dart
 lib/src/model/dish_out.dart
 lib/src/model/email_code_request.dart
@@ -224,6 +225,7 @@ lib/src/model/release_note.dart
 lib/src/model/reproducibility_position.dart
 lib/src/model/reproducibility_problem.dart
 lib/src/model/retrieval_result.dart
+lib/src/model/scenario_feedback.dart
 lib/src/model/search_ingredient_out.dart
 lib/src/model/search_query.dart
 lib/src/model/search_result.dart

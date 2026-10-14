@@ -1,4 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import 'composition_provider.dart';
+
 import 'package:gramtree_api/gramtree_api.dart';
 
 import 'component_registry.dart';
@@ -24,6 +28,7 @@ class RecipeSafetyProtocolSection extends StatelessWidget {
     required this.loading,
     this.errorMessage,
     this.awaitingCheck = false,
+    this.composition,
   });
 
   final RecipeSafetyResult? result;
@@ -36,6 +41,7 @@ class RecipeSafetyProtocolSection extends StatelessWidget {
   final bool loading;
   final String? errorMessage;
   final bool awaitingCheck;
+  final AsyncValue<CompositionResult>? composition;
 
   @override
   Widget build(BuildContext context) {
@@ -44,6 +50,7 @@ class RecipeSafetyProtocolSection extends StatelessWidget {
       pageType: 'recipe_detail',
       recipeId: recipeId,
       versionId: versionId,
+      resultOverride: composition,
       standardLayoutBuilder: (_) => _standardCards(),
     );
   }

@@ -6,6 +6,8 @@ import 'components/hint_bar_component.dart';
 import 'components/list_component.dart';
 import 'components/section_title_component.dart';
 import 'components/source_demo_component.dart';
+import 'components/scenario_summary_component.dart';
+import 'components/scenario_notice_component.dart';
 import 'components/text_block_component.dart';
 import 'recipe_components.dart';
 import 'recipe_safety_protocol.dart';
@@ -83,6 +85,26 @@ class ComponentRegistry {
 /// 仅测试用，专门用来驱动"来源标记 -> 为什么面板 -> 反馈"这条链路，不是真实业务
 /// 组件（真实的换算内容留给以后的子 SPEC）。
 final defaultComponentRegistry = ComponentRegistry(const [
+  ComponentSpec(
+    type: 'scenario_difference',
+    builder: buildScenarioNoticeComponent,
+    emptyState: ComponentEmptyState(title: '和上次的差别'),
+  ),
+  ComponentSpec(
+    type: 'failure_reminder',
+    builder: buildScenarioNoticeComponent,
+    emptyState: ComponentEmptyState(title: '这一步留意'),
+  ),
+  ComponentSpec(
+    type: 'taste_change_notice',
+    builder: buildScenarioNoticeComponent,
+    emptyState: ComponentEmptyState(title: '已按你最近的口味调整'),
+  ),
+  ComponentSpec(
+    type: 'scenario_summary',
+    builder: buildScenarioSummaryComponent,
+    emptyState: ComponentEmptyState(title: '标准步骤'),
+  ),
   ComponentSpec(
     type: 'hint_bar',
     builder: buildHintBarComponent,

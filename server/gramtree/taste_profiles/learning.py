@@ -905,6 +905,93 @@ def owned_change(session: Session, owner_id: uuid.UUID, change_id: uuid.UUID) ->
     return row
 
 
+def before_change_state(
+    session: Session,
+    profile: TasteProfile,
+    change_id: uuid.UUID,
+    *,
+    only_target: bool = False,
+) -> tuple[dict[str, Any], list[dict[str, Any]], int]:
+    """Rewind detached ordinary taste values; current sensitive grants remain authoritative."""
+    from copy import deepcopy
+
+    target = owned_change(session, profile.owner_id, change_id)
+    if target.status not in ("active", "confirmed"):
+        raise ApiError(409, "change_not_effective", "这条口味变化目前没有生效")
+    if not (
+        target.field.startswith("flavors.")
+        or target.field == "ingredient_preferences"
+        or target.field.startswith("ingredient_preferences.")
+    ):
+        raise ApiError(409, "change_not_supported", "这条变化不属于可重算的普通口味")
+    if target.effective_at is None or target.effective_version is None:
+        raise ApiError(409, "history_unavailable", "没有可靠的口味变化生效时间")
+    flavors = deepcopy(profile.flavors)
+    preferences = deepcopy(profile.ingredient_preferences)
+    operations: list[tuple[datetime, int, TasteProfileChange, bool]] = []
+    rows = session.scalars(
+        select(TasteProfileChange).where(
+            TasteProfileChange.owner_id == profile.owner_id,
+            TasteProfileChange.status != "pending",
+        )
+    )
+    for row in rows:
+        # Sensitive allergy history is deliberately not replayed: today's consent
+        # and safety constraints apply in both views. Ignore unrelated fields too.
+        if not (
+            row.field.startswith("flavors.")
+            or row.field == "ingredient_preferences"
+            or row.field.startswith("ingredient_preferences.")
+        ):
+            continue
+        if only_target and row.id != target.id:
+            continue
+        if row.effective_at is None or row.effective_version is None:
+            raise ApiError(409, "history_unavailable", "没有可靠的口味变化生效时间")
+        if only_target or row.effective_version >= target.effective_version:
+            operations.append((row.effective_at, row.effective_version, row, False))
+        if (
+            not only_target
+            and row.reverted_at is not None
+            and row.reverted_at >= target.effective_at
+        ):
+            # Undo a later revert even if its original application predates target.
+            operations.append((row.reverted_at, row.effective_version, row, True))
+    operations.sort(key=lambda op: (op[0], op[1], str(op[2].id)), reverse=True)
+    for _, _, row, undo_revert in operations:
+        expected = row.old_value if undo_revert else row.new_value
+        restored = row.new_value if undo_revert else row.old_value
+        if row.field.startswith("flavors."):
+            key = row.field.split(".", 1)[1]
+            if flavors.get(key) != expected:
+                raise ApiError(409, "history_unavailable", "无法可靠还原变化前口味")
+            flavors[key] = deepcopy(restored)
+        elif row.field == "ingredient_preferences":
+            if preferences != expected.get("items", []):
+                raise ApiError(409, "history_unavailable", "无法可靠还原变化前口味")
+            preferences = deepcopy(restored.get("items", []))
+        elif row.field.startswith("ingredient_preferences."):
+            key = row.field.split(".", 1)[1]
+            actual = next(
+                (
+                    item
+                    for item in preferences
+                    if str(item.get("ingredient_id") or item.get("name") or "") == key
+                ),
+                {},
+            )
+            if actual != expected:
+                raise ApiError(409, "history_unavailable", "无法可靠还原变化前口味")
+            preferences = [
+                item
+                for item in preferences
+                if str(item.get("ingredient_id") or item.get("name") or "") != key
+            ]
+            if restored:
+                preferences.append(deepcopy(restored))
+    return flavors, preferences, max(1, target.effective_version - 1)
+
+
 def confirm_change(session: Session, profile: TasteProfile, row: TasteProfileChange) -> None:
     if row.owner_id != profile.owner_id:
         raise NotFound()
@@ -914,6 +1001,8 @@ def confirm_change(session: Session, profile: TasteProfile, row: TasteProfileCha
         profile.version += 1
         profile.updated_at = utcnow()
         row.status = "confirmed"
+        row.effective_at = profile.updated_at
+        row.effective_version = profile.version
         profile_service.record_change_event(session, profile, row)
     elif row.status == "active":
         # An already-applied numeric change: confirmation only changes status.

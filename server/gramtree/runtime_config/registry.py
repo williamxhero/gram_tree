@@ -441,6 +441,10 @@ ITEMS: tuple[ConfigItem, ...] = (
         minimum=1,
         maximum=30,
     ),
+    # —— 场景组合（SPEC-009.2） ——
+    ConfigItem("ui.scenario.experienced_count", "int", 10, "熟手所需完成做菜次数", minimum=1),
+    ConfigItem("ui.scenario.frequent_count", "int", 3, "同一道菜常做次数门槛", minimum=1),
+    ConfigItem("ui.scenario.taste_recent_days", "int", 14, "近期生效口味变化窗口（天）", minimum=1),
     # —— 界面描述协议（SPEC-009.1） ——
     ConfigItem(
         "ui.composition_timeout_ms",
@@ -479,6 +483,18 @@ ITEMS: tuple[ConfigItem, ...] = (
         "ExperimentDefinition 校验，不在这里（type=json 的配置项只存不管形状）。"
         "不下发给 App（public 默认 False）——App 不需要知道实验定义，只需要从组合"
         "接口的响应里读 experiment 字段。",
+    ),
+    ConfigItem(
+        "ui.experiment.recipe_composition",
+        "json",
+        {
+            "enabled": False,
+            "groups": [
+                {"name": "control", "ratio": 0.5, "variant": "default"},
+                {"name": "more_detail", "ratio": 0.5, "variant": "more_detail"},
+            ],
+        },
+        "菜谱详情场景实验：稳定分组，只覆盖自动详略，不覆盖用户或页面选择。",
     ),
     # —— 能力开关：关闭时 App 里对应入口不出现（SPEC-009） ——
     ConfigItem(

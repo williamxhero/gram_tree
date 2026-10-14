@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://gramtree.app/contracts/ui_protocol/1.0/components/taste_change_notice.schema.json",
+  "title": "近期口味变化",
+  "type": "object", "additionalProperties": false,
+  "required": ["conclusion", "change_id", "change_date", "source"],
+  "properties": {
+    "conclusion": {"type": "string", "minLength": 1},
+    "change_id": {"type": "string", "format": "uuid"},
+    "change_date": {"type": "string", "format": "date"},
+    "source": {"type": "object", "additionalProperties": false,
+      "required": ["source_type", "value", "basis"],
+      "properties": {
+        "source_type": {"const": "scenario_adjusted"},
+        "value": {"type": "string", "minLength": 1},
+        "basis": {"type": "object", "additionalProperties": false,
+          "required": ["reason_code", "text", "citation"],
+          "properties": {"reason_code": {"type": "string", "minLength": 1},
+            "text": {"type": "string", "minLength": 1},
+            "citation": {"type": "string", "minLength": 1}}
+        }
+      }
+    }
+  }
+}

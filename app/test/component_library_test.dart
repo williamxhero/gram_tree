@@ -2,8 +2,11 @@ import 'dart:io';
 
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gram_tree/app/theme.dart';
+import 'package:gram_tree/l10n/app_localizations.dart';
 import 'package:gram_tree/ui_protocol/component_registry.dart';
 import 'package:gramtree_api/gramtree_api.dart';
 
@@ -55,13 +58,17 @@ void main() {
         ? child
         : SingleChildScrollView(child: child);
     await tester.pumpWidget(
-      MaterialApp(
-        theme: buildTheme(Brightness.light),
-        darkTheme: buildTheme(Brightness.dark),
-        themeMode: brightness == Brightness.dark
-            ? ThemeMode.dark
-            : ThemeMode.light,
-        home: Scaffold(body: body),
+      ProviderScope(
+        child: MaterialApp(
+          theme: buildTheme(Brightness.light),
+          darkTheme: buildTheme(Brightness.dark),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          themeMode: brightness == Brightness.dark
+              ? ThemeMode.dark
+              : ThemeMode.light,
+          home: Scaffold(body: body),
+        ),
       ),
     );
     await tester.pumpAndSettle();
@@ -211,6 +218,278 @@ void main() {
       expect(triggered, hasLength(1));
       expect(triggered.single.intent, 'open_page');
     });
+  });
+
+  group('场景详略组件', () {
+    final scenarioData = {
+      'conclusion': '详细步骤',
+      'steps_collapsed': false,
+      'layout': 'phone',
+      'source': {
+        'source_type': 'scenario_adjusted',
+        'value': '按你的经验调整',
+        'basis': {
+          'reason_code': 'novice',
+          'text': '你还没有完整做菜记录',
+          'citation': '做菜记录、你的默认设置及本次页面选择',
+        },
+      },
+    };
+
+    testWidgets('显示统一来源标记，三个操作派发页面详略意图', (tester) async {
+      final actions = [
+        ActionDescriptor(
+          intent: 'set_scenario_detail',
+          params: {'detail': 'brief'},
+        ),
+        ActionDescriptor(
+          intent: 'set_scenario_detail',
+          params: {'detail': 'detailed'},
+        ),
+        ActionDescriptor(
+          intent: 'set_scenario_detail',
+          params: {'detail': 'auto'},
+        ),
+      ];
+      final triggered = await pumpSpec(
+        tester,
+        spec: registry['scenario_summary']!,
+        component: descriptor(
+          type: 'scenario_summary',
+          detail: ComponentDescriptorDetailEnum.detailed,
+          data: scenarioData,
+          actions: actions,
+        ),
+      );
+
+      expect(find.text('详细步骤'), findsOneWidget);
+      expect(find.text('按场景调整'), findsOneWidget);
+      expect(find.text('本页简洁'), findsOneWidget);
+      expect(find.text('本页详细'), findsOneWidget);
+      expect(find.text('恢复默认'), findsOneWidget);
+      await tester.tap(find.byKey(const ValueKey('scenario-detail-brief')));
+      expect(triggered, hasLength(1));
+      expect(triggered.single.intent, 'set_scenario_detail');
+      expect(triggered.single.params, {'detail': 'brief'});
+    });
+
+    testWidgets('窄屏和大字仍可换行，不溢出', (tester) async {
+      await pumpSpec(
+        tester,
+        spec: registry['scenario_summary']!,
+        component: descriptor(
+          type: 'scenario_summary',
+          detail: ComponentDescriptorDetailEnum.detailed,
+          data: scenarioData,
+          actions: [
+            ActionDescriptor(
+              intent: 'set_scenario_detail',
+              params: {'detail': 'brief'},
+            ),
+            ActionDescriptor(
+              intent: 'set_scenario_detail',
+              params: {'detail': 'detailed'},
+            ),
+            ActionDescriptor(
+              intent: 'set_scenario_detail',
+              params: {'detail': 'auto'},
+            ),
+          ],
+        ),
+        textScale: 3,
+        size: const Size(320, 780),
+      );
+      expect(tester.takeException(), isNull);
+    });
+  });
+
+  group('场景通知的分层和必要操作', () {
+    final source = {
+      'source_type': 'scenario_adjusted',
+      'value': '本次盐量调整为 8 g',
+      'basis': {'text': '根据上次偏咸记录调整', 'citation': '做过记录 · 2026-10-10'},
+    };
+    final differenceData = {
+      'conclusion': '与上次相比，盐减少了',
+      'record_date': '2026-10-10',
+      'source': source,
+      'differences': [
+        {'kind': 'quantity', 'label': '盐', 'before': '9 g', 'after': '8 g'},
+        {'kind': 'quantity', 'label': '水', 'before': '20 ml', 'after': '20 ml'},
+        {'kind': 'step', 'label': '加盐', 'before': '直接加入', 'after': '试味后加入'},
+        {'kind': 'servings', 'label': '份数', 'before': '2', 'after': '3'},
+      ],
+    };
+
+    for (final detail in ComponentDescriptorDetailEnum.values) {
+      testWidgets('差异通知 ${detail.name}：依据分层，简洁仍可展开实际用量', (tester) async {
+        final semantics = tester.ensureSemantics();
+        await pumpSpec(
+          tester,
+          spec: registry['scenario_difference']!,
+          component: descriptor(
+            type: 'scenario_difference',
+            detail: detail,
+            data: differenceData,
+          ),
+        );
+        expect(find.text('与上次相比，盐减少了'), findsOneWidget);
+        expect(find.bySemanticsLabel('与上次相比，盐减少了'), findsOneWidget);
+        expect(find.bySemanticsLabel(RegExp('按场景调整.*')), findsOneWidget);
+        expect(
+          find.text('依据做过记录：2026-10-10'),
+          detail == ComponentDescriptorDetailEnum.brief
+              ? findsNothing
+              : findsOneWidget,
+        );
+        expect(
+          find.text('默认组合'),
+          detail == ComponentDescriptorDetailEnum.detailed
+              ? findsOneWidget
+              : findsNothing,
+        );
+        expect(
+          find.text('根据上次偏咸记录调整'),
+          detail == ComponentDescriptorDetailEnum.detailed
+              ? findsOneWidget
+              : findsNothing,
+        );
+        if (detail != ComponentDescriptorDetailEnum.detailed) {
+          expect(find.textContaining('上次 9 g'), findsNothing);
+          await tester.tap(find.byKey(const ValueKey('c1:expand')));
+          await tester.pumpAndSettle();
+        }
+        expect(find.text('盐：上次 9 g，本次 8 g'), findsOneWidget);
+        expect(find.bySemanticsLabel('盐：上次 9 g，本次 8 g'), findsOneWidget);
+        semantics.dispose();
+      });
+
+      testWidgets('失败提醒 ${detail.name}：问题和建议不可折叠隐藏', (tester) async {
+        final semantics = tester.ensureSemantics();
+        await pumpSpec(
+          tester,
+          spec: registry['failure_reminder']!,
+          component: descriptor(
+            type: 'failure_reminder',
+            detail: detail,
+            data: {
+              'conclusion': '这一步留意加盐',
+              'problem': '上次加盐过多',
+              'advice': '先少放盐，试味后再补',
+              'record_date': '2026-10-10',
+              'source': source,
+            },
+          ),
+        );
+        expect(find.text('上次加盐过多'), findsOneWidget);
+        expect(find.text('先少放盐，试味后再补'), findsOneWidget);
+        expect(find.text('依据做过记录：2026-10-10'), findsOneWidget);
+        expect(find.bySemanticsLabel('先少放盐，试味后再补'), findsOneWidget);
+        semantics.dispose();
+      });
+
+      testWidgets('口味变化 ${detail.name}：旧口味预览和撤销均可直接触发', (tester) async {
+        final triggered = await pumpSpec(
+          tester,
+          spec: registry['taste_change_notice']!,
+          component: descriptor(
+            type: 'taste_change_notice',
+            detail: detail,
+            data: {
+              'conclusion': '最近口味变淡',
+              'change_date': '2026-10-10',
+              'source': source,
+            },
+            actions: [
+              ActionDescriptor(
+                intent: 'show_before_taste_change',
+                params: {'change_id': 'change'},
+              ),
+              ActionDescriptor(
+                intent: 'open_taste_change',
+                params: {'change_id': 'change'},
+              ),
+            ],
+          ),
+        );
+        for (final intent in [
+          'show_before_taste_change',
+          'open_taste_change',
+        ]) {
+          final target = find.byKey(ValueKey('c1:$intent'));
+          expect(target.hitTestable(), findsOneWidget);
+          await tester.tap(target);
+        }
+        expect(triggered.map((action) => action.intent), [
+          'show_before_taste_change',
+          'open_taste_change',
+        ]);
+        expect(
+          triggered.every(
+            (action) => (action.params as Map)['change_id'] == 'change',
+          ),
+          isTrue,
+        );
+      });
+    }
+
+    for (final brightness in Brightness.values) {
+      for (final scale in [1.3, 1.6]) {
+        testWidgets('差异数值使用主题等宽字体和酱红，${brightness.name}，字号 $scale', (
+          tester,
+        ) async {
+          await pumpSpec(
+            tester,
+            spec: registry['scenario_difference']!,
+            component: descriptor(
+              type: 'scenario_difference',
+              detail: ComponentDescriptorDetailEnum.detailed,
+              data: differenceData,
+            ),
+            brightness: brightness,
+            textScale: scale,
+            size: const Size(320, 780),
+          );
+          TextStyle? displayedStyle(String line, String segment) {
+            final paragraph = tester.renderObject<RenderParagraph>(
+              find.text(line),
+            );
+            final renderedText = paragraph.text.toPlainText();
+            expect(renderedText, line);
+            final start = renderedText.indexOf(segment);
+            expect(start, greaterThanOrEqualTo(0));
+            return paragraph.text
+                .getSpanForPosition(
+                  TextPosition(offset: start + segment.length - 1),
+                )
+                ?.style;
+          }
+
+          final colors = GramTreeColors.of(
+            tester.element(find.text('盐：上次 9 g，本次 8 g')),
+          );
+          expect(
+            displayedStyle('盐：上次 9 g，本次 8 g', '上次 9 g')?.fontFamily,
+            numberFont,
+          );
+          final current = displayedStyle('盐：上次 9 g，本次 8 g', '本次 8 g');
+          expect(current?.fontFamily, numberFont);
+          expect(current?.color, colors.accent);
+          expect(
+            displayedStyle('水：上次 20 ml，本次 20 ml', '本次 20 ml')?.color,
+            isNot(colors.accent),
+          );
+          final currentServings = displayedStyle('份数：上次 2，本次 3', '本次 3');
+          expect(currentServings?.fontFamily, numberFont);
+          expect(currentServings?.color, colors.accent);
+          expect(
+            displayedStyle('加盐：上次 直接加入，本次 试味后加入', '本次 试味后加入')?.color,
+            isNot(colors.accent),
+          );
+          expect(tester.takeException(), isNull);
+        });
+      }
+    }
   });
 
   group('没有内容时显示登记的标准空态', () {

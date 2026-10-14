@@ -47,6 +47,8 @@ from gramtree.ui_protocol.protocol import DetailLevel, ExperimentInfo
 # 带实验标识、变体不能绕过必显校验"这整条链路，不做效果统计（那是 SPEC-010.3 的事）。
 TODAY_EXPERIMENT_NAME = "today_composition_detail"
 TODAY_EXPERIMENT_CONFIG_KEY = "ui.experiment.today_composition"
+RECIPE_EXPERIMENT_NAME = "recipe_composition_detail"
+RECIPE_EXPERIMENT_CONFIG_KEY = "ui.experiment.recipe_composition"
 
 # 变体名 -> 组件类型 -> 详略覆盖。没在这里列出的组件类型、没在这里列出的变体名，
 # 详略程度就是 `service.compose_today` 自己的默认值（等价于没有实验）。
@@ -166,4 +168,20 @@ def assign_today_experiment(session: Session, user_id: uuid.UUID) -> TodayExperi
         experiment=ExperimentInfo(experiment=TODAY_EXPERIMENT_NAME, variant=group.variant),
         detail_overrides=TODAY_VARIANT_DETAILS.get(group.variant, {}),
         dropped_components=TODAY_VARIANT_DROPPED_COMPONENTS.get(group.variant, frozenset()),
+    )
+
+
+def assign_recipe_experiment(session: Session, user_id: uuid.UUID) -> TodayExperimentAssignment:
+    try:
+        definition = ExperimentDefinition.model_validate(
+            runtime_config_service.get(session, RECIPE_EXPERIMENT_CONFIG_KEY)
+        )
+    except ValueError:
+        return NO_EXPERIMENT
+    group = _pick_group(definition, stable_bucket(user_id, RECIPE_EXPERIMENT_NAME))
+    if group is None or group.variant not in ("default", "more_detail"):
+        return NO_EXPERIMENT
+    return TodayExperimentAssignment(
+        experiment=ExperimentInfo(experiment=RECIPE_EXPERIMENT_NAME, variant=group.variant),
+        detail_overrides={"scenario_summary": "detailed"} if group.variant == "more_detail" else {},
     )

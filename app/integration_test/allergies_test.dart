@@ -184,6 +184,7 @@ void main() {
     await tester.pumpAndSettle();
     await reveal(tester, find.text('设置'));
     await tester.tap(find.text('设置'));
+    await reveal(tester, find.byKey(const ValueKey('sensitive-withdraw')));
     await waitFor(tester, find.byKey(const ValueKey('sensitive-withdraw')));
     await tap(tester, find.byKey(const ValueKey('sensitive-withdraw')));
     await tap(tester, find.byKey(const ValueKey('sensitive-withdraw-confirm')));

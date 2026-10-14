@@ -69,6 +69,8 @@ def composition_shown_content(description: PageDescription) -> dict[str, object]
         }
     else:
         content["experiment"] = None
+    if description.scenario_signals is not None:
+        content["scenario_signals"] = description.scenario_signals
     return content
 
 
@@ -82,7 +84,7 @@ def record_composition_shown(
     item = events_service.EventInput(
         id=uuid.uuid4(),
         event_type=EVENT_TYPE,
-        type_version=EVENT_TYPE_VERSION,
+        type_version=2 if description.scenario_signals is not None else EVENT_TYPE_VERSION,
         device_id=SERVER_DEVICE_ID,
         device_time=now,
         app_version=SERVER_APP_VERSION,

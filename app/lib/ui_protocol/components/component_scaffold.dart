@@ -33,6 +33,7 @@ class ComponentCard extends StatelessWidget {
     this.onTapConclusion,
     this.detailLabel,
     this.onDetail,
+    this.preserveConclusionSemantics = false,
   });
 
   final ComponentDescriptorDetailEnum detail;
@@ -42,6 +43,10 @@ class ComponentCard extends StatelessWidget {
 
   /// 结论层的纯文字版本，只用于拼读屏标注。
   final String conclusionSemanticsText;
+
+  /// Interactive conclusions expose their own controls to assistive technology.
+  /// Their text is not repeated in the card's aggregate semantic label.
+  final bool preserveConclusionSemantics;
 
   /// 标准档和详细档都会显示的额外内容（比如列表容器的行、分区标题的计数）。
   final Widget? standardExtra;
@@ -83,7 +88,10 @@ class ComponentCard extends StatelessWidget {
     // 都可能有自己独立的读屏内容（每行读它自己的名称和数值、按钮读它自己的文案），
     // 不放进 ExcludeSemantics，各自留成语义树里单独能查到的节点。
     final children = <Widget>[
-      ExcludeSemantics(child: conclusion),
+      if (preserveConclusionSemantics)
+        conclusion
+      else
+        ExcludeSemantics(child: conclusion),
       if (_showStandardExtra && standardExtra != null) ...[
         const SizedBox(height: 8),
         standardExtra!,
@@ -162,7 +170,7 @@ class ComponentCard extends StatelessWidget {
     // `showPrimaryButton == false`）才把主要动作文案带进来，因为那种情况下它没有
     // 别的部件可以承载这段读屏文案。
     final semanticsLabel = [
-      conclusionSemanticsText,
+      if (!preserveConclusionSemantics) conclusionSemanticsText,
       if (showingBasis) basis,
       if (!showPrimaryButton && primaryActionLabel != null) primaryActionLabel,
     ].join('，');

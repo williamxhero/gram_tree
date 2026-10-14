@@ -49,6 +49,7 @@ import 'package:gramtree_api/src/model/count_unit.dart';
 import 'package:gramtree_api/src/model/count_units_attribute.dart';
 import 'package:gramtree_api/src/model/deletion_out.dart';
 import 'package:gramtree_api/src/model/density_attribute.dart';
+import 'package:gramtree_api/src/model/detail_preference.dart';
 import 'package:gramtree_api/src/model/dish_input.dart';
 import 'package:gramtree_api/src/model/dish_out.dart';
 import 'package:gramtree_api/src/model/email_code_request.dart';
@@ -193,6 +194,7 @@ import 'package:gramtree_api/src/model/release_note.dart';
 import 'package:gramtree_api/src/model/reproducibility_position.dart';
 import 'package:gramtree_api/src/model/reproducibility_problem.dart';
 import 'package:gramtree_api/src/model/retrieval_result.dart';
+import 'package:gramtree_api/src/model/scenario_feedback.dart';
 import 'package:gramtree_api/src/model/search_ingredient_out.dart';
 import 'package:gramtree_api/src/model/search_query.dart';
 import 'package:gramtree_api/src/model/search_result.dart';
@@ -395,6 +397,9 @@ ReturnType deserialize<ReturnType, BaseType>(
       return DeletionOut.fromJson(value as Map<String, dynamic>) as ReturnType;
     case 'DensityAttribute':
       return DensityAttribute.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'DetailPreference':
+      return DetailPreference.fromJson(value as Map<String, dynamic>)
           as ReturnType;
     case 'DishInput':
       return DishInput.fromJson(value as Map<String, dynamic>) as ReturnType;
@@ -815,6 +820,9 @@ ReturnType deserialize<ReturnType, BaseType>(
           as ReturnType;
     case 'RetrievalResult':
       return RetrievalResult.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'ScenarioFeedback':
+      return ScenarioFeedback.fromJson(value as Map<String, dynamic>)
           as ReturnType;
     case 'SearchIngredientOut':
       return SearchIngredientOut.fromJson(value as Map<String, dynamic>)
