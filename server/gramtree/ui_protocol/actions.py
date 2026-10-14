@@ -212,7 +212,12 @@ class ActionSpec:
     validate_params: Callable[[Mapping[str, Any]], bool]
 
 
+def _validate_scenario_detail(params: Mapping[str, Any]) -> bool:
+    return set(params) == {"detail"} and params.get("detail") in ("auto", "brief", "detailed")
+
+
 ITEMS: tuple[ActionSpec, ...] = (
+    ActionSpec("set_scenario_detail", _validate_scenario_detail),
     ActionSpec("open_page", _validate_open_page),
     ActionSpec("start_cooking", _validate_start_cooking),
     ActionSpec("open_record_card", _validate_open_record_card),

@@ -48,6 +48,8 @@ import 'change_explanation_panel.dart';
 import 'cooking_session.dart';
 import '../../storage/local_store.dart';
 import '../../ui_protocol/components/component_scaffold.dart';
+import '../../ui_protocol/composition_provider.dart';
+import '../../ui_protocol/scenario_detail_scope.dart';
 import '../../ui_protocol/intent_dispatcher.dart';
 import '../../ui_protocol/recipe_operations.dart';
 import '../../ui_protocol/recipe_safety.dart';
@@ -2752,6 +2754,7 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
   RecipePersonalizedOut? _originalSafety;
   final Set<String> _dinerIds = {};
   String? _primaryDinerId;
+  String? _sceneDetailOverride;
 
   Map<String, PersonalizedIngredientOut> get _personalizedIngredients => {
     for (final item in _personalized?.ingredients ?? const []) item.id: item,
@@ -2829,6 +2832,7 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
         _dinerIds.clear();
         _primaryDinerId = null;
         _showOriginal = false;
+        _sceneDetailOverride = null;
         _personalizationLoading = false;
         _personalizationError = null;
         _detail = null;
@@ -2871,6 +2875,7 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
       _scaleMode = _RecipeScaleMode.servings;
       _targetServings = null;
       _targetMold = null;
+      _sceneDetailOverride = null;
       unawaited(_load());
     }
   }
@@ -3985,6 +3990,28 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
         ),
       );
     }
+    final scene = offline
+        ? const AsyncValue<CompositionResult>.data(
+            CompositionFailed(FallbackInfoReasonCodeEnum.serverError),
+          )
+        : ref.watch(
+            scenarioCompositionProvider((
+              recipeId: widget.recipeId,
+              versionId: detail.version.id,
+              screenWidth: MediaQuery.sizeOf(context).width
+                  .round()
+                  .clamp(1, 16384),
+              detailOverride: _sceneDetailOverride,
+            )),
+          );
+    final sceneResult = scene.value;
+    final sceneComponents = sceneResult is CompositionReady
+        ? sceneResult.description.components ?? const <ComponentDescriptor>[]
+        : const <ComponentDescriptor>[];
+    final sceneSummary = sceneComponents
+        .where((item) => item.type == 'scenario_summary')
+        .firstOrNull;
+    final sceneDetail = sceneSummary?.detail.value ?? 'standard';
     return Scaffold(
       appBar: AppBar(
         title: Text(detail.dish.name),
@@ -4072,15 +4099,21 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
               ],
             ),
           ReproducibilityCard(result: detail.version.reproducibility),
-          RecipeSafetyProtocolSection(
-            result: detail.version.safety ?? detail.version.safetyAtSave,
-            legacyDerived: derived,
-            dishName: detail.dish.name,
-            snapshot: snapshot,
-            recipeId: widget.recipeId,
-            versionId: detail.version.id,
-            authoring: false,
-            loading: false,
+          ScenarioDetailScope(
+            onChanged: (value) => setState(() {
+              _sceneDetailOverride = value == 'auto' ? null : value;
+            }),
+            child: RecipeSafetyProtocolSection(
+              result: detail.version.safety ?? detail.version.safetyAtSave,
+              legacyDerived: derived,
+              dishName: detail.dish.name,
+              snapshot: snapshot,
+              recipeId: widget.recipeId,
+              versionId: detail.version.id,
+              authoring: false,
+              loading: false,
+              composition: scene,
+            ),
           ),
           _RecipePhotoDisplay(images: detail.version.images),
           if (widget.versionId == null && !offline)
@@ -4291,10 +4324,11 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
                     item: _personalizedSteps[step.id]!,
                     child: _StepDetailTile(
                       key: PageStorageKey(
-                        'personalized-step-${detail.version.id}-${step.id}',
+                        'personalized-step-${detail.version.id}-${step.id}-$sceneDetail',
                       ),
                       index: index,
                       step: step,
+                      scenarioDetail: sceneDetail,
                       ingredientNames: {
                         for (final item in _personalized!.ingredients)
                           item.id: item.displayName,
@@ -4311,9 +4345,12 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
                 : _StepDetailTile(
                     // Lazy scrolling recreates tiles; retain expanded requirements
                     // only for this immutable version and stable step identity.
-                    key: PageStorageKey('step-${detail.version.id}-${step.id}'),
+                    key: PageStorageKey(
+                      'step-${detail.version.id}-${step.id}-$sceneDetail',
+                    ),
                     index: index,
                     step: step,
+                    scenarioDetail: sceneDetail,
                     converted: _scaleMode == _RecipeScaleMode.servings
                         ? convertedServingStepsById[step.id]
                         : null,
@@ -5174,6 +5211,7 @@ class _StepDetailTile extends StatelessWidget {
     required this.stepLabels,
     required this.safetyFindings,
     required this.l10n,
+    this.scenarioDetail = 'standard',
   });
 
   final int index;
@@ -5184,6 +5222,7 @@ class _StepDetailTile extends StatelessWidget {
   final Map<String, String> stepLabels;
   final List<RecipeSafetyFinding> safetyFindings;
   final AppLocalizations l10n;
+  final String scenarioDetail;
 
   Widget _sourceMark(
     BuildContext context, {
@@ -5238,6 +5277,7 @@ class _StepDetailTile extends StatelessWidget {
       children: [
         ExpansionTile(
           key: ValueKey('recipe-step-$index'),
+          initiallyExpanded: scenarioDetail == 'detailed',
           title: Text('${index + 1}. ${step.instruction}'),
           subtitle: Text(
             details.isEmpty

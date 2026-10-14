@@ -29,12 +29,20 @@ from gramtree.accounts.deps import CurrentAuth
 from gramtree.core.errors import ERROR_RESPONSES, ApiError
 from gramtree.deps import RedisDep, SessionDep, SettingsDep
 from gramtree.recipes import service as recipe_service
-from gramtree.ui_protocol import cache, composition_events, experiments, service, validation
+from gramtree.ui_protocol import (
+    cache,
+    composition_events,
+    experiments,
+    scenarios,
+    service,
+    validation,
+)
 from gramtree.ui_protocol.protocol import (
     PageDescription,
     SkipAdjustmentRequest,
     SkipAdjustmentResult,
 )
+from gramtree.ui_protocol.scenarios import Preference
 
 logger = logging.getLogger("gramtree.ui_protocol")
 
@@ -61,6 +69,11 @@ class ComposeRequest(BaseModel):
     version_id: uuid.UUID | None = Field(
         default=None,
         description="可选的不可变菜谱版本；不填使用当前版本",
+    )
+
+    screen_width: int = Field(default=400, ge=1, le=16384, description="逻辑像素视口宽度")
+    detail_override: Preference | None = Field(
+        default=None, description="仅当前页面的详略切换；auto 恢复用户默认或自动决定"
     )
 
     @model_validator(mode="after")
@@ -120,7 +133,12 @@ def compose(
             logger.exception("读取菜谱安全上下文失败，整页退回安全标准布局")
 
     depends_on = service.dependency_versions(body.page_type, session)
-    key = cache.cache_key(auth.user.id, body.page_type, DEFAULT_SCENARIO, depends_on)
+    # Client capabilities are part of the cache identity: a narrow client must not
+    # receive another client's otherwise valid composition.
+    client_scenario = scenarios.digest(
+        [DEFAULT_SCENARIO, body.protocol_version, sorted(set(body.supported_components))]
+    )
+    key = cache.cache_key(auth.user.id, body.page_type, client_scenario, depends_on)
     if not recipe_page:
         cached = cache.get(redis, key)
         if cached is not None:
@@ -147,6 +165,17 @@ def compose(
                 safety_context=safety_context,
                 personal_safety=personal_safety,
             )
+            if body.page_type == "recipe_detail" and body.recipe_id is not None:
+                component, signals, _ = scenarios.summary(
+                    session,
+                    auth.user,
+                    body.recipe_id,
+                    screen_width=body.screen_width,
+                    override=body.detail_override if body.detail_override != "auto" else None,
+                )
+                description.scenario_signals = signals
+                if "scenario_summary" in body.supported_components:
+                    description.components.append(component)
         except Exception:
             # 组合模块本身报错、或者实验分组时出了问题：不让这个错误往上冒（这个接口出
             # 任何问题都不能卡住做饭），记录下来方便排查，返回标准布局兜底
@@ -163,6 +192,25 @@ def compose(
     # 重新走一遍完整流程，不会一直下发同一份兜底结果。
     cache.set_(redis, key, description)
     return description
+
+
+class DetailPreference(BaseModel):
+    detail: Preference
+
+
+@router.get("/preferences", response_model=DetailPreference, responses=ERROR_RESPONSES)
+def get_preferences(auth: CurrentAuth, session: SessionDep) -> DetailPreference:
+    return DetailPreference(detail=scenarios.preference(session, auth.user.id))
+
+
+@router.put("/preferences", response_model=DetailPreference, responses=ERROR_RESPONSES)
+def set_preferences(
+    body: DetailPreference, auth: CurrentAuth, session: SessionDep, redis: RedisDep
+) -> DetailPreference:
+    scenarios.record_event(
+        session, redis, auth.user.id, "ui.detail_preference", {"detail": body.detail}
+    )
+    return body
 
 
 @router.post(

@@ -25,6 +25,7 @@ import 'ingredient_preference_actions.dart';
 import 'recipe_operations.dart';
 import 'source_overrides.dart';
 import 'source_types.dart';
+import 'scenario_detail_scope.dart';
 
 /// App 内置意图登记表（SPEC-009.1 #81）：组件上的每个动作只能是这里登记过的意图，
 /// 按钮、菜单、以后的一句话输入都落到同一批意图，都走同一个处理器
@@ -352,7 +353,23 @@ Future<void> _handleRecipeOperation(
 /// SPEC-009.1 #81 登记的意图表：#77/#80 用到的 `open_page`/`start_cooking`/
 /// `open_record_card` 沿用之前的默认文案，新增 `call_operation` 和四个先只登记
 /// 名字的意图。
+bool _validateScenarioDetail(Map<String, dynamic> params) =>
+    params.length == 1 &&
+    const ['auto', 'brief', 'detailed'].contains(params['detail']);
+
+void _handleScenarioDetail(
+  BuildContext context,
+  Ref ref,
+  Map<String, dynamic> params,
+) => ScenarioDetailScope.change(context, params['detail'] as String);
+
 final defaultIntentRegistry = IntentRegistry([
+  const IntentSpec(
+    name: 'set_scenario_detail',
+    defaultLabel: '切换本页详略',
+    validateParams: _validateScenarioDetail,
+    handler: _handleScenarioDetail,
+  ),
   ...allergyIntentSpecs,
   ...cookingConstraintIntentSpecs,
   ...familyIntentSpecs,

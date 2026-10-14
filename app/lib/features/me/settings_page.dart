@@ -10,6 +10,7 @@ import '../../privacy/consent.dart';
 import '../../privacy/documents.dart';
 import '../../privacy/policy.dart';
 import '../../widgets/page_frame.dart';
+import '../../ui_protocol/detail_preference_setting.dart';
 import 'account_data.dart';
 import 'allergies_section.dart';
 
@@ -65,6 +66,7 @@ class SettingsPage extends ConsumerWidget {
           ),
           // 时区跟随手机自动更新，只展示
           item(l10n.settingsTimezone, value: user?.timezone),
+          const DetailPreferenceSetting(),
           group(l10n.settingsPrivacy),
           item(
             l10n.privacyTitle,

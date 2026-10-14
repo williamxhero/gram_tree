@@ -18,16 +18,23 @@ part 'compose_request.g.dart';
 class ComposeRequest {
   /// Returns a new [ComposeRequest] instance.
   ComposeRequest({
+    this.detailOverride,
+
     required this.pageType,
 
     required this.protocolVersion,
 
     this.recipeId,
 
+    this.screenWidth = 400,
+
     this.supportedComponents,
 
     this.versionId,
   });
+
+  @JsonKey(name: r'detail_override', required: false, includeIfNull: false)
+  final ComposeRequestDetailOverrideEnum? detailOverride;
 
   /// 要哪个页面类型的组合，例如 today
   @JsonKey(name: r'page_type', required: true, includeIfNull: false)
@@ -40,6 +47,17 @@ class ComposeRequest {
   @JsonKey(name: r'recipe_id', required: false, includeIfNull: false)
   final String? recipeId;
 
+  /// 逻辑像素视口宽度
+  // minimum: 1
+  // maximum: 16384
+  @JsonKey(
+    defaultValue: 400,
+    name: r'screen_width',
+    required: false,
+    includeIfNull: false,
+  )
+  final int? screenWidth;
+
   /// App 已登记、认识的组件类型清单；服务端只会下发这里面的类型
   @JsonKey(name: r'supported_components', required: false, includeIfNull: false)
   final List<String>? supportedComponents;
@@ -51,17 +69,21 @@ class ComposeRequest {
   bool operator ==(Object other) =>
       identical(this, other) ||
       other is ComposeRequest &&
+          other.detailOverride == detailOverride &&
           other.pageType == pageType &&
           other.protocolVersion == protocolVersion &&
           other.recipeId == recipeId &&
+          other.screenWidth == screenWidth &&
           other.supportedComponents == supportedComponents &&
           other.versionId == versionId;
 
   @override
   int get hashCode =>
+      (detailOverride == null ? 0 : detailOverride.hashCode) +
       pageType.hashCode +
       protocolVersion.hashCode +
       (recipeId == null ? 0 : recipeId.hashCode) +
+      screenWidth.hashCode +
       supportedComponents.hashCode +
       (versionId == null ? 0 : versionId.hashCode);
 
@@ -74,4 +96,20 @@ class ComposeRequest {
   String toString() {
     return toJson().toString();
   }
+}
+
+enum ComposeRequestDetailOverrideEnum {
+  @JsonValue(r'auto')
+  auto(r'auto'),
+  @JsonValue(r'brief')
+  brief(r'brief'),
+  @JsonValue(r'detailed')
+  detailed(r'detailed');
+
+  const ComposeRequestDetailOverrideEnum(this.value);
+
+  final String value;
+
+  @override
+  String toString() => value;
 }

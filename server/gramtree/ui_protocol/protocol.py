@@ -75,6 +75,9 @@ class PageDescription(BaseModel):
         description="非空表示这份描述是标准布局兜底，components 为空数组",
     )
     components: list[ComponentDescriptor] = Field(default_factory=list)
+    scenario_signals: dict[str, Any] | None = Field(
+        default=None, description="服务端计算的场景取值与来源；旧客户端可忽略"
+    )
 
 
 # —— SPEC-009.1 #82：来源标记与"为什么"面板 ——

@@ -80,6 +80,7 @@ lib/src/model/count_unit.dart
 lib/src/model/count_units_attribute.dart
 lib/src/model/deletion_out.dart
 lib/src/model/density_attribute.dart
+lib/src/model/detail_preference.dart
 lib/src/model/dish_input.dart
 lib/src/model/dish_out.dart
 lib/src/model/email_code_request.dart

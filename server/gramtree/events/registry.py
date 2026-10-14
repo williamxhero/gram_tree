@@ -126,6 +126,14 @@ class CompositionShownContentV1(BaseModel):
     )
 
 
+class CompositionShownContentV2(CompositionShownContentV1):
+    scenario_signals: dict[str, object] = Field(default_factory=dict)
+
+
+class DetailPreferenceContentV1(BaseModel):
+    detail: Literal["auto", "brief", "detailed"]
+
+
 class ComponentActionContentV1(BaseModel):
     """`ui.component_action` v1：组件上的动作被触发时记（#81 触发，这里先登记类型）。"""
 
@@ -354,6 +362,21 @@ ITEMS: tuple[EventTypeSpec, ...] = (
         correlation_fields=("ui_composition_id",),
         exportable=True,
         content_schema=CompositionShownContentV1,
+    ),
+    EventTypeSpec(
+        event_type="ui.composition_shown",
+        version=2,
+        description="场景组合展示：组件决定及带来源的场景摘要",
+        correlation_fields=("ui_composition_id",),
+        exportable=True,
+        content_schema=CompositionShownContentV2,
+    ),
+    EventTypeSpec(
+        event_type="ui.detail_preference",
+        version=1,
+        description="用户固定的页面默认详略，最新一条为当前选择",
+        exportable=True,
+        content_schema=DetailPreferenceContentV1,
     ),
     EventTypeSpec(
         event_type="ui.component_action",

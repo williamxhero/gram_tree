@@ -11,6 +11,8 @@ import 'package:gramtree_api/gramtree_api.dart'
         PageDescription;
 
 import '../api/api_client.dart';
+import '../auth/auth_controller.dart';
+import '../auth/session.dart';
 import '../config/app_config.dart';
 import '../events/event_recorder.dart';
 import '../features_flags/features.dart';
@@ -108,6 +110,50 @@ final recipeCompositionProvider =
       ),
     );
 
+typedef ScenarioCompositionKey = ({
+  String recipeId,
+  String versionId,
+  int screenWidth,
+  String? detailOverride,
+});
+
+final scenarioCompositionProvider = FutureProvider.autoDispose
+    .family<CompositionResult, ScenarioCompositionKey>((ref, key) {
+      ref.watch(authProvider.select((value) => value.value?.id));
+      return fetchComposition(
+        ref,
+        pageType: 'recipe_detail',
+        registry: ref.watch(componentRegistryProvider),
+        recipeId: key.recipeId,
+        versionId: key.versionId,
+        screenWidth: key.screenWidth,
+        detailOverride: key.detailOverride,
+      );
+    });
+
+final detailPreferenceProvider = FutureProvider.autoDispose<String>((
+  ref,
+) async {
+  ref.watch(authProvider.select((value) => value.value?.id));
+  final session = ref.watch(sessionStoreProvider);
+  final identity = session.identity;
+  final response = await ref
+      .watch(dioProvider)
+      .get<Map<String, dynamic>>(
+        '/v1/ui/preferences',
+        options: Options(
+          extra: {
+            if (identity != null) 'auth_owner_id': identity.ownerId,
+            if (identity != null) 'auth_identity_epoch': identity.epoch,
+          },
+        ),
+      );
+  if (identity != null && !session.matches(identity)) {
+    throw StateError('stale_scenario_preference');
+  }
+  return response.data?['detail'] as String? ?? 'auto';
+});
+
 /// 请求组合结果，并在渲染前按协议信封 Schema 和每个组件的 data Schema 各校验一次
 /// （#18 的硬性要求）。这里拿原始 JSON（而不是走生成客户端直接拿到的强类型对象）
 /// 校验，因为生成的 Dart 模型只保证“反序列化不出错”，不保证“符合协议语义”——
@@ -132,8 +178,12 @@ Future<CompositionResult> fetchComposition(
   required ComponentRegistry registry,
   String? recipeId,
   String? versionId,
+  int? screenWidth,
+  String? detailOverride,
 }) async {
   final dio = ref.read(dioProvider);
+  final session = ref.read(sessionStoreProvider);
+  final identity = session.identity;
   final safetyPage = pageType == 'recipe_detail' || pageType == 'recipe_editor';
   final supportedTypes = registry.supportedTypes
       .where(
@@ -149,13 +199,27 @@ Future<CompositionResult> fetchComposition(
   final requestBody = request.toJson();
   if (recipeId != null) requestBody['recipe_id'] = recipeId;
   if (versionId != null) requestBody['version_id'] = versionId;
+  if (screenWidth != null) requestBody['screen_width'] = screenWidth;
+  if (detailOverride != null) requestBody['detail_override'] = detailOverride;
   final timeoutMs = ref.watch(compositionTimeoutMsProvider);
 
   final Map<String, dynamic> raw;
   try {
     final response = await dio
-        .post<Map<String, dynamic>>('/v1/ui/compositions', data: requestBody)
+        .post<Map<String, dynamic>>(
+          '/v1/ui/compositions',
+          data: requestBody,
+          options: Options(
+            extra: {
+              if (identity != null) 'auth_owner_id': identity.ownerId,
+              if (identity != null) 'auth_identity_epoch': identity.epoch,
+            },
+          ),
+        )
         .timeout(Duration(milliseconds: timeoutMs));
+    if (identity != null && !session.matches(identity)) {
+      return const CompositionFailed(FallbackInfoReasonCodeEnum.serverError);
+    }
     final data = response.data;
     if (data == null) {
       return await _fail(ref, pageType, FallbackInfoReasonCodeEnum.serverError);
@@ -299,6 +363,9 @@ Future<CompositionResult> fetchComposition(
     }
   }
 
+  if (identity != null && !session.matches(identity)) {
+    return const CompositionFailed(FallbackInfoReasonCodeEnum.serverError);
+  }
   final description = PageDescription.fromJson(raw);
   // SPEC-009.1 票 2（#78）：合法结果显示前记一条“组合展示”事件，content 和服务端
   // 那条（gramtree.ui_protocol.composition_events.composition_shown_content）
@@ -307,11 +374,15 @@ Future<CompositionResult> fetchComposition(
       .read(eventRecorderProvider)
       .record(
         eventType: 'ui.composition_shown',
-        typeVersion: 1,
+        typeVersion: raw['scenario_signals'] is Map ? 2 : 1,
         correlation: EventCorrelationIds(
           uiCompositionId: description.compositionId,
         ),
-        content: _compositionShownContent(description),
+        content: {
+          ..._compositionShownContent(description),
+          if (raw['scenario_signals'] is Map)
+            'scenario_signals': raw['scenario_signals'],
+        },
       );
   // SPEC-009.1 票 7（#83）：成功拿到的描述连同它依赖的内容版本存到本机，供下次
   // 离线/超时时使用（见 [_fail] 的 tryCache 分支）。

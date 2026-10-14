@@ -78,6 +78,7 @@ export 'package:gramtree_api/src/model/count_unit.dart';
 export 'package:gramtree_api/src/model/count_units_attribute.dart';
 export 'package:gramtree_api/src/model/deletion_out.dart';
 export 'package:gramtree_api/src/model/density_attribute.dart';
+export 'package:gramtree_api/src/model/detail_preference.dart';
 export 'package:gramtree_api/src/model/dish_input.dart';
 export 'package:gramtree_api/src/model/dish_out.dart';
 export 'package:gramtree_api/src/model/email_code_request.dart';

@@ -49,6 +49,7 @@ import 'package:gramtree_api/src/model/count_unit.dart';
 import 'package:gramtree_api/src/model/count_units_attribute.dart';
 import 'package:gramtree_api/src/model/deletion_out.dart';
 import 'package:gramtree_api/src/model/density_attribute.dart';
+import 'package:gramtree_api/src/model/detail_preference.dart';
 import 'package:gramtree_api/src/model/dish_input.dart';
 import 'package:gramtree_api/src/model/dish_out.dart';
 import 'package:gramtree_api/src/model/email_code_request.dart';
@@ -395,6 +396,9 @@ ReturnType deserialize<ReturnType, BaseType>(
       return DeletionOut.fromJson(value as Map<String, dynamic>) as ReturnType;
     case 'DensityAttribute':
       return DensityAttribute.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'DetailPreference':
+      return DetailPreference.fromJson(value as Map<String, dynamic>)
           as ReturnType;
     case 'DishInput':
       return DishInput.fromJson(value as Map<String, dynamic>) as ReturnType;

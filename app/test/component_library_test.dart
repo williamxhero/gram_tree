@@ -3,7 +3,9 @@ import 'dart:io';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gram_tree/app/theme.dart';
+import 'package:gram_tree/l10n/app_localizations.dart';
 import 'package:gram_tree/ui_protocol/component_registry.dart';
 import 'package:gramtree_api/gramtree_api.dart';
 
@@ -55,13 +57,17 @@ void main() {
         ? child
         : SingleChildScrollView(child: child);
     await tester.pumpWidget(
-      MaterialApp(
-        theme: buildTheme(Brightness.light),
-        darkTheme: buildTheme(Brightness.dark),
-        themeMode: brightness == Brightness.dark
-            ? ThemeMode.dark
-            : ThemeMode.light,
-        home: Scaffold(body: body),
+      ProviderScope(
+        child: MaterialApp(
+          theme: buildTheme(Brightness.light),
+          darkTheme: buildTheme(Brightness.dark),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          themeMode: brightness == Brightness.dark
+              ? ThemeMode.dark
+              : ThemeMode.light,
+          home: Scaffold(body: body),
+        ),
       ),
     );
     await tester.pumpAndSettle();
@@ -210,6 +216,89 @@ void main() {
       await tester.tap(find.text('去看看'));
       expect(triggered, hasLength(1));
       expect(triggered.single.intent, 'open_page');
+    });
+  });
+
+  group('场景详略组件', () {
+    final scenarioData = {
+      'conclusion': '详细步骤',
+      'steps_collapsed': false,
+      'layout': 'phone',
+      'source': {
+        'source_type': 'scenario_adjusted',
+        'value': '按你的经验调整',
+        'basis': {
+          'reason_code': 'novice',
+          'text': '你还没有完整做菜记录',
+          'citation': '做菜记录、你的默认设置及本次页面选择',
+        },
+      },
+    };
+
+    testWidgets('显示统一来源标记，三个操作派发页面详略意图', (tester) async {
+      final actions = [
+        ActionDescriptor(
+          intent: 'set_scenario_detail',
+          params: {'detail': 'brief'},
+        ),
+        ActionDescriptor(
+          intent: 'set_scenario_detail',
+          params: {'detail': 'detailed'},
+        ),
+        ActionDescriptor(
+          intent: 'set_scenario_detail',
+          params: {'detail': 'auto'},
+        ),
+      ];
+      final triggered = await pumpSpec(
+        tester,
+        spec: registry['scenario_summary']!,
+        component: descriptor(
+          type: 'scenario_summary',
+          detail: ComponentDescriptorDetailEnum.detailed,
+          data: scenarioData,
+          actions: actions,
+        ),
+      );
+
+      expect(find.text('详细步骤'), findsOneWidget);
+      expect(find.text('按场景调整'), findsOneWidget);
+      expect(find.text('本页简洁'), findsOneWidget);
+      expect(find.text('本页详细'), findsOneWidget);
+      expect(find.text('恢复默认'), findsOneWidget);
+      await tester.tap(find.byKey(const ValueKey('scenario-detail-brief')));
+      expect(triggered, hasLength(1));
+      expect(triggered.single.intent, 'set_scenario_detail');
+      expect(triggered.single.params, {'detail': 'brief'});
+    });
+
+    testWidgets('窄屏和大字仍可换行，不溢出', (tester) async {
+      await pumpSpec(
+        tester,
+        spec: registry['scenario_summary']!,
+        component: descriptor(
+          type: 'scenario_summary',
+          detail: ComponentDescriptorDetailEnum.detailed,
+          data: scenarioData,
+          actions: [
+            ActionDescriptor(
+              intent: 'set_scenario_detail',
+              params: {'detail': 'brief'},
+            ),
+            ActionDescriptor(
+              intent: 'set_scenario_detail',
+              params: {'detail': 'detailed'},
+            ),
+            ActionDescriptor(
+              intent: 'set_scenario_detail',
+              params: {'detail': 'auto'},
+            ),
+          ],
+        ),
+        textScale: 3,
+        size: const Size(320, 780),
+      );
+      expect(tester.takeException(), isNull);
     });
   });
 
