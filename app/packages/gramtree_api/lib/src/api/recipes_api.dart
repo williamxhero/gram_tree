@@ -2070,6 +2070,10 @@ class RecipesApi {
   /// * [recipeId]
   /// * [personalizationRequest]
   /// * [view]
+  /// * [xRequestSignature] - HMAC-SHA256 请求签名
+  /// * [xRequestTimestamp] - Unix 秒时间戳
+  /// * [xRequestNonce] - 每次请求唯一的随机数
+  /// * [xDeviceID] - 登录时的设备安装 ID
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -2083,6 +2087,10 @@ class RecipesApi {
     required String recipeId,
     required PersonalizationRequest personalizationRequest,
     String? view = 'personalized',
+    String? xRequestSignature,
+    String? xRequestTimestamp,
+    String? xRequestNonce,
+    String? xDeviceID,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
     Map<String, dynamic>? extra,
@@ -2098,7 +2106,13 @@ class RecipesApi {
     );
     final _options = Options(
       method: r'POST',
-      headers: <String, dynamic>{...?headers},
+      headers: <String, dynamic>{
+        r'X-Request-Signature': xRequestSignature,
+        r'X-Request-Timestamp': xRequestTimestamp,
+        r'X-Request-Nonce': xRequestNonce,
+        r'X-Device-ID': xDeviceID,
+        ...?headers,
+      },
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
           {'type': 'http', 'scheme': 'bearer', 'name': 'HTTPBearer'},

@@ -23827,6 +23827,78 @@
               "title": "View",
               "type": "string"
             }
+          },
+          {
+            "description": "HMAC-SHA256 请求签名",
+            "in": "header",
+            "name": "X-Request-Signature",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "HMAC-SHA256 请求签名",
+              "title": "X-Request-Signature"
+            }
+          },
+          {
+            "description": "Unix 秒时间戳",
+            "in": "header",
+            "name": "X-Request-Timestamp",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Unix 秒时间戳",
+              "title": "X-Request-Timestamp"
+            }
+          },
+          {
+            "description": "每次请求唯一的随机数",
+            "in": "header",
+            "name": "X-Request-Nonce",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "每次请求唯一的随机数",
+              "title": "X-Request-Nonce"
+            }
+          },
+          {
+            "description": "登录时的设备安装 ID",
+            "in": "header",
+            "name": "X-Device-ID",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "登录时的设备安装 ID",
+              "title": "X-Device-Id"
+            }
           }
         ],
         "requestBody": {
