@@ -79,6 +79,9 @@ Future<CookingSessionStore> sessionStore(
   Map<String, dynamic> inputs = const {},
   RecipeSafetyResult? safety,
   RecipeDerived? derived,
+  List<RecipeStep>? steps,
+  int stepIndex = 0,
+  String sessionId = 'session',
 }) async {
   final source = recipeSnapshotFixture('frozen-v1');
   final detail = source.copyWith(
@@ -88,23 +91,26 @@ Future<CookingSessionStore> sessionStore(
     ),
   );
   detail.version.snapshot.steps!.clear();
-  detail.version.snapshot.steps!.addAll([
-    RecipeStep(
-      id: 'heat',
-      action: '加热',
-      instruction: '加热至变白',
-      doneness: '表面变白',
-      why: '避免长时间加热使肉变柴',
-      durationSeconds: 60,
-    ),
-    RecipeStep(id: 'serve', instruction: '盛出'),
-  ]);
+  detail.version.snapshot.steps!.addAll(
+    steps ??
+        [
+          RecipeStep(
+            id: 'heat',
+            action: '加热',
+            instruction: '加热至变白',
+            doneness: '表面变白',
+            why: '避免长时间加热使肉变柴',
+            durationSeconds: 60,
+          ),
+          RecipeStep(id: 'serve', instruction: '盛出'),
+        ],
+  );
   final store = CookingSessionStore(env.local, accountId: env.server.user.id);
   await store.write(
     CookingSession(
-      id: 'session',
+      id: sessionId,
       startedAt: DateTime.utc(2026, 10, 14),
-      stepIndex: 0,
+      stepIndex: stepIndex,
       snapshot: FrozenRecipeSnapshot(
         detail: detail,
         capturedAt: DateTime.utc(2026, 10, 14),
@@ -715,6 +721,173 @@ void main() {
       },
     );
   }
+
+  for (final useFling in [false, true]) {
+    testWidgets(
+      'forward ${useFling ? 'left fling' : 'button'} completes current prerequisite before entering dependent step',
+      (tester) async {
+        final env = TestEnv.signedIn();
+        const sessionId = '44444444-4444-4444-8444-444444444444';
+        final store = await sessionStore(
+          env,
+          sessionId: sessionId,
+          steps: [
+            RecipeStep(id: 'prep', instruction: '切好食材'),
+            RecipeStep(
+              id: 'cook',
+              instruction: '下锅加热',
+              dependsOn: const ['prep'],
+            ),
+            RecipeStep(
+              id: 'serve',
+              instruction: '装盘上桌',
+              dependsOn: const ['prep', 'cook'],
+            ),
+          ],
+        );
+        env.server.on(
+          'POST',
+          '/v1/ui/compositions',
+          (_) => (200, cookingComposition('brief').toJson()),
+        );
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [
+              ...env.overrides,
+              cookingSessionStoreProvider.overrideWithValue(store),
+            ],
+            child: testApp(const CookingPage(sessionId: sessionId)),
+          ),
+        );
+        await tester.pumpAndSettle();
+        expect(find.text('步骤 1 / 3'), findsOneWidget);
+        Future<void> forward() async {
+          if (useFling) {
+            // A drag without velocity does not trigger the cooking fling path.
+            await tester.fling(
+              find.byType(ListView).first,
+              const Offset(-400, 0),
+              1000,
+            );
+          } else {
+            await revealCooking(tester, find.text('下一步'));
+            await tester.tap(find.text('下一步').hitTestable());
+          }
+          await tester.pumpAndSettle();
+        }
+
+        await forward();
+        expect(find.text('步骤 2 / 3'), findsOneWidget);
+        expect(find.text('下锅加热'), findsOneWidget);
+        expect(find.text('请先完成前置步骤，再继续。'), findsNothing);
+        await revealCooking(tester, find.text('上一步'));
+        await tester.tap(find.text('上一步').hitTestable());
+        await tester.pumpAndSettle();
+        expect(find.text('步骤 1 / 3'), findsOneWidget);
+        await forward();
+        expect(find.text('步骤 2 / 3'), findsOneWidget);
+        await forward();
+        expect(find.text('步骤 3 / 3'), findsOneWidget);
+        expect(find.text('装盘上桌'), findsOneWidget);
+        await revealCooking(tester, find.text('完成'));
+        await tester.tap(find.text('完成').hitTestable());
+        await tester.pumpAndSettle();
+        expect(find.text('已完成 汤'), findsOneWidget);
+        expect(tester.takeException(), isNull);
+        await tester.pumpWidget(const SizedBox.shrink());
+      },
+    );
+  }
+
+  testWidgets('forward cannot satisfy another unfinished prerequisite', (
+    tester,
+  ) async {
+    final env = TestEnv.signedIn();
+    final store = await sessionStore(
+      env,
+      stepIndex: 1,
+      steps: [
+        RecipeStep(id: 'prep', instruction: '切好食材'),
+        RecipeStep(id: 'cook', instruction: '下锅加热', dependsOn: const ['prep']),
+        RecipeStep(
+          id: 'serve',
+          instruction: '装盘上桌',
+          dependsOn: const ['prep', 'cook'],
+        ),
+      ],
+    );
+    env.server.on(
+      'POST',
+      '/v1/ui/compositions',
+      (_) => (200, cookingComposition('brief').toJson()),
+    );
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          ...env.overrides,
+          cookingSessionStoreProvider.overrideWithValue(store),
+        ],
+        child: testApp(const CookingPage(sessionId: 'session')),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await revealCooking(tester, find.text('下一步'));
+    await tester.tap(find.text('下一步').hitTestable());
+    await tester.pumpAndSettle();
+    expect(find.text('步骤 2 / 3'), findsOneWidget);
+    expect(find.text('装盘上桌'), findsNothing);
+    expect(find.text('请先完成前置步骤，再继续。'), findsOneWidget);
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
+
+  testWidgets('backward navigation never completes the step being left', (
+    tester,
+  ) async {
+    final env = TestEnv.signedIn();
+    // An acyclic dependency need not follow display order: assembling needs
+    // cooking. A restored cook step is still unfinished until moving forward.
+    final store = await sessionStore(
+      env,
+      stepIndex: 1,
+      steps: [
+        RecipeStep(
+          id: 'assemble',
+          instruction: '组装成品',
+          dependsOn: const ['cook'],
+        ),
+        RecipeStep(id: 'cook', instruction: '下锅加热'),
+      ],
+    );
+    env.server.on(
+      'POST',
+      '/v1/ui/compositions',
+      (_) => (200, cookingComposition('brief').toJson()),
+    );
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          ...env.overrides,
+          cookingSessionStoreProvider.overrideWithValue(store),
+        ],
+        child: testApp(const CookingPage(sessionId: 'session')),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await revealCooking(tester, find.text('上一步'));
+    await tester.tap(find.text('上一步').hitTestable());
+    await tester.pumpAndSettle();
+    expect(find.text('步骤 1 / 2'), findsOneWidget);
+    await tester.fling(find.byType(ListView).first, const Offset(400, 0), 1000);
+    await tester.pumpAndSettle();
+    expect(find.text('先准备食材'), findsOneWidget);
+    await revealCooking(tester, find.text('开始第一步'));
+    await tester.tap(find.text('开始第一步').hitTestable());
+    await tester.pumpAndSettle();
+    expect(find.text('先准备食材'), findsOneWidget);
+    expect(find.text('组装成品'), findsNothing);
+    expect(find.text('请先完成前置步骤，再继续。'), findsOneWidget);
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
 
   testWidgets('scenario switches and source remain accessible in brief cards', (
     tester,

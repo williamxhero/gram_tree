@@ -509,9 +509,19 @@ class _CookingPageState extends ConsumerState<CookingPage>
       session.steps.length - 1,
     );
     if (next == session.stepIndex) return;
+    final completed = [...session.completed];
+    if (delta > 0 && session.stepIndex >= 0) {
+      final previous = session.steps[session.stepIndex].id;
+      if (!completed.contains(previous)) completed.add(previous);
+    }
+    // Forward navigation finishes the current step before entering its
+    // dependent. Validate this candidate without saving it: another missing
+    // prerequisite must block both navigation and the completion update.
     if (delta > 0 &&
         next >= 0 &&
-        !session.dependenciesReady(session.steps[next])) {
+        !session
+            .copyWith(completed: completed)
+            .dependenciesReady(session.steps[next])) {
       if (mounted) {
         ScaffoldMessenger.of(context)
             .showSnackBar(const SnackBar(content: Text('请先完成前置步骤，再继续。')));
@@ -519,11 +529,6 @@ class _CookingPageState extends ConsumerState<CookingPage>
       return;
     }
     final reached = [...session.reached];
-    final completed = [...session.completed];
-    if (delta > 0 && session.stepIndex >= 0) {
-      final previous = session.steps[session.stepIndex].id;
-      if (!completed.contains(previous)) completed.add(previous);
-    }
     if (next >= 0 && !reached.contains(session.steps[next].id)) {
       reached.add(session.steps[next].id);
     }
