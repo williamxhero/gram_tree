@@ -240,8 +240,14 @@ def _run(
     input_data: dict[str, object],
     now: datetime,
     captcha: CaptchaAdapter,
+    release_caller_session: bool = False,
 ) -> RiskDecision | None:
     cfg = _config(session)
+    if release_caller_session:
+        # The caller has performed only read checks. Release its connection before
+        # opening the independent durable audit session, or a request burst can
+        # have every pool slot wait for a second one.
+        session.commit()
     with _audit_session(session, [subject]) as audit:
         return _run_locked(
             redis,
@@ -365,6 +371,7 @@ def observe_request(
                 input_data={"detail": detail.group(1) if detail else ""},
                 now=current,
                 captcha=captcha,
+                release_caller_session=True,
             )
             if decision:
                 return decision
@@ -379,6 +386,7 @@ def observe_request(
             input_data={},
             now=current,
             captcha=captcha,
+            release_caller_session=True,
         )
     return None
 
@@ -408,6 +416,7 @@ def observe_account(
         input_data={"detail": detail.group(1) if detail else ""},
         now=now,
         captcha=captcha,
+        release_caller_session=True,
     )
     if decision:
         return decision
@@ -422,6 +431,7 @@ def observe_account(
             input_data={"account": account.value, "new_account": False},
             now=now,
             captcha=captcha,
+            release_caller_session=True,
         )
         if decision:
             return decision
@@ -503,6 +513,7 @@ def record_security_failure(
         input_data={"rule": rule},
         now=now,
         captcha=captcha,
+        release_caller_session=True,
     )
 
 

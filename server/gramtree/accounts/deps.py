@@ -5,6 +5,7 @@ from typing import Annotated, Literal
 
 from fastapi import Depends, Header, Request
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from starlette.concurrency import run_in_threadpool
 
 from gramtree.accounts import service
 from gramtree.accounts.apple import AppleClient
@@ -51,14 +52,30 @@ async def get_identity_auth(
 ) -> AuthContext:
     if credentials is None or credentials.scheme.lower() != "bearer":
         raise Unauthorized("missing bearer token")
+    # Read through Starlette's cache before acquiring a database connection:
+    # slow bodies must not hold the pool slots needed by other requests.
+    body = await request.body()
+    return await run_in_threadpool(
+        _authenticate_identity, request, session, redis, settings, clock, credentials, body
+    )
+
+
+def _authenticate_identity(
+    request: Request,
+    session: SessionDep,
+    redis: RedisDep,
+    settings: SettingsDep,
+    clock: ClockDep,
+    credentials: HTTPAuthorizationCredentials,
+    body: bytes,
+) -> AuthContext:
+    # Pool/lock waits must leave the event loop free to finish other requests
+    # and return their connections, including during signature-failure audits.
     user, ds = service.authenticate(
         session, settings, credentials.credentials, clock(), enforce_risk_ban=False
     )
     request.scope["gramtree.account_id"] = str(user.id)
     request.scope["gramtree.device_id"] = ds.device_id
-    # Read the body through Starlette's cache so downstream Pydantic parsing sees
-    # the same bytes that were authenticated here.
-    body = await request.body()
     headers = {key.lower(): value for key, value in request.headers.items()}
     try:
         verify_request_signature(
@@ -102,7 +119,7 @@ async def get_identity_auth(
 IdentityAuth = Annotated[AuthContext, Depends(get_identity_auth)]
 
 
-async def get_auth(
+def get_auth(
     request: Request,
     session: SessionDep,
     redis: RedisDep,
@@ -153,7 +170,7 @@ async def get_optional_auth(
             raise Unauthorized("invalid authorization header")
         return None
     identity = await get_identity_auth(request, session, redis, settings, clock, credentials)
-    return await get_auth(request, session, redis, settings, clock, identity)
+    return await run_in_threadpool(get_auth, request, session, redis, settings, clock, identity)
 
 
 OptionalAuth = Annotated[AuthContext | None, Depends(get_optional_auth)]
