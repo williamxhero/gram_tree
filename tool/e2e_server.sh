@@ -56,10 +56,13 @@ EOF
     cat "$LOG_FILE" >&2
     return 1
   fi
-  # All acceptance files share one server/IP. Keep production limits unchanged,
-  # but allow the isolated test database enough codes for the complete suite.
+  # All acceptance files share one server/IP and create independent accounts.
+  # Give only this disposable database enough codes/accounts for the full suite;
+  # production defaults and dedicated protection-test thresholds stay unchanged.
   uv run gramtree config set auth.email_code_daily_limit 1000 \
     --by e2e --reason 'Shared-IP acceptance suite' >/dev/null
+  uv run gramtree config set risk.subnet_new_account_limit 1000 \
+    --by e2e --reason 'Independent acceptance accounts share one subnet' >/dev/null
   uv run gramtree ingredients import tests/data/ingredients >/dev/null
   if [[ "$GRAMTREE_AI_MODE" == replay ]]; then
     uv run python ../tool/ai_replay_corpus.py --out "$GRAMTREE_AI_REPLAY_DIR" \

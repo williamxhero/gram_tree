@@ -50,6 +50,16 @@ def test_e2e_bootstrap_supports_more_than_one_hundred_logins(tmp_path: Path) -> 
             )
             assert response.status_code == 429
             assert response.json()["error"]["code"] == "resend_too_soon"
+            # Independent browser accounts also share the runner subnet. Exercise
+            # actual logins beyond its production budget, not only code delivery.
+            for index in range(11):
+                email = f"acceptance-{index}@example.com"
+                code = client.get("/v1/dev/latest-email-code", params={"email": email})
+                assert code.status_code == 200
+                response = client.post(
+                    "/v1/auth/email/login", json={"email": email, "code": code.json()["code"]}
+                )
+                assert response.status_code == 200, response.text
     finally:
         try:
             subprocess.run([*command, "stop"], cwd=root, env=env, check=True, timeout=30)
