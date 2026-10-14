@@ -5,6 +5,8 @@ import 'package:gram_tree/config/app_config.dart';
 import 'package:gram_tree/main.dart' as app;
 import 'package:integration_test/integration_test.dart';
 
+import '../test/profile_scroll_support.dart';
+
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
   final server = Dio(
@@ -31,6 +33,14 @@ void main() {
     tester.testTextInput.hide();
     await tester.pump();
     final dialog = find.byType(AlertDialog);
+    if (dialog.evaluate().isEmpty &&
+        find
+            .byKey(const ValueKey('taste-profile-content'))
+            .evaluate()
+            .isNotEmpty) {
+      await revealProfileTarget(tester, finder, delta: delta);
+      return;
+    }
     final scrollable = dialog.evaluate().isEmpty
         ? find
               .byWidgetPredicate(
@@ -164,16 +174,16 @@ void main() {
         tester,
         find.byKey(const ValueKey('taste-profile-content')),
       );
-      await reveal(tester, find.byKey(const ValueKey('cooking-constraints')));
-      await waitFor(tester, find.text('人数未设置，菜谱沿用作者份数'));
+      // The old card can remain mounted until the clear request completes.
+      // Locate the actual cleared value even if the refresh replaces the list.
+      await reveal(tester, find.text('人数未设置，菜谱沿用作者份数'));
       await back(tester);
       await tap(tester, 'taste-profile-entry');
       await waitFor(
         tester,
         find.byKey(const ValueKey('taste-profile-content')),
       );
-      await reveal(tester, find.byKey(const ValueKey('cooking-constraints')));
-      await waitFor(tester, find.text('人数未设置，菜谱沿用作者份数'));
+      await reveal(tester, find.text('人数未设置，菜谱沿用作者份数'));
       expect(find.text('厨具未设置'), findsOneWidget);
       await tap(tester, 'cooking-constraints-edit', scroll: true);
       await tester.enterText(
