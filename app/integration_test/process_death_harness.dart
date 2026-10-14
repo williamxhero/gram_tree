@@ -32,6 +32,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'event_pipeline_support.dart' show resetLocalAppState;
 import 'offline_writes_support.dart' as acceptance;
+import 'signed_probe_support.dart' show registerProbeSession;
 
 const _runId = String.fromEnvironment('PROCESS_DEATH_RUN_ID');
 const _manifestKey = 'process_death_harness:$_runId';
@@ -183,7 +184,13 @@ Future<String> _seedAccountAndRecipe(
       .read(sessionStoreProvider)
       .save(TokenPair.fromJson(login.data!));
   await container.read(consentProvider.notifier).agree();
-  final token = container.read(sessionStoreProvider).current!.accessToken;
+  final session = container.read(sessionStoreProvider).current!;
+  final token = session.accessToken;
+  registerProbeSession(
+    server,
+    session,
+    deviceId: container.read(deviceIdProvider),
+  );
   final recipe = await server.post<Map<String, dynamic>>(
     '/v1/recipes',
     options: Options(headers: {'Authorization': 'Bearer $token'}),
@@ -228,6 +235,7 @@ Future<void> _seed(
   Dio server,
 ) async {
   final path = await _seedAccountAndRecipe(container, server);
+  final signedServer = server;
   await container.read(authProvider.future);
   container.read(routerProvider).go(path);
   await tester.pumpWidget(
@@ -270,7 +278,7 @@ Future<void> _seed(
             .every((e) => e.state == WriteState.confirmed),
     reason: 'online seed quiescence',
   );
-  final baseline = await _count(server, session.accessToken, device);
+  final baseline = await _count(signedServer, session.accessToken, device);
   expect(baseline, 0);
   container.read(offlineSimulationProvider.notifier).set(true);
   await container.read(apiReachabilityProvider.notifier).check();
@@ -321,7 +329,7 @@ Future<void> _seed(
       ])}',
     ),
   );
-  expect(await _count(server, session.accessToken, device), baseline);
+  expect(await _count(signedServer, session.accessToken, device), baseline);
   // Drain the snapshot store's serialized persistence tail after the page has
   // entered offline mode; do not retain an earlier local-render capture while
   // the authoritative display contract is still completing.
@@ -365,6 +373,11 @@ Future<void> _restore(
   expect(session, isNotNull);
   expect(session!.user.id, manifest['owner']);
   expect(container.read(deviceIdProvider), manifest['device']);
+  registerProbeSession(
+    server,
+    session,
+    deviceId: container.read(deviceIdProvider),
+  );
   final queue = container.read(eventQueueProvider);
   final owner = session.user.id;
   // No auth controller/root widget has been created yet: automatic upload cannot
