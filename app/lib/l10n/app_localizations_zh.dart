@@ -1076,6 +1076,56 @@ class AppLocalizationsZh extends AppLocalizations {
   String get recipeLoadMoreRetry => '加载失败，重试';
 
   @override
+  String get recipeCursorExpired => '列表已过期，请刷新';
+
+  @override
+  String get paginationLimitNotice => '已到翻页上限，请换搜索条件';
+
+  @override
+  String get dismissNotice => '关闭提示';
+
+  @override
+  String accessRetryCountdown(int seconds) {
+    return '操作太频繁，请稍后再试 · $seconds 秒后可重试';
+  }
+
+  @override
+  String get captchaTitle => '安全验证';
+
+  @override
+  String get captchaResponse => '验证结果';
+
+  @override
+  String get captchaContinue => '验证并继续';
+
+  @override
+  String get shareRecipeAction => '分享菜谱';
+
+  @override
+  String get shareCopied => '分享链接已复制';
+
+  @override
+  String get sharePageTitle => '分享的菜谱';
+
+  @override
+  String get shareUnavailable => '菜谱不存在或已下架';
+
+  @override
+  String get shareUnavailableHelp => '请确认分享链接，或稍后重新打开。';
+
+  @override
+  String get shareOpening => '正在打开分享的菜谱';
+
+  @override
+  String get shareLoginRequired => '完整菜谱需要登录后查看';
+
+  @override
+  String get shareLoginAction => '登录后查看完整菜谱';
+
+  @override
+  String get shareDownloadHelp => '未安装 App？可向分享人索取测试版；当前尚未公开发布下载。';
+
+  @override
   String get recipeRetry => '重试';
 
   @override

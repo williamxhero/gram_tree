@@ -2056,6 +2056,102 @@ abstract class AppLocalizations {
   /// **'加载失败，重试'**
   String get recipeLoadMoreRetry;
 
+  /// No description provided for @recipeCursorExpired.
+  ///
+  /// In zh, this message translates to:
+  /// **'列表已过期，请刷新'**
+  String get recipeCursorExpired;
+
+  /// No description provided for @paginationLimitNotice.
+  ///
+  /// In zh, this message translates to:
+  /// **'已到翻页上限，请换搜索条件'**
+  String get paginationLimitNotice;
+
+  /// No description provided for @dismissNotice.
+  ///
+  /// In zh, this message translates to:
+  /// **'关闭提示'**
+  String get dismissNotice;
+
+  /// No description provided for @accessRetryCountdown.
+  ///
+  /// In zh, this message translates to:
+  /// **'操作太频繁，请稍后再试 · {seconds} 秒后可重试'**
+  String accessRetryCountdown(int seconds);
+
+  /// No description provided for @captchaTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'安全验证'**
+  String get captchaTitle;
+
+  /// No description provided for @captchaResponse.
+  ///
+  /// In zh, this message translates to:
+  /// **'验证结果'**
+  String get captchaResponse;
+
+  /// No description provided for @captchaContinue.
+  ///
+  /// In zh, this message translates to:
+  /// **'验证并继续'**
+  String get captchaContinue;
+
+  /// No description provided for @shareRecipeAction.
+  ///
+  /// In zh, this message translates to:
+  /// **'分享菜谱'**
+  String get shareRecipeAction;
+
+  /// No description provided for @shareCopied.
+  ///
+  /// In zh, this message translates to:
+  /// **'分享链接已复制'**
+  String get shareCopied;
+
+  /// No description provided for @sharePageTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'分享的菜谱'**
+  String get sharePageTitle;
+
+  /// No description provided for @shareUnavailable.
+  ///
+  /// In zh, this message translates to:
+  /// **'菜谱不存在或已下架'**
+  String get shareUnavailable;
+
+  /// No description provided for @shareUnavailableHelp.
+  ///
+  /// In zh, this message translates to:
+  /// **'请确认分享链接，或稍后重新打开。'**
+  String get shareUnavailableHelp;
+
+  /// No description provided for @shareOpening.
+  ///
+  /// In zh, this message translates to:
+  /// **'正在打开分享的菜谱'**
+  String get shareOpening;
+
+  /// No description provided for @shareLoginRequired.
+  ///
+  /// In zh, this message translates to:
+  /// **'完整菜谱需要登录后查看'**
+  String get shareLoginRequired;
+
+  /// No description provided for @shareLoginAction.
+  ///
+  /// In zh, this message translates to:
+  /// **'登录后查看完整菜谱'**
+  String get shareLoginAction;
+
+  /// No description provided for @shareDownloadHelp.
+  ///
+  /// In zh, this message translates to:
+  /// **'未安装 App？可向分享人索取测试版；当前尚未公开发布下载。'**
+  String get shareDownloadHelp;
+
   /// No description provided for @recipeRetry.
   ///
   /// In zh, this message translates to:

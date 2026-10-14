@@ -7,6 +7,7 @@ from starlette.types import ASGIApp, Receive, Scope, Send
 
 from gramtree.core.errors import error_response
 from gramtree.core.rate_limit import RateLimitError, enforce
+from gramtree.core.time import utcnow
 from gramtree.settings import Settings
 
 
@@ -50,6 +51,7 @@ class RateLimitMiddleware:
                     token=token,
                     device_id=headers.get("x-device-id"),
                     ip=ip,
+                    now=getattr(scope["app"].state, "clock", utcnow)(),
                 )
         except RateLimitError as exc:
             response = error_response(

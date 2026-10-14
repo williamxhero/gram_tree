@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
@@ -89,6 +90,7 @@ class FakeServer extends Interceptor {
   }
 
   final requests = <Recorded>[];
+  final responseHeaders = <String, Map<String, List<String>>>{};
   final _routes = <String, FutureOr<(int, Object?)> Function(Recorded)>{};
 
   UserOut user = testUser();
@@ -129,6 +131,7 @@ class FakeServer extends Interceptor {
       accessToken: 'access-$tokenSerial',
       accessExpiresIn: 1800,
       refreshToken: 'refresh-$tokenSerial',
+      requestSigningKey: 'test-signing-key-$tokenSerial',
       user: user,
     ).toJson();
   }
@@ -421,7 +424,13 @@ class FakeServer extends Interceptor {
     final sent = options.data;
     final Object? body = sent == null
         ? null
-        : jsonDecode(sent is String ? sent : jsonEncode(sent));
+        : jsonDecode(
+            sent is String
+                ? sent
+                : sent is List<int>
+                ? utf8.decode(sent)
+                : jsonEncode(sent),
+          );
     final rec = Recorded(
       options.method,
       options.uri.path,
@@ -438,7 +447,14 @@ class FakeServer extends Interceptor {
     final response = Response<dynamic>(
       requestOptions: options,
       statusCode: status,
-      data: data == null ? null : jsonDecode(jsonEncode(data)),
+      headers: Headers.fromMap(
+        responseHeaders['${options.method} ${options.uri.path}'] ?? {},
+      ),
+      data: data == null
+          ? null
+          : options.responseType == ResponseType.bytes && data is List<int>
+          ? Uint8List.fromList(data)
+          : jsonDecode(jsonEncode(data)),
     );
     if (status >= 200 && status < 300) {
       handler.resolve(response, true);
@@ -561,13 +577,15 @@ Map<String, String> consentedStore({String privacy = privacyVersion}) => {
 };
 
 Map<String, String> signedInSecure(UserOut user) => {
-  sessionStorageKey: jsonEncode(
-    AuthSession(
+  sessionStorageKey: jsonEncode({
+    ...AuthSession(
       accessToken: 'access-0',
       refreshToken: 'refresh-0',
+      requestSigningKey: 'test-signing-key-0',
       user: user,
     ).toJson(),
-  ),
+    'device_id': 'device-test',
+  }),
 };
 
 class TestReachabilityProbe implements ApiReachabilityProbe {

@@ -45,6 +45,14 @@ class RiskMiddleware:
         client = scope.get("client")
         ip = client[0] if client else None
         path = scope.get("path", "")
+        if service.is_recovery_route(path, scope.get("method", "")):
+            # Recovery has its own finite rate category and identity-only auth.
+            await self.app(scope, receive, send)
+            return
+        state = getattr(scope.get("app"), "state", None)
+        clock = getattr(state, "clock", None)
+        now = clock() if clock else datetime.now(UTC)
+        captcha = getattr(state, "captcha", self.captcha)
         try:
             with self.session_factory() as session:
                 decision = await run_in_threadpool(
@@ -55,8 +63,8 @@ class RiskMiddleware:
                     ip=ip,
                     device_id=device_id[:64] if device_id else None,
                     path=path,
-                    now=datetime.now(UTC),
-                    captcha=self.captcha,
+                    now=now,
+                    captcha=captcha,
                 )
             if decision is not None and decision.level is not None:
                 error = service.RiskActionError(
@@ -75,5 +83,5 @@ class RiskMiddleware:
         except Exception:
             # Protection is fail-open when Redis/PostgreSQL is unavailable; the ordinary
             # rate limiter and authentication boundary still remain active.
-            logger.warning("risk evaluation unavailable", exc_info=True)
+            logger.warning("risk evaluation unavailable")
         await self.app(scope, receive, send)

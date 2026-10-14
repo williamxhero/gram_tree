@@ -48,6 +48,7 @@ from gramtree.accounts.signing import credential_hash
 from gramtree.events.models import Event
 from gramtree.events.sync_models import WriteFactOutbox, WriteReceipt
 from gramtree.recipes.measure_models import PersonalMeasure
+from gramtree.risk.captcha import CaptchaAdapter
 from gramtree.runtime_config import service as config
 from gramtree.settings import Settings
 from gramtree.taste_profiles.models import TasteProfile
@@ -257,7 +258,11 @@ def _issue(
 def _start_session(
     session: Session, settings: Settings, user: User, device_id: str | None, now: datetime
 ) -> IssuedTokens:
-    if user.status != UserStatus.active:
+    from gramtree.risk.service import is_permanently_banned
+
+    if user.status != UserStatus.active or is_permanently_banned(
+        session, settings, user_id=str(user.id), device_id=device_id, now=now
+    ):
         raise AccountUnavailable()
     ds = DeviceSession(user_id=user.id, device_id=device_id, created_at=now)
     session.add(ds)
@@ -266,7 +271,12 @@ def _start_session(
 
 
 def authenticate(
-    session: Session, settings: Settings, token: str, now: datetime
+    session: Session,
+    settings: Settings,
+    token: str,
+    now: datetime,
+    *,
+    enforce_risk_ban: bool = True,
 ) -> tuple[User, DeviceSession]:
     try:
         claims = jwt.decode(
@@ -292,7 +302,14 @@ def authenticate(
         raise Unauthorized("unknown session")
     if ds.revoked_at is not None:
         raise Unauthorized("session revoked")
-    if user.status != UserStatus.active:
+    from gramtree.risk.service import is_permanently_banned
+
+    if user.status != UserStatus.active or (
+        enforce_risk_ban
+        and is_permanently_banned(
+            session, settings, user_id=str(user.id), device_id=ds.device_id, now=now
+        )
+    ):
         raise Unauthorized("account unavailable")
     return user, ds
 
@@ -318,7 +335,15 @@ def refresh(session: Session, settings: Settings, token: str, now: datetime) -> 
     if row.expires_at <= now:
         raise RefreshInvalid()
     user = session.get(User, ds.user_id)
-    if user is None or user.status != UserStatus.active:
+    from gramtree.risk.service import is_permanently_banned
+
+    if (
+        user is None
+        or user.status != UserStatus.active
+        or is_permanently_banned(
+            session, settings, user_id=str(user.id), device_id=ds.device_id, now=now
+        )
+    ):
         raise RefreshInvalid()
     row.used_at = now
     return _issue(session, settings, user, ds, now)
@@ -346,7 +371,10 @@ def _user_for_identity(session: Session, kind: IdentityKind, subject: str) -> Us
 def login_with_email(
     session: Session,
     settings: Settings,
+    redis: Redis,
+    captcha: CaptchaAdapter,
     *,
+    ip: str | None,
     email: str,
     code: str,
     device_id: str | None,
@@ -354,6 +382,7 @@ def login_with_email(
 ) -> IssuedTokens:
     verify_email_code(session, settings, email=email, purpose="login", code=code, now=now)
     user = _user_for_identity(session, IdentityKind.email, email)
+    is_new_account = user is None
     if user is None:
         # 首次登录即创建账号
         user = User(nickname=default_nickname(), created_at=now)
@@ -365,6 +394,19 @@ def login_with_email(
             )
         )
         session.flush()
+    from gramtree.risk.service import observe_login
+
+    observe_login(
+        redis,
+        session,
+        settings,
+        user=user,
+        device_id=device_id,
+        ip=ip,
+        is_new_account=is_new_account,
+        now=now,
+        captcha=captcha,
+    )
     return _start_session(session, settings, user, device_id, now)
 
 
@@ -382,7 +424,10 @@ def login_with_apple(
     session: Session,
     settings: Settings,
     apple: AppleClient,
+    redis: Redis,
+    captcha: CaptchaAdapter,
     *,
+    ip: str | None,
     identity_token: str,
     authorization_code: str | None,
     given_name: str | None,
@@ -392,6 +437,7 @@ def login_with_apple(
 ) -> IssuedTokens:
     info = apple.verify_identity_token(identity_token, now.timestamp())
     user = _user_for_identity(session, IdentityKind.apple, info.subject)
+    is_new_account = user is None
     if user is None:
         max_len = int(config.get(session, "account.nickname_max_length"))
         name = _apple_nickname(given_name, family_name)
@@ -404,6 +450,19 @@ def login_with_apple(
         _add_apple_identity(session, apple, user, info, authorization_code, now)
     elif authorization_code:
         _refresh_apple_grant(session, apple, info.subject, authorization_code)
+    from gramtree.risk.service import observe_login
+
+    observe_login(
+        redis,
+        session,
+        settings,
+        user=user,
+        device_id=device_id,
+        ip=ip,
+        is_new_account=is_new_account,
+        now=now,
+        captcha=captcha,
+    )
     return _start_session(session, settings, user, device_id, now)
 
 

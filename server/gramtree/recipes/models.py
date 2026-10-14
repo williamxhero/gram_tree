@@ -47,6 +47,11 @@ class Recipe(Base):
     dish_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("dishes.id"), index=True)
     owner_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"), index=True)
     visibility: Mapped[str] = mapped_column(String(16), default="private")
+    share_id: Mapped[str | None] = mapped_column(String(64), unique=True, default=None)
+    # Only the explicitly approved immutable version may be shared publicly.
+    approved_public_version_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("recipe_versions.id", ondelete="SET NULL"), default=None
+    )
     current_version_id: Mapped[uuid.UUID | None] = mapped_column(
         ForeignKey("recipe_versions.id", ondelete="SET NULL"), default=None
     )
@@ -57,6 +62,22 @@ class Recipe(Base):
     root_recipe_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("recipes.id"), default=None)
     created_at: Mapped[datetime] = mapped_column(default=utcnow)
     updated_at: Mapped[datetime] = mapped_column(default=utcnow)
+
+
+class ShareComplaint(Base):
+    """Minimal rights-complaint inbox; operators review it through the CLI."""
+
+    __tablename__ = "share_complaints"
+    __table_args__ = (Index("ix_share_complaints_status_created", "status", "created_at"),)
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=new_id)
+    share_id: Mapped[str | None] = mapped_column(String(64), default=None)
+    contact: Mapped[str] = mapped_column(String(320))
+    message: Mapped[str] = mapped_column(Text)
+    status: Mapped[str] = mapped_column(String(16), default="pending")
+    created_at: Mapped[datetime] = mapped_column(default=utcnow)
+    reviewed_at: Mapped[datetime | None] = mapped_column(default=None)
+    reviewed_by: Mapped[str | None] = mapped_column(String(64), default=None)
 
 
 class RecipeVersion(Base):

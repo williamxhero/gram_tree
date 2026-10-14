@@ -124,7 +124,9 @@ class RecipeDetail {
 
 enum RecipeDetailVisibilityEnum {
   @JsonValue(r'private')
-  private(r'private');
+  private(r'private'),
+  @JsonValue(r'public')
+  public(r'public');
 
   const RecipeDetailVisibilityEnum(this.value);
 

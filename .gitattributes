@@ -1,1 +1,4 @@
 app/assets/models/zh/* -text
+api/openapi.json text eol=lf
+app/packages/gramtree_api/.openapi-generator/FILES text eol=lf
+app/packages/gramtree_api/**/*.dart text eol=lf

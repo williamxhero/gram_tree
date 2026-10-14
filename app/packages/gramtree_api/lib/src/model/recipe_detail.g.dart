@@ -253,4 +253,5 @@ Map<String, dynamic> _$RecipeDetailToJson(RecipeDetail instance) =>
 
 const _$RecipeDetailVisibilityEnumEnumMap = {
   RecipeDetailVisibilityEnum.private: 'private',
+  RecipeDetailVisibilityEnum.public: 'public',
 };

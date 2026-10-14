@@ -2140,6 +2140,67 @@ void main() {
     expect(find.byKey(const ValueKey('recipe-version-1')), findsOneWidget);
   });
 
+  for (final code in ['invalid_cursor', 'pagination_limit_reached']) {
+    testWidgets(
+      'recipe cursor $code offers refresh instead of replaying stale cursor',
+      (tester) async {
+        final server = FakeServer();
+        final state = _installRecipeApi(server);
+        final current = RecipeDetail.fromJson(state.current);
+        final item = RecipeListItem(
+          id: current.id,
+          dish: current.dish,
+          visibility: RecipeListItemVisibilityEnum.private,
+          versionNumber: current.version.versionNumber,
+          servings: current.version.snapshot.servings,
+          updatedAt: current.updatedAt,
+          totalTimeSeconds: 0,
+          activeTimeSeconds: 0,
+        );
+        var firstPages = 0;
+        server.on('GET', '/v1/recipes', (r) {
+          if (r.query['cursor'] != null) {
+            return FakeServer.error(
+              400,
+              code,
+              code == 'invalid_cursor' ? '列表已过期，请刷新' : '已到翻页上限，请换搜索条件',
+            );
+          }
+          firstPages++;
+          return (
+            200,
+            RecipeList(
+              items: [item],
+              nextCursor: firstPages == 1 ? 'stale' : null,
+            ).toJson(),
+          );
+        });
+        await pumpApp(tester, env: TestEnv.signedIn(server: server));
+        await _openMyRecipes(tester);
+        await tester.tap(find.byKey(const ValueKey('recipe-load-more')));
+        await tester.pumpAndSettle();
+        expect(
+          find.text(code == 'invalid_cursor' ? '列表已过期，请刷新' : '已到翻页上限，请换搜索条件'),
+          findsWidgets,
+        );
+        await tester.tap(find.byKey(const ValueKey('recipe-load-more')));
+        await tester.pumpAndSettle();
+        expect(
+          find.byKey(ValueKey('recipe-card-${current.id}')),
+          findsOneWidget,
+        );
+        expect(find.byKey(const ValueKey('recipe-load-more')), findsNothing);
+        expect(firstPages, 2);
+        expect(
+          server
+              .calls('GET', '/v1/recipes')
+              .where((r) => r.query['cursor'] == 'stale'),
+          hasLength(1),
+        );
+      },
+    );
+  }
+
   testWidgets('recipe list and history load cursor pages', (tester) async {
     final server = FakeServer();
     final state = _installRecipeApi(server);

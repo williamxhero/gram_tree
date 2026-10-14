@@ -22,9 +22,10 @@ from gramtree.legal import router as legal
 from gramtree.recipes import imports as recipe_imports
 from gramtree.recipes import measure_router as personal_measures
 from gramtree.recipes import router as recipes
+from gramtree.recipes import sharing as recipe_sharing
 from gramtree.records import router as records
 from gramtree.risk import router as risk
-from gramtree.risk.captcha import RejectingCaptchaAdapter
+from gramtree.risk.captcha import ImageCaptchaAdapter
 from gramtree.risk.middleware import RiskMiddleware
 from gramtree.settings import Settings, get_settings
 from gramtree.taste_profiles import allergy_router as allergies
@@ -60,17 +61,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     )
     app.state.mailer = make_mail_sender(settings)
     app.state.apple = AppleClient(settings, HttpAppleTransport())
-    app.state.captcha = RejectingCaptchaAdapter()
+    app.state.captcha = ImageCaptchaAdapter(app.state.redis, settings.auth_secret)
 
     install_error_handlers(app)
-    app.add_middleware(
-        CORSMiddleware,
-        allow_origins=[o.strip() for o in settings.cors_origins.split(",") if o.strip()],
-        allow_origin_regex=settings.cors_origin_regex,
-        allow_methods=["*"],
-        allow_headers=["*"],
-        expose_headers=["X-Request-ID", "X-Measure-Observed-Writes", "X-Measure-Snapshot-Version"],
-    )
     app.add_middleware(
         RiskMiddleware,
         session_factory=app.state.session_factory,
@@ -84,6 +77,24 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         redis=app.state.redis,
         settings=settings,
     )
+    # Added last among guards: browsers must see early risk/rate responses too.
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=[o.strip() for o in settings.cors_origins.split(",") if o.strip()],
+        allow_origin_regex=settings.cors_origin_regex,
+        allow_methods=["*"],
+        allow_headers=["*"],
+        expose_headers=[
+            "X-Request-ID",
+            "X-Measure-Observed-Writes",
+            "X-Measure-Snapshot-Version",
+            "Retry-After",
+            "Date",
+            "X-Risk-Level",
+            "X-Risk-Challenge",
+            "X-Pagination-Limit-Reached",
+        ],
+    )
     app.add_middleware(RequestContextMiddleware)
 
     v1 = APIRouter(prefix=API_PREFIX)
@@ -96,6 +107,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     v1.include_router(analytics.router)
     v1.include_router(ingredients.router)
     v1.include_router(recipes.router)
+    v1.include_router(recipe_sharing.api_router)
+    v1.include_router(recipe_sharing.resolver_router)
     v1.include_router(records.router)
     v1.include_router(recipe_imports.router)
     v1.include_router(recipe_ai.router)
@@ -117,6 +130,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         v1.include_router(examples_router)
     app.include_router(v1)
     app.include_router(legal.router)
+    app.include_router(recipe_sharing.web_router)
     return app
 
 

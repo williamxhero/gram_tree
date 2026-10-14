@@ -20,7 +20,7 @@ from sqlalchemy.orm import Session
 
 from gramtree.accounts.models import User
 from gramtree.core.errors import ApiError, NotFound
-from gramtree.core.pagination import decode_signed_cursor, next_signed_cursor
+from gramtree.core.pagination import decode_cursor, encode_cursor
 from gramtree.core.time import utcnow
 from gramtree.events import service as event_service
 from gramtree.events.registry import SourceType
@@ -635,6 +635,8 @@ def _detail(
     settings: Settings,
     recipe: Recipe,
     version: RecipeVersion | None = None,
+    *,
+    include_owner_defaults: bool = True,
 ) -> RecipeDetail:
     dish = session.get(Dish, recipe.dish_id)
     author = session.get(User, recipe.owner_id)
@@ -645,20 +647,38 @@ def _detail(
     # defaults into snapshots or derived author data.
     from gramtree.taste_profiles.models import TasteProfile
 
-    profile = session.scalar(select(TasteProfile).where(TasteProfile.owner_id == recipe.owner_id))
+    profile = (
+        session.scalar(select(TasteProfile).where(TasteProfile.owner_id == recipe.owner_id))
+        if include_owner_defaults
+        else None
+    )
     household = profile.cooking_constraints.get("household_servings") if profile else None
+    version_out = _version_out(session, settings, version, recipe.id)
+    if not include_owner_defaults:
+        # Edit evidence and notes describe the private baseline, not just this
+        # approved snapshot. Public readers cannot receive those historical values.
+        version_out = version_out.model_copy(
+            update={
+                "edit_operations": [],
+                "change_note": "",
+                "previous_version_id": None,
+                "base_version_id": None,
+                "conclusion": None,
+                "reproducibility": None,
+            }
+        )
     return RecipeDetail(
         default_servings=household,
         taste_profile_version=profile.version if profile else None,
         id=recipe.id,
         dish=_dish_out(session, dish),
         author=RecipeAuthor(id=author.id, nickname=author.nickname),
-        visibility="private",
+        visibility=cast("Literal['private', 'public']", recipe.visibility),
         source_version_id=recipe.source_version_id,
         root_recipe_id=recipe.root_recipe_id,
         created_at=recipe.created_at,
         updated_at=recipe.updated_at,
-        version=_version_out(session, settings, version, recipe.id),
+        version=version_out,
     )
 
 
@@ -1318,8 +1338,29 @@ def save_version(
 def get_recipe(
     session: Session, settings: Settings, owner: User, recipe_id: uuid.UUID
 ) -> RecipeDetail:
-    recipe = _owned_recipe(session, owner, recipe_id)
-    return _detail(session, settings, recipe)
+    recipe = _readable_recipe(session, owner, recipe_id)
+    return _detail(session, settings, recipe, include_owner_defaults=recipe.owner_id == owner.id)
+
+
+def _readable_recipe(session: Session, viewer: User, recipe_id: uuid.UUID) -> Recipe:
+    recipe = session.get(Recipe, recipe_id)
+    if recipe is None:
+        raise NotFound()
+    if recipe.owner_id == viewer.id:
+        return recipe
+    author = session.get(User, recipe.owner_id)
+    from gramtree.accounts.models import UserStatus
+
+    if (
+        not bool(config.get(session, "feature.public_recipes"))
+        or recipe.visibility != "public"
+        or recipe.current_version_id is None
+        or recipe.approved_public_version_id != recipe.current_version_id
+        or author is None
+        or author.status != UserStatus.active
+    ):
+        raise NotFound()
+    return recipe
 
 
 def get_version(
@@ -1329,7 +1370,9 @@ def get_version(
     recipe_id: uuid.UUID,
     version_id: uuid.UUID,
 ) -> RecipeDetail:
-    recipe = _owned_recipe(session, owner, recipe_id)
+    recipe = _readable_recipe(session, owner, recipe_id)
+    if recipe.owner_id != owner.id and version_id != recipe.approved_public_version_id:
+        raise NotFound()
     version = session.scalar(
         select(RecipeVersion).where(
             RecipeVersion.id == version_id, RecipeVersion.recipe_id == recipe.id
@@ -1337,7 +1380,9 @@ def get_version(
     )
     if version is None:
         raise NotFound()
-    return _detail(session, settings, recipe, version)
+    return _detail(
+        session, settings, recipe, version, include_owner_defaults=recipe.owner_id == owner.id
+    )
 
 
 def _owned_version(
@@ -1906,37 +1951,20 @@ def list_versions(
     cursor: str | None,
     limit: int,
     maximum: int,
-    signing_secret: str,
-    signing_subject: str,
-    cursor_ttl_seconds: int,
-    cursor_max_pages: int,
 ) -> RecipeVersionHistory:
     if limit > maximum:
         raise ApiError(422, "invalid_request", "请求参数有误", f"limit 不能超过 {maximum}")
     recipe = _owned_recipe(session, owner, recipe_id)
-    query_key = f"recipes:{recipe_id}:versions:limit={limit}"
-    after = (
-        decode_signed_cursor(
-            cursor,
-            secret=signing_secret,
-            subject=signing_subject,
-            query=query_key,
-            max_pages=cursor_max_pages,
-        )
-        if cursor
-        else None
-    )
+    after = decode_cursor(cursor) if cursor else None
     query = select(RecipeVersion).where(RecipeVersion.recipe_id == recipe.id)
     if after is not None:
-        timestamp, row_id, current_page = after
+        timestamp, row_id = after
         query = query.where(
             or_(
                 RecipeVersion.created_at < timestamp,
                 (RecipeVersion.created_at == timestamp) & (RecipeVersion.id < row_id),
             )
         )
-    else:
-        current_page = 1
     rows = list(
         session.scalars(
             query.order_by(RecipeVersion.created_at.desc(), RecipeVersion.id.desc()).limit(
@@ -1962,18 +1990,7 @@ def list_versions(
             for row in rows
         ],
         next_cursor=(
-            next_signed_cursor(
-                rows[-1].created_at,
-                rows[-1].id,
-                secret=signing_secret,
-                subject=signing_subject,
-                query=query_key,
-                current_page=current_page,
-                max_pages=cursor_max_pages,
-                ttl_seconds=cursor_ttl_seconds,
-            )
-            if has_more and rows
-            else None
+            encode_cursor(rows[-1].created_at, rows[-1].id) if has_more and rows else None
         ),
     )
 
@@ -1986,15 +2003,10 @@ def list_comparison_candidates(
     cursor: str | None,
     limit: int,
     maximum: int,
-    signing_secret: str,
-    signing_subject: str,
-    cursor_ttl_seconds: int,
-    cursor_max_pages: int,
 ) -> RecipeComparisonCandidates:
     anchor = _owned_recipe(session, owner, recipe_id)
     if limit > maximum:
         raise ApiError(422, "invalid_request", "请求参数有误", f"limit 不能超过 {maximum}")
-    query_key = f"recipes:{recipe_id}:comparison-candidates:limit={limit}"
     query = (
         select(RecipeVersion)
         .join(Recipe, RecipeVersion.recipe_id == Recipe.id)
@@ -2003,21 +2015,13 @@ def list_comparison_candidates(
     # Current visibility is owned-only, exactly like compare_ingredients; public
     # versions are a later capability and must not leak through this picker.
     if cursor:
-        timestamp, row_id, current_page = decode_signed_cursor(
-            cursor,
-            secret=signing_secret,
-            subject=signing_subject,
-            query=query_key,
-            max_pages=cursor_max_pages,
-        )
+        timestamp, row_id = decode_cursor(cursor)
         query = query.where(
             or_(
                 RecipeVersion.created_at < timestamp,
                 (RecipeVersion.created_at == timestamp) & (RecipeVersion.id < row_id),
             )
         )
-    else:
-        current_page = 1
     rows = list(
         session.scalars(
             query.order_by(RecipeVersion.created_at.desc(), RecipeVersion.id.desc()).limit(
@@ -2045,18 +2049,7 @@ def list_comparison_candidates(
             for row in rows
         ],
         next_cursor=(
-            next_signed_cursor(
-                rows[-1].created_at,
-                rows[-1].id,
-                secret=signing_secret,
-                subject=signing_subject,
-                query=query_key,
-                current_page=current_page,
-                max_pages=cursor_max_pages,
-                ttl_seconds=cursor_ttl_seconds,
-            )
-            if has_more and rows
-            else None
+            encode_cursor(rows[-1].created_at, rows[-1].id) if has_more and rows else None
         ),
     )
 
@@ -2068,36 +2061,19 @@ def list_recipes(
     cursor: str | None,
     limit: int,
     maximum: int,
-    signing_secret: str,
-    signing_subject: str,
-    cursor_ttl_seconds: int,
-    cursor_max_pages: int,
 ) -> RecipeList:
     if limit > maximum:
         raise ApiError(422, "invalid_request", "请求参数有误", f"limit 不能超过 {maximum}")
-    query_key = f"recipes:collection:limit={limit}"
-    after = (
-        decode_signed_cursor(
-            cursor,
-            secret=signing_secret,
-            subject=signing_subject,
-            query=query_key,
-            max_pages=cursor_max_pages,
-        )
-        if cursor
-        else None
-    )
+    after = decode_cursor(cursor) if cursor else None
     query = select(Recipe).where(Recipe.owner_id == owner.id)
     if after is not None:
-        timestamp, row_id, current_page = after
+        timestamp, row_id = after
         query = query.where(
             or_(
                 Recipe.updated_at < timestamp,
                 (Recipe.updated_at == timestamp) & (Recipe.id < row_id),
             )
         )
-    else:
-        current_page = 1
     rows = list(
         session.scalars(query.order_by(Recipe.updated_at.desc(), Recipe.id.desc()).limit(limit + 1))
     )
@@ -2115,7 +2091,7 @@ def list_recipes(
             RecipeListItem(
                 id=recipe.id,
                 dish=_dish_out(session, dish),
-                visibility="private",
+                visibility=cast("Literal['private', 'public']", recipe.visibility),
                 version_number=version.version_number,
                 servings=snapshot.servings,
                 difficulty=snapshot.difficulty,
@@ -2124,20 +2100,7 @@ def list_recipes(
                 updated_at=recipe.updated_at,
             )
         )
-    next_cursor = (
-        next_signed_cursor(
-            rows[-1].updated_at,
-            rows[-1].id,
-            secret=signing_secret,
-            subject=signing_subject,
-            query=query_key,
-            current_page=current_page,
-            max_pages=cursor_max_pages,
-            ttl_seconds=cursor_ttl_seconds,
-        )
-        if has_more and rows
-        else None
-    )
+    next_cursor = encode_cursor(rows[-1].updated_at, rows[-1].id) if has_more and rows else None
     return RecipeList(items=items, next_cursor=next_cursor)
 
 

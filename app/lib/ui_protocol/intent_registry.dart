@@ -12,6 +12,7 @@ import 'package:gramtree_api/gramtree_api.dart'
         MeasureInputOut;
 
 import '../recipes/personal_measure_repository.dart';
+import '../platform/system_share.dart';
 
 import '../api/api_client.dart';
 import '../events/event_recorder.dart';
@@ -357,6 +358,25 @@ final defaultIntentRegistry = IntentRegistry([
   ...cookingConstraintIntentSpecs,
   ...familyIntentSpecs,
   ...ingredientPreferenceIntentSpecs,
+  IntentSpec(
+    name: 'share_recipe',
+    defaultLabel: '分享菜谱',
+    validateParams: (params) =>
+        isRecipeId(params['recipe_id']) &&
+        (params['image_id'] == null || isRecipeId(params['image_id'])) &&
+        (params['image_content_type'] == null ||
+            const {
+              'image/png',
+              'image/jpeg',
+              'image/webp',
+            }.contains(params['image_content_type'])),
+    handler: (context, ref, params) => shareRecipe(
+      ref,
+      recipeId: params['recipe_id'] as String,
+      imageId: params['image_id'] as String?,
+      imageContentType: params['image_content_type'] as String?,
+    ),
+  ),
   const IntentSpec(
     name: 'recipe_operation',
     defaultLabel: '菜谱操作',

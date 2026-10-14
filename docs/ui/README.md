@@ -25,6 +25,7 @@
 | [`offline-online.html`](offline-online.html) | 在线入口降级：需要联网说明、原话保留、本机能力可用，浅色/深色 | #27 SPEC-013.3 / #215 | 本会话无 Artifact 发布工具；本地 HTML 样稿 |
 
 | [`offline-writes.html`](offline-writes.html) | 离线手工编辑与保存、个人量具修改历史、账号退出保留提醒、同步分类与重试；浅色/深色交互 | #27 / #216、#218、#219、#220 | 本会话无 Artifact 发布工具；本地 HTML 样稿 |
+| [`recipe-sharing.html`](recipe-sharing.html) | 公开分享页最小信息：成品图、菜名、简介、署名、许可与 App 入口 | #46 / #261 | 本地 HTML 样稿 |
 
 ## 说明
 

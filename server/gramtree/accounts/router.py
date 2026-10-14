@@ -1,6 +1,6 @@
 from typing import Any, Literal
 
-from fastapi import APIRouter, status
+from fastapi import APIRouter, Request, status
 from pydantic import BaseModel, Field
 
 from gramtree.accounts import service
@@ -212,6 +212,9 @@ def send_email_code(
 )
 def email_login(
     body: EmailLoginRequest,
+    request: Request,
+    redis: RedisDep,
+    ip: ClientIpDep,
     session: SessionDep,
     settings: SettingsDep,
     clock: ClockDep,
@@ -220,6 +223,9 @@ def email_login(
     issued = service.login_with_email(
         session,
         settings,
+        redis,
+        request.app.state.captcha,
+        ip=ip,
         email=service.normalize_email(body.email),
         code=body.code,
         device_id=device_id,
@@ -236,6 +242,9 @@ def email_login(
 )
 def apple_login(
     body: AppleLoginRequest,
+    request: Request,
+    redis: RedisDep,
+    ip: ClientIpDep,
     session: SessionDep,
     settings: SettingsDep,
     apple: AppleDep,
@@ -246,6 +255,9 @@ def apple_login(
         session,
         settings,
         apple,
+        redis,
+        request.app.state.captcha,
+        ip=ip,
         identity_token=body.identity_token,
         authorization_code=body.authorization_code,
         given_name=body.given_name,

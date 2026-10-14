@@ -86,7 +86,12 @@ def error_response(
     all_headers = dict(headers or {})
     if request_id:
         all_headers[REQUEST_ID_HEADER] = request_id
-    return JSONResponse(body.model_dump(), status_code=status, headers=all_headers or None)
+    payload = body.model_dump()
+    # Keep the established four-field envelope; clock correction is an opt-in
+    # extension, not a new null field on every existing error response.
+    if server_time is None:
+        payload["error"].pop("server_time")
+    return JSONResponse(payload, status_code=status, headers=all_headers or None)
 
 
 def private_profile_boundary(path: str) -> bool:
@@ -98,8 +103,8 @@ def private_profile_boundary(path: str) -> bool:
 def install_error_handlers(app: FastAPI) -> None:
     @app.exception_handler(ApiError)
     async def _api_error(request: Request, exc: ApiError) -> JSONResponse:
-        if private_profile_boundary(request.url.path):
-            return error_response(exc.status, exc.code, "私密设置请求未完成，请刷新后重试", None)
+        private = private_profile_boundary(request.url.path)
+        safe_cursor_error = exc.code in {"invalid_cursor", "pagination_limit_reached"}
         retry_after = getattr(exc, "retry_after", None)
         headers = dict(getattr(exc, "headers", {}))
         if retry_after is not None:
@@ -108,8 +113,10 @@ def install_error_handlers(app: FastAPI) -> None:
         return error_response(
             exc.status,
             exc.code,
-            exc.message,
-            exc.detail,
+            "私密设置请求未完成，请刷新后重试"
+            if private and not safe_cursor_error
+            else exc.message,
+            None if private else exc.detail,
             headers=headers or None,
             server_time=server_time.isoformat() if server_time is not None else None,
         )

@@ -472,10 +472,22 @@ ITEMS: tuple[ConfigItem, ...] = (
             ("write", 60),
             ("ai", 30),
             ("auth", 30),
+            ("captcha", 30),
             ("export", 10),
         )
         for dimension in ("account", "device", "ip")
         for window, default in (("minute", default), ("day", default * 40))
+    ),
+    *(
+        ConfigItem(
+            f"rate.detail.{dimension}_distinct_recipes_per_day",
+            "int",
+            1000,
+            f"详情接口按{dimension}维度每天访问不同菜谱的数量上限",
+            minimum=1,
+            maximum=1_000_000,
+        )
+        for dimension in ("account", "device", "ip")
     ),
     # —— 规则型机器行为保护（SPEC-011.2） ——
     ConfigItem("risk.enabled", "bool", True, "是否启用机器行为风险规则"),
@@ -561,6 +573,53 @@ ITEMS: tuple[ConfigItem, ...] = (
         "Redis 处置状态保留时间（秒）",
         minimum=60,
         maximum=2_592_000,
+    ),
+    ConfigItem("risk.uniform_days", "int", 3, "全天均匀请求观察天数", minimum=1, maximum=30),
+    ConfigItem(
+        "risk.uniform_bucket_seconds",
+        "int",
+        3600,
+        "均匀请求分桶时长（秒）",
+        minimum=1,
+        maximum=3600,
+    ),
+    ConfigItem(
+        "risk.uniform_tolerance_percent",
+        "int",
+        25,
+        "均匀请求计数偏差百分比",
+        minimum=0,
+        maximum=100,
+    ),
+    ConfigItem(
+        "risk.detail_interval_tolerance_ms",
+        "int",
+        250,
+        "详情间隔稳定性容差（毫秒）",
+        minimum=0,
+        maximum=10000,
+    ),
+    ConfigItem(
+        "risk.security_failure_limit", "int", 5, "签名失败或重放触发次数", minimum=1, maximum=10000
+    ),
+    ConfigItem(
+        "risk.throttle_request_limit", "int", 1, "降速窗口允许请求数", minimum=1, maximum=1000
+    ),
+    ConfigItem(
+        "risk.throttle_window_seconds", "int", 5, "降速窗口长度（秒）", minimum=1, maximum=3600
+    ),
+    ConfigItem("feature.public_recipes", "bool", False, "是否允许公开菜谱分享", public=True),
+    ConfigItem(
+        "sharing.ai_crawlers",
+        "json",
+        {"values": ["GPTBot", "CCBot", "ClaudeBot", "Google-Extended", "Bytespider", "Amazonbot"]},
+        "拒绝的 AI 训练爬虫",
+    ),
+    ConfigItem("sharing.public_base_url", "str", "https://gramtree.app", "分享页 HTTPS 公开基地址"),
+    ConfigItem("sharing.download_url", "str", "", "App 下载或测试版地址"),
+    ConfigItem("sharing.complaint_contact", "str", "", "侵权投诉联系方式"),
+    ConfigItem(
+        "ops.access_log_retention_days", "int", 180, "安全访问日志保存天数", minimum=1, maximum=3650
     ),
     ConfigItem(
         "account.nickname_max_length",

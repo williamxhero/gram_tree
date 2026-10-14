@@ -12,6 +12,8 @@ from gramtree.core.pagination import (
     Page,
     PageParams,
     check_limit,
+    decode_cursor,
+    encode_cursor,
     page_params,
 )
 from gramtree.deps import SessionDep
@@ -169,18 +171,29 @@ def list_pending_changes(
     auth: CurrentAuth, session: SessionDep, page: PageDep
 ) -> Page[TasteProfileChangeOut]:
     check_limit(page.limit, config.get(session, "api.page_size_max"))
+    query = select(TasteProfileChange).where(
+        TasteProfileChange.owner_id == auth.user.id,
+        TasteProfileChange.status == "pending",
+    )
+    if page.cursor:
+        timestamp, row_id = decode_cursor(page.cursor)
+        query = query.where(
+            (TasteProfileChange.created_at < timestamp)
+            | ((TasteProfileChange.created_at == timestamp) & (TasteProfileChange.id < row_id))
+        )
     rows = list(
         session.scalars(
-            select(TasteProfileChange)
-            .where(
-                TasteProfileChange.owner_id == auth.user.id,
-                TasteProfileChange.status == "pending",
-            )
-            .order_by(TasteProfileChange.created_at.desc(), TasteProfileChange.id.desc())
-            .limit(page.limit)
+            query.order_by(
+                TasteProfileChange.created_at.desc(), TasteProfileChange.id.desc()
+            ).limit(page.limit + 1)
         )
     )
-    return Page[TasteProfileChangeOut](items=[_out(row) for row in rows], next_cursor=None)
+    more = len(rows) > page.limit
+    rows = rows[: page.limit]
+    return Page[TasteProfileChangeOut](
+        items=[_out(row) for row in rows],
+        next_cursor=encode_cursor(rows[-1].created_at, rows[-1].id) if more else None,
+    )
 
 
 @router.post(
