@@ -110,7 +110,13 @@ def taste_profile_storage(
         "changes": len(changes),
         "events": len(events),
         "taste_events": len(taste_events),
-        "improvement_taste_metadata_only": all(
+        "metadata_only": all(
+            event.content == {}
+            and event.correlation == {"taste_profile_change_id": str(event.id)}
+            and event.id in changes
+            for event in taste_events
+        )
+        and all(
             set(event.content)
             == {
                 "source_recipe_id",
@@ -124,12 +130,6 @@ def taste_profile_storage(
             and event.correlation == {"recipe_version_id": event.content["source_version_id"]}
             for event in events
             if event.event_type == "recipe.improvement_saved_to_taste"
-        ),
-        "metadata_only": all(
-            event.content == {}
-            and event.correlation == {"taste_profile_change_id": str(event.id)}
-            and event.id in changes
-            for event in taste_events
         ),
     }
     if include_sensitive:

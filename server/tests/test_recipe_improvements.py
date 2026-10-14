@@ -308,8 +308,13 @@ def test_microadjust_prompt_cancel_taste_confirmation_and_retry(api: Api):
     assert event_count(api, reader, "recipe.improvement_saved_to_taste") == 1
     storage = api.client.get("/v1/dev/events/taste-profile-storage", headers=bearer(reader))
     assert storage.status_code == 200, storage.text
-    assert storage.json()["improvement_taste_metadata_only"] is True
-    assert storage.json()["metadata_only"] is True
+    assert storage.json() == {
+        "profiles": 1,
+        "changes": 1,
+        "events": 2,
+        "taste_events": 1,
+        "metadata_only": True,
+    }
 
 
 def test_microadjust_branch_nonconvertible_and_general_boundary(api: Api):
