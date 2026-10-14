@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gram_tree/app/theme.dart';
@@ -449,37 +450,40 @@ void main() {
             textScale: scale,
             size: const Size(320, 780),
           );
-          final text = tester.widget<Text>(find.text('盐：上次 9 g，本次 8 g'));
-          final spans = (text.textSpan! as TextSpan).children!.cast<TextSpan>();
+          TextStyle? displayedStyle(String line, String segment) {
+            final paragraph = tester.renderObject<RenderParagraph>(
+              find.text(line),
+            );
+            final renderedText = paragraph.text.toPlainText();
+            expect(renderedText, line);
+            final start = renderedText.indexOf(segment);
+            expect(start, greaterThanOrEqualTo(0));
+            return paragraph.text
+                .getSpanForPosition(
+                  TextPosition(offset: start + segment.length - 1),
+                )
+                ?.style;
+          }
+
           final colors = GramTreeColors.of(
             tester.element(find.text('盐：上次 9 g，本次 8 g')),
           );
           expect(
-            spans.firstWhere((span) => span.text == '9 g').style!.fontFamily,
+            displayedStyle('盐：上次 9 g，本次 8 g', '上次 9 g')?.fontFamily,
             numberFont,
           );
-          final current = spans.firstWhere((span) => span.text == '8 g').style!;
-          expect(current.fontFamily, numberFont);
-          expect(current.color, colors.accent);
-          final unchanged = tester.widget<Text>(
-            find.text('水：上次 20 ml，本次 20 ml'),
-          );
-          final unchangedSpans = (unchanged.textSpan! as TextSpan).children!
-              .cast<TextSpan>();
-          expect(unchangedSpans.last.style!.color, isNot(colors.accent));
-          final servings = tester.widget<Text>(find.text('份数：上次 2，本次 3'));
-          final currentServings =
-              ((servings.textSpan! as TextSpan).children!.last as TextSpan)
-                  .style!;
-          expect(currentServings.fontFamily, numberFont);
-          expect(currentServings.color, colors.accent);
-          final instruction = tester.widget<Text>(
-            find.text('加盐：上次 直接加入，本次 试味后加入'),
-          );
+          final current = displayedStyle('盐：上次 9 g，本次 8 g', '本次 8 g');
+          expect(current?.fontFamily, numberFont);
+          expect(current?.color, colors.accent);
           expect(
-            ((instruction.textSpan! as TextSpan).children!.last as TextSpan)
-                .style
-                ?.color,
+            displayedStyle('水：上次 20 ml，本次 20 ml', '本次 20 ml')?.color,
+            isNot(colors.accent),
+          );
+          final currentServings = displayedStyle('份数：上次 2，本次 3', '本次 3');
+          expect(currentServings?.fontFamily, numberFont);
+          expect(currentServings?.color, colors.accent);
+          expect(
+            displayedStyle('加盐：上次 直接加入，本次 试味后加入', '本次 试味后加入')?.color,
             isNot(colors.accent),
           );
           expect(tester.takeException(), isNull);
