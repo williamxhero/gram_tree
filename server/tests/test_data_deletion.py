@@ -4,7 +4,9 @@ from datetime import datetime
 
 from tests.accounts_support import Api, bearer, new_uuid
 from tests.test_account_deletion import _purge, _reauth_email
+from tests.test_offline_recipe_sync import save_write
 from tests.test_recipes import recipe_input
+from tests.test_sync_writes import submit
 
 
 def _recipe(api: Api, tokens: dict, name: str = "删除测试菜") -> dict:
@@ -145,6 +147,27 @@ def test_private_recipe_delete_removes_all_versions_and_indexes_but_keeps_frozen
     storage = _storage(api, alice)
     assert storage["owned_counts"]["recipe_save_outbox"] == 0
     assert storage["pending_objects"] == 0
+
+
+def test_deleted_private_recipe_cannot_be_replayed_from_confirmed_or_conflicting_sync(
+    api: Api,
+) -> None:
+    alice = api.login("erased-sync@example.com")
+    original = _recipe(api, alice)
+    accepted = save_write(alice, original, 320)
+    conflicting = save_write(alice, original, 400)
+    assert submit(api, alice, accepted)[0]["status"] == "confirmed"
+    assert submit(api, alice, conflicting)[0]["status"] == "conflict"
+    path = f"/v1/recipes/{original['id']}"
+    assert api.client.delete(path, headers=bearer(alice)).status_code == 204
+    for write in (accepted, conflicting):
+        replay = submit(api, alice, write)[0]
+        assert replay["status"] == "failed"
+        assert replay["reason_code"] == "resource_deleted"
+        assert replay["result"] is None and replay["conflict"] is None
+        assert "私人" not in str(replay)
+    assert api.client.get(path, headers=bearer(alice)).status_code == 404
+    assert _storage(api, alice)["owned_counts"]["write_fact_outbox"] == 0
 
 
 def test_due_account_erasure_removes_implemented_domains_has_content_free_steps_and_is_idempotent(

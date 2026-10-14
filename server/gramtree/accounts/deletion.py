@@ -10,6 +10,7 @@ import uuid
 from datetime import UTC, timedelta
 
 from redis import Redis
+from redis.exceptions import RedisError
 from sqlalchemy import delete, select, update
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import Session
@@ -145,18 +146,32 @@ def erase_record(session: Session, row: CookingRecord) -> None:
     session.delete(row)  # Revisions, attribution and learning signals cascade.
 
 
-def _erase_receipts(session: Session, owner: uuid.UUID, ids: set[str], resource_type: str) -> None:
+def _erase_receipts(
+    session: Session,
+    owner: uuid.UUID,
+    ids: set[str],
+    resource_type: str,
+    recipe_id: uuid.UUID | None = None,
+) -> None:
     receipts = list(session.scalars(select(WriteReceipt).where(WriteReceipt.owner_id == owner)))
     for receipt in receipts:
-        if (
-            receipt.result
-            and receipt.result.get("resource_type") == resource_type
-            and receipt.result.get("resource_id") in ids
-        ):
+        result = receipt.result or {}
+        confirmed = (
+            result.get("resource_type") == resource_type and result.get("resource_id") in ids
+        )
+        conflict = (
+            recipe_id is not None
+            and receipt.write_type == "recipe_version.save"
+            and result.get("recipe_id") == str(recipe_id)
+        )
+        if confirmed or conflict:
             session.execute(
                 delete(WriteFactOutbox).where(WriteFactOutbox.write_id == receipt.write_id)
             )
-            # Keep the retry receipt, but not its deleted resource pointer.
+            # Retain a content-free terminal receipt so retry cannot recreate
+            # erased content or return cached private/conflicting snapshots.
+            receipt.status = "failed"
+            receipt.reason_code = "resource_deleted"
             receipt.result = None
             receipt.dependencies = []
 
@@ -171,14 +186,19 @@ def queue_objects(session: Session, keys: list[str]) -> None:
 def erase_owner_caches(settings: Settings, owner: uuid.UUID) -> None:
     # Clear only the owner's content caches, never another user's counters or
     # global caches. A backend outage must keep account erasure retryable.
-    with Redis.from_url(settings.redis_url, socket_connect_timeout=5, socket_timeout=5) as redis:
-        for pattern in (
-            f"ui:composition_cache:{owner}:*",
-            f"personalized:replacement:v1:{owner}:*",
-            f"personalized:equipment:v1:{owner}:*",
-        ):
-            for key in redis.scan_iter(match=pattern, count=100):
-                redis.delete(key)
+    try:
+        with Redis.from_url(
+            settings.redis_url, socket_connect_timeout=5, socket_timeout=5
+        ) as redis:
+            for pattern in (
+                f"ui:composition_cache:{owner}:*",
+                f"personalized:replacement:v1:{owner}:*",
+                f"personalized:equipment:v1:{owner}:*",
+            ):
+                for key in redis.scan_iter(match=pattern, count=100):
+                    redis.delete(key)
+    except RedisError as exc:
+        raise ApiError(503, "erasure_unavailable", "删除暂未完成，请稍后重试") from exc
 
 
 def drain_objects(session: Session, settings: Settings) -> None:
@@ -232,7 +252,13 @@ def erase_recipe(session: Session, recipe: Recipe) -> None:
             Event.correlation["recipe_version_id"].astext.in_([str(v) for v in versions]),
         )
     )
-    _erase_receipts(session, recipe.owner_id, {str(recipe.id)}, "recipe")
+    _erase_receipts(
+        session,
+        recipe.owner_id,
+        {str(version) for version in versions},
+        "recipe.version",
+        recipe.id,
+    )
     session.execute(
         update(Recipe)
         .where(Recipe.id == recipe.id)

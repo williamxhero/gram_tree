@@ -234,16 +234,23 @@ def test_author_can_save_read_list_and_delete_private_recipe(api: Api) -> None:
     assert api.client.get("/v1/recipes", headers=headers).json()["items"] == []
 
 
-def test_recipe_event_retries_after_delete_via_http_and_cli(api: Api, database_url: str) -> None:
+def test_recipe_event_retries_live_recipe_but_never_resurrects_deleted_content(
+    api: Api, database_url: str
+) -> None:
     tokens = api.login("retry-after-delete@example.com")
     headers = bearer(tokens)
     unavailable = make_settings(redis_url="redis://127.0.0.1:63999/15")
+    recipe_ids = []
     with TestClient(create_app(unavailable), raise_server_exceptions=False) as broken:
         for name in ("待重试菜谱一", "待重试菜谱二"):
             saved = broken.post("/v1/recipes", json=recipe_input(name), headers=headers)
             assert saved.status_code == 201, saved.text
             recipe_id = saved.json()["id"]
-            assert broken.delete(f"/v1/recipes/{recipe_id}", headers=headers).status_code == 204
+            recipe_ids.append(recipe_id)
+            # Cache erasure must fail closed, leaving the recipe retryable.
+            failed = broken.delete(f"/v1/recipes/{recipe_id}", headers=headers)
+            assert_error_shape(failed, 503, "erasure_unavailable")
+            assert broken.get(f"/v1/recipes/{recipe_id}", headers=headers).status_code == 200
 
     env = os.environ.copy()
     env["GRAMTREE_DATABASE_URL"] = database_url
@@ -281,6 +288,30 @@ def test_recipe_event_retries_after_delete_via_http_and_cli(api: Api, database_u
         params={"event_type": "recipe.version_saved"},
         headers=headers,
     ).json() == {"count": 2}
+
+    # SPEC47 intentionally changes retention after private deletion: both
+    # delivered events and pending private save payloads are erased, not replayed.
+    for recipe_id in recipe_ids:
+        assert api.client.delete(f"/v1/recipes/{recipe_id}", headers=headers).status_code == 204
+    with TestClient(create_app(unavailable), raise_server_exceptions=False) as broken:
+        pending = broken.post("/v1/recipes", json=recipe_input("不能复活的菜谱"), headers=headers)
+        assert pending.status_code == 201, pending.text
+        pending_id = pending.json()["id"]
+        assert_error_shape(
+            broken.delete(f"/v1/recipes/{pending_id}", headers=headers),
+            503,
+            "erasure_unavailable",
+        )
+    assert api.client.delete(f"/v1/recipes/{pending_id}", headers=headers).status_code == 204
+    after_deletion = subprocess.run(
+        command, cwd=server_dir, env=env, capture_output=True, text=True, check=True
+    )
+    assert "已投递 0 条菜谱版本事件" in after_deletion.stdout
+    assert api.client.get(
+        "/v1/dev/events/count",
+        params={"event_type": "recipe.version_saved"},
+        headers=headers,
+    ).json() == {"count": 0}
 
 
 def test_private_recipe_is_isolated_between_accounts(api: Api) -> None:
