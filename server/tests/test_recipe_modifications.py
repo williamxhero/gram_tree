@@ -393,8 +393,15 @@ def test_canonical_selected_display_name_matches_version_and_event_audit(
 
 
 @pytest.mark.parametrize("device", [None, "text-slow-read-device"])
-@pytest.mark.parametrize("tampered", [False, True])
-def test_slow_signed_read_burst_completes_without_blocking_other_requests(api, device, tampered):
+@pytest.mark.parametrize(
+    ("concurrency", "tampered", "risk_enabled"),
+    [(16, False, True), (16, True, True), (80, False, True), (80, False, False)],
+)
+def test_slow_signed_read_burst_completes_without_blocking_other_requests(
+    api, device, concurrency, tampered, risk_enabled
+):
+    if not risk_enabled:
+        configure("risk.enabled", False)
     tokens = api.login("text-slow-read@example.com", device=device)
 
     async def read_burst():
@@ -405,7 +412,7 @@ def test_slow_signed_read_burst_completes_without_blocking_other_requests(api, d
             nonlocal started
             yield b"{"
             started += 1
-            if started == 16:
+            if started == concurrency:
                 gate.set()
             # All clients finish their signed bodies together. No request may
             # monopolize the event loop while the other bodies are in flight.
@@ -427,10 +434,12 @@ def test_slow_signed_read_burst_completes_without_blocking_other_requests(api, d
 
         transport = httpx.ASGITransport(app=api.client.app, raise_app_exceptions=False)
         async with httpx.AsyncClient(transport=transport, base_url="http://testserver") as client:
-            return await asyncio.gather(*(read(client) for _ in range(16)))
+            return await asyncio.gather(*(read(client) for _ in range(concurrency)))
 
     responses = asyncio.run(read_burst())
-    assert [response.status_code for response in responses] == [401 if tampered else 200] * 16
+    assert [response.status_code for response in responses] == [
+        401 if tampered else 200
+    ] * concurrency
     if tampered:
         assert {response.json()["error"]["code"] for response in responses} == {"signature_invalid"}
     else:

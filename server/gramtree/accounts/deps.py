@@ -113,6 +113,9 @@ def _authenticate_identity(
                     captcha=request.app.state.captcha,
                 )
         raise
+    # Only reads have run. Release before the next worker-pool handoff so
+    # queued authentications cannot consume every token waiting for this slot.
+    session.commit()
     return AuthContext(user, ds)
 
 
@@ -150,6 +153,9 @@ def get_auth(
         raise risk_service.RiskActionError(
             decision.level, retry_after=decision.retry_after, challenge=decision.challenge_id
         )
+    # Observation may be disabled; its read checks must not retain a connection
+    # while the endpoint waits for a worker. Business writes have not started.
+    session.commit()
     return auth
 
 
