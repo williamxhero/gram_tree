@@ -103,9 +103,11 @@ def allow_center(xml: str) -> tuple[int, int] | None:
     if len(buttons) != 1:
         raise DriverError("Missing unique notification Allow button")
     button = buttons[0]
+    # AOSP's resource text and all-caps accessibility text; no normalization.
+    text_match = button.get("text") in ("Allow", "ALLOW")
     if (
         button.get("package") != CONTROLLER
-        or button.get("text") != "Allow"
+        or not text_match
         or button.get("class") != "android.widget.Button"
         or button.get("enabled") != "true"
         or button.get("clickable") != "true"
@@ -114,7 +116,7 @@ def allow_center(xml: str) -> tuple[int, int] | None:
         raise DriverError(
             "Notification Allow button is not an enabled controller button "
             f"(package_match={button.get('package') == CONTROLLER}, "
-            f"text_match={button.get('text') == 'Allow'}, "
+            f"text_match={text_match}, "
             f"class_match={button.get('class') == 'android.widget.Button'}, "
             f"enabled_match={button.get('enabled') == 'true'}, "
             f"clickable_match={button.get('clickable') == 'true'})"

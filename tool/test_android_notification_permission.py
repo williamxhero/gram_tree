@@ -234,6 +234,96 @@ class NotificationCliTest(unittest.TestCase):
         self.assertIn(["shell", "dumpsys", "package", PACKAGE], commands)
         self.assertTrue(any(command[:3] == ["shell", "rm", "-f"] for command in commands))
 
+    def test_exact_uppercase_allow_grants_and_closes_notification_dialog(self):
+        xml = UI.replace('text="Allow"', 'text="ALLOW"').replace(
+            "[90,1400][990,1520]", "[100,1200][900,1300]"
+        )
+        result, commands = self.invoke(ui=xml, tap=["500", "1250"], wait_for="ui_read")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("permission granted and OS dialog closed", result.stdout)
+        self.assertEqual(commands.count(["shell", "input", "tap", "500", "1250"]), 1)
+        self.assertIn(["shell", "dumpsys", "package", PACKAGE], commands)
+
+    def test_other_allow_spellings_and_whitespace_fail_closed(self):
+        for text in (
+            " Allow",
+            "Allow ",
+            " ALLOW",
+            "ALLOW ",
+            "\tAllow",
+            "ALLOW\n",
+            "allow",
+            "ALlOW",
+            "aLlOw",
+            "Allow once",
+        ):
+            with self.subTest(text=repr(text)):
+                tree = ET.fromstring(UI)
+                list(tree.iter("node"))[-1].set("text", text)
+                result, commands = self.invoke(
+                    ui=ET.tostring(tree, encoding="unicode"), wait_for="ui_read"
+                )
+                self.assertEqual(result.returncode, 1, result.stderr)
+                self.assertIn("text_match=False", result.stderr)
+                self.assert_no_tap(commands)
+                self.assertNotIn("permission granted and OS dialog closed", result.stdout)
+
+    def test_uppercase_allow_does_not_bypass_request_or_question_identity(self):
+        uppercase = UI.replace('text="Allow"', 'text="ALLOW"')
+        for activity, xml, wait_for in (
+            (
+                DIALOG_ACTIVITY.replace(
+                    f"launchedFromPackage={PACKAGE} ", "launchedFromPackage=other.app "
+                ),
+                uppercase,
+                "dialog_seen",
+            ),
+            (
+                DIALOG_ACTIVITY.replace(
+                    f"launchedFromPackage={PACKAGE} ", f"launchedFromPackage={PACKAGE}.impostor "
+                ),
+                uppercase,
+                "dialog_seen",
+            ),
+            (
+                DIALOG_ACTIVITY,
+                uppercase.replace(
+                    "Allow 味谱 to send you notifications?",
+                    "Allow 味谱 to take pictures and record video?",
+                ),
+                "ui_read",
+            ),
+            (
+                DIALOG_ACTIVITY,
+                uppercase.replace(
+                    "Allow 味谱 to send you notifications?",
+                    "Allow Other to send you notifications?",
+                ),
+                "ui_read",
+            ),
+        ):
+            with self.subTest(activity=activity, xml=xml):
+                result, commands = self.invoke(activity=activity, ui=xml, wait_for=wait_for)
+                self.assertEqual(result.returncode, 0, result.stderr)
+                self.assert_no_tap(commands)
+                self.assertNotIn("permission granted and OS dialog closed", result.stdout)
+
+    def test_uppercase_allow_diagnostic_uses_the_same_text_match(self):
+        xml = UI.replace('text="Allow"', 'text="ALLOW"').replace(
+            'enabled="true" clickable', 'enabled="false" clickable'
+        )
+        result, commands = self.invoke(ui=xml, wait_for="ui_read")
+        self.assertEqual(result.returncode, 1, result.stderr)
+        self.assertEqual(
+            result.stderr,
+            "Android notification observer FAILED: "
+            "Notification Allow button is not an enabled controller button "
+            "(package_match=True, text_match=True, class_match=True, "
+            "enabled_match=False, clickable_match=True)\n",
+        )
+        self.assert_no_tap(commands)
+        self.assertNotIn("ALLOW", result.stdout + result.stderr)
+
     def test_aosp_and_legacy_history_spacing_preserve_notification_grant(self):
         for spaces in (1, 2):
             with self.subTest(spaces=spaces):
