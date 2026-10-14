@@ -26,6 +26,7 @@
 
 | [`offline-writes.html`](offline-writes.html) | 离线手工编辑与保存、个人量具修改历史、账号退出保留提醒、同步分类与重试；浅色/深色交互 | #27 / #216、#218、#219、#220 | 本会话无 Artifact 发布工具；本地 HTML 样稿 |
 | [`personalized-recipe.html`](personalized-recipe.html) | 默认按口味视图、原版切换、解释面板、多人/儿童分盛、过敏阻断、厨具降级与做菜模式一致 | #31 SPEC-005.2 | 2026-10-13 已尝试发布；Artifact 要求 claude.ai 登录，当前 API-token 认证不支持。本地交互 HTML 样稿 |
+| [`scenario-composition.html`](scenario-composition.html) | 场景组合样稿：新手/熟手详略、常做差异、失败前置与当步提醒、近期口味变化、统一为什么面板、固定骨架与标准布局 | #34 SPEC-009.2；#279–#282 | 2026-10-14 Artifact 实际拒绝发布：本会话 ANTHROPIC_AUTH_TOKEN 认证优先于 claude.ai 登录；尚无发布链接，暂停于实现之前 |
 
 ## 说明
 
