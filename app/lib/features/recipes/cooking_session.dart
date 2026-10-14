@@ -342,6 +342,8 @@ class _CookingPageState extends ConsumerState<CookingPage>
   final _skippedSceneComponents = <String>{};
   Timer? _ticker;
   bool _reportingDueTimers = false;
+  double _horizontalDragStartX = 0;
+  double _horizontalDragOffset = 0;
   final _voiceCommands = CookingVoiceController();
   VoiceQuestionLifecycle? _voiceQuestion;
   PressAndHoldVoiceQuestion? _voiceRecorder;
@@ -1162,8 +1164,23 @@ class _CookingPageState extends ConsumerState<CookingPage>
           ],
         ),
         body: GestureDetector(
-          onHorizontalDragEnd: (details) =>
-              _move((details.primaryVelocity ?? 0) < 0 ? 1 : -1),
+          onHorizontalDragDown: (details) {
+            _horizontalDragStartX = details.globalPosition.dx;
+            _horizontalDragOffset = 0;
+          },
+          onHorizontalDragStart: (details) => _horizontalDragOffset =
+              details.globalPosition.dx - _horizontalDragStartX,
+          onHorizontalDragUpdate: (details) => _horizontalDragOffset =
+              details.globalPosition.dx - _horizontalDragStartX,
+          onHorizontalDragCancel: () => _horizontalDragOffset = 0,
+          onHorizontalDragEnd: (details) {
+            // A held finger can have zero release velocity after crossing slop.
+            // Preserve fling direction; otherwise use the actual net movement.
+            final velocity = details.primaryVelocity ?? 0;
+            final direction = velocity != 0 ? velocity : _horizontalDragOffset;
+            _horizontalDragOffset = 0;
+            if (direction != 0) unawaited(_move(direction < 0 ? 1 : -1));
+          },
           onTap: () => _move(1),
           child: ListView(
             padding: const EdgeInsets.all(24),

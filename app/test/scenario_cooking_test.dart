@@ -777,6 +777,110 @@ void main() {
     );
   }
 
+  testWidgets(
+    'paused horizontal swipes retain direction below long safety cards',
+    (tester) async {
+      tester.view.physicalSize = const Size(320, 480);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      final env = TestEnv.signedIn();
+      final store = await sessionStore(env);
+      final description = cookingComposition('brief');
+      description.components!.addAll([
+        failureReminder('serve', 'before'),
+        failureReminder('serve', 'at'),
+      ]);
+      final composition = description.toJson();
+      for (final component in composition['components'] as List) {
+        if (component['type'] == 'food_safety') {
+          (component['data'] as Map)['conclusion'] = List.filled(
+            12,
+            '安全检查尚未完成，处理生鸡肉后请清洗双手和接触面。',
+          ).join('\n');
+        }
+      }
+      env.server.on('POST', '/v1/ui/compositions', (_) => (200, composition));
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            ...env.overrides,
+            cookingSessionStoreProvider.overrideWithValue(store),
+          ],
+          child: testApp(const CookingPage(sessionId: 'session')),
+        ),
+      );
+      await tester.pumpAndSettle();
+      final action = find.byKey(const ValueKey('cooking-action'));
+      await revealCookingControl(tester, action);
+      expect(find.text('步骤 1 / 2'), findsOneWidget);
+      await revealCookingControl(
+        tester,
+        find.byKey(const ValueKey('scene:failure:recipe:dry:serve:before')),
+      );
+      await revealCookingControl(tester, find.text('下一步'));
+      await tester.drag(cookingScroll, const Offset(0, -400));
+      await tester.pumpAndSettle();
+
+      Future<void> pausedSwipe(Offset offset) async {
+        final center = tester.getCenter(find.byType(ListView).first);
+        final gesture = await tester.startGesture(center - offset / 2);
+        // Cross touch slop with real pointer movement, then hold still before up.
+        await gesture.moveBy(
+          offset,
+          timeStamp: const Duration(milliseconds: 16),
+        );
+        await tester.pump(const Duration(milliseconds: 100));
+        await gesture.up(timeStamp: const Duration(milliseconds: 116));
+        await tester.pumpAndSettle();
+      }
+
+      await pausedSwipe(const Offset(-160, 0));
+      await revealCookingControl(tester, find.text('步骤 2 / 2'));
+      expect(find.text('步骤 2 / 2'), findsOneWidget);
+      await revealCookingControl(tester, action);
+      expect(find.text('盛出'), findsWidgets);
+      await revealCookingControl(
+        tester,
+        find.byKey(const ValueKey('scene:failure:recipe:dry:serve:at')),
+      );
+      await revealCookingControl(tester, find.text('完成'));
+      await tester.drag(cookingScroll, const Offset(0, -400));
+      await tester.pumpAndSettle();
+      await pausedSwipe(const Offset(160, 0));
+      await revealCookingControl(tester, action);
+      expect(find.text('步骤 1 / 2'), findsOneWidget);
+      expect(find.text('加热'), findsOneWidget);
+
+      await pausedSwipe(const Offset(0, -160));
+      await revealCookingControl(tester, action);
+      expect(find.text('步骤 1 / 2'), findsOneWidget);
+      expect(find.text('加热'), findsOneWidget);
+
+      // Fast flings must still work after scrolling past both reminder layouts.
+      await revealCookingControl(tester, find.text('下一步'));
+      await tester.fling(
+        find.byType(ListView).first,
+        const Offset(-160, 0),
+        1000,
+      );
+      await tester.pumpAndSettle();
+      await revealCookingControl(tester, find.text('步骤 2 / 2'));
+      expect(find.text('步骤 2 / 2'), findsOneWidget);
+      await revealCookingControl(tester, find.text('完成'));
+      await tester.fling(
+        find.byType(ListView).first,
+        const Offset(160, 0),
+        1000,
+      );
+      await tester.pumpAndSettle();
+      await revealCookingControl(tester, action);
+      expect(find.text('步骤 1 / 2'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+      await tester.pumpWidget(const SizedBox.shrink());
+    },
+  );
+
   for (final useFling in [false, true]) {
     testWidgets(
       'forward ${useFling ? 'left fling' : 'button'} completes current prerequisite before entering dependent step',
@@ -818,7 +922,7 @@ void main() {
         expect(find.text('步骤 1 / 3'), findsOneWidget);
         Future<void> forward() async {
           if (useFling) {
-            // A drag without velocity does not trigger the cooking fling path.
+            // Keep release-velocity coverage alongside paused pointer swipes.
             await tester.fling(
               find.byType(ListView).first,
               const Offset(-400, 0),
