@@ -12,11 +12,16 @@ const signingNonceHeader = 'X-Request-Nonce';
 const signingSignatureHeader = 'X-Request-Signature';
 
 class RequestSigner {
-  RequestSigner(this._session, {DateTime Function()? now})
-    : _now = now ?? DateTime.now;
+  RequestSigner(
+    this._session, {
+    DateTime Function()? now,
+    Cryptography? cryptography,
+  }) : _now = now ?? DateTime.now,
+       _cryptography = cryptography ?? Cryptography.instance;
 
   final SessionStore _session;
   final DateTime Function() _now;
+  final Cryptography _cryptography;
   final Random _random = Random.secure();
   Duration _serverOffset = Duration.zero;
 
@@ -111,11 +116,12 @@ class RequestSigner {
       options.uri.hasQuery ? options.uri.query : '',
       timestamp,
       nonce,
-      (await Sha256().hash(body)).bytes
+      (await _cryptography.sha256().hash(body)).bytes
           .map((byte) => byte.toRadixString(16).padLeft(2, '0'))
           .join(),
     );
-    final mac = await Hmac.sha256().calculateMac(
+    final hmac = _cryptography.hmac(_cryptography.sha256());
+    final mac = await hmac.calculateMac(
       message,
       secretKey: SecretKey(utf8.encode(key)),
     );

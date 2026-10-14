@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:cryptography/cryptography.dart';
+import 'package:cryptography/dart.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -46,14 +47,16 @@ class _SignedServer extends FakeServer {
           : body is List<int>
           ? body
           : utf8.encode(body.toString());
-      final digest = (await Sha256().hash(bytes)).bytes
+      final sha256 = DartCryptography.defaultInstance.sha256();
+      final digest = (await sha256.hash(bytes)).bytes
           .map((b) => b.toRadixString(16).padLeft(2, '0'))
           .join();
       final query = quote(options.uri.query);
       final escapedPath = quote(options.uri.path);
       final message =
           '${options.method.toUpperCase()}\n$escapedPath\n$query\n$timestamp\n${quote(nonce)}\n$digest';
-      final mac = await Hmac.sha256().calculateMac(
+      final hmac = DartCryptography.defaultInstance.hmac(sha256);
+      final mac = await hmac.calculateMac(
         utf8.encode(message),
         secretKey: SecretKey(utf8.encode('test-signing-key-0')),
       );
@@ -116,6 +119,7 @@ class _SigningEnv extends TestEnv {
     this.method = 'GET',
     this.path = '/v1/signing-probe',
     String escapedPath = '/v1/signing-probe',
+    super.usePlatformCryptography,
   }) : super(server: _SignedServer(escapedQuery, path, escapedPath)) {
     local.values.addAll(consentedStore());
     secure.values.addAll(signedInSecure(testUser()));
@@ -191,7 +195,49 @@ Future<void> _openList(WidgetTester tester, _SigningEnv env) async {
   expect(find.text('菜谱暂时加载不了'), findsNothing);
 }
 
+Future<void> _pumpPlatformEventsUntil(
+  WidgetTester tester,
+  Finder finder,
+  int count,
+) async {
+  for (var i = 0; i < 80 && finder.evaluate().length != count; i++) {
+    // Native WebCrypto completes on the real browser event loop, not the
+    // automated binding's fake clock. Keep actual production crypto here.
+    await tester.runAsync(
+      () => Future<void>.delayed(const Duration(milliseconds: 50)),
+    );
+    await tester.pump(const Duration(milliseconds: 50));
+  }
+  expect(finder, findsNWidgets(count));
+}
+
 void main() {
+  testWidgets('platform crypto completes signed page loads with fresh nonces', (
+    tester,
+  ) async {
+    final env = _SigningEnv(
+      query: 'q=a%2Bb',
+      escapedQuery: 'q=a%252Bb',
+      method: 'POST',
+      usePlatformCryptography: true,
+    );
+    await pumpApp(tester, env: env, settle: false);
+    // Navigate from authenticated Home. Background telemetry may still finish;
+    // it must not refetch the unchanged recipe projection.
+    await _pumpPlatformEventsUntil(tester, find.text(emptyTitles[0]), 1);
+    await tester.pumpAndSettle();
+    final container = ProviderScope.containerOf(
+      tester.element(find.byType(Scaffold).first),
+    );
+    container.read(routerProvider).go('/recipes');
+    final cards = find.byKey(ValueKey('recipe-card-${sharedDetail().id}'));
+    await _pumpPlatformEventsUntil(tester, cards, 1);
+    await tester.tap(find.byKey(const ValueKey('recipe-load-more')));
+    await _pumpPlatformEventsUntil(tester, cards, 2);
+    expect(find.text('菜谱暂时加载不了'), findsNothing);
+    expect(env.server.calls('POST', env.path), hasLength(2));
+  });
+
   testWidgets('Unicode wire paths retain independent UTF-8 escaping coverage', (
     tester,
   ) async {

@@ -133,6 +133,49 @@ void main() {
     },
   );
 
+  for (final receipt in [
+    (accepted: false, restored: true),
+    (accepted: true, restored: false),
+    (accepted: false, restored: false),
+  ]) {
+    testWidgets('unsuccessful captcha receipt never replays: $receipt', (
+      tester,
+    ) async {
+      final env = SharingTestEnv();
+      env.server.responseHeaders['GET /v1/recipes/$sharedRecipeId'] = {
+        'x-risk-challenge': ['challenge-123'],
+      };
+      env.server.on(
+        'GET',
+        '/v1/recipes/$sharedRecipeId',
+        (_) => FakeServer.error(403, 'risk_captcha_required', '需要安全验证'),
+      );
+      env.server.on(
+        'POST',
+        '/v1/risk/captcha',
+        (_) => (
+          200,
+          {'accepted': receipt.accepted, 'access_restored': receipt.restored},
+        ),
+      );
+      await openProtectedRecipe(tester, env);
+      await pumpUntilVisible(tester, find.text('安全验证'));
+      await tester.enterText(
+        find.byKey(const ValueKey('captcha-response')),
+        'verified',
+      );
+      await tester.tap(find.text('验证并继续'));
+      await tester.pumpAndSettle();
+      expect(find.text('安全验证'), findsNothing);
+      expect(env.server.calls('POST', '/v1/risk/captcha'), hasLength(1));
+      expect(
+        env.server.calls('GET', '/v1/recipes/$sharedRecipeId'),
+        hasLength(1),
+      );
+      expect(find.byKey(const ValueKey('recipe-share-button')), findsNothing);
+    });
+  }
+
   for (final repeated in [false, true]) {
     testWidgets('clock correction retries once, repeated=$repeated', (
       tester,
