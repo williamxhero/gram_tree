@@ -99,7 +99,7 @@ import UserNotifications
       result(FlutterError(code: "invalid_arguments", message: "Expected ZIP bytes and a safe ZIP basename.", details: nil))
       return
     }
-    guard !exportShareInProgress, let presenter = exportPresenter(),
+    guard !exportShareInProgress, exportDirectory == nil, let presenter = exportPresenter(),
           !(presenter is UIActivityViewController), !presenter.isBeingDismissed,
           !presenter.isBeingPresented else {
       result(FlutterError(code: "share_failed", message: "Sharing is unavailable or already open.", details: nil))
@@ -151,8 +151,11 @@ import UserNotifications
           share.completionWithItemsHandler = { _, _, _, _ in
             // Save to Files / the receiving activity has finished consuming the URL.
             try? manager.removeItem(at: directory)
-            self.exportShareInProgress = false
-            self.exportDirectory = nil
+            DispatchQueue.main.async {
+              guard self.exportGeneration == generation else { return }
+              self.exportShareInProgress = false
+              self.exportDirectory = nil
+            }
           }
           if let popover = share.popoverPresentationController {
             popover.sourceView = presenter.view
@@ -162,6 +165,7 @@ import UserNotifications
             popover.permittedArrowDirections = []
           }
           self.exportShareInProgress = false
+          self.exportDirectory = directory
           let pending = self.exportPendingResult
           self.exportPendingResult = nil
           presenter.present(share, animated: true) { pending?(nil) }

@@ -23,7 +23,7 @@ class ExportFileShare(private val activity: Activity) : MethodChannel.MethodCall
     private var generation = 0L
     private var active = false
     private var activeDirectory: File? = null
-    private var presentedDirectory: File? = null
+    private val presentedDirectories = mutableSetOf<File>()
     private var pendingResult: MethodChannel.Result? = null
 
     init {
@@ -115,7 +115,7 @@ class ExportFileShare(private val activity: Activity) : MethodChannel.MethodCall
             synchronized(lock) {
                 active = false
                 activeDirectory = null
-                presentedDirectory = directory
+                presentedDirectories += directory
                 pending = pendingResult
                 pendingResult = null
             }
@@ -130,22 +130,25 @@ class ExportFileShare(private val activity: Activity) : MethodChannel.MethodCall
     }
 
     private fun cancelShare(result: MethodChannel.Result) {
-        val directory: File?
+        val directories: List<File>
         val pending: MethodChannel.Result?
         synchronized(lock) {
-            if (!active && presentedDirectory == null) {
+            if (!active && presentedDirectories.isEmpty()) {
                 result.success(null)
                 return
             }
             generation += 1
             active = false
-            directory = activeDirectory ?: presentedDirectory
+            directories = buildList {
+                activeDirectory?.let(::add)
+                addAll(presentedDirectories)
+            }.distinct()
             activeDirectory = null
-            presentedDirectory = null
+            presentedDirectories.clear()
             pending = pendingResult
             pendingResult = null
         }
-        deleteExport(directory)
+        directories.forEach(::deleteExport)
         pending?.error("share_cancelled", "ZIP sharing was cancelled.", null)
         result.success(null)
     }
