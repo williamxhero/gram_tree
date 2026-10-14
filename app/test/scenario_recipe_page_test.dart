@@ -333,9 +333,13 @@ FakeServer _server({
 
 Finder _key(String value) => find.byKey(ValueKey(value));
 
-Future<void> _pump(WidgetTester tester) async {
+// Held HTTP responses need frame/microtask flushes without accidentally
+// exhausting the real composition timeout (800 ms by default).
+Future<void> _pump(WidgetTester tester, {bool advanceTime = true}) async {
   for (var i = 0; i < 12; i++) {
-    await tester.pump(const Duration(milliseconds: 100));
+    await tester.pump(
+      advanceTime ? const Duration(milliseconds: 100) : Duration.zero,
+    );
   }
 }
 
@@ -348,21 +352,28 @@ Future<void> _open(WidgetTester tester, FakeServer server) async {
   await _pump(tester);
 }
 
-Future<void> _reveal(WidgetTester tester, Finder target) async {
+Future<void> _reveal(
+  WidgetTester tester,
+  Finder target, {
+  bool advanceTime = true,
+}) async {
   final scroll = _key('recipe-detail-content');
+  final scrollPump = advanceTime
+      ? const Duration(milliseconds: 50)
+      : Duration.zero;
   if (target.evaluate().isEmpty) {
     for (var i = 0; i < 12; i++) {
       await tester.drag(scroll, const Offset(0, 500));
-      await tester.pump(const Duration(milliseconds: 50));
+      await tester.pump(scrollPump);
     }
     for (var i = 0; i < 45 && target.evaluate().isEmpty; i++) {
       await tester.drag(scroll, const Offset(0, -250));
-      await tester.pump(const Duration(milliseconds: 50));
+      await tester.pump(scrollPump);
     }
   }
   expect(target, findsWidgets);
   await tester.ensureVisible(target.last);
-  await _pump(tester);
+  await _pump(tester, advanceTime: advanceTime);
   expect(target.last.hitTestable(), findsOneWidget);
 }
 
@@ -624,8 +635,10 @@ void main() {
       reason: '尚未取得新档案用量时不能用旧用量重新组合',
     );
     updatedProjection.complete();
-    await _pump(tester);
-    await _reveal(tester, find.text('盐  7.5 g'));
+    await _pump(tester, advanceTime: false);
+    // Observe a genuinely pending response within the production timeout.
+    await tester.pump(const Duration(milliseconds: 100));
+    await _reveal(tester, find.text('盐  7.5 g'), advanceTime: false);
     expect(
       recipeSceneRequests(),
       greaterThan(initialRequests),
@@ -750,10 +763,11 @@ void main() {
     expect(_key('personalized-allergy-鸡肉'), findsNothing);
     expect(recipeSceneRequests(), initialRequests);
     updatedProjection.complete();
-    await _pump(tester);
-    await _reveal(tester, find.text('盐  8 g'));
+    await _pump(tester, advanceTime: false);
+    await tester.pump(const Duration(milliseconds: 100));
+    await _reveal(tester, find.text('盐  8 g'), advanceTime: false);
     expect(recipeSceneRequests(), greaterThan(initialRequests));
-    await _reveal(tester, _key('recipe-allergen-card'));
+    await _reveal(tester, _key('recipe-allergen-card'), advanceTime: false);
     expect(
       _key('personal-safety-你-allergy-鸡肉'),
       findsNothing,
