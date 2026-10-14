@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gramtree_api/gramtree_api.dart'
     show ActionDescriptor, EventCorrelationIds;
 
+import '../auth/session.dart';
 import '../events/event_recorder.dart';
 import 'intent_registry.dart';
 
@@ -59,6 +60,11 @@ class IntentDispatcher {
     // （component_scaffold.dart 顶部注释提到过这个口子）——不合法就安静地什么都
     // 不做，不抛异常、不影响界面。
     if (spec == null || !spec.validateParams(params)) return null;
+    final session = _ref.read(sessionStoreProvider);
+    final identity = session.identity;
+    bool scenarioIsCurrent() =>
+        !componentId.startsWith('scene:') ||
+        (identity != null && session.matches(identity));
 
     if (OnlineFeatures.forIntent(action.intent, params) != null) {
       final status = _ref.read(apiReachabilityProvider);
@@ -74,6 +80,8 @@ class IntentDispatcher {
         return null;
       }
     }
+
+    if (!scenarioIsCurrent()) return null;
 
     // Fixed business pages have no server composition; never invent its ID.
     if (compositionId != null) {
@@ -100,6 +108,7 @@ class IntentDispatcher {
       }
     }
 
+    if (!scenarioIsCurrent()) return null;
     final handler = spec.handler;
     if (handler != null && context.mounted) {
       return await handler(context, _ref, params);

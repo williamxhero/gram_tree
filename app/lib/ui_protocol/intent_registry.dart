@@ -14,6 +14,7 @@ import 'package:gramtree_api/gramtree_api.dart'
 import '../recipes/personal_measure_repository.dart';
 
 import '../api/api_client.dart';
+import '../auth/session.dart';
 import '../events/event_recorder.dart';
 import '../recipes/recipe_repository.dart';
 import '../recipes/batch_advice.dart';
@@ -271,6 +272,8 @@ Future<Object?> _handleSkipThisTime(
   final componentId = params['component_id'] as String;
   final sourceType = params['source_type'] as String;
   final compositionId = params['composition_id'] as String?;
+  final session = ref.read(sessionStoreProvider);
+  final identity = session.identity;
 
   await ref
       .read(eventRecorderProvider)
@@ -289,7 +292,9 @@ Future<Object?> _handleSkipThisTime(
 
   if (sourceType == sourceTypeScenarioAdjusted &&
       componentId.startsWith('scene:')) {
-    if (!context.mounted) return null;
+    if (!context.mounted || (identity != null && !session.matches(identity))) {
+      return null;
+    }
     final scope = ScenarioDetailScope.of(context);
     if (componentId.startsWith('scene:taste:')) {
       await scope?.onBeforeTaste?.call(
