@@ -37,7 +37,7 @@ Future<void> pumpUntilRequestCount(
   }
 }
 
-void main({void Function(Map<String, Object?>)? onCaptchaProgress}) {
+void main() {
   for (final signedIn in [false, true]) {
     testWidgets('public share CAPTCHA stays anonymous: signedIn=$signedIn', (
       tester,
@@ -410,86 +410,43 @@ void main({void Function(Map<String, Object?>)? onCaptchaProgress}) {
           '/v1/risk/captcha',
           (_) => (200, {'accepted': true, 'access_restored': true}),
         );
-        var phase = 'open';
-        void reportProgress() {
-          final verification = env.server.calls('POST', '/v1/risk/captcha');
-          final body = verification.lastOrNull?.body;
-          onCaptchaProgress?.call({
-            'repeated': repeated,
-            'phase': phase,
-            'recipe_calls': count,
-            'challenge_calls': env.server
-                .calls('GET', '/v1/risk/captcha/challenge-123')
-                .length,
-            'verification_calls': verification.length,
-            'dialog_visible': find.text('安全验证').evaluate().isNotEmpty,
-            'input_received': find.text('verified').evaluate().isNotEmpty,
-            'challenge_id_matches':
-                body is Map && body['challenge_id'] == 'challenge-123',
-            'response_matches': body is Map && body['response'] == 'verified',
-            'share_button_visible': find
-                .byKey(const ValueKey('recipe-share-button'))
-                .evaluate()
-                .isNotEmpty,
-          });
-        }
-
-        reportProgress();
-        try {
-          await openProtectedRecipe(tester, env);
-          phase = 'show_dialog';
-          await pumpUntilVisible(tester, find.text('安全验证'));
-          // Finish the dialog entrance without trying to settle the pending
-          // recipe request's indeterminate spinner beneath the modal.
-          await tester.pump(const Duration(milliseconds: 300));
-          reportProgress();
-          expect(find.text('输入图中的字符'), findsOneWidget);
-          expect(find.byKey(const ValueKey('captcha-image')), findsOneWidget);
-          phase = 'enter_response';
-          await tester.enterText(
-            find.byKey(const ValueKey('captcha-response')),
-            'verified',
-          );
-          await tester.pump();
-          reportProgress();
-          expect(find.text('verified'), findsOneWidget);
-          phase = 'submit';
-          await tester.tap(find.text('验证并继续'));
-          await tester.pumpAndSettle();
-          phase = 'wait_replay';
-          reportProgress();
-          await pumpUntilRequestCount(tester, () => count, 2);
-          // WebCrypto completion and request dispatch are not a UI completion
-          // signal. Wait for the actual success/error page before asserting.
-          phase = 'wait_page';
-          reportProgress();
-          await pumpUntilVisible(
-            tester,
-            repeated
-                ? find.text('菜谱暂时加载不了')
-                : find.byKey(const ValueKey('recipe-share-button')),
-          );
-          await tester.pumpAndSettle();
-          phase = 'assert_result';
-          reportProgress();
-          expect(count, 2);
-          final verification = env.server.calls('POST', '/v1/risk/captcha');
-          expect(verification, hasLength(1));
-          expect(verification.single.body, {
-            'challenge_id': 'challenge-123',
-            'response': 'verified',
-          });
-          expect(find.text('安全验证'), findsNothing);
-          expect(
-            find.byKey(const ValueKey('recipe-share-button')),
-            repeated ? findsNothing : findsOneWidget,
-          );
-          phase = 'complete';
-          reportProgress();
-        } catch (_) {
-          reportProgress();
-          rethrow;
-        }
+        await openProtectedRecipe(tester, env);
+        await pumpUntilVisible(tester, find.text('安全验证'));
+        // Finish the dialog entrance without trying to settle the pending
+        // recipe request's indeterminate spinner beneath the modal.
+        await tester.pump(const Duration(milliseconds: 300));
+        expect(find.text('输入图中的字符'), findsOneWidget);
+        expect(find.byKey(const ValueKey('captcha-image')), findsOneWidget);
+        await tester.enterText(
+          find.byKey(const ValueKey('captcha-response')),
+          'verified',
+        );
+        await tester.pump();
+        expect(find.text('verified'), findsOneWidget);
+        await tester.tap(find.text('验证并继续'));
+        await tester.pumpAndSettle();
+        await pumpUntilRequestCount(tester, () => count, 2);
+        // WebCrypto completion and request dispatch are not a UI completion
+        // signal. Wait for the actual success/error page before asserting.
+        await pumpUntilVisible(
+          tester,
+          repeated
+              ? find.text('菜谱暂时加载不了')
+              : find.byKey(const ValueKey('recipe-share-button')),
+        );
+        await tester.pumpAndSettle();
+        expect(count, 2);
+        final verification = env.server.calls('POST', '/v1/risk/captcha');
+        expect(verification, hasLength(1));
+        expect(verification.single.body, {
+          'challenge_id': 'challenge-123',
+          'response': 'verified',
+        });
+        expect(find.text('安全验证'), findsNothing);
+        expect(
+          find.byKey(const ValueKey('recipe-share-button')),
+          repeated ? findsNothing : findsOneWidget,
+        );
       },
     );
   }
