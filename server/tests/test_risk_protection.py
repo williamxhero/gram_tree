@@ -87,6 +87,8 @@ def test_rule_tiers_audit_expiration_and_manual_device_release(api: Api, capsys)
     assert api.client.get("/v1/me", headers=device).status_code == 401
     challenged = api.client.get("/v1/me", headers=device)
     solve(api, challenged, device)
+    # Keep the recovered CAPTCHA earlier than the next audited action.
+    api.clock.advance(milliseconds=1)
     assert api.client.get("/v1/me", headers=device).status_code == 401
     slowed = api.client.get("/v1/me", headers=device)
     assert slowed.status_code == 429
