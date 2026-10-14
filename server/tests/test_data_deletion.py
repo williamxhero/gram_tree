@@ -163,7 +163,9 @@ def test_deleted_private_recipe_cannot_be_replayed_from_confirmed_or_conflicting
     for write in (accepted, conflicting):
         replay = submit(api, alice, write)[0]
         assert replay["status"] == "failed"
-        assert replay["reason_code"] == "resource_deleted"
+        # Authorization fails closed before receipt lookup once the recipe is
+        # gone, so replay gives no existence hint or cached private payload.
+        assert replay["reason_code"] == "recipe_not_writable"
         assert replay["result"] is None and replay["conflict"] is None
         assert "私人" not in str(replay)
     assert api.client.get(path, headers=bearer(alice)).status_code == 404
