@@ -1,11 +1,13 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:gram_tree/auth/session.dart';
 import 'package:gram_tree/config/app_config.dart';
 import 'package:gram_tree/main.dart' as app;
 import 'package:integration_test/integration_test.dart';
 
 import 'event_pipeline_support.dart' show resetLocalAppState;
+import 'signed_probe_support.dart';
 
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
@@ -81,7 +83,7 @@ void main() {
             )).data['code']
             as String;
     await tester.enterText(find.byKey(const ValueKey('code-input')), code);
-    await waitFor(tester, find.text('先添加一道你常做的菜'));
+    await waitFor(tester, find.text('今天还没有安排'));
     await tester.tap(find.text('我的'));
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const ValueKey('taste-profile-entry')));
@@ -105,7 +107,11 @@ void main() {
       options: device,
     )).data;
     return Options(
-      headers: {'Authorization': 'Bearer ${tokens['access_token']}'},
+      headers: registerProbeSession(
+        server,
+        AuthSession.fromJson(Map<String, dynamic>.from(tokens as Map)),
+        deviceId: email,
+      ),
     );
   }
 

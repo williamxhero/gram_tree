@@ -6,10 +6,12 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:gram_tree/auth/session.dart';
 import 'package:gram_tree/config/app_config.dart';
 import 'package:gram_tree/main.dart' as app;
+import 'package:gram_tree/storage/device_id.dart';
 import 'package:gramtree_api/gramtree_api.dart';
 import 'package:integration_test/integration_test.dart';
 
 import 'event_pipeline_support.dart' show containerOf;
+import 'signed_probe_support.dart';
 
 enum _FamilyStep {
   login,
@@ -88,7 +90,11 @@ void main() {
       ),
       headers: device,
     );
-    return {'Authorization': 'Bearer ${response.data!.accessToken}'};
+    return registerProbeSession(
+      server,
+      AuthSession.fromTokens(response.data!),
+      deviceId: device['X-Device-ID']!,
+    );
   }
 
   Future<void> expectStatus(
@@ -224,7 +230,7 @@ void main() {
       queryParameters: {'email': email},
     );
     await tester.enterText(key('code-input'), code.data['code'] as String);
-    await waitFor(tester, find.text('先添加一道你常做的菜'));
+    await waitFor(tester, find.text('今天还没有安排'));
     await tester.tap(find.text('我的'));
     await tester.pumpAndSettle();
     await openProfile(tester);
@@ -279,10 +285,12 @@ void main() {
     markStep(_FamilyStep.unauthorizedWrite);
     // The UI already authenticated this owner. A second code request would
     // correctly hit the resend guard before any privacy assertion runs.
-    final owner = <String, dynamic>{
-      'Authorization':
-          'Bearer ${containerOf(tester).read(sessionStoreProvider).current!.accessToken}',
-    };
+    final container = containerOf(tester);
+    final owner = registerProbeSession(
+      server,
+      container.read(sessionStoreProvider).current!,
+      deviceId: container.read(deviceIdProvider),
+    );
     final refused = (await familyApi.listFamilyMembers(headers: owner)).data!;
     expect(refused.consentId, isNull);
     expect(refused.items, isEmpty);
