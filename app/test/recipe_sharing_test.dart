@@ -1,9 +1,11 @@
 import 'dart:async';
 
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:gram_tree/api/api_client.dart';
 import 'package:gram_tree/app/router.dart';
 
 import 'helpers.dart';
@@ -176,7 +178,27 @@ void main() {
     'sharing includes finished image bytes only from the trusted image API',
     (tester) async {
       final env = SharingTestEnv(withImage: true);
+      // The snapshot's first image can be older than the public route's image.
+      final detail = sharedDetail(withImage: true).toJson();
+      final version = detail['version'] as Map<String, dynamic>;
+      final snapshotImage = (version['images'] as List).first as Map;
+      snapshotImage['content_type'] = 'image/jpeg';
+      env.server.on('GET', '/v1/recipes/$sharedRecipeId', (_) => (200, detail));
       await _openShare(tester, env, '/recipes/$sharedRecipeId');
+      final container = ProviderScope.containerOf(
+        tester.element(find.byType(Scaffold).first),
+      );
+      final dio = container.read(dioProvider);
+      final imageRequests = <RequestOptions>[];
+      dio.interceptors.insert(
+        0,
+        InterceptorsWrapper(
+          onRequest: (options, handler) {
+            if (options.uri.path.endsWith('/image')) imageRequests.add(options);
+            handler.next(options);
+          },
+        ),
+      );
       await tester.tap(find.byKey(const ValueKey('recipe-share-button')));
       await tester.pumpAndSettle();
       expect(env.sharing.texts, [publicShareUrl]);
@@ -185,14 +207,30 @@ void main() {
         expect(find.text('分享链接已复制'), findsOneWidget);
       } else {
         expect(env.sharing.images.single, testImageBytes);
+        expect(env.sharing.contentTypes.single, 'image/png');
         expect(
-          env.server.calls(
-            'GET',
-            '/v1/recipes/$sharedRecipeId/images/$sharedImageId',
-          ),
+          imageRequests.single.uri.origin,
+          Uri.parse(dio.options.baseUrl).origin,
+        );
+        expect(imageRequests.single.followRedirects, isFalse);
+        expect(imageRequests.single.extra['public_request'], isTrue);
+        final imageCall = env.server
+            .calls('GET', '/s/$publicShareId/image')
+            .single;
+        expect(imageCall.headers['Authorization'], isNull);
+        expect(imageCall.headers['X-Device-ID'], isNull);
+        expect(
+          env.server.calls('GET', '/s/$publicShareId/image'),
           hasLength(1),
         );
       }
+      expect(
+        env.server.calls(
+          'GET',
+          '/v1/recipes/$sharedRecipeId/images/$sharedImageId',
+        ),
+        isEmpty,
+      );
       expect(env.server.calls('GET', '/image.png'), isEmpty);
     },
   );

@@ -1,5 +1,7 @@
 """昵称、时区和同意记录（SPEC-013.2 票 4、票 5）。"""
 
+import pytest
+
 from tests.accounts_support import Api, bearer, new_uuid
 
 
@@ -44,9 +46,10 @@ def _record(kind: str, action: str = "agree", version: str = "v1", **kw: str) ->
     }
 
 
-def test_consents_given_before_login_are_uploaded(api: Api) -> None:
+@pytest.mark.parametrize("privacy_version", ["v1", "v2"])
+def test_consents_given_before_login_are_uploaded(api: Api, privacy_version: str) -> None:
     tokens = api.login("cook@example.com")
-    local = [_record("terms"), _record("privacy")]
+    local = [_record("terms"), _record("privacy", version=privacy_version)]
     resp = api.client.post("/v1/me/consents", json={"records": local}, headers=bearer(tokens))
     assert resp.status_code == 204
 
@@ -55,7 +58,7 @@ def test_consents_given_before_login_are_uploaded(api: Api) -> None:
     got = api.client.get("/v1/me/consents", headers=bearer(tokens)).json()
     assert [(c["kind"], c["version"], c["action"]) for c in got] == [
         ("terms", "v1", "agree"),
-        ("privacy", "v1", "agree"),
+        ("privacy", privacy_version, "agree"),
     ]
     assert got[0]["occurred_at"] == "2026-09-27T04:00:00+00:00"
     assert got[0]["device_id"] == "device-1"
@@ -111,4 +114,19 @@ def test_legal_pages_are_served(database_url: str) -> None:
             assert resp.status_code == 200
             assert resp.headers["content-type"].startswith("text/html")
             assert title in resp.text
+        privacy = c.get("/legal/privacy.html")
+        assert "版本 v2" in privacy.text
+        for disclosure in (
+            "接口访问日志",
+            "账号",
+            "设备 ID",
+            "IP",
+            "接口",
+            "返回内容 ID",
+            "结果",
+            "180 天",
+        ):
+            assert disclosure in privacy.text
+        assert "不记录菜谱正文、口味内容" in privacy.text
+        assert c.get("/legal/privacy").text == privacy.text
         assert c.get("/legal/other.html").status_code == 404

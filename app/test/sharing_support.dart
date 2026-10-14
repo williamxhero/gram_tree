@@ -49,6 +49,7 @@ RecipeDetail sharedDetail({bool withImage = false}) => RecipeDetail.fromJson({
 class RecordingSystemShare implements SystemShare {
   final texts = <String>[];
   final images = <Uint8List?>[];
+  final contentTypes = <String?>[];
   @override
   Future<void> shareText(
     String text, {
@@ -57,6 +58,7 @@ class RecordingSystemShare implements SystemShare {
   }) async {
     texts.add(text);
     images.add(imageBytes);
+    contentTypes.add(imageContentType);
   }
 }
 
@@ -94,8 +96,20 @@ class SharingTestEnv extends TestEnv {
     server.on(
       'GET',
       '/v1/recipes/$sharedRecipeId/images/$sharedImageId',
-      (_) => (200, testImageBytes),
+      (request) =>
+          request.query.containsKey('expires') &&
+              request.query.containsKey('signature')
+          ? (200, testImageBytes)
+          : FakeServer.error(
+              422,
+              'validation_error',
+              'Missing image signature',
+            ),
     );
+    server.on('GET', '/s/$publicShareId/image', (_) => (200, testImageBytes));
+    server.responseHeaders['GET /s/$publicShareId/image'] = {
+      'content-type': ['image/png'],
+    };
     server.on(
       'POST',
       '/v1/recipes/$sharedRecipeId/share',

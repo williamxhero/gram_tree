@@ -67,6 +67,8 @@ def cmd_recipes(args: argparse.Namespace) -> int:
         if get_settings().env != "test":
             print("这个命令只允许在 test 环境使用", file=sys.stderr)
             return 1
+        # A standalone CLI has no app import to register cross-module FK targets.
+        from gramtree import models as _models  # noqa: F401
         from gramtree.recipes.models import Recipe
 
         with _session() as session:
