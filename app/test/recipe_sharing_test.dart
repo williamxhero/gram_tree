@@ -1,14 +1,14 @@
 import 'dart:async';
 
-import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:gram_tree/api/api_client.dart';
 import 'package:gram_tree/app/router.dart';
 
 import 'helpers.dart';
+import 'sharing_http_fixture_stub.dart'
+    if (dart.library.io) 'sharing_http_fixture_io.dart';
 import 'sharing_support.dart';
 import 'settings_test.dart' show openSettings;
 
@@ -179,26 +179,12 @@ void main() {
     (tester) async {
       final env = SharingTestEnv(withImage: true);
       // The snapshot's first image can be older than the public route's image.
-      final detail = sharedDetail(withImage: true).toJson();
-      final version = detail['version'] as Map<String, dynamic>;
-      final snapshotImage = (version['images'] as List).first as Map;
-      snapshotImage['content_type'] = 'image/jpeg';
+      final detail = sharedDetail(
+        withImage: true,
+        imageContentType: 'image/jpeg',
+      ).toJson();
       env.server.on('GET', '/v1/recipes/$sharedRecipeId', (_) => (200, detail));
       await _openShare(tester, env, '/recipes/$sharedRecipeId');
-      final container = ProviderScope.containerOf(
-        tester.element(find.byType(Scaffold).first),
-      );
-      final dio = container.read(dioProvider);
-      final imageRequests = <RequestOptions>[];
-      dio.interceptors.insert(
-        0,
-        InterceptorsWrapper(
-          onRequest: (options, handler) {
-            if (options.uri.path.endsWith('/image')) imageRequests.add(options);
-            handler.next(options);
-          },
-        ),
-      );
       await tester.tap(find.byKey(const ValueKey('recipe-share-button')));
       await tester.pumpAndSettle();
       expect(env.sharing.texts, [publicShareUrl]);
@@ -208,12 +194,6 @@ void main() {
       } else {
         expect(env.sharing.images.single, testImageBytes);
         expect(env.sharing.contentTypes.single, 'image/png');
-        expect(
-          imageRequests.single.uri.origin,
-          Uri.parse(dio.options.baseUrl).origin,
-        );
-        expect(imageRequests.single.followRedirects, isFalse);
-        expect(imageRequests.single.extra['public_request'], isTrue);
         final imageCall = env.server
             .calls('GET', '/s/$publicShareId/image')
             .single;
@@ -234,6 +214,92 @@ void main() {
       expect(env.server.calls('GET', '/image.png'), isEmpty);
     },
   );
+
+  for (final redirect in [false, true]) {
+    testWidgets(
+      'native image HTTP ${redirect ? 'refuses cross-origin redirects' : 'uses anonymous API-origin bytes'}',
+      (tester) async {
+        final fixture = (await tester.runAsync(
+          () => SharingImageHttpFixture.start(redirect: redirect),
+        ))!;
+        addTearDown(fixture.close);
+        final env = SharingTestEnv(
+          withImage: true,
+          fixtureServer: fixture.server,
+          apiBaseUrl: fixture.apiBaseUrl,
+        );
+        env.server.on(
+          'GET',
+          '/v1/recipes/$sharedRecipeId',
+          (_) => (
+            200,
+            sharedDetail(
+              withImage: true,
+              imageUrl: fixture.foreignImageUrl,
+              imageContentType: 'image/jpeg',
+            ).toJson(),
+          ),
+        );
+        if (redirect) {
+          final control = await tester.runAsync(
+            fixture.readImageWithDefaultRedirects,
+          );
+          expect(control, testImageBytes);
+          expect(fixture.foreignRequests.single.path, '/redirected-image');
+        }
+        final beforeImages = fixture.imageRequests.length;
+        final beforeForeign = fixture.foreignRequests.length;
+        await _openShare(tester, env, '/recipes/$sharedRecipeId');
+        await tester.runAsync(
+          () => fixture.withRealHttp(() async {
+            await tester.tap(find.byKey(const ValueKey('recipe-share-button')));
+          }),
+        );
+        // Real sockets need real event-loop time; pumping a fake clock alone
+        // cannot finish this request. Stop only on its visible UI/panel result.
+        for (var i = 0; i < 300; i++) {
+          await tester.runAsync(
+            () => Future<void>.delayed(const Duration(milliseconds: 20)),
+          );
+          await tester.pump(const Duration(milliseconds: 20));
+          if (redirect
+              ? find.byType(SnackBar).evaluate().isNotEmpty
+              : env.sharing.texts.isNotEmpty) {
+            break;
+          }
+        }
+        expect(fixture.imageRequests, hasLength(beforeImages + 1));
+        final request = fixture.imageRequests.last;
+        expect(request.method, 'GET');
+        expect(request.path, '/s/$publicShareId/image');
+        expect(
+          request.headers['host'],
+          Uri.parse(fixture.apiBaseUrl).authority,
+        );
+        for (final name in [
+          'authorization',
+          'x-device-id',
+          'x-request-signature',
+        ]) {
+          expect(request.headers[name], isNull, reason: name);
+        }
+        // This same sink serves both the snapshot's untrusted image URL and
+        // the API's cross-origin Location. Neither may receive an App request.
+        expect(fixture.foreignRequests, hasLength(beforeForeign));
+        if (redirect) {
+          expect(find.byType(SnackBar), findsOneWidget);
+          expect(env.sharing.texts, isEmpty);
+          expect(env.sharing.images, isEmpty);
+        } else {
+          expect(env.sharing.texts, [publicShareUrl]);
+          expect(env.sharing.images.single, testImageBytes);
+          expect(env.sharing.contentTypes.single, 'image/png');
+        }
+        expect(tester.takeException(), isNull);
+      },
+      skip: kIsWeb,
+    );
+  }
 
   testWidgets(
     'a second opaque link replaces the first resolved or unavailable target',

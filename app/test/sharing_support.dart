@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:flutter_riverpod/misc.dart' show Override;
+import 'package:gram_tree/config/app_config.dart';
 import 'package:gram_tree/platform/system_share.dart';
 import 'package:gram_tree/storage/local_store.dart';
 import 'package:gram_tree/storage/secure_store.dart';
@@ -20,7 +21,11 @@ const testPngBase64 =
     'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9Wl2l9sAAAAASUVORK5CYII=';
 final testImageBytes = base64Decode(testPngBase64);
 
-RecipeDetail sharedDetail({bool withImage = false}) => RecipeDetail.fromJson({
+RecipeDetail sharedDetail({
+  bool withImage = false,
+  String imageUrl = 'https://untrusted.example/image.png',
+  String imageContentType = 'image/png',
+}) => RecipeDetail.fromJson({
   ...recipeSnapshotFixture(sharedVersionId, recipe: sharedRecipeId).toJson(),
   if (withImage)
     'version': {
@@ -31,10 +36,10 @@ RecipeDetail sharedDetail({bool withImage = false}) => RecipeDetail.fromJson({
       'images': [
         RecipeImageOut(
           byteSize: testImageBytes.length,
-          contentType: 'image/png',
+          contentType: imageContentType,
           expiresInSeconds: 900,
           id: sharedImageId,
-          url: 'https://untrusted.example/image.png',
+          url: imageUrl,
           versionId: sharedVersionId,
         ).toJson(),
       ],
@@ -69,7 +74,10 @@ class SharingTestEnv extends TestEnv {
     this.nativeSharing = false,
     bool publicRecipes = true,
     bool withImage = false,
+    FakeServer? fixtureServer,
+    this.apiBaseUrl,
   }) : super(
+         server: fixtureServer,
          features: {'public_recipes': publicRecipes},
          local: MemoryLocalStore(
            consented ? consentedStore() : {'device_id': 'device-test'},
@@ -136,10 +144,15 @@ class SharingTestEnv extends TestEnv {
     );
   }
   final bool nativeSharing;
+  final String? apiBaseUrl;
   final sharing = RecordingSystemShare();
   @override
   List<Override> get overrides => [
     ...super.overrides,
+    if (apiBaseUrl != null)
+      appConfigProvider.overrideWithValue(
+        AppConfig(env: AppEnv.dev, apiBaseUrl: apiBaseUrl!),
+      ),
     if (!nativeSharing) systemShareProvider.overrideWithValue(sharing),
   ];
 }
