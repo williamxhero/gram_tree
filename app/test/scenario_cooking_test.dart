@@ -14,6 +14,7 @@ import 'package:gram_tree/ui_protocol/source_mark.dart';
 import 'package:gram_tree/ui_protocol/component_registry.dart';
 import 'package:gramtree_api/gramtree_api.dart';
 
+import '../integration_test/cooking_controls_support.dart';
 import 'helpers.dart';
 import 'allergies_page_test.dart' show allergyFixture;
 import 'taste_profile_page_test.dart'
@@ -177,6 +178,60 @@ Future<void> revealCooking(
 }
 
 void main() {
+  testWidgets('preparation controls remain reachable below long safety cards', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(320, 480);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    final env = TestEnv.signedIn();
+    final store = await sessionStore(
+      env,
+      stepIndex: -1,
+      steps: [RecipeStep(id: 'prep', instruction: '切好食材')],
+    );
+    final composition = cookingComposition('detailed').toJson();
+    for (final component in composition['components'] as List) {
+      if (component['type'] == 'food_safety') {
+        (component['data'] as Map)['conclusion'] = List.filled(
+          12,
+          '安全检查尚未完成，处理生鸡肉后请清洗双手和接触面。',
+        ).join('\n');
+      }
+    }
+    env.server.on('POST', '/v1/ui/compositions', (_) => (200, composition));
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          ...env.overrides,
+          cookingSessionStoreProvider.overrideWithValue(store),
+        ],
+        child: testApp(const CookingPage(sessionId: 'session')),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(
+      find.byKey(const ValueKey('recipe-food-safety-card')),
+      findsOneWidget,
+    );
+    // Waiting alone cannot mount lazy children below the safety section.
+    expect(find.text('先准备食材'), findsNothing);
+    await revealCookingControl(tester, find.text('先准备食材'));
+    expect(find.text('先准备食材').hitTestable(), findsOneWidget);
+    await revealCookingControl(tester, find.text('开始第一步'));
+    await tester.tap(find.text('开始第一步').hitTestable());
+    await tester.pumpAndSettle();
+    await revealCookingControl(
+      tester,
+      find.byKey(const ValueKey('cooking-action')),
+    );
+    expect(find.text('切好食材'), findsWidgets);
+    expect(find.text('步骤 1 / 1'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
+
   testWidgets(
     'cooking detail switch expands rationale without changing execution',
     (tester) async {

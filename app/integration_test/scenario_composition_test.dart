@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:gram_tree/util/ids.dart';
 
+import 'cooking_controls_support.dart';
 import 'event_pipeline_support.dart'
     show accessTokenOf, containerOf, devServer, signInFreshUser;
 
@@ -25,7 +26,7 @@ Future<void> _wait(WidgetTester tester, Finder finder) async {
   final binding = IntegrationTestWidgetsFlutterBinding.instance;
   binding.reportData = {
     ...?binding.reportData,
-    'e2e_wait_for': finder.toString(),
+    'e2e_wait_for': finder.toString(describeSelf: true),
   };
   for (var i = 0; i < 150 && finder.evaluate().isEmpty; i++) {
     await tester.pump(const Duration(milliseconds: 100));
@@ -71,21 +72,12 @@ Future<void> _tap(
 }
 
 Future<void> _revealCooking(WidgetTester tester, Finder finder) async {
-  final scrollable = find.byType(Scrollable).first;
-  if (finder.evaluate().isEmpty) {
-    for (var i = 0; i < 12; i++) {
-      await tester.drag(scrollable, const Offset(0, 500));
-      await tester.pump(const Duration(milliseconds: 100));
-    }
-  }
-  await tester.scrollUntilVisible(
-    finder,
-    200,
-    scrollable: scrollable,
-    maxScrolls: 20,
-  );
-  await _pump(tester);
-  expect(finder.last.hitTestable(), findsOneWidget);
+  final binding = IntegrationTestWidgetsFlutterBinding.instance;
+  binding.reportData = {
+    ...?binding.reportData,
+    'e2e_wait_for': finder.toString(describeSelf: true),
+  };
+  await revealCookingControl(tester, finder);
 }
 
 Future<void> _tapCooking(WidgetTester tester, Finder finder) async {
@@ -313,8 +305,9 @@ void main() {
       expect(_key('scenario-restore-current-taste'), findsNothing);
 
       await _tap(tester, _key('start-cooking-button'), inRecipe: true);
-      await _wait(tester, find.text('先准备食材'));
-      await _tap(tester, find.text('开始第一步'));
+      await _wait(tester, find.byTooltip('暂离'));
+      await _revealCooking(tester, find.text('先准备食材'));
+      await _tapCooking(tester, find.text('开始第一步'));
       final before = 'scene:failure:$recipeId:dry_meat:cook:before';
       final at = 'scene:failure:$recipeId:dry_meat:cook:at';
       await _revealCooking(tester, _key('cooking-reminders-cook-before'));
