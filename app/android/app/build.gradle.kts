@@ -17,6 +17,7 @@ android {
     defaultConfig {
         // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
         applicationId = "app.gramtree.gram_tree"
+        testInstrumentationRunner = "android.test.InstrumentationTestRunner"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = 26
@@ -46,4 +47,13 @@ kotlin {
 
 flutter {
     source = "../.."
+}
+
+// Android's platform instrumentation APIs are test-only; no new runtime SDK.
+dependencies {
+    val sdk = androidComponents.sdkComponents.sdkDirectory.get().asFile
+    androidTestImplementation(files(
+        "$sdk/platforms/android-${flutter.compileSdkVersion}/optional/android.test.runner.jar",
+        "$sdk/platforms/android-${flutter.compileSdkVersion}/optional/android.test.base.jar",
+    ))
 }

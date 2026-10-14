@@ -1,0 +1,15 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <application>
+        <uses-library android:name="android.test.runner" />
+        <!-- A receiving app in the test APK, not shipped with GramTree. Stock
+             Android DocumentsUI does not itself accept ACTION_SEND ZIPs. -->
+        <activity android:name="app.gramtree.gram_tree.ExportSaveActivity"
+            android:exported="true" android:label="Save test ZIP">
+            <intent-filter>
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="application/zip" />
+            </intent-filter>
+        </activity>
+    </application>
+</manifest>
