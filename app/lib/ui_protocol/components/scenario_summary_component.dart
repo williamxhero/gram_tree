@@ -25,6 +25,7 @@ Widget buildScenarioSummaryComponent(
     detail: component.detail,
     conclusionSemanticsText: '$conclusion，按场景调整',
     showPrimaryButton: false,
+    preserveConclusionSemantics: true,
     conclusion: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [

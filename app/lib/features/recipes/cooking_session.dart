@@ -13,6 +13,10 @@ import '../../recipes/recipe_snapshot.dart';
 import '../../recipes/recipe_snapshot_provider.dart';
 import '../../storage/local_store.dart';
 import '../../util/ids.dart';
+import '../../ui_protocol/composition_provider.dart';
+import '../../ui_protocol/composition_view.dart';
+import '../../ui_protocol/recipe_safety_protocol.dart';
+import '../../ui_protocol/scenario_detail_scope.dart';
 import 'cooking_voice.dart';
 import 'press_hold_voice_question.dart';
 import '../records/records_repository.dart';
@@ -332,6 +336,8 @@ class CookingPage extends ConsumerStatefulWidget {
 class _CookingPageState extends ConsumerState<CookingPage>
     with WidgetsBindingObserver {
   CookingSession? _session;
+  String? _sceneDetailOverride;
+  final _skippedSceneComponents = <String>{};
   Timer? _ticker;
   bool _reportingDueTimers = false;
   final _voiceCommands = CookingVoiceController();
@@ -749,25 +755,28 @@ class _CookingPageState extends ConsumerState<CookingPage>
   Future<void> _recordQuestion() async {
     final session = _session;
     if (session == null || session.stepIndex < 0) return;
-    final controller = TextEditingController();
+    // The field owns its controller through the dialog's reverse transition.
+    var draft = '';
     final text = await showDialog<String>(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('记录问题'),
-        content: TextField(controller: controller, autofocus: true),
+        content: TextField(
+          onChanged: (value) => draft = value,
+          autofocus: true,
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
             child: const Text('取消'),
           ),
           FilledButton(
-            onPressed: () => Navigator.pop(context, controller.text.trim()),
+            onPressed: () => Navigator.pop(context, draft.trim()),
             child: const Text('保存'),
           ),
         ],
       ),
     );
-    controller.dispose();
     if (text == null || text.isEmpty) return;
     await _save(
       session.copyWith(
@@ -783,13 +792,14 @@ class _CookingPageState extends ConsumerState<CookingPage>
   Future<void> _recordAdjustment() async {
     final session = _session;
     if (session == null || session.stepIndex < 0) return;
-    final controller = TextEditingController();
+    // The field owns its controller through the dialog's reverse transition.
+    var draft = '';
     final text = await showDialog<String>(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('记录临时调整'),
         content: TextField(
-          controller: controller,
+          onChanged: (value) => draft = value,
           autofocus: true,
           decoration: const InputDecoration(hintText: '例如：少放一点盐'),
         ),
@@ -799,13 +809,12 @@ class _CookingPageState extends ConsumerState<CookingPage>
             child: const Text('取消'),
           ),
           FilledButton(
-            onPressed: () => Navigator.pop(context, controller.text.trim()),
+            onPressed: () => Navigator.pop(context, draft.trim()),
             child: const Text('保存'),
           ),
         ],
       ),
     );
-    controller.dispose();
     if (text == null || text.isEmpty) return;
     await _save(
       session.copyWith(
@@ -1008,156 +1017,273 @@ class _CookingPageState extends ConsumerState<CookingPage>
     }
     final index = session.stepIndex;
     final current = index >= 0 && index < steps.length ? steps[index] : null;
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(session.snapshot.detail.dish.name),
-        actions: [
-          IconButton(
-            onPressed: () => Navigator.pop(context),
-            icon: const Icon(Icons.close),
-            tooltip: '暂离',
-          ),
-        ],
-      ),
-      body: GestureDetector(
-        onHorizontalDragEnd: (details) =>
-            _move((details.primaryVelocity ?? 0) < 0 ? 1 : -1),
-        onTap: () => _move(1),
-        child: ListView(
-          padding: const EdgeInsets.all(24),
-          children: [
-            if (index < 0) ...[
-              Text('先准备食材', style: Theme.of(context).textTheme.headlineMedium),
-              for (final ingredient
-                  in session.snapshot.detail.version.snapshot.ingredients ??
-                      const [])
-                ListTile(
-                  title: Text(ingredient.displayName),
-                  trailing: Text(
-                    '${ingredient.quantity == ingredient.quantity.roundToDouble() ? ingredient.quantity.toInt() : ingredient.quantity} ${ingredient.unit}',
-                  ),
+    // Presentation always targets the session's frozen version. A newer recipe,
+    // profile, or scenario response must never rewrite the execution snapshot.
+    final scene = ref.watch(
+      scenarioCompositionProvider((
+        recipeId: session.snapshot.recipeId,
+        versionId: session.snapshot.versionId,
+        screenWidth: MediaQuery.sizeOf(context).width.round().clamp(1, 16384),
+        detailOverride: _sceneDetailOverride,
+        beforeChangeId: session.snapshot.inputs['before_change_id'] is String
+            ? session.snapshot.inputs['before_change_id'] as String
+            : null,
+        personalizationView:
+            session.snapshot.inputs['personalized_view'] == 'original'
+            ? 'original'
+            : 'personalized',
+        personalizationJson: null,
+        skippedComponentsJson: jsonEncode(
+          _skippedSceneComponents.toList()..sort(),
+        ),
+      )),
+    );
+    final description = switch (scene.value) {
+      CompositionReady(:final description) => description,
+      _ => null,
+    };
+    final components = description?.components ?? const <ComponentDescriptor>[];
+    final summary = components
+        .where((c) => c.type == 'scenario_summary')
+        .firstOrNull;
+    final sceneDetail =
+        summary?.detail ?? ComponentDescriptorDetailEnum.standard;
+    final detail = session.snapshot.detail;
+    // Only step presentation, its mapped reminders, and mandatory safety belong
+    // here. Taste preview/difference actions are for browsing, not execution.
+    final header = scene.whenData((result) {
+      final selected = components
+          .where(
+            (c) =>
+                c.type == 'scenario_summary' ||
+                c.type == 'food_safety' ||
+                c.type == 'allergen_notice',
+          )
+          .toList();
+      return switch (result) {
+        CompositionReady(:final description) => CompositionReady(
+          description.copyWith(components: selected),
+        ),
+        CompositionFromCache() => const CompositionFailed(
+          FallbackInfoReasonCodeEnum.serverError,
+        ),
+        _ => result,
+      };
+    });
+    Widget reminders(String placement) {
+      if (description == null) return const SizedBox.shrink();
+      // The server supplies the target and placement. Looking up the preceding
+      // step is presentation only; no failure-tag mapping or advice lives here.
+      final target = placement == 'at'
+          ? current?.id
+          : index >= 0 && index + 1 < steps.length
+          ? steps[index + 1].id
+          : null;
+      if (target == null) return const SizedBox.shrink();
+      final selected = components.where((c) {
+        final data = c.data;
+        return c.type == 'failure_reminder' &&
+            data is Map &&
+            data['step_id'] == target &&
+            data['placement'] == placement;
+      }).toList();
+      if (selected.isEmpty) return const SizedBox.shrink();
+      return CompositionView(
+        key: ValueKey('cooking-reminders-$target-$placement'),
+        pageType: 'recipe_detail',
+        resultOverride: AsyncValue.data(
+          CompositionReady(description.copyWith(components: selected)),
+        ),
+        standardLayoutBuilder: (_) => const SizedBox.shrink(),
+      );
+    }
+
+    return ScenarioDetailScope(
+      onChanged: (value) =>
+          setState(() => _sceneDetailOverride = value == 'auto' ? null : value),
+      onSkip: (id) => setState(() => _skippedSceneComponents.add(id)),
+      child: Scaffold(
+        appBar: AppBar(
+          title: Text(session.snapshot.detail.dish.name),
+          actions: [
+            IconButton(
+              onPressed: () => Navigator.pop(context),
+              icon: const Icon(Icons.close),
+              tooltip: '暂离',
+            ),
+          ],
+        ),
+        body: GestureDetector(
+          onHorizontalDragEnd: (details) =>
+              _move((details.primaryVelocity ?? 0) < 0 ? 1 : -1),
+          onTap: () => _move(1),
+          child: ListView(
+            padding: const EdgeInsets.all(24),
+            children: [
+              RecipeSafetyProtocolSection(
+                result: detail.version.safety ?? detail.version.safetyAtSave,
+                legacyDerived: detail.version.derived,
+                dishName: detail.dish.name,
+                snapshot: detail.version.snapshot,
+                recipeId: session.snapshot.recipeId,
+                versionId: session.snapshot.versionId,
+                authoring: false,
+                loading: false,
+                composition: header,
+              ),
+              if (index < 0) ...[
+                Text(
+                  '先准备食材',
+                  style: Theme.of(context).textTheme.headlineMedium,
                 ),
-              FilledButton.icon(
-                onPressed: () => _move(1),
-                icon: const Icon(Icons.play_arrow),
-                label: const Text('开始第一步'),
-              ),
-            ] else if (current != null) ...[
-              Text(
-                '步骤 ${index + 1} / ${steps.length}',
-                style: GramTreeColors.of(context)
-                    .numberStyle(Theme.of(context).textTheme.titleMedium!),
-              ),
-              const SizedBox(height: 16),
-              Text(
-                current.action ?? current.instruction,
-                key: const ValueKey('cooking-action'),
-                style: Theme.of(context).textTheme.headlineMedium,
-              ),
-              const SizedBox(height: 12),
-              Text(
-                current.instruction,
-                style: Theme.of(context).textTheme.titleLarge,
-              ),
-              if (current.heat != null) Text('火候：${current.heat}'),
-              if (current.temperatureCelsius != null)
-                Text('温度：${current.temperatureCelsius}°C'),
-              if (current.cookware != null) Text('厨具：${current.cookware}'),
-              if (current.doneness != null) Text('成熟判断：${current.doneness}'),
-              if (current.why != null)
-                ExpansionTile(
-                  title: const Text('为什么'),
-                  children: [Text(current.why!)],
+                for (final ingredient
+                    in session.snapshot.detail.version.snapshot.ingredients ??
+                        const [])
+                  ListTile(
+                    title: Text(ingredient.displayName),
+                    trailing: Text(
+                      '${ingredient.quantity == ingredient.quantity.roundToDouble() ? ingredient.quantity.toInt() : ingredient.quantity} ${ingredient.unit}',
+                    ),
+                  ),
+                FilledButton.icon(
+                  onPressed: () => _move(1),
+                  icon: const Icon(Icons.play_arrow),
+                  label: const Text('开始第一步'),
                 ),
-              const SizedBox(height: 24),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: [
-                  OutlinedButton.icon(
-                    onPressed: () => _toggleTimer(current),
-                    icon: const Icon(Icons.timer_outlined),
-                    label: Text(
-                      current.durationSeconds == 0
-                          ? '无计时'
-                          : '计时 ${current.durationSeconds} 秒',
+              ] else if (current != null) ...[
+                reminders('at'),
+                Text(
+                  '步骤 ${index + 1} / ${steps.length}',
+                  style: GramTreeColors.of(context)
+                      .numberStyle(Theme.of(context).textTheme.titleMedium!),
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  current.action ?? current.instruction,
+                  key: const ValueKey('cooking-action'),
+                  style: Theme.of(context).textTheme.headlineMedium,
+                ),
+                if (sceneDetail != ComponentDescriptorDetailEnum.brief ||
+                    current.action != null &&
+                        current.action != current.instruction) ...[
+                  const SizedBox(height: 12),
+                  Text(
+                    current.instruction,
+                    style: Theme.of(context).textTheme.titleLarge,
+                  ),
+                ],
+                if (current.heat != null) Text('火候：${current.heat}'),
+                if (current.temperatureCelsius != null)
+                  Text('温度：${current.temperatureCelsius}°C'),
+                if (current.cookware != null) Text('厨具：${current.cookware}'),
+                if (current.doneness != null &&
+                    sceneDetail != ComponentDescriptorDetailEnum.brief)
+                  Text('成熟判断：${current.doneness}'),
+                if (current.why != null)
+                  ExpansionTile(
+                    key: PageStorageKey(
+                      'cooking-why-${session.snapshot.versionId}-${current.id}-${sceneDetail.value}',
                     ),
+                    initiallyExpanded:
+                        sceneDetail == ComponentDescriptorDetailEnum.detailed,
+                    title: const Text('为什么'),
+                    children: [Text(current.why!)],
                   ),
-                  OutlinedButton.icon(
-                    onPressed: _skipCurrent,
-                    icon: const Icon(Icons.skip_next),
-                    label: const Text('跳过'),
-                  ),
-                  OutlinedButton.icon(
-                    onPressed: _voiceUnavailable ? null : _toggleVoiceCommands,
-                    icon: Icon(
-                      _voiceListener?.isRunning == true
-                          ? Icons.mic
-                          : Icons.mic_none,
+                reminders('before'),
+                const SizedBox(height: 24),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    OutlinedButton.icon(
+                      onPressed: () => _toggleTimer(current),
+                      icon: const Icon(Icons.timer_outlined),
+                      label: Text(
+                        current.durationSeconds == 0
+                            ? '无计时'
+                            : '计时 ${current.durationSeconds} 秒',
+                      ),
                     ),
-                    label: Text(
-                      _voiceUnavailable
-                          ? '语音不可用'
-                          : _voiceListener?.isRunning == true
-                          ? '关闭语音翻页'
-                          : '开启语音翻页',
+                    OutlinedButton.icon(
+                      onPressed: _skipCurrent,
+                      icon: const Icon(Icons.skip_next),
+                      label: const Text('跳过'),
                     ),
-                  ),
-                  OutlinedButton.icon(
-                    onPressed: _recordQuestion,
-                    icon: const Icon(Icons.help_outline),
-                    label: const Text('记录问题'),
-                  ),
-                  GestureDetector(
-                    onLongPressStart: (_) => _startVoiceQuestion(),
-                    onLongPressEnd: (_) => _finishVoiceQuestion(),
-                    onLongPressCancel: _cancelVoiceQuestion,
-                    child: OutlinedButton.icon(
-                      onPressed: null,
+                    OutlinedButton.icon(
+                      onPressed: _voiceUnavailable
+                          ? null
+                          : _toggleVoiceCommands,
                       icon: Icon(
-                        _voiceQuestion?.state == VoiceQuestionState.recording
+                        _voiceListener?.isRunning == true
                             ? Icons.mic
                             : Icons.mic_none,
                       ),
                       label: Text(
                         _voiceUnavailable
                             ? '语音不可用'
-                            : _voiceQuestion?.state ==
-                                  VoiceQuestionState.recording
-                            ? '松开结束录音'
-                            : '按住语音提问',
+                            : _voiceListener?.isRunning == true
+                            ? '关闭语音翻页'
+                            : '开启语音翻页',
                       ),
                     ),
-                  ),
-                  OutlinedButton.icon(
-                    onPressed: _recordAdjustment,
-                    icon: const Icon(Icons.edit_note),
-                    label: const Text('记录临时调整'),
-                  ),
-                  OutlinedButton.icon(
-                    onPressed: index == 0 ? null : () => _move(-1),
-                    icon: const Icon(Icons.arrow_back),
-                    label: const Text('上一步'),
-                  ),
-                  FilledButton.icon(
-                    onPressed: index == steps.length - 1
-                        ? _complete
-                        : () => _move(1),
-                    icon: const Icon(Icons.arrow_forward),
-                    label: Text(index == steps.length - 1 ? '完成' : '下一步'),
-                  ),
-                ],
-              ),
-              for (final timer in session.timers.where(
-                (item) => item.status != 'cancelled',
-              ))
-                ListTile(
-                  key: ValueKey('cooking-timer-${timer.id}'),
-                  title: Text('步骤计时'),
-                  trailing: Text(timer.remainingAt(DateTime.now()).toString()),
+                    OutlinedButton.icon(
+                      onPressed: _recordQuestion,
+                      icon: const Icon(Icons.help_outline),
+                      label: const Text('记录问题'),
+                    ),
+                    GestureDetector(
+                      onLongPressStart: (_) => _startVoiceQuestion(),
+                      onLongPressEnd: (_) => _finishVoiceQuestion(),
+                      onLongPressCancel: _cancelVoiceQuestion,
+                      child: OutlinedButton.icon(
+                        onPressed: null,
+                        icon: Icon(
+                          _voiceQuestion?.state == VoiceQuestionState.recording
+                              ? Icons.mic
+                              : Icons.mic_none,
+                        ),
+                        label: Text(
+                          _voiceUnavailable
+                              ? '语音不可用'
+                              : _voiceQuestion?.state ==
+                                    VoiceQuestionState.recording
+                              ? '松开结束录音'
+                              : '按住语音提问',
+                        ),
+                      ),
+                    ),
+                    OutlinedButton.icon(
+                      onPressed: _recordAdjustment,
+                      icon: const Icon(Icons.edit_note),
+                      label: const Text('记录临时调整'),
+                    ),
+                    OutlinedButton.icon(
+                      onPressed: index == 0 ? null : () => _move(-1),
+                      icon: const Icon(Icons.arrow_back),
+                      label: const Text('上一步'),
+                    ),
+                    FilledButton.icon(
+                      onPressed: index == steps.length - 1
+                          ? _complete
+                          : () => _move(1),
+                      icon: const Icon(Icons.arrow_forward),
+                      label: Text(index == steps.length - 1 ? '完成' : '下一步'),
+                    ),
+                  ],
                 ),
+                for (final timer in session.timers.where(
+                  (item) => item.status != 'cancelled',
+                ))
+                  ListTile(
+                    key: ValueKey('cooking-timer-${timer.id}'),
+                    title: Text('步骤计时'),
+                    trailing: Text(
+                      timer.remainingAt(DateTime.now()).toString(),
+                    ),
+                  ),
+              ],
             ],
-          ],
+          ),
         ),
       ),
     );
