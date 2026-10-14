@@ -18,7 +18,7 @@ part 'publication_notifications.g.dart';
 )
 class PublicationNotifications {
   /// Returns a new [PublicationNotifications] instance.
-  PublicationNotifications({this.items, this.licenseNotice});
+  PublicationNotifications({this.items, this.licenseNotice, this.nextCursor});
 
   @JsonKey(name: r'items', required: false, includeIfNull: false)
   final List<PublicationNotificationOut>? items;
@@ -26,16 +26,22 @@ class PublicationNotifications {
   @JsonKey(name: r'license_notice', required: false, includeIfNull: false)
   final String? licenseNotice;
 
+  @JsonKey(name: r'next_cursor', required: false, includeIfNull: false)
+  final String? nextCursor;
+
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
       other is PublicationNotifications &&
           other.items == items &&
-          other.licenseNotice == licenseNotice;
+          other.licenseNotice == licenseNotice &&
+          other.nextCursor == nextCursor;
 
   @override
   int get hashCode =>
-      items.hashCode + (licenseNotice == null ? 0 : licenseNotice.hashCode);
+      items.hashCode +
+      (licenseNotice == null ? 0 : licenseNotice.hashCode) +
+      (nextCursor == null ? 0 : nextCursor.hashCode);
 
   factory PublicationNotifications.fromJson(Map<String, dynamic> json) =>
       _$PublicationNotificationsFromJson(json);

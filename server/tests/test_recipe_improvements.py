@@ -109,6 +109,120 @@ def test_historical_source_draft_is_exact_and_no_creation_until_save(api: Api):
     assert api.client.get(f"/v1/recipes/{branch['id']}", headers=bearer(author)).status_code == 404
 
 
+@pytest.mark.parametrize("legacy", [False, True])
+@pytest.mark.parametrize("protocol", ["1.0", "99.0"])
+def test_attribution_uses_only_supported_cards_in_normal_and_fallback_composition(
+    api: Api, legacy, protocol
+):
+    _, reader, source = public_source(api)
+    saved = post_save(api, reader, source, improvement_body(source))
+    assert saved.status_code == 201, saved.text
+    branch = saved.json()["recipe"]
+    supported = ["food_safety", "allergen_notice", "scenario_summary"]
+    if not legacy:
+        supported.append("source_attribution")
+    body = {
+        "page_type": "recipe_detail",
+        "protocol_version": protocol,
+        "supported_components": supported,
+        "recipe_id": branch["id"],
+        "detail_override": "brief",
+    }
+    response = api.client.post("/v1/ui/compositions", headers=bearer(reader), json=body)
+    assert response.status_code == 200, response.text
+    components = response.json()["components"]
+    assert all(item["type"] in supported for item in components)
+    assert any(
+        branch["source_attribution"]["label"] in item["data"].get("conclusion", "")
+        and item["required"]
+        and item["type"] in {"source_attribution", "scenario_summary", "hint_bar", "empty_state"}
+        for item in components
+    )
+    assert all(item["type"] != "source_attribution" for item in components) == legacy
+    other = api.login("composition-private@example.com")
+    assert (
+        api.client.post("/v1/ui/compositions", headers=bearer(other), json=body).status_code == 404
+    )
+
+
+@pytest.mark.parametrize("carrier_type", ["hint_bar", "empty_state"])
+@pytest.mark.parametrize("protocol", ["1.0", "99.0"])
+@pytest.mark.parametrize("modern_source", [False, True])
+def test_legacy_text_attribution_carrier_data_has_no_source_specific_fields(
+    api: Api, carrier_type, protocol, modern_source
+):
+    _, reader, source = public_source(api)
+    saved = post_save(api, reader, source, improvement_body(source))
+    assert saved.status_code == 201, saved.text
+    branch = saved.json()["recipe"]
+    response = api.client.post(
+        "/v1/ui/compositions",
+        headers=bearer(reader),
+        json={
+            "page_type": "recipe_detail",
+            "protocol_version": protocol,
+            "supported_components": [carrier_type, "source_attribution"]
+            if modern_source
+            else [carrier_type],
+            "recipe_id": branch["id"],
+        },
+    )
+    assert response.status_code == 200, response.text
+    assert response.json()["fallback"] == {"reason_code": "missing_required"}
+    components = response.json()["components"]
+    assert len(components) == (2 if modern_source else 1)
+    assert {item["type"] for item in components} == (
+        {carrier_type, "source_attribution"} if modern_source else {carrier_type}
+    )
+    carrier = next(item for item in components if item["type"] == carrier_type)
+    prefix = "" if modern_source else f"{branch['source_attribution']['label']} · "
+    assert carrier["data"] == {
+        "conclusion": f"{prefix}暂时无法确认食品安全信息。 · 暂时无法确认过敏原信息。"
+    }
+    if modern_source:
+        source_card = next(item for item in components if item["type"] == "source_attribution")
+        assert source_card["data"]["attribution"]["label"] == branch["source_attribution"]["label"]
+    assert carrier["required"] is True
+    assert carrier["actions"] == []
+    unsupported = api.client.post(
+        "/v1/ui/compositions",
+        headers=bearer(reader),
+        json={
+            "page_type": "recipe_detail",
+            "protocol_version": protocol,
+            "supported_components": [],
+            "recipe_id": branch["id"],
+        },
+    )
+    assert unsupported.status_code == 422, unsupported.text
+    assert unsupported.json()["error"]["code"] == "unsupported_source_attribution"
+    safety_only = api.client.post(
+        "/v1/ui/compositions",
+        headers=bearer(reader),
+        json={
+            "page_type": "recipe_detail",
+            "protocol_version": protocol,
+            "supported_components": ["food_safety", "allergen_notice"],
+            "recipe_id": branch["id"],
+        },
+    )
+    assert safety_only.status_code == 422, safety_only.text
+    assert safety_only.json()["error"]["code"] == "unsupported_source_attribution"
+    if modern_source:
+        source_only = api.client.post(
+            "/v1/ui/compositions",
+            headers=bearer(reader),
+            json={
+                "page_type": "recipe_detail",
+                "protocol_version": protocol,
+                "supported_components": ["source_attribution"],
+                "recipe_id": branch["id"],
+            },
+        )
+        assert source_only.status_code == 422, source_only.text
+        assert source_only.json()["error"]["code"] == "unsupported_required_facts"
+
+
 def test_retry_conflict_and_one_creation_event(api: Api):
     _, reader, source = public_source(api)
     body = improvement_body(source)
@@ -192,6 +306,10 @@ def test_microadjust_prompt_cancel_taste_confirmation_and_retry(api: Api):
     assert api.client.get("/v1/recipes", headers=bearer(reader)).json()["items"] == []
     assert event_count(api, reader, "recipe.improvement_created") == 0
     assert event_count(api, reader, "recipe.improvement_saved_to_taste") == 1
+    storage = api.client.get("/v1/dev/events/taste-profile-storage", headers=bearer(reader))
+    assert storage.status_code == 200, storage.text
+    assert storage.json()["improvement_taste_metadata_only"] is True
+    assert storage.json()["metadata_only"] is True
 
 
 def test_microadjust_branch_nonconvertible_and_general_boundary(api: Api):
@@ -262,20 +380,72 @@ def test_source_chain_survives_edits_and_source_withdrawal(api: Api):
     assert fetched.status_code == 200, fetched.text
     assert fetched.json()["source_attribution"]["chain"][0]["withdrawn"] is True
     assert "snapshot" not in fetched.json()["source_attribution"]["chain"][0]
-    assert post_save(api, reader, source, improvement_body(source)).status_code == 404
+    # A new source read/copy stays forbidden; the previously owned copy survives.
+    assert api.client.get(f"/v1/recipes/{source['id']}", headers=bearer(reader)).status_code == 404
     assert (
-        api.client.get(
-            f"/v1/improvement-drafts/{draft.json()['id']}", headers=bearer(reader)
+        api.client.post(
+            f"/v1/recipes/{source['id']}/improvement-drafts",
+            headers=bearer(reader),
+            json={"source_version_id": source["version"]["id"]},
         ).status_code
         == 404
     )
+    owned = api.client.get(f"/v1/improvement-drafts/{draft.json()['id']}", headers=bearer(reader))
+    assert owned.status_code == 200, owned.text
+    assert owned.json() == draft.json()
+    assert (
+        api.client.get(
+            f"/v1/improvement-drafts/{draft.json()['id']}", headers=bearer(third)
+        ).status_code
+        == 404
+    )
+    assert post_save(api, third, source, improvement_body(source)).status_code == 404
+    preview = api.client.post(
+        f"/v1/recipes/{source['id']}/improvements/preview",
+        headers=bearer(reader),
+        json={key: value for key, value in improvement_body(source).items() if key != "request_id"},
+    )
+    assert preview.status_code == 200, preview.text
+    assert preview.json()["snapshot"]["ingredients"][1]["quantity"] == 7
+    resumed = post_save(api, reader, source, improvement_body(source))
+    assert resumed.status_code == 201, resumed.text
+    assert resumed.json()["recipe"]["source_version_id"] == source["version"]["id"]
+    assert resumed.json()["recipe"]["source_attribution"]["chain"][-1]["withdrawn"] is True
 
 
-def test_record_derived_significant_branch_is_exact_published_and_idempotent(api: Api):
+@pytest.mark.parametrize("withdraw", [False, True])
+def test_record_derived_significant_branch_is_exact_published_and_idempotent(api: Api, withdraw):
     author, reader, source = public_source(api)
     record = complete_recipe(
         api, reader, source, adjustments=[{"step_id": "cook", "fields": {"cookware": "烤箱"}}]
     )
+    if withdraw:
+        assert (
+            api.client.post(
+                f"/v1/recipes/{source['id']}/withdraw", headers=bearer(author)
+            ).status_code
+            == 200
+        )
+        assert (
+            api.client.get(f"/v1/recipes/{source['id']}", headers=bearer(reader)).status_code == 404
+        )
+        assert post_save(api, reader, source, improvement_body(source)).status_code == 404
+        record_body = {
+            "source_version_id": source["version"]["id"],
+            "from_cooking_record_id": record["id"],
+        }
+        stranger = api.login("withdraw-record-stranger@example.com")
+        assert (
+            post_save(api, stranger, source, {**record_body, "request_id": new_uuid()}).status_code
+            == 404
+        )
+        preview = api.client.post(
+            f"/v1/recipes/{source['id']}/improvements/preview",
+            headers=bearer(reader),
+            json=record_body,
+        )
+        assert preview.status_code == 200, preview.text
+        assert preview.json()["snapshot"] == record["source_context"]["executed_snapshot"]
     body = {
         "source_version_id": source["version"]["id"],
         "from_cooking_record_id": record["id"],
@@ -294,6 +464,20 @@ def test_record_derived_significant_branch_is_exact_published_and_idempotent(api
     # The source record keeps its own recipe/version rather than being rewritten.
     original_record = api.client.get(f"/v1/records/{record['id']}", headers=bearer(reader)).json()
     assert original_record["recipe_version_id"] == source["version"]["id"]
+    snapshot = deepcopy(branch["version"]["snapshot"])
+    snapshot["description"] = "保留从精确实做记录继承的基准"
+    edited = api.client.post(
+        f"/v1/recipes/{branch['id']}/versions", headers=bearer(reader), json={"snapshot": snapshot}
+    )
+    assert edited.status_code == 201, edited.text
+    latest = panel(api, reader, edited.json())
+    assert latest["baseline_version_id"] == branch["version"]["id"]
+    assert latest["cumulative_conclusion"] != "significant"
+    assert latest["state"] == "pending_verification"
+    assert (
+        api.client.get(f"/v1/records/{record['id']}", headers=bearer(reader)).json()
+        == original_record
+    )
 
 
 def test_derivation_rejects_other_user_wrong_version_wrong_recipe_and_changed_result(api: Api):
@@ -457,9 +641,12 @@ def improvement_ai_api(monkeypatch, tmp_path, request):
     return request.getfixturevalue("api"), tmp_path
 
 
-def test_ai_working_copy_reuses_preview_and_requires_confirmed_decisions(improvement_ai_api):
+@pytest.mark.parametrize("withdraw", [False, True])
+def test_ai_working_copy_reuses_preview_and_requires_confirmed_decisions(
+    improvement_ai_api, withdraw
+):
     api, directory = improvement_ai_api
-    _, reader, source = public_source(api)
+    author, reader, source = public_source(api)
     snapshot = source["version"]["snapshot"]
     recording(directory, "modify_intent", {"text": TEXT}, INTENT)
     recording(
@@ -474,6 +661,24 @@ def test_ai_working_copy_reuses_preview_and_requires_confirmed_decisions(improve
         json={"source_version_id": source["version"]["id"]},
     )
     assert draft.status_code == 201, draft.text
+    if withdraw:
+        assert (
+            api.client.post(
+                f"/v1/recipes/{source['id']}/withdraw", headers=bearer(author)
+            ).status_code
+            == 200
+        )
+        assert (
+            api.client.get(f"/v1/recipes/{source['id']}", headers=bearer(reader)).status_code == 404
+        )
+        assert (
+            api.client.post(
+                "/v1/ai/recipes/modifications",
+                headers=bearer(author),
+                json={"text": TEXT, "improvement_draft_id": draft.json()["id"]},
+            ).status_code
+            == 404
+        )
     proposal = api.client.post(
         "/v1/ai/recipes/modifications",
         headers=bearer(reader),

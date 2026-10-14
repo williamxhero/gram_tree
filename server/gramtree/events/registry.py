@@ -283,8 +283,12 @@ class ImprovementCreatedContentV1(ImprovementSourceContentV1):
     intent: str
 
 
-class ImprovementTasteContentV1(ImprovementSourceContentV1):
-    coefficients: dict[str, float]
+class ImprovementTasteContentV1(BaseModel):
+    source_recipe_id: str
+    source_version_id: str
+    conclusion: Literal["minor_only"]
+    rules_version: str
+    profile_id: str
     profile_version: int
 
 

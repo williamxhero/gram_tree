@@ -266,3 +266,158 @@ def test_precise_actual_result_preserves_source_ids_and_exact_changes(api: Api) 
     assert result["ingredients"][0]["quantity"] == 250
     assert result["steps"][1]["duration_seconds"] == 90
     assert row["adjustments"] == adjustments
+
+
+@pytest.mark.parametrize("skipped_index", [0, -1])
+def test_skipped_execution_is_retained_without_publication_or_exact_derivation(
+    api: Api, skipped_index
+):
+    author = api.login("completion-skip@example.com")
+    recipe = _recipe(api, author)
+    body = completed_record_body(api, author, recipe)
+    skipped = body["completion"]["completed_steps"].pop(skipped_index)
+    body["completion"]["skipped_steps"] = [skipped]
+    response = api.client.post("/v1/records", headers=bearer(author), json=body)
+    assert response.status_code == 201, response.text
+    record = response.json()
+    assert record["source_context"]["skipped_steps"] == [skipped]
+    assert skipped not in record["source_context"]["completed_steps"]
+    assert record["source_context"]["derivation_available"] is False
+    assert (
+        api.client.get(f"/v1/recipes/{recipe['id']}/publication", headers=bearer(author)).json()[
+            "state"
+        ]
+        == "draft"
+    )
+    assert (
+        api.client.post(
+            f"/v1/records/{record['id']}/save-version",
+            headers=bearer(author),
+            json={"request_id": new_uuid()},
+        ).status_code
+        == 422
+    )
+
+
+@pytest.mark.parametrize("transport", ["http", "sync"])
+def test_all_skipped_signed_session_is_private_replayable_without_cooking_credit(
+    api: Api, transport: str
+):
+    owner = api.login("all-skipped-completion@example.com")
+    stranger = api.login("all-skipped-stranger@example.com")
+    recipe = _recipe(api, owner)
+    body = completed_record_body(api, owner, recipe)
+    body["completion"]["skipped_steps"] = body["completion"]["completed_steps"]
+    body["completion"]["completed_steps"] = []
+    if transport == "http":
+        first = api.client.post("/v1/records", headers=bearer(owner), json=body)
+        assert first.status_code == 201, first.text
+        replay = api.client.post("/v1/records", headers=bearer(owner), json=body)
+        assert replay.status_code == 201, replay.text
+        assert replay.json()["id"] == first.json()["id"]
+    else:
+        write = envelope(
+            owner["user"]["id"], write_type="cooking_record.create", payload={"record": body}
+        )
+        first = submit(api, owner, write)[0]
+        assert first["status"] == "confirmed", first
+        assert submit(api, owner, write)[0]["status"] == "already_processed"
+    records = api.client.get("/v1/records", headers=bearer(owner)).json()["items"]
+    assert len(records) == 1
+    row = records[0]
+    assert row["verification"] == "unverified"
+    assert row["counts_as_cooked"] is False
+    assert row["snapshot"] == body["snapshot"]
+    assert row["source_context"]["completed_steps"] == []
+    assert row["source_context"]["skipped_steps"] == body["completion"]["skipped_steps"]
+    assert row["source_context"]["server_completed"] is False
+    assert row["source_context"]["derivation_available"] is False
+    assert api.client.get(f"/v1/records/{row['id']}", headers=bearer(stranger)).status_code == 404
+    assert (
+        api.client.get(f"/v1/recipes/{recipe['id']}", headers=bearer(stranger)).status_code == 404
+    )
+    panel = api.client.get(f"/v1/recipes/{recipe['id']}/publication", headers=bearer(owner)).json()
+    assert panel["state"] == "draft"
+    assert any(condition["code"] == "not_cooked" for condition in panel["missing"])
+    assert (
+        api.client.post(
+            f"/v1/records/{row['id']}/save-version",
+            headers=bearer(owner),
+            json={"request_id": new_uuid()},
+        ).status_code
+        == 422
+    )
+    count = api.client.get(
+        "/v1/dev/events/count",
+        headers=bearer(owner),
+        params={"event_type": "cooking.record_created"},
+    )
+    assert count.json()["count"] == 1
+
+
+@pytest.mark.parametrize("transport", ["http", "sync"])
+@pytest.mark.parametrize("proof", ["valid", "tokenless", "forged", "foreign", "unrelated"])
+@pytest.mark.parametrize("all_skipped", [False, True])
+def test_withdrawal_preserves_only_executor_signed_offline_record(
+    api: Api, transport: str, proof: str, all_skipped: bool
+):
+    from tests.cooking_completion_support import complete_recipe
+
+    author = api.login("withdraw-author@example.com")
+    executor = api.login("withdraw-executor@example.com")
+    stranger = api.login("withdraw-stranger@example.com")
+    recipe = _recipe(api, author)
+    complete_recipe(api, author, recipe)
+    body = completed_record_body(api, executor, recipe)
+    if all_skipped:
+        body["completion"]["skipped_steps"] = body["completion"]["completed_steps"]
+        body["completion"]["completed_steps"] = []
+    assert (
+        api.client.post(f"/v1/recipes/{recipe['id']}/withdraw", headers=bearer(author)).status_code
+        == 200
+    )
+    tokens = executor
+    if proof == "tokenless":
+        body.pop("completion")
+    elif proof == "forged":
+        body["completion"]["execution_token"] = "0" * 64
+    elif proof == "foreign":
+        tokens = stranger
+    elif proof == "unrelated":
+        other = _recipe(api, author)
+        body["recipe_id"] = other["id"]
+        body["recipe_version_id"] = other["version"]["id"]
+    if transport == "http":
+        response = api.client.post("/v1/records", headers=bearer(tokens), json=body)
+        assert response.status_code == (
+            201 if proof == "valid" else 404 if proof == "tokenless" else 422
+        ), response.text
+    else:
+        result = submit(
+            api,
+            tokens,
+            envelope(
+                tokens["user"]["id"],
+                write_type="cooking_record.create",
+                payload={"record": body},
+            ),
+        )[0]
+        assert result["status"] == ("confirmed" if proof == "valid" else "failed"), result
+    records = api.client.get("/v1/records", headers=bearer(tokens)).json()["items"]
+    assert len(records) == (1 if proof == "valid" else 0)
+    if proof == "valid":
+        assert records[0]["snapshot"] == body["snapshot"]
+        assert records[0]["verification"] == ("unverified" if all_skipped else "cooking_mode")
+        assert records[0]["counts_as_cooked"] is not all_skipped
+        if all_skipped:
+            assert records[0]["source_context"]["server_completed"] is False
+            assert records[0]["source_context"]["derivation_available"] is False
+        assert (
+            api.client.get(f"/v1/records/{records[0]['id']}", headers=bearer(stranger)).status_code
+            == 404
+        )
+    assert (
+        api.client.get(f"/v1/recipes/{recipe['id']}", headers=bearer(executor)).status_code == 404
+    )
+    owner = api.client.get(f"/v1/recipes/{recipe['id']}", headers=bearer(author)).json()
+    assert owner["withdrawn"] is True

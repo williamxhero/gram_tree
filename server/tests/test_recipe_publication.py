@@ -91,7 +91,7 @@ def test_author_completion_publishes_once_with_private_proof_and_one_license(api
     assert "CC BY-NC-SA 4.0" in notices["license_notice"]
     assert api.client.get(
         "/v1/recipes/publication/notifications", headers=bearer(reader)
-    ).json() == {"items": [], "license_notice": None}
+    ).json() == {"items": [], "next_cursor": None, "license_notice": None}
     acknowledgement = {"notification_ids": [notices["items"][0]["id"]], "license_seen": True}
     for _ in range(2):
         assert (
@@ -511,3 +511,114 @@ def test_client_cannot_supply_publication_ancestry_or_server_only_events(api: Ap
         assert response.status_code == 200, response.text
         assert response.json()["results"][0]["reason"]["code"] == "server_only_event"
     assert panel(api, author, recipe)["state"] == "draft"
+
+
+def test_latest_actual_recook_not_publication_or_offline_upload_selects_baseline(api: Api):
+    from datetime import datetime, timedelta
+
+    author = api.login("recook-author@example.com")
+    reader = api.login("recook-reader@example.com")
+    first = create(api, author)
+    complete_recipe(api, author, first)
+    snapshot = deepcopy(first["version"]["snapshot"])
+    snapshot["steps"][1]["cookware"] = "空气炸锅"
+    second = save(api, author, first, snapshot)
+    second_record = complete_recipe(api, author, second)
+    delayed_old = completed_record_body(api, author, second)
+    old_time = datetime.fromisoformat(
+        second_record["occurred_at"].replace("Z", "+00:00")
+    ) - timedelta(hours=1)
+    delayed_old["occurred_at"] = delayed_old["completion"]["finished_at"] = old_time.isoformat()
+    delayed_old["completion"]["started_at"] = (old_time - timedelta(minutes=10)).isoformat()
+    recook = complete_recipe(api, reader, first)
+    assert recook["id"] != second_record["id"]
+    third = save(api, author, second, snapshot)
+    result = panel(api, author, third)
+    assert result["baseline_version_id"] == first["version"]["id"]
+    assert result["cumulative_conclusion"] == "significant"
+    assert result["state"] == "draft"
+    assert {item["code"] for item in result["missing"]} == {"cook_again"}
+    late = api.client.post("/v1/records", headers=bearer(author), json=delayed_old)
+    assert late.status_code == 201, late.text
+    assert panel(api, author, third) == result
+    assert event_count(api, author, "recipe.version_published") == 2
+    assert event_count(api, reader, "recipe.pending_verification_cleared") == 0
+    exact = f"/v1/recipes/{first['id']}/versions/{third['version']['id']}"
+    assert api.client.get(exact, headers=bearer(reader)).status_code == 404
+    assert (
+        api.client.get(
+            f"/v1/recipes/{first['id']}/versions/{first['version']['id']}", headers=bearer(reader)
+        ).json()["version"]["snapshot"]
+        == first["version"]["snapshot"]
+    )
+
+
+def test_notifications_cursor_reaches_all_unseen_and_ack_batches_preserve_license(api: Api):
+    author = api.login("notice-pages@example.com")
+    other = api.login("notice-other@example.com")
+    recipe = create(api, author)
+    complete_recipe(api, author, recipe)
+    for _ in range(101):
+        recipe = save(api, author, recipe, recipe["version"]["snapshot"])
+    endpoint = "/v1/recipes/publication/notifications"
+    first = api.client.get(endpoint, headers=bearer(author), params={"limit": 100})
+    assert first.status_code == 200, first.text
+    page = first.json()
+    assert len(page["items"]) == 100
+    assert page["next_cursor"]
+    ids = [item["id"] for item in page["items"]]
+    second = api.client.get(
+        endpoint, headers=bearer(author), params={"limit": 100, "cursor": page["next_cursor"]}
+    ).json()
+    assert len(second["items"]) == 2
+    assert second["next_cursor"] is None
+    assert not set(ids).intersection(item["id"] for item in second["items"])
+    assert second["license_notice"] == page["license_notice"]
+    assert (
+        api.client.get(
+            endpoint, headers=bearer(other), params={"cursor": page["next_cursor"]}
+        ).json()["items"]
+        == []
+    )
+    assert (
+        api.client.post(
+            endpoint + "/acknowledge",
+            headers=bearer(author),
+            json={"notification_ids": [*ids, second["items"][0]["id"]]},
+        ).status_code
+        == 422
+    )
+    assert (
+        api.client.post(
+            endpoint + "/acknowledge", headers=bearer(other), json={"notification_ids": ids}
+        ).status_code
+        == 204
+    )
+    assert api.client.get(endpoint, headers=bearer(author), params={"limit": 100}).json() == page
+    assert (
+        api.client.post(
+            endpoint + "/acknowledge", headers=bearer(author), json={"notification_ids": ids}
+        ).status_code
+        == 204
+    )
+    remaining = api.client.get(endpoint, headers=bearer(author)).json()
+    assert remaining["items"] == second["items"]
+    assert remaining["license_notice"] == page["license_notice"]
+    assert (
+        api.client.post(
+            endpoint + "/acknowledge",
+            headers=bearer(author),
+            json={
+                "notification_ids": [item["id"] for item in remaining["items"]],
+                "license_seen": True,
+            },
+        ).status_code
+        == 204
+    )
+    assert api.client.get(endpoint, headers=bearer(author)).json() == {
+        "items": [],
+        "next_cursor": None,
+        "license_notice": None,
+    }
+    for params in ({"limit": 0}, {"limit": 101}, {"cursor": "invalid"}):
+        assert api.client.get(endpoint, headers=bearer(author), params=params).status_code == 422

@@ -90,7 +90,6 @@ def completed_context(
     reached = set(completion.reached_steps)
     if (
         not step_ids
-        or not completed
         or len(completed) != len(completion.completed_steps)
         or len(skipped) != len(completion.skipped_steps)
         or len(reached) != len(completion.reached_steps)
@@ -104,11 +103,12 @@ def completed_context(
     context = deepcopy(body.source_context)
     context.update(completion.model_dump(mode="json", exclude={"execution_token"}))
     context.update(
-        server_completed=True,
+        server_completed=bool(completed),
         executed_snapshot=executed_value,
         derivation_available=available and not skipped,
     )
-    return "cooking_mode", context
+    # Full coverage preserves the session, but skipping everything proves no cooking.
+    return "cooking_mode" if completed else "unverified", context
 
 
 def _apply_adjustments(

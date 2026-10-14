@@ -10,16 +10,15 @@ from __future__ import annotations
 import uuid
 from typing import Any, cast
 
-from sqlalchemy import select
+from sqlalchemy import or_, select, tuple_
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import Session
 
 from gramtree.accounts.models import RealNameStatus, User
 from gramtree.core.errors import ApiError, NotFound
-from gramtree.core.ids import new_id
+from gramtree.core.pagination import check_limit, decode_cursor, encode_cursor
 from gramtree.core.time import utcnow
-from gramtree.events.models import Event
-from gramtree.events.service import EventInput, _fingerprint
+from gramtree.events.service import append_server_event
 from gramtree.recipes import food_safety, reproducibility
 from gramtree.recipes.models import (
     Dish,
@@ -209,35 +208,11 @@ def append_event(
     content: dict[str, Any],
 ) -> None:
     """Reliable same-transaction event delivery; callers lock the transition row."""
-    now = utcnow()
     correlation = {"recipe_version_id": str(version.id)} if version else {}
     if content.get("verification_record_id"):
         correlation["cooking_record_id"] = content["verification_record_id"]
-    item = EventInput(
-        id=new_id(),
-        event_type=event_type,
-        type_version=1,
-        device_id="server",
-        device_time=now,
-        app_version="server",
-        correlation=correlation,
-        content={"recipe_id": str(recipe.id), **content},
-    )
-    session.add(
-        Event(
-            id=item.id,
-            user_id=owner_id,
-            event_type=event_type,
-            type_version=1,
-            device_id="server",
-            device_time=now,
-            app_version="server",
-            correlation=item.correlation,
-            content=item.content,
-            content_fingerprint=_fingerprint(owner_id, item),
-            received_at=now,
-            device_time_suspicious=False,
-        )
+    append_server_event(
+        session, owner_id, event_type, {"recipe_id": str(recipe.id), **content}, correlation
     )
 
 
@@ -260,28 +235,42 @@ def check_version(
             and trusted_record(derived_record)
         ):
             record = derived_record
-    baseline = session.execute(
-        select(RecipeVersion, RecipePublication)
+    # Publication proof is immutable. Choose the latest actual execution, not
+    # first publication time or upload time (an older offline record may arrive late).
+    candidates = session.execute(
+        select(RecipeVersion, CookingRecord)
         .join(RecipePublication, RecipePublication.version_id == RecipeVersion.id)
+        .join(
+            CookingRecord,
+            or_(
+                CookingRecord.recipe_version_id == RecipeVersion.id,
+                CookingRecord.id == RecipePublication.derived_record_id,
+            ),
+        )
         .where(
             RecipeVersion.recipe_id == recipe.id,
             RecipeVersion.version_number < version.version_number,
             RecipePublication.state == "published",
-            RecipePublication.verified_at.is_not(None),
+            CookingRecord.source == "cooking_session",
+            CookingRecord.verification == "cooking_mode",
         )
-        .order_by(RecipePublication.verified_at.desc(), RecipeVersion.version_number.desc())
-        .limit(1)
-    ).first()
+        .order_by(
+            CookingRecord.occurred_at.desc(),
+            CookingRecord.created_at.desc(),
+            RecipeVersion.version_number.desc(),
+        )
+    )
+    baseline = next((item for item in candidates if trusted_record(item[1])), None)
     if baseline is not None:
         from gramtree.recipes.full_comparison import compare_full
 
         author = session.get(User, recipe.owner_id)
         if author is None:
             raise NotFound()
-        base, base_publication = baseline
+        base, base_record = baseline
         comparison = compare_full(session, author, recipe.id, base.id, version.id, commit=False)
         row.baseline_version_id = base.id
-        row.baseline_record_id = base_publication.verification_record_id
+        row.baseline_record_id = base_record.id
         row.cumulative_conclusion = comparison.conclusion
         row.rules_version = comparison.rules_version
     waived = baseline is not None and row.cumulative_conclusion != "significant"
@@ -514,14 +503,30 @@ def set_withdrawn(session: Session, owner: User, recipe_id: uuid.UUID, withdrawn
     return service._detail(session, _settings(session), recipe)
 
 
-def notifications(session: Session, owner: User) -> PublicationNotifications:
-    rows = session.scalars(
-        select(RecipePublicationNotice)
-        .where(
-            RecipePublicationNotice.owner_id == owner.id, RecipePublicationNotice.seen_at.is_(None)
-        )
-        .order_by(RecipePublicationNotice.created_at, RecipePublicationNotice.id)
+def notifications(
+    session: Session, owner: User, *, cursor: str | None, limit: int
+) -> PublicationNotifications:
+    check_limit(limit, int(config.get(session, "api.page_size_max")))
+    query = select(RecipePublicationNotice).where(
+        RecipePublicationNotice.owner_id == owner.id, RecipePublicationNotice.seen_at.is_(None)
     )
+    if cursor:
+        created_at, notice_id = decode_cursor(cursor)
+        query = query.where(
+            tuple_(RecipePublicationNotice.created_at, RecipePublicationNotice.id)
+            > tuple_(created_at, notice_id)
+        )
+    rows = list(
+        session.scalars(
+            query.order_by(RecipePublicationNotice.created_at, RecipePublicationNotice.id).limit(
+                limit + 1
+            )
+        )
+    )
+    next_cursor = (
+        encode_cursor(rows[limit - 1].created_at, rows[limit - 1].id) if len(rows) > limit else None
+    )
+    rows = rows[:limit]
     license_row = session.get(RecipePublicationLicense, owner.id)
     return PublicationNotifications(
         items=[
@@ -535,6 +540,7 @@ def notifications(session: Session, owner: User) -> PublicationNotifications:
             )
             for row in rows
         ],
+        next_cursor=next_cursor,
         license_notice=LICENSE if license_row is not None and license_row.seen_at is None else None,
     )
 

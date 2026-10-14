@@ -58,7 +58,19 @@ def _validate_recipe_reference(
         raise NotFound()
     from gramtree.recipes.publication import readable_version
 
-    recipe, version = readable_version(session, owner, version.recipe_id, version.id)
+    try:
+        recipe, version = readable_version(session, owner, version.recipe_id, version.id)
+    except NotFound:
+        # A signed frozen execution authorizes only this record write. Withdrawal
+        # must not destroy somebody else's offline data or restore public access.
+        from gramtree.records.completion import completed_context
+
+        if body.completion is None:
+            raise
+        completed_context(owner, body, session.info["settings"])
+        recipe = session.get(Recipe, version.recipe_id)
+        if recipe is None or body.recipe_id != recipe.id:
+            raise NotFound() from None
     if body.recipe_id is not None and body.recipe_id != recipe.id:
         raise ApiError(422, "invalid_record", "记录内容有误", "菜谱版本关联不一致")
     if body.verification == "cooking_mode":
@@ -113,7 +125,8 @@ def create_record(
         dish_name=body.dish_name,
         source=body.source,
         verification=verification,
-        counts_as_cooked=body.source != "dining",
+        counts_as_cooked=body.source != "dining"
+        and (body.completion is None or bool(body.completion.completed_steps)),
         meal=body.meal,
         occurred_at=body.occurred_at
         or (body.completion.finished_at if body.completion else utcnow()),

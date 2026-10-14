@@ -39,6 +39,7 @@ class PublicationNotificationOut(BaseModel):
 
 class PublicationNotifications(BaseModel):
     items: list[PublicationNotificationOut] = Field(default_factory=list)
+    next_cursor: str | None = None
     license_notice: str | None = None
 
 

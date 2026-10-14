@@ -12,10 +12,7 @@ from sqlalchemy.orm import Session
 
 from gramtree.accounts.models import User
 from gramtree.core.errors import ApiError, NotFound
-from gramtree.core.ids import new_id
-from gramtree.core.time import utcnow
-from gramtree.events.models import Event
-from gramtree.events.service import EventInput, _fingerprint
+from gramtree.events.service import append_server_event
 from gramtree.recipes import personalization, reproducibility, service
 from gramtree.recipes.comparison import ComparisonVersion
 from gramtree.recipes.full_comparison import RecipeFullComparison, compare_snapshots
@@ -53,6 +50,42 @@ def _source(session: Session, owner: User, recipe_id: uuid.UUID, version_id: uui
     return recipe, version
 
 
+def _working_source(
+    session: Session,
+    owner: User,
+    recipe_id: uuid.UUID,
+    version_id: uuid.UUID,
+    record_id: uuid.UUID | None = None,
+):
+    """Resume an owned exact draft/record, never grant a new public read."""
+    if record_id is not None:
+        recipe = session.get(Recipe, recipe_id)
+        version = session.get(RecipeVersion, version_id)
+        if recipe is None or version is None or version.recipe_id != recipe_id:
+            raise NotFound()
+        _record(session, owner, recipe, version, record_id)
+        if recipe.owner_id == owner.id:
+            raise ApiError(422, "self_improvement", "自己的菜谱请存为新一版，不生成改良分支")
+        return recipe, version
+    draft = session.scalar(
+        select(ImprovementDraft)
+        .where(
+            ImprovementDraft.owner_id == owner.id,
+            ImprovementDraft.source_recipe_id == recipe_id,
+            ImprovementDraft.source_version_id == version_id,
+        )
+        .order_by(ImprovementDraft.created_at)
+        .limit(1)
+    )
+    if draft is None:
+        return _source(session, owner, recipe_id, version_id)
+    recipe = session.get(Recipe, recipe_id)
+    version = session.get(RecipeVersion, version_id)
+    if recipe is None or version is None or version.recipe_id != recipe_id:
+        raise NotFound()
+    return recipe, version
+
+
 def draft_out(row: ImprovementDraft) -> ImprovementDraftOut:
     return ImprovementDraftOut.model_validate(row, from_attributes=True)
 
@@ -66,7 +99,7 @@ def owned_draft(session: Session, owner: User, draft_id: uuid.UUID) -> Improveme
     )
     if row is None:
         raise NotFound()
-    _source(session, owner, row.source_recipe_id, row.source_version_id)
+    # The authorized working copy belongs to its creator, even after withdrawal.
     return row
 
 
@@ -286,7 +319,9 @@ def preview(
     recipe_id: uuid.UUID,
     body: ImprovementPreviewInput,
 ) -> ImprovementPreviewOut:
-    recipe, version = _source(session, owner, recipe_id, body.source_version_id)
+    recipe, version = _working_source(
+        session, owner, recipe_id, body.source_version_id, body.from_cooking_record_id
+    )
     snapshot, _, _, _ = _edit(session, settings, owner, recipe, version, body)
     comparison = _comparison(session, recipe, version, snapshot, owner)
     proposal = taste_proposal(
@@ -309,33 +344,7 @@ def creation_event(
     content: dict[str, Any],
     correlation: dict[str, Any],
 ) -> None:
-    now = utcnow()
-    item = EventInput(
-        id=new_id(),
-        event_type=event_type,
-        type_version=1,
-        device_id="server",
-        device_time=now,
-        app_version="server",
-        correlation=correlation,
-        content=content,
-    )
-    session.add(
-        Event(
-            id=item.id,
-            user_id=owner_id,
-            event_type=event_type,
-            type_version=1,
-            device_id="server",
-            device_time=now,
-            app_version="server",
-            correlation=correlation,
-            content=content,
-            content_fingerprint=_fingerprint(owner_id, item),
-            received_at=now,
-            device_time_suspicious=False,
-        )
-    )
+    append_server_event(session, owner_id, event_type, content, correlation)
 
 
 def _source_path(session: Session, recipe: Recipe, version: RecipeVersion):
@@ -387,7 +396,9 @@ def save(
         if receipt.fingerprint != fingerprint:
             raise ApiError(409, "idempotency_conflict", "这个保存请求已经用于其他内容")
         return ImprovementSaveOut.model_validate(receipt.response)
-    recipe, source = _source(session, owner, recipe_id, body.source_version_id)
+    recipe, source = _working_source(
+        session, owner, recipe_id, body.source_version_id, body.from_cooking_record_id
+    )
     snapshot, operations, record, modification = _edit(
         session, settings, owner, recipe, source, body, final=True
     )
@@ -438,8 +449,11 @@ def save(
             owner.id,
             "recipe.improvement_saved_to_taste",
             {
-                **fact_payload,
-                "coefficients": proposal.coefficients,
+                "source_recipe_id": str(recipe.id),
+                "source_version_id": str(source.id),
+                "conclusion": comparison.conclusion,
+                "rules_version": comparison.rules_version,
+                "profile_id": str(profile.id),
                 "profile_version": profile.version,
             },
             {"recipe_version_id": str(source.id)},

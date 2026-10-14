@@ -47,7 +47,18 @@ def _authorize(session: Session, owner: uuid.UUID, payload: BaseModel) -> None:
         try:
             recipe, _ = readable_version(session, owner, version.recipe_id, version.id)
         except ApiError as exc:
-            raise WriteFailure("reference_forbidden") from exc
+            from gramtree.recipes.models import Recipe
+            from gramtree.records.completion import completed_context
+
+            if exc.status != 404 or parsed.completion is None:
+                raise WriteFailure("reference_forbidden") from exc
+            try:
+                completed_context(owner, parsed, session.info["settings"])
+            except ApiError as proof_error:
+                raise WriteFailure(proof_error.code) from proof_error
+            recipe = session.get(Recipe, version.recipe_id)
+            if recipe is None or parsed.recipe_id != recipe.id:
+                raise WriteFailure("reference_forbidden") from exc
         if parsed.recipe_id is not None and parsed.recipe_id != recipe.id:
             raise WriteFailure("reference_mismatch")
     if parsed.source == "cooking_session" and parsed.recipe_version_id is None:
@@ -108,7 +119,8 @@ def _apply(
             dish_name=parsed.dish_name,
             source=parsed.source,
             verification=verification,
-            counts_as_cooked=parsed.source != "dining",
+            counts_as_cooked=parsed.source != "dining"
+            and (parsed.completion is None or bool(parsed.completion.completed_steps)),
             meal=parsed.meal,
             occurred_at=parsed.occurred_at
             or (parsed.completion.finished_at if parsed.completion else now),

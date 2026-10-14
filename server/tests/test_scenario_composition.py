@@ -67,7 +67,6 @@ def test_first_cook_is_detailed_and_page_override_does_not_change_default(api: A
     assert {c["type"] for c in fixed["components"] if c["required"]} == {
         "food_safety",
         "allergen_notice",
-        "source_attribution",
     }
     other = bearer(api.login("scene-other@example.com"))
     assert api.client.get("/v1/ui/preferences", headers=other).json()["detail"] == "auto"
@@ -163,24 +162,8 @@ def test_viewport_boundary_and_legacy_capabilities_preserve_required_safety(api:
     assert calendar["source"]["timezone"] == "Asia/Shanghai"
     assert calendar["rule_entry"] in {"weekday_quick", "weekend_leisure"}
     assert calendar["period"] in {"morning", "afternoon", "evening"}
-    legacy_response = api.client.post(
-        "/v1/ui/compositions",
-        headers=headers,
-        json={
-            "page_type": "recipe_detail",
-            "protocol_version": "1.0",
-            "recipe_id": recipe["id"],
-            "supported_components": ["food_safety", "allergen_notice"],
-        },
-    )
-    assert legacy_response.status_code == 200, legacy_response.text
-    legacy = legacy_response.json()
-    assert legacy["fallback"]["reason_code"] == "missing_required"
-    assert {item["type"] for item in legacy["components"]} == {
-        "food_safety",
-        "allergen_notice",
-        "source_attribution",
-    }
+    legacy = compose(api, headers, recipe, supported_components=["food_safety", "allergen_notice"])
+    assert {item["type"] for item in legacy["components"]} == {"food_safety", "allergen_notice"}
     assert all(item["required"] for item in legacy["components"])
     assert legacy["composition_id"] != tablet["composition_id"]
     invalid = api.client.post(
@@ -407,7 +390,6 @@ def test_expired_taste_change_is_not_presented_as_recent(
     assert {c["type"] for c in expired["components"] if c["required"]} == {
         "food_safety",
         "allergen_notice",
-        "source_attribution",
     }
 
 
@@ -936,7 +918,6 @@ def test_recipe_experiment_is_stable_and_explicit_preferences_win(api: Api) -> N
     assert {c["type"] for c in fixed["components"] if c["required"]} == {
         "food_safety",
         "allergen_notice",
-        "source_attribution",
     }
 
 

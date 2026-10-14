@@ -11,6 +11,8 @@ abstract class _$PublicationNotificationsCWProxy {
 
   PublicationNotifications licenseNotice(String? licenseNotice);
 
+  PublicationNotifications nextCursor(String? nextCursor);
+
   /// This function **does support** nullification of nullable fields. All `null` values passed to `non-nullable` fields will be ignored. You can also use `PublicationNotifications(...).copyWith.fieldName(...)` to override fields one at a time with nullification support.
   ///
   /// Usage
@@ -20,6 +22,7 @@ abstract class _$PublicationNotificationsCWProxy {
   PublicationNotifications call({
     List<PublicationNotificationOut>? items,
     String? licenseNotice,
+    String? nextCursor,
   });
 }
 
@@ -39,6 +42,10 @@ class _$PublicationNotificationsCWProxyImpl
       this(licenseNotice: licenseNotice);
 
   @override
+  PublicationNotifications nextCursor(String? nextCursor) =>
+      this(nextCursor: nextCursor);
+
+  @override
   /// This function **does support** nullification of nullable fields. All `null` values passed to `non-nullable` fields will be ignored. You can also use `PublicationNotifications(...).copyWith.fieldName(...)` to override fields one at a time with nullification support.
   ///
   /// Usage
@@ -48,6 +55,7 @@ class _$PublicationNotificationsCWProxyImpl
   PublicationNotifications call({
     Object? items = const $CopyWithPlaceholder(),
     Object? licenseNotice = const $CopyWithPlaceholder(),
+    Object? nextCursor = const $CopyWithPlaceholder(),
   }) {
     return PublicationNotifications(
       items: items == const $CopyWithPlaceholder()
@@ -58,6 +66,10 @@ class _$PublicationNotificationsCWProxyImpl
           ? _value.licenseNotice
           // ignore: cast_nullable_to_non_nullable
           : licenseNotice as String?,
+      nextCursor: nextCursor == const $CopyWithPlaceholder()
+          ? _value.nextCursor
+          // ignore: cast_nullable_to_non_nullable
+          : nextCursor as String?,
     );
   }
 }
@@ -75,25 +87,36 @@ extension $PublicationNotificationsCopyWith on PublicationNotifications {
 
 PublicationNotifications _$PublicationNotificationsFromJson(
   Map<String, dynamic> json,
-) => $checkedCreate('PublicationNotifications', json, ($checkedConvert) {
-  final val = PublicationNotifications(
-    items: $checkedConvert(
-      'items',
-      (v) => (v as List<dynamic>?)
-          ?.map(
-            (e) =>
-                PublicationNotificationOut.fromJson(e as Map<String, dynamic>),
-          )
-          .toList(),
-    ),
-    licenseNotice: $checkedConvert('license_notice', (v) => v as String?),
-  );
-  return val;
-}, fieldKeyMap: const {'licenseNotice': 'license_notice'});
+) => $checkedCreate(
+  'PublicationNotifications',
+  json,
+  ($checkedConvert) {
+    final val = PublicationNotifications(
+      items: $checkedConvert(
+        'items',
+        (v) => (v as List<dynamic>?)
+            ?.map(
+              (e) => PublicationNotificationOut.fromJson(
+                e as Map<String, dynamic>,
+              ),
+            )
+            .toList(),
+      ),
+      licenseNotice: $checkedConvert('license_notice', (v) => v as String?),
+      nextCursor: $checkedConvert('next_cursor', (v) => v as String?),
+    );
+    return val;
+  },
+  fieldKeyMap: const {
+    'licenseNotice': 'license_notice',
+    'nextCursor': 'next_cursor',
+  },
+);
 
 Map<String, dynamic> _$PublicationNotificationsToJson(
   PublicationNotifications instance,
 ) => <String, dynamic>{
   'items': ?instance.items?.map((e) => e.toJson()).toList(),
   'license_notice': ?instance.licenseNotice,
+  'next_cursor': ?instance.nextCursor,
 };

@@ -122,9 +122,9 @@ def _parse_target_mold(raw: str | None) -> MoldSpec | None:
     "/publication/notifications", response_model=PublicationNotifications, responses=_errors(401)
 )
 def get_publication_notifications(
-    auth: CurrentAuth, session: SessionDep
+    auth: CurrentAuth, session: SessionDep, page: PageDep
 ) -> PublicationNotifications:
-    return publication.notifications(session, auth.user)
+    return publication.notifications(session, auth.user, cursor=page.cursor, limit=page.limit)
 
 
 @router.post("/publication/notifications/acknowledge", status_code=204, responses=_errors(401))
