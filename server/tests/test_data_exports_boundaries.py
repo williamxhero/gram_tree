@@ -39,7 +39,8 @@ def test_export_download_expires_at_boundary_and_cleanup_removes_archive(api: Ap
     expired = api.client.get(download_url, headers=bearer(tokens))
     assert expired.status_code == 410
     assert expired.json()["error"]["code"] == "export_expired"
-    assert api.client.get(f"/v1/me/exports/{job_id}", headers=bearer(tokens)).json()["status"] == "expired"
+    status = api.client.get(f"/v1/me/exports/{job_id}", headers=bearer(tokens)).json()["status"]
+    assert status == "expired"
     result = run_exports(api, action="cleanup")
     assert result["removed"] >= 1
     assert api.client.get(download_url, headers=bearer(tokens)).status_code == 410
