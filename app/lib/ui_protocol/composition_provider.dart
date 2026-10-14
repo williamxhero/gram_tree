@@ -118,6 +118,7 @@ typedef ScenarioCompositionKey = ({
   String? detailOverride,
   String? beforeChangeId,
   String? personalizationJson,
+  String personalizationView,
   String skippedComponentsJson,
 });
 
@@ -133,6 +134,7 @@ final scenarioCompositionProvider = FutureProvider.autoDispose
         screenWidth: key.screenWidth,
         detailOverride: key.detailOverride,
         beforeChangeId: key.beforeChangeId,
+        personalizationView: key.personalizationView,
         personalization: key.personalizationJson == null
             ? null
             : jsonDecode(key.personalizationJson!) as Map<String, dynamic>,
@@ -191,6 +193,7 @@ Future<CompositionResult> fetchComposition(
   int? screenWidth,
   String? detailOverride,
   String? beforeChangeId,
+  String personalizationView = 'personalized',
   Map<String, dynamic>? personalization,
   List<String> skippedComponents = const [],
 }) async {
@@ -216,6 +219,9 @@ Future<CompositionResult> fetchComposition(
   if (detailOverride != null) requestBody['detail_override'] = detailOverride;
   if (beforeChangeId != null) requestBody['before_change_id'] = beforeChangeId;
   if (personalization != null) requestBody['personalization'] = personalization;
+  if (personalizationView != 'personalized') {
+    requestBody['personalization_view'] = personalizationView;
+  }
   if (skippedComponents.isNotEmpty) {
     requestBody['skipped_components'] = skippedComponents;
   }

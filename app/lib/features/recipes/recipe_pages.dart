@@ -3454,6 +3454,10 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
     _personalizationGeneration++;
     setState(() {
       _showOriginal = original;
+      if (original && _beforeTasteChangeId != null) {
+        _beforeTasteChangeId = null;
+        _personalized = null;
+      }
       if (_personalized != null) {
         _personalized = requirePersonalizationConfirmation(_personalized!);
       }
@@ -3693,6 +3697,10 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
       inputs: {
         ...frozen.inputs,
         'personalized_view': _showOriginal ? 'original' : 'personalized',
+        'before_change_id': _showOriginal ? null : _beforeTasteChangeId,
+        'scale_mode': _scaleMode.name,
+        'target_servings': result.inputs.targetServings,
+        'target_mold': result.inputs.targetMold?.toJson(),
         // Execution evidence contains rules, not family names or allergies.
         'personalization_rules': [
           for (final item in result.ingredients)
@@ -4035,7 +4043,8 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
         versionId: detail.version.id,
         screenWidth: MediaQuery.sizeOf(context).width.round().clamp(1, 16384),
         detailOverride: _sceneDetailOverride,
-        beforeChangeId: _beforeTasteChangeId,
+        beforeChangeId: _showOriginal ? null : _beforeTasteChangeId,
+        personalizationView: _showOriginal ? 'original' : 'personalized',
         personalizationJson:
             _targetServings == null &&
                 _targetMold == null &&
