@@ -5,7 +5,6 @@ import 'package:gram_tree/app/theme.dart';
 import 'package:gram_tree/l10n/app_localizations.dart';
 import 'package:gram_tree/features/recipes/cooking_session.dart';
 import 'package:gram_tree/recipes/recipe_snapshot.dart';
-import 'package:gram_tree/ui_protocol/composition_provider.dart';
 import 'package:gram_tree/ui_protocol/source_mark.dart';
 import 'package:gram_tree/ui_protocol/component_registry.dart';
 import 'package:gramtree_api/gramtree_api.dart';
@@ -14,7 +13,7 @@ import 'helpers.dart';
 import 'recipe_snapshot_test.dart' show recipeSnapshotFixture;
 
 PageDescription cookingComposition(String detail) => PageDescription(
-  cache: CacheInfo(ttlS: 0),
+  cache: CacheInfo(ttlS: 0, dependsOn: const {}),
   compositionId: '7c9e6679-7425-40de-944b-e07fc1f90ae7',
   generatedAt: '2026-10-14T00:00:00Z',
   pageType: 'recipe_detail',
@@ -27,8 +26,14 @@ PageDescription cookingComposition(String detail) => PageDescription(
         id: type,
         detail: ComponentDescriptorDetailEnum.brief,
         required_: true,
+        actions: const [],
         reason: ComponentReason(code: 'required', text: '必显'),
-        data: {'status': 'unknown', 'conclusion': '安全结果待检查'},
+        data: {
+          'status': 'unknown',
+          'conclusion': '安全结果待检查',
+          'basis': '尚无安全检查结果',
+          'result': null,
+        },
       ),
   ],
 );
@@ -38,20 +43,25 @@ ComponentDescriptor failureReminder(String step, String placement) =>
       type: 'failure_reminder',
       id: 'scene:failure:recipe:dry:$step:$placement',
       detail: ComponentDescriptorDetailEnum.brief,
+      actions: const [],
       reason: ComponentReason(code: 'last_failure', text: '上次记录肉柴'),
       data: {
         'conclusion': placement == 'before' ? '下一步注意火候' : '本步注意火候',
         'rule_id': 'dry',
         'problem': '上次肉柴',
         'advice': '变白立即盛出',
-        'record_id': 'record',
+        'record_id': '33333333-3333-4333-8333-333333333333',
         'record_date': '2026-10-12',
         'step_id': step,
         'placement': placement,
         'source': {
           'source_type': 'scenario_adjusted',
           'value': '变白立即盛出',
-          'basis': {'text': '上次记录肉柴', 'citation': '2026-10-12 做过记录'},
+          'basis': {
+            'reason_code': 'last_failure',
+            'text': '上次记录肉柴',
+            'citation': '2026-10-12 做过记录',
+          },
         },
       },
     );
@@ -100,10 +110,16 @@ ComponentDescriptor scenarioSummary(String detail) => ComponentDescriptor(
   reason: ComponentReason(code: 'page_switch', text: '本页临时选择'),
   data: {
     'conclusion': '本页步骤详略',
+    'steps_collapsed': detail == 'brief',
+    'layout': 'phone',
     'source': {
       'source_type': 'scenario_adjusted',
       'value': detail,
-      'basis': {'text': '本页临时选择，不改默认设置'},
+      'basis': {
+        'reason_code': 'page_switch',
+        'text': '本页临时选择，不改默认设置',
+        'citation': '本页临时选择',
+      },
     },
   },
   actions: [
@@ -143,17 +159,25 @@ void main() {
     'cooking detail switch expands rationale without changing execution',
     (tester) async {
       final env = TestEnv.signedIn();
-      final store = await sessionStore(env);
+      final store = await sessionStore(
+        env,
+        inputs: const {'scale_mode': 'servings', 'target_servings': 3},
+      );
+      env.server.on(
+        'POST',
+        '/v1/ui/compositions',
+        (request) => (
+          200,
+          cookingComposition(
+            (request.body as Map)['detail_override'] as String? ?? 'detailed',
+          ).toJson(),
+        ),
+      );
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
             ...env.overrides,
             cookingSessionStoreProvider.overrideWithValue(store),
-            scenarioCompositionProvider.overrideWith(
-              (ref, key) async => CompositionReady(
-                cookingComposition(key.detailOverride ?? 'detailed'),
-              ),
-            ),
           ],
           child: testApp(const CookingPage(sessionId: 'session')),
         ),
@@ -183,6 +207,15 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('避免长时间加热使肉变柴').hitTestable(), findsNothing);
       expect(find.text('成熟判断：表面变白'), findsNothing);
+      expect(
+        env.server.calls('POST', '/v1/ui/compositions').where((call) {
+          final body = call.body as Map;
+          final personalization = body['personalization'] as Map?;
+          return body['detail_override'] == 'brief' &&
+              personalization?['target_servings'] == 3;
+        }),
+        isNotEmpty,
+      );
       expect(find.byKey(const ValueKey('cooking-action')), findsOneWidget);
       expect(find.text('步骤 1 / 2'), findsOneWidget);
       await tester.scrollUntilVisible(
@@ -238,14 +271,16 @@ void main() {
         failureReminder('serve', 'before'),
         failureReminder('serve', 'at'),
       ]);
+      env.server.on(
+        'POST',
+        '/v1/ui/compositions',
+        (_) => (200, description.toJson()),
+      );
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
             ...env.overrides,
             cookingSessionStoreProvider.overrideWithValue(store),
-            scenarioCompositionProvider.overrideWith(
-              (ref, key) async => CompositionReady(description),
-            ),
           ],
           child: testApp(const CookingPage(sessionId: 'session')),
         ),
