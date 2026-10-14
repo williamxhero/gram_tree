@@ -65,6 +65,12 @@ EOF
     --by e2e --reason 'Independent acceptance accounts share one subnet' >/dev/null
   uv run gramtree config set risk.short_request_limit 100000 \
     --by e2e --reason 'Acceptance suite generates a high request volume from one emulator IP' >/dev/null
+  for category in search_list auth ai; do
+    for dimension in account device ip; do
+      uv run gramtree config set "rate.${category}.${dimension}_per_minute" 1000 \
+        --by e2e --reason 'Acceptance suite shares one runner IP and device across independent accounts' >/dev/null
+    done
+  done
   uv run gramtree ingredients import tests/data/ingredients >/dev/null
   if [[ "$GRAMTREE_AI_MODE" == replay ]]; then
     uv run python ../tool/ai_replay_corpus.py --out "$GRAMTREE_AI_REPLAY_DIR" \

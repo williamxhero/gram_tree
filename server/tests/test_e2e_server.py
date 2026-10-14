@@ -35,6 +35,31 @@ def test_e2e_bootstrap_supports_more_than_one_hundred_logins(tmp_path: Path) -> 
     ]
     try:
         subprocess.run([*command, "start"], cwd=root, env=env, check=True, timeout=300)
+        # Independent acceptance accounts share one runner IP/device. Only
+        # burst budgets are enlarged; production daily budgets remain in force.
+        for category, day_limit in (("search_list", 4800), ("auth", 1200), ("ai", 1200)):
+            for dimension in ("account", "device", "ip"):
+                for window, expected in (("minute", 1000), ("day", day_limit)):
+                    configured = subprocess.run(
+                        [
+                            "uv",
+                            "run",
+                            "gramtree",
+                            "config",
+                            "get",
+                            f"rate.{category}.{dimension}_per_{window}",
+                        ],
+                        cwd=root / "server",
+                        env={
+                            **env,
+                            "GRAMTREE_DATABASE_URL": target.render_as_string(hide_password=False),
+                        },
+                        check=True,
+                        capture_output=True,
+                        text=True,
+                        timeout=30,
+                    )
+                    assert int(configured.stdout.strip()) == expected
         with httpx.Client(base_url=f"http://127.0.0.1:{port}") as client:
             for index in range(101):
                 response = client.post(
