@@ -7,6 +7,7 @@ import 'package:gramtree_api/gramtree_api.dart'
     show
         ComponentDescriptor,
         ComposeRequest,
+        ComposeRequestPersonalizationViewEnum,
         EventCorrelationIds,
         FallbackInfoReasonCodeEnum,
         PageDescription;
@@ -211,6 +212,9 @@ Future<CompositionResult> fetchComposition(
     pageType: pageType,
     protocolVersion: supportedProtocolVersion,
     supportedComponents: supportedTypes,
+    personalizationView: personalizationView == 'original'
+        ? ComposeRequestPersonalizationViewEnum.original
+        : ComposeRequestPersonalizationViewEnum.personalized,
   );
   final requestBody = request.toJson();
   if (recipeId != null) requestBody['recipe_id'] = recipeId;

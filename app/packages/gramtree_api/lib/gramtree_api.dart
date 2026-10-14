@@ -223,6 +223,7 @@ export 'package:gramtree_api/src/model/release_note.dart';
 export 'package:gramtree_api/src/model/reproducibility_position.dart';
 export 'package:gramtree_api/src/model/reproducibility_problem.dart';
 export 'package:gramtree_api/src/model/retrieval_result.dart';
+export 'package:gramtree_api/src/model/scenario_feedback.dart';
 export 'package:gramtree_api/src/model/search_ingredient_out.dart';
 export 'package:gramtree_api/src/model/search_query.dart';
 export 'package:gramtree_api/src/model/search_result.dart';

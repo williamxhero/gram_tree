@@ -93,6 +93,7 @@ Future<Object?> handleOpenTasteChange(
     if (confirmed != true || !context.mounted || !current()) return null;
     await repository.revertChange(change.id);
     if (!context.mounted || !current()) return null;
+    ref.invalidate(tasteProfileSnapshotProvider);
     ref.invalidate(tasteProfileProvider);
     ref.invalidate(tasteProfileChangesProvider);
     ref.invalidate(scenarioCompositionProvider);

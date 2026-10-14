@@ -142,9 +142,10 @@ class RecipeRepository {
     String? beforeChangeId,
   }) async {
     if (beforeChangeId != null) {
-      final response = await _api.dio.post<Map<String, dynamic>>(
-        '/v1/recipes/$recipeId/personalized/before-change/$beforeChangeId',
-        data: PersonalizationRequest(
+      final response = await _recipes.personalizeBeforeChange(
+        recipeId: recipeId,
+        changeId: beforeChangeId,
+        personalizationRequest: PersonalizationRequest(
           versionId: versionId,
           targetServings: targetServings,
           targetMold: targetMold,
@@ -152,9 +153,9 @@ class RecipeRepository {
           dinerMemberIds: dinerMemberIds,
           primaryDinerId: primaryDinerId,
           confirmAllergyRisk: confirmAllergyRisk,
-        ).toJson(),
+        ),
       );
-      return RecipePersonalizedOut.fromJson(response.data!);
+      return response.data!;
     }
     final response = await _recipes.personalizeRecipe(
       recipeId: recipeId,

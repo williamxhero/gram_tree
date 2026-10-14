@@ -225,6 +225,7 @@ lib/src/model/release_note.dart
 lib/src/model/reproducibility_position.dart
 lib/src/model/reproducibility_problem.dart
 lib/src/model/retrieval_result.dart
+lib/src/model/scenario_feedback.dart
 lib/src/model/search_ingredient_out.dart
 lib/src/model/search_query.dart
 lib/src/model/search_result.dart

@@ -194,6 +194,7 @@ import 'package:gramtree_api/src/model/release_note.dart';
 import 'package:gramtree_api/src/model/reproducibility_position.dart';
 import 'package:gramtree_api/src/model/reproducibility_problem.dart';
 import 'package:gramtree_api/src/model/retrieval_result.dart';
+import 'package:gramtree_api/src/model/scenario_feedback.dart';
 import 'package:gramtree_api/src/model/search_ingredient_out.dart';
 import 'package:gramtree_api/src/model/search_query.dart';
 import 'package:gramtree_api/src/model/search_result.dart';
@@ -819,6 +820,9 @@ ReturnType deserialize<ReturnType, BaseType>(
           as ReturnType;
     case 'RetrievalResult':
       return RetrievalResult.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'ScenarioFeedback':
+      return ScenarioFeedback.fromJson(value as Map<String, dynamic>)
           as ReturnType;
     case 'SearchIngredientOut':
       return SearchIngredientOut.fromJson(value as Map<String, dynamic>)

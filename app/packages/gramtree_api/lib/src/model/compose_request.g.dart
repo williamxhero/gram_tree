@@ -7,17 +7,27 @@ part of 'compose_request.dart';
 // **************************************************************************
 
 abstract class _$ComposeRequestCWProxy {
+  ComposeRequest beforeChangeId(String? beforeChangeId);
+
   ComposeRequest detailOverride(
     ComposeRequestDetailOverrideEnum? detailOverride,
   );
 
   ComposeRequest pageType(String pageType);
 
+  ComposeRequest personalization(PersonalizationRequest? personalization);
+
+  ComposeRequest personalizationView(
+    ComposeRequestPersonalizationViewEnum personalizationView,
+  );
+
   ComposeRequest protocolVersion(String protocolVersion);
 
   ComposeRequest recipeId(String? recipeId);
 
   ComposeRequest screenWidth(int? screenWidth);
+
+  ComposeRequest skippedComponents(List<String>? skippedComponents);
 
   ComposeRequest supportedComponents(List<String>? supportedComponents);
 
@@ -30,11 +40,15 @@ abstract class _$ComposeRequestCWProxy {
   /// ComposeRequest(...).copyWith(id: 12, name: "My name")
   /// ````
   ComposeRequest call({
+    String? beforeChangeId,
     ComposeRequestDetailOverrideEnum? detailOverride,
     String pageType,
+    PersonalizationRequest? personalization,
+    ComposeRequestPersonalizationViewEnum personalizationView,
     String protocolVersion,
     String? recipeId,
     int? screenWidth,
+    List<String>? skippedComponents,
     List<String>? supportedComponents,
     String? versionId,
   });
@@ -47,12 +61,25 @@ class _$ComposeRequestCWProxyImpl implements _$ComposeRequestCWProxy {
   final ComposeRequest _value;
 
   @override
+  ComposeRequest beforeChangeId(String? beforeChangeId) =>
+      this(beforeChangeId: beforeChangeId);
+
+  @override
   ComposeRequest detailOverride(
     ComposeRequestDetailOverrideEnum? detailOverride,
   ) => this(detailOverride: detailOverride);
 
   @override
   ComposeRequest pageType(String pageType) => this(pageType: pageType);
+
+  @override
+  ComposeRequest personalization(PersonalizationRequest? personalization) =>
+      this(personalization: personalization);
+
+  @override
+  ComposeRequest personalizationView(
+    ComposeRequestPersonalizationViewEnum personalizationView,
+  ) => this(personalizationView: personalizationView);
 
   @override
   ComposeRequest protocolVersion(String protocolVersion) =>
@@ -64,6 +91,10 @@ class _$ComposeRequestCWProxyImpl implements _$ComposeRequestCWProxy {
   @override
   ComposeRequest screenWidth(int? screenWidth) =>
       this(screenWidth: screenWidth);
+
+  @override
+  ComposeRequest skippedComponents(List<String>? skippedComponents) =>
+      this(skippedComponents: skippedComponents);
 
   @override
   ComposeRequest supportedComponents(List<String>? supportedComponents) =>
@@ -80,15 +111,23 @@ class _$ComposeRequestCWProxyImpl implements _$ComposeRequestCWProxy {
   /// ComposeRequest(...).copyWith(id: 12, name: "My name")
   /// ````
   ComposeRequest call({
+    Object? beforeChangeId = const $CopyWithPlaceholder(),
     Object? detailOverride = const $CopyWithPlaceholder(),
     Object? pageType = const $CopyWithPlaceholder(),
+    Object? personalization = const $CopyWithPlaceholder(),
+    Object? personalizationView = const $CopyWithPlaceholder(),
     Object? protocolVersion = const $CopyWithPlaceholder(),
     Object? recipeId = const $CopyWithPlaceholder(),
     Object? screenWidth = const $CopyWithPlaceholder(),
+    Object? skippedComponents = const $CopyWithPlaceholder(),
     Object? supportedComponents = const $CopyWithPlaceholder(),
     Object? versionId = const $CopyWithPlaceholder(),
   }) {
     return ComposeRequest(
+      beforeChangeId: beforeChangeId == const $CopyWithPlaceholder()
+          ? _value.beforeChangeId
+          // ignore: cast_nullable_to_non_nullable
+          : beforeChangeId as String?,
       detailOverride: detailOverride == const $CopyWithPlaceholder()
           ? _value.detailOverride
           // ignore: cast_nullable_to_non_nullable
@@ -97,6 +136,14 @@ class _$ComposeRequestCWProxyImpl implements _$ComposeRequestCWProxy {
           ? _value.pageType
           // ignore: cast_nullable_to_non_nullable
           : pageType as String,
+      personalization: personalization == const $CopyWithPlaceholder()
+          ? _value.personalization
+          // ignore: cast_nullable_to_non_nullable
+          : personalization as PersonalizationRequest?,
+      personalizationView: personalizationView == const $CopyWithPlaceholder()
+          ? _value.personalizationView
+          // ignore: cast_nullable_to_non_nullable
+          : personalizationView as ComposeRequestPersonalizationViewEnum,
       protocolVersion: protocolVersion == const $CopyWithPlaceholder()
           ? _value.protocolVersion
           // ignore: cast_nullable_to_non_nullable
@@ -109,6 +156,10 @@ class _$ComposeRequestCWProxyImpl implements _$ComposeRequestCWProxy {
           ? _value.screenWidth
           // ignore: cast_nullable_to_non_nullable
           : screenWidth as int?,
+      skippedComponents: skippedComponents == const $CopyWithPlaceholder()
+          ? _value.skippedComponents
+          // ignore: cast_nullable_to_non_nullable
+          : skippedComponents as List<String>?,
       supportedComponents: supportedComponents == const $CopyWithPlaceholder()
           ? _value.supportedComponents
           // ignore: cast_nullable_to_non_nullable
@@ -137,19 +188,41 @@ ComposeRequest _$ComposeRequestFromJson(
   'ComposeRequest',
   json,
   ($checkedConvert) {
-    $checkKeys(json, requiredKeys: const ['page_type', 'protocol_version']);
+    $checkKeys(
+      json,
+      requiredKeys: const [
+        'page_type',
+        'personalization_view',
+        'protocol_version',
+      ],
+    );
     final val = ComposeRequest(
+      beforeChangeId: $checkedConvert('before_change_id', (v) => v as String?),
       detailOverride: $checkedConvert(
         'detail_override',
         (v) =>
             $enumDecodeNullable(_$ComposeRequestDetailOverrideEnumEnumMap, v),
       ),
       pageType: $checkedConvert('page_type', (v) => v as String),
+      personalization: $checkedConvert(
+        'personalization',
+        (v) => v == null
+            ? null
+            : PersonalizationRequest.fromJson(v as Map<String, dynamic>),
+      ),
+      personalizationView: $checkedConvert(
+        'personalization_view',
+        (v) => $enumDecode(_$ComposeRequestPersonalizationViewEnumEnumMap, v),
+      ),
       protocolVersion: $checkedConvert('protocol_version', (v) => v as String),
       recipeId: $checkedConvert('recipe_id', (v) => v as String?),
       screenWidth: $checkedConvert(
         'screen_width',
         (v) => (v as num?)?.toInt() ?? 400,
+      ),
+      skippedComponents: $checkedConvert(
+        'skipped_components',
+        (v) => (v as List<dynamic>?)?.map((e) => e as String).toList(),
       ),
       supportedComponents: $checkedConvert(
         'supported_components',
@@ -160,11 +233,14 @@ ComposeRequest _$ComposeRequestFromJson(
     return val;
   },
   fieldKeyMap: const {
+    'beforeChangeId': 'before_change_id',
     'detailOverride': 'detail_override',
     'pageType': 'page_type',
+    'personalizationView': 'personalization_view',
     'protocolVersion': 'protocol_version',
     'recipeId': 'recipe_id',
     'screenWidth': 'screen_width',
+    'skippedComponents': 'skipped_components',
     'supportedComponents': 'supported_components',
     'versionId': 'version_id',
   },
@@ -172,12 +248,18 @@ ComposeRequest _$ComposeRequestFromJson(
 
 Map<String, dynamic> _$ComposeRequestToJson(ComposeRequest instance) =>
     <String, dynamic>{
+      'before_change_id': ?instance.beforeChangeId,
       'detail_override':
           ?_$ComposeRequestDetailOverrideEnumEnumMap[instance.detailOverride],
       'page_type': instance.pageType,
+      'personalization': ?instance.personalization?.toJson(),
+      'personalization_view':
+          _$ComposeRequestPersonalizationViewEnumEnumMap[instance
+              .personalizationView]!,
       'protocol_version': instance.protocolVersion,
       'recipe_id': ?instance.recipeId,
       'screen_width': ?instance.screenWidth,
+      'skipped_components': ?instance.skippedComponents,
       'supported_components': ?instance.supportedComponents,
       'version_id': ?instance.versionId,
     };
@@ -186,4 +268,9 @@ const _$ComposeRequestDetailOverrideEnumEnumMap = {
   ComposeRequestDetailOverrideEnum.auto: 'auto',
   ComposeRequestDetailOverrideEnum.brief: 'brief',
   ComposeRequestDetailOverrideEnum.detailed: 'detailed',
+};
+
+const _$ComposeRequestPersonalizationViewEnumEnumMap = {
+  ComposeRequestPersonalizationViewEnum.personalized: 'personalized',
+  ComposeRequestPersonalizationViewEnum.original: 'original',
 };

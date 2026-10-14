@@ -1218,6 +1218,18 @@
       },
       "ComposeRequest": {
         "properties": {
+          "before_change_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Before Change Id"
+          },
           "detail_override": {
             "anyOf": [
               {
@@ -1238,6 +1250,25 @@
           "page_type": {
             "description": "要哪个页面类型的组合，例如 today",
             "title": "Page Type",
+            "type": "string"
+          },
+          "personalization": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PersonalizationRequest"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "personalization_view": {
+            "default": "personalized",
+            "enum": [
+              "personalized",
+              "original"
+            ],
+            "title": "Personalization View",
             "type": "string"
           },
           "protocol_version": {
@@ -1265,6 +1296,14 @@
             "minimum": 1.0,
             "title": "Screen Width",
             "type": "integer"
+          },
+          "skipped_components": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 32,
+            "title": "Skipped Components",
+            "type": "array"
           },
           "supported_components": {
             "description": "App 已登记、认识的组件类型清单；服务端只会下发这里面的类型",
@@ -9355,6 +9394,27 @@
           "status"
         ],
         "title": "RetrievalResult",
+        "type": "object"
+      },
+      "ScenarioFeedback": {
+        "properties": {
+          "component_id": {
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Component Id",
+            "type": "string"
+          },
+          "source_type": {
+            "const": "scenario_adjusted",
+            "title": "Source Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "component_id",
+          "source_type"
+        ],
+        "title": "ScenarioFeedback",
         "type": "object"
       },
       "SearchIngredientOut": {
@@ -18252,6 +18312,114 @@
         ]
       }
     },
+    "/v1/recipes/{recipe_id}/personalized/before-change/{change_id}": {
+      "post": {
+        "operationId": "personalize_before_change",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "recipe_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Recipe Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "change_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Change Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PersonalizationRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecipePersonalizedOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "服务端错误"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Personalize Before Change",
+        "tags": [
+          "recipes"
+        ]
+      }
+    },
     "/v1/recipes/{recipe_id}/quantification": {
       "post": {
         "operationId": "quantify_recipe",
@@ -20068,6 +20236,62 @@
           }
         ],
         "summary": "Set Preferences",
+        "tags": [
+          "ui-protocol"
+        ]
+      }
+    },
+    "/v1/ui/scenario-feedback": {
+      "post": {
+        "operationId": "scenario_feedback",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ScenarioFeedback"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ScenarioFeedback"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "参数错误"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "服务端错误"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Scenario Feedback",
         "tags": [
           "ui-protocol"
         ]
