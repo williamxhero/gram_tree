@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:cryptography/cryptography.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gramtree_api/gramtree_api.dart';
@@ -28,6 +29,13 @@ final apiClientProvider = Provider<GramtreeApi>(
 /// 测试时在拦截链最后加一个假服务端（记录请求、直接返回预设的响应，不走网络层）。
 /// null 表示真的发请求。
 final fakeServerProvider = Provider<Interceptor?>((ref) => null);
+
+/// Keep the platform implementation in production and live integration tests.
+/// Automated widget fixtures can select the package's real Dart algorithms,
+/// whose futures do not depend on native browser events outside the fake clock.
+final requestSigningCryptographyProvider = Provider<Cryptography>(
+  (ref) => Cryptography.instance,
+);
 
 /// 端到端测试专用的"飞行模式"开关：默认 false（正常联网），只有测试代码会把它
 /// 置成 true。跟 [fakeServerProvider] 不一样——这里仍然是真的服务端，只是本机
@@ -148,7 +156,10 @@ final dioProvider = Provider<Dio>((ref) {
   // 续期和续期后的重试都用单独的 Dio，不经过下面的续期拦截：
   // 续期拦截是排队执行的，在它里面再走同一条拦截链，重试失败时会互相等待、永远卡住
   final plainDio = _baseDio(ref);
-  final signer = RequestSigner(ref.watch(sessionStoreProvider));
+  final signer = RequestSigner(
+    ref.watch(sessionStoreProvider),
+    cryptography: ref.watch(requestSigningCryptographyProvider),
+  );
   final auth = AuthInterceptor(
     retryDio: plainDio,
     session: ref.watch(sessionStoreProvider),

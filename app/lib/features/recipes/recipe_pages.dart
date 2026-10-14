@@ -54,12 +54,9 @@ import '../../widgets/empty_state.dart';
 import '../../util/ids.dart';
 
 final myRecipesProvider = FutureProvider.autoDispose<RecipeList>((ref) async {
-  // Wait for the initial projection before subscribing to subsequent changes;
-  // otherwise its loading-to-data transition issues the first HTTP page twice.
-  await ref.watch(localRecipeVersionsProvider.future);
-  final local =
-      ref.watch(localRecipeVersionsProvider).value ??
-      const <LocalRecipeVersion>[];
+  // Watch the resolved projection, not its loading-to-data state transition.
+  // Subsequent local recipe changes remain reactive through this future.
+  final local = await ref.watch(localRecipeVersionsProvider.future);
   RecipeList page;
   try {
     page = await ref.watch(recipeRepositoryProvider).listPage();

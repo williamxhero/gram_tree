@@ -2,7 +2,9 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
 
+import 'package:cryptography/dart.dart';
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart' show BindingBase;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
@@ -615,6 +617,7 @@ class TestEnv {
     this.localDependencyVersions,
     this.offline = false,
     this.probe,
+    this.usePlatformCryptography = false,
   }) : server = server ?? FakeServer(),
        local = local ?? MemoryLocalStore(),
        secure = secure ?? MemorySecureStore(),
@@ -649,6 +652,7 @@ class TestEnv {
     );
   }
 
+  final bool usePlatformCryptography;
   final ApiReachabilityProbe? probe;
   late final reachability = TestReachabilityProbe(!offline);
   final FakeServer server;
@@ -687,6 +691,11 @@ class TestEnv {
     localStoreProvider.overrideWithValue(local),
     secureStoreProvider.overrideWithValue(secure),
     fakeServerProvider.overrideWithValue(server),
+    if (!usePlatformCryptography &&
+        BindingBase.debugBindingType() == AutomatedTestWidgetsFlutterBinding)
+      requestSigningCryptographyProvider.overrideWithValue(
+        DartCryptography.defaultInstance,
+      ),
     apiReachabilityProbeProvider.overrideWithValue(probe ?? reachability),
     // Page tests use the same cache interface with a fake-clock-safe store;
     // native drift persistence is exercised by installed integration tests.

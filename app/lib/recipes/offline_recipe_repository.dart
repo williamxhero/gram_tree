@@ -245,8 +245,31 @@ final localRecipeVersionsProvider = StreamProvider<List<LocalRecipeVersion>>((
     yield const [];
     return;
   }
-  yield await repository.versions();
+  final initial = await repository.versions();
+  var projection = _recipeProjection(initial);
+  yield initial;
   await for (final _ in repository.queue.changes) {
-    yield await repository.versions();
+    final versions = await repository.versions();
+    final next = _recipeProjection(versions);
+    // Analytics uploads share this queue. Unchanged recipe data must not spend
+    // another protected HTTP page request or reset an in-progress recipe list.
+    if (next == projection) continue;
+    projection = next;
+    yield versions;
   }
 });
+
+String _recipeProjection(List<LocalRecipeVersion> versions) => jsonEncode([
+  for (final version in versions)
+    [
+      version.entry.write.toJson(),
+      version.entry.sequence,
+      version.entry.state.name,
+      version.entry.attempts,
+      version.entry.reasonCode,
+      version.entry.nextAttemptAt?.toIso8601String(),
+      version.entry.result,
+      version.entry.businessRecord,
+      version.entry.confirmedAt?.toIso8601String(),
+    ],
+]);
