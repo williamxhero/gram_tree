@@ -20,7 +20,7 @@ FLUTTER="${FLUTTER:-flutter}"
 PORT="${CHROMEDRIVER_PORT:-4444}"
 # Random Flutter ports can land on Chrome's blocked-port list (for example 6000)
 # and leave the driver waiting on an error page. Parallel runs can override this.
-WEB_PORT="${GRAMTREE_E2E_WEB_PORT:-7357}"
+WEB_PORT="${GRAMTREE_E2E_WEB_PORT:-17357}"
 if [[ $# -gt 0 ]]; then
   targets=("$@")
 else
