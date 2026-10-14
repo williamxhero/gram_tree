@@ -508,6 +508,7 @@ class RecipeIngredientDraft {
     this.flavorSource,
     this.functionalSource,
     this.replacement,
+    this.flavorContributionCleared = false,
   });
 
   factory RecipeIngredientDraft.fromModel(RecipeIngredient value) =>
@@ -533,6 +534,7 @@ class RecipeIngredientDraft {
         flavorContribution: value.flavorContribution,
         flavorSource: value.flavorSource,
         functionalSource: value.functionalSource,
+        flavorContributionCleared: false,
         replacement: value.replacement is String
             ? RecipeReplacementDraft(
                 ingredientId: null,
@@ -570,6 +572,7 @@ class RecipeIngredientDraft {
           : null,
       flavorSource: _valueSource(value['flavor_source']),
       functionalSource: _valueSource(value['functional_source']),
+      flavorContributionCleared: value['flavor_contribution_cleared'] == true,
       replacement: replacement is String
           ? RecipeReplacementDraft(ingredientId: null, displayName: replacement)
           : replacement is Map
@@ -600,11 +603,15 @@ class RecipeIngredientDraft {
   bool optional;
   bool functional;
   RecipeFlavorContribution? flavorContribution;
+
+  /// Distinguishes an intentional clear from an untouched unknown contribution.
+  bool flavorContributionCleared;
   ValueSource? flavorSource;
   ValueSource? functionalSource;
   RecipeReplacementDraft? replacement;
 
   void adoptIngredientDefaults(IngredientDetail ingredient) {
+    flavorContributionCleared = false;
     final flavor = ingredient.attributes.flavor;
     flavorContribution = flavor == null
         ? null
@@ -626,7 +633,8 @@ class RecipeIngredientDraft {
   void setFlavor(String axis, int? strength) {
     final values = flavorContribution?.toJson() ?? <String, dynamic>{};
     values[axis] = strength;
-    flavorContribution = values.values.every((value) => value == null)
+    flavorContributionCleared = values.values.every((value) => value == null);
+    flavorContribution = flavorContributionCleared
         ? null
         : RecipeFlavorContribution.fromJson(values);
     flavorSource = flavorContribution == null
@@ -645,7 +653,9 @@ class RecipeIngredientDraft {
     // Preserve an unknown source contribution as null. An empty contribution is
     // a meaningful explicit edit and would make an untouched quantity change
     // compare as a general recipe change.
-    flavorContribution: flavorContribution,
+    flavorContribution: flavorContributionCleared
+        ? RecipeFlavorContribution()
+        : flavorContribution,
     flavorSource: flavorSource,
     functionalSource: functionalSource,
     group: _optionalText(group),
@@ -683,6 +693,7 @@ class RecipeIngredientDraft {
     'optional': optional,
     'functional': functional,
     'flavor_contribution': flavorContribution?.toJson(),
+    'flavor_contribution_cleared': flavorContributionCleared,
     'flavor_source': flavorSource?.toJson(),
     'functional_source': functionalSource?.toJson(),
     'replacement': replacement?.toJson(),
