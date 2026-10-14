@@ -61,7 +61,8 @@ status=0
 for target in "${targets[@]}"; do
   echo "== $target"
   fixture_args=()
-  if [[ "$target" == integration_test/comparison_assistance_test.dart ]]; then
+  if [[ "$target" == integration_test/comparison_assistance_test.dart ||
+        "$target" == integration_test/public_sharing_live_test.dart ]]; then
     defines_path="${GRAMTREE_E2E_ASSISTANCE_DEFINES:-${TMPDIR:-/tmp}/gramtree_e2e_server_${GRAMTREE_E2E_PORT:-8000}.assistance.json}"
     if command -v cygpath >/dev/null 2>&1; then
       defines_path="$(cygpath -m "$defines_path")"
