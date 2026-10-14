@@ -17,7 +17,7 @@ from gramtree.accounts.models import User, UserStatus
 from gramtree.core.errors import ApiError, NotFound
 from gramtree.exports import archive
 from gramtree.exports.models import ExportJob
-from gramtree.exports.schemas import ExportJobView
+from gramtree.exports.schemas import ExportJobView, ExportStatus
 from gramtree.runtime_config import service as config
 from gramtree.settings import Settings
 
@@ -46,7 +46,7 @@ def view(job: ExportJob, settings: Settings, now: datetime) -> ExportJobView:
             url = f"/v1/me/exports/{job.id}/download?expires={expires}&signature={signed}"
     return ExportJobView(
         id=job.id,
-        status=cast("object", status),  # validated by Pydantic below
+        status=cast(ExportStatus, status),
         created_at=job.created_at,
         completed_at=job.completed_at,
         expires_at=job.expires_at,
@@ -219,7 +219,7 @@ def erase_owner_exports(session: Session, settings: Settings, owner_id: uuid.UUI
     """Account erasure extension; caller already holds the owner lock."""
     for job in session.scalars(select(ExportJob).where(ExportJob.owner_id == owner_id)):
         archive_path(settings, job.id).unlink(missing_ok=True)
-        job.status, job.error_code = "expired", None
+        session.delete(job)
 
 
 def cleanup(session: Session, settings: Settings, now: datetime) -> dict[str, int]:

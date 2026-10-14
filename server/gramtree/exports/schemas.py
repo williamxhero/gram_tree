@@ -4,10 +4,12 @@ from typing import Literal
 
 from pydantic import BaseModel
 
+ExportStatus = Literal["pending", "processing", "completed", "failed", "expired"]
+
 
 class ExportJobView(BaseModel):
     id: uuid.UUID
-    status: Literal["pending", "processing", "completed", "failed", "expired"]
+    status: ExportStatus
     created_at: datetime
     completed_at: datetime | None = None
     expires_at: datetime | None = None

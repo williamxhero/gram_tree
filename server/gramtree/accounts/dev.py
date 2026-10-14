@@ -51,6 +51,7 @@ def deletion_storage(
     from gramtree.analytics.models import AnalyticsEvent
     from gramtree.events.models import Event
     from gramtree.events.sync_models import WriteFactOutbox, WriteReceipt
+    from gramtree.exports.models import ExportJob
     from gramtree.recipes.import_models import RecipeImport
     from gramtree.recipes.measure_models import PersonalMeasure
     from gramtree.recipes.models import Recipe, RecipeImageStaging, RecipeSaveOutbox
@@ -84,6 +85,7 @@ def deletion_storage(
         (GenerationRequest, GenerationRequest.user_id),
         (RecipeModification, RecipeModification.user_id),
         (CookingStatisticDedup, CookingStatisticDedup.owner_id),
+        (ExportJob, ExportJob.owner_id),
     )
     counts = {
         model.__tablename__: session.scalar(

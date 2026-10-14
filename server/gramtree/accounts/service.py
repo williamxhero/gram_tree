@@ -680,6 +680,7 @@ def purge_due_accounts(session: Session, apple: AppleClient, now: datetime) -> i
     """删除到期的注销中账号的个人数据。账号行保留为“已注销”，ID 不复用。"""
     from gramtree.accounts import deletion
     from gramtree.accounts.deletion_models import AccountDeletion
+    from gramtree.exports import service as exports
     from gramtree.settings import get_settings
 
     settings = get_settings()
@@ -734,6 +735,7 @@ def purge_due_accounts(session: Session, apple: AppleClient, now: datetime) -> i
         # Storage retries remain durable after metadata erasure. Do not mark the
         # account completed when storage deletion failed.
         deletion.drain_objects(session, settings)
+        exports.erase_owner_exports(session, settings, user.id)
         job.steps = {**job.steps, "objects_erased": now.isoformat()}
         deletion.erase_owner_caches(settings, user.id)
         job.steps = {**job.steps, "caches_erased": now.isoformat()}
