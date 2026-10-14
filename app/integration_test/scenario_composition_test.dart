@@ -9,6 +9,7 @@ import 'event_pipeline_support.dart'
     show accessTokenOf, containerOf, devServer, signInFreshUser;
 
 const _dish = '网页场景验收鸡肉';
+const _prepInstruction = '切好鸡肉，备好盐';
 const _instruction = '炒熟鸡肉，关火后加盐';
 const _note = '观察中心熟透后再出锅';
 
@@ -63,6 +64,30 @@ Future<void> _tap(
   await _pump(tester);
 }
 
+Future<void> _revealCooking(WidgetTester tester, Finder finder) async {
+  final scrollable = find.byType(Scrollable).first;
+  if (finder.evaluate().isEmpty) {
+    for (var i = 0; i < 12; i++) {
+      await tester.drag(scrollable, const Offset(0, 500));
+      await tester.pump(const Duration(milliseconds: 100));
+    }
+  }
+  await tester.scrollUntilVisible(
+    finder.last,
+    200,
+    scrollable: scrollable,
+    maxScrolls: 20,
+  );
+  await _pump(tester);
+  expect(finder.last.hitTestable(), findsOneWidget);
+}
+
+Future<void> _tapCooking(WidgetTester tester, Finder finder) async {
+  await _revealCooking(tester, finder);
+  await tester.tap(finder.last.hitTestable());
+  await _pump(tester);
+}
+
 Future<void> _back(WidgetTester tester) =>
     _tap(tester, find.byType(BackButton).last);
 
@@ -90,7 +115,15 @@ Map<String, dynamic> _recipeInput() => {
     ],
     'steps': [
       {
+        'id': 'prep',
+        'action': '切',
+        'instruction': _prepInstruction,
+        'ingredient_ids': ['chicken'],
+        'duration_seconds': 60,
+      },
+      {
         'id': 'cook',
+        'depends_on': ['prep'],
         'action': '炒',
         'instruction': _instruction,
         'ingredient_ids': ['chicken', 'salt'],
@@ -150,7 +183,7 @@ Future<void> _seedHistory(Options auth, Map<String, dynamic> recipe) async {
       'recipe_version_id': version['id'],
       'snapshot': {'format_version': 1, 'detail': executed},
       'source_context': {
-        'completed_steps': ['cook'],
+        'completed_steps': ['prep', 'cook'],
         'skipped_steps': <String>[],
       },
     }, auth);
@@ -170,9 +203,10 @@ void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
   testWidgets('真实登录后首次详细、熟练差异、失败提醒和口味变化预览贯穿页面', (tester) async {
-    if (!kIsWeb) return;
-    tester.testTextInput.register();
-    addTearDown(tester.testTextInput.unregister);
+    if (kIsWeb) {
+      tester.testTextInput.register();
+      addTearDown(tester.testTextInput.unregister);
+    }
     await signInFreshUser(tester);
     final auth = Options(
       headers: {
@@ -266,6 +300,37 @@ void main() {
     final revertedProfile = await _get('/v1/me/taste-profile', auth);
     expect((revertedProfile['flavors'] as Map)['salty']['coefficient'], 0.75);
     expect(_key('scenario-restore-current-taste'), findsNothing);
+
+    await _tap(tester, _key('start-cooking-button'), inRecipe: true);
+    await _wait(tester, find.text('先准备食材'));
+    await _tap(tester, find.text('开始第一步'));
+    final before = 'scene:failure:$recipeId:dry_meat:cook:before';
+    final at = 'scene:failure:$recipeId:dry_meat:cook:at';
+    await _revealCooking(tester, _key('cooking-reminders-cook-before'));
+    expect(_key(before), findsOneWidget);
+    expect(_key(at), findsNothing);
+    await _revealCooking(tester, find.text('计时 60 秒'));
+    await _revealCooking(tester, find.text('记录问题'));
+    await _revealCooking(tester, find.text('下一步'));
+    // A real flip must move the active step despite reminder cards adding
+    // their own nested scrollables above the normal cooking controls.
+    await tester.drag(find.byType(Scrollable).first, const Offset(-350, 0));
+    await _pump(tester);
+    await _revealCooking(tester, find.text('步骤 2 / 2'));
+    await _revealCooking(tester, _key('cooking-reminders-cook-at'));
+    expect(_key(at), findsOneWidget);
+    expect(_key(before), findsNothing);
+    await _tapCooking(tester, find.text('记录问题'));
+    await _wait(tester, find.byType(AlertDialog));
+    await _tap(tester, find.text('取消'));
+    await _tapCooking(tester, find.text('记录临时调整'));
+    await _wait(tester, find.byType(AlertDialog));
+    await _tap(tester, find.text('取消'));
+    await _tapCooking(tester, find.text('计时 120 秒'));
+    await _revealCooking(tester, find.text('步骤计时'));
+    await _tapCooking(tester, find.text('完成'));
+    await _wait(tester, _key('cooking-complete'));
+    expect(find.text('已完成 $_dish'), findsOneWidget);
     expect(tester.takeException(), isNull);
   }, timeout: const Timeout(Duration(minutes: 5)));
 }

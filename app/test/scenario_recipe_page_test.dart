@@ -431,8 +431,10 @@ void main() {
     await _reveal(tester, find.textContaining('上次 9 g'));
     expect(find.textContaining('本次 8 g'), findsWidgets);
     await _reveal(tester, _key('scenario-expand-steps'));
+    expect(find.text('展开完整步骤'), findsOneWidget);
     expect(find.textContaining(_instruction), findsNothing);
     await _tap(tester, _key('scenario-expand-steps'));
+    expect(find.text('收起完整步骤'), findsOneWidget);
     await _reveal(tester, find.textContaining(_instruction));
     expect(tester.takeException(), isNull);
   });
@@ -520,7 +522,9 @@ void main() {
       tester.widget<FilledButton>(_key('start-cooking-button')).onPressed,
       isNull,
     );
+    await _reveal(tester, _key('recipe-ingredient-amount-salt'));
     expect(find.text('盐  9 g'), findsNothing);
+    expect(find.text('10 克'), findsOneWidget);
     expect(_key('scenario-restore-current-taste'), findsNothing);
     expect(
       server.calls('POST', '/v1/me/taste-profile/changes/$_changeId/revert'),
