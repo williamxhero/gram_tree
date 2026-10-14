@@ -18,7 +18,7 @@ const publicShareUrl = 'https://gramtree.app/s/$publicShareId';
 const sharedImageId = '44444444-4444-4444-8444-444444444444';
 // Generated-contract image fixture: a single opaque PNG pixel, not user data.
 const testPngBase64 =
-    'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9Wl2l9sAAAAASUVORK5CYII=';
+    'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR4nGP4////fwAJ+wP9KobjigAAAABJRU5ErkJggg==';
 final testImageBytes = base64Decode(testPngBase64);
 
 RecipeDetail sharedDetail({

@@ -9,12 +9,47 @@ import '../test/request_protection_test.dart' as protection;
 import '../test/sharing_support.dart';
 
 void main() {
-  IntegrationTestWidgetsFlutterBinding.ensureInitialized();
+  final binding = IntegrationTestWidgetsFlutterBinding.ensureInitialized();
+  setUp(binding.testTextInput.register);
+  tearDown(binding.testTextInput.unregister);
+  // FlutterErrorDetails.toString() is empty in profile builds. Keep structured
+  // failure locations without recording request bodies, credentials or answers.
+  final previousReporter = reportTestException;
+  reportTestException = (details, description) {
+    final failures = [
+      ...?binding.reportData?['framework_failures'] as List?,
+      {
+        'test': description,
+        'exception_type': details.exception.runtimeType.toString(),
+        // These two fixture-only tests assert fixed text, counts and payloads;
+        // their matcher failures cannot contain real account credentials.
+        if (description.startsWith(
+              'captcha dialog completes and original retry',
+            ) &&
+            details.exception is TestFailure)
+          'assertion': details.exception.toString(),
+        'stack': details.stack?.toString(),
+      },
+    ];
+    binding.reportData = {
+      ...?binding.reportData,
+      'framework_failures': failures,
+    };
+    previousReporter(details, description);
+  };
+  tearDownAll(() => reportTestException = previousReporter);
   // Same public, clock, rotation, captcha and countdown journeys run in the
   // compiled Chromium app, not merely a router-only widget substitute.
   if (kIsWeb) {
     sharing.main();
-    protection.main();
+    protection.main(
+      onCaptchaProgress: (data) {
+        binding.reportData = {
+          ...?binding.reportData,
+          'captcha_${data['repeated']}': data,
+        };
+      },
+    );
   }
 
   if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {

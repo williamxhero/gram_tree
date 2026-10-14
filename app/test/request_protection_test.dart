@@ -24,7 +24,20 @@ Future<void> pumpUntilVisible(WidgetTester tester, Finder finder) async {
   expect(finder, findsOneWidget);
 }
 
-void main() {
+Future<void> pumpUntilRequestCount(
+  WidgetTester tester,
+  int Function() count,
+  int expected,
+) async {
+  for (var i = 0; i < 80 && count() != expected; i++) {
+    await tester.runAsync(
+      () => Future<void>.delayed(const Duration(milliseconds: 50)),
+    );
+    await tester.pump(const Duration(milliseconds: 50));
+  }
+}
+
+void main({void Function(Map<String, Object?>)? onCaptchaProgress}) {
   for (final signedIn in [false, true]) {
     testWidgets('public share CAPTCHA stays anonymous: signedIn=$signedIn', (
       tester,
@@ -74,12 +87,77 @@ void main() {
       ];
       expect(requests, hasLength(4));
       for (final request in requests) {
-        expect(request.headers['Authorization'], isNull);
+        expect(request.headers.containsKey('Authorization'), isFalse);
         expect(request.headers['X-Device-ID'], isNull);
         expect(request.headers['X-Request-Signature'], isNull);
       }
     });
   }
+
+  testWidgets('signed-out login CAPTCHA omits Authorization entirely', (
+    tester,
+  ) async {
+    final env = SharingTestEnv(signedIn: false);
+    var codeCalls = 0;
+    env.server.responseHeaders['POST /v1/auth/email/code'] = {
+      'x-risk-challenge': ['challenge-123'],
+    };
+    env.server.on('POST', '/v1/auth/email/code', (_) {
+      if (++codeCalls == 1) {
+        return FakeServer.error(403, 'risk_captcha_required', '需要安全验证');
+      }
+      return (200, {'resend_after_seconds': 60, 'expires_in_seconds': 600});
+    });
+    env.server.on(
+      'POST',
+      '/v1/risk/captcha',
+      (_) => (200, {'accepted': true, 'access_restored': true}),
+    );
+    await pumpApp(tester, env: env);
+    await tester.enterText(
+      find.byKey(const ValueKey('login-email')),
+      testEmail,
+    );
+    await tester.ensureVisible(find.text('发送验证码'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('发送验证码'));
+    await pumpUntilVisible(tester, find.text('安全验证'));
+    // The login request remains busy beneath this modal; do not settle its
+    // indeterminate spinner while waiting for the user to answer.
+    await tester.pump(const Duration(milliseconds: 300));
+    await tester.enterText(
+      find.byKey(const ValueKey('captcha-response')),
+      'verified',
+    );
+    await tester.pump();
+    expect(find.text('verified'), findsOneWidget);
+    await tester.tap(find.text('验证并继续'));
+    await pumpUntilRequestCount(tester, () => codeCalls, 2);
+    await pumpUntilVisible(tester, find.text('输入验证码'));
+    await tester.pumpAndSettle();
+    expect(codeCalls, 2);
+    expect(find.text('安全验证'), findsNothing);
+    expect(find.text('请先登录'), findsNothing);
+    final challenge = env.server.calls('GET', '/v1/risk/captcha/challenge-123');
+    final verification = env.server.calls('POST', '/v1/risk/captcha');
+    expect(challenge, hasLength(1));
+    expect(verification, hasLength(1));
+    expect(verification.single.body, {
+      'challenge_id': 'challenge-123',
+      'response': 'verified',
+    });
+    for (final request in [
+      ...env.server.calls('POST', '/v1/auth/email/code'),
+      ...challenge,
+      ...verification,
+    ]) {
+      // The browser adapter turns a present null into the literal header 'null'.
+      // Optional backend authentication requires the header to be absent instead.
+      expect(request.headers.containsKey('Authorization'), isFalse);
+      expect(request.headers['X-Request-Signature'], isNull);
+    }
+    expect(env.server.calls('POST', '/v1/auth/refresh'), isEmpty);
+  });
 
   testWidgets(
     'clock replay can refresh expired tokens without a second clock or auth retry',
@@ -325,30 +403,93 @@ void main() {
               ? FakeServer.error(403, 'risk_captcha_required', '需要安全验证')
               : (200, sharedDetail().toJson()),
         );
-        env.server.on('POST', '/v1/risk/captcha', (r) {
-          expect(r.body, {
+        // Assertions in an async interceptor can throw before it completes the
+        // request. Assert the recorded payload below, in the test's own future.
+        env.server.on(
+          'POST',
+          '/v1/risk/captcha',
+          (_) => (200, {'accepted': true, 'access_restored': true}),
+        );
+        var phase = 'open';
+        void reportProgress() {
+          final verification = env.server.calls('POST', '/v1/risk/captcha');
+          final body = verification.lastOrNull?.body;
+          onCaptchaProgress?.call({
+            'repeated': repeated,
+            'phase': phase,
+            'recipe_calls': count,
+            'challenge_calls': env.server
+                .calls('GET', '/v1/risk/captcha/challenge-123')
+                .length,
+            'verification_calls': verification.length,
+            'dialog_visible': find.text('安全验证').evaluate().isNotEmpty,
+            'input_received': find.text('verified').evaluate().isNotEmpty,
+            'challenge_id_matches':
+                body is Map && body['challenge_id'] == 'challenge-123',
+            'response_matches': body is Map && body['response'] == 'verified',
+            'share_button_visible': find
+                .byKey(const ValueKey('recipe-share-button'))
+                .evaluate()
+                .isNotEmpty,
+          });
+        }
+
+        reportProgress();
+        try {
+          await openProtectedRecipe(tester, env);
+          phase = 'show_dialog';
+          await pumpUntilVisible(tester, find.text('安全验证'));
+          // Finish the dialog entrance without trying to settle the pending
+          // recipe request's indeterminate spinner beneath the modal.
+          await tester.pump(const Duration(milliseconds: 300));
+          reportProgress();
+          expect(find.text('输入图中的字符'), findsOneWidget);
+          expect(find.byKey(const ValueKey('captcha-image')), findsOneWidget);
+          phase = 'enter_response';
+          await tester.enterText(
+            find.byKey(const ValueKey('captcha-response')),
+            'verified',
+          );
+          await tester.pump();
+          reportProgress();
+          expect(find.text('verified'), findsOneWidget);
+          phase = 'submit';
+          await tester.tap(find.text('验证并继续'));
+          await tester.pumpAndSettle();
+          phase = 'wait_replay';
+          reportProgress();
+          await pumpUntilRequestCount(tester, () => count, 2);
+          // WebCrypto completion and request dispatch are not a UI completion
+          // signal. Wait for the actual success/error page before asserting.
+          phase = 'wait_page';
+          reportProgress();
+          await pumpUntilVisible(
+            tester,
+            repeated
+                ? find.text('菜谱暂时加载不了')
+                : find.byKey(const ValueKey('recipe-share-button')),
+          );
+          await tester.pumpAndSettle();
+          phase = 'assert_result';
+          reportProgress();
+          expect(count, 2);
+          final verification = env.server.calls('POST', '/v1/risk/captcha');
+          expect(verification, hasLength(1));
+          expect(verification.single.body, {
             'challenge_id': 'challenge-123',
             'response': 'verified',
           });
-          return (200, {'accepted': true, 'access_restored': true});
-        });
-        await openProtectedRecipe(tester, env);
-        await pumpUntilVisible(tester, find.text('安全验证'));
-        expect(find.text('输入图中的字符'), findsOneWidget);
-        expect(find.byKey(const ValueKey('captcha-image')), findsOneWidget);
-        await tester.enterText(
-          find.byKey(const ValueKey('captcha-response')),
-          'verified',
-        );
-        await tester.tap(find.text('验证并继续'));
-        await tester.pumpAndSettle();
-        expect(count, 2);
-        expect(env.server.calls('POST', '/v1/risk/captcha'), hasLength(1));
-        expect(find.text('安全验证'), findsNothing);
-        expect(
-          find.byKey(const ValueKey('recipe-share-button')),
-          repeated ? findsNothing : findsOneWidget,
-        );
+          expect(find.text('安全验证'), findsNothing);
+          expect(
+            find.byKey(const ValueKey('recipe-share-button')),
+            repeated ? findsNothing : findsOneWidget,
+          );
+          phase = 'complete';
+          reportProgress();
+        } catch (_) {
+          reportProgress();
+          rethrow;
+        }
       },
     );
   }

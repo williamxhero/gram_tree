@@ -311,7 +311,10 @@ class RequestProtectionInterceptor extends Interceptor {
           };
           final response = await riskApi.getCaptchaChallenge(
             challengeId: Uri.encodeComponent(challengeId),
-            headers: {'Authorization': options.headers['Authorization']},
+            headers: {
+              if (options.headers['Authorization'] != null)
+                'Authorization': options.headers['Authorization'],
+            },
             extra: recoveryExtra,
           );
           final challenge = response.data;
@@ -347,7 +350,10 @@ class RequestProtectionInterceptor extends Interceptor {
                 challengeId: challengeId,
                 response: answer,
               ),
-              headers: {'Authorization': options.headers['Authorization']},
+              headers: {
+                if (options.headers['Authorization'] != null)
+                  'Authorization': options.headers['Authorization'],
+              },
               extra: {...recoveryExtra, _captchaRetried: true},
             );
             if (verification.data?.accepted != true ||
