@@ -6,7 +6,7 @@ import 'package:gram_tree/config/app_config.dart';
 import 'package:gram_tree/main.dart' as app;
 import 'package:integration_test/integration_test.dart';
 
-import 'cooking_controls_support.dart';
+import '../test/cooking_controls_support.dart';
 
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();

@@ -14,7 +14,7 @@ import 'package:gram_tree/ui_protocol/source_mark.dart';
 import 'package:gram_tree/ui_protocol/component_registry.dart';
 import 'package:gramtree_api/gramtree_api.dart';
 
-import '../integration_test/cooking_controls_support.dart';
+import 'cooking_controls_support.dart';
 import 'helpers.dart';
 import 'allergies_page_test.dart' show allergyFixture;
 import 'taste_profile_page_test.dart'

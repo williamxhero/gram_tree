@@ -5,7 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:gram_tree/util/ids.dart';
 
-import 'cooking_controls_support.dart';
+import '../test/cooking_controls_support.dart';
 import 'event_pipeline_support.dart'
     show accessTokenOf, containerOf, devServer, signInFreshUser;
 
