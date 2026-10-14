@@ -26,6 +26,7 @@
 
 | [`offline-writes.html`](offline-writes.html) | 离线手工编辑与保存、个人量具修改历史、账号退出保留提醒、同步分类与重试；浅色/深色交互 | #27 / #216、#218、#219、#220 | 本会话无 Artifact 发布工具；本地 HTML 样稿 |
 | [`recipe-sharing.html`](recipe-sharing.html) | 公开分享最小信息、系统图加链接分享、无效链接兜底与时钟/验证码/限流/分页保护状态 | #46 / #256–263 | Artifact 发布被当前登录方式阻塞；本地交互 HTML 样稿（示例数据） |
+| [`personalized-recipe.html`](personalized-recipe.html) | 默认按口味视图、原版切换、解释面板、多人/儿童分盛、过敏阻断、厨具降级与做菜模式一致 | #31 SPEC-005.2 | 2026-10-13 已尝试发布；Artifact 要求 claude.ai 登录，当前 API-token 认证不支持。本地交互 HTML 样稿 |
 
 ## 说明
 

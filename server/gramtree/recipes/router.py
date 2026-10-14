@@ -26,6 +26,7 @@ from gramtree.recipes.quantification_schemas import (
 )
 from gramtree.recipes.schemas import (
     MoldSpec,
+    PersonalizationRequest,
     RecipeComparisonCandidates,
     RecipeCreate,
     RecipeDetail,
@@ -36,6 +37,7 @@ from gramtree.recipes.schemas import (
     RecipeList,
     RecipeMoldConversionOut,
     RecipeMoldConversionRequest,
+    RecipePersonalizedOut,
     RecipeReproducibilityCheckOut,
     RecipeReproducibilityCheckRequest,
     RecipeSafetyCheckOut,
@@ -362,6 +364,25 @@ def decide_recipe_quantification(
     settings: SettingsDep,
 ) -> RecipeDetail:
     return quantification.decide(session, redis, settings, auth.user, recipe_id, proposal_id, body)
+
+
+@router.post(
+    "/{recipe_id}/personalized",
+    response_model=RecipePersonalizedOut,
+    responses=_errors(401, 404, 422),
+)
+def personalize_recipe(
+    recipe_id: IdV4,
+    body: PersonalizationRequest,
+    auth: CurrentAuth,
+    session: SessionDep,
+    redis: RedisDep,
+    settings: SettingsDep,
+    view: Literal["personalized", "original"] = Query(default="personalized"),
+) -> RecipePersonalizedOut:
+    return service.personalize_recipe(
+        session, settings, auth.user, recipe_id, body, redis=redis, view=view
+    )
 
 
 @router.get("/{recipe_id}", response_model=RecipeDetail, responses=_errors(401, 404))

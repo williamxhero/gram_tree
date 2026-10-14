@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:gram_tree/api/api_client.dart';
 import 'package:gram_tree/app/router.dart';
 import 'package:gram_tree/network/reachability.dart';
 import 'package:gram_tree/recipes/recipe_snapshot.dart';
@@ -11,8 +12,10 @@ import 'package:gramtree_api/gramtree_api.dart';
 
 import 'package:gram_tree/storage/local_store.dart';
 
+import 'frozen_conversion_support.dart';
 import 'fixtures/conversion_cases.g.dart';
 import 'helpers.dart';
+import 'taste_profile_page_test.dart' show profileFixture;
 
 const _recipeId = '11111111-1111-4111-8111-111111111111';
 const _firstVersionId = '22222222-2222-4222-8222-222222222222';
@@ -1623,8 +1626,18 @@ void main() {
     (tester) async {
       final server = FakeServer();
       _installRecipeApi(server);
+      // Real fresh accounts return a default profile, not a missing profile.
+      server.on(
+        'GET',
+        '/v1/me/taste-profile',
+        (_) => (200, profileFixture().toJson()),
+      );
       final env = TestEnv.signedIn(server: server);
       await pumpApp(tester, env: env);
+      final seedContainer = ProviderScope.containerOf(
+        tester.element(find.byType(Scaffold).first),
+      );
+      installFrozenConversionFixture(seedContainer.read(dioProvider));
       await _openMyRecipes(tester);
       await tester.tap(find.byKey(const ValueKey('recipe-card-$_recipeId')));
       await tester.pumpAndSettle();
@@ -1648,16 +1661,45 @@ void main() {
           'recipe.scaling_round_deviation_threshold': 0.9,
         },
       );
-      await pumpApp(tester, env: offline);
-      ProviderScope.containerOf(tester.element(find.byType(Scaffold).first))
-          .read(routerProvider)
-          .go('/recipes/$_recipeId');
+      // Match the Android process-death harness's viewport and text scale.
+      await pumpApp(
+        tester,
+        env: offline,
+        size: const Size(320, 640),
+        textScale: 1.5,
+      );
+      final restoreContainer = ProviderScope.containerOf(
+        tester.element(find.byType(Scaffold).first),
+      );
+      installFrozenConversionFixture(restoreContainer.read(dioProvider));
+      restoreContainer.read(routerProvider).go('/recipes/$_recipeId');
       await tester.pumpAndSettle();
-      expect(find.textContaining('离线快照'), findsOneWidget);
-      await _scrollToBottom(tester);
+      expect(find.textContaining('离线快照 · 第 1 版'), findsOneWidget);
+      await _scrollUntilVisible(tester, find.textContaining('已保存 3 份'));
+      expect(
+        find.text('已保存 3 份的用量与换算结果；缺少口味结果，修改换算需要联网。').hitTestable(),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(const ValueKey('recipe-serving-control')),
+        findsNothing,
+      );
+      expect(find.byKey(const ValueKey('recipe-measure-picker')), findsNothing);
+      expect(
+        find.byKey(const ValueKey('recipe-display-mode-base')),
+        findsNothing,
+      );
+      await _scrollUntilVisible(
+        tester,
+        find.byKey(const ValueKey('recipe-ingredient-amount-ingredient-1')),
+      );
       expect(find.text('150 克'), findsWidgets);
+      final source = find.byKey(
+        const ValueKey('recipe-source-mark-ingredient-1'),
+      );
+      await _scrollUntilVisible(tester, source);
       expect(find.text('按场景调整'), findsOneWidget);
-      await tester.tap(find.text('按场景调整'));
+      await tester.tap(source);
       await tester.pumpAndSettle();
       expect(find.text('原来：100 g'), findsOneWidget);
       expect(find.text('现在：150 克'), findsOneWidget);

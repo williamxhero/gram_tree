@@ -455,6 +455,7 @@ def check(
     *,
     descriptions: list[str] | None = None,
     policy: Rules | None = None,
+    age_bands: list[str] | None = None,
 ) -> RecipeSafetyResult:
     policy = policy or rules()
     recipe_text = " ".join(
@@ -548,6 +549,20 @@ def check(
                         rest_minutes=rule.rest_minutes,
                     )
                 )
+    if age_bands and "under_1" in age_bands:
+        infant_terms = {"蜂蜜": "infant_honey", "盐": "infant_salt"}
+        for item in snapshot.ingredients:
+            for term, rule_id in infant_terms.items():
+                if term in item.display_name or term in (item.preparation or ""):
+                    findings.append(
+                        RecipeSafetyFinding(
+                            rule_id=rule_id,
+                            severity="high_risk",
+                            message=f"1 岁以下婴幼儿不应食用{term}",
+                            basis="家庭成员年龄段安全规则",
+                            ingredient_ids=[item.id],
+                        )
+                    )
     claim_texts = [title, *(descriptions or []), *_strings(snapshot.model_dump())]
     prohibited = [
         term

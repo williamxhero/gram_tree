@@ -58,6 +58,8 @@ class Unavailable(Exception):
 
 
 def route(session: Session, capability: str) -> tuple[ModelRoute, Policy]:
+    if capability in ("personalize_equipment", "personalize_replacement"):
+        capability = "modify"
     try:
         tier = config.get(session, "ai.routes")[capability]
         model = ModelRoute.model_validate(config.get(session, "ai.models")[tier])
@@ -69,7 +71,10 @@ def route(session: Session, capability: str) -> tuple[ModelRoute, Policy]:
 
 def quota_capabilities(capability: str) -> tuple[str, ...]:
     return (
-        ("modify", "modify_intent") if capability in ("modify", "modify_intent") else (capability,)
+        ("modify", "modify_intent", "personalize_equipment", "personalize_replacement")
+        if capability
+        in ("modify", "modify_intent", "personalize_equipment", "personalize_replacement")
+        else (capability,)
     )
 
 
@@ -213,6 +218,16 @@ def _invoke(
             prompt += "\nJSON schema: " + json.dumps(
                 QuantificationOutput.model_json_schema(), ensure_ascii=False
             )
+        if capability in ("personalize_equipment", "personalize_replacement"):
+            from gramtree.recipes.personalization_adaptations import (
+                EquipmentRewrite,
+                ReplacementSuggestion,
+            )
+
+            schema = (
+                EquipmentRewrite if capability == "personalize_equipment" else ReplacementSuggestion
+            )
+            prompt += "\nJSON schema: " + json.dumps(schema.model_json_schema(), ensure_ascii=False)
         user_content: Any = json.dumps(payload, ensure_ascii=False)
         if capability == "recipe_import" and payload.get("images_base64"):
             user_content = [

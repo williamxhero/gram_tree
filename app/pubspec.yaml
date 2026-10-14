@@ -53,4 +53,5 @@ flutter:
   uses-material-design: true
   generate: true
   assets:
+    - assets/personalization_cases.json
     - assets/models/zh/
