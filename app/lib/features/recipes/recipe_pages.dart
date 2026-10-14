@@ -2758,6 +2758,7 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
   String? _beforeTasteChangeId;
   final Set<String> _sceneSkippedComponents = {};
   bool _sceneStepsExpanded = false;
+  ScenarioCompositionKey? _activeSceneKey;
 
   Map<String, PersonalizedIngredientOut> get _personalizedIngredients => {
     for (final item in _personalized?.ingredients ?? const []) item.id: item,
@@ -3376,6 +3377,10 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
           result.profileVersion != profile.version) {
         setState(() => _personalizationError = '口味档案已变化，请重新联网换算。');
         return;
+      }
+      final sceneKey = _activeSceneKey;
+      if (sceneKey != null) {
+        ref.invalidate(scenarioCompositionProvider(sceneKey));
       }
       setState(() {
         if (original) {
@@ -4037,38 +4042,55 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
         ),
       );
     }
-    final scene = ref.watch(
-      scenarioCompositionProvider((
-        recipeId: widget.recipeId,
-        versionId: detail.version.id,
-        screenWidth: MediaQuery.sizeOf(context).width.round().clamp(1, 16384),
-        detailOverride: _sceneDetailOverride,
-        beforeChangeId: _showOriginal ? null : _beforeTasteChangeId,
-        personalizationView: _showOriginal ? 'original' : 'personalized',
-        personalizationJson:
-            _targetServings == null &&
-                _targetMold == null &&
-                _dinerIds.isEmpty &&
-                _primaryDinerId == null
-            ? null
-            : jsonEncode(
-                PersonalizationRequest(
-                  versionId: detail.version.id,
-                  targetServings: _scaleMode == _RecipeScaleMode.servings
-                      ? (_targetServings ?? snapshot.servings)
-                      : null,
-                  targetMold: _scaleMode == _RecipeScaleMode.mold
-                      ? _targetMold
-                      : null,
-                  dinerMemberIds: _dinerIds.toList(),
-                  primaryDinerId: _primaryDinerId,
-                ).toJson(),
-              ),
-        skippedComponentsJson: jsonEncode(
-          _sceneSkippedComponents.toList()..sort(),
-        ),
-      )),
+    final ScenarioCompositionKey sceneKey = (
+      recipeId: widget.recipeId,
+      versionId: detail.version.id,
+      screenWidth: MediaQuery.sizeOf(context).width.round().clamp(1, 16384),
+      detailOverride: _sceneDetailOverride,
+      beforeChangeId: _showOriginal ? null : _beforeTasteChangeId,
+      personalizationView: _showOriginal ? 'original' : 'personalized',
+      personalizationJson:
+          _targetServings == null &&
+              _targetMold == null &&
+              _dinerIds.isEmpty &&
+              _primaryDinerId == null
+          ? null
+          : jsonEncode(
+              PersonalizationRequest(
+                versionId: detail.version.id,
+                targetServings: _scaleMode == _RecipeScaleMode.servings
+                    ? (_targetServings ?? snapshot.servings)
+                    : null,
+                targetMold: _scaleMode == _RecipeScaleMode.mold
+                    ? _targetMold
+                    : null,
+                dinerMemberIds: _dinerIds.toList(),
+                primaryDinerId: _primaryDinerId,
+              ).toJson(),
+            ),
+      skippedComponentsJson: jsonEncode(
+        _sceneSkippedComponents.toList()..sort(),
+      ),
     );
+    _activeSceneKey = sceneKey;
+    final projection = _showOriginal ? _originalSafety : _personalized;
+    final sceneAllowed =
+        !ref.watch(sensitiveMemoryProvider).suppressed &&
+        (offline || (!_personalizationLoading && projection != null));
+    final pendingScene = const AsyncValue<CompositionResult>.loading();
+    final rawScene = sceneAllowed
+        ? ref.watch(scenarioCompositionProvider(sceneKey))
+        : pendingScene;
+    // Refreshes retain old AsyncValue data; never retain revoked safety context
+    // or describe a projection that has not yet been accepted for this page.
+    final scene =
+        offline ||
+            _personalizationLoading ||
+            projection == null ||
+            rawScene.isLoading ||
+            rawScene.hasError
+        ? pendingScene
+        : rawScene;
     final sceneResult = scene.value;
     final sceneComponents = sceneResult is CompositionReady
         ? sceneResult.description.components ?? const <ComponentDescriptor>[]
