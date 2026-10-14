@@ -3,6 +3,7 @@
 //
 
 // ignore_for_file: unused_element
+import 'package:gramtree_api/src/model/cooking_completion.dart';
 import 'package:copy_with_extension/copy_with_extension.dart';
 import 'package:json_annotation/json_annotation.dart';
 
@@ -23,6 +24,8 @@ class CookingRecordCreate {
     required this.clientId,
 
     this.coDinerIds,
+
+    this.completion,
 
     this.dishName,
 
@@ -51,6 +54,9 @@ class CookingRecordCreate {
 
   @JsonKey(name: r'co_diner_ids', required: false, includeIfNull: false)
   final List<String>? coDinerIds;
+
+  @JsonKey(name: r'completion', required: false, includeIfNull: false)
+  final CookingCompletion? completion;
 
   @JsonKey(name: r'dish_name', required: false, includeIfNull: false)
   final String? dishName;
@@ -86,6 +92,7 @@ class CookingRecordCreate {
           other.adjustments == adjustments &&
           other.clientId == clientId &&
           other.coDinerIds == coDinerIds &&
+          other.completion == completion &&
           other.dishName == dishName &&
           other.meal == meal &&
           other.occurredAt == occurredAt &&
@@ -101,6 +108,7 @@ class CookingRecordCreate {
       adjustments.hashCode +
       clientId.hashCode +
       coDinerIds.hashCode +
+      completion.hashCode +
       (dishName == null ? 0 : dishName.hashCode) +
       (meal == null ? 0 : meal.hashCode) +
       (occurredAt == null ? 0 : occurredAt.hashCode) +

@@ -1470,6 +1470,73 @@
         "title": "ConsentUpload",
         "type": "object"
       },
+      "CookingCompletion": {
+        "additionalProperties": false,
+        "properties": {
+          "completed_steps": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 200,
+            "title": "Completed Steps",
+            "type": "array"
+          },
+          "execution_token": {
+            "maxLength": 64,
+            "minLength": 64,
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "Execution Token",
+            "type": "string"
+          },
+          "finished_at": {
+            "format": "date-time",
+            "title": "Finished At",
+            "type": "string"
+          },
+          "reached_steps": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 200,
+            "title": "Reached Steps",
+            "type": "array"
+          },
+          "session_id": {
+            "format": "uuid",
+            "title": "Session Id",
+            "type": "string"
+          },
+          "skipped_steps": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 200,
+            "title": "Skipped Steps",
+            "type": "array"
+          },
+          "started_at": {
+            "format": "date-time",
+            "title": "Started At",
+            "type": "string"
+          },
+          "status": {
+            "const": "completed",
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "session_id",
+          "execution_token",
+          "status",
+          "started_at",
+          "finished_at",
+          "reached_steps",
+          "completed_steps"
+        ],
+        "title": "CookingCompletion",
+        "type": "object"
+      },
       "CookingConstraints": {
         "additionalProperties": false,
         "properties": {
@@ -1705,6 +1772,16 @@
             "maxItems": 50,
             "title": "Co Diner Ids",
             "type": "array"
+          },
+          "completion": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CookingCompletion"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "dish_name": {
             "anyOf": [
@@ -3650,6 +3727,363 @@
         "title": "ImportOut",
         "type": "object"
       },
+      "ImprovementDraftInput": {
+        "additionalProperties": false,
+        "properties": {
+          "source_version_id": {
+            "format": "uuid",
+            "title": "Source Version Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "source_version_id"
+        ],
+        "title": "ImprovementDraftInput",
+        "type": "object"
+      },
+      "ImprovementDraftOut": {
+        "properties": {
+          "ai_assisted": {
+            "title": "Ai Assisted",
+            "type": "boolean"
+          },
+          "dish_name": {
+            "title": "Dish Name",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "snapshot": {
+            "$ref": "#/components/schemas/RecipeSnapshot"
+          },
+          "source_recipe_id": {
+            "format": "uuid",
+            "title": "Source Recipe Id",
+            "type": "string"
+          },
+          "source_version_id": {
+            "format": "uuid",
+            "title": "Source Version Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "source_recipe_id",
+          "source_version_id",
+          "snapshot",
+          "dish_name",
+          "ai_assisted"
+        ],
+        "title": "ImprovementDraftOut",
+        "type": "object"
+      },
+      "ImprovementPreviewInput": {
+        "additionalProperties": false,
+        "properties": {
+          "change_note": {
+            "default": "",
+            "maxLength": 2000,
+            "title": "Change Note",
+            "type": "string"
+          },
+          "explanation_fingerprint": {
+            "anyOf": [
+              {
+                "pattern": "^[0-9a-f]{64}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Explanation Fingerprint"
+          },
+          "from_cooking_record_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "From Cooking Record Id"
+          },
+          "modification_request_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Modification Request Id"
+          },
+          "modification_revision": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Modification Revision"
+          },
+          "snapshot": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RecipeSnapshot"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "source_version_id": {
+            "format": "uuid",
+            "title": "Source Version Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "source_version_id"
+        ],
+        "title": "ImprovementPreviewInput",
+        "type": "object"
+      },
+      "ImprovementPreviewOut": {
+        "properties": {
+          "comparison": {
+            "$ref": "#/components/schemas/RecipeFullComparison"
+          },
+          "microadjust_prompt": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Microadjust Prompt"
+          },
+          "snapshot": {
+            "$ref": "#/components/schemas/RecipeSnapshot"
+          },
+          "taste_proposal": {
+            "$ref": "#/components/schemas/ImprovementTasteProposal"
+          }
+        },
+        "required": [
+          "snapshot",
+          "comparison",
+          "taste_proposal"
+        ],
+        "title": "ImprovementPreviewOut",
+        "type": "object"
+      },
+      "ImprovementSaveInput": {
+        "additionalProperties": false,
+        "properties": {
+          "change_note": {
+            "default": "",
+            "maxLength": 2000,
+            "title": "Change Note",
+            "type": "string"
+          },
+          "expected_profile_version": {
+            "anyOf": [
+              {
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expected Profile Version"
+          },
+          "explanation_fingerprint": {
+            "anyOf": [
+              {
+                "pattern": "^[0-9a-f]{64}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Explanation Fingerprint"
+          },
+          "from_cooking_record_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "From Cooking Record Id"
+          },
+          "microadjust_choice": {
+            "anyOf": [
+              {
+                "enum": [
+                  "branch",
+                  "taste"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Microadjust Choice"
+          },
+          "modification_request_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Modification Request Id"
+          },
+          "modification_revision": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Modification Revision"
+          },
+          "request_id": {
+            "format": "uuid",
+            "title": "Request Id",
+            "type": "string"
+          },
+          "snapshot": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RecipeSnapshot"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "source_version_id": {
+            "format": "uuid",
+            "title": "Source Version Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "source_version_id",
+          "request_id"
+        ],
+        "title": "ImprovementSaveInput",
+        "type": "object"
+      },
+      "ImprovementSaveOut": {
+        "properties": {
+          "outcome": {
+            "enum": [
+              "branch",
+              "taste"
+            ],
+            "title": "Outcome",
+            "type": "string"
+          },
+          "profile_version": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Profile Version"
+          },
+          "recipe": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RecipeDetail"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "outcome"
+        ],
+        "title": "ImprovementSaveOut",
+        "type": "object"
+      },
+      "ImprovementTasteProposal": {
+        "properties": {
+          "coefficients": {
+            "additionalProperties": {
+              "type": "number"
+            },
+            "title": "Coefficients",
+            "type": "object"
+          },
+          "convertible": {
+            "title": "Convertible",
+            "type": "boolean"
+          },
+          "profile_version": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Profile Version"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          }
+        },
+        "required": [
+          "convertible"
+        ],
+        "title": "ImprovementTasteProposal",
+        "type": "object"
+      },
       "IngredientAttributes": {
         "additionalProperties": false,
         "description": "一种食材的全部详细属性，每项都可选；没有数据的项为 null。",
@@ -4533,6 +4967,18 @@
               }
             ],
             "title": "Generation Request Id"
+          },
+          "improvement_draft_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Improvement Draft Id"
           },
           "recipe_id": {
             "anyOf": [
@@ -6048,6 +6494,210 @@
         "title": "ProfileUpdate",
         "type": "object"
       },
+      "PublicationCondition": {
+        "properties": {
+          "action": {
+            "title": "Action",
+            "type": "string"
+          },
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "remaining_count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Remaining Count"
+          }
+        },
+        "required": [
+          "code",
+          "label",
+          "action"
+        ],
+        "title": "PublicationCondition",
+        "type": "object"
+      },
+      "PublicationNotificationAck": {
+        "additionalProperties": false,
+        "properties": {
+          "license_seen": {
+            "default": false,
+            "title": "License Seen",
+            "type": "boolean"
+          },
+          "notification_ids": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "maxItems": 100,
+            "title": "Notification Ids",
+            "type": "array"
+          }
+        },
+        "title": "PublicationNotificationAck",
+        "type": "object"
+      },
+      "PublicationNotificationOut": {
+        "properties": {
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "message": {
+            "title": "Message",
+            "type": "string"
+          },
+          "recipe_id": {
+            "format": "uuid",
+            "title": "Recipe Id",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "version_id": {
+            "format": "uuid",
+            "title": "Version Id",
+            "type": "string"
+          },
+          "version_number": {
+            "title": "Version Number",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "recipe_id",
+          "version_id",
+          "version_number",
+          "title",
+          "message"
+        ],
+        "title": "PublicationNotificationOut",
+        "type": "object"
+      },
+      "PublicationNotifications": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/PublicationNotificationOut"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "license_notice": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "License Notice"
+          }
+        },
+        "title": "PublicationNotifications",
+        "type": "object"
+      },
+      "PublicationPanel": {
+        "properties": {
+          "automatically_publishes": {
+            "default": true,
+            "title": "Automatically Publishes",
+            "type": "boolean"
+          },
+          "baseline_version_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Baseline Version Id"
+          },
+          "cumulative_conclusion": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cumulative Conclusion"
+          },
+          "ever_public": {
+            "title": "Ever Public",
+            "type": "boolean"
+          },
+          "high_risk": {
+            "default": false,
+            "title": "High Risk",
+            "type": "boolean"
+          },
+          "missing": {
+            "items": {
+              "$ref": "#/components/schemas/PublicationCondition"
+            },
+            "title": "Missing",
+            "type": "array"
+          },
+          "review_level": {
+            "default": "standard",
+            "enum": [
+              "standard",
+              "high"
+            ],
+            "title": "Review Level",
+            "type": "string"
+          },
+          "rules_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rules Version"
+          },
+          "state": {
+            "enum": [
+              "draft",
+              "published",
+              "pending_verification",
+              "withdrawn"
+            ],
+            "title": "State",
+            "type": "string"
+          }
+        },
+        "required": [
+          "state",
+          "ever_public"
+        ],
+        "title": "PublicationPanel",
+        "type": "object"
+      },
       "PurchaseUnit": {
         "additionalProperties": false,
         "properties": {
@@ -6606,6 +7256,16 @@
             ],
             "title": "Previous Version Id"
           },
+          "publication_state": {
+            "default": "draft",
+            "enum": [
+              "draft",
+              "published",
+              "pending_verification"
+            ],
+            "title": "Publication State",
+            "type": "string"
+          },
           "recipe_id": {
             "format": "uuid",
             "title": "Recipe Id",
@@ -6812,9 +7472,19 @@
           "dish": {
             "$ref": "#/components/schemas/DishOut"
           },
+          "ever_public": {
+            "default": false,
+            "title": "Ever Public",
+            "type": "boolean"
+          },
           "id": {
             "format": "uuid",
             "title": "Id",
+            "type": "string"
+          },
+          "license": {
+            "default": "菜谱内容按 CC BY-NC-SA 4.0 共享；成品图版权归上传者。",
+            "title": "License",
             "type": "string"
           },
           "root_recipe_id": {
@@ -6828,6 +7498,25 @@
               }
             ],
             "title": "Root Recipe Id"
+          },
+          "source_attribution": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Attribution"
+          },
+          "source_links": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Source Links",
+            "type": "array"
           },
           "source_version_id": {
             "anyOf": [
@@ -6860,9 +7549,17 @@
             "$ref": "#/components/schemas/RecipeVersionOut"
           },
           "visibility": {
-            "const": "private",
+            "enum": [
+              "private",
+              "public"
+            ],
             "title": "Visibility",
             "type": "string"
+          },
+          "withdrawn": {
+            "default": false,
+            "title": "Withdrawn",
+            "type": "boolean"
           }
         },
         "required": [
@@ -7758,7 +8455,10 @@
             "type": "integer"
           },
           "visibility": {
-            "const": "private",
+            "enum": [
+              "private",
+              "public"
+            ],
             "title": "Visibility",
             "type": "string"
           }
@@ -7918,6 +8618,17 @@
             },
             "title": "Effective Flavors",
             "type": "object"
+          },
+          "execution_token": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Execution Token"
           },
           "fallback": {
             "anyOf": [
@@ -9040,6 +9751,16 @@
             ],
             "title": "Previous Version Id"
           },
+          "publication_state": {
+            "default": "draft",
+            "enum": [
+              "draft",
+              "published",
+              "pending_verification"
+            ],
+            "title": "Publication State",
+            "type": "string"
+          },
           "reproducibility": {
             "anyOf": [
               {
@@ -9162,6 +9883,16 @@
             ],
             "title": "Previous Version Id"
           },
+          "publication_state": {
+            "default": "draft",
+            "enum": [
+              "draft",
+              "published",
+              "pending_verification"
+            ],
+            "title": "Publication State",
+            "type": "string"
+          },
           "rules_version": {
             "anyOf": [
               {
@@ -9186,6 +9917,27 @@
           "created_at"
         ],
         "title": "RecipeVersionSummary",
+        "type": "object"
+      },
+      "RecordVersionSaveInput": {
+        "additionalProperties": false,
+        "properties": {
+          "change_note": {
+            "default": "临场调整",
+            "maxLength": 2000,
+            "title": "Change Note",
+            "type": "string"
+          },
+          "request_id": {
+            "format": "uuid",
+            "title": "Request Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "request_id"
+        ],
+        "title": "RecordVersionSaveInput",
         "type": "object"
       },
       "RefreshRequest": {
@@ -12321,6 +13073,64 @@
         "summary": "健康检查：服务、数据库、Redis 是否可用",
         "tags": [
           "health"
+        ]
+      }
+    },
+    "/v1/improvement-drafts/{draft_id}": {
+      "get": {
+        "operationId": "get_improvement_draft",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "draft_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Draft Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImprovementDraftOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "参数错误"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "服务端错误"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Improvement Draft",
+        "tags": [
+          "improvements"
         ]
       }
     },
@@ -17110,6 +17920,121 @@
         ]
       }
     },
+    "/v1/recipes/publication/notifications": {
+      "get": {
+        "operationId": "get_publication_notifications",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicationNotifications"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "参数错误"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "服务端错误"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Publication Notifications",
+        "tags": [
+          "recipes"
+        ]
+      }
+    },
+    "/v1/recipes/publication/notifications/acknowledge": {
+      "post": {
+        "operationId": "acknowledge_publication_notifications",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PublicationNotificationAck"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "参数错误"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "服务端错误"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Acknowledge Publication Notifications",
+        "tags": [
+          "recipes"
+        ]
+      }
+    },
     "/v1/recipes/reproducibility/check": {
       "post": {
         "operationId": "check_recipe_reproducibility",
@@ -18074,6 +18999,16 @@
               "title": "Signature",
               "type": "string"
             }
+          },
+          {
+            "in": "query",
+            "name": "public",
+            "required": false,
+            "schema": {
+              "default": false,
+              "title": "Public",
+              "type": "boolean"
+            }
           }
         ],
         "responses": {
@@ -18119,6 +19054,210 @@
         "summary": "Read Recipe Image",
         "tags": [
           "recipes"
+        ]
+      }
+    },
+    "/v1/recipes/{recipe_id}/improvement-drafts": {
+      "post": {
+        "operationId": "create_improvement_draft",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "recipe_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Recipe Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ImprovementDraftInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImprovementDraftOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "参数错误"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "服务端错误"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Create Improvement Draft",
+        "tags": [
+          "improvements"
+        ]
+      }
+    },
+    "/v1/recipes/{recipe_id}/improvements": {
+      "post": {
+        "operationId": "save_improvement",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "recipe_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Recipe Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ImprovementSaveInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImprovementSaveOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "参数错误"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "服务端错误"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Save Improvement",
+        "tags": [
+          "improvements"
+        ]
+      }
+    },
+    "/v1/recipes/{recipe_id}/improvements/preview": {
+      "post": {
+        "operationId": "preview_improvement",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "recipe_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Recipe Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ImprovementPreviewInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImprovementPreviewOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "参数错误"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "服务端错误"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Preview Improvement",
+        "tags": [
+          "improvements"
         ]
       }
     },
@@ -18420,6 +19559,101 @@
         ]
       }
     },
+    "/v1/recipes/{recipe_id}/publication": {
+      "get": {
+        "operationId": "get_recipe_publication",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "recipe_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Recipe Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "version_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Version Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicationPanel"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "参数错误"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "服务端错误"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Recipe Publication",
+        "tags": [
+          "recipes"
+        ]
+      }
+    },
     "/v1/recipes/{recipe_id}/quantification": {
       "post": {
         "operationId": "quantify_recipe",
@@ -18631,6 +19865,94 @@
           }
         ],
         "summary": "Decide Recipe Quantification",
+        "tags": [
+          "recipes"
+        ]
+      }
+    },
+    "/v1/recipes/{recipe_id}/restore": {
+      "post": {
+        "operationId": "restore_recipe",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "recipe_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Recipe Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecipeDetail"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "参数错误"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "服务端错误"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Restore Recipe",
         "tags": [
           "recipes"
         ]
@@ -19355,6 +20677,94 @@
         ]
       }
     },
+    "/v1/recipes/{recipe_id}/versions/{version_id}/risk-confirmation": {
+      "post": {
+        "operationId": "confirm_recipe_publication_risk",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "recipe_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Recipe Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "version_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Version Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecipeDetail"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "参数错误"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "服务端错误"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Confirm Recipe Publication Risk",
+        "tags": [
+          "recipes"
+        ]
+      }
+    },
     "/v1/recipes/{recipe_id}/versions/{version_id}/servings": {
       "get": {
         "operationId": "convert_recipe_version_servings",
@@ -19447,6 +20857,94 @@
           }
         ],
         "summary": "Convert Recipe Version Servings",
+        "tags": [
+          "recipes"
+        ]
+      }
+    },
+    "/v1/recipes/{recipe_id}/withdraw": {
+      "post": {
+        "operationId": "withdraw_recipe",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "recipe_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Recipe Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecipeDetail"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "参数错误"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "服务端错误"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Withdraw Recipe",
         "tags": [
           "recipes"
         ]
@@ -19970,6 +21468,74 @@
         "summary": "Revise Record",
         "tags": [
           "records"
+        ]
+      }
+    },
+    "/v1/records/{record_id}/save-version": {
+      "post": {
+        "operationId": "save_record_version",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "record_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Record Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RecordVersionSaveInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImprovementSaveOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "参数错误"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "服务端错误"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Save Record Version",
+        "tags": [
+          "improvements"
         ]
       }
     },

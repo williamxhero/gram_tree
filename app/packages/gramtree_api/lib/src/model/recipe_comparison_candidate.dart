@@ -34,6 +34,8 @@ class RecipeComparisonCandidate {
 
     this.previousVersionId,
 
+    required this.publicationState,
+
     required this.recipeId,
 
     this.rulesVersion,
@@ -65,6 +67,9 @@ class RecipeComparisonCandidate {
   @JsonKey(name: r'previous_version_id', required: false, includeIfNull: false)
   final String? previousVersionId;
 
+  @JsonKey(name: r'publication_state', required: true, includeIfNull: false)
+  final RecipeComparisonCandidatePublicationStateEnum publicationState;
+
   @JsonKey(name: r'recipe_id', required: true, includeIfNull: false)
   final String recipeId;
 
@@ -86,6 +91,7 @@ class RecipeComparisonCandidate {
           other.createdAt == createdAt &&
           other.id == id &&
           other.previousVersionId == previousVersionId &&
+          other.publicationState == publicationState &&
           other.recipeId == recipeId &&
           other.rulesVersion == rulesVersion &&
           other.versionNumber == versionNumber;
@@ -100,6 +106,7 @@ class RecipeComparisonCandidate {
       createdAt.hashCode +
       id.hashCode +
       (previousVersionId == null ? 0 : previousVersionId.hashCode) +
+      publicationState.hashCode +
       recipeId.hashCode +
       (rulesVersion == null ? 0 : rulesVersion.hashCode) +
       versionNumber.hashCode;
@@ -126,6 +133,22 @@ enum RecipeComparisonCandidateConclusionEnum {
   significant(r'significant');
 
   const RecipeComparisonCandidateConclusionEnum(this.value);
+
+  final String value;
+
+  @override
+  String toString() => value;
+}
+
+enum RecipeComparisonCandidatePublicationStateEnum {
+  @JsonValue(r'draft')
+  draft(r'draft'),
+  @JsonValue(r'published')
+  published(r'published'),
+  @JsonValue(r'pending_verification')
+  pendingVerification(r'pending_verification');
+
+  const RecipeComparisonCandidatePublicationStateEnum(this.value);
 
   final String value;
 

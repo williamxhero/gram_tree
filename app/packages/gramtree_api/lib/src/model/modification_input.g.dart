@@ -15,6 +15,8 @@ abstract class _$ModificationInputCWProxy {
 
   ModificationInput generationRequestId(String? generationRequestId);
 
+  ModificationInput improvementDraftId(String? improvementDraftId);
+
   ModificationInput recipeId(String? recipeId);
 
   ModificationInput requestId(String? requestId);
@@ -33,6 +35,7 @@ abstract class _$ModificationInputCWProxy {
     ModificationInputAdjustmentPercentEnum? adjustmentPercent,
     String? baseVersionId,
     String? generationRequestId,
+    String? improvementDraftId,
     String? recipeId,
     String? requestId,
     bool? retryFailed,
@@ -60,6 +63,10 @@ class _$ModificationInputCWProxyImpl implements _$ModificationInputCWProxy {
       this(generationRequestId: generationRequestId);
 
   @override
+  ModificationInput improvementDraftId(String? improvementDraftId) =>
+      this(improvementDraftId: improvementDraftId);
+
+  @override
   ModificationInput recipeId(String? recipeId) => this(recipeId: recipeId);
 
   @override
@@ -83,6 +90,7 @@ class _$ModificationInputCWProxyImpl implements _$ModificationInputCWProxy {
     Object? adjustmentPercent = const $CopyWithPlaceholder(),
     Object? baseVersionId = const $CopyWithPlaceholder(),
     Object? generationRequestId = const $CopyWithPlaceholder(),
+    Object? improvementDraftId = const $CopyWithPlaceholder(),
     Object? recipeId = const $CopyWithPlaceholder(),
     Object? requestId = const $CopyWithPlaceholder(),
     Object? retryFailed = const $CopyWithPlaceholder(),
@@ -101,6 +109,10 @@ class _$ModificationInputCWProxyImpl implements _$ModificationInputCWProxy {
           ? _value.generationRequestId
           // ignore: cast_nullable_to_non_nullable
           : generationRequestId as String?,
+      improvementDraftId: improvementDraftId == const $CopyWithPlaceholder()
+          ? _value.improvementDraftId
+          // ignore: cast_nullable_to_non_nullable
+          : improvementDraftId as String?,
       recipeId: recipeId == const $CopyWithPlaceholder()
           ? _value.recipeId
           // ignore: cast_nullable_to_non_nullable
@@ -152,6 +164,10 @@ ModificationInput _$ModificationInputFromJson(
         'generation_request_id',
         (v) => v as String?,
       ),
+      improvementDraftId: $checkedConvert(
+        'improvement_draft_id',
+        (v) => v as String?,
+      ),
       recipeId: $checkedConvert('recipe_id', (v) => v as String?),
       requestId: $checkedConvert('request_id', (v) => v as String?),
       retryFailed: $checkedConvert('retry_failed', (v) => v as bool? ?? false),
@@ -163,6 +179,7 @@ ModificationInput _$ModificationInputFromJson(
     'adjustmentPercent': 'adjustment_percent',
     'baseVersionId': 'base_version_id',
     'generationRequestId': 'generation_request_id',
+    'improvementDraftId': 'improvement_draft_id',
     'recipeId': 'recipe_id',
     'requestId': 'request_id',
     'retryFailed': 'retry_failed',
@@ -176,6 +193,7 @@ Map<String, dynamic> _$ModificationInputToJson(ModificationInput instance) =>
               .adjustmentPercent],
       'base_version_id': ?instance.baseVersionId,
       'generation_request_id': ?instance.generationRequestId,
+      'improvement_draft_id': ?instance.improvementDraftId,
       'recipe_id': ?instance.recipeId,
       'request_id': ?instance.requestId,
       'retry_failed': ?instance.retryFailed,
