@@ -50,10 +50,12 @@ def permission_activity(output: str) -> str | None:
         return None
     if match[2] not in ACTIVITIES:
         return None
-    # A history header is not enough: use the full '* Hist #...:' dump with the
-    # exact record token, not a launchedFromPackage from another activity/task.
+    # AOSP TaskFragment's "Hist " label plus dumpActivity's " #" makes two spaces.
+    # Keep legacy one-space support, but bind the full record and its own caller.
     headers = list(
-        re.finditer(r"^\s*\* Hist #\d+: (ActivityRecord\{[^\r\n]+\})\s*$", output, re.MULTILINE)
+        re.finditer(
+            r"^\s*\* Hist {1,2}#\d+: (ActivityRecord\{[^\r\n]+\})\s*$", output, re.MULTILINE
+        )
     )
     blocks = []
     for index, header in enumerate(headers):
@@ -61,7 +63,10 @@ def permission_activity(output: str) -> str | None:
             end = headers[index + 1].start() if index + 1 < len(headers) else len(output)
             blocks.append(output[header.end() : end])
     if len(blocks) != 1:
-        raise DriverError("Missing unique detailed permission ActivityRecord")
+        raise DriverError(
+            "Missing unique detailed permission ActivityRecord "
+            f"(history_headers={len(headers)}, matching_records={len(blocks)})"
+        )
     callers = re.findall(
         r"^\s*launchedFromUid=\d+ launchedFromPackage=(\S+) launchedFromFeature=\S+ userId=0\s*$",
         blocks[0],

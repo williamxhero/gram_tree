@@ -17,16 +17,17 @@ import xml.etree.ElementTree as ET
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 PACKAGE = "app.gramtree.gram_tree"
 CONTROLLER = "com.android.permissioncontroller"
-# Producer formats verified in AOSP android-14.0.0_r1, not real CI observations.
+# AOSP android-14.0.0_r1 producer formats, not real CI observations.
+# TaskFragment passes "Hist "; ActivityRecord.dumpActivity adds " #": two spaces.
 ACTIVITY = f"{CONTROLLER}/.permission.ui.GrantPermissionsActivity"
 RECORD = f"ActivityRecord{{abc123 u0 {ACTIVITY} t8}}"
 DIALOG_ACTIVITY = f"""ACTIVITY MANAGER ACTIVITIES (dumpsys activity activities)
   * Task{{000aaa #8 type=standard A={PACKAGE}}}
     topResumedActivity={RECORD}
-    * Hist #1: {RECORD}
+    * Hist  #1: {RECORD}
       packageName={CONTROLLER} processName={CONTROLLER}
       launchedFromUid=10123 launchedFromPackage={PACKAGE} launchedFromFeature=null userId=0
-    * Hist #0: ActivityRecord{{def456 u0 {PACKAGE}/.MainActivity t8}}
+    * Hist  #0: ActivityRecord{{def456 u0 {PACKAGE}/.MainActivity t8}}
       launchedFromUid=2000 launchedFromPackage=com.android.shell launchedFromFeature=null userId=0
 """
 MAIN_ACTIVITY = f"topResumedActivity=ActivityRecord{{def456 u0 {PACKAGE}/.MainActivity t8}}\n"
@@ -233,11 +234,56 @@ class NotificationCliTest(unittest.TestCase):
         self.assertIn(["shell", "dumpsys", "package", PACKAGE], commands)
         self.assertTrue(any(command[:3] == ["shell", "rm", "-f"] for command in commands))
 
+    def test_aosp_and_legacy_history_spacing_preserve_notification_grant(self):
+        for spaces in (1, 2):
+            with self.subTest(spaces=spaces):
+                activity = DIALOG_ACTIVITY.replace("Hist  #", "Hist" + " " * spaces + "#")
+                result, commands = self.invoke(activity=activity, wait_for="dialog_seen")
+                self.assertEqual(result.returncode, 0, result.stderr)
+                self.assertIn("permission granted and OS dialog closed", result.stdout)
+                self.assertEqual(commands.count(["shell", "input", "tap", "540", "1460"]), 1)
+
+    def test_unknown_history_spacing_fails_closed(self):
+        for whitespace in ("", "   ", "\t", "\n"):
+            with self.subTest(whitespace=repr(whitespace)):
+                activity = DIALOG_ACTIVITY.replace("Hist  #", "Hist" + whitespace + "#")
+                result, commands = self.invoke(activity=activity, wait_for="dialog_seen")
+                self.assertEqual(result.returncode, 1, result.stderr)
+                self.assertIn("history_headers=0, matching_records=0", result.stderr)
+                self.assert_no_tap(commands)
+                self.assertNotIn(RECORD, result.stderr)
+
+    def test_history_record_mismatch_and_duplicates_fail_closed(self):
+        header = f"* Hist  #1: {RECORD}"
+        duplicate = (
+            f"    * Hist  #2: {RECORD}\n"
+            f"      launchedFromUid=10123 launchedFromPackage={PACKAGE} "
+            "launchedFromFeature=null userId=0\n"
+        )
+        for activity, counts in (
+            (
+                DIALOG_ACTIVITY.replace(header, header.replace("abc123", "c0ffee")),
+                "history_headers=2, matching_records=0",
+            ),
+            (
+                DIALOG_ACTIVITY.replace(header, header.replace("t8}", "t9}")),
+                "history_headers=2, matching_records=0",
+            ),
+            (DIALOG_ACTIVITY + duplicate, "history_headers=3, matching_records=2"),
+        ):
+            with self.subTest(counts=counts, activity=activity):
+                result, commands = self.invoke(activity=activity, wait_for="dialog_seen")
+                self.assertEqual(result.returncode, 1, result.stderr)
+                self.assertIn(counts, result.stderr)
+                self.assert_no_tap(commands)
+                self.assertNotIn(RECORD, result.stderr)
+                self.assertNotIn("c0ffee", result.stderr)
+
     def test_retained_permission_history_does_not_mean_open_dialog(self):
         main_with_history = (
             MAIN_ACTIVITY
             + f"    mLastPausedActivity={RECORD}\n"
-            + f"    * Hist #1: {RECORD}\n"
+            + f"    * Hist  #1: {RECORD}\n"
             + f"      launchedFromUid=10123 launchedFromPackage={PACKAGE} "
             + "launchedFromFeature=null userId=0\n"
         )
