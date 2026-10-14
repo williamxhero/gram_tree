@@ -48,6 +48,9 @@ import 'package:gramtree_api/src/model/cooking_record_revision_out.dart';
 import 'package:gramtree_api/src/model/count_unit.dart';
 import 'package:gramtree_api/src/model/count_units_attribute.dart';
 import 'package:gramtree_api/src/model/deletion_out.dart';
+import 'package:gramtree_api/src/model/deletion_preview.dart';
+import 'package:gramtree_api/src/model/deletion_public_recipe.dart';
+import 'package:gramtree_api/src/model/deletion_request.dart';
 import 'package:gramtree_api/src/model/density_attribute.dart';
 import 'package:gramtree_api/src/model/detail_preference.dart';
 import 'package:gramtree_api/src/model/dish_input.dart';
@@ -65,6 +68,8 @@ import 'package:gramtree_api/src/model/event_upload_response.dart';
 import 'package:gramtree_api/src/model/event_upload_result_item.dart';
 import 'package:gramtree_api/src/model/existing_choice.dart';
 import 'package:gramtree_api/src/model/experiment_info.dart';
+import 'package:gramtree_api/src/model/export_job_list.dart';
+import 'package:gramtree_api/src/model/export_job_view.dart';
 import 'package:gramtree_api/src/model/fallback_info.dart';
 import 'package:gramtree_api/src/model/family_allergies_out.dart';
 import 'package:gramtree_api/src/model/family_allergies_write.dart';
@@ -395,6 +400,15 @@ ReturnType deserialize<ReturnType, BaseType>(
           as ReturnType;
     case 'DeletionOut':
       return DeletionOut.fromJson(value as Map<String, dynamic>) as ReturnType;
+    case 'DeletionPreview':
+      return DeletionPreview.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'DeletionPublicRecipe':
+      return DeletionPublicRecipe.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'DeletionRequest':
+      return DeletionRequest.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
     case 'DensityAttribute':
       return DensityAttribute.fromJson(value as Map<String, dynamic>)
           as ReturnType;
@@ -442,6 +456,12 @@ ReturnType deserialize<ReturnType, BaseType>(
           as ReturnType;
     case 'ExperimentInfo':
       return ExperimentInfo.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'ExportJobList':
+      return ExportJobList.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'ExportJobView':
+      return ExportJobView.fromJson(value as Map<String, dynamic>)
           as ReturnType;
     case 'FallbackInfo':
       return FallbackInfo.fromJson(value as Map<String, dynamic>) as ReturnType;
