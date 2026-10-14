@@ -78,7 +78,7 @@ Future<void> _revealCooking(WidgetTester tester, Finder finder) async {
     }
   }
   await tester.scrollUntilVisible(
-    finder.last,
+    finder,
     200,
     scrollable: scrollable,
     maxScrolls: 20,
