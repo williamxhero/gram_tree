@@ -1353,6 +1353,7 @@ def personalize_recipe(
     *,
     redis: Redis,
     view: Literal["personalized", "original"] = "personalized",
+    before_change_id: uuid.UUID | None = None,
 ) -> RecipePersonalizedOut:
     """Build a private, temporary projection without saving a recipe version."""
     from gramtree.recipes import personalization_adaptations as adaptations
@@ -1363,14 +1364,32 @@ def personalize_recipe(
 
     profile = taste_service.locked_profile(session, owner.id, taste_service.scale_for(session))
     source_snapshot = RecipeSnapshot.model_validate(version.snapshot)
+    flavor_state = profile.flavors
+    prior_preferences = None
+    result_profile_version = profile.version
+    if before_change_id is not None:
+        from gramtree.taste_profiles.learning import before_change_state
+
+        flavor_state, prior_preferences, result_profile_version = before_change_state(
+            session, profile, before_change_id
+        )
     flavors = {
         key: float(value.get("coefficient", 1.0))
-        for key, value in profile.flavors.items()
+        for key, value in flavor_state.items()
         if isinstance(value, dict)
     }
     constraints = adaptations.select_diners(
         authorized_constraints.read(session, owner.id, settings), body.diner_member_ids
     )
+    if prior_preferences is not None:
+        from dataclasses import replace
+
+        constraints = replace(
+            constraints,
+            owner_avoidances=tuple(
+                item for item in prior_preferences if item.get("preference") == "avoided"
+            ),
+        )
     flavors = adaptations.diner_flavors(flavors, constraints, body.primary_diner_id)
     equipment = body.equipment
     if equipment is None:
@@ -1380,7 +1399,7 @@ def personalize_recipe(
     authorization_version = profile.sensitive_authorization_version
     request = personalization.PersonalizationInput(
         flavors=flavors,
-        profile_version=profile_version,
+        profile_version=result_profile_version,
         target_servings=body.target_servings,
         min_servings=int(config.get(session, "recipe.servings_min")),
         max_servings=int(config.get(session, "recipe.servings_max")),
@@ -1553,8 +1572,8 @@ def personalize_recipe(
         recipe_id=recipe.id,
         version_id=version.id,
         view=view,
-        cache_key=cache,
-        profile_version=profile.version,
+        cache_key=cache + (f":before:{before_change_id}" if before_change_id else ""),
+        profile_version=result_profile_version,
         authorization_version=authorization_version,
         snapshot_unchanged=source_snapshot.model_dump(mode="json")
         == RecipeSnapshot.model_validate(version.snapshot).model_dump(mode="json"),

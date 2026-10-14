@@ -21,6 +21,9 @@ class ComponentSpec:
 
 
 ITEMS: tuple[ComponentSpec, ...] = (
+    ComponentSpec("scenario_difference", "与最近不可变执行的真实差异"),
+    ComponentSpec("failure_reminder", "可信失败经验的步骤提醒"),
+    ComponentSpec("taste_change_notice", "近期有效口味变化的真实影响"),
     ComponentSpec("scenario_summary", "场景详略：结论 + 用户默认或页面选择的来源"),
     ComponentSpec("hint_bar", "提示条：结论 + 可选动作"),
     ComponentSpec("empty_state", "标准空态：结论 + 可选依据说明"),

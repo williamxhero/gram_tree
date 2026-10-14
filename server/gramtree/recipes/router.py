@@ -374,6 +374,25 @@ def personalize_recipe(
     )
 
 
+@router.post(
+    "/{recipe_id}/personalized/before-change/{change_id}",
+    response_model=RecipePersonalizedOut,
+    responses=_errors(401, 404, 409, 422),
+)
+def personalize_before_change(
+    recipe_id: IdV4,
+    change_id: IdV4,
+    body: PersonalizationRequest,
+    auth: CurrentAuth,
+    session: SessionDep,
+    redis: RedisDep,
+    settings: SettingsDep,
+) -> RecipePersonalizedOut:
+    return service.personalize_recipe(
+        session, settings, auth.user, recipe_id, body, redis=redis, before_change_id=change_id
+    )
+
+
 @router.get("/{recipe_id}", response_model=RecipeDetail, responses=_errors(401, 404))
 def get_recipe(
     recipe_id: IdV4, auth: CurrentAuth, session: SessionDep, settings: SettingsDep

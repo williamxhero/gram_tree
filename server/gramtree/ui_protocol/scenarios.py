@@ -5,7 +5,7 @@ from __future__ import annotations
 import hashlib
 import json
 import uuid
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Any, Literal, cast
 from zoneinfo import ZoneInfo
 
@@ -14,12 +14,16 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from gramtree.accounts.models import User
+from gramtree.core.errors import ApiError
 from gramtree.core.time import utcnow
 from gramtree.events import service as events
 from gramtree.events.models import Event
-from gramtree.recipes.models import RecipeVersion
-from gramtree.records.models import CookingRecord
+from gramtree.recipes.models import Recipe, RecipeVersion
+from gramtree.recipes.schemas import PersonalizationRequest, RecipeSnapshot
+from gramtree.records.models import CookingRecord, CookingRecordRevision
 from gramtree.runtime_config import service as config
+from gramtree.settings import Settings
+from gramtree.taste_profiles.models import TasteProfileChange
 from gramtree.ui_protocol.protocol import (
     ActionDescriptor,
     ComponentDescriptor,
@@ -112,14 +116,18 @@ def calendar_signal(user: User, now: datetime) -> dict[str, Any]:
 
 
 def records_for(session: Session, user: User, recipe_id: uuid.UUID) -> list[CookingRecord]:
-    versions = select(RecipeVersion.id).where(RecipeVersion.recipe_id == recipe_id)
+    recipe = session.get(Recipe, recipe_id)
+    if recipe is None or recipe.owner_id != user.id:
+        raise ApiError(404, "not_found", "没有这份菜谱")
+    recipes = select(Recipe.id).where(Recipe.dish_id == recipe.dish_id)
+    versions = select(RecipeVersion.id).where(RecipeVersion.recipe_id.in_(recipes))
     return list(
         session.scalars(
             select(CookingRecord)
             .where(
                 CookingRecord.owner_id == user.id,
                 CookingRecord.counts_as_cooked.is_(True),
-                (CookingRecord.recipe_id == recipe_id)
+                CookingRecord.recipe_id.in_(recipes)
                 | CookingRecord.recipe_version_id.in_(versions),
             )
             .order_by(CookingRecord.occurred_at.desc(), CookingRecord.id.desc())
@@ -215,3 +223,356 @@ def summary(
         },
     )
     return component, signals, rows
+
+
+def source(text: str, code: str, citation: str) -> dict[str, Any]:
+    return {
+        "source_type": "scenario_adjusted",
+        "value": text,
+        "basis": {"reason_code": code, "text": text, "citation": citation},
+    }
+
+
+def notice(
+    kind: str, component_id: str, data: dict[str, Any], code: str, citation: str
+) -> ComponentDescriptor:
+    text = data["conclusion"]
+    return ComponentDescriptor(
+        type=kind,
+        id=component_id,
+        detail="standard",
+        data={**data, "source": source(text, code, citation)},
+        reason=ComponentReason(code=code, text=text),
+        actions=[
+            ActionDescriptor(
+                intent=intent,
+                params={"component_id": component_id, "source_type": "scenario_adjusted"},
+            )
+            for intent in ("skip_this_time", "dont_do_again")
+        ],
+    )
+
+
+def feedback_scope(session: Session, user: User, component_id: str) -> tuple[str, ...]:
+    """Resolve trusted ownership and stable dish/rule scope, never caller-supplied IDs."""
+    parts = component_id.split(":")
+    try:
+        if len(parts) == 3 and parts[:2] == ["scene", "taste"]:
+            from gramtree.taste_profiles.learning import owned_change
+
+            row = owned_change(session, user.id, uuid.UUID(parts[2]))
+            return ("taste", str(row.id))
+        if (len(parts) == 3 and parts[:2] == ["scene", "difference"]) or (
+            len(parts) == 6
+            and parts[:2] == ["scene", "failure"]
+            and parts[3] in FAILURE_RULES
+            and parts[5] in ("before", "at")
+        ):
+            recipe = session.get(Recipe, uuid.UUID(parts[2]))
+            if recipe is not None and recipe.owner_id == user.id:
+                if parts[1] == "difference":
+                    return ("difference", str(recipe.dish_id))
+                return ("failure", str(recipe.dish_id), parts[3])
+    except (ValueError, TypeError):
+        pass
+    raise ApiError(404, "unknown_component", "没有这个场景组件")
+
+
+def suppressed(session: Session, user: User, component_id: str) -> bool:
+    scope = feedback_scope(session, user, component_id)
+    rows = session.scalars(
+        select(Event).where(Event.user_id == user.id, Event.event_type == "ui.source_feedback")
+    )
+    for row in rows:
+        if row.content.get("feedback") != "never_again":
+            continue
+        try:
+            if feedback_scope(session, user, str(row.content.get("component_id", ""))) == scope:
+                return True
+        except ApiError:
+            continue
+    return False
+
+
+def execution_snapshot(row: CookingRecord) -> RecipeSnapshot | None:
+    # detail.version.snapshot is the actual execution projection frozen when cooking
+    # starts. render can contain author-based serving conversion: do not prefer it.
+    try:
+        return RecipeSnapshot.model_validate((row.snapshot or {})["detail"]["version"]["snapshot"])
+    except (ValueError, KeyError, TypeError):
+        return None
+
+
+def differences(before: RecipeSnapshot, after: RecipeSnapshot) -> list[dict[str, str]]:
+    result: list[dict[str, str]] = []
+    previous = {item.id: item for item in before.ingredients}
+    current = {item.id: item for item in after.ingredients}
+    for item_id in dict.fromkeys([*previous, *current]):
+        old, new = previous.get(item_id), current.get(item_id)
+        label = new.display_name if new else old.display_name if old else item_id
+        if old is None or new is None:
+            result.append(
+                {
+                    "kind": "ingredient",
+                    "ingredient_id": item_id,
+                    "label": label,
+                    "before": old.display_name if old else "无",
+                    "after": new.display_name if new else "无",
+                }
+            )
+            continue
+        if old.quantity != new.quantity or old.unit != new.unit:
+            result.append(
+                {
+                    "kind": "quantity",
+                    "ingredient_id": item_id,
+                    "label": label,
+                    "before": f"{old.quantity:g} {old.unit}",
+                    "after": f"{new.quantity:g} {new.unit}",
+                }
+            )
+        if old.display_name != new.display_name:
+            result.append(
+                {
+                    "kind": "ingredient",
+                    "ingredient_id": item_id,
+                    "label": label,
+                    "before": old.display_name,
+                    "after": new.display_name,
+                }
+            )
+    old_steps = {step.id: step for step in before.steps}
+    new_steps = {step.id: step for step in after.steps}
+    for step_id in dict.fromkeys([*old_steps, *new_steps]):
+        old_step, new_step = old_steps.get(step_id), new_steps.get(step_id)
+        for field, label in (
+            ("instruction", "操作"),
+            ("duration_seconds", "时间（秒）"),
+            ("heat", "火力"),
+            ("temperature_celsius", "温度"),
+            ("doneness", "成熟判断"),
+            ("cookware", "器具"),
+        ):
+            a = getattr(old_step, field, None)
+            b = getattr(new_step, field, None)
+            if a != b:
+                result.append(
+                    {
+                        "kind": field,
+                        "label": f"{step_id} {label}",
+                        "before": str(a) if a is not None else "无",
+                        "after": str(b) if b is not None else "无",
+                    }
+                )
+    if before.servings != after.servings:
+        result.append(
+            {
+                "kind": "servings",
+                "label": "份数",
+                "before": str(before.servings),
+                "after": str(after.servings),
+            }
+        )
+    return result
+
+
+def difference_card(
+    recipe_id: uuid.UUID, rows: list[CookingRecord], current: RecipeSnapshot
+) -> ComponentDescriptor | None:
+    if not rows:
+        return None
+    row = rows[0]
+    previous = execution_snapshot(row)
+    if previous is None:
+        return None  # Missing evidence is not "unchanged"; keep all steps expanded.
+    changes = differences(previous, current)
+    date = row.occurred_at.date().isoformat()
+    return notice(
+        "scenario_difference",
+        f"scene:difference:{recipe_id}",
+        {
+            "conclusion": "与上次做的不同" if changes else "与上次做的用量和操作相同",
+            "record_id": str(row.id),
+            "record_date": date,
+            "differences": changes,
+        },
+        "last_execution",
+        f"{date} 做菜记录 {row.id} 的不可变执行快照",
+    )
+
+
+# Deliberately small, reviewable mapping table. No lexical/AI guess at a step.
+FAILURE_RULES = {
+    "dry_meat": (
+        {"肉太干", "肉炒干了", "炒干了", "太干", "dry_meat"},
+        None,
+        "留意肉的成熟状态，熟后及时离火；不要为追求上色继续加热。",
+    ),
+    "too_salty": (
+        {"偏咸", "太咸", "salty"},
+        "salty",
+        "分次加入咸味调料，确认味道后再决定是否加完。",
+    ),
+    "too_spicy": ({"太辣", "偏辣", "spicy"}, "spicy", "辣味调料先少放，确认能接受后再补。"),
+    "too_oily": ({"太油", "太腻", "oily"}, "oily", "留意用油量，不要在原用量之外继续补油。"),
+}
+HEATING_ACTIONS = {"炒", "煎", "炸", "烤", "煮", "炖", "蒸", "焖"}
+MEAT_NAMES = {"猪肉", "牛肉", "羊肉", "鸡肉", "鸡腿肉", "鸡胸肉", "肉片", "肉丝", "排骨"}
+
+
+def failure_cards(
+    session: Session, recipe_id: uuid.UUID, rows: list[CookingRecord], current: RecipeSnapshot
+) -> list[ComponentDescriptor]:
+    cards: list[ComponentDescriptor] = []
+    seen: set[str] = set()
+    for row in rows:
+        revisions = list(
+            session.scalars(
+                select(CookingRecordRevision)
+                .where(
+                    CookingRecordRevision.record_id == row.id,
+                    CookingRecordRevision.owner_id == row.owner_id,
+                )
+                .order_by(CookingRecordRevision.revision)
+            )
+        )
+        effective: dict[str, dict[str, Any]] = {}
+        for revision in revisions:
+            effective[revision.field] = revision.value or {}
+        tags: set[str] = set()
+        for field in ("feedback", "tags"):
+            value = effective.get(field, {})
+            if not value.get("deleted"):
+                raw = value.get("taste_tags", value.get("tags", []))
+                if isinstance(raw, list):
+                    tags.update(str(tag) for tag in raw)
+        previous = execution_snapshot(row)
+        if previous is None:
+            continue
+        for rule_id, (labels, flavor, advice) in FAILURE_RULES.items():
+            matched = tags.intersection(labels)
+            if rule_id in seen or not matched:
+                continue
+            seen.add(rule_id)
+
+            def targets(snapshot: RecipeSnapshot, flavor: str | None = flavor) -> list[str]:
+                ingredient_ids = {
+                    item.id
+                    for item in snapshot.ingredients
+                    if (
+                        item.display_name in MEAT_NAMES
+                        if flavor is None
+                        else bool(getattr(item.flavor_contribution, flavor, None))
+                    )
+                }
+                return [
+                    step.id
+                    for step in snapshot.steps
+                    if ingredient_ids.intersection(step.ingredient_ids)
+                    and (step.action in HEATING_ACTIONS if flavor is None else True)
+                ]
+
+            historical, candidates = targets(previous), targets(current)
+            if len(historical) != 1 or candidates != historical:
+                continue  # Ambiguous or changed step identity: do not invent confidence.
+            date = row.occurred_at.date().isoformat()
+            for placement in ("before", "at"):
+                component_id = f"scene:failure:{recipe_id}:{rule_id}:{candidates[0]}:{placement}"
+                cards.append(
+                    notice(
+                        "failure_reminder",
+                        component_id,
+                        {
+                            "conclusion": "留意上次遇到的问题",
+                            "problem": sorted(matched)[0],
+                            "advice": advice,
+                            "rule_id": rule_id,
+                            "record_id": str(row.id),
+                            "record_date": date,
+                            "step_id": candidates[0],
+                            "placement": placement,
+                        },
+                        rule_id,
+                        f"{date} 做菜记录 {row.id} 的最新反馈",
+                    )
+                )
+    return cards
+
+
+def taste_cards(
+    session: Session,
+    settings: Settings,
+    redis: Redis,
+    user: User,
+    recipe_id: uuid.UUID,
+    inputs: PersonalizationRequest,
+    current: RecipeSnapshot,
+    *,
+    before_change_id: uuid.UUID | None,
+    view: Literal["personalized", "original"] = "personalized",
+) -> list[ComponentDescriptor]:
+    from gramtree.recipes import service as recipes
+    from gramtree.taste_profiles import service as taste_service
+
+    if before_change_id is not None or view == "original":
+        return []
+    profile = taste_service.locked_profile(session, user.id, taste_service.scale_for(session))
+    cutoff = utcnow() - timedelta(days=int(config.get(session, "ui.scenario.taste_recent_days")))
+    rows = session.scalars(
+        select(TasteProfileChange)
+        .where(
+            TasteProfileChange.owner_id == user.id,
+            TasteProfileChange.status.in_(("active", "confirmed")),
+            TasteProfileChange.created_at >= cutoff,
+        )
+        .order_by(
+            TasteProfileChange.version.desc(),
+            TasteProfileChange.created_at.desc(),
+            TasteProfileChange.id.desc(),
+        )
+    )
+    result: list[ComponentDescriptor] = []
+    seen: set[str] = set()
+    for row in rows:
+        if row.field in seen:
+            continue
+        seen.add(row.field)
+        # A recent but superseded change is not a currently effective source.
+        if row.field.startswith("flavors."):
+            if profile.flavors.get(row.field.split(".", 1)[1]) != row.new_value:
+                continue
+            flavor = row.field.split(".", 1)[1]
+            if not any(
+                getattr(item.flavor_contribution, flavor, None) for item in current.ingredients
+            ):
+                continue
+        elif not row.field.startswith("ingredient_preferences"):
+            continue
+        try:
+            before = recipes.personalize_recipe(
+                session, settings, user, recipe_id, inputs, redis=redis, before_change_id=row.id
+            )
+        except ApiError as exc:
+            if exc.status == 409:
+                continue  # Unreconstructable history is not evidence of influence.
+            raise
+        if not differences(before.snapshot, current):
+            continue
+        date = row.created_at.date().isoformat()
+        card = notice(
+            "taste_change_notice",
+            f"scene:taste:{row.id}",
+            {
+                "conclusion": "最近的口味变化影响了这道菜的换算",
+                "change_id": str(row.id),
+                "change_date": date,
+            },
+            "recent_taste_change",
+            f"{date} 口味变化 {row.id}：{row.reason}",
+        )
+        card.actions.extend(
+            ActionDescriptor(intent=intent, params={"change_id": str(row.id)})
+            for intent in ("show_before_taste_change", "open_taste_change")
+        )
+        result.append(card)
+    return result

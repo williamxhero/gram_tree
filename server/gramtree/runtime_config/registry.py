@@ -484,6 +484,18 @@ ITEMS: tuple[ConfigItem, ...] = (
         "不下发给 App（public 默认 False）——App 不需要知道实验定义，只需要从组合"
         "接口的响应里读 experiment 字段。",
     ),
+    ConfigItem(
+        "ui.experiment.recipe_composition",
+        "json",
+        {
+            "enabled": False,
+            "groups": [
+                {"name": "control", "ratio": 0.5, "variant": "default"},
+                {"name": "more_detail", "ratio": 0.5, "variant": "more_detail"},
+            ],
+        },
+        "菜谱详情场景实验：稳定分组，只覆盖自动详略，不覆盖用户或页面选择。",
+    ),
     # —— 能力开关：关闭时 App 里对应入口不出现（SPEC-009） ——
     ConfigItem(
         "feature.evolution_tree",

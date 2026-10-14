@@ -3,7 +3,14 @@
 from tests.accounts_support import Api, bearer, new_uuid
 from tests.test_recipes import recipe_input
 
-COMPONENTS = ["food_safety", "allergen_notice", "scenario_summary"]
+COMPONENTS = [
+    "food_safety",
+    "allergen_notice",
+    "scenario_summary",
+    "scenario_difference",
+    "failure_reminder",
+    "taste_change_notice",
+]
 
 
 def compose(api: Api, headers: dict, recipe: dict, **options: object) -> dict:
@@ -164,6 +171,59 @@ def test_viewport_boundary_and_legacy_capabilities_preserve_required_safety(api:
         == 422
     )
     assert api.client.put("/v1/ui/preferences", json={"detail": "brief"}).status_code == 401
+
+
+def test_frequent_difference_uses_frozen_execution_and_feedback_is_dish_scoped(api: Api) -> None:
+    headers = bearer(api.login("scene-difference@example.com"))
+    recipe = api.client.post("/v1/recipes", headers=headers, json=recipe_input()).json()
+    record(api, headers, recipe)
+    record(api, headers, recipe)
+    last = record(api, headers, recipe)
+    first = compose(api, headers, recipe)
+    card = next(c for c in first["components"] if c["type"] == "scenario_difference")
+    assert card["data"]["record_id"] == last["id"]
+    assert card["data"]["differences"] == []
+    assert first["components"][2]["data"]["steps_collapsed"] is True
+    changed = recipe_input()
+    changed["snapshot"]["ingredients"][0]["quantity"] = 250
+    version = api.client.post(f"/v1/recipes/{recipe['id']}/versions", headers=headers, json=changed)
+    assert version.status_code == 201, version.text
+    result = compose(api, headers, recipe)
+    card = next(c for c in result["components"] if c["type"] == "scenario_difference")
+    assert card["data"]["differences"] == [
+        {
+            "kind": "quantity",
+            "ingredient_id": "chicken",
+            "label": "鸡腿肉",
+            "before": "300 g",
+            "after": "250 g",
+        }
+    ]
+    assert (
+        api.client.get(f"/v1/records/{last['id']}", headers=headers).json()["snapshot"]
+        == last["snapshot"]
+    )
+    skipped = compose(api, headers, recipe, skipped_components=[card["id"]])
+    assert not any(c["type"] == "scenario_difference" for c in skipped["components"])
+    assert skipped["components"][2]["data"]["steps_collapsed"] is False
+    feedback = api.client.post(
+        "/v1/ui/scenario-feedback",
+        headers=headers,
+        json={"component_id": card["id"], "source_type": "scenario_adjusted"},
+    )
+    assert feedback.status_code == 200, feedback.text
+    assert not any(
+        c["type"] == "scenario_difference" for c in compose(api, headers, recipe)["components"]
+    )
+    assert compose(api, headers, recipe)["components"][2]["data"]["steps_collapsed"] is False
+    same_dish = api.client.post("/v1/recipes", headers=headers, json=recipe_input()).json()
+    same = compose(api, headers, same_dish)
+    assert same["scenario_signals"]["dish_history"]["count"] == 3
+    assert not any(c["type"] == "scenario_difference" for c in same["components"])
+    other_input = recipe_input("另一道菜")
+    other_input["dish_aliases"] = []
+    other_dish = api.client.post("/v1/recipes", headers=headers, json=other_input).json()
+    assert compose(api, headers, other_dish)["scenario_signals"]["dish_history"]["count"] == 0
 
 
 def test_today_cache_isolated_by_client_component_capability(api: Api) -> None:

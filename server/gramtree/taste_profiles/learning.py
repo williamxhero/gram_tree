@@ -905,6 +905,64 @@ def owned_change(session: Session, owner_id: uuid.UUID, change_id: uuid.UUID) ->
     return row
 
 
+def before_change_state(
+    session: Session,
+    profile: TasteProfile,
+    change_id: uuid.UUID,
+) -> tuple[dict[str, Any], list[dict[str, Any]], int]:
+    """Rewind detached ordinary taste values; current sensitive grants remain authoritative."""
+    from copy import deepcopy
+
+    target = owned_change(session, profile.owner_id, change_id)
+    if target.status not in ("active", "confirmed"):
+        raise ApiError(409, "change_not_effective", "这条口味变化目前没有生效")
+    flavors = deepcopy(profile.flavors)
+    preferences = deepcopy(profile.ingredient_preferences)
+    rows = session.scalars(
+        select(TasteProfileChange)
+        .where(
+            TasteProfileChange.owner_id == profile.owner_id,
+            TasteProfileChange.version >= target.version,
+            TasteProfileChange.status.in_(("active", "confirmed")),
+        )
+        .order_by(
+            TasteProfileChange.version.desc(),
+            TasteProfileChange.created_at.desc(),
+            TasteProfileChange.id.desc(),
+        )
+    )
+    for row in rows:
+        if row.field.startswith("flavors."):
+            key = row.field.split(".", 1)[1]
+            if flavors.get(key) != row.new_value:
+                raise ApiError(409, "history_unavailable", "无法可靠还原变化前口味")
+            flavors[key] = deepcopy(row.old_value)
+        elif row.field == "ingredient_preferences":
+            if preferences != row.new_value.get("items", []):
+                raise ApiError(409, "history_unavailable", "无法可靠还原变化前口味")
+            preferences = deepcopy(row.old_value.get("items", []))
+        elif row.field.startswith("ingredient_preferences."):
+            key = row.field.split(".", 1)[1]
+            actual = next(
+                (
+                    item
+                    for item in preferences
+                    if str(item.get("ingredient_id") or item.get("name") or "") == key
+                ),
+                {},
+            )
+            if actual != row.new_value:
+                raise ApiError(409, "history_unavailable", "无法可靠还原变化前口味")
+            preferences = [
+                item
+                for item in preferences
+                if str(item.get("ingredient_id") or item.get("name") or "") != key
+            ]
+            if row.old_value:
+                preferences.append(deepcopy(row.old_value))
+    return flavors, preferences, max(1, target.version - 1)
+
+
 def confirm_change(session: Session, profile: TasteProfile, row: TasteProfileChange) -> None:
     if row.owner_id != profile.owner_id:
         raise NotFound()
