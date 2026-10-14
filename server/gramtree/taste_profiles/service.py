@@ -116,6 +116,8 @@ def record_changes(
                 else source_record_ids or []
             ),
             created_at=profile.updated_at,
+            effective_at=profile.updated_at if status != "pending" and apply_value else None,
+            effective_version=profile.version if status != "pending" and apply_value else None,
         )
         for change in actual
     ]

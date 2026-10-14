@@ -1354,6 +1354,7 @@ def personalize_recipe(
     redis: Redis,
     view: Literal["personalized", "original"] = "personalized",
     before_change_id: uuid.UUID | None = None,
+    compare_change_only: bool = False,
 ) -> RecipePersonalizedOut:
     """Build a private, temporary projection without saving a recipe version."""
     from gramtree.recipes import personalization_adaptations as adaptations
@@ -1371,7 +1372,7 @@ def personalize_recipe(
         from gramtree.taste_profiles.learning import before_change_state
 
         flavor_state, prior_preferences, result_profile_version = before_change_state(
-            session, profile, before_change_id
+            session, profile, before_change_id, only_target=compare_change_only
         )
     flavors = {
         key: float(value.get("coefficient", 1.0))

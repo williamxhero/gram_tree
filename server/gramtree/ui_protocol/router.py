@@ -31,7 +31,7 @@ from gramtree.core.errors import ERROR_RESPONSES, ApiError
 from gramtree.core.time import utcnow
 from gramtree.deps import RedisDep, SessionDep, SettingsDep
 from gramtree.recipes import service as recipe_service
-from gramtree.recipes.schemas import PersonalizationRequest
+from gramtree.recipes.schemas import PersonalizationRequest, RecipeDerived
 from gramtree.ui_protocol import (
     cache,
     composition_events,
@@ -234,6 +234,26 @@ def compose(
                     before_change_id=body.before_change_id,
                     view=body.personalization_view,
                 )
+                # The same displayed projection and diner inputs govern mandatory
+                # safety, including before-change substitutions. Never reuse author
+                # results merely because the component skeleton is unchanged.
+                projected_safety = service.compose_recipe_safety(
+                    body.page_type,
+                    set(body.supported_components),
+                    session=session,
+                    safety_context=(
+                        projected.food_safety,
+                        RecipeDerived(
+                            total_time_seconds=projected.snapshot.total_time_seconds,
+                            active_time_seconds=projected.snapshot.active_time_seconds,
+                        ),
+                    ),
+                    personal_safety=projected.safety,
+                )
+                description.components = projected_safety.components
+                description.experiment = assignment.experiment
+                for safety_component in description.components:
+                    safety_component.reason.text = "依据本次显示换算及当前授权的安全检查结果"
                 optional = scenarios.failure_cards(
                     session, body.recipe_id, rows, projected.snapshot
                 )

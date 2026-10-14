@@ -341,29 +341,8 @@ def differences(before: RecipeSnapshot, after: RecipeSnapshot) -> list[dict[str,
                     "after": new.display_name,
                 }
             )
-    old_steps = {step.id: step for step in before.steps}
-    new_steps = {step.id: step for step in after.steps}
-    for step_id in dict.fromkeys([*old_steps, *new_steps]):
-        old_step, new_step = old_steps.get(step_id), new_steps.get(step_id)
-        for field, label in (
-            ("instruction", "操作"),
-            ("duration_seconds", "时间（秒）"),
-            ("heat", "火力"),
-            ("temperature_celsius", "温度"),
-            ("doneness", "成熟判断"),
-            ("cookware", "器具"),
-        ):
-            a = getattr(old_step, field, None)
-            b = getattr(new_step, field, None)
-            if a != b:
-                result.append(
-                    {
-                        "kind": field,
-                        "label": f"{step_id} {label}",
-                        "before": str(a) if a is not None else "无",
-                        "after": str(b) if b is not None else "无",
-                    }
-                )
+    # This card compares conversion values (servings, amounts, substitutions),
+    # not arbitrary author edits or structural recipe-version changes.
     if before.servings != after.servings:
         result.append(
             {
@@ -391,7 +370,7 @@ def difference_card(
         "scenario_difference",
         f"scene:difference:{recipe_id}",
         {
-            "conclusion": "与上次做的不同" if changes else "与上次做的用量和操作相同",
+            "conclusion": "与上次做的换算不同" if changes else "与上次做的换算用量相同",
             "record_id": str(row.id),
             "record_date": date,
             "differences": changes,
@@ -404,7 +383,7 @@ def difference_card(
 # Deliberately small, reviewable mapping table. No lexical/AI guess at a step.
 FAILURE_RULES = {
     "dry_meat": (
-        {"肉太干", "肉炒干了", "炒干了", "太干", "dry_meat"},
+        {"肉柴", "肉太干", "肉炒干了", "炒干了", "太干", "dry_meat"},
         None,
         "留意肉的成熟状态，熟后及时离火；不要为追求上色继续加热。",
     ),
@@ -425,7 +404,8 @@ def failure_cards(
 ) -> list[ComponentDescriptor]:
     cards: list[ComponentDescriptor] = []
     seen: set[str] = set()
-    for row in rows:
+    # A successful latest cook supersedes earlier negative evidence.
+    for row in rows[:1]:
         revisions = list(
             session.scalars(
                 select(CookingRecordRevision)
@@ -446,6 +426,26 @@ def failure_cards(
                 raw = value.get("taste_tags", value.get("tags", []))
                 if isinstance(raw, list):
                     tags.update(str(tag) for tag in raw)
+        adjustment_revision = effective.get("adjustments")
+        adjustments = (
+            adjustment_revision.get("adjustments", [])
+            if adjustment_revision is not None
+            else row.adjustments
+        )
+        if adjustment_revision and adjustment_revision.get("deleted"):
+            adjustments = []
+        if isinstance(adjustments, list):
+            for adjustment in adjustments:
+                if not isinstance(adjustment, dict):
+                    continue
+                flavor_key = adjustment.get("flavor", adjustment.get("flavor_key"))
+                delta = adjustment.get("delta", adjustment.get("direction"))
+                # Explicit reductions of a named flavor are observable live-cook
+                # evidence, not inference from generic quantity/serving edits.
+                if isinstance(delta, (int, float)) and not isinstance(delta, bool) and delta < 0:
+                    label = {"salty": "偏咸", "spicy": "太辣", "oily": "太腻"}.get(str(flavor_key))
+                    if label:
+                        tags.add(label)
         previous = execution_snapshot(row)
         if previous is None:
             continue
@@ -493,7 +493,7 @@ def failure_cards(
                             "placement": placement,
                         },
                         rule_id,
-                        f"{date} 做菜记录 {row.id} 的最新反馈",
+                        f"{date} 做菜记录 {row.id} 的最新反馈及临场改动",
                     )
                 )
     return cards
@@ -523,11 +523,11 @@ def taste_cards(
         .where(
             TasteProfileChange.owner_id == user.id,
             TasteProfileChange.status.in_(("active", "confirmed")),
-            TasteProfileChange.created_at >= cutoff,
+            TasteProfileChange.effective_at >= cutoff,
         )
         .order_by(
-            TasteProfileChange.version.desc(),
-            TasteProfileChange.created_at.desc(),
+            TasteProfileChange.effective_version.desc(),
+            TasteProfileChange.effective_at.desc(),
             TasteProfileChange.id.desc(),
         )
     )
@@ -550,7 +550,14 @@ def taste_cards(
             continue
         try:
             before = recipes.personalize_recipe(
-                session, settings, user, recipe_id, inputs, redis=redis, before_change_id=row.id
+                session,
+                settings,
+                user,
+                recipe_id,
+                inputs,
+                redis=redis,
+                before_change_id=row.id,
+                compare_change_only=True,
             )
         except ApiError as exc:
             if exc.status == 409:
@@ -558,7 +565,9 @@ def taste_cards(
             raise
         if not differences(before.snapshot, current):
             continue
-        date = row.created_at.date().isoformat()
+        if row.effective_at is None:
+            continue
+        date = row.effective_at.date().isoformat()
         card = notice(
             "taste_change_notice",
             f"scene:taste:{row.id}",
