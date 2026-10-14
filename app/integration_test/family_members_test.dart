@@ -11,6 +11,7 @@ import 'package:gramtree_api/gramtree_api.dart';
 import 'package:integration_test/integration_test.dart';
 
 import 'event_pipeline_support.dart' show containerOf;
+import 'profile_scroll_support.dart';
 import 'signed_probe_support.dart';
 
 enum _FamilyStep {
@@ -145,45 +146,7 @@ void main() {
     WidgetTester tester,
     Finder finder, [
     double delta = 300,
-  ]) async {
-    final scrollables = find.byWidgetPredicate(
-      (widget) =>
-          widget is Scrollable && widget.axisDirection == AxisDirection.down,
-    );
-    await waitFor(tester, scrollables);
-    final profile = find.byKey(const ValueKey('taste-profile-content'));
-    final profileScrollables = find.descendant(
-      of: profile,
-      matching: scrollables,
-    );
-    final scrollable =
-        profile.evaluate().isNotEmpty &&
-            profileScrollables.evaluate().isNotEmpty
-        ? profileScrollables.first
-        : scrollables.first;
-    final position = tester.state<ScrollableState>(scrollable).position;
-    final step = delta.abs().clamp(100.0, 500.0).toDouble();
-    // Reset the lazy profile list before each bounded forward search so a
-    // target cannot be stranded above the previous viewport.
-    position.jumpTo(position.minScrollExtent);
-    await tester.pumpAndSettle();
-    for (var i = 0; i < 300 && finder.evaluate().isEmpty; i++) {
-      position.jumpTo(
-        (position.pixels + step).clamp(
-          position.minScrollExtent,
-          position.maxScrollExtent,
-        ),
-      );
-      await tester.pump(const Duration(milliseconds: 100));
-    }
-    expect(finder, findsOneWidget);
-    await Scrollable.ensureVisible(
-      tester.element(finder),
-      alignment: 0.5,
-      alignmentPolicy: ScrollPositionAlignmentPolicy.explicit,
-    );
-    await tester.pumpAndSettle();
-  }
+  ]) => revealProfileTarget(tester, finder, delta: delta);
 
   Future<void> tap(WidgetTester tester, Finder finder) async {
     await Scrollable.ensureVisible(tester.element(finder), alignment: 0.5);
