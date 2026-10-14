@@ -259,15 +259,15 @@ final localRecipeVersionsProvider = StreamProvider<List<LocalRecipeVersion>>((
   }
 });
 
+// Retry counts and backoff times do not change recipe content or its visible
+// status. Including them would reload the list and discard loaded cursor pages.
 String _recipeProjection(List<LocalRecipeVersion> versions) => jsonEncode([
   for (final version in versions)
     [
       version.entry.write.toJson(),
       version.entry.sequence,
       version.entry.state.name,
-      version.entry.attempts,
       version.entry.reasonCode,
-      version.entry.nextAttemptAt?.toIso8601String(),
       version.entry.result,
       version.entry.businessRecord,
       version.entry.confirmedAt?.toIso8601String(),
