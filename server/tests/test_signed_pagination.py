@@ -209,7 +209,7 @@ def test_non_collection_lists_keep_valid_paging_shape_and_signed_boundary(
             assert response.status_code == 201, response.text
         url = "/v1/records"
     else:
-        for value in (0.1, 0.2, 0.3):
+        for value in (0.5, 0.75, 1.25):
             response = api.client.patch(
                 "/v1/me/taste-profile", json={"flavors": {"spicy": value}}, headers=h
             )

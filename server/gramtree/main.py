@@ -113,8 +113,10 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     v1.include_router(recipe_imports.router)
     v1.include_router(recipe_ai.router)
     v1.include_router(personal_measures.router)
-    v1.include_router(taste_profiles.router)
+    # Register literal taste-learning paths (including /changes/pending) before
+    # the taste-profile router's /changes/{change_id} route.
     v1.include_router(taste_learning.router)
+    v1.include_router(taste_profiles.router)
     v1.include_router(taste_learning.record_router)
     v1.include_router(cooking_constraints.router)
     v1.include_router(allergies.router)
