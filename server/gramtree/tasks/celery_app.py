@@ -23,6 +23,14 @@ def make_celery() -> Celery:
         broker_connection_retry_on_startup=True,
         include=["gramtree.tasks.jobs"],
         beat_schedule={
+            "run-data-exports": {
+                "task": "gramtree.tasks.jobs.run_data_exports",
+                "schedule": 60.0,
+            },
+            "cleanup-data-exports": {
+                "task": "gramtree.tasks.jobs.cleanup_data_exports",
+                "schedule": 60.0,
+            },
             # 样板：每 10 分钟写一次心跳，证明定时任务链路可用
             "heartbeat": {
                 "task": "gramtree.tasks.jobs.record_heartbeat",

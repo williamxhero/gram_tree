@@ -14,6 +14,26 @@ from gramtree.tasks.celery_app import celery_app
 logger = logging.getLogger("gramtree.tasks")
 
 
+@celery_app.task(name="gramtree.tasks.jobs.run_data_exports")
+def run_data_exports(job_id: str | None = None) -> dict[str, int]:
+    import uuid
+
+    from gramtree.core.time import utcnow
+    from gramtree.exports import service
+
+    with _session_factory()() as session:
+        return service.run(session, get_settings(), utcnow(), uuid.UUID(job_id) if job_id else None)
+
+
+@celery_app.task(name="gramtree.tasks.jobs.cleanup_data_exports")
+def cleanup_data_exports() -> dict[str, int]:
+    from gramtree.core.time import utcnow
+    from gramtree.exports import service
+
+    with _session_factory()() as session:
+        return service.cleanup(session, get_settings(), utcnow())
+
+
 @lru_cache
 def _session_factory() -> sessionmaker[Session]:
     return make_session_factory(make_engine(get_settings().database_url))

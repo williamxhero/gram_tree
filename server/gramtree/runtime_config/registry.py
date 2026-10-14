@@ -35,6 +35,25 @@ class ConfigItem:
 
 ITEMS: tuple[ConfigItem, ...] = (
     ConfigItem(
+        "export.daily_limit", "int", 3, "每账号 UTC 每日独立导出额度", minimum=1, maximum=100
+    ),
+    ConfigItem(
+        "export.download_ttl_seconds",
+        "int",
+        86400,
+        "导出完成后的签名下载有效期（秒）",
+        minimum=1,
+        maximum=604800,
+    ),
+    ConfigItem(
+        "export.max_attempts",
+        "int",
+        3,
+        "每个导出任务最多执行次数（含手动重试）",
+        minimum=1,
+        maximum=10,
+    ),
+    ConfigItem(
         "taste.equipment",
         "json",
         {

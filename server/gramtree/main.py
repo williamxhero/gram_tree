@@ -16,6 +16,8 @@ from gramtree.db import make_engine, make_session_factory
 from gramtree.events import dev as events_dev
 from gramtree.events import router as events
 from gramtree.events import sync_router as sync
+from gramtree.exports import documentation as export_documentation
+from gramtree.exports import router as exports
 from gramtree.ingredients import router as ingredients
 from gramtree.legal import router as legal
 from gramtree.recipes import imports as recipe_imports
@@ -73,6 +75,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     v1.include_router(client_config.router)
     v1.include_router(accounts.router)
     v1.include_router(accounts.me_router)
+    v1.include_router(exports.router)
     v1.include_router(events.router)
     v1.include_router(sync.router)
     v1.include_router(analytics.router)
@@ -98,6 +101,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         v1.include_router(examples_router)
     app.include_router(v1)
     app.include_router(legal.router)
+    app.include_router(export_documentation.router)
     return app
 
 

@@ -9,6 +9,7 @@ from gramtree.events import field_adjudication as _field_adjudication  # noqa: F
 from gramtree.events import models as _events  # noqa: F401
 from gramtree.events import sync_models as _sync  # noqa: F401
 from gramtree.examples import models as _examples  # noqa: F401
+from gramtree.exports import models as _exports  # noqa: F401
 from gramtree.ingredients import models as _ingredients  # noqa: F401
 from gramtree.recipes import import_models as _recipe_imports  # noqa: F401
 from gramtree.recipes import measure_models as _measure_models  # noqa: F401
