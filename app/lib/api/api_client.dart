@@ -274,7 +274,16 @@ class RequestProtectionInterceptor extends Interceptor {
     ErrorInterceptorHandler handler,
   ) async {
     final options = err.requestOptions;
-    final data = err.response?.data;
+    var data = err.response?.data;
+    // Image requests retain byte responses even when the server sends JSON
+    // protection errors. Decode only for classification, not the caller's data.
+    if (data is List<int> && data.length <= 1024 * 1024) {
+      try {
+        data = jsonDecode(utf8.decode(data));
+      } on FormatException {
+        // Non-JSON image failures must still propagate without a retry.
+      }
+    }
     final body = data is Map ? data['error'] : null;
     final headers = err.response?.headers;
     if (body is Map && body['code'] == 'pagination_limit_reached') {

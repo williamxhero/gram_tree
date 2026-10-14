@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
@@ -214,6 +215,73 @@ void main() {
       expect(env.server.calls('GET', '/image.png'), isEmpty);
     },
   );
+
+  for (final repeated in [false, true]) {
+    testWidgets(
+      'image byte error recovers anonymous CAPTCHA once: repeated=$repeated',
+      (tester) async {
+        final env = SharingTestEnv(withImage: true);
+        var imageCalls = 0;
+        env.server.responseHeaders['GET /s/$publicShareId/image'] = {
+          'x-risk-challenge': ['challenge-123'],
+          'content-type': ['application/json'],
+        };
+        env.server.on('GET', '/s/$publicShareId/image', (_) {
+          if (++imageCalls == 1 || repeated) {
+            final (status, body) = FakeServer.error(
+              403,
+              'risk_captcha_required',
+              '需要安全验证',
+            );
+            return (status, utf8.encode(jsonEncode(body)));
+          }
+          return (200, testImageBytes);
+        });
+        env.server.on(
+          'POST',
+          '/v1/risk/captcha',
+          (_) => (200, {'accepted': true, 'access_restored': true}),
+        );
+        await _openShare(tester, env, '/recipes/$sharedRecipeId');
+        await tester.tap(find.byKey(const ValueKey('recipe-share-button')));
+        for (var i = 0; i < 80 && find.text('安全验证').evaluate().isEmpty; i++) {
+          await tester.pump(const Duration(milliseconds: 50));
+        }
+        expect(find.text('安全验证'), findsOneWidget);
+        expect(env.sharing.texts, isEmpty);
+        await tester.enterText(
+          find.byKey(const ValueKey('captcha-response')),
+          'verified',
+        );
+        await tester.tap(find.text('验证并继续'));
+        await tester.pumpAndSettle();
+        expect(imageCalls, 2);
+        expect(find.text('安全验证'), findsNothing);
+        expect(env.server.calls('POST', '/v1/risk/captcha'), hasLength(1));
+        final requests = [
+          ...env.server.calls('GET', '/s/$publicShareId/image'),
+          ...env.server.calls('GET', '/v1/risk/captcha/challenge-123'),
+          ...env.server.calls('POST', '/v1/risk/captcha'),
+        ];
+        expect(requests, hasLength(4));
+        for (final request in requests) {
+          expect(request.headers['Authorization'], isNull);
+          expect(request.headers['X-Device-ID'], isNull);
+          expect(request.headers['X-Request-Signature'], isNull);
+        }
+        if (repeated) {
+          expect(env.sharing.texts, isEmpty);
+          expect(env.sharing.images, isEmpty);
+          expect(find.byType(SnackBar), findsOneWidget);
+        } else {
+          expect(env.sharing.texts, [publicShareUrl]);
+          expect(env.sharing.images.single, testImageBytes);
+        }
+        expect(tester.takeException(), isNull);
+      },
+      skip: kIsWeb,
+    );
+  }
 
   for (final redirect in [false, true]) {
     testWidgets(
