@@ -26,7 +26,13 @@ from gramtree.events import service as event_service
 from gramtree.events.registry import SourceType
 from gramtree.ingredients.attributes import IngredientAttributes
 from gramtree.ingredients.models import Ingredient, IngredientAttribute
-from gramtree.recipes import food_safety, personal_safety, personalization, reproducibility
+from gramtree.recipes import (
+    food_safety,
+    personal_safety,
+    personalization,
+    publication,
+    reproducibility,
+)
 from gramtree.recipes.measure_display import display_amount, quantity_text
 from gramtree.recipes.measure_input import confirmed_source
 from gramtree.recipes.measure_models import PersonalMeasure
@@ -532,23 +538,29 @@ def _signed_url(
     recipe_id: uuid.UUID,
     image_id: uuid.UUID,
     storage_key: str,
+    *,
+    public: bool = False,
 ) -> tuple[str, int]:
     expires_in = settings.recipe_image_url_ttl_seconds or _SIGNED_URL_TTL
-    storage = make_recipe_storage(settings)
-    object_url = storage.signed_get_url(storage_key, expires_in)
-    if object_url is not None:
-        return object_url, expires_in
+    # Public image reads go through the API so withdrawal/config changes revoke
+    # access immediately rather than leaving a live object-store URL until TTL.
+    if not public:
+        storage = make_recipe_storage(settings)
+        object_url = storage.signed_get_url(storage_key, expires_in)
+        if object_url is not None:
+            return object_url, expires_in
     expires = int((datetime.now(UTC) + timedelta(seconds=expires_in)).timestamp())
-    payload = f"{recipe_id}:{image_id}:{expires}".encode()
+    payload = f"{recipe_id}:{image_id}:{expires}{':public' if public else ''}".encode()
     signature = hmac.new(_image_secret(settings).encode(), payload, hashlib.sha256).hexdigest()
     return (
-        f"/v1/recipes/{recipe_id}/images/{image_id}?expires={expires}&signature={signature}",
+        f"/v1/recipes/{recipe_id}/images/{image_id}?expires={expires}&signature={signature}"
+        + ("&public=true" if public else ""),
         expires_in,
     )
 
 
-def _image_out(settings: Settings, row: RecipeImage) -> RecipeImageOut:
-    url, expires_in = _signed_url(settings, row.recipe_id, row.id, row.storage_key)
+def _image_out(settings: Settings, row: RecipeImage, *, public: bool = False) -> RecipeImageOut:
+    url, expires_in = _signed_url(settings, row.recipe_id, row.id, row.storage_key, public=public)
     return RecipeImageOut(
         id=row.id,
         version_id=row.version_id,
@@ -593,7 +605,12 @@ def _staged_signed_url(
 
 
 def _version_out(
-    session: Session, settings: Settings, row: RecipeVersion, recipe_id: uuid.UUID
+    session: Session,
+    settings: Settings,
+    row: RecipeVersion,
+    recipe_id: uuid.UUID,
+    *,
+    public: bool = False,
 ) -> RecipeVersionOut:
     images = list(
         session.scalars(
@@ -602,11 +619,24 @@ def _version_out(
             .order_by(RecipeImage.created_at)
         )
     )
+
+    def public_reference(value: uuid.UUID | None) -> uuid.UUID | None:
+        if not public or value is None:
+            return value
+        referenced = session.get(RecipeVersion, value)
+        return (
+            value
+            if referenced is not None
+            and publication.state(session, referenced) in publication.PUBLIC_STATES
+            else None
+        )
+
     return RecipeVersionOut(
+        publication_state=cast(Any, publication.state(session, row)),
         id=row.id,
         version_number=row.version_number,
-        previous_version_id=row.previous_version_id,
-        base_version_id=row.base_version_id,
+        previous_version_id=public_reference(row.previous_version_id),
+        base_version_id=public_reference(row.base_version_id),
         conclusion=cast("ChangeConclusion | None", row.conclusion),
         rules_version=row.rules_version,
         snapshot=RecipeSnapshot.model_validate(row.snapshot),
@@ -626,11 +656,11 @@ def _version_out(
         safety_at_save=(
             RecipeSafetyResult.model_validate(row.safety_at_save) if row.safety_at_save else None
         ),
-        edit_operations=row.edit_operations or [],
+        edit_operations=[] if public else row.edit_operations or [],
         change_note=row.change_note,
         ai_assisted=row.ai_assisted,
         created_at=row.created_at,
-        images=[_image_out(settings, image) for image in images],
+        images=[_image_out(settings, image, public=public) for image in images],
     )
 
 
@@ -639,6 +669,8 @@ def _detail(
     settings: Settings,
     recipe: Recipe,
     version: RecipeVersion | None = None,
+    *,
+    viewer: User | None = None,
 ) -> RecipeDetail:
     dish = session.get(Dish, recipe.dish_id)
     author = session.get(User, recipe.owner_id)
@@ -649,20 +681,41 @@ def _detail(
     # defaults into snapshots or derived author data.
     from gramtree.taste_profiles.models import TasteProfile
 
-    profile = session.scalar(select(TasteProfile).where(TasteProfile.owner_id == recipe.owner_id))
+    profile = session.scalar(
+        select(TasteProfile).where(
+            TasteProfile.owner_id == (viewer.id if viewer else recipe.owner_id)
+        )
+    )
+    public = viewer is not None and viewer.id != recipe.owner_id
     household = profile.cooking_constraints.get("household_servings") if profile else None
+    from gramtree.recipes.import_models import RecipeImport
+    from gramtree.recipes.improvements import source_attribution
+
+    source_links = [
+        value
+        for value in session.scalars(
+            select(RecipeImport.source_url).where(
+                RecipeImport.recipe_id == recipe.id, RecipeImport.source_url.is_not(None)
+            )
+        )
+        if value is not None
+    ]
     return RecipeDetail(
+        ever_public=recipe.ever_public,
+        withdrawn=recipe.withdrawn,
+        source_attribution=source_attribution(session, recipe),
+        source_links=source_links,
         default_servings=household,
         taste_profile_version=profile.version if profile else None,
         id=recipe.id,
         dish=_dish_out(session, dish),
         author=RecipeAuthor(id=author.id, nickname=author.nickname),
-        visibility="private",
+        visibility=cast(Any, recipe.visibility),
         source_version_id=recipe.source_version_id,
         root_recipe_id=recipe.root_recipe_id,
         created_at=recipe.created_at,
         updated_at=recipe.updated_at,
-        version=_version_out(session, settings, version, recipe.id),
+        version=_version_out(session, settings, version, recipe.id, public=public),
     )
 
 
@@ -831,7 +884,7 @@ def recipe_safety_context(
     Ownership is resolved before reading the snapshot. This result must never be
     put in the shared composition cache.
     """
-    recipe, version = _owned_version(session, owner, recipe_id, version_id)
+    recipe, version = publication.readable_version(session, owner, recipe_id, version_id)
     dish = session.get(Dish, recipe.dish_id)
     if dish is None:
         raise NotFound()
@@ -858,7 +911,7 @@ def recipe_personal_safety_context(
     version_id: uuid.UUID | None = None,
 ) -> RecipePersonalSafety:
     """Read current private constraints for an uncached recipe composition only."""
-    recipe, version = _owned_version(session, owner, recipe_id, version_id)
+    recipe, version = publication.readable_version(session, owner, recipe_id, version_id)
     del recipe
     return personal_safety.check(
         session,
@@ -879,6 +932,7 @@ def create_recipe(
     confirmed_operations: list[dict[str, Any]] | None = None,
     before_commit: Callable[[RecipeVersion], None] | None = None,
 ) -> RecipeDetail:
+    publication._lock_owner(session, owner.id)
     snapshot = normalize_sources(
         _validate_snapshot(session, body.snapshot, owner.id, settings=settings),
         trusted_sources=confirmed_operations is not None,
@@ -924,6 +978,7 @@ def create_recipe(
         generation.saved_recipe_id = recipe.id
     if before_commit is not None:
         before_commit(version)
+    publication.check_version(session, settings, recipe, version)
     session.commit()
     _drain_save_events(session, redis, owner)
     return _detail(session, settings, recipe, version)
@@ -1177,6 +1232,7 @@ def mutate_version(
     Online saves and durable sync share validation and normalization, but the
     caller controls commit and whether the current-version fence is mandatory.
     """
+    publication._lock_owner(session, owner.id)
     recipe = session.scalar(
         select(Recipe)
         .where(Recipe.id == recipe_id, Recipe.owner_id == owner.id)
@@ -1281,6 +1337,7 @@ def mutate_version(
     recipe.current_version_id = version.id
     recipe.updated_at = version.created_at
     _enqueue_save_event(session, owner, recipe, version)
+    publication.check_version(session, settings, recipe, version)
     session.flush()
     return _detail(session, settings, recipe, version)
 
@@ -1322,8 +1379,8 @@ def save_version(
 def get_recipe(
     session: Session, settings: Settings, owner: User, recipe_id: uuid.UUID
 ) -> RecipeDetail:
-    recipe = _owned_recipe(session, owner, recipe_id)
-    return _detail(session, settings, recipe)
+    recipe, version = publication.readable_version(session, owner, recipe_id)
+    return _detail(session, settings, recipe, version, viewer=owner)
 
 
 def get_version(
@@ -1333,15 +1390,8 @@ def get_version(
     recipe_id: uuid.UUID,
     version_id: uuid.UUID,
 ) -> RecipeDetail:
-    recipe = _owned_recipe(session, owner, recipe_id)
-    version = session.scalar(
-        select(RecipeVersion).where(
-            RecipeVersion.id == version_id, RecipeVersion.recipe_id == recipe.id
-        )
-    )
-    if version is None:
-        raise NotFound()
-    return _detail(session, settings, recipe, version)
+    recipe, version = publication.readable_version(session, owner, recipe_id, version_id)
+    return _detail(session, settings, recipe, version, viewer=owner)
 
 
 def personalize_recipe(
@@ -1360,7 +1410,7 @@ def personalize_recipe(
     from gramtree.recipes import personalization_adaptations as adaptations
     from gramtree.taste_profiles import authorized_constraints
 
-    recipe, version = _owned_version(session, owner, recipe_id, body.version_id)
+    recipe, version = publication.readable_version(session, owner, recipe_id, body.version_id)
     from gramtree.taste_profiles import service as taste_service
 
     profile = taste_service.locked_profile(session, owner.id, taste_service.scale_for(session))
@@ -1569,7 +1619,10 @@ def personalize_recipe(
         authorization_version=authorization_version,
         view=view,
     )
+    from gramtree.records.completion import execution_token
+
     return RecipePersonalizedOut(
+        execution_token=execution_token(owner.id, version.id, projected, settings),
         recipe_id=recipe.id,
         version_id=version.id,
         view=view,
@@ -1946,7 +1999,7 @@ def display_recipe_ingredients(
     Callers receive the source amount alongside the rendered amount, while
     density and personal-measure ownership stay server-side.
     """
-    recipe, version = _owned_version(session, owner, recipe_id, version_id)
+    recipe, version = publication.readable_version(session, owner, recipe_id, version_id)
     if target_servings is not None and target_mold is not None:
         raise ApiError(422, "invalid_request", "请求参数有误", "份数换算和模具换算不能同时使用")
 
@@ -2117,7 +2170,7 @@ def convert_recipe_servings(
     version_id: uuid.UUID | None = None,
 ) -> RecipeServingConversionOut:
     """Return a deterministic, read-only conversion for an owned recipe version."""
-    recipe, version = _owned_version(session, owner, recipe_id, version_id)
+    recipe, version = publication.readable_version(session, owner, recipe_id, version_id)
     snapshot = RecipeSnapshot.model_validate(version.snapshot)
     derived = RecipeDerived.model_validate(version.derived)
     conversion = _convert_snapshot_servings(session, snapshot, derived, target_servings)
@@ -2138,7 +2191,7 @@ def convert_recipe_mold(
     version_id: uuid.UUID | None = None,
 ) -> RecipeMoldConversionOut:
     """Return a deterministic, read-only bottom-area conversion for an owned version."""
-    recipe, version = _owned_version(session, owner, recipe_id, version_id)
+    recipe, version = publication.readable_version(session, owner, recipe_id, version_id)
     snapshot = RecipeSnapshot.model_validate(version.snapshot)
     conversion = _convert_snapshot_mold(session, snapshot, target_mold)
     return RecipeMoldConversionOut(
@@ -2161,9 +2214,16 @@ def list_versions(
 ) -> RecipeVersionHistory:
     if limit > maximum:
         raise ApiError(422, "invalid_request", "请求参数有误", f"limit 不能超过 {maximum}")
-    recipe = _owned_recipe(session, owner, recipe_id)
+    recipe, _ = publication.readable_version(session, owner, recipe_id)
+    public = recipe.owner_id != owner.id
     after = decode_cursor(cursor) if cursor else None
     query = select(RecipeVersion).where(RecipeVersion.recipe_id == recipe.id)
+    if public:
+        from gramtree.recipes.models import RecipePublication
+
+        query = query.join(
+            RecipePublication, RecipePublication.version_id == RecipeVersion.id
+        ).where(RecipePublication.state.in_(publication.PUBLIC_STATES))
     if after is not None:
         timestamp, row_id = after
         query = query.where(
@@ -2172,22 +2232,27 @@ def list_versions(
                 (RecipeVersion.created_at == timestamp) & (RecipeVersion.id < row_id),
             )
         )
-    rows = list(
-        session.scalars(
-            query.order_by(RecipeVersion.created_at.desc(), RecipeVersion.id.desc()).limit(
-                limit + 1
-            )
-        )
-    )
+    rows: list[RecipeVersion] = []
+    for row in session.scalars(
+        query.order_by(RecipeVersion.created_at.desc(), RecipeVersion.id.desc())
+    ):
+        try:
+            publication.readable_version(session, owner, row.recipe_id, row.id)
+        except NotFound:
+            continue
+        rows.append(row)
+        if len(rows) > limit:
+            break
     has_more = len(rows) > limit
     rows = rows[:limit]
     return RecipeVersionHistory(
         items=[
             RecipeVersionSummary(
+                publication_state=cast(Any, publication.state(session, row)),
                 id=row.id,
                 version_number=row.version_number,
-                previous_version_id=row.previous_version_id,
-                base_version_id=row.base_version_id,
+                previous_version_id=None if public else row.previous_version_id,
+                base_version_id=None if public else row.base_version_id,
                 conclusion=cast("ChangeConclusion | None", row.conclusion),
                 rules_version=row.rules_version,
                 change_note=row.change_note,
@@ -2209,16 +2274,23 @@ def list_comparison_candidates(
     limit: int,
     maximum: int,
 ) -> RecipeComparisonCandidates:
-    anchor = _owned_recipe(session, owner, recipe_id)
+    anchor, _ = publication.readable_version(session, owner, recipe_id)
     if limit > maximum:
         raise ApiError(422, "invalid_request", "请求参数有误", f"limit 不能超过 {maximum}")
+    from gramtree.recipes.models import RecipePublication
+
+    visible = Recipe.owner_id == owner.id
+    if publication.public_enabled(session):
+        visible = or_(
+            visible,
+            (Recipe.withdrawn.is_(False)) & RecipePublication.state.in_(publication.PUBLIC_STATES),
+        )
     query = (
         select(RecipeVersion)
         .join(Recipe, RecipeVersion.recipe_id == Recipe.id)
-        .where(Recipe.dish_id == anchor.dish_id, Recipe.owner_id == owner.id)
+        .outerjoin(RecipePublication, RecipePublication.version_id == RecipeVersion.id)
+        .where(Recipe.dish_id == anchor.dish_id, visible)
     )
-    # Current visibility is owned-only, exactly like compare_ingredients; public
-    # versions are a later capability and must not leak through this picker.
     if cursor:
         timestamp, row_id = decode_cursor(cursor)
         query = query.where(
@@ -2227,24 +2299,42 @@ def list_comparison_candidates(
                 (RecipeVersion.created_at == timestamp) & (RecipeVersion.id < row_id),
             )
         )
-    rows = list(
-        session.scalars(
-            query.order_by(RecipeVersion.created_at.desc(), RecipeVersion.id.desc()).limit(
-                limit + 1
-            )
-        )
-    )
+    rows: list[RecipeVersion] = []
+    for row in session.scalars(
+        query.order_by(RecipeVersion.created_at.desc(), RecipeVersion.id.desc())
+    ):
+        try:
+            publication.readable_version(session, owner, row.recipe_id, row.id)
+        except NotFound:
+            continue
+        rows.append(row)
+        if len(rows) > limit:
+            break
     has_more = len(rows) > limit
     rows = rows[:limit]
+    author_by_recipe: dict[uuid.UUID, User] = {}
+    recipe_by_id: dict[uuid.UUID, Recipe] = {}
+    for row in rows:
+        row_recipe = session.get(Recipe, row.recipe_id)
+        if row_recipe is not None:
+            recipe_by_id[row.recipe_id] = row_recipe
+            author = session.get(User, row_recipe.owner_id)
+            if author is not None:
+                author_by_recipe[row.recipe_id] = author
     return RecipeComparisonCandidates(
         items=[
             RecipeComparisonCandidate(
+                publication_state=cast(Any, publication.state(session, row)),
                 id=row.id,
                 recipe_id=row.recipe_id,
-                author=owner.nickname,
+                author=author_by_recipe[row.recipe_id].nickname,
                 version_number=row.version_number,
-                previous_version_id=row.previous_version_id,
-                base_version_id=row.base_version_id,
+                previous_version_id=row.previous_version_id
+                if recipe_by_id[row.recipe_id].owner_id == owner.id
+                else None,
+                base_version_id=row.base_version_id
+                if recipe_by_id[row.recipe_id].owner_id == owner.id
+                else None,
                 conclusion=cast("ChangeConclusion | None", row.conclusion),
                 rules_version=row.rules_version,
                 change_note=row.change_note,
@@ -2303,7 +2393,13 @@ def list_recipes(
 
 
 def delete_recipe(session: Session, owner: User, recipe_id: uuid.UUID, settings: Settings) -> None:
-    recipe = _owned_recipe(session, owner, recipe_id)
+    recipe = session.scalar(
+        select(Recipe).where(Recipe.id == recipe_id, Recipe.owner_id == owner.id).with_for_update()
+    )
+    if recipe is None:
+        raise NotFound()
+    if recipe.ever_public:
+        raise ApiError(409, "published_recipe_immutable", "公开过的菜谱不能删除，只能下架")
     image_keys = [
         image.storage_key
         for image in session.scalars(select(RecipeImage).where(RecipeImage.recipe_id == recipe.id))
@@ -2480,8 +2576,10 @@ def signed_image_file(
     image_id: uuid.UUID,
     expires: int,
     signature: str,
+    *,
+    public: bool = False,
 ) -> tuple[bytes, str]:
-    payload = f"{recipe_id}:{image_id}:{expires}".encode()
+    payload = f"{recipe_id}:{image_id}:{expires}{':public' if public else ''}".encode()
     expected = hmac.new(_image_secret(settings).encode(), payload, hashlib.sha256).hexdigest()
     if expires < int(datetime.now(UTC).timestamp()) or not hmac.compare_digest(signature, expected):
         raise NotFound()
@@ -2490,6 +2588,26 @@ def signed_image_file(
     )
     if image is None:
         raise NotFound()
+    if public:
+        recipe = session.get(Recipe, recipe_id)
+        version = session.get(RecipeVersion, image.version_id)
+        if (
+            recipe is None
+            or version is None
+            or recipe.withdrawn
+            or not publication.public_enabled(session)
+            or publication.state(session, version) not in publication.PUBLIC_STATES
+        ):
+            raise NotFound()
+        from gramtree.recipes.models import RecipePublication
+
+        missing, _, level = publication._gates(
+            session, recipe, version, session.get(RecipePublication, version.id)
+        )
+        if missing or not publication.before_publication_review(
+            session, recipe, version, level=level
+        ):
+            raise NotFound()
     return make_recipe_storage(settings).get(image.storage_key), image.content_type
 
 

@@ -27,6 +27,7 @@ from fastapi import APIRouter
 from pydantic import BaseModel, Field, model_validator
 
 from gramtree.accounts.deps import CurrentAuth
+from gramtree.accounts.models import User
 from gramtree.core.errors import ERROR_RESPONSES, ApiError
 from gramtree.core.time import utcnow
 from gramtree.deps import RedisDep, SessionDep, SettingsDep
@@ -41,6 +42,8 @@ from gramtree.ui_protocol import (
     validation,
 )
 from gramtree.ui_protocol.protocol import (
+    ComponentDescriptor,
+    ComponentReason,
     PageDescription,
     SkipAdjustmentRequest,
     SkipAdjustmentResult,
@@ -135,6 +138,26 @@ def compose(
     selected_version = body.version_id or (
         body.personalization.version_id if body.personalization else None
     )
+    attribution_component = None
+    if body.page_type == "recipe_detail" and body.recipe_id is not None:
+        from gramtree.recipes.improvements import source_attribution
+        from gramtree.recipes.publication import readable_version
+
+        recipe, _ = readable_version(session, auth.user, body.recipe_id, selected_version)
+        attribution = source_attribution(session, recipe)
+        author = session.get(User, recipe.owner_id)
+        author_name = author.nickname if author and author.status == "active" else "已注销用户"
+        attribution_component = ComponentDescriptor(
+            type="source_attribution",
+            id="recipe-source-attribution",
+            detail="standard",
+            data={
+                "conclusion": attribution["label"] if attribution else f"作者 @{author_name}",
+                "attribution": attribution,
+            },
+            reason=ComponentReason(code="immutable_source", text="创建时保存的永久来源关系"),
+            required=True,
+        )
     safety_context = None
     personal_safety = None
     safety_context_failed = False
@@ -316,10 +339,20 @@ def compose(
             logger.exception("组合页面 %s 时服务端报错，整页退回标准布局", body.page_type)
             description = service.build_fallback_description(body.page_type, "server_error")
         else:
+            if (
+                attribution_component is not None
+                and "source_attribution" in body.supported_components
+            ):
+                description.components.append(attribution_component)
             reason = validation.classify_invalid_description(description.model_dump(mode="json"))
             if reason is not None:
                 description = service.build_fallback_description(body.page_type, reason)
 
+    if attribution_component is not None:
+        # Attribution cannot be dropped by a scenario, experiment or fallback.
+        description.components = [
+            item for item in description.components if item.type != "source_attribution"
+        ] + [attribution_component]
     composition_events.record_composition_shown(session, redis, auth.user.id, description)
     # 兜底描述（ttl_s=0）不会真的被写进去，见 cache.set_() 的说明——下次请求还是会
     # 重新走一遍完整流程，不会一直下发同一份兜底结果。

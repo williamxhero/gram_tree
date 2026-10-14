@@ -8,7 +8,6 @@ from decimal import Decimal
 from typing import Any, Literal
 
 from pydantic import BaseModel, Field
-from sqlalchemy import select
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import Session
 
@@ -21,7 +20,7 @@ from gramtree.recipes.comparison import (
     Pairing,
     compare_ingredients,
 )
-from gramtree.recipes.models import Recipe, RecipeComparisonCache, RecipeVersion
+from gramtree.recipes.models import RecipeComparisonCache, RecipeVersion
 from gramtree.recipes.schemas import ChangeConclusion, RecipeIngredient, RecipeSnapshot, RecipeStep
 from gramtree.runtime_config import service as config
 
@@ -478,17 +477,15 @@ def _compare_steps(
 def _visible_pair(
     session: Session, owner: User, recipe_id: uuid.UUID, from_id: uuid.UUID, to_id: uuid.UUID
 ) -> tuple[RecipeVersion, RecipeVersion]:
-    anchor = service._owned_recipe(session, owner, recipe_id)
+    from gramtree.recipes.publication import readable_version
+
+    anchor, _ = readable_version(session, owner, recipe_id)
     versions = []
     for version_id in (from_id, to_id):
-        row = session.execute(
-            select(Recipe, RecipeVersion)
-            .join(RecipeVersion, RecipeVersion.recipe_id == Recipe.id)
-            .where(RecipeVersion.id == version_id, Recipe.owner_id == owner.id)
-        ).one_or_none()
-        if row is None:
+        version = session.get(RecipeVersion, version_id)
+        if version is None:
             raise NotFound()
-        recipe, version = row
+        recipe, version = readable_version(session, owner, version.recipe_id, version_id)
         if recipe.dish_id != anchor.dish_id:
             raise ApiError(422, "different_dishes", "只能比较同一道菜的版本")
         versions.append(version)
@@ -518,6 +515,40 @@ def compare_full(
         RecipeSnapshot.model_validate(a_version.snapshot),
         RecipeSnapshot.model_validate(b_version.snapshot),
     )
+    result = grade_snapshots(session, a, b, ingredient_result, policy=policy)
+    session.execute(
+        insert(RecipeComparisonCache)
+        .values(
+            from_version_id=from_version_id,
+            to_version_id=to_version_id,
+            rules_version=policy.version,
+            result=result.model_dump(mode="json"),
+        )
+        .on_conflict_do_nothing()
+    )
+    if commit:
+        session.commit()
+    return result
+
+
+def compare_snapshots(
+    session: Session,
+    a: RecipeSnapshot,
+    b: RecipeSnapshot,
+    from_version: ComparisonVersion,
+    to_version: ComparisonVersion,
+    *,
+    stable: bool = True,
+) -> RecipeFullComparison:
+    """Unsaved comparison; callers must authorize both inputs before invoking."""
+    from gramtree.recipes.comparison import compare_snapshots as compare_ingredient_snapshots
+
+    result = compare_ingredient_snapshots(session, a, b, from_version, to_version, stable=stable)
+    return grade_snapshots(session, a, b, result)
+
+
+def grade_snapshots(session, a, b, ingredient_result, *, policy=None) -> RecipeFullComparison:
+    policy = policy or rules(session)
     ingredients = []
     for row in ingredient_result.ingredients:
         main = any(
@@ -602,16 +633,4 @@ def compare_full(
         rules_version=policy.version,
         basis=list(dict.fromkeys(c.basis for c in determining)) or ["归一化后没有差异"],
     )
-    session.execute(
-        insert(RecipeComparisonCache)
-        .values(
-            from_version_id=from_version_id,
-            to_version_id=to_version_id,
-            rules_version=policy.version,
-            result=result.model_dump(mode="json"),
-        )
-        .on_conflict_do_nothing()
-    )
-    if commit:
-        session.commit()
     return result

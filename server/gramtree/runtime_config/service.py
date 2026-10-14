@@ -102,12 +102,23 @@ def validate(cfg: ConfigItem, value: int | float | bool | str | dict[str, Any]) 
 def get(session: Session, key: str) -> Any:
     cfg = item(key)
     row = session.get(ConfigValue, key)
-    return cfg.default if row is None else row.value
+    if row is not None:
+        return row.value
+    return _default(session, cfg)
+
+
+def _default(session: Session, cfg: ConfigItem) -> Any:
+    if cfg.key == "feature.public_recipes":
+        from gramtree.settings import get_settings
+
+        settings = session.info.get("settings") or get_settings()
+        return settings.env in ("dev", "test")
+    return cfg.default
 
 
 def get_all(session: Session) -> dict[str, Any]:
     stored = {row.key: row.value for row in session.scalars(select(ConfigValue))}
-    return {cfg.key: stored.get(cfg.key, cfg.default) for cfg in ITEMS}
+    return {cfg.key: stored.get(cfg.key, _default(session, cfg)) for cfg in ITEMS}
 
 
 def set_value(session: Session, key: str, raw: str, changed_by: str, reason: str) -> ChangeRecord:

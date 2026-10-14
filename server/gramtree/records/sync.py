@@ -18,7 +18,7 @@ from gramtree.events.sync_contract import (
 from gramtree.records import context as record_context
 from gramtree.records.models import CookingRecord
 from gramtree.records.schemas import CookingRecordCreate
-from gramtree.records.service import record_created_event
+from gramtree.records.service import matches_submission, record_created_event
 
 
 class CookingRecordWritePayload(BaseModel):
@@ -36,14 +36,20 @@ def _authorize(session: Session, owner: uuid.UUID, payload: BaseModel) -> None:
     if parsed.verification == "cooking_mode":
         raise WriteFailure("verification_unavailable")
     if parsed.recipe_version_id is not None:
-        from gramtree.recipes.models import Recipe, RecipeVersion
+        from gramtree.recipes.models import RecipeVersion
 
         version = session.get(RecipeVersion, parsed.recipe_version_id)
         if version is None:
             raise WriteDeferred("reference_not_arrived")
-        recipe = session.get(Recipe, version.recipe_id)
-        if recipe is None or recipe.owner_id != owner:
-            raise WriteFailure("reference_forbidden")
+        from gramtree.core.errors import ApiError
+        from gramtree.recipes.publication import readable_version
+
+        try:
+            recipe, _ = readable_version(session, owner, version.recipe_id, version.id)
+        except ApiError as exc:
+            raise WriteFailure("reference_forbidden") from exc
+        if parsed.recipe_id is not None and parsed.recipe_id != recipe.id:
+            raise WriteFailure("reference_mismatch")
     if parsed.source == "cooking_session" and parsed.recipe_version_id is None:
         raise WriteFailure("reference_required")
     try:
@@ -69,7 +75,15 @@ def _apply(
     payload: BaseModel,
     now,
 ) -> WriteApplication:
+    from gramtree.core.errors import ApiError
+    from gramtree.recipes.models import RecipeVersion
+    from gramtree.records.completion import completed_context
+
     parsed = CookingRecordWritePayload.model_validate(payload).record
+    try:
+        verification, source_context = completed_context(owner, parsed, session.info["settings"])
+    except ApiError as exc:
+        raise WriteFailure(exc.code) from exc
     taste_summary, co_diner_ids = record_context.build(
         session, owner, parsed.co_diner_ids, session.info["settings"]
     )
@@ -80,34 +94,38 @@ def _apply(
         )
     )
     if existing is None:
+        recipe_id = parsed.recipe_id
+        if parsed.recipe_version_id is not None:
+            version = session.get(RecipeVersion, parsed.recipe_version_id)
+            if version is None:
+                raise WriteDeferred("reference_not_arrived")
+            recipe_id = version.recipe_id
         row = CookingRecord(
             owner_id=owner,
             client_id=parsed.client_id,
-            recipe_id=parsed.recipe_id,
+            recipe_id=recipe_id,
             recipe_version_id=parsed.recipe_version_id,
             dish_name=parsed.dish_name,
             source=parsed.source,
-            # A client cannot self-attest the trusted cooking-mode outcome.
-            # The source still counts as cooked, while verification remains
-            # unverified until a server-owned session handoff exists.
-            verification="unverified",
+            verification=verification,
             counts_as_cooked=parsed.source != "dining",
             meal=parsed.meal,
-            occurred_at=parsed.occurred_at or now,
+            occurred_at=parsed.occurred_at
+            or (parsed.completion.finished_at if parsed.completion else now),
             snapshot=parsed.snapshot,
             adjustments=parsed.adjustments,
-            source_context=parsed.source_context,
+            source_context=source_context,
             taste_summary=taste_summary,
             co_diner_ids=[str(item) for item in co_diner_ids],
         )
         session.add(row)
         session.flush()
         record_created_event(session, owner, row)
+        from gramtree.recipes.publication import record_completed
+
+        record_completed(session, session.info["settings"], row)
     else:
-        if (
-            existing.recipe_version_id != parsed.recipe_version_id
-            or existing.source != parsed.source
-        ):
+        if not matches_submission(existing, parsed, verification, source_context):
             raise WriteFailure("record_id_reused")
         row = existing
     return WriteApplication(

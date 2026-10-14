@@ -19,7 +19,7 @@ class PageTypeSpec:
 
 ITEMS: tuple[PageTypeSpec, ...] = (
     PageTypeSpec("today"),
-    PageTypeSpec("recipe_detail", ("food_safety", "allergen_notice")),
+    PageTypeSpec("recipe_detail", ("food_safety", "allergen_notice", "source_attribution")),
     PageTypeSpec("recipe_editor", ("food_safety", "allergen_notice")),
 )
 

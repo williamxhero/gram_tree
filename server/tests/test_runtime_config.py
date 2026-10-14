@@ -1,9 +1,13 @@
 """服务端配置项和能力开关：命令行修改，接口立刻生效，留历史。"""
 
+import secrets
+
 import pytest
 from fastapi.testclient import TestClient
 
 from gramtree.cli import main as cli
+from gramtree.main import create_app
+from tests.conftest import make_settings
 
 
 def test_client_config_defaults(client: TestClient) -> None:
@@ -15,11 +19,31 @@ def test_client_config_defaults(client: TestClient) -> None:
         # SPEC-005.3：口味自动学习与「存进我的口味」随本子 SPEC 一起下发。
         "taste_auto_learning": True,
         "save_to_taste": True,
+        # Public reads are enabled by default only in development/test.
+        "public_recipes": True,
     }
     # 运维类配置不下发给 App
     assert not any(key.startswith("ops.") for key in body["params"])
     # SPEC-009.1 #79：等待组合接口的时限，初始 800 毫秒，经这个接口下发给 App
     assert body["params"]["ui.composition_timeout_ms"] == 800
+
+
+@pytest.mark.parametrize("env,enabled", [("prod", False), ("dev", True), ("test", True)])
+def test_public_recipe_default_depends_on_server_environment(env: str, enabled: bool) -> None:
+    settings = make_settings(
+        env=env,
+        auth_secret=secrets.token_urlsafe(32),
+        image_signing_secret=secrets.token_urlsafe(32),
+        mail_backend="smtp",
+        recipe_storage_backend="s3",
+        recipe_s3_bucket="test-only-bucket",
+        recipe_s3_access_key_id="test-only-key",
+        recipe_s3_secret_access_key=secrets.token_urlsafe(32),
+    )
+    with TestClient(create_app(settings)) as configured:
+        response = configured.get("/v1/client-config")
+        assert response.status_code == 200, response.text
+        assert response.json()["features"]["public_recipes"] is enabled
 
 
 def test_composition_timeout_change_takes_effect_immediately(client: TestClient) -> None:
