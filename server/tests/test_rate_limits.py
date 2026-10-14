@@ -1,12 +1,16 @@
 """Real Redis HTTP quotas, dimension isolation and atomic concurrent admission."""
 
 from concurrent.futures import ThreadPoolExecutor
+from uuid import uuid4
 
 import pytest
 from fastapi.testclient import TestClient
+from sqlalchemy import make_url
 
 from gramtree.cli import main as cli
+from gramtree.main import create_app
 from tests.accounts_support import Api, bearer
+from tests.conftest import make_settings
 from tests.test_request_signing import configure, quiet_risk
 
 
@@ -21,6 +25,29 @@ def assert_limited(response, *, day: bool = False) -> None:
     assert 1 <= delay <= (86400 if day else 60)
     if day:
         assert delay > 60
+
+
+@pytest.mark.parametrize(
+    ("method", "url"),
+    [
+        ("GET", "/v1/me"),
+        ("POST", "/v1/ui/compositions"),
+        ("GET", "/v1/risk/captcha/missing-id"),
+    ],
+)
+def test_config_database_outage_fails_closed_over_http(
+    database_url: str, method: str, url: str
+) -> None:
+    # A real PostgreSQL rejection, not a mocked config implementation. This unique
+    # nonexistent database cannot affect the migrated test database or other runs.
+    unavailable = make_url(database_url).set(database=f"rate_unavailable_{uuid4().hex}")
+    app = create_app(make_settings(database_url=unavailable.render_as_string(hide_password=False)))
+    try:
+        with TestClient(app, raise_server_exceptions=False) as client:
+            assert_limited(client.request(method, url))
+    finally:
+        app.state.engine.dispose()
+        app.state.redis.close()
 
 
 @pytest.mark.parametrize("dimension", ["account", "device", "ip"])
