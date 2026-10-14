@@ -41,8 +41,10 @@ Future<bool> shareRecipe(
   if (!ref.mounted || !session.matches(identity)) return false;
   Uint8List? imageBytes;
   if (!kIsWeb && imageId != null) {
-    imageBytes = await ref.read(shareImageProvider)(recipeId, imageId);
+    final image = await ref.read(shareImageProvider)(link);
     if (!ref.mounted || !session.matches(identity)) return false;
+    imageBytes = image.$1;
+    imageContentType = image.$2 ?? imageContentType;
   }
   await ref
       .read(systemShareProvider)
@@ -54,25 +56,30 @@ Future<bool> shareRecipe(
   return true;
 }
 
-/// Download only the recipe image API, never a snapshot-supplied absolute URL.
-/// Credentials remain on the configured API origin and cross-origin redirects
-/// are disabled. The native panel receives bytes, not a remotely supplied URI.
-final shareImageProvider = Provider<Future<Uint8List> Function(String, String)>((
-  ref,
-) {
-  final dio = ref.watch(dioProvider);
-  return (recipeId, imageId) async {
-    final response = await dio.get<List<int>>(
-      '/v1/recipes/${Uri.encodeComponent(recipeId)}/images/${Uri.encodeComponent(imageId)}',
-      options: Options(
-        responseType: ResponseType.bytes,
-        followRedirects: false,
-      ),
-    );
-    final bytes = response.data;
-    if (bytes == null || bytes.isEmpty || bytes.length > 8 * 1024 * 1024) {
-      throw const FormatException('Invalid recipe share image');
-    }
-    return Uint8List.fromList(bytes);
-  };
-});
+/// Reuse the approved share's selected image, not a snapshot-supplied URL.
+/// Only the validated share path is used on the configured API origin; public
+/// requests send no credentials and never follow redirects to another origin.
+final shareImageProvider =
+    Provider<Future<(Uint8List, String?)> Function(RecipeShareLink)>((ref) {
+      final dio = ref.watch(dioProvider);
+      return (link) async {
+        final response = await dio.get<List<int>>(
+          '${Uri.parse(link.url).path}/image',
+          options: Options(
+            responseType: ResponseType.bytes,
+            followRedirects: false,
+            extra: const {'public_request': true},
+          ),
+        );
+        final bytes = response.data;
+        if (bytes == null || bytes.isEmpty || bytes.length > 8 * 1024 * 1024) {
+          throw const FormatException('Invalid recipe share image');
+        }
+        // The public route selects the newest approved image, which need not
+        // have the same MIME type as the snapshot image used to show the button.
+        return (
+          Uint8List.fromList(bytes),
+          response.headers.value('content-type'),
+        );
+      };
+    });

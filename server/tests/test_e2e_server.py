@@ -43,9 +43,10 @@ def test_e2e_bootstrap_supports_more_than_one_hundred_logins(tmp_path: Path) -> 
                 )
                 assert response.status_code == 200, response.text
             # Only the daily budget is overridden, not the same-email cooldown.
+            # Retry the latest address: 101 requests can outlast the first cooldown.
             response = client.post(
                 "/v1/auth/email/code",
-                json={"email": "acceptance-0@example.com", "purpose": "login"},
+                json={"email": "acceptance-100@example.com", "purpose": "login"},
             )
             assert response.status_code == 429
             assert response.json()["error"]["code"] == "resend_too_soon"

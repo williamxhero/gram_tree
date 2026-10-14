@@ -4,14 +4,14 @@
 /// 同步更新服务端 `gramtree/legal/router.py` 的正文。已同意旧版本的用户下次打开会先看到变更摘要、
 /// 重新同意后才能继续。
 const termsVersion = 'v1';
-const privacyVersion = 'v1';
+const privacyVersion = 'v2';
 
 /// “产品改进统计”开关本身的版本（不是隐私政策的版本）。改了采集范围就提高这个版本号。
 const productAnalyticsVersion = 'v1';
 
 /// 每个版本相对上一版改了什么（给已同意旧版的用户看）。
 const privacyChangeLog = <String, List<String>>{
-  // 'v2': ['新增：……', '修改：……'],
+  'v2': ['新增：接口访问日志的收集目的、记录内容和默认 180 天保存期限。'],
 };
 
 /// 同意记录的类型，和服务端 ConsentRecord.kind 一致。

@@ -369,6 +369,43 @@ def test_challenge_read_is_bound_non_issuing_no_store_and_expires_after_solve(ap
     assert api.client.get("/v1/me", headers=headers).status_code == 401
 
 
+def test_challenge_read_distinguishes_identity_failures_from_challenge_binding(api: Api) -> None:
+    api.client.app.state.captcha = MemoryCaptchaAdapter()
+    set_config("auth.access_token_minutes", "2")
+    tokens = api.login("captcha-identity@example.com", "identity-challenge-device")
+    # Login advances the business clock by 61s; use a fresh request window so
+    # login observations cannot pre-issue the challenge under this lower limit.
+    configure(short_request_limit=2, short_window_seconds=10)
+    headers = {**bearer(tokens), "X-Device-ID": "identity-challenge-device"}
+    assert api.client.get("/v1/me", headers=headers).status_code == 200
+    challenged = api.client.get("/v1/me", headers=headers)
+    assert challenged.status_code == 403, challenged.text
+    path = f"/v1/risk/captcha/{challenged.headers['X-Risk-Challenge']}"
+    anonymous = {"X-Device-ID": "identity-challenge-device"}
+
+    # A bearer opts into the signed identity boundary, even on a recovery route.
+    unsigned = api.client.get(path, headers={**headers, "X-Test-Unsigned": "true"})
+    assert unsigned.status_code == 401, unsigned.text
+    assert unsigned.json()["error"]["code"] == "signature_required"
+    assert api.client.get(path, headers=anonymous).status_code == 200
+    assert api.client.get(path, headers=headers).status_code == 200
+    invalid = api.client.get(path, headers={**anonymous, "Authorization": "Bearer invalid-token"})
+    assert invalid.status_code == 401, invalid.text
+    assert invalid.json()["error"]["code"] == "unauthorized"
+
+    # The access token expires before this still-active challenge. Anonymous
+    # device/IP recovery remains possible without weakening bearer validation.
+    api.clock.advance(seconds=60)
+    expired = api.client.get(path, headers=headers)
+    assert expired.status_code == 401, expired.text
+    assert expired.json()["error"]["code"] == "token_expired"
+    assert api.client.get(path, headers=anonymous).status_code == 200
+    solve(api, challenged, anonymous)
+    consumed = api.client.get(path, headers=anonymous)
+    assert consumed.status_code == 400, consumed.text
+    assert consumed.json()["error"]["code"] == "captcha_invalid"
+
+
 def test_real_image_provider_rejects_wrong_answer_without_plaintext_answer(api: Api) -> None:
     configure(short_request_limit=2)
     headers = {"X-Device-ID": "real-image-device"}

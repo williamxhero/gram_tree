@@ -55,7 +55,7 @@ def _recipe(api: Api, email: str = "sharing@example.com"):
     return created.json(), headers
 
 
-def test_share_requires_public_approval_owner_and_feature_flag(api: Api) -> None:
+def test_share_requires_public_approval_and_feature_flag(api: Api) -> None:
     saved, owner = _recipe(api)
     path = f"/v1/recipes/{saved['id']}/share"
     response = api.client.post(path, headers=owner)
@@ -69,9 +69,20 @@ def test_share_requires_public_approval_owner_and_feature_flag(api: Api) -> None
 
     _make_public(api.client, saved["id"], owner)
     outsider = bearer(api.login("sharing-outsider@example.com"))
-    denied_owner = api.client.post(path, headers=outsider)
-    assert denied_owner.status_code == 404
-    assert denied_owner.json()["error"]["code"] == "not_found"
+    shared = api.client.post(path, headers=outsider)
+    assert shared.status_code == 201, shared.text
+    assert api.client.post(path, headers=owner).json() == shared.json()
+    preview = api.client.get(f"/v1/recipes/{saved['id']}/share-preview", headers=outsider)
+    assert preview.status_code == 200, preview.text
+    assert set(preview.json()) == {
+        "title",
+        "description",
+        "nickname",
+        "image_url",
+        "license",
+        "photo_rights",
+    }
+    assert api.client.post(path).status_code == 401
 
 
 def test_share_page_releases_only_allowlisted_projection_and_unavailable_is_uniform(
@@ -166,6 +177,14 @@ def test_all_unavailable_share_states_have_identical_html_and_resolver(
     resolver = api.client.get(f"/v1/shares/{link['share_id']}")
     assert resolver.status_code == 404 and resolver.json()["error"]["code"] == "not_found"
     assert api.client.get(f"/s/{link['share_id']}/image").status_code == 404
+    outsider = bearer(api.login("unavailable-share-reader@example.com"))
+    for viewer in (owner, outsider):
+        denied = api.client.post(f"/v1/recipes/{saved['id']}/share", headers=viewer)
+        assert denied.status_code == 404 and denied.json()["error"]["code"] == "not_found"
+        assert (
+            api.client.get(f"/v1/recipes/{saved['id']}/share-preview", headers=viewer).status_code
+            == 404
+        )
 
 
 def test_share_resolves_opaque_id_to_one_authorized_version_not_private_history(api: Api) -> None:
@@ -216,6 +235,37 @@ def test_share_resolves_opaque_id_to_one_authorized_version_not_private_history(
     assert changed.status_code == 201, changed.text
     assert api.client.get(f"/v1/shares/{link['share_id']}").status_code == 404
     assert api.client.get(f"/v1/recipes/{saved['id']}", headers=outsider).status_code == 404
+    assert api.client.post(path, headers=outsider).status_code == 404
+    assert (
+        api.client.get(f"/v1/recipes/{saved['id']}/share-preview", headers=outsider).status_code
+        == 404
+    )
+
+
+def test_share_rejects_inactive_author_for_public_readers(api: Api) -> None:
+    saved, owner = _recipe(api)
+    _make_public(api.client, saved["id"], owner)
+    outsider = bearer(api.login("inactive-author-reader@example.com"))
+    path = f"/v1/recipes/{saved['id']}/share"
+    link = api.client.post(path, headers=outsider)
+    assert link.status_code == 201, link.text
+    assert api.send_code("sharing@example.com", "reauth", headers=owner).status_code == 200
+    assert (
+        api.client.post(
+            "/v1/auth/reauth/email",
+            headers=owner,
+            json={"email": "sharing@example.com", "code": api.latest_code("sharing@example.com")},
+        ).status_code
+        == 204
+    )
+    assert api.client.post("/v1/me/deletion", headers=owner).status_code == 202
+    assert api.client.post(path, headers=outsider).status_code == 404
+    assert (
+        api.client.get(f"/v1/recipes/{saved['id']}/share-preview", headers=outsider).status_code
+        == 404
+    )
+    assert api.client.get(f"/v1/shares/{link.json()['share_id']}").status_code == 404
+    assert api.client.get(f"/s/{link.json()['share_id']}/image").status_code == 404
 
 
 def test_share_image_og_metadata_escape_and_random_id(api: Api) -> None:

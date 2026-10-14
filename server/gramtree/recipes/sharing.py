@@ -1,4 +1,4 @@
-"""Fail-closed public recipe previews and owner-issued opaque share links."""
+"""Fail-closed public recipe previews and authenticated opaque share links."""
 
 from __future__ import annotations
 
@@ -138,9 +138,7 @@ def _public_recipe(session: Session, share_id: str) -> PublicRow | None:
     return recipe, version, image, dish, author
 
 
-def _owner_projection(
-    session: Session, recipe_id: uuid.UUID, owner_id: uuid.UUID
-) -> PublicRow | None:
+def _shareable_projection(session: Session, recipe_id: uuid.UUID) -> PublicRow | None:
     row = session.execute(
         select(Recipe, RecipeVersion, RecipeImage, Dish, User)
         .join(RecipeVersion, RecipeVersion.id == Recipe.current_version_id)
@@ -149,7 +147,7 @@ def _owner_projection(
         .outerjoin(RecipeImage, RecipeImage.version_id == RecipeVersion.id)
         .where(
             Recipe.id == recipe_id,
-            Recipe.owner_id == owner_id,
+            User.status == UserStatus.active,
             Recipe.visibility == "public",
             Recipe.approved_public_version_id == Recipe.current_version_id,
         )
@@ -220,9 +218,6 @@ def create_recipe_share(
     auth: CurrentAuth,
     session: SessionDep,
 ) -> RecipeShareLink:
-    row = _owner_projection(session, recipe_id, auth.user.id)
-    if row is None:
-        raise NotFound()
     # Serialize first issuance so concurrent taps return the same stable share ID.
     recipe = session.scalar(
         select(Recipe)
@@ -230,11 +225,9 @@ def create_recipe_share(
         .with_for_update()
         .execution_options(populate_existing=True)
     )
-    if (
-        recipe is None
-        or recipe.visibility != "public"
-        or recipe.approved_public_version_id != recipe.current_version_id
-    ):
+    # Any signed-in reader may share, but only the approved current public
+    # version from an active author; recheck after acquiring the recipe lock.
+    if recipe is None or _shareable_projection(session, recipe_id) is None:
         raise NotFound()
     if not bool(config.get(session, "feature.public_recipes")):
         raise NotFound()
@@ -260,7 +253,7 @@ def create_recipe_share(
 def get_recipe_share_preview(
     recipe_id: IdV4, auth: CurrentAuth, session: SessionDep
 ) -> PublicRecipeProjection:
-    row = _owner_projection(session, recipe_id, auth.user.id)
+    row = _shareable_projection(session, recipe_id)
     if row is None or not bool(config.get(session, "feature.public_recipes")):
         raise NotFound()
     recipe, version, image, dish, author = row

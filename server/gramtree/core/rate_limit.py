@@ -11,6 +11,7 @@ from typing import Any, Literal, cast
 
 import jwt
 from redis import Redis
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
 from gramtree.core.errors import ApiError
@@ -101,6 +102,10 @@ def _safe_limit(session: Session, key: str, fallback: int) -> int:
             return default
         if item is not None:
             config.validate(item, value)
+    except SQLAlchemyError as exc:
+        # Config storage is part of the quota boundary: an outage must fail closed,
+        # just like an unavailable Redis counter, rather than escape as a 500.
+        raise RateLimitError(60) from exc
     except (KeyError, TypeError, ValueError, OverflowError):
         return default
     return value if value > 0 else default

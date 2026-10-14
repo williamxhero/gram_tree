@@ -69,7 +69,7 @@ def test_authenticated_records_identify_content_without_token_or_snapshot(api: A
     )
     assert read.status_code == 200
     rows = _read_logs(capsys, detail_id)
-    assert rows[0]["account_id"] == tokens["user_id"]
+    assert rows[0]["account_id"] == tokens["user"]["id"]
     assert rows[0]["device_id"] == "audit-device"
     assert saved["id"] in rows[0]["content_ids"]
     assert rows[0]["method"] == "GET" and rows[0]["ip_address"]
