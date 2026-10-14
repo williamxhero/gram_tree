@@ -82,6 +82,27 @@ def test_out_of_range_value_rejected(
     assert capsys.readouterr().out == ""
 
 
+@pytest.mark.parametrize(
+    ("category", "minute_limit"),
+    [
+        ("search_list", 120),
+        ("detail", 120),
+        ("write", 60),
+        ("ai", 30),
+        ("auth", 30),
+        ("captcha", 30),
+        ("export", 10),
+    ],
+)
+def test_rate_defaults_are_consistent_across_dimensions(
+    category: str, minute_limit: int, capsys: pytest.CaptureFixture[str]
+) -> None:
+    for dimension in ("account", "device", "ip"):
+        for window, expected in (("minute", minute_limit), ("day", minute_limit * 40)):
+            assert cli(["config", "get", f"rate.{category}.{dimension}_per_{window}"]) == 0
+            assert int(capsys.readouterr().out.strip()) == expected
+
+
 def test_unknown_key_rejected() -> None:
     assert cli(["config", "set", "nope.key", "1", "--by", "t", "--reason", "r"]) == 1
 

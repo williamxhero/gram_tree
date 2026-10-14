@@ -466,7 +466,7 @@ ITEMS: tuple[ConfigItem, ...] = (
             minimum=1,
             maximum=10_000_000,
         )
-        for category, default in (
+        for category, minute_limit in (
             ("search_list", 120),
             ("detail", 120),
             ("write", 60),
@@ -476,7 +476,7 @@ ITEMS: tuple[ConfigItem, ...] = (
             ("export", 10),
         )
         for dimension in ("account", "device", "ip")
-        for window, default in (("minute", default), ("day", default * 40))
+        for window, default in (("minute", minute_limit), ("day", minute_limit * 40))
     ),
     *(
         ConfigItem(
