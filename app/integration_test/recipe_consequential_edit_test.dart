@@ -40,6 +40,35 @@ class _Journey {
     expect(finder, findsWidgets, reason: phase);
   }
 
+  Finder interactionTarget(Finder finder) {
+    final widget = tester.widget(finder);
+    // An expanded tile's center may be in its body, not its tap target.
+    // History rows likewise have separate subtitle comparison actions.
+    if (widget is ExpansionTile) {
+      return find.descendant(
+        of: finder,
+        matching: find.byElementPredicate(
+          (element) => identical(
+            element.widget,
+            element.findAncestorWidgetOfExactType<ExpansionTile>()?.title,
+          ),
+        ),
+      );
+    }
+    if (widget is ListTile && widget.title != null) {
+      return find.descendant(
+        of: finder,
+        matching: find.byElementPredicate(
+          (element) => identical(
+            element.widget,
+            element.findAncestorWidgetOfExactType<ListTile>()?.title,
+          ),
+        ),
+      );
+    }
+    return finder;
+  }
+
   Future<void> reveal(String value) async {
     final finder = key(value);
     tester.testTextInput.hide();
@@ -48,10 +77,11 @@ class _Journey {
     // Try it directly first, then use the page position below if its center is
     // still outside the viewport (for example, a tall suggestion card).
     if (finder.evaluate().isNotEmpty) {
-      await tester.ensureVisible(finder);
+      final target = interactionTarget(finder);
+      await Scrollable.ensureVisible(tester.element(target), alignment: 0.5);
       await tester.pumpAndSettle();
-      if (finder.hitTestable().evaluate().isNotEmpty) {
-        expect(finder.hitTestable(), findsOneWidget, reason: phase);
+      if (target.hitTestable().evaluate().isNotEmpty) {
+        expect(target.hitTestable(), findsOneWidget, reason: phase);
         return;
       }
     }
@@ -95,9 +125,10 @@ class _Journey {
       await tester.pump(const Duration(milliseconds: 100));
     }
     expect(finder, findsOneWidget, reason: phase);
-    await tester.ensureVisible(finder);
+    final target = interactionTarget(finder);
+    await Scrollable.ensureVisible(tester.element(target), alignment: 0.5);
     await tester.pumpAndSettle();
-    for (var i = 0; i < 8 && finder.hitTestable().evaluate().isEmpty; i++) {
+    for (var i = 0; i < 8 && target.hitTestable().evaluate().isEmpty; i++) {
       position.jumpTo(
         (position.pixels + 100).clamp(
           position.minScrollExtent,
@@ -106,23 +137,49 @@ class _Journey {
       );
       await tester.pumpAndSettle();
     }
-    expect(finder.hitTestable(), findsOneWidget, reason: phase);
+    expect(target.hitTestable(), findsOneWidget, reason: phase);
   }
 
   Future<void> tap(String value) async {
     await reveal(value);
     final finder = key(value);
-    final widget = tester.widget(finder);
-    // History rows contain separate comparison actions in their subtitle. The
-    // row center can hit one of those instead of opening the requested version.
-    final target = widget is ListTile && widget.title != null
-        ? find.descendant(of: finder, matching: find.byWidget(widget.title!))
-        : finder;
+    final target = interactionTarget(finder);
     await Scrollable.ensureVisible(tester.element(target), alignment: 0.5);
     await tester.pumpAndSettle();
     expect(target.hitTestable(), findsOneWidget, reason: phase);
     await tester.tap(target);
     await tester.pumpAndSettle();
+  }
+
+  Future<void> ensureStepExpanded(int index) async {
+    final value = 'recipe-step-$index';
+    await reveal(value);
+    final finder = key(value);
+    final l10n = MaterialLocalizations.of(tester.element(finder));
+    // The public accessibility action reflects current expansion, including
+    // restored PageStorage state; initiallyExpanded cannot tell us that.
+    final hint = find.descendant(
+      of: finder,
+      matching: find.byWidgetPredicate(
+        (widget) =>
+            widget is Semantics &&
+            [
+              l10n.expansionTileExpandedTapHint,
+              l10n.expansionTileCollapsedTapHint,
+            ].contains(widget.properties.hintOverrides?.onTapHint),
+      ),
+    );
+    expect(hint, findsOneWidget, reason: phase);
+    if (tester.widget<Semantics>(hint).properties.hintOverrides?.onTapHint ==
+        l10n.expansionTileCollapsedTapHint) {
+      await tap(value);
+      await reveal(value);
+    }
+    expect(
+      tester.widget<Semantics>(hint).properties.hintOverrides?.onTapHint,
+      l10n.expansionTileExpandedTapHint,
+      reason: phase,
+    );
   }
 
   Future<void> enter(String value, String text) async {
@@ -612,7 +669,7 @@ void main() {
       await journey.enter('change-explanation-note', '换空气炸锅，中心温度达到74°C后盛出。');
       await journey.enter('change-explanation-tags', '空气炸锅，作者确认');
       await journey.confirm();
-      await journey.tap('recipe-step-1');
+      await journey.ensureStepExpanded(1);
       expect(journey.instruction(1, '空气炸锅180°C加热鸡肉10分钟'), findsOneWidget);
       expect(find.textContaining('厨具：空气炸锅'), findsWidgets);
       expect(find.textContaining('温度'), findsWidgets);
@@ -633,7 +690,7 @@ void main() {
       await journey.tap('recipe-version-2');
       await journey.waitFor(journey.key('recipe-detail-content'));
       expect(find.text('作者确认'), findsOneWidget);
-      await journey.tap('recipe-step-1');
+      await journey.ensureStepExpanded(1);
       expect(journey.instruction(1, '空气炸锅180°C加热鸡肉10分钟'), findsOneWidget);
       expect(
         find.descendant(
@@ -857,7 +914,7 @@ void main() {
       await journey.reveal('text-edit-after-explain-cook');
       expect(find.text(_manualWhy), findsOneWidget);
       await journey.confirm();
-      await journey.tap('recipe-step-1');
+      await journey.ensureStepExpanded(1);
       expect(journey.instruction(1, _original), findsOneWidget);
       expect(find.textContaining(_manualWhy), findsOneWidget);
       await journey.tap('edit-recipe-button');
@@ -891,7 +948,7 @@ void main() {
       await journey.waitFor(journey.key('text-edit-error'));
       expect(find.textContaining('模型暂不可用'), findsWidgets);
       await journey.confirm();
-      await journey.tap('recipe-step-1');
+      await journey.ensureStepExpanded(1);
       expect(find.textContaining(_manualWhy), findsOneWidget);
       await journey.tap('recipe-history-button');
       await journey.waitFor(journey.key('recipe-version-1'));
@@ -902,7 +959,7 @@ void main() {
       );
       await journey.tap('recipe-version-1');
       await journey.waitFor(journey.key('recipe-detail-content'));
-      await journey.tap('recipe-step-1');
+      await journey.ensureStepExpanded(1);
       expect(journey.instruction(1, _original), findsOneWidget);
       expect(find.textContaining(_manualWhy), findsOneWidget);
     });
