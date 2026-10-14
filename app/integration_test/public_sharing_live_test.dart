@@ -13,13 +13,26 @@ import 'event_pipeline_support.dart' show resetLocalAppState;
 Future<void> _waitFor(WidgetTester tester, Finder target) async {
   final binding = IntegrationTestWidgetsFlutterBinding.instance;
   binding.reportData = {'e2e_step': target.toString()};
+  final notices = <String>{};
   for (var i = 0; i < 300 && target.evaluate().isEmpty; i++) {
     await tester.pump(const Duration(milliseconds: 100));
+    notices.addAll(
+      tester
+          .widgetList<Text>(
+            find.descendant(
+              of: find.byType(SnackBar),
+              matching: find.byType(Text),
+            ),
+          )
+          .map((text) => text.data)
+          .whereType<String>(),
+    );
   }
   if (target.evaluate().isEmpty) {
     binding.reportData = {
       ...?binding.reportData,
       'e2e_error': 'Expected page target did not appear',
+      'notices': notices.toList(),
       'page_text': tester
           .widgetList<Text>(find.byType(Text))
           .map((text) => text.data)
