@@ -169,7 +169,7 @@ def test_every_composition_writes_a_composition_shown_event(api: Api, engine: En
     events = _composition_events(engine)
     assert len(events) == 1
     event = events[0]
-    assert event.type_version == 1
+    assert event.type_version == 2
     assert event.correlation == {"ui_composition_id": body["composition_id"]}
 
     content = event.content
@@ -187,10 +187,10 @@ def test_every_composition_writes_a_composition_shown_event(api: Api, engine: En
         for c in body["components"]
     ]
 
-    # content 的形状也要符合登记表里登记的 v1 schema（这条事件走的是
-    # events.service.upload，不经过 events.router.upload_events 的逐字段
-    # 校验，这里补一道回归测试，防止手写的 content 字典和登记的 schema 走偏）。
-    spec = BY_KEY[("ui.composition_shown", 1)]
+    assert content["scenario_signals"] == body["scenario_signals"]
+    # SPEC34 的场景信号使用 v2；保持完整 schema 校验，不放宽事件形状。
+    # 事件走 events.service.upload，这里防止内容与登记契约走偏。
+    spec = BY_KEY[("ui.composition_shown", 2)]
     assert spec.content_schema is not None
     spec.content_schema.model_validate(content)
 

@@ -14,11 +14,11 @@ from sqlalchemy.orm import Session
 from gramtree.cli import main as cli
 from gramtree.core.time import utcnow
 from gramtree.events.models import Event
-from gramtree.ui_protocol import cache, service
+from gramtree.ui_protocol import cache, scenarios, service
 from gramtree.ui_protocol.protocol import CacheInfo, PageDescription
 from tests.accounts_support import Api, bearer
 from tests.conftest import TEST_REDIS_URL
-from tests.test_ui_protocol import _compose
+from tests.test_ui_protocol import ALL_COMPONENTS, _compose
 
 
 def _redis() -> Redis:
@@ -75,7 +75,17 @@ def test_compose_result_is_cached_when_dependencies_unchanged(api: Api, engine: 
         me = api.client.get("/v1/me", headers=bearer(tokens))
         user_id = uuid.UUID(me.json()["id"])
         depends_on = service.dependency_versions("today", session)
-    key = cache.cache_key(user_id, "today", "default", depends_on)
+    # Today is still cached, but calendar and advertised client capabilities now
+    # identify its scenario; the pre-SPEC34 literal "default" is no longer used.
+    scenario = scenarios.digest(
+        [
+            "default",
+            first["protocol"],
+            sorted(set(ALL_COMPONENTS)),
+            first["scenario_signals"]["calendar"],
+        ]
+    )
+    key = cache.cache_key(user_id, "today", scenario, depends_on)
     cached = cache.get(_redis(), key)
     assert cached is not None
     assert str(cached.composition_id) == first["composition_id"]
