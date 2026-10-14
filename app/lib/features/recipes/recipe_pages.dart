@@ -2755,6 +2755,9 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
   final Set<String> _dinerIds = {};
   String? _primaryDinerId;
   String? _sceneDetailOverride;
+  String? _beforeTasteChangeId;
+  final Set<String> _sceneSkippedComponents = {};
+  bool _sceneStepsExpanded = false;
 
   Map<String, PersonalizedIngredientOut> get _personalizedIngredients => {
     for (final item in _personalized?.ingredients ?? const []) item.id: item,
@@ -2833,6 +2836,9 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
         _primaryDinerId = null;
         _showOriginal = false;
         _sceneDetailOverride = null;
+        _beforeTasteChangeId = null;
+        _sceneSkippedComponents.clear();
+        _sceneStepsExpanded = false;
         _personalizationLoading = false;
         _personalizationError = null;
         _detail = null;
@@ -2876,6 +2882,9 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
       _targetServings = null;
       _targetMold = null;
       _sceneDetailOverride = null;
+      _beforeTasteChangeId = null;
+      _sceneSkippedComponents.clear();
+      _sceneStepsExpanded = false;
       unawaited(_load());
     }
   }
@@ -3156,7 +3165,9 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
     RecipeConversionConfig config,
   ) async {
     final cache = _snapshotStore;
-    if (cache == null || (_networkUnavailable && !_offlineRecomputed)) {
+    if (_beforeTasteChangeId != null ||
+        cache == null ||
+        (_networkUnavailable && !_offlineRecomputed)) {
       return;
     }
     final privateCache = ref.read(tasteProfileCacheProvider);
@@ -3303,6 +3314,15 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
     });
   }
 
+  Future<void> _showBeforeTasteChange(String changeId) async {
+    if (_networkUnavailable) return;
+    setState(() {
+      _beforeTasteChangeId = changeId;
+      _showOriginal = false;
+    });
+    await _loadPersonalization();
+  }
+
   Future<void> _loadPersonalization({bool? confirmAllergyRisk}) async {
     final detail = _detail;
     final sensitive = ref.read(sensitiveMemoryProvider);
@@ -3338,10 +3358,13 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
             primaryDinerId: _primaryDinerId,
             confirmAllergyRisk: confirmAllergyRisk ?? false,
             original: original,
+            beforeChangeId: original ? null : _beforeTasteChangeId,
           );
       if (!current()) return;
       final profile = ref.read(tasteProfileProvider).value;
-      if (profile != null && result.profileVersion != profile.version) {
+      if (_beforeTasteChangeId == null &&
+          profile != null &&
+          result.profileVersion != profile.version) {
         setState(() => _personalizationError = '口味档案已变化，请重新联网换算。');
         return;
       }
@@ -3683,7 +3706,8 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
         _originalSafety = requirePersonalizationConfirmation(_originalSafety!);
       }
     });
-    context.push('/cooking/${session.id}');
+    await context.push('/cooking/${session.id}');
+    if (mounted) ref.invalidate(scenarioCompositionProvider);
   }
 
   @override
@@ -3990,20 +4014,37 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
         ),
       );
     }
-    final scene = offline
-        ? const AsyncValue<CompositionResult>.data(
-            CompositionFailed(FallbackInfoReasonCodeEnum.serverError),
-          )
-        : ref.watch(
-            scenarioCompositionProvider((
-              recipeId: widget.recipeId,
-              versionId: detail.version.id,
-              screenWidth: MediaQuery.sizeOf(context).width
-                  .round()
-                  .clamp(1, 16384),
-              detailOverride: _sceneDetailOverride,
-            )),
-          );
+    final scene = ref.watch(
+      scenarioCompositionProvider((
+        recipeId: widget.recipeId,
+        versionId: detail.version.id,
+        screenWidth: MediaQuery.sizeOf(context).width.round().clamp(1, 16384),
+        detailOverride: _sceneDetailOverride,
+        beforeChangeId: _beforeTasteChangeId,
+        personalizationJson:
+            _targetServings == null &&
+                _targetMold == null &&
+                _dinerIds.isEmpty &&
+                _primaryDinerId == null
+            ? null
+            : jsonEncode(
+                PersonalizationRequest(
+                  versionId: detail.version.id,
+                  targetServings: _scaleMode == _RecipeScaleMode.servings
+                      ? (_targetServings ?? snapshot.servings)
+                      : null,
+                  targetMold: _scaleMode == _RecipeScaleMode.mold
+                      ? _targetMold
+                      : null,
+                  dinerMemberIds: _dinerIds.toList(),
+                  primaryDinerId: _primaryDinerId,
+                ).toJson(),
+              ),
+        skippedComponentsJson: jsonEncode(
+          _sceneSkippedComponents.toList()..sort(),
+        ),
+      )),
+    );
     final sceneResult = scene.value;
     final sceneComponents = sceneResult is CompositionReady
         ? sceneResult.description.components ?? const <ComponentDescriptor>[]
@@ -4012,6 +4053,11 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
         .where((item) => item.type == 'scenario_summary')
         .firstOrNull;
     final sceneDetail = sceneSummary?.detail.value ?? 'standard';
+    final sceneData = sceneSummary?.data;
+    final stepsCollapsed =
+        sceneData is Map &&
+        sceneData['steps_collapsed'] == true &&
+        !_sceneStepsExpanded;
     return Scaffold(
       appBar: AppBar(
         title: Text(detail.dish.name),
@@ -4103,6 +4149,12 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
             onChanged: (value) => setState(() {
               _sceneDetailOverride = value == 'auto' ? null : value;
             }),
+            onSkip: (id) => setState(() => _sceneSkippedComponents.add(id)),
+            onBeforeTaste: _showBeforeTasteChange,
+            onTasteReverted: () {
+              setState(() => _beforeTasteChangeId = null);
+              unawaited(_loadPersonalization());
+            },
             child: RecipeSafetyProtocolSection(
               result: detail.version.safety ?? detail.version.safetyAtSave,
               legacyDerived: derived,
@@ -4115,6 +4167,15 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
               composition: scene,
             ),
           ),
+          if (_beforeTasteChangeId != null)
+            TextButton(
+              key: const ValueKey('scenario-restore-current-taste'),
+              onPressed: () {
+                setState(() => _beforeTasteChangeId = null);
+                unawaited(_loadPersonalization());
+              },
+              child: const Text('本次按调整前口味显示 · 恢复最近口味'),
+            ),
           _RecipePhotoDisplay(images: detail.version.images),
           if (widget.versionId == null && !offline)
             RecipePhotoPanel(
@@ -4313,58 +4374,66 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
             l10n.recipeStepsTitle,
             style: Theme.of(context).textTheme.titleLarge,
           ),
+          if (sceneData is Map && sceneData['steps_collapsed'] == true)
+            TextButton(
+              key: const ValueKey('scenario-expand-steps'),
+              onPressed: () =>
+                  setState(() => _sceneStepsExpanded = !_sceneStepsExpanded),
+              child: Text(stepsCollapsed ? '展开完整步骤' : '收起完整步骤'),
+            ),
           if ((snapshot.steps ?? const []).isEmpty) Text(l10n.recipeNoSteps),
-          for (final (index, step)
-              in ((!_showOriginal ? _personalized?.snapshot.steps : null) ??
-                      snapshot.steps ??
-                      const <RecipeStep>[])
-                  .indexed)
-            !_showOriginal && _personalizedSteps[step.id] != null
-                ? _PersonalizedStepRow(
-                    item: _personalizedSteps[step.id]!,
-                    child: _StepDetailTile(
+          if (!stepsCollapsed)
+            for (final (index, step)
+                in ((!_showOriginal ? _personalized?.snapshot.steps : null) ??
+                        snapshot.steps ??
+                        const <RecipeStep>[])
+                    .indexed)
+              !_showOriginal && _personalizedSteps[step.id] != null
+                  ? _PersonalizedStepRow(
+                      item: _personalizedSteps[step.id]!,
+                      child: _StepDetailTile(
+                        key: PageStorageKey(
+                          'personalized-step-${detail.version.id}-${step.id}-$sceneDetail',
+                        ),
+                        index: index,
+                        step: step,
+                        scenarioDetail: sceneDetail,
+                        ingredientNames: {
+                          for (final item in _personalized!.ingredients)
+                            item.id: item.displayName,
+                        },
+                        stepLabels: {
+                          for (final (i, item) in _personalized!.steps.indexed)
+                            item.id: '${i + 1}. ${item.instruction}',
+                        },
+                        safetyFindings:
+                            _personalized!.foodSafety.findings ?? const [],
+                        l10n: l10n,
+                      ),
+                    )
+                  : _StepDetailTile(
+                      // Lazy scrolling recreates tiles; retain expanded requirements
+                      // only for this immutable version and stable step identity.
                       key: PageStorageKey(
-                        'personalized-step-${detail.version.id}-${step.id}-$sceneDetail',
+                        'step-${detail.version.id}-${step.id}-$sceneDetail',
                       ),
                       index: index,
                       step: step,
                       scenarioDetail: sceneDetail,
-                      ingredientNames: {
-                        for (final item in _personalized!.ingredients)
-                          item.id: item.displayName,
-                      },
-                      stepLabels: {
-                        for (final (i, item) in _personalized!.steps.indexed)
-                          item.id: '${i + 1}. ${item.instruction}',
-                      },
+                      converted: _scaleMode == _RecipeScaleMode.servings
+                          ? convertedServingStepsById[step.id]
+                          : null,
+                      moldConverted: _scaleMode == _RecipeScaleMode.mold
+                          ? convertedMoldStepsById[step.id]
+                          : null,
+                      ingredientNames: ingredientNames,
+                      stepLabels: stepLabels,
                       safetyFindings:
-                          _personalized!.foodSafety.findings ?? const [],
+                          (detail.version.safety ?? detail.version.safetyAtSave)
+                              ?.findings ??
+                          const [],
                       l10n: l10n,
                     ),
-                  )
-                : _StepDetailTile(
-                    // Lazy scrolling recreates tiles; retain expanded requirements
-                    // only for this immutable version and stable step identity.
-                    key: PageStorageKey(
-                      'step-${detail.version.id}-${step.id}-$sceneDetail',
-                    ),
-                    index: index,
-                    step: step,
-                    scenarioDetail: sceneDetail,
-                    converted: _scaleMode == _RecipeScaleMode.servings
-                        ? convertedServingStepsById[step.id]
-                        : null,
-                    moldConverted: _scaleMode == _RecipeScaleMode.mold
-                        ? convertedMoldStepsById[step.id]
-                        : null,
-                    ingredientNames: ingredientNames,
-                    stepLabels: stepLabels,
-                    safetyFindings:
-                        (detail.version.safety ?? detail.version.safetyAtSave)
-                            ?.findings ??
-                        const [],
-                    l10n: l10n,
-                  ),
           const SizedBox(height: 16),
           TextButton(
             key: const ValueKey('delete-recipe-button'),

@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -115,6 +116,9 @@ typedef ScenarioCompositionKey = ({
   String versionId,
   int screenWidth,
   String? detailOverride,
+  String? beforeChangeId,
+  String? personalizationJson,
+  String skippedComponentsJson,
 });
 
 final scenarioCompositionProvider = FutureProvider.autoDispose
@@ -128,6 +132,12 @@ final scenarioCompositionProvider = FutureProvider.autoDispose
         versionId: key.versionId,
         screenWidth: key.screenWidth,
         detailOverride: key.detailOverride,
+        beforeChangeId: key.beforeChangeId,
+        personalization: key.personalizationJson == null
+            ? null
+            : jsonDecode(key.personalizationJson!) as Map<String, dynamic>,
+        skippedComponents: (jsonDecode(key.skippedComponentsJson) as List)
+            .cast<String>(),
       );
     });
 
@@ -180,6 +190,9 @@ Future<CompositionResult> fetchComposition(
   String? versionId,
   int? screenWidth,
   String? detailOverride,
+  String? beforeChangeId,
+  Map<String, dynamic>? personalization,
+  List<String> skippedComponents = const [],
 }) async {
   final dio = ref.read(dioProvider);
   final session = ref.read(sessionStoreProvider);
@@ -201,6 +214,11 @@ Future<CompositionResult> fetchComposition(
   if (versionId != null) requestBody['version_id'] = versionId;
   if (screenWidth != null) requestBody['screen_width'] = screenWidth;
   if (detailOverride != null) requestBody['detail_override'] = detailOverride;
+  if (beforeChangeId != null) requestBody['before_change_id'] = beforeChangeId;
+  if (personalization != null) requestBody['personalization'] = personalization;
+  if (skippedComponents.isNotEmpty) {
+    requestBody['skipped_components'] = skippedComponents;
+  }
   final timeoutMs = ref.watch(compositionTimeoutMsProvider);
 
   final Map<String, dynamic> raw;
