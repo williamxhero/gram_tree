@@ -1,5 +1,6 @@
 """SPEC-009.2 scenarios, observed only through authenticated HTTP interfaces."""
 
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 import pytest
@@ -182,6 +183,40 @@ def test_viewport_boundary_and_legacy_capabilities_preserve_required_safety(api:
     assert api.client.put("/v1/ui/preferences", json={"detail": "brief"}).status_code == 401
 
 
+@pytest.mark.parametrize(
+    ("timezone", "instant", "day", "period", "local_date"),
+    [
+        ("Asia/Shanghai", "2026-10-16T15:59:00+00:00", "weekday", "evening", "2026-10-16"),
+        ("Asia/Shanghai", "2026-10-16T16:00:00+00:00", "weekend", "morning", "2026-10-17"),
+        ("America/Los_Angeles", "2026-10-17T00:00:00+00:00", "weekday", "afternoon", "2026-10-16"),
+        ("America/Los_Angeles", "2026-10-19T07:00:00+00:00", "weekday", "morning", "2026-10-19"),
+    ],
+)
+def test_calendar_signal_uses_local_day_and_period(
+    api: Api,
+    monkeypatch: pytest.MonkeyPatch,
+    timezone: str,
+    instant: str,
+    day: str,
+    period: str,
+    local_date: str,
+) -> None:
+    headers = bearer(api.login("scene-calendar@example.com"))
+    updated = api.client.patch("/v1/me", headers=headers, json={"timezone": timezone})
+    assert updated.status_code == 200, updated.text
+    recipe = api.client.post("/v1/recipes", headers=headers, json=recipe_input()).json()
+    monkeypatch.setattr(
+        "gramtree.ui_protocol.scenarios.utcnow", lambda: datetime.fromisoformat(instant)
+    )
+    calendar = compose(api, headers, recipe)["scenario_signals"]["calendar"]
+    assert calendar == {
+        "value": day,
+        "period": period,
+        "source": {"timezone": timezone, "local_date": local_date},
+        "rule_entry": "weekend_leisure" if day == "weekend" else "weekday_quick",
+    }
+
+
 def test_frequent_difference_uses_frozen_execution_and_feedback_is_dish_scoped(api: Api) -> None:
     headers = bearer(api.login("scene-difference@example.com"))
     recipe = api.client.post("/v1/recipes", headers=headers, json=recipe_input()).json()
@@ -318,6 +353,120 @@ def test_failure_mapping_uses_latest_feedback_and_refuses_ambiguous_steps(api: A
     )
     assert not any(
         c["type"] == "failure_reminder" for c in compose(api, headers, recipe)["components"]
+    )
+
+
+def test_expired_taste_change_is_not_presented_as_recent(
+    api: Api,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    headers = bearer(api.login("scene-expired-taste@example.com"))
+    body = recipe_input()
+    body["snapshot"]["ingredients"].append(
+        {
+            "id": "salt",
+            "display_name": "盐",
+            "quantity": 10,
+            "unit": "g",
+            "group": "调味",
+            "flavor_contribution": {"salty": 3},
+        }
+    )
+    body["snapshot"]["steps"][1]["ingredient_ids"].append("salt")
+    recipe = api.client.post("/v1/recipes", headers=headers, json=body).json()
+    saved = api.client.patch(
+        "/v1/me/taste-profile", headers=headers, json={"flavors": {"salty": 0.75}}
+    )
+    assert saved.status_code == 200, saved.text
+    assert any(
+        c["type"] == "taste_change_notice" for c in compose(api, headers, recipe)["components"]
+    )
+    future = datetime.now(UTC) + timedelta(days=15)
+    monkeypatch.setattr("gramtree.ui_protocol.scenarios.utcnow", lambda: future)
+    expired = compose(api, headers, recipe)
+    assert not any(c["type"] == "taste_change_notice" for c in expired["components"])
+    assert api.client.get("/v1/me/taste-profile", headers=headers).json() == saved.json()
+    assert {c["type"] for c in expired["components"] if c["required"]} == {
+        "food_safety",
+        "allergen_notice",
+    }
+
+
+def test_pending_taste_suggestion_is_not_a_recent_effective_change(
+    personalization_api: Api,
+) -> None:
+    from tests.test_personalization_adaptations import avoid, ingredient
+    from tests.test_personalization_adaptations import recipe as adaptation_recipe
+    from tests.test_taste_learning import create, run_learning
+
+    api = personalization_api
+    tokens = api.login("scene-pending-taste@example.com")
+    headers = bearer(tokens)
+    body = adaptation_recipe(
+        [ingredient("香菜", "herb", replacement={"display_name": "葱", "ratio": 0.5})],
+        "最后加入香菜，拌匀后盛出",
+    )
+    recipe = api.client.post("/v1/recipes", headers=headers, json=body).json()
+    before = api.client.get("/v1/me/taste-profile", headers=headers).json()
+    for _ in range(2):
+        create(
+            api,
+            tokens,
+            snapshot={
+                "format_version": 1,
+                "dish_name": "测试香菜牛肉",
+                "ingredients": [
+                    {"display_name": "香菜", "disposition": "deleted", "category": "蔬菜"}
+                ],
+            },
+            adjustments=[{"text": "去掉香菜"}],
+        )
+    outcome = run_learning(api, tokens)
+    assert outcome["pending_suggestions"]
+    assert all(c["status"] == "pending" for c in outcome["pending_suggestions"])
+    pending_profile = api.client.get("/v1/me/taste-profile", headers=headers).json()
+    # Recording a pending suggestion increments the history version, not the taste values.
+    assert {k: v for k, v in pending_profile.items() if k != "version"} == {
+        k: v for k, v in before.items() if k != "version"
+    }
+    assert not any(
+        c["type"] == "taste_change_notice" for c in compose(api, headers, recipe)["components"]
+    )
+    assert api.client.get("/v1/me/taste-profile", headers=headers).json() == pending_profile
+    endpoint = f"/v1/recipes/{recipe['id']}/personalized"
+    pending_view = api.client.post(endpoint, headers=headers, json={})
+    assert pending_view.status_code == 200, pending_view.text
+    assert pending_view.json()["snapshot"]["ingredients"][0]["display_name"] == "香菜"
+    change_id = outcome["pending_suggestions"][0]["id"]
+    confirmed = api.client.post(
+        f"/v1/me/taste-profile/changes/{change_id}/confirm", headers=headers
+    )
+    assert confirmed.status_code == 200, confirmed.text
+    confirmed_view = api.client.post(endpoint, headers=headers, json={})
+    assert confirmed_view.status_code == 200, confirmed_view.text
+    # Disliked is not avoided: even confirmed, this suggestion does not alter execution.
+    assert confirmed_view.json()["snapshot"]["ingredients"][0]["display_name"] == "香菜"
+    assert (
+        api.client.get("/v1/me/taste-profile", headers=headers).json()["ingredient_preferences"][0][
+            "preference"
+        ]
+        == "disliked"
+    )
+    assert not any(
+        c["type"] == "taste_change_notice" for c in compose(api, headers, recipe)["components"]
+    )
+    # A separate effective avoidance is a positive control on the same target recipe.
+    avoid(api, headers, "香菜")
+    effective = api.client.post(endpoint, headers=headers, json={})
+    assert effective.status_code == 200, effective.text
+    assert effective.json()["snapshot"]["ingredients"][0]["display_name"] == "葱"
+    assert effective.json()["snapshot"]["ingredients"][0]["quantity"] == 5
+    changes = api.client.get("/v1/me/taste-profile/changes", headers=headers).json()["items"]
+    manual = next(c for c in changes if c["source"] == "manual")
+    assert manual["id"] != change_id
+    assert any(
+        c["type"] == "taste_change_notice" and c["data"]["change_id"] == manual["id"]
+        for c in compose(api, headers, recipe)["components"]
     )
 
 
