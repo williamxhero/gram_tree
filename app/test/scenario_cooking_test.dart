@@ -56,7 +56,10 @@ ComponentDescriptor failureReminder(String step, String placement) =>
       },
     );
 
-Future<CookingSessionStore> sessionStore(TestEnv env) async {
+Future<CookingSessionStore> sessionStore(
+  TestEnv env, {
+  Map<String, dynamic> inputs = const {},
+}) async {
   final detail = recipeSnapshotFixture('frozen-v1');
   detail.version.snapshot.steps!.clear();
   detail.version.snapshot.steps!.addAll([
@@ -79,7 +82,7 @@ Future<CookingSessionStore> sessionStore(TestEnv env) async {
       snapshot: FrozenRecipeSnapshot(
         detail: detail,
         capturedAt: DateTime.utc(2026, 10, 14),
-        inputs: const {},
+        inputs: inputs,
         render: null,
         dependencies: const {},
       ),
@@ -288,52 +291,107 @@ void main() {
     },
   );
 
-  testWidgets(
-    'composition failure retains standard cooking and mandatory safety',
-    (tester) async {
-      final env = TestEnv.signedIn();
-      final store = await sessionStore(env);
-      env.server.on(
-        'POST',
-        '/v1/ui/compositions',
-        (_) => FakeServer.error(500, 'server_error', '组合不可用'),
-      );
-      await tester.pumpWidget(
-        ProviderScope(
-          overrides: [
-            ...env.overrides,
-            cookingSessionStoreProvider.overrideWithValue(store),
-          ],
-          child: testApp(const CookingPage(sessionId: 'session')),
-        ),
-      );
-      await tester.pumpAndSettle();
-      expect(
-        find.byKey(const ValueKey('recipe-food-safety-card')),
-        findsOneWidget,
-      );
-      expect(
-        find.byKey(const ValueKey('recipe-allergen-card')),
-        findsOneWidget,
-      );
-      expect(find.text('本页步骤详略'), findsNothing);
-      final requests = env.server.calls('POST', '/v1/ui/compositions');
-      expect(requests, isNotEmpty);
-      for (final call in requests) {
-        final request = call.body as Map;
-        expect(request['recipe_id'], 'recipe');
-        expect(request['version_id'], 'frozen-v1');
-        expect(request['page_type'], 'recipe_detail');
-      }
-      await revealCooking(tester, find.text('成熟判断：表面变白'));
-      expect(find.text('避免长时间加热使肉变柴').hitTestable(), findsNothing);
-      await revealCooking(tester, find.text('下一步'));
-      await tester.tap(find.text('下一步'));
-      await tester.pumpAndSettle();
-      expect(find.text('步骤 2 / 2'), findsOneWidget);
-      await tester.pumpWidget(const SizedBox.shrink());
-    },
-  );
+  for (final fixture in [
+    (
+      view: 'original',
+      inputs: <String, dynamic>{
+        'personalized_view': 'original',
+        'scale_mode': 'servings',
+        'target_servings': 3,
+      },
+      expected: <String, dynamic>{
+        'version_id': 'frozen-v1',
+        'confirm_allergy_risk': false,
+        'diner_member_ids': <String>[],
+        'target_servings': 3,
+      },
+    ),
+    (
+      view: 'personalized',
+      inputs: <String, dynamic>{
+        'personalized_view': 'personalized',
+        'before_change_id': 'frozen-change',
+        'scale_mode': 'servings',
+        'target_servings': 3,
+      },
+      expected: <String, dynamic>{
+        'version_id': 'frozen-v1',
+        'confirm_allergy_risk': false,
+        'diner_member_ids': <String>[],
+        'target_servings': 3,
+      },
+    ),
+    (
+      view: 'personalized',
+      inputs: <String, dynamic>{
+        'personalized_view': 'personalized',
+        'scale_mode': 'mold',
+        'target_mold': {'shape': 'round', 'diameter': 18, 'unit': 'cm'},
+      },
+      expected: <String, dynamic>{
+        'version_id': 'frozen-v1',
+        'confirm_allergy_risk': false,
+        'diner_member_ids': <String>[],
+        'target_mold': {'shape': 'round', 'diameter': 18, 'unit': 'cm'},
+      },
+    ),
+  ]) {
+    testWidgets(
+      'composition failure retains frozen ${fixture.view} ${fixture.inputs['scale_mode']} inputs and mandatory safety',
+      (tester) async {
+        final env = TestEnv.signedIn();
+        final store = await sessionStore(env, inputs: fixture.inputs);
+        env.server.on(
+          'POST',
+          '/v1/ui/compositions',
+          (_) => FakeServer.error(500, 'server_error', '组合不可用'),
+        );
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [
+              ...env.overrides,
+              cookingSessionStoreProvider.overrideWithValue(store),
+            ],
+            child: testApp(const CookingPage(sessionId: 'session')),
+          ),
+        );
+        await tester.pumpAndSettle();
+        expect(
+          find.byKey(const ValueKey('recipe-food-safety-card')),
+          findsOneWidget,
+        );
+        expect(
+          find.byKey(const ValueKey('recipe-allergen-card')),
+          findsOneWidget,
+        );
+        expect(find.text('本页步骤详略'), findsNothing);
+        final requests = env.server.calls('POST', '/v1/ui/compositions');
+        expect(requests, isNotEmpty);
+        for (final call in requests) {
+          final request = call.body as Map;
+          expect(request['recipe_id'], 'recipe');
+          expect(request['version_id'], 'frozen-v1');
+          expect(request['page_type'], 'recipe_detail');
+          expect(request['personalization'], fixture.expected);
+          expect(
+            request['personalization_view'] ?? 'personalized',
+            fixture.view,
+          );
+          expect(
+            request['before_change_id'],
+            fixture.inputs['before_change_id'],
+          );
+        }
+        await revealCooking(tester, find.text('成熟判断：表面变白'));
+        expect(find.text('避免长时间加热使肉变柴').hitTestable(), findsNothing);
+        await revealCooking(tester, find.text('下一步'));
+        await tester.tap(find.text('下一步'));
+        await tester.pumpAndSettle();
+        expect(find.text('步骤 2 / 2'), findsOneWidget);
+        await tester.pumpWidget(const SizedBox.shrink());
+      },
+    );
+  }
 
   testWidgets('scenario switches and source remain accessible in brief cards', (
     tester,

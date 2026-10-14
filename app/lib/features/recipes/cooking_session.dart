@@ -1017,6 +1017,16 @@ class _CookingPageState extends ConsumerState<CookingPage>
     }
     final index = session.stepIndex;
     final current = index >= 0 && index < steps.length ? steps[index] : null;
+    final inputs = session.snapshot.inputs;
+    final targetServings = inputs['scale_mode'] != 'mold'
+        ? inputs['target_servings'] as int?
+        : null;
+    final targetMold =
+        inputs['scale_mode'] == 'mold' && inputs['target_mold'] is Map
+        ? MoldSpec.fromJson(
+            Map<String, dynamic>.from(inputs['target_mold'] as Map),
+          )
+        : null;
     // Presentation always targets the session's frozen version. A newer recipe,
     // profile, or scenario response must never rewrite the execution snapshot.
     final scene = ref.watch(
@@ -1032,7 +1042,16 @@ class _CookingPageState extends ConsumerState<CookingPage>
             session.snapshot.inputs['personalized_view'] == 'original'
             ? 'original'
             : 'personalized',
-        personalizationJson: null,
+        personalizationJson: targetServings == null && targetMold == null
+            ? null
+            : jsonEncode(
+                PersonalizationRequest(
+                  versionId: session.snapshot.versionId,
+                  targetServings: targetServings,
+                  targetMold: targetMold,
+                  dinerMemberIds: const [],
+                ).toJson(),
+              ),
         skippedComponentsJson: jsonEncode(
           _skippedSceneComponents.toList()..sort(),
         ),
