@@ -25,6 +25,7 @@ import java.util.zip.ZipOutputStream
 @Suppress("DEPRECATION")
 class ExportFileShareTest : InstrumentationTestCase() {
     private lateinit var activity: Activity
+    private lateinit var shareHandler: ExportFileShare
     private val saved = LinkedBlockingQueue<Intent>()
     private val documents = mutableListOf<Uri>()
     private val receiver = object : BroadcastReceiver() {
@@ -42,6 +43,7 @@ class ExportFileShareTest : InstrumentationTestCase() {
         activity = instrumentation.startActivitySync(Intent(context, MainActivity::class.java)
             .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
         instrumentation.waitForIdleSync()
+        shareHandler = ExportFileShare(activity)
     }
 
     override fun tearDown() {
@@ -65,6 +67,17 @@ class ExportFileShareTest : InstrumentationTestCase() {
         assertZip(secondSource, "second export")
         assertZip(requireNotNull(first.data), "first export")
         assertZip(requireNotNull(second.data), "second export")
+    }
+
+    fun testCancellationInvalidatesPreparationBeforePresentation() {
+        val shareReplies = LinkedBlockingQueue<String>()
+        shareHandler.onMethodCall(
+            MethodCall("shareZip", mapOf("bytes" to ByteArray(32 * 1024 * 1024), "filename" to "cancel.zip")),
+            replyQueue(shareReplies),
+        )
+        assertEquals("success", invoke(MethodCall("cancelShare", null)))
+        assertEquals("share_cancelled", shareReplies.poll(30, TimeUnit.SECONDS))
+        assertNull("Cancellation must not launch the system chooser", saved.poll(1, TimeUnit.SECONDS))
     }
 
     fun testInvalidArgumentsNeverOpenSharing() {
@@ -103,12 +116,14 @@ class ExportFileShareTest : InstrumentationTestCase() {
 
     private fun invoke(call: MethodCall): String {
         val replies = LinkedBlockingQueue<String>()
-        ExportFileShare(activity).onMethodCall(call, object : MethodChannel.Result {
-            override fun success(result: Any?) { replies.offer("success") }
-            override fun error(code: String, message: String?, details: Any?) { replies.offer(code) }
-            override fun notImplemented() { replies.offer("not_implemented") }
-        })
+        shareHandler.onMethodCall(call, replyQueue(replies))
         return replies.poll(30, TimeUnit.SECONDS) ?: error("Native share handler did not reply")
+    }
+
+    private fun replyQueue(replies: LinkedBlockingQueue<String>): MethodChannel.Result = object : MethodChannel.Result {
+        override fun success(result: Any?) { replies.offer("success") }
+        override fun error(code: String, message: String?, details: Any?) { replies.offer(code) }
+        override fun notImplemented() { replies.offer("not_implemented") }
     }
 
     private fun zip(text: String): ByteArray {

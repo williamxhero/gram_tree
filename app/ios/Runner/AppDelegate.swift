@@ -5,6 +5,9 @@ import UserNotifications
 @main
 @objc class AppDelegate: FlutterAppDelegate, FlutterImplicitEngineDelegate {
   private var exportShareInProgress = false
+  private var exportGeneration: UInt64 = 0
+  private var exportDirectory: URL?
+  private var exportPendingResult: FlutterResult?
 
   override func application(
     _ application: UIApplication,
@@ -19,13 +22,17 @@ import UserNotifications
       name: "app.gramtree/export_file", binaryMessenger: engineBridge.binaryMessenger
     )
     exportChannel.setMethodCallHandler { [weak self] call, result in
-      guard call.method == "shareZip" else {
-        result(FlutterMethodNotImplemented)
-        return
-      }
       DispatchQueue.main.async {
         guard let self = self else {
           result(FlutterError(code: "share_failed", message: "Sharing is unavailable.", details: nil))
+          return
+        }
+        if call.method == "cancelShare" || call.method == "discardExport" {
+          self.cancelShare(result: result)
+          return
+        }
+        guard call.method == "shareZip" else {
+          result(FlutterMethodNotImplemented)
           return
         }
         self.shareZip(call.arguments, result: result)
@@ -78,6 +85,7 @@ import UserNotifications
       result(nil)
     }
     UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound]) { _, _ in }
+    cleanupStaleExportDirectories()
   }
 
   private func shareZip(_ arguments: Any?, result: @escaping FlutterResult) {
@@ -98,10 +106,14 @@ import UserNotifications
       return
     }
     exportShareInProgress = true
+    exportGeneration &+= 1
+    let generation = exportGeneration
+    exportPendingResult = result
+    let manager = FileManager.default
+    let root = manager.temporaryDirectory.appendingPathComponent("gramtree-exports", isDirectory: true)
+    let directory = root.appendingPathComponent(UUID().uuidString, isDirectory: true)
+    exportDirectory = directory
     DispatchQueue.global(qos: .userInitiated).async {
-      let manager = FileManager.default
-      let root = manager.temporaryDirectory.appendingPathComponent("gramtree-exports", isDirectory: true)
-      let directory = root.appendingPathComponent(UUID().uuidString, isDirectory: true)
       let file = directory.appendingPathComponent(filename)
       do {
         try manager.createDirectory(at: root, withIntermediateDirectories: true)
@@ -121,11 +133,17 @@ import UserNotifications
         try manager.createDirectory(at: directory, withIntermediateDirectories: false)
         try bytes.data.write(to: file, options: .atomic)
         DispatchQueue.main.async {
+          guard self.exportShareInProgress, self.exportGeneration == generation else {
+            try? manager.removeItem(at: directory)
+            return
+          }
           guard let presenter = self.exportPresenter(),
                 !(presenter is UIActivityViewController), !presenter.isBeingDismissed,
                 !presenter.isBeingPresented else {
             try? manager.removeItem(at: directory)
             self.exportShareInProgress = false
+            self.exportDirectory = nil
+            self.exportPendingResult = nil
             result(FlutterError(code: "share_failed", message: "Sharing is unavailable.", details: nil))
             return
           }
@@ -134,6 +152,7 @@ import UserNotifications
             // Save to Files / the receiving activity has finished consuming the URL.
             try? manager.removeItem(at: directory)
             self.exportShareInProgress = false
+            self.exportDirectory = nil
           }
           if let popover = share.popoverPresentationController {
             popover.sourceView = presenter.view
@@ -142,15 +161,59 @@ import UserNotifications
             )
             popover.permittedArrowDirections = []
           }
-          presenter.present(share, animated: true) { result(nil) }
+          self.exportShareInProgress = false
+          let pending = self.exportPendingResult
+          self.exportPendingResult = nil
+          presenter.present(share, animated: true) { pending?(nil) }
         }
       } catch {
         try? manager.removeItem(at: directory)
         DispatchQueue.main.async {
-          self.exportShareInProgress = false
-          result(FlutterError(code: "share_failed", message: "Could not prepare ZIP sharing.", details: nil))
+          self.failExport(generation: generation, message: "Could not prepare ZIP sharing.")
         }
       }
+    }
+  }
+
+  private func cancelShare(result: @escaping FlutterResult) {
+    guard exportShareInProgress || exportDirectory != nil else {
+      result(nil)
+      return
+    }
+    exportGeneration &+= 1
+    let wasPreparing = exportShareInProgress
+    exportShareInProgress = false
+    let directory = exportDirectory
+    exportDirectory = nil
+    let pending = exportPendingResult
+    exportPendingResult = nil
+    if let directory { try? FileManager.default.removeItem(at: directory) }
+    if !wasPreparing { exportPresenter()?.dismiss(animated: true) }
+    pending?(FlutterError(code: "share_cancelled", message: "ZIP sharing was cancelled.", details: nil))
+    result(nil)
+  }
+
+  private func failExport(generation: UInt64, message: String) {
+    guard exportShareInProgress, exportGeneration == generation else { return }
+    exportShareInProgress = false
+    exportDirectory = nil
+    let pending = exportPendingResult
+    exportPendingResult = nil
+    pending?(FlutterError(code: "share_failed", message: message, details: nil))
+  }
+
+  private func cleanupStaleExportDirectories() {
+    let manager = FileManager.default
+    let root = manager.temporaryDirectory.appendingPathComponent("gramtree-exports", isDirectory: true)
+    let cutoff = Date().addingTimeInterval(-24 * 60 * 60)
+    let directories = (try? manager.contentsOfDirectory(
+      at: root, includingPropertiesForKeys: [.creationDateKey, .isDirectoryKey], options: [.skipsHiddenFiles]
+    )) ?? []
+    for directory in directories.prefix(20) {
+      guard UUID(uuidString: directory.lastPathComponent) != nil,
+            let values = try? directory.resourceValues(forKeys: [.creationDateKey, .isDirectoryKey]),
+            values.isDirectory == true, let created = values.creationDate, created < cutoff else { continue }
+      try? manager.removeItem(at: directory)
     }
   }
 
