@@ -225,10 +225,24 @@ def download(
     return path
 
 
+def invalidate_owner_exports(session: Session, settings: Settings, owner_id: uuid.UUID) -> None:
+    """Erase derived copies after item deletion, keeping the daily quota receipts.
+
+    The caller holds the owner lock, shared with archive generation. Never mark
+    erasure complete if storage is unavailable; the transaction can be retried.
+    """
+    for job in session.scalars(select(ExportJob).where(ExportJob.owner_id == owner_id)):
+        try:
+            archive_path(settings, job.id).unlink(missing_ok=True)
+        except OSError as exc:
+            raise ApiError(503, "erasure_unavailable", "删除暂未完成，请稍后重试") from exc
+        job.status, job.error_code = "expired", None
+
+
 def erase_owner_exports(session: Session, settings: Settings, owner_id: uuid.UUID) -> None:
     """Account erasure extension; caller already holds the owner lock."""
+    invalidate_owner_exports(session, settings, owner_id)
     for job in session.scalars(select(ExportJob).where(ExportJob.owner_id == owner_id)):
-        archive_path(settings, job.id).unlink(missing_ok=True)
         session.delete(job)
 
 
@@ -236,24 +250,24 @@ def cleanup(session: Session, settings: Settings, now: datetime) -> dict[str, in
     ids = list(
         session.scalars(
             select(ExportJob.id).where(
-                ExportJob.status == "completed",
-                ExportJob.expires_at <= now,
+                (ExportJob.status == "expired")
+                | ((ExportJob.status == "completed") & (ExportJob.expires_at <= now)),
             )
         )
     )
     removed = 0
     for job_id in ids:
         job = session.scalar(select(ExportJob).where(ExportJob.id == job_id).with_for_update())
-        if (
-            job is None
-            or job.status != "completed"
-            or job.expires_at is None
-            or job.expires_at > now
+        if job is None or not (
+            job.status == "expired"
+            or (job.status == "completed" and job.expires_at is not None and job.expires_at <= now)
         ):
             continue
-        archive_path(settings, job.id).unlink(missing_ok=True)
+        path = archive_path(settings, job.id)
+        existed = path.is_file()
+        path.unlink(missing_ok=True)
         job.status = "expired"
-        removed += 1
+        removed += int(existed)
     session.commit()
     # Files whose account/job was cascaded away, plus abandoned crash tempfiles.
     root = Path(settings.export_dir).resolve()

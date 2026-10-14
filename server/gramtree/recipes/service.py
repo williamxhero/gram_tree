@@ -2303,11 +2303,14 @@ def list_recipes(
 
 
 def delete_recipe(session: Session, owner: User, recipe_id: uuid.UUID, settings: Settings) -> None:
-    recipe = _owned_recipe(session, owner, recipe_id)
     from gramtree.accounts import deletion
+    from gramtree.exports import service as exports
 
+    exports.lock_owner(session, owner.id)
+    recipe = _owned_recipe(session, owner, recipe_id)
     deletion.erase_owner_caches(settings, owner.id)
     deletion.erase_recipe(session, recipe)
+    exports.invalidate_owner_exports(session, settings, owner.id)
     session.commit()
     # The durable queue survives a storage outage after metadata erasure.
     deletion.drain_objects(session, settings)

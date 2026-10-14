@@ -157,10 +157,13 @@ def delete_record(
     record_id: IdV4, auth: CurrentAuth, session: SessionDep, settings: SettingsDep
 ) -> None:
     from gramtree.accounts import deletion
+    from gramtree.exports import service as exports
 
+    exports.lock_owner(session, auth.user.id)
     row = _owned(session, auth.user.id, record_id)
     deletion.erase_owner_caches(settings, auth.user.id)
     deletion.erase_record(session, row)
+    exports.invalidate_owner_exports(session, settings, auth.user.id)
     session.commit()
 
 

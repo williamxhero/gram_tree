@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -369,7 +370,16 @@ class ApiFailure {
       return ApiFailure('network', error.toString());
     }
     if (error is DioException) {
-      final data = error.response?.data;
+      Object? data = error.response?.data;
+      // Dio keeps error bodies as bytes for ZIP requests too. Decode only a
+      // bounded JSON error, so token refresh and expiry messages still work.
+      if (data is List<int> && data.length <= 65536) {
+        try {
+          data = jsonDecode(utf8.decode(data));
+        } on FormatException {
+          data = null;
+        }
+      }
       if (data is Map && data['error'] is Map) {
         final e = data['error'] as Map;
         return ApiFailure(
