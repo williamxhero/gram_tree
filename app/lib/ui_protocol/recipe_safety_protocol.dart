@@ -8,6 +8,7 @@ import 'package:gramtree_api/gramtree_api.dart';
 import 'component_registry.dart';
 import 'composition_view.dart';
 import 'recipe_safety.dart';
+import 'source_attribution.dart';
 
 /// Fixed recipe safety section used by detail and authoring pages.
 ///
@@ -29,6 +30,7 @@ class RecipeSafetyProtocolSection extends StatelessWidget {
     this.errorMessage,
     this.awaitingCheck = false,
     this.composition,
+    this.sourceAttribution,
   });
 
   final RecipeSafetyResult? result;
@@ -42,6 +44,7 @@ class RecipeSafetyProtocolSection extends StatelessWidget {
   final String? errorMessage;
   final bool awaitingCheck;
   final AsyncValue<CompositionResult>? composition;
+  final Object? sourceAttribution;
 
   @override
   Widget build(BuildContext context) {
@@ -59,6 +62,7 @@ class RecipeSafetyProtocolSection extends StatelessWidget {
     key: const ValueKey('recipe-safety-protocol-section'),
     crossAxisAlignment: CrossAxisAlignment.stretch,
     children: [
+      if (!authoring) SourceAttributionCard(attribution: sourceAttribution),
       FoodSafetyCard(
         result: result,
         legacyDerived: legacyDerived,

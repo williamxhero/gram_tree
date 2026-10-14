@@ -2669,7 +2669,7 @@ abstract class AppLocalizations {
   /// No description provided for @recipeEditAction.
   ///
   /// In zh, this message translates to:
-  /// **'我来改一版'**
+  /// **'编辑我的菜谱'**
   String get recipeEditAction;
 
   /// No description provided for @recipeBaseOnVersion.

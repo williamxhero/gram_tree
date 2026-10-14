@@ -43,6 +43,7 @@ RecipeDetail _detail() => RecipeDetail.fromJson({
   'version': {
     'id': _versionId,
     'version_number': 1,
+    'publication_state': 'draft',
     'snapshot': {
       'format_version': 1,
       'servings': 2,
@@ -138,6 +139,13 @@ Map<String, dynamic> _component(
 }).toJson();
 
 List<Map<String, dynamic>> _safety() => [
+  _component(
+    'source_attribution',
+    'scene:source:$_recipeId',
+    {'conclusion': '作者 @原版作者', 'attribution': null},
+    required: true,
+    detail: 'standard',
+  ),
   _component(
     'food_safety',
     'scene:safety:$_recipeId',

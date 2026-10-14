@@ -65,6 +65,7 @@ RecipeDetail _detail(RecipeSnapshot snapshot) => RecipeDetail(
   id: _recipeId,
   visibility: RecipeDetailVisibilityEnum.private,
   version: RecipeVersionOut(
+    publicationState: RecipeVersionOutPublicationStateEnum.draft,
     aiAssisted: true,
     changeNote: 'AI 第一版',
     createdAt: '2026-10-07T00:00:00+00:00',
@@ -1011,7 +1012,7 @@ void main() {
     );
     await _tap(tester, 'save-recipe-button');
     expect(find.byKey(const ValueKey('recipe-detail-content')), findsOneWidget);
-    expect(find.text('AI 辅助 · 尚未做过验证'), findsOneWidget);
+    expect(find.text('AI 协助生成 · 发起作者 @味友0001'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 

@@ -29,6 +29,15 @@ PageDescription cookingComposition(String detail) => PageDescription(
   protocol: '1.0',
   components: [
     scenarioSummary(detail),
+    ComponentDescriptor(
+      type: 'source_attribution',
+      id: 'source-attribution',
+      detail: ComponentDescriptorDetailEnum.brief,
+      required_: true,
+      actions: const [],
+      reason: ComponentReason(code: 'required', text: '来源永久保留'),
+      data: {'conclusion': '作者 @作者', 'attribution': null},
+    ),
     for (final type in ['food_safety', 'allergen_notice'])
       ComponentDescriptor(
         type: type,

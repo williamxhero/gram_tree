@@ -74,6 +74,7 @@ RecipeDetail detailFixture(String version, int number) => RecipeDetail(
   id: recipeId,
   visibility: RecipeDetailVisibilityEnum.private,
   version: RecipeVersionOut(
+    publicationState: RecipeVersionOutPublicationStateEnum.draft,
     id: version,
     versionNumber: number,
     aiAssisted: false,
@@ -168,6 +169,7 @@ void main() {
         RecipeVersionHistory(
           items: [
             RecipeVersionSummary(
+              publicationState: RecipeVersionSummaryPublicationStateEnum.draft,
               id: versionA,
               versionNumber: 1,
               aiAssisted: false,
@@ -192,6 +194,7 @@ void main() {
                   : otherRecipe,
               'author': '作者',
               'version_number': 1,
+              'publication_state': 'published',
               'ai_assisted': false,
               'change_note': request.query['cursor'] == null
                   ? '本菜谱原版'
@@ -246,6 +249,7 @@ void main() {
         RecipeVersionHistory(
           items: [
             RecipeVersionSummary(
+              publicationState: RecipeVersionSummaryPublicationStateEnum.draft,
               id: versionB,
               previousVersionId: versionA,
               versionNumber: 2,
@@ -254,6 +258,7 @@ void main() {
               createdAt: '2026-10-02T00:00:00Z',
             ),
             RecipeVersionSummary(
+              publicationState: RecipeVersionSummaryPublicationStateEnum.draft,
               id: versionA,
               versionNumber: 1,
               aiAssisted: false,
@@ -273,6 +278,8 @@ void main() {
           items: [
             for (final entry in [(versionB, 2), (versionA, 1)])
               RecipeComparisonCandidate(
+                publicationState:
+                    RecipeComparisonCandidatePublicationStateEnum.draft,
                 id: entry.$1,
                 recipeId: recipeId,
                 author: '作者',

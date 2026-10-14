@@ -542,7 +542,7 @@
   "recipeIncomplete": "（可能不完整）",
   "recipeSeconds": "{seconds} 秒",
   "recipeAi": " · AI 协助",
-  "recipeEditAction": "我来改一版",
+  "recipeEditAction": "编辑我的菜谱",
   "recipeBaseOnVersion": "基于这一版继续编辑",
   "recipePhotoTitle": "成品图",
   "recipePhotoStageHint": "先选图，保存菜谱时会把它放进第 1 版。",

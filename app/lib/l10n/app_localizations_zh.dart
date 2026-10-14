@@ -1418,7 +1418,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get recipeAi => ' · AI 协助';
 
   @override
-  String get recipeEditAction => '我来改一版';
+  String get recipeEditAction => '编辑我的菜谱';
 
   @override
   String get recipeBaseOnVersion => '基于这一版继续编辑';

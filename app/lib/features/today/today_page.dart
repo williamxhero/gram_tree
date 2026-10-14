@@ -6,6 +6,7 @@ import '../../ui_protocol/composition_view.dart';
 import '../../widgets/empty_state.dart';
 import '../../widgets/tab_page.dart';
 import '../tab_paths.dart';
+import '../recipes/publication_panel.dart';
 
 /// “今天”页由服务端的默认组合下发（SPEC-009.1 #77），标准布局
 /// （[_StandardTodayLayout]）在组合不合法、请求出错、等待超时或还没返回时顶上，两者
@@ -22,9 +23,16 @@ class TodayPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return TabPage(
-      child: CompositionView(
-        pageType: 'today',
-        standardLayoutBuilder: (context) => const _StandardTodayLayout(),
+      child: Column(
+        children: [
+          const PublicationNotices(),
+          Expanded(
+            child: CompositionView(
+              pageType: 'today',
+              standardLayoutBuilder: (context) => const _StandardTodayLayout(),
+            ),
+          ),
+        ],
       ),
     );
   }

@@ -15,6 +15,30 @@ class RecipeRepository {
   RecipesApi get _recipes => _api.getRecipesApi();
   RecipeAiApi get _ai => _api.getRecipeAiApi();
 
+  Future<ImprovementDraftOut> startImprovement(
+    String recipeId,
+    String versionId,
+  ) async => (await _api.getImprovementsApi().createImprovementDraft(
+    recipeId: recipeId,
+    improvementDraftInput: ImprovementDraftInput(sourceVersionId: versionId),
+  )).data!;
+
+  Future<ImprovementPreviewOut> previewImprovement(
+    String recipeId,
+    ImprovementPreviewInput input,
+  ) async => (await _api.getImprovementsApi().previewImprovement(
+    recipeId: recipeId,
+    improvementPreviewInput: input,
+  )).data!;
+
+  Future<ImprovementSaveOut> saveImprovement(
+    String recipeId,
+    ImprovementSaveInput input,
+  ) async => (await _api.getImprovementsApi().saveImprovement(
+    recipeId: recipeId,
+    improvementSaveInput: input,
+  )).data!;
+
   Future<AIStatus> aiStatus() async => (await _ai.recipeAiStatus()).data!;
 
   Future<AIStatus> modificationStatus() async =>
@@ -618,9 +642,10 @@ class RecipeIngredientDraft {
     baseUnit: _baseUnit(baseUnit),
     displayName: displayName.trim(),
     functional: functional,
-    // dart-dio omits null properties. Send an empty, unknown profile so clearing
-    // a contribution is explicit and cannot re-adopt a mutable library default.
-    flavorContribution: flavorContribution ?? RecipeFlavorContribution(),
+    // Preserve an unknown source contribution as null. An empty contribution is
+    // a meaningful explicit edit and would make an untouched quantity change
+    // compare as a general recipe change.
+    flavorContribution: flavorContribution,
     flavorSource: flavorSource,
     functionalSource: functionalSource,
     group: _optionalText(group),
@@ -960,8 +985,8 @@ class RecipeForm {
     designRationale: designRationale,
     textSource: writable ? _writableSource(textSource) : textSource,
     servingsSource: writable ? _writableSource(servingsSource) : servingsSource,
-    difficulty: difficulty,
-    dishType: dishType,
+    difficulty: _optionalText(difficulty),
+    dishType: _optionalText(dishType),
     formatVersion: RecipeSnapshotFormatVersionEnum.number1,
     ingredients: [
       for (final item in ingredients) item.toModel(writable: writable),
