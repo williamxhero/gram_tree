@@ -24,6 +24,9 @@ class AuthorizedFamilyConstraints:
     nickname: str
     allergies: dict[str, Any]
     avoidances: tuple[dict[str, Any], ...]
+    id: str = ""
+    age_band: str = "adult"
+    flavors: dict[str, float] | None = None
 
 
 @dataclass(frozen=True)
@@ -71,6 +74,9 @@ def read(
     members = tuple(
         AuthorizedFamilyConstraints(
             nickname=str(value["nickname"]),
+            id=str(row.id),
+            age_band=str(value["age_band"]),
+            flavors=dict(value.get("flavors") or {}),
             allergies=dict(value.get("allergies") or allergies.EMPTY),
             avoidances=tuple(value.get("avoidances") or ()),
         )

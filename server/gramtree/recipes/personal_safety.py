@@ -70,7 +70,7 @@ def _target(
         ingredient_id=str(ingredient.id),
         category=ingredient.category,
         allergens=frozenset(attrs.allergens.value if attrs.allergens is not None else ()),
-        unknown=attrs.allergens is None,
+        unknown=attrs.allergens is None or attrs.allergens.estimate,
         replacement=replacement,
         recipe_ingredient_id=item.id,
     )
@@ -155,6 +155,9 @@ def check(
     snapshot: RecipeSnapshot,
     owner_id: Any,
     settings: Settings,
+    *,
+    constraints: authorized_constraints.AuthorizedConstraints | None = None,
+    include_replacements: bool = True,
 ) -> RecipePersonalSafety:
     """Cross-check only the current authorized state for this owner.
 
@@ -163,7 +166,7 @@ def check(
     than claiming that an ingredient is safe.
     """
 
-    constraints = authorized_constraints.read(session, owner_id, settings)
+    constraints = constraints or authorized_constraints.read(session, owner_id, settings)
     if not constraints.sensitive_authorized:
         # Owner avoidances are ordinary profile data and can still produce the
         # light warning; no allergy/family data is read or inferred here.
@@ -181,6 +184,8 @@ def check(
     seen: set[tuple[str, str, str, str, bool]] = set()
     for item in snapshot.ingredients:
         for target in _targets(session, item):
+            if target.replacement and not include_replacements:
+                continue
             if target.unknown:
                 unknown.add(target.label)
             for person, allergy_value, avoidances in people:

@@ -204,6 +204,10 @@ class RecipeModificationContentV1(BaseModel):
     saved_version_id: str | None = None
 
 
+class RecipePersonalizedViewChangedContentV1(BaseModel):
+    view: Literal["original", "personalized"]
+
+
 class CookingSessionContentV1(BaseModel):
     """做菜会话的只追加操作；冻结显示内容保存在客户端会话交接中。"""
 
@@ -236,6 +240,14 @@ class CookingRecordCreatedContentV1(BaseModel):
 
 
 ITEMS: tuple[EventTypeSpec, ...] = (
+    EventTypeSpec(
+        event_type="recipe.personalized_view_changed",
+        version=1,
+        description="菜谱个性化与原版视图切换，不包含口味或家庭信息。",
+        correlation_fields=("recipe_version_id",),
+        exportable=True,
+        content_schema=RecipePersonalizedViewChangedContentV1,
+    ),
     EventTypeSpec(
         event_type="recipe.import",
         version=1,

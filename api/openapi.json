@@ -5721,6 +5721,209 @@
         "title": "PersonalMeasureUpdate",
         "type": "object"
       },
+      "PersonalizationRequest": {
+        "additionalProperties": false,
+        "description": "Viewer-owned inputs for a temporary personalized recipe projection.",
+        "properties": {
+          "confirm_allergy_risk": {
+            "default": false,
+            "title": "Confirm Allergy Risk",
+            "type": "boolean"
+          },
+          "diner_member_ids": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "maxItems": 50,
+            "title": "Diner Member Ids",
+            "type": "array"
+          },
+          "equipment": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "maxItems": 100,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Equipment"
+          },
+          "primary_diner_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Primary Diner Id"
+          },
+          "target_mold": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/MoldSpec"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "target_servings": {
+            "anyOf": [
+              {
+                "maximum": 1000.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Servings"
+          },
+          "version_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Version Id"
+          }
+        },
+        "title": "PersonalizationRequest",
+        "type": "object"
+      },
+      "PersonalizedIngredientOut": {
+        "properties": {
+          "adaptation_factors": {
+            "items": {
+              "type": "number"
+            },
+            "title": "Adaptation Factors",
+            "type": "array"
+          },
+          "changed": {
+            "title": "Changed",
+            "type": "boolean"
+          },
+          "display_name": {
+            "title": "Display Name",
+            "type": "string"
+          },
+          "display_quantity": {
+            "title": "Display Quantity",
+            "type": "number"
+          },
+          "display_unit": {
+            "title": "Display Unit",
+            "type": "string"
+          },
+          "factor": {
+            "title": "Factor",
+            "type": "number"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "original_name": {
+            "title": "Original Name",
+            "type": "string"
+          },
+          "original_quantity": {
+            "title": "Original Quantity",
+            "type": "number"
+          },
+          "original_unit": {
+            "title": "Original Unit",
+            "type": "string"
+          },
+          "reason": {
+            "title": "Reason",
+            "type": "string"
+          },
+          "rule": {
+            "title": "Rule",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "display_name",
+          "original_name",
+          "original_quantity",
+          "display_quantity",
+          "original_unit",
+          "display_unit",
+          "factor",
+          "rule",
+          "reason",
+          "changed"
+        ],
+        "title": "PersonalizedIngredientOut",
+        "type": "object"
+      },
+      "PersonalizedStepOut": {
+        "properties": {
+          "changed": {
+            "default": false,
+            "title": "Changed",
+            "type": "boolean"
+          },
+          "cookware": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cookware"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "instruction": {
+            "title": "Instruction",
+            "type": "string"
+          },
+          "original_instruction": {
+            "title": "Original Instruction",
+            "type": "string"
+          },
+          "source": {
+            "enum": [
+              "recipe",
+              "ai_estimated",
+              "scenario_adjusted"
+            ],
+            "title": "Source",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "instruction",
+          "original_instruction",
+          "source"
+        ],
+        "title": "PersonalizedStepOut",
+        "type": "object"
+      },
       "ProfileUpdate": {
         "properties": {
           "nickname": {
@@ -7594,6 +7797,123 @@
           "ingredient"
         ],
         "title": "RecipePersonalSafetyAlert",
+        "type": "object"
+      },
+      "RecipePersonalizedOut": {
+        "properties": {
+          "adjustment_limit": {
+            "title": "Adjustment Limit",
+            "type": "number"
+          },
+          "authorization_version": {
+            "title": "Authorization Version",
+            "type": "integer"
+          },
+          "blocked": {
+            "title": "Blocked",
+            "type": "boolean"
+          },
+          "cache_key": {
+            "title": "Cache Key",
+            "type": "string"
+          },
+          "effective_flavors": {
+            "additionalProperties": {
+              "type": "number"
+            },
+            "title": "Effective Flavors",
+            "type": "object"
+          },
+          "fallback": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fallback"
+          },
+          "food_safety": {
+            "$ref": "#/components/schemas/RecipeSafetyResult"
+          },
+          "ingredients": {
+            "items": {
+              "$ref": "#/components/schemas/PersonalizedIngredientOut"
+            },
+            "title": "Ingredients",
+            "type": "array"
+          },
+          "inputs": {
+            "$ref": "#/components/schemas/PersonalizationRequest"
+          },
+          "notices": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Notices",
+            "type": "array"
+          },
+          "profile_version": {
+            "title": "Profile Version",
+            "type": "integer"
+          },
+          "recipe_id": {
+            "format": "uuid",
+            "title": "Recipe Id",
+            "type": "string"
+          },
+          "safety": {
+            "$ref": "#/components/schemas/RecipePersonalSafety"
+          },
+          "snapshot": {
+            "$ref": "#/components/schemas/RecipeSnapshot"
+          },
+          "snapshot_unchanged": {
+            "title": "Snapshot Unchanged",
+            "type": "boolean"
+          },
+          "steps": {
+            "items": {
+              "$ref": "#/components/schemas/PersonalizedStepOut"
+            },
+            "title": "Steps",
+            "type": "array"
+          },
+          "version_id": {
+            "format": "uuid",
+            "title": "Version Id",
+            "type": "string"
+          },
+          "view": {
+            "enum": [
+              "personalized",
+              "original"
+            ],
+            "title": "View",
+            "type": "string"
+          }
+        },
+        "required": [
+          "recipe_id",
+          "version_id",
+          "view",
+          "cache_key",
+          "profile_version",
+          "authorization_version",
+          "snapshot_unchanged",
+          "snapshot",
+          "inputs",
+          "effective_flavors",
+          "adjustment_limit",
+          "food_safety",
+          "ingredients",
+          "steps",
+          "safety",
+          "blocked"
+        ],
+        "title": "RecipePersonalizedOut",
         "type": "object"
       },
       "RecipeQuantificationOut": {
@@ -17769,6 +18089,108 @@
           }
         ],
         "summary": "Convert Current Recipe Mold",
+        "tags": [
+          "recipes"
+        ]
+      }
+    },
+    "/v1/recipes/{recipe_id}/personalized": {
+      "post": {
+        "operationId": "personalize_recipe",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "recipe_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Recipe Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "view",
+            "required": false,
+            "schema": {
+              "default": "personalized",
+              "enum": [
+                "personalized",
+                "original"
+              ],
+              "title": "View",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PersonalizationRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecipePersonalizedOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "服务端错误"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Personalize Recipe",
         "tags": [
           "recipes"
         ]

@@ -579,6 +579,82 @@ class RecipeDetail(BaseModel):
     version: RecipeVersionOut
 
 
+class PersonalizationRequest(BaseModel):
+    """Viewer-owned inputs for a temporary personalized recipe projection."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    version_id: IdV4 | None = None
+    target_servings: int | None = Field(default=None, ge=1, le=1000)
+    target_mold: MoldSpec | None = None
+    equipment: list[str] | None = Field(default=None, max_length=100)
+    diner_member_ids: list[IdV4] = Field(default_factory=list, max_length=50)
+    primary_diner_id: IdV4 | None = None
+    confirm_allergy_risk: bool = False
+
+    @model_validator(mode="after")
+    def unique_diners(self) -> "PersonalizationRequest":
+        if len(set(self.diner_member_ids)) != len(self.diner_member_ids):
+            raise ValueError("同吃的人不能重复选择")
+        if self.primary_diner_id is not None and self.primary_diner_id not in self.diner_member_ids:
+            raise ValueError("主要食客必须属于同吃的人")
+        if self.target_mold is not None and self.target_servings is not None:
+            raise ValueError("份数和模具换算不能同时启用")
+        if self.equipment is not None:
+            self.equipment = [value.strip() for value in self.equipment]
+            if any(not value or len(value) > 100 for value in self.equipment):
+                raise ValueError("厨具名称不能为空或过长")
+            if len(set(self.equipment)) != len(self.equipment):
+                raise ValueError("厨具不能重复")
+        return self
+
+
+class PersonalizedIngredientOut(BaseModel):
+    id: str
+    display_name: str
+    original_name: str
+    original_quantity: float
+    display_quantity: float
+    original_unit: str
+    display_unit: str
+    factor: float
+    # Keep exact sequential multipliers; rounded amounts cannot recover them offline.
+    adaptation_factors: list[float] = Field(default_factory=list)
+    rule: str
+    reason: str
+    changed: bool
+
+
+class PersonalizedStepOut(BaseModel):
+    id: str
+    instruction: str
+    original_instruction: str
+    cookware: str | None = None
+    changed: bool = False
+    source: Literal["recipe", "ai_estimated", "scenario_adjusted"]
+
+
+class RecipePersonalizedOut(BaseModel):
+    recipe_id: IdV4
+    version_id: IdV4
+    view: Literal["personalized", "original"]
+    cache_key: str
+    profile_version: int
+    authorization_version: int
+    snapshot_unchanged: bool
+    snapshot: RecipeSnapshot
+    inputs: PersonalizationRequest
+    effective_flavors: dict[str, float]
+    adjustment_limit: float
+    food_safety: RecipeSafetyResult
+    ingredients: list[PersonalizedIngredientOut]
+    steps: list[PersonalizedStepOut]
+    safety: RecipePersonalSafety
+    blocked: bool
+    notices: list[str] = Field(default_factory=list)
+    fallback: str | None = None
+
+
 class RecipeVersionSummary(BaseModel):
     id: IdV4
     version_number: int

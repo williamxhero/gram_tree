@@ -129,6 +129,33 @@ class RecipeRepository {
     return response.data!;
   }
 
+  Future<RecipePersonalizedOut> personalize(
+    String recipeId, {
+    String? versionId,
+    int? targetServings,
+    MoldSpec? targetMold,
+    List<String>? equipment,
+    List<String>? dinerMemberIds,
+    String? primaryDinerId,
+    bool original = false,
+    bool confirmAllergyRisk = false,
+  }) async {
+    final response = await _recipes.personalizeRecipe(
+      recipeId: recipeId,
+      personalizationRequest: PersonalizationRequest(
+        versionId: versionId,
+        targetServings: targetServings,
+        targetMold: targetMold,
+        equipment: equipment,
+        dinerMemberIds: dinerMemberIds,
+        primaryDinerId: primaryDinerId,
+        confirmAllergyRisk: confirmAllergyRisk,
+      ),
+      view: original ? 'original' : 'personalized',
+    );
+    return response.data!;
+  }
+
   Future<RecipeIngredientComparison> compareIngredients(
     String recipeId,
     String fromVersionId,

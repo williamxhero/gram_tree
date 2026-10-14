@@ -161,6 +161,9 @@ lib/src/model/page_unrecorded_ingredient_item.dart
 lib/src/model/personal_measure_input.dart
 lib/src/model/personal_measure_out.dart
 lib/src/model/personal_measure_update.dart
+lib/src/model/personalization_request.dart
+lib/src/model/personalized_ingredient_out.dart
+lib/src/model/personalized_step_out.dart
 lib/src/model/profile_update.dart
 lib/src/model/purchase_unit.dart
 lib/src/model/purchase_units_attribute.dart
@@ -195,6 +198,7 @@ lib/src/model/recipe_mold_conversion_out.dart
 lib/src/model/recipe_mold_conversion_request.dart
 lib/src/model/recipe_personal_safety.dart
 lib/src/model/recipe_personal_safety_alert.dart
+lib/src/model/recipe_personalized_out.dart
 lib/src/model/recipe_quantification_out.dart
 lib/src/model/recipe_question.dart
 lib/src/model/recipe_replacement.dart

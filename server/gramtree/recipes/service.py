@@ -26,7 +26,7 @@ from gramtree.events import service as event_service
 from gramtree.events.registry import SourceType
 from gramtree.ingredients.attributes import IngredientAttributes
 from gramtree.ingredients.models import Ingredient, IngredientAttribute
-from gramtree.recipes import food_safety, personal_safety, reproducibility
+from gramtree.recipes import food_safety, personal_safety, personalization, reproducibility
 from gramtree.recipes.measure_display import display_amount, quantity_text
 from gramtree.recipes.measure_input import confirmed_source
 from gramtree.recipes.measure_models import PersonalMeasure
@@ -57,6 +57,9 @@ from gramtree.recipes.schemas import (
     DishOut,
     MoldSpec,
     NutritionEstimate,
+    PersonalizationRequest,
+    PersonalizedIngredientOut,
+    PersonalizedStepOut,
     RecipeAuthor,
     RecipeComparisonCandidate,
     RecipeComparisonCandidates,
@@ -73,6 +76,7 @@ from gramtree.recipes.schemas import (
     RecipeList,
     RecipeListItem,
     RecipeMoldConversionOut,
+    RecipePersonalizedOut,
     RecipePersonalSafety,
     RecipeReproducibilityResult,
     RecipeSafetyCheckRequest,
@@ -1338,6 +1342,234 @@ def get_version(
     if version is None:
         raise NotFound()
     return _detail(session, settings, recipe, version)
+
+
+def personalize_recipe(
+    session: Session,
+    settings: Settings,
+    owner: User,
+    recipe_id: uuid.UUID,
+    body: PersonalizationRequest,
+    *,
+    redis: Redis,
+    view: Literal["personalized", "original"] = "personalized",
+) -> RecipePersonalizedOut:
+    """Build a private, temporary projection without saving a recipe version."""
+    from gramtree.recipes import personalization_adaptations as adaptations
+    from gramtree.taste_profiles import authorized_constraints
+
+    recipe, version = _owned_version(session, owner, recipe_id, body.version_id)
+    from gramtree.taste_profiles import service as taste_service
+
+    profile = taste_service.locked_profile(session, owner.id, taste_service.scale_for(session))
+    source_snapshot = RecipeSnapshot.model_validate(version.snapshot)
+    flavors = {
+        key: float(value.get("coefficient", 1.0))
+        for key, value in profile.flavors.items()
+        if isinstance(value, dict)
+    }
+    constraints = adaptations.select_diners(
+        authorized_constraints.read(session, owner.id, settings), body.diner_member_ids
+    )
+    flavors = adaptations.diner_flavors(flavors, constraints, body.primary_diner_id)
+    equipment = body.equipment
+    if equipment is None:
+        equipment = list(profile.cooking_constraints.get("equipment") or [])
+    inputs = body.model_copy(update={"equipment": equipment, "version_id": version.id})
+    profile_version = profile.version
+    authorization_version = profile.sensitive_authorization_version
+    request = personalization.PersonalizationInput(
+        flavors=flavors,
+        profile_version=profile_version,
+        target_servings=body.target_servings,
+        min_servings=int(config.get(session, "recipe.servings_min")),
+        max_servings=int(config.get(session, "recipe.servings_max")),
+        adjustment_limit=float(config.get(session, "recipe.personalization_adjustment_limit")),
+    )
+    rule_input = source_snapshot.model_copy(deep=True)
+    converted_original = source_snapshot.model_copy(deep=True)
+    if body.target_servings is not None:
+        # Validate even an identity request; do not let malformed inputs bypass rules.
+        serving_conversion = _convert_snapshot_servings(
+            session,
+            source_snapshot,
+            RecipeDerived.model_validate(version.derived),
+            body.target_servings,
+        )
+        converted_by_id = {item.id: item for item in serving_conversion.ingredients}
+        for item in converted_original.ingredients:
+            source_quantity = item.quantity
+            item.quantity = converted_by_id[item.id].display_quantity
+            if item.base_quantity is not None and source_quantity:
+                item.base_quantity = item.base_quantity * item.quantity / source_quantity
+        converted_steps = {step.id: step for step in serving_conversion.steps}
+        for step in converted_original.steps:
+            step.instruction = converted_steps[step.id].instruction
+            step.duration_seconds = converted_steps[step.id].duration_seconds
+        converted_original.servings = body.target_servings
+        rule_input = converted_original.model_copy(deep=True)
+    if body.target_mold is not None:
+        mold = _convert_snapshot_mold(session, source_snapshot, body.target_mold)
+        for item, scaled in zip(rule_input.ingredients, mold.ingredients, strict=True):
+            source_quantity = item.quantity
+            item.quantity = scaled.display_quantity
+            if item.base_quantity is not None and source_quantity:
+                item.base_quantity = item.base_quantity * item.quantity / source_quantity
+            original_item = next(
+                item for item in converted_original.ingredients if item.id == scaled.id
+            )
+            original_item.quantity = scaled.display_quantity
+            original_item.base_quantity = item.base_quantity
+        rule_input.base_mold = body.target_mold
+        converted_original.base_mold = body.target_mold
+    if view == "original":
+        projected = converted_original
+        changes: list[dict[str, Any]] = []
+        notices: list[str] = []
+    else:
+        projected, changes, notices = personalization.compile_rules(rule_input, request)
+    change_by_id = {item["ingredient_id"]: item for item in changes}
+    for item, source in zip(rule_input.ingredients, source_snapshot.ingredients, strict=True):
+        if item.quantity != source.quantity:
+            row = change_by_id.setdefault(item.id, {})
+            reason = "模具换算" if body.target_mold is not None else "份数换算"
+            row["reason"] = reason + ("；" + row["reason"] if row.get("reason") else "")
+            if row.get("rule", "unchanged") == "unchanged":
+                row["rule"] = "mold_ratio" if body.target_mold is not None else "servings"
+    ai_steps: set[str] = set()
+    fallback = None
+    if view == "personalized":
+        projected, replacements, replacement_notices = adaptations.substitute(
+            session, settings, owner.id, projected, constraints, redis=redis, version_id=version.id
+        )
+        notices.extend(replacement_notices)
+        for item_id, (reason, ratio, suggested) in replacements.items():
+            row = change_by_id.setdefault(item_id, {})
+            row["reason"] = (row.get("reason", "") + "；" + reason).strip("；")
+            row["rule"] = "ai_substitution" if suggested else "substitution"
+            row["adaptation_factors"] = [ratio]
+        projected, ai_steps, fallback = adaptations.adapt_equipment(
+            session, redis, settings, owner.id, version.id, projected, equipment
+        )
+        # Family-specific child serving instructions must never enter AI payloads.
+        projected, child_factors = adaptations.split_children(projected, constraints)
+        if child_factors:
+            for item_id, ratio in child_factors.items():
+                row = change_by_id.setdefault(item_id, {})
+                row["reason"] = row.get("reason", "") + "；先盛儿童份，辣味用量按其余人数换算"
+                row["rule"] = "child_portion"
+                row.setdefault("adaptation_factors", []).append(ratio)
+        elif any(
+            m.age_band != "adult" and (m.flavors or {}).get("spicy") == 0
+            for m in constraints.family
+        ):
+            notices.append("原步骤未明确允许安全后加辣味，未自动分盛；请为不吃辣的成员另做一份")
+        # Gateway accounting commits around I/O. Reacquire and reject concurrent
+        # profile/consent changes instead of returning private stale constraints.
+        profile = taste_service.locked_profile(session, owner.id, taste_service.scale_for(session))
+        if (
+            profile.version != profile_version
+            or profile.sensitive_authorization_version != authorization_version
+        ):
+            raise ApiError(409, "profile_changed", "口味或授权已变化，请重新换算")
+    safety = personal_safety.check(
+        session, projected, owner.id, settings, constraints=constraints, include_replacements=False
+    )
+    if safety.incomplete and constraints.sensitive_authorized:
+        from gramtree.recipes.schemas import RecipePersonalSafetyAlert
+
+        people = [("你", constraints.owner_allergies)] + [
+            (member.nickname, member.allergies) for member in constraints.family
+        ]
+        for person, allergies in people:
+            if allergies.get("categories") or allergies.get("ingredients"):
+                for name in safety.unknown_ingredients:
+                    safety.alerts.append(
+                        RecipePersonalSafetyAlert(
+                            person=person,
+                            kind="allergy",
+                            target="过敏原资料未确认",
+                            ingredient=name,
+                            replacement=False,
+                        )
+                    )
+    allergy_blocked = any(alert.kind == "allergy" for alert in safety.alerts)
+    if allergy_blocked:
+        notices.append("含本人或本次同吃成员的过敏原；开始做之前需要明确确认")
+    checked = food_safety.check(
+        session, projected, age_bands=[member.age_band for member in constraints.family]
+    )
+    infant_blocked = any(f.rule_id.startswith("infant_") for f in checked.findings)
+    if infant_blocked:
+        notices.append("1 岁以下婴幼儿不能食用蜂蜜或额外添加盐；请为婴幼儿另做一份")
+    ingredients = [
+        PersonalizedIngredientOut(
+            id=item.id,
+            display_name=item.display_name,
+            original_name=source.display_name,
+            original_quantity=source.quantity,
+            display_quantity=item.quantity,
+            original_unit=source.unit,
+            display_unit=item.unit,
+            factor=float(change_by_id.get(item.id, {}).get("factor", 1.0)),
+            adaptation_factors=change_by_id.get(item.id, {}).get("adaptation_factors", []),
+            rule=str(change_by_id.get(item.id, {}).get("rule", "unchanged")),
+            reason=str(change_by_id.get(item.id, {}).get("reason", "原版用量")),
+            changed=item.quantity != source.quantity
+            or item.unit != source.unit
+            or item.display_name != source.display_name,
+        )
+        for item, source in zip(projected.ingredients, source_snapshot.ingredients, strict=True)
+    ]
+    source_steps = {step.id: step for step in source_snapshot.steps}
+    steps = [
+        PersonalizedStepOut(
+            id=step.id,
+            instruction=step.instruction,
+            original_instruction=(
+                source_steps[step.id].instruction if step.id in source_steps else ""
+            ),
+            cookware=step.cookware,
+            changed=step.id not in source_steps or step != source_steps[step.id],
+            source="ai_estimated"
+            if step.id in ai_steps
+            else "scenario_adjusted"
+            if step.id not in source_steps
+            else "recipe",
+        )
+        for step in projected.steps
+    ]
+    cache = personalization.cache_key(
+        str(version.id),
+        request,
+        equipment=tuple(equipment),
+        diners=tuple(str(item) for item in body.diner_member_ids),
+        primary_diner=str(body.primary_diner_id) if body.primary_diner_id else None,
+        target_mold=body.target_mold.model_dump(mode="json") if body.target_mold else None,
+        authorization_version=authorization_version,
+        view=view,
+    )
+    return RecipePersonalizedOut(
+        recipe_id=recipe.id,
+        version_id=version.id,
+        view=view,
+        cache_key=cache,
+        profile_version=profile.version,
+        authorization_version=authorization_version,
+        snapshot_unchanged=source_snapshot.model_dump(mode="json")
+        == RecipeSnapshot.model_validate(version.snapshot).model_dump(mode="json"),
+        snapshot=projected,
+        inputs=inputs,
+        effective_flavors=flavors,
+        adjustment_limit=request.adjustment_limit,
+        food_safety=checked,
+        ingredients=ingredients,
+        steps=steps,
+        safety=safety,
+        blocked=infant_blocked or (allergy_blocked and not body.confirm_allergy_risk),
+        notices=notices,
+        fallback=fallback,
+    )
 
 
 def _owned_version(
