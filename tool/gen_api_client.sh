@@ -41,6 +41,9 @@ java -jar "$JAR" generate --skip-validate-spec \
   --additional-properties=pubName=gramtree_api,pubVersion=1.0.0,pubDescription="GramTree API client (generated)",serializationLibrary=json_serializable \
   >/dev/null
 
+# Java writes the file manifest with platform line endings; keep CI generation deterministic.
+sed -i.bak 's/\r$//' "$STAGE/.openapi-generator/FILES" && rm "$STAGE/.openapi-generator/FILES.bak"
+
 # 生成的 json_serializable 代码用到 null-aware elements，需要 Dart 3.8
 sed -i.bak "s/sdk: '>=3.5.0 <4.0.0'/sdk: '>=3.8.0 <4.0.0'/" "$STAGE/pubspec.yaml" && rm "$STAGE/pubspec.yaml.bak"
 rm -rf "$STAGE/doc" "$STAGE/test" "$STAGE/README.md" "$STAGE/.travis.yml" "$STAGE/git_push.sh"

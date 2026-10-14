@@ -19,6 +19,7 @@ lib/src/api/recipe_ai_api.dart
 lib/src/api/recipe_imports_api.dart
 lib/src/api/recipes_api.dart
 lib/src/api/records_api.dart
+lib/src/api/risk_api.dart
 lib/src/api/sync_api.dart
 lib/src/api/taste_profile_api.dart
 lib/src/api/ui_protocol_api.dart
@@ -53,6 +54,8 @@ lib/src/model/bind_apple_request.dart
 lib/src/model/bind_email_request.dart
 lib/src/model/bool_attribute.dart
 lib/src/model/cache_info.dart
+lib/src/model/captcha_verification.dart
+lib/src/model/captcha_verification_out.dart
 lib/src/model/change_explanation_input.dart
 lib/src/model/change_explanation_result.dart
 lib/src/model/changes_response.dart

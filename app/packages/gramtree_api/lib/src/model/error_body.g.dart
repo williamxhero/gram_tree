@@ -15,6 +15,8 @@ abstract class _$ErrorBodyCWProxy {
 
   ErrorBody requestId(String? requestId);
 
+  ErrorBody serverTime(String? serverTime);
+
   /// This function **does support** nullification of nullable fields. All `null` values passed to `non-nullable` fields will be ignored. You can also use `ErrorBody(...).copyWith.fieldName(...)` to override fields one at a time with nullification support.
   ///
   /// Usage
@@ -26,6 +28,7 @@ abstract class _$ErrorBodyCWProxy {
     String? detail,
     String message,
     String? requestId,
+    String? serverTime,
   });
 }
 
@@ -48,6 +51,9 @@ class _$ErrorBodyCWProxyImpl implements _$ErrorBodyCWProxy {
   ErrorBody requestId(String? requestId) => this(requestId: requestId);
 
   @override
+  ErrorBody serverTime(String? serverTime) => this(serverTime: serverTime);
+
+  @override
   /// This function **does support** nullification of nullable fields. All `null` values passed to `non-nullable` fields will be ignored. You can also use `ErrorBody(...).copyWith.fieldName(...)` to override fields one at a time with nullification support.
   ///
   /// Usage
@@ -59,6 +65,7 @@ class _$ErrorBodyCWProxyImpl implements _$ErrorBodyCWProxy {
     Object? detail = const $CopyWithPlaceholder(),
     Object? message = const $CopyWithPlaceholder(),
     Object? requestId = const $CopyWithPlaceholder(),
+    Object? serverTime = const $CopyWithPlaceholder(),
   }) {
     return ErrorBody(
       code: code == const $CopyWithPlaceholder()
@@ -77,6 +84,10 @@ class _$ErrorBodyCWProxyImpl implements _$ErrorBodyCWProxy {
           ? _value.requestId
           // ignore: cast_nullable_to_non_nullable
           : requestId as String?,
+      serverTime: serverTime == const $CopyWithPlaceholder()
+          ? _value.serverTime
+          // ignore: cast_nullable_to_non_nullable
+          : serverTime as String?,
     );
   }
 }
@@ -91,21 +102,27 @@ extension $ErrorBodyCopyWith on ErrorBody {
 // JsonSerializableGenerator
 // **************************************************************************
 
-ErrorBody _$ErrorBodyFromJson(Map<String, dynamic> json) =>
-    $checkedCreate('ErrorBody', json, ($checkedConvert) {
-      $checkKeys(json, requiredKeys: const ['code', 'message']);
-      final val = ErrorBody(
-        code: $checkedConvert('code', (v) => v as String),
-        detail: $checkedConvert('detail', (v) => v as String?),
-        message: $checkedConvert('message', (v) => v as String),
-        requestId: $checkedConvert('request_id', (v) => v as String?),
-      );
-      return val;
-    }, fieldKeyMap: const {'requestId': 'request_id'});
+ErrorBody _$ErrorBodyFromJson(Map<String, dynamic> json) => $checkedCreate(
+  'ErrorBody',
+  json,
+  ($checkedConvert) {
+    $checkKeys(json, requiredKeys: const ['code', 'message']);
+    final val = ErrorBody(
+      code: $checkedConvert('code', (v) => v as String),
+      detail: $checkedConvert('detail', (v) => v as String?),
+      message: $checkedConvert('message', (v) => v as String),
+      requestId: $checkedConvert('request_id', (v) => v as String?),
+      serverTime: $checkedConvert('server_time', (v) => v as String?),
+    );
+    return val;
+  },
+  fieldKeyMap: const {'requestId': 'request_id', 'serverTime': 'server_time'},
+);
 
 Map<String, dynamic> _$ErrorBodyToJson(ErrorBody instance) => <String, dynamic>{
   'code': instance.code,
   'detail': ?instance.detail,
   'message': instance.message,
   'request_id': ?instance.requestId,
+  'server_time': ?instance.serverTime,
 };

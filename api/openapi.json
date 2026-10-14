@@ -833,6 +833,46 @@
         "title": "CacheInfo",
         "type": "object"
       },
+      "CaptchaVerification": {
+        "properties": {
+          "challenge_id": {
+            "maxLength": 128,
+            "minLength": 8,
+            "title": "Challenge Id",
+            "type": "string"
+          },
+          "response": {
+            "maxLength": 512,
+            "minLength": 1,
+            "title": "Response",
+            "type": "string"
+          }
+        },
+        "required": [
+          "challenge_id",
+          "response"
+        ],
+        "title": "CaptchaVerification",
+        "type": "object"
+      },
+      "CaptchaVerificationOut": {
+        "properties": {
+          "accepted": {
+            "title": "Accepted",
+            "type": "boolean"
+          },
+          "access_restored": {
+            "title": "Access Restored",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "accepted",
+          "access_restored"
+        ],
+        "title": "CaptchaVerificationOut",
+        "type": "object"
+      },
       "ChangeExplanationInput": {
         "additionalProperties": false,
         "properties": {
@@ -2315,6 +2355,17 @@
               }
             ],
             "title": "Request Id"
+          },
+          "server_time": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Server Time"
           }
         },
         "required": [
@@ -10019,6 +10070,11 @@
             "title": "Refresh Token",
             "type": "string"
           },
+          "request_signing_key": {
+            "description": "当前设备请求签名密钥；仅在登录或刷新响应中返回，不会写入日志",
+            "title": "Request Signing Key",
+            "type": "string"
+          },
           "user": {
             "$ref": "#/components/schemas/UserOut"
           }
@@ -10027,6 +10083,7 @@
           "access_token",
           "access_expires_in",
           "refresh_token",
+          "request_signing_key",
           "user"
         ],
         "title": "TokenPair",
@@ -19324,6 +19381,67 @@
         "summary": "Revise Record",
         "tags": [
           "records"
+        ]
+      }
+    },
+    "/v1/risk/captcha": {
+      "post": {
+        "operationId": "verify_captcha",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CaptchaVerification"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CaptchaVerificationOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "参数错误"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "服务端错误"
+          }
+        },
+        "summary": "完成访问安全验证",
+        "tags": [
+          "risk"
         ]
       }
     },

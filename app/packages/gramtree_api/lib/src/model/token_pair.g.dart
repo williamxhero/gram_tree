@@ -13,6 +13,8 @@ abstract class _$TokenPairCWProxy {
 
   TokenPair refreshToken(String refreshToken);
 
+  TokenPair requestSigningKey(String requestSigningKey);
+
   TokenPair user(UserOut user);
 
   /// This function **does support** nullification of nullable fields. All `null` values passed to `non-nullable` fields will be ignored. You can also use `TokenPair(...).copyWith.fieldName(...)` to override fields one at a time with nullification support.
@@ -25,6 +27,7 @@ abstract class _$TokenPairCWProxy {
     int accessExpiresIn,
     String accessToken,
     String refreshToken,
+    String requestSigningKey,
     UserOut user,
   });
 }
@@ -47,6 +50,10 @@ class _$TokenPairCWProxyImpl implements _$TokenPairCWProxy {
       this(refreshToken: refreshToken);
 
   @override
+  TokenPair requestSigningKey(String requestSigningKey) =>
+      this(requestSigningKey: requestSigningKey);
+
+  @override
   TokenPair user(UserOut user) => this(user: user);
 
   @override
@@ -60,6 +67,7 @@ class _$TokenPairCWProxyImpl implements _$TokenPairCWProxy {
     Object? accessExpiresIn = const $CopyWithPlaceholder(),
     Object? accessToken = const $CopyWithPlaceholder(),
     Object? refreshToken = const $CopyWithPlaceholder(),
+    Object? requestSigningKey = const $CopyWithPlaceholder(),
     Object? user = const $CopyWithPlaceholder(),
   }) {
     return TokenPair(
@@ -75,6 +83,10 @@ class _$TokenPairCWProxyImpl implements _$TokenPairCWProxy {
           ? _value.refreshToken
           // ignore: cast_nullable_to_non_nullable
           : refreshToken as String,
+      requestSigningKey: requestSigningKey == const $CopyWithPlaceholder()
+          ? _value.requestSigningKey
+          // ignore: cast_nullable_to_non_nullable
+          : requestSigningKey as String,
       user: user == const $CopyWithPlaceholder()
           ? _value.user
           // ignore: cast_nullable_to_non_nullable
@@ -103,6 +115,7 @@ TokenPair _$TokenPairFromJson(Map<String, dynamic> json) => $checkedCreate(
         'access_expires_in',
         'access_token',
         'refresh_token',
+        'request_signing_key',
         'user',
       ],
     );
@@ -113,6 +126,10 @@ TokenPair _$TokenPairFromJson(Map<String, dynamic> json) => $checkedCreate(
       ),
       accessToken: $checkedConvert('access_token', (v) => v as String),
       refreshToken: $checkedConvert('refresh_token', (v) => v as String),
+      requestSigningKey: $checkedConvert(
+        'request_signing_key',
+        (v) => v as String,
+      ),
       user: $checkedConvert(
         'user',
         (v) => UserOut.fromJson(v as Map<String, dynamic>),
@@ -124,6 +141,7 @@ TokenPair _$TokenPairFromJson(Map<String, dynamic> json) => $checkedCreate(
     'accessExpiresIn': 'access_expires_in',
     'accessToken': 'access_token',
     'refreshToken': 'refresh_token',
+    'requestSigningKey': 'request_signing_key',
   },
 );
 
@@ -131,5 +149,6 @@ Map<String, dynamic> _$TokenPairToJson(TokenPair instance) => <String, dynamic>{
   'access_expires_in': instance.accessExpiresIn,
   'access_token': instance.accessToken,
   'refresh_token': instance.refreshToken,
+  'request_signing_key': instance.requestSigningKey,
   'user': instance.user.toJson(),
 };
