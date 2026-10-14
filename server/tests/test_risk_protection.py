@@ -228,7 +228,7 @@ def test_subnet_new_accounts_trigger_but_repeated_existing_login_does_not(api: A
     rows = actions(capsys)
     assert any(row["rule"] == "subnet_new_accounts" for row in rows)
     assert "192.0.2.5" not in json.dumps(rows)
-    assert first["user_id"] != last["user_id"]
+    assert first["user"]["id"] != last["user"]["id"]
 
 
 def test_captcha_expiry_cannot_reuse_old_answer(api: Api) -> None:
