@@ -42,22 +42,29 @@ void main() {
     // even when a prior reveal left the list at its maximum extent.
     position.jumpTo(position.minScrollExtent);
     await tester.pumpAndSettle();
-    for (var i = 0; i < 300 && finder.evaluate().isEmpty; i++) {
-      position.jumpTo(
-        (position.pixels + step).clamp(
-          position.minScrollExtent,
-          position.maxScrollExtent,
-        ),
-      );
-      await tester.pump(const Duration(milliseconds: 100));
+    for (var i = 0; i < 300; i++) {
+      if (finder.evaluate().isNotEmpty) {
+        await Scrollable.ensureVisible(
+          tester.element(finder),
+          alignment: 0.5,
+          alignmentPolicy: ScrollPositionAlignmentPolicy.explicit,
+        );
+        await tester.pumpAndSettle();
+        // Async sections above the target can grow during layout and unmount
+        // it again. Finish only after the settled target remains hittable.
+        if (finder.hitTestable().evaluate().isNotEmpty) break;
+      } else {
+        position.jumpTo(
+          (position.pixels + step).clamp(
+            position.minScrollExtent,
+            position.maxScrollExtent,
+          ),
+        );
+        await tester.pump(const Duration(milliseconds: 100));
+      }
     }
     expect(finder, findsOneWidget);
-    await Scrollable.ensureVisible(
-      tester.element(finder),
-      alignment: 0.5,
-      alignmentPolicy: ScrollPositionAlignmentPolicy.explicit,
-    );
-    await tester.pumpAndSettle();
+    expect(finder.hitTestable(), findsOneWidget);
   }
 
   Future<void> reopen(WidgetTester tester) async {
@@ -111,7 +118,7 @@ void main() {
         find.byKey(const ValueKey('code-input')),
         code.data['code'] as String,
       );
-      await waitFor(tester, find.text('先添加一道你常做的菜'));
+      await waitFor(tester, find.text('今天还没有安排'));
       await tester.tap(find.text('我的'));
       await tester.pumpAndSettle();
       await tester.tap(find.byKey(const ValueKey('taste-profile-entry')));
