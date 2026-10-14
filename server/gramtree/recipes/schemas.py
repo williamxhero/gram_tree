@@ -476,10 +476,22 @@ class RecipeVersionCreate(RecipeSnapshotInput):
         # Keep ignoring those, but reject attempts to supply immutable ancestry
         # or server-owned publication facts explicitly.
         protected = {
-            "source_version_id", "source_recipe_id", "root_recipe_id", "source_path",
-            "source_attribution", "branch_type", "publication_state", "visibility",
-            "ever_public", "withdrawn", "verification_record_id", "derived_record_id",
-            "baseline_record_id", "verified_at", "published_at", "eligibility",
+            "source_version_id",
+            "source_recipe_id",
+            "root_recipe_id",
+            "source_path",
+            "source_attribution",
+            "branch_type",
+            "publication_state",
+            "visibility",
+            "ever_public",
+            "withdrawn",
+            "verification_record_id",
+            "derived_record_id",
+            "baseline_record_id",
+            "verified_at",
+            "published_at",
+            "eligibility",
         }
         if isinstance(value, dict) and protected.intersection(value):
             raise ValueError("来源关系和公开事实只能由服务端登记")
