@@ -35,7 +35,8 @@ Future<void> _wait(WidgetTester tester, Finder finder) async {
 }
 
 Future<void> _reveal(WidgetTester tester, Finder finder) async {
-  tester.testTextInput.hide();
+  FocusManager.instance.primaryFocus?.unfocus();
+  if (tester.testTextInput.isRegistered) tester.testTextInput.hide();
   final body = _key('recipe-detail-content');
   if (finder.evaluate().isEmpty) {
     for (var i = 0; i < 12; i++) {
