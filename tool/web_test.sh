@@ -18,6 +18,9 @@ cd "$ROOT/app"
 CHROMEDRIVER="${CHROMEDRIVER:-chromedriver}"
 FLUTTER="${FLUTTER:-flutter}"
 PORT="${CHROMEDRIVER_PORT:-4444}"
+# Random Flutter ports can land on Chrome's blocked-port list (for example 6000)
+# and leave the driver waiting on an error page. Parallel runs can override this.
+WEB_PORT="${GRAMTREE_E2E_WEB_PORT:-7357}"
 if [[ $# -gt 0 ]]; then
   targets=("$@")
 else
@@ -72,7 +75,7 @@ for target in "${targets[@]}"; do
   "$FLUTTER" drive --timeout=300 --profile --no-web-resources-cdn \
     --driver=test_driver/integration_test.dart --driver-port="$PORT" \
     --target="$target" \
-    -d web-server --browser-name=chrome --headless --driver-port="$PORT" \
+    -d web-server --web-port="$WEB_PORT" --browser-name=chrome --headless --driver-port="$PORT" \
     ${CHROME_EXECUTABLE:+--chrome-binary="$CHROME_EXECUTABLE"} \
     --dart-define=APP_ENV=dev \
     --dart-define=API_BASE_URL="$API_BASE_URL" \
