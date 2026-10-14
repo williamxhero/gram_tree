@@ -46,10 +46,19 @@ def test_export_download_expires_at_boundary_and_cleanup_removes_archive(api: Ap
     assert expires_at - completed_at == timedelta(days=1)
 
     # Refresh the access token immediately before expiry so this assertion tests the
-    # export expiry boundary rather than the shorter access-token lifetime.
-    login_at = expires_at - timedelta(seconds=62)
-    api.clock.advance(seconds=(login_at - api.clock.now).total_seconds())
-    tokens = api.login(email)
+    # export expiry boundary rather than the shorter access-token lifetime. The shared
+    # Api.login helper advances the clock for resend tests, so use its HTTP steps here
+    # without that post-login test-time advance.
+    api.clock.advance(seconds=(expires_at - timedelta(seconds=30) - api.clock.now).total_seconds())
+    sent = api.send_code(email)
+    assert sent.status_code == 200, sent.text
+    login = api.client.post(
+        "/v1/auth/email/login",
+        json={"email": email, "code": api.latest_code(email)},
+    )
+    assert login.status_code == 200, login.text
+    tokens = login.json()
+    api.clock.advance(seconds=29)
     assert api.clock.now == expires_at - timedelta(seconds=1)
     assert api.client.get(download_url, headers=bearer(tokens)).status_code == 200
 
