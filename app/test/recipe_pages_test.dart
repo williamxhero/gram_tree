@@ -1648,16 +1648,43 @@ void main() {
           'recipe.scaling_round_deviation_threshold': 0.9,
         },
       );
-      await pumpApp(tester, env: offline);
+      // Match the Android process-death harness's viewport and text scale.
+      await pumpApp(
+        tester,
+        env: offline,
+        size: const Size(320, 640),
+        textScale: 1.5,
+      );
       ProviderScope.containerOf(tester.element(find.byType(Scaffold).first))
           .read(routerProvider)
           .go('/recipes/$_recipeId');
       await tester.pumpAndSettle();
-      expect(find.textContaining('离线快照'), findsOneWidget);
-      await _scrollToBottom(tester);
+      expect(find.textContaining('离线快照 · 第 1 版'), findsOneWidget);
+      await _scrollUntilVisible(tester, find.textContaining('已保存 3 份'));
+      expect(
+        find.text('已保存 3 份的用量与换算结果；缺少口味结果，修改换算需要联网。').hitTestable(),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(const ValueKey('recipe-serving-control')),
+        findsNothing,
+      );
+      expect(find.byKey(const ValueKey('recipe-measure-picker')), findsNothing);
+      expect(
+        find.byKey(const ValueKey('recipe-display-mode-base')),
+        findsNothing,
+      );
+      await _scrollUntilVisible(
+        tester,
+        find.byKey(const ValueKey('recipe-ingredient-amount-ingredient-1')),
+      );
       expect(find.text('150 克'), findsWidgets);
+      final source = find.byKey(
+        const ValueKey('recipe-source-mark-ingredient-1'),
+      );
+      await _scrollUntilVisible(tester, source);
       expect(find.text('按场景调整'), findsOneWidget);
-      await tester.tap(find.text('按场景调整'));
+      await tester.tap(source);
       await tester.pumpAndSettle();
       expect(find.text('原来：100 g'), findsOneWidget);
       expect(find.text('现在：150 克'), findsOneWidget);

@@ -421,7 +421,9 @@ Future<void> _restore(
     reason: 'recipe detail mounted',
   );
   await _reveal(tester, find.textContaining('离线快照 · 第 1 版'));
-  await _reveal(tester, find.textContaining('已保存 3 份的用量与换算结果；离线只读'));
+  // This seed has no cached taste result: restore the frozen conversion, not
+  // the offline-personalization branch that allows changing servings.
+  await _reveal(tester, find.text('已保存 3 份的用量与换算结果；缺少口味结果，修改换算需要联网。'));
   final amount = find.byKey(
     const ValueKey('recipe-ingredient-amount-$_ingredientId'),
   );
