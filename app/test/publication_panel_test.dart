@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 import 'package:gram_tree/auth/auth_controller.dart';
 import 'package:gram_tree/auth/session.dart';
 import 'package:gram_tree/events/event_uploader.dart';
@@ -353,6 +354,14 @@ void main() {
         ),
       );
       expect(find.textContaining('改良自 @原作者《番茄汤》第 3 版'), findsOneWidget);
+      expect(
+        find.text('保留精确来源版本，来源署名和关系不能修改或删除。'),
+        detail == 'brief' ? findsNothing : findsOneWidget,
+      );
+      expect(
+        find.text('来源关系永久保留；下架来源不提供隐藏内容。'),
+        detail == 'detailed' ? findsOneWidget : findsNothing,
+      );
       await tester.tap(find.byKey(const ValueKey('source-attribution-chain')));
       await tester.pumpAndSettle();
       expect(find.textContaining('已注销用户'), findsOneWidget);
@@ -367,12 +376,15 @@ void main() {
     'publication labels distinguish version verification from numeric evidence',
     (tester) async {
       await tester.pumpWidget(
-        const MaterialApp(
-          home: Scaffold(
+        MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: const Scaffold(
             body: PublicationStateLabel(state: 'pending_verification'),
           ),
         ),
       );
+      await tester.pumpAndSettle();
       expect(find.text('已公开 · 待验证'), findsOneWidget);
       expect(find.text('已验证'), findsNothing);
     },
@@ -529,9 +541,142 @@ void main() {
       await mount(tester, env, (_) => const PublicationNotices());
       expect(find.textContaining('CC BY-NC-SA 4.0'), findsOneWidget);
       expect(find.text('同意许可'), findsNothing);
+      expect(
+        env.server.calls(
+          'POST',
+          '/v1/recipes/publication/notifications/acknowledge',
+        ),
+        isEmpty,
+      );
+      final navigator = Navigator.of(
+        tester.element(find.byType(PublicationNotices)),
+      );
+      unawaited(
+        navigator.push(
+          MaterialPageRoute<void>(
+            builder: (_) => const Scaffold(body: Text('其他页面')),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('其他页面'), findsOneWidget);
+      expect(
+        env.server.calls(
+          'POST',
+          '/v1/recipes/publication/notifications/acknowledge',
+        ),
+        isEmpty,
+      );
+      navigator.pop();
+      await tester.pumpAndSettle();
+      expect(find.textContaining('CC BY-NC-SA 4.0'), findsOneWidget);
+      await tester.tap(find.text('知道了'));
+      await tester.pumpAndSettle();
+      final acknowledgements = env.server.calls(
+        'POST',
+        '/v1/recipes/publication/notifications/acknowledge',
+      );
+      expect(acknowledgements, hasLength(1));
+      expect((acknowledgements.single.body as Map)['license_seen'], isTrue);
+      expect(find.textContaining('CC BY-NC-SA 4.0'), findsNothing);
       await tester.pumpWidget(const SizedBox.shrink());
       await mount(tester, env, (_) => const PublicationNotices());
       expect(find.textContaining('CC BY-NC-SA 4.0'), findsNothing);
+      expect(
+        env.server.calls(
+          'POST',
+          '/v1/recipes/publication/notifications/acknowledge',
+        ),
+        hasLength(1),
+      );
+    },
+  );
+
+  testWidgets(
+    'publication notices page all 101 items with explicit bounded retryable dismissal',
+    (tester) async {
+      final env = TestEnv.signedIn();
+      const endpoint = '/v1/recipes/publication/notifications';
+      var failAck = true;
+      var licenseSeen = false;
+      String noticeId(int n) =>
+          '55555555-5555-4555-8555-${n.toString().padLeft(12, '0')}';
+      Map<String, Object?> notice(int n) => {
+        'id': noticeId(n),
+        'recipe_id': recipeId,
+        'version_id': versionId,
+        'version_number': n,
+        'message': '第 $n 版已公开',
+        'title': '番茄汤',
+      };
+      env.server.on('GET', endpoint, (request) {
+        expect(request.query['limit'], 20);
+        final offset = int.parse(request.query['cursor'] as String? ?? '0');
+        final last = offset == 100;
+        return (
+          200,
+          {
+            'items': [
+              for (var n = offset + 1; n <= (last ? 101 : offset + 20); n++)
+                notice(n),
+            ],
+            'next_cursor': last ? null : '${offset + 20}',
+            'license_notice': licenseSeen ? null : 'CC BY-NC-SA 4.0',
+          },
+        );
+      });
+      env.server.on('POST', '$endpoint/acknowledge', (request) {
+        if (failAck) return FakeServer.error(503, 'retry', '稍后重试');
+        licenseSeen =
+            (request.body as Map)['license_seen'] == true || licenseSeen;
+        return (204, null);
+      });
+      await mount(tester, env, (_) => const PublicationNotices());
+      expect(find.text('第 1 版已公开'), findsOneWidget);
+      expect(find.text('第 20 版已公开'), findsOneWidget);
+      expect(env.server.calls('POST', '$endpoint/acknowledge'), isEmpty);
+      await tester.ensureVisible(find.text('查看下一页公开提示'));
+      await tester.tap(find.text('查看下一页公开提示'));
+      await tester.pumpAndSettle();
+      expect(find.text('第 20 版已公开'), findsOneWidget);
+      expect(env.server.calls('GET', endpoint), hasLength(1));
+      failAck = false;
+      for (var page = 0; page < 5; page++) {
+        await tester.ensureVisible(find.text('查看下一页公开提示'));
+        await tester.tap(find.text('查看下一页公开提示'));
+        await tester.pumpAndSettle();
+        expect(find.text('第 ${page * 20 + 21} 版已公开'), findsOneWidget);
+        expect(find.textContaining('CC BY-NC-SA'), findsNothing);
+      }
+      expect(find.text('第 101 版已公开'), findsOneWidget);
+      expect(find.text('第 100 版已公开'), findsNothing);
+      expect(find.textContaining('CC BY-NC-SA'), findsNothing);
+      await tester.ensureVisible(find.text('知道了'));
+      await tester.tap(find.text('知道了'));
+      await tester.pumpAndSettle();
+      expect(find.text('第 101 版已公开'), findsNothing);
+      final calls = env.server.calls('POST', '$endpoint/acknowledge').toList();
+      expect(calls, hasLength(7));
+      expect(env.server.calls('GET', endpoint), hasLength(6));
+      expect((calls.first.body as Map)['notification_ids'], hasLength(20));
+      final acknowledged = <Object?>[];
+      for (var page = 0; page < 6; page++) {
+        final body = calls[page + 1].body as Map;
+        final ids = body['notification_ids'] as List;
+        expect(ids.length, lessThanOrEqualTo(100));
+        expect(ids, [
+          for (
+            var n = page * 20 + 1;
+            n <= (page == 5 ? 101 : page * 20 + 20);
+            n++
+          )
+            noticeId(n),
+        ]);
+        expect(body['license_seen'], page == 0);
+        acknowledged.addAll(ids);
+      }
+      expect(acknowledged, hasLength(101));
+      expect(acknowledged.toSet(), hasLength(101));
     },
   );
 
@@ -660,6 +805,141 @@ void main() {
     );
   }
 
+  for (final choice in ['cancel', 'taste', 'branch']) {
+    testWidgets(
+      'actual router improvement $choice preserves visible navigation',
+      (tester) async {
+        final env = TestEnv.signedIn();
+        const branchId = '55555555-5555-4555-8555-555555555555';
+        final source = publicationRecipeFixture().toJson();
+        (source['author'] as Map)['id'] =
+            '77777777-7777-4777-8777-777777777777';
+        source['visibility'] = 'public';
+        source['ever_public'] = true;
+        (source['version'] as Map)['publication_state'] = 'published';
+        final branch = publicationRecipeFixture().toJson();
+        branch['id'] = branchId;
+        (branch['dish'] as Map)['name'] = '我的改良番茄汤';
+        env.server.on('GET', '/v1/recipes/$recipeId', (_) => (200, source));
+        env.server.on('GET', '/v1/recipes/$branchId', (_) => (200, branch));
+        env.server.on(
+          'GET',
+          '/v1/recipes/$branchId/publication',
+          (_) => (200, panelFixture()),
+        );
+        env.server.on(
+          'POST',
+          '/v1/recipes/$recipeId/improvement-drafts',
+          (_) => (
+            201,
+            ImprovementDraftOut(
+              id: '44444444-4444-4444-8444-444444444444',
+              sourceRecipeId: recipeId,
+              sourceVersionId: versionId,
+              snapshot: publicationRecipeFixture().version.snapshot,
+              dishName: '番茄汤',
+              aiAssisted: false,
+            ).toJson(),
+          ),
+        );
+        env.server.on(
+          'POST',
+          '/v1/recipes/$recipeId/improvements/preview',
+          (_) => (200, improvementPreviewFixture()),
+        );
+        env.server.on(
+          'POST',
+          '/v1/recipes/$recipeId/improvements',
+          (_) => (
+            201,
+            {
+              'outcome': choice,
+              'recipe': choice == 'branch' ? branch : null,
+              'profile_version': choice == 'taste' ? 3 : null,
+            },
+          ),
+        );
+        await pumpApp(tester, env: env);
+        unawaited(
+          GoRouter.of(tester.element(find.byType(Scaffold).first))
+              .push<void>('/recipes/$recipeId'),
+        );
+        await tester.pumpAndSettle();
+        final start = find.byKey(const ValueKey('improve-recipe-button'));
+        await tester.ensureVisible(start);
+        await tester.pumpAndSettle();
+        await tester.tap(start);
+        await tester.pumpAndSettle();
+        expect(
+          find.byKey(const ValueKey('recipe-editor-content')),
+          findsOneWidget,
+        );
+        expect(find.textContaining('改良工作副本'), findsOneWidget);
+        await saveEditor(tester);
+        expect(find.text('这个改动更像个人口味'), findsOneWidget);
+        if (choice == 'cancel') {
+          await tester.tap(find.text('取消'));
+          await tester.pumpAndSettle();
+          expect(
+            find.byKey(const ValueKey('recipe-editor-content')),
+            findsOneWidget,
+          );
+          expect(
+            env.server.calls('POST', '/v1/recipes/$recipeId/improvements'),
+            isEmpty,
+          );
+          expect(env.server.calls('POST', '/v1/recipes'), isEmpty);
+          expect(tester.takeException(), isNull);
+          await tester.pumpWidget(const SizedBox.shrink());
+          return;
+        } else {
+          await tester.tap(find.byKey(ValueKey('improvement-save-$choice')));
+        }
+        await tester.pumpAndSettle();
+        expect(
+          find.byKey(const ValueKey('recipe-editor-content')),
+          findsNothing,
+        );
+        expect(
+          find.byKey(const ValueKey('recipe-detail-content')),
+          findsOneWidget,
+        );
+        if (choice == 'branch') {
+          expect(find.text('我的改良番茄汤'), findsWidgets);
+          expect(env.server.calls('GET', '/v1/recipes/$branchId'), isNotEmpty);
+          await tester.binding.handlePopRoute();
+          await tester.pumpAndSettle();
+          expect(
+            find.byKey(const ValueKey('recipe-detail-content')),
+            findsOneWidget,
+          );
+          expect(
+            find.byKey(const ValueKey('improve-recipe-button')),
+            findsOneWidget,
+          );
+          expect(find.text('我的改良番茄汤'), findsNothing);
+        } else {
+          expect(
+            find.byKey(const ValueKey('improve-recipe-button')),
+            findsOneWidget,
+          );
+        }
+        final saves = env.server.calls(
+          'POST',
+          '/v1/recipes/$recipeId/improvements',
+        );
+        expect(saves, choice == 'cancel' ? isEmpty : hasLength(1));
+        if (saves.isNotEmpty) {
+          expect((saves.single.body as Map)['microadjust_choice'], choice);
+          expect((saves.single.body as Map)['source_version_id'], versionId);
+        }
+        expect(env.server.calls('POST', '/v1/recipes'), isEmpty);
+        expect(tester.takeException(), isNull);
+        await tester.pumpWidget(const SizedBox.shrink());
+      },
+    );
+  }
+
   testWidgets('mounted notices refresh after confirmed queued record upload', (
     tester,
   ) async {
@@ -777,13 +1057,21 @@ void main() {
       await mountImprovement(tester, env);
       await saveEditor(tester);
       expect(find.text('非用量微调不能转换'), findsOneWidget);
+      await tester.tap(find.byKey(const ValueKey('improvement-save-taste')));
+      await tester.pumpAndSettle();
+      expect(find.text('非用量微调不能转换'), findsOneWidget);
+      expect(find.byType(AlertDialog), findsOneWidget);
       expect(
-        tester
-            .widget<OutlinedButton>(
-              find.byKey(const ValueKey('improvement-save-taste')),
-            )
-            .onPressed,
-        isNull,
+        env.server.calls('POST', '/v1/recipes/$recipeId/improvements'),
+        isEmpty,
+      );
+      expect(
+        (await env.eventQueue.entries(ownerId: env.server.user.id)).where(
+          (entry) =>
+              entry.write.eventType == 'recipe.improvement_saved_to_taste' ||
+              entry.write.eventType == 'recipe.improvement_created',
+        ),
+        isEmpty,
       );
       await tester.tap(find.text('取消'));
       await tester.pumpAndSettle();

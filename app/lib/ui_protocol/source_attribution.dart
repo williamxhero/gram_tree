@@ -9,6 +9,7 @@ import 'components/component_scaffold.dart';
 import 'intent_dispatcher.dart';
 import 'recipe_operations.dart';
 import '../util/ids.dart';
+import '../l10n/app_localizations.dart';
 
 /// Recipe lineage is not a numeric evidence mark. It cannot be skipped or
 /// hidden by the chosen composition/detail level, including local fallbacks.
@@ -26,14 +27,15 @@ class SourceAttributionCard extends ConsumerWidget {
     final data = attribution is Map
         ? Map<String, dynamic>.from(attribution as Map)
         : <String, dynamic>{};
-    final label = _label(data);
+    final l10n = AppLocalizations.of(context);
+    final label = _label(l10n, data);
     final chain = data['chain'] is List ? data['chain'] as List : const [];
     final compositionId = 'source-${data['source_version_id'] ?? newUuidV4()}';
     Future<void> showChain() async {
       await showDialog<void>(
         context: context,
         builder: (context) => AlertDialog(
-          title: const Text('到根菜谱的来源链'),
+          title: Text(l10n.sourceChainTitle),
           content: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -44,17 +46,19 @@ class SourceAttributionCard extends ConsumerWidget {
                   if (node is Map)
                     Padding(
                       padding: const EdgeInsets.only(top: 12),
-                      child: Text(_label(Map<String, dynamic>.from(node))),
+                      child: Text(
+                        _label(l10n, Map<String, dynamic>.from(node)),
+                      ),
                     ),
                 const SizedBox(height: 12),
-                const Text('来源关系永久保留；下架来源不提供隐藏内容。'),
+                Text(l10n.sourceChainPreserved),
               ],
             ),
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text('关闭'),
+              child: Text(l10n.familyClose),
             ),
           ],
         ),
@@ -66,27 +70,37 @@ class SourceAttributionCard extends ConsumerWidget {
       child: Builder(
         builder: (context) => ComponentCard(
           key: const ValueKey('source-attribution'),
-          // Even brief displays the attribution and chain action.
-          detail: ComponentDescriptorDetailEnum.standard,
-          conclusion: Text(label),
+          detail: ComponentDescriptorDetailEnum.values.firstWhere(
+            (value) => value.value == detail,
+            orElse: () => ComponentDescriptorDetailEnum.standard,
+          ),
+          preserveConclusionSemantics: true,
           conclusionSemanticsText: label,
-          basisText: '保留精确来源版本，来源署名和关系不能修改或删除。',
-          standardExtra: TextButton(
-            key: const ValueKey('source-attribution-chain'),
-            onPressed: () => unawaited(
-              ref
-                  .read(intentDispatcherProvider)
-                  .dispatch(
-                    context,
-                    compositionId: compositionId,
-                    componentId: 'source-attribution',
-                    action: ActionDescriptor(
-                      intent: 'recipe_operation',
-                      params: {'operation': 'source_chain'},
-                    ),
-                  ),
-            ),
-            child: const Text('查看来源链'),
+          basisText: l10n.sourceImmutableBasis,
+          detailedExtra: Text(l10n.sourceChainPreserved),
+          // The chain is the primary action, available even in brief.
+          conclusion: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(label),
+              TextButton(
+                key: const ValueKey('source-attribution-chain'),
+                onPressed: () => unawaited(
+                  ref
+                      .read(intentDispatcherProvider)
+                      .dispatch(
+                        context,
+                        compositionId: compositionId,
+                        componentId: 'source-attribution',
+                        action: ActionDescriptor(
+                          intent: 'recipe_operation',
+                          params: {'operation': 'source_chain'},
+                        ),
+                      ),
+                ),
+                child: Text(l10n.sourceViewChain),
+              ),
+            ],
           ),
         ),
       ),
@@ -94,16 +108,16 @@ class SourceAttributionCard extends ConsumerWidget {
   }
 }
 
-String _label(Map<String, dynamic> data) {
+String _label(AppLocalizations l10n, Map<String, dynamic> data) {
   final raw = data['label'];
   final withdrawn =
       data['withdrawn'] == true || data['source_withdrawn'] == true;
   if (raw is String && raw.isNotEmpty) {
-    return '$raw${withdrawn && !raw.contains('已下架') ? ' · 已下架' : ''}';
+    return '$raw${withdrawn && !raw.contains(l10n.publicationWithdrawn) ? l10n.sourceWithdrawnSuffix : ''}';
   }
   final author =
       data['author_deleted'] == true || data['deleted_author'] == true
-      ? '已注销用户'
+      ? l10n.sourceDeletedAuthor
       : data['author'] ??
             data['author_name'] ??
             data['author_nickname'] ??
@@ -111,9 +125,14 @@ String _label(Map<String, dynamic> data) {
   final dish = data['title'] ?? data['dish_name'] ?? data['source_dish_name'];
   final number = data['version_number'] ?? data['source_version_number'];
   if (author == null || dish == null || number == null) {
-    return '来源署名暂不可用 · 来源关系仍永久保留';
+    return l10n.sourceUnavailable;
   }
-  return '改良自 @$author《$dish》第 $number 版${withdrawn ? ' · 已下架' : ''}';
+  return l10n.sourceLineage(
+    '$author',
+    '$dish',
+    '$number',
+    withdrawn ? l10n.sourceWithdrawnSuffix : '',
+  );
 }
 
 Widget buildSourceAttributionComponent(

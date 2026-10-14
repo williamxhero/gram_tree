@@ -4,6 +4,7 @@ import 'package:gramtree_api/gramtree_api.dart';
 
 import '../../api/api_client.dart';
 import '../../auth/auth_controller.dart';
+import '../../l10n/app_localizations.dart';
 import '../../ui_protocol/recipe_operations.dart';
 import '../../ui_protocol/intent_dispatcher.dart';
 import '../../util/ids.dart';
@@ -130,10 +131,10 @@ class _RecordCardState extends ConsumerState<_RecordCard> {
         SnackBar(
           content: Text(
             result.recipe == null
-                ? '已存进我的口味，没有生成改良版。'
+                ? AppLocalizations.of(context).improvementSavedTaste
                 : own
-                ? '已存为我的新一版；公开状态以服务端同步结果为准。'
-                : '已存成改良版；公开状态以服务端同步结果为准。',
+                ? AppLocalizations.of(context).recordSavedVersion
+                : AppLocalizations.of(context).recordSavedImprovement,
           ),
         ),
       );
@@ -153,16 +154,21 @@ class _RecordCardState extends ConsumerState<_RecordCard> {
     showDialog<void>(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text(record.dishName ?? '做菜记录'),
+        title: Text(
+          record.dishName ?? AppLocalizations.of(context).recordCookingTitle,
+        ),
         content: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const Text('当时显示的内容快照；来源下架后仍可回看。'),
+              Text(AppLocalizations.of(context).recordSnapshotGuidance),
               if (saved != null) ...[
                 Text(
-                  '第 ${saved.version.versionNumber} 版 · @${saved.author.nickname}',
+                  AppLocalizations.of(context).recordSnapshotVersion(
+                    saved.version.versionNumber,
+                    saved.author.nickname,
+                  ),
                 ),
                 for (final item
                     in saved.version.snapshot.ingredients ??
@@ -172,7 +178,7 @@ class _RecordCardState extends ConsumerState<_RecordCard> {
                     in saved.version.snapshot.steps ?? <RecipeStep>[])
                   Text(step.instruction),
               ] else
-                const Text('这条记录没有保留配方快照。'),
+                Text(AppLocalizations.of(context).recordNoSnapshot),
               for (final adjustment in record.adjustments) Text('$adjustment'),
             ],
           ),
@@ -180,7 +186,7 @@ class _RecordCardState extends ConsumerState<_RecordCard> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('关闭'),
+            child: Text(AppLocalizations.of(context).familyClose),
           ),
         ],
       ),
@@ -205,14 +211,18 @@ class _RecordCardState extends ConsumerState<_RecordCard> {
             key: ValueKey('record-${record.id}'),
             onTap: _showSnapshot,
             leading: const Icon(Icons.restaurant_outlined),
-            title: Text(record.dishName ?? '未命名菜谱'),
+            title: Text(
+              record.dishName ??
+                  AppLocalizations.of(context).recordUnnamedRecipe,
+            ),
             subtitle: Text(
               [
                 if (when != null) '${when.year}/${when.month}/${when.day}',
                 record.source_ == CookingRecordOutSource_Enum.cookingSession
-                    ? '做菜模式'
-                    : '手动记录',
-                if (record.adjustments.isNotEmpty) '有临时调整',
+                    ? AppLocalizations.of(context).recordCookingMode
+                    : AppLocalizations.of(context).recordManual,
+                if (record.adjustments.isNotEmpty)
+                  AppLocalizations.of(context).recordHasAdjustments,
               ].join(' · '),
             ),
             trailing: record.countsAsCooked
@@ -240,10 +250,10 @@ class _RecordCardState extends ConsumerState<_RecordCard> {
                             ),
                   child: Text(
                     _saving
-                        ? '正在保存…'
+                        ? AppLocalizations.of(context).recordSaving
                         : own
-                        ? '存为我的新一版'
-                        : '存成改良版',
+                        ? AppLocalizations.of(context).recordSaveVersion
+                        : AppLocalizations.of(context).recordSaveImprovement,
                   ),
                 ),
               ),

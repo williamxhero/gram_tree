@@ -276,6 +276,14 @@ void main() {
         binding.reportData = {
           ...?binding.reportData,
           'error': safeDiagnostic(error),
+          'visible_text': find
+              .byType(Text)
+              .evaluate()
+              .map((element) => (element.widget as Text).data)
+              .whereType<String>()
+              .take(40)
+              .map(safeDiagnostic)
+              .toList(),
           'stack': safeDiagnostic(stack),
         };
         rethrow;

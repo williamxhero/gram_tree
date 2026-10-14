@@ -943,8 +943,11 @@ class _RecipeEditorPageState extends ConsumerState<RecipeEditorPage> {
     if (result.recipe != null) {
       context.pushReplacement('/recipes/${result.recipe!.id}');
     } else {
-      ScaffoldMessenger.of(context)
-          .showSnackBar(const SnackBar(content: Text('已存进我的口味，没有生成改良版。')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(AppLocalizations.of(context).improvementSavedTaste),
+        ),
+      );
       context.pop();
     }
     return true;
@@ -1248,9 +1251,9 @@ class _RecipeEditorPageState extends ConsumerState<RecipeEditorPage> {
           padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
           children: [
             if (widget.improvementDraft == null && _loaded == null)
-              const Text('草稿仅自己可见；做过后满足条件会自动公开。'),
+              Text(l10n.publicationPrivateDraftGuidance),
             if (widget.improvementDraft != null) ...[
-              const Text('改良工作副本 · 做过后会自动公开。保存前可以取消，不会生成菜谱。'),
+              Text(l10n.improvementDraftGuidance),
               TextEditPanel(
                 key: ValueKey(
                   'improvement-text-${widget.improvementDraft!.id}',
@@ -1368,10 +1371,10 @@ class _RecipeEditorPageState extends ConsumerState<RecipeEditorPage> {
                         TextField(
                           key: const ValueKey('recipe-operation-command'),
                           decoration: InputDecoration(
-                            labelText: '一句话操作',
+                            labelText: l10n.publicationCommand,
                             hintText: widget.improvementDraft == null
-                                ? '检查可复刻性 / 请求量化 / 定位下一处 / 全部接受 / 暂不处理'
-                                : '保存改良版 / 检查可复刻性 / 定位下一处',
+                                ? l10n.publicationEditorCommandHint
+                                : l10n.improvementEditorCommandHint,
                           ),
                           onSubmitted: (text) {
                             final action = recipeCommand(text);
@@ -1401,8 +1404,8 @@ class _RecipeEditorPageState extends ConsumerState<RecipeEditorPage> {
             if (_form.aiAssisted) ...[
               Text(
                 _loaded == null && widget.improvementDraft == null
-                    ? 'AI 辅助 · 尚未做过验证'
-                    : 'AI 协助生成 · 本次编辑尚未保存',
+                    ? l10n.publicationAiUnverified
+                    : l10n.publicationAiUnsaved,
               ),
               SourceMark(
                 sourceType: sourceTypeAiEstimated,
@@ -1439,7 +1442,7 @@ class _RecipeEditorPageState extends ConsumerState<RecipeEditorPage> {
                         ? l10n.recipeSaving
                         : widget.improvementDraft == null
                         ? l10n.recipeSaveVersion
-                        : '保存改良版',
+                        : l10n.improvementSave,
                   ),
                 ),
               ),
@@ -3809,11 +3812,7 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
           .read(recipeRepositoryProvider)
           .startImprovement(detail.id, detail.version.id);
       if (!mounted || ref.read(authProvider).value?.id != owner) return;
-      await Navigator.of(context).push<void>(
-        MaterialPageRoute(
-          builder: (_) => RecipeEditorPage(improvementDraft: draft),
-        ),
-      );
+      await context.push<void>(RecipeEditorPage.path, extra: draft);
     } catch (error) {
       if (mounted && ref.read(authProvider).value?.id == owner) {
         ScaffoldMessenger.of(
@@ -4321,13 +4320,13 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
                       FilledButton(
                         key: const ValueKey('improve-recipe-button'),
                         onPressed: _startingImprovement ? null : dispatch,
-                        child: const Text('我来改一版'),
+                        child: Text(l10n.improvementStart),
                       ),
                       TextField(
                         key: const ValueKey('improvement-command'),
-                        decoration: const InputDecoration(
-                          labelText: '一句话操作',
-                          hintText: '我来改一版',
+                        decoration: InputDecoration(
+                          labelText: l10n.publicationCommand,
+                          hintText: l10n.improvementStart,
                         ),
                         onSubmitted: (text) {
                           if (text.trim() == '我来改一版' && !_startingImprovement) {
@@ -4352,14 +4351,14 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
           if (detail.license != null)
             Text(detail.license!, key: const ValueKey('recipe-public-license')),
           for (final link in detail.sourceLinks ?? const <String>[])
-            SelectableText('原始来源：$link'),
+            SelectableText(l10n.sourceOriginalLink(link)),
           if (detail.version.aiAssisted) ...[
-            Text('AI 协助生成 · 发起作者 @${detail.author.nickname}'),
+            Text(l10n.sourceAiAuthor(detail.author.nickname)),
             SourceMark(
               sourceType: sourceTypeAiEstimated,
               componentId: 'recipe-ai-design',
               value: '菜谱设计',
-              basisText: snapshot.designRationale ?? 'AI 参与配方设计；公开验证状态见本版状态。',
+              basisText: snapshot.designRationale ?? l10n.publicationAiBasis,
               required: false,
               feedbackEnabled: false,
               onAction: null,
@@ -4415,7 +4414,7 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
               sourceAttribution:
                   detail.sourceAttribution ??
                   {
-                    'label': '作者 @${detail.author.nickname}',
+                    'label': l10n.sourceAuthor(detail.author.nickname),
                     'chain': <Object>[],
                   },
             ),

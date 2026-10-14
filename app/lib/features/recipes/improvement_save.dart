@@ -7,6 +7,7 @@ import '../../recipes/recipe_repository.dart';
 import '../../ui_protocol/intent_dispatcher.dart';
 import '../../ui_protocol/recipe_operations.dart';
 import 'comparison_cards.dart';
+import '../../l10n/app_localizations.dart';
 
 /// Both form and confirmed one-line proposals use the same server comparison,
 /// explicit microadjust choice and retry key. Cancelling never commits a branch.
@@ -64,6 +65,7 @@ Future<ImprovementSaveOut?> saveImprovementWithChoice(
                   ),
                 );
             final proposal = preview.tasteProposal;
+            final l10n = AppLocalizations.of(context);
             return AlertDialog(
               title: Text(preview.microadjustPrompt!),
               content: SingleChildScrollView(
@@ -72,33 +74,41 @@ Future<ImprovementSaveOut?> saveImprovementWithChoice(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     Text(
-                      '依据：${comparisonConclusionLabel(preview.comparison.conclusion.value)}；确定性规则判定，与来源精确版本比较。',
+                      l10n.improvementChoiceBasis(
+                        comparisonConclusionLabel(
+                          preview.comparison.conclusion.value,
+                        ),
+                      ),
                     ),
                     if (proposal.convertible) ...[
-                      Text('拟更新口味档案第 ${proposal.profileVersion} 版：'),
+                      Text(
+                        l10n.improvementProfileProposal(
+                          '${proposal.profileVersion}',
+                        ),
+                      ),
                       Text('${proposal.coefficients}'),
-                      const Text('确认后只更新我的口味，不生成菜谱。'),
+                      Text(l10n.improvementTasteOnly),
                     ] else
-                      Text(proposal.reason ?? '这些微调不能安全转换为口味系数，可坚持保存微调分支。'),
+                      Text(proposal.reason ?? l10n.improvementTasteUnavailable),
                   ],
                 ),
               ),
               actions: [
                 TextButton(
                   onPressed: () => Navigator.pop(dialogContext),
-                  child: const Text('取消'),
+                  child: Text(l10n.cancel),
                 ),
                 OutlinedButton(
                   key: const ValueKey('improvement-save-taste'),
                   onPressed: proposal.convertible
                       ? () => dispatch('improvement_taste')
                       : null,
-                  child: const Text('存进我的口味'),
+                  child: Text(l10n.improvementSaveTaste),
                 ),
                 FilledButton(
                   key: const ValueKey('improvement-save-branch'),
                   onPressed: () => dispatch('improvement_branch'),
-                  child: const Text('仍然保存'),
+                  child: Text(l10n.improvementSaveBranch),
                 ),
               ],
             );

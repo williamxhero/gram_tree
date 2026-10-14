@@ -21,6 +21,7 @@ import 'cooking_voice.dart';
 import 'press_hold_voice_question.dart';
 import '../records/records_repository.dart';
 import 'publication_panel.dart';
+import '../../l10n/app_localizations.dart';
 import '../../features/me/family_members_data.dart';
 import '../../features/me/allergies_data.dart';
 
@@ -521,7 +522,10 @@ class _CookingPageState extends ConsumerState<CookingPage>
     final completed = [...session.completed];
     if (delta > 0 && session.stepIndex >= 0) {
       final previous = session.steps[session.stepIndex].id;
-      if (!completed.contains(previous)) completed.add(previous);
+      if (!session.skipped.contains(previous) &&
+          !completed.contains(previous)) {
+        completed.add(previous);
+      }
     }
     // Forward navigation finishes the current step before entering its
     // dependent. Validate this candidate without saving it: another missing
@@ -638,7 +642,9 @@ class _CookingPageState extends ConsumerState<CookingPage>
     final currentIndex = session.stepIndex;
     if (currentIndex >= 0 && currentIndex < session.steps.length) {
       final current = session.steps[currentIndex].id;
-      if (!completed.contains(current)) completed.add(current);
+      if (!session.skipped.contains(current) && !completed.contains(current)) {
+        completed.add(current);
+      }
       if (!reached.contains(current)) reached.add(current);
     }
     final unfinished = session.steps
@@ -738,7 +744,10 @@ class _CookingPageState extends ConsumerState<CookingPage>
     final stepId = session.steps[session.stepIndex].id;
     if (session.skipped.contains(stepId)) return;
     await _save(
-      session.copyWith(skipped: [...session.skipped, stepId]),
+      session.copyWith(
+        skipped: [...session.skipped, stepId],
+        completed: session.completed.where((id) => id != stepId).toList(),
+      ),
       event: 'step_skip',
     );
   }
@@ -799,11 +808,11 @@ class _CookingPageState extends ConsumerState<CookingPage>
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('取消'),
+            child: Text(AppLocalizations.of(context).cancel),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(context, draft.trim()),
-            child: const Text('保存'),
+            child: Text(AppLocalizations.of(context).save),
           ),
         ],
       ),
@@ -823,7 +832,10 @@ class _CookingPageState extends ConsumerState<CookingPage>
   Future<void> _recordAdjustment() async {
     final session = _session;
     if (session == null || session.stepIndex < 0) return;
-    final ingredients = session.snapshot.detail.version.snapshot.ingredients ?? const <RecipeIngredient>[];
+    final l10n = AppLocalizations.of(context);
+    final ingredients =
+        session.snapshot.detail.version.snapshot.ingredients ??
+        const <RecipeIngredient>[];
     var mode = 'note';
     var ingredientId = ingredients.isEmpty ? null : ingredients.first.id;
     var draft = '';
@@ -832,24 +844,29 @@ class _CookingPageState extends ConsumerState<CookingPage>
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setDialogState) => AlertDialog(
-          title: const Text('记录临时调整'),
+          title: Text(l10n.cookingAdjustmentTitle),
           content: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
                 DropdownButtonFormField<String>(
                   initialValue: mode,
-                  decoration: const InputDecoration(labelText: '调整类型'),
+                  decoration: InputDecoration(
+                    labelText: l10n.cookingAdjustmentType,
+                  ),
                   items: [
-                    const DropdownMenuItem(value: 'note', child: Text('文字备注')),
+                    DropdownMenuItem(
+                      value: 'note',
+                      child: Text(l10n.cookingAdjustmentNote),
+                    ),
                     if (ingredients.isNotEmpty)
-                      const DropdownMenuItem(
+                      DropdownMenuItem(
                         value: 'quantity',
-                        child: Text('实际食材用量'),
+                        child: Text(l10n.cookingAdjustmentQuantity),
                       ),
-                    const DropdownMenuItem(
+                    DropdownMenuItem(
                       value: 'duration',
-                      child: Text('本步实际时长'),
+                      child: Text(l10n.cookingAdjustmentDuration),
                     ),
                   ],
                   onChanged: (value) => setDialogState(() {
@@ -861,7 +878,9 @@ class _CookingPageState extends ConsumerState<CookingPage>
                 if (mode == 'quantity')
                   DropdownButtonFormField<String>(
                     initialValue: ingredientId,
-                    decoration: const InputDecoration(labelText: '食材'),
+                    decoration: InputDecoration(
+                      labelText: l10n.cookingAdjustmentIngredient,
+                    ),
                     items: [
                       for (final item in ingredients)
                         DropdownMenuItem(
@@ -880,23 +899,24 @@ class _CookingPageState extends ConsumerState<CookingPage>
                       : const TextInputType.numberWithOptions(decimal: true),
                   decoration: InputDecoration(
                     labelText: mode == 'quantity'
-                        ? '实际用量（原单位）'
+                        ? l10n.cookingActualQuantity
                         : mode == 'duration'
-                        ? '实际时长（秒）'
+                        ? l10n.cookingActualDuration
                         : null,
-                    hintText: mode == 'note' ? '例如：少放一点盐' : null,
+                    hintText: mode == 'note'
+                        ? l10n.cookingAdjustmentHint
+                        : null,
                     errorText: error,
                   ),
                 ),
-                if (mode == 'note')
-                  const Text('文字备注会完整保留；要从记录保存精确做法，请填写实际用量或时长。'),
+                if (mode == 'note') Text(l10n.cookingAdjustmentExactGuidance),
               ],
             ),
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text('取消'),
+              child: Text(AppLocalizations.of(context).cancel),
             ),
             FilledButton(
               onPressed: () {
@@ -912,7 +932,9 @@ class _CookingPageState extends ConsumerState<CookingPage>
                                 (number > 86400 ||
                                     number != number.round()))))) {
                   setDialogState(
-                    () => error = mode == 'note' ? '请填写备注' : '请填写范围内的非负数值',
+                    () => error = mode == 'note'
+                        ? l10n.cookingAdjustmentNoteRequired
+                        : l10n.cookingAdjustmentNumberRequired,
                   );
                   return;
                 }
@@ -935,7 +957,7 @@ class _CookingPageState extends ConsumerState<CookingPage>
                   'created_at': DateTime.now().toUtc().toIso8601String(),
                 });
               },
-              child: const Text('保存'),
+              child: Text(AppLocalizations.of(context).save),
             ),
           ],
         ),
@@ -1128,11 +1150,12 @@ class _CookingPageState extends ConsumerState<CookingPage>
           padding: const EdgeInsets.all(24),
           children: [
             Text(
-              '已完成 ${session.snapshot.detail.dish.name}',
+              AppLocalizations.of(context)
+                  .cookingCompletedDish(session.snapshot.detail.dish.name),
               key: const ValueKey('cooking-complete'),
             ),
             const SizedBox(height: 16),
-            const Text('完成记录联网同步后，服务端会检查公开条件。'),
+            Text(AppLocalizations.of(context).cookingPublicationSyncGuidance),
             const PublicationNotices(),
           ],
         ),

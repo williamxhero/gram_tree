@@ -14,11 +14,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 /// 必显组件业务需求）。
 const Map<String, Set<String>> defaultRequiredComponentTypes = {
   'today': <String>{},
-  'recipe_detail': <String>{
-    'food_safety',
-    'allergen_notice',
-    'source_attribution',
-  },
+  'recipe_detail': <String>{'food_safety', 'allergen_notice'},
   'recipe_editor': <String>{'food_safety', 'allergen_notice'},
 };
 

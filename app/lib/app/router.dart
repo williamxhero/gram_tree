@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:gramtree_api/gramtree_api.dart' show GenerationResult;
+import 'package:gramtree_api/gramtree_api.dart'
+    show GenerationResult, ImprovementDraftOut;
 
 import '../auth/auth_controller.dart';
 import '../events/sync_status.dart';
@@ -128,6 +129,9 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (_, state) => RecipeEditorPage(
           generation: state.extra is GenerationResult
               ? state.extra as GenerationResult
+              : null,
+          improvementDraft: state.extra is ImprovementDraftOut
+              ? state.extra as ImprovementDraftOut
               : null,
         ),
       ),

@@ -19,7 +19,6 @@ class RecordsRepository {
         session.finishedAt == null ||
         session.finishedAt!.isBefore(session.startedAt) ||
         session.steps.isEmpty ||
-        session.completed.isEmpty ||
         session.completed.toSet().length != session.completed.length ||
         session.skipped.toSet().length != session.skipped.length ||
         session.completed.any(session.skipped.contains) ||

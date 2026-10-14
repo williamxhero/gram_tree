@@ -45,7 +45,6 @@ void main() {
     expect(defaultRequiredComponentTypes['recipe_detail'], {
       'food_safety',
       'allergen_notice',
-      'source_attribution',
     });
     expect(defaultRequiredComponentTypes['recipe_editor'], {
       'food_safety',

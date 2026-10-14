@@ -12,20 +12,22 @@ import '../../ui_protocol/components/component_scaffold.dart';
 import '../../ui_protocol/intent_dispatcher.dart';
 import '../../ui_protocol/recipe_operations.dart';
 import '../../util/ids.dart';
+import '../../l10n/app_localizations.dart';
 import 'comparison_cards.dart';
 
-String publicationLabel(String state) => switch (state) {
-  'published' => '已公开',
-  'pending_verification' => '已公开 · 待验证',
-  'withdrawn' => '已下架',
-  _ => '草稿 · 仅自己可见',
+String publicationLabel(AppLocalizations l10n, String state) => switch (state) {
+  'published' => l10n.publicationPublished,
+  'pending_verification' => l10n.publicationPending,
+  'withdrawn' => l10n.publicationWithdrawn,
+  _ => l10n.publicationDraft,
 };
 
 class PublicationStateLabel extends StatelessWidget {
   const PublicationStateLabel({super.key, required this.state});
   final String state;
   @override
-  Widget build(BuildContext context) => Text(publicationLabel(state));
+  Widget build(BuildContext context) =>
+      Text(publicationLabel(AppLocalizations.of(context), state));
 }
 
 /// No client eligibility calculation: every missing condition comes from the
@@ -76,7 +78,11 @@ class _PublicationPanelCardState extends ConsumerState<PublicationPanelCard> {
         });
       }
     } catch (_) {
-      if (mounted && _sameOwner) setState(() => _error = '公开状态暂时无法读取，请联网重试。');
+      if (mounted && _sameOwner) {
+        setState(
+          () => _error = AppLocalizations.of(context).publicationLoadError,
+        );
+      }
     }
   }
 
@@ -84,19 +90,17 @@ class _PublicationPanelCardState extends ConsumerState<PublicationPanelCard> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('公开高风险菜谱前请确认'),
-        content: const Text(
-          '这道菜包含高风险食材或做法。请核对食品安全提示；公开后会接受更严格的审核。确认不代表安全风险已消除。',
-        ),
+        title: Text(AppLocalizations.of(context).publicationRiskTitle),
+        content: Text(AppLocalizations.of(context).publicationRiskBody),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('暂不确认'),
+            child: Text(AppLocalizations.of(context).publicationRiskLater),
           ),
           FilledButton(
             key: const ValueKey('publication-confirm-risk'),
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('我已了解风险'),
+            child: Text(AppLocalizations.of(context).publicationRiskConfirm),
           ),
         ],
       ),
@@ -123,7 +127,11 @@ class _PublicationPanelCardState extends ConsumerState<PublicationPanelCard> {
         widget.onChanged();
       }
     } catch (_) {
-      if (mounted && _sameOwner) setState(() => _error = '操作未确认，请联网重试。');
+      if (mounted && _sameOwner) {
+        setState(
+          () => _error = AppLocalizations.of(context).publicationMutationError,
+        );
+      }
     } finally {
       if (mounted && _sameOwner) setState(() => _busy = false);
     }
@@ -134,21 +142,29 @@ class _PublicationPanelCardState extends ConsumerState<PublicationPanelCard> {
     final yes = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text(restore ? '重新上架菜谱？' : '下架菜谱？'),
+        title: Text(
+          restore
+              ? AppLocalizations.of(context).publicationRestoreTitle
+              : AppLocalizations.of(context).publicationWithdrawTitle,
+        ),
         content: Text(
           restore
-              ? '仅恢复符合条件的公开版本，草稿仍仅自己可见。'
-              : '别人将无法打开此菜谱；已有改良版来源署名和做菜记录仍保留。公开过的菜谱不能删除。',
+              ? AppLocalizations.of(context).publicationRestoreBody
+              : AppLocalizations.of(context).publicationWithdrawBody,
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('取消'),
+            child: Text(AppLocalizations.of(context).cancel),
           ),
           FilledButton(
             key: const ValueKey('publication-confirm-lifecycle'),
             onPressed: () => Navigator.pop(context, true),
-            child: Text(restore ? '重新上架' : '下架'),
+            child: Text(
+              restore
+                  ? AppLocalizations.of(context).publicationRestore
+                  : AppLocalizations.of(context).publicationWithdraw,
+            ),
           ),
         ],
       ),
@@ -175,7 +191,9 @@ class _PublicationPanelCardState extends ConsumerState<PublicationPanelCard> {
       case 'review':
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('正在等待审核；审核通过后会自动更新公开状态。')),
+            SnackBar(
+              content: Text(AppLocalizations.of(context).publicationReview),
+            ),
           );
         }
       case 'verify_identity':
@@ -221,7 +239,9 @@ class _PublicationPanelCardState extends ConsumerState<PublicationPanelCard> {
                   params: {'operation': operation, 'condition': ?condition},
                 ),
               );
+          final l10n = AppLocalizations.of(context);
           final label = publicationLabel(
+            l10n,
             panel?.state.value ?? widget.detail.version.publicationState.value,
           );
           return ComponentCard(
@@ -230,17 +250,23 @@ class _PublicationPanelCardState extends ConsumerState<PublicationPanelCard> {
             conclusion: Text(label),
             conclusionSemanticsText: label,
             basisText: panel?.baselineVersionId == null
-                ? '公开条件由服务端检查，离线做完后需先同步。'
-                : '和最近一次做过验证的版本比较：${comparisonConclusionLabel(panel!.cumulativeConclusion ?? "未判定")}；规则 ${panel.rulesVersion ?? ""}',
+                ? l10n.publicationBasis
+                : l10n.publicationComparisonBasis(
+                    comparisonConclusionLabel(
+                      panel!.cumulativeConclusion ??
+                          l10n.publicationUndetermined,
+                    ),
+                    panel.rulesVersion ?? '',
+                  ),
             standardExtra: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 if ((panel?.state.value ??
                         widget.detail.version.publicationState.value) ==
                     'draft')
-                  const Text(
-                    '做过后会自动公开；还需满足以下公开条件。',
-                    key: ValueKey('draft-auto-public'),
+                  Text(
+                    l10n.publicationDraftConditions,
+                    key: const ValueKey('draft-auto-public'),
                   ),
                 if (panel == null && _error == null)
                   const LinearProgressIndicator(),
@@ -254,11 +280,15 @@ class _PublicationPanelCardState extends ConsumerState<PublicationPanelCard> {
                         : () =>
                               dispatch('publication_condition', condition.code),
                     child: Text(
-                      '${condition.label}${condition.remainingCount == null ? "" : "（${condition.remainingCount} 处）"}',
+                      condition.remainingCount == null
+                          ? condition.label
+                          : l10n.publicationConditionCount(
+                              condition.label,
+                              condition.remainingCount!,
+                            ),
                     ),
                   ),
-                if (panel?.highRisk == true)
-                  const Text('高风险菜谱 · 公开前请核对安全提示，并确认风险。'),
+                if (panel?.highRisk == true) Text(l10n.publicationRiskGuidance),
                 if (panel?.everPublic == true)
                   OutlinedButton(
                     key: const ValueKey('publication-lifecycle'),
@@ -266,20 +296,22 @@ class _PublicationPanelCardState extends ConsumerState<PublicationPanelCard> {
                         ? null
                         : () => dispatch('publication_lifecycle'),
                     child: Text(
-                      panel?.state.value == 'withdrawn' ? '重新上架' : '下架菜谱',
+                      panel?.state.value == 'withdrawn'
+                          ? l10n.publicationRestore
+                          : l10n.publicationWithdrawRecipe,
                     ),
                   ),
                 TextButton(
                   onPressed: _busy
                       ? null
                       : () => dispatch('publication_refresh'),
-                  child: const Text('刷新公开状态'),
+                  child: Text(l10n.publicationRefresh),
                 ),
                 TextField(
                   key: const ValueKey('publication-command'),
-                  decoration: const InputDecoration(
-                    labelText: '一句话操作',
-                    hintText: '刷新公开状态 / 确认公开风险 / 下架菜谱 / 重新上架',
+                  decoration: InputDecoration(
+                    labelText: l10n.publicationCommand,
+                    hintText: l10n.publicationCommandHint,
                   ),
                   onSubmitted: (text) {
                     final action = recipeCommand(text);
@@ -318,11 +350,13 @@ class _PublicationNoticesState extends ConsumerState<PublicationNotices> {
   PublicationNotifications? _notices;
   String? _account;
   int _generation = 0;
-  Future<void> _load(String account) async {
+  bool _acknowledging = false;
+  Future<void> _load(String account, {String? cursor}) async {
     final generation = ++_generation;
     try {
       final api = ref.read(apiClientProvider).getRecipesApi();
-      final result = (await api.getPublicationNotifications()).data;
+      final result = (await api.getPublicationNotifications(cursor: cursor))
+          .data;
       if (!mounted ||
           generation != _generation ||
           ref.read(authProvider).value?.id != account ||
@@ -330,33 +364,51 @@ class _PublicationNoticesState extends ConsumerState<PublicationNotices> {
         return;
       }
       setState(() => _notices = result);
-      if ((result.items?.isEmpty ?? true) && result.licenseNotice == null) {
-        return;
-      }
-      WidgetsBinding.instance.addPostFrameCallback((_) async {
-        if (!mounted ||
-            generation != _generation ||
-            ref.read(authProvider).value?.id != account ||
-            ModalRoute.of(context)?.isCurrent == false ||
-            !TickerMode.valuesOf(context).enabled) {
-          return;
-        }
-        try {
-          await api.acknowledgePublicationNotifications(
-            publicationNotificationAck: PublicationNotificationAck(
-              notificationIds:
-                  (result.items ?? const <PublicationNotificationOut>[])
-                      .map((item) => item.id)
-                      .toList(),
-              licenseSeen: result.licenseNotice != null,
-            ),
-          );
-        } catch (_) {
-          /* Retain unacknowledged notices for the next open. */
-        }
-      });
     } catch (_) {
       /* A failed notice read cannot block records or recipes. */
+    }
+  }
+
+  Future<void> _acknowledge() async {
+    final account = _account;
+    final notices = _notices;
+    final generation = _generation;
+    if (_acknowledging ||
+        account == null ||
+        notices == null ||
+        ref.read(authProvider).value?.id != account ||
+        ModalRoute.of(context)?.isCurrent == false ||
+        !TickerMode.valuesOf(context).enabled) {
+      return;
+    }
+    setState(() => _acknowledging = true);
+    try {
+      await ref
+          .read(apiClientProvider)
+          .getRecipesApi()
+          .acknowledgePublicationNotifications(
+            publicationNotificationAck: PublicationNotificationAck(
+              notificationIds:
+                  (notices.items ?? const <PublicationNotificationOut>[])
+                      .map((item) => item.id)
+                      .toList(),
+              licenseSeen: notices.licenseNotice != null,
+            ),
+          );
+      if (!mounted ||
+          generation != _generation ||
+          ref.read(authProvider).value?.id != account) {
+        return;
+      }
+      if (notices.nextCursor != null) {
+        await _load(account, cursor: notices.nextCursor);
+      } else {
+        setState(() => _notices = null);
+      }
+    } catch (_) {
+      // Leave this page visible and retryable; never consume an unseen license.
+    } finally {
+      if (mounted) setState(() => _acknowledging = false);
     }
   }
 
@@ -380,28 +432,40 @@ class _PublicationNoticesState extends ConsumerState<PublicationNotices> {
         ((notices.items?.isEmpty ?? true) && notices.licenseNotice == null)) {
       return const SizedBox.shrink();
     }
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            for (final item
-                in notices.items ?? const <PublicationNotificationOut>[])
-              Text(
-                item.message,
-                key: ValueKey('publication-notice-${item.id}'),
-              ),
-            if (notices.licenseNotice != null)
-              Text(
-                notices.licenseNotice!,
-                key: const ValueKey('publication-license-notice'),
-              ),
-            TextButton(
-              onPressed: () => setState(() => _notices = null),
-              child: const Text('知道了'),
+    // Keep a full page of notices reachable without overflowing the Today tab.
+    return ConstrainedBox(
+      constraints: BoxConstraints(
+        maxHeight: MediaQuery.sizeOf(context).height * .45,
+      ),
+      child: SingleChildScrollView(
+        child: Card(
+          child: Padding(
+            padding: const EdgeInsets.all(12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                for (final item
+                    in notices.items ?? const <PublicationNotificationOut>[])
+                  Text(
+                    item.message,
+                    key: ValueKey('publication-notice-${item.id}'),
+                  ),
+                if (notices.licenseNotice != null)
+                  Text(
+                    notices.licenseNotice!,
+                    key: const ValueKey('publication-license-notice'),
+                  ),
+                TextButton(
+                  onPressed: _acknowledging ? null : _acknowledge,
+                  child: Text(
+                    notices.nextCursor == null
+                        ? AppLocalizations.of(context).publicationUnderstood
+                        : AppLocalizations.of(context).publicationMoreNotices,
+                  ),
+                ),
+              ],
             ),
-          ],
+          ),
         ),
       ),
     );
