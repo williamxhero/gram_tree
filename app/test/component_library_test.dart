@@ -302,6 +302,192 @@ void main() {
     });
   });
 
+  group('场景通知的分层和必要操作', () {
+    final source = {
+      'source_type': 'scenario_adjusted',
+      'value': '本次盐量调整为 8 g',
+      'basis': {'text': '根据上次偏咸记录调整', 'citation': '做过记录 · 2026-10-10'},
+    };
+    final differenceData = {
+      'conclusion': '与上次相比，盐减少了',
+      'record_date': '2026-10-10',
+      'source': source,
+      'differences': [
+        {'kind': 'quantity', 'label': '盐', 'before': '9 g', 'after': '8 g'},
+        {'kind': 'quantity', 'label': '水', 'before': '20 ml', 'after': '20 ml'},
+        {'kind': 'step', 'label': '加盐', 'before': '直接加入', 'after': '试味后加入'},
+        {'kind': 'servings', 'label': '份数', 'before': '2', 'after': '3'},
+      ],
+    };
+
+    for (final detail in ComponentDescriptorDetailEnum.values) {
+      testWidgets('差异通知 ${detail.name}：依据分层，简洁仍可展开实际用量', (tester) async {
+        final semantics = tester.ensureSemantics();
+        await pumpSpec(
+          tester,
+          spec: registry['scenario_difference']!,
+          component: descriptor(
+            type: 'scenario_difference',
+            detail: detail,
+            data: differenceData,
+          ),
+        );
+        expect(find.text('与上次相比，盐减少了'), findsOneWidget);
+        expect(find.bySemanticsLabel('与上次相比，盐减少了'), findsOneWidget);
+        expect(find.bySemanticsLabel(RegExp('按场景调整.*')), findsOneWidget);
+        expect(
+          find.text('依据做过记录：2026-10-10'),
+          detail == ComponentDescriptorDetailEnum.brief
+              ? findsNothing
+              : findsOneWidget,
+        );
+        expect(
+          find.text('默认组合'),
+          detail == ComponentDescriptorDetailEnum.detailed
+              ? findsOneWidget
+              : findsNothing,
+        );
+        expect(
+          find.text('根据上次偏咸记录调整'),
+          detail == ComponentDescriptorDetailEnum.detailed
+              ? findsOneWidget
+              : findsNothing,
+        );
+        if (detail != ComponentDescriptorDetailEnum.detailed) {
+          expect(find.textContaining('上次 9 g'), findsNothing);
+          await tester.tap(find.byKey(const ValueKey('c1:expand')));
+          await tester.pumpAndSettle();
+        }
+        expect(find.text('盐：上次 9 g，本次 8 g'), findsOneWidget);
+        expect(find.bySemanticsLabel('盐：上次 9 g，本次 8 g'), findsOneWidget);
+        semantics.dispose();
+      });
+
+      testWidgets('失败提醒 ${detail.name}：问题和建议不可折叠隐藏', (tester) async {
+        final semantics = tester.ensureSemantics();
+        await pumpSpec(
+          tester,
+          spec: registry['failure_reminder']!,
+          component: descriptor(
+            type: 'failure_reminder',
+            detail: detail,
+            data: {
+              'conclusion': '这一步留意加盐',
+              'problem': '上次加盐过多',
+              'advice': '先少放盐，试味后再补',
+              'record_date': '2026-10-10',
+              'source': source,
+            },
+          ),
+        );
+        expect(find.text('上次加盐过多'), findsOneWidget);
+        expect(find.text('先少放盐，试味后再补'), findsOneWidget);
+        expect(find.text('依据做过记录：2026-10-10'), findsOneWidget);
+        expect(find.bySemanticsLabel('先少放盐，试味后再补'), findsOneWidget);
+        semantics.dispose();
+      });
+
+      testWidgets('口味变化 ${detail.name}：旧口味预览和撤销均可直接触发', (tester) async {
+        final triggered = await pumpSpec(
+          tester,
+          spec: registry['taste_change_notice']!,
+          component: descriptor(
+            type: 'taste_change_notice',
+            detail: detail,
+            data: {
+              'conclusion': '最近口味变淡',
+              'change_date': '2026-10-10',
+              'source': source,
+            },
+            actions: [
+              ActionDescriptor(
+                intent: 'show_before_taste_change',
+                params: {'change_id': 'change'},
+              ),
+              ActionDescriptor(
+                intent: 'open_taste_change',
+                params: {'change_id': 'change'},
+              ),
+            ],
+          ),
+        );
+        for (final intent in [
+          'show_before_taste_change',
+          'open_taste_change',
+        ]) {
+          final target = find.byKey(ValueKey('c1:$intent'));
+          expect(target.hitTestable(), findsOneWidget);
+          await tester.tap(target);
+        }
+        expect(triggered.map((action) => action.intent), [
+          'show_before_taste_change',
+          'open_taste_change',
+        ]);
+        expect(
+          triggered.every(
+            (action) => (action.params as Map)['change_id'] == 'change',
+          ),
+          isTrue,
+        );
+      });
+    }
+
+    for (final brightness in Brightness.values) {
+      for (final scale in [1.3, 1.6]) {
+        testWidgets('差异数值使用主题等宽字体和酱红，${brightness.name}，字号 $scale', (
+          tester,
+        ) async {
+          await pumpSpec(
+            tester,
+            spec: registry['scenario_difference']!,
+            component: descriptor(
+              type: 'scenario_difference',
+              detail: ComponentDescriptorDetailEnum.detailed,
+              data: differenceData,
+            ),
+            brightness: brightness,
+            textScale: scale,
+            size: const Size(320, 780),
+          );
+          final text = tester.widget<Text>(find.text('盐：上次 9 g，本次 8 g'));
+          final spans = (text.textSpan! as TextSpan).children!.cast<TextSpan>();
+          final colors = GramTreeColors.of(
+            tester.element(find.text('盐：上次 9 g，本次 8 g')),
+          );
+          expect(
+            spans.firstWhere((span) => span.text == '9 g').style!.fontFamily,
+            numberFont,
+          );
+          final current = spans.firstWhere((span) => span.text == '8 g').style!;
+          expect(current.fontFamily, numberFont);
+          expect(current.color, colors.accent);
+          final unchanged = tester.widget<Text>(
+            find.text('水：上次 20 ml，本次 20 ml'),
+          );
+          final unchangedSpans = (unchanged.textSpan! as TextSpan).children!
+              .cast<TextSpan>();
+          expect(unchangedSpans.last.style!.color, isNot(colors.accent));
+          final servings = tester.widget<Text>(find.text('份数：上次 2，本次 3'));
+          final currentServings =
+              ((servings.textSpan! as TextSpan).children!.last as TextSpan)
+                  .style!;
+          expect(currentServings.fontFamily, numberFont);
+          expect(currentServings.color, colors.accent);
+          final instruction = tester.widget<Text>(
+            find.text('加盐：上次 直接加入，本次 试味后加入'),
+          );
+          expect(
+            ((instruction.textSpan! as TextSpan).children!.last as TextSpan)
+                .style
+                ?.color,
+            isNot(colors.accent),
+          );
+          expect(tester.takeException(), isNull);
+        });
+      }
+    }
+  });
+
   group('没有内容时显示登记的标准空态', () {
     testWidgets('hint_bar 结论缺失时显示登记的空态文案', (tester) async {
       await pumpSpec(
