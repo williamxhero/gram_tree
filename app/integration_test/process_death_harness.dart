@@ -31,7 +31,8 @@ import 'package:integration_test/integration_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'event_pipeline_support.dart' show resetLocalAppState;
-import 'frozen_conversion_support.dart' show installFrozenConversionFixture;
+import '../test/frozen_conversion_support.dart'
+    show installFrozenConversionFixture;
 import 'offline_writes_support.dart' as acceptance;
 
 const _runId = String.fromEnvironment('PROCESS_DEATH_RUN_ID');

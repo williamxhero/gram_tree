@@ -12,7 +12,7 @@ import 'package:gramtree_api/gramtree_api.dart';
 
 import 'package:gram_tree/storage/local_store.dart';
 
-import '../integration_test/frozen_conversion_support.dart';
+import 'frozen_conversion_support.dart';
 import 'fixtures/conversion_cases.g.dart';
 import 'helpers.dart';
 import 'taste_profile_page_test.dart' show profileFixture;
