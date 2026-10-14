@@ -39,7 +39,14 @@ else
   TARGET="$OUT"
 fi
 
-"$PYTHON" - "$ROOT/app" "$TARGET" <<'PY'
+# Native Windows Python needs drive-letter paths, as in gen_api_client.sh.
+APP_DIR="$ROOT/app"
+if command -v cygpath >/dev/null 2>&1; then
+  APP_DIR="$(cygpath -m "$APP_DIR")"
+  TARGET="$(cygpath -m "$TARGET")"
+fi
+
+"$PYTHON" - "$APP_DIR" "$TARGET" <<'PY'
 import sys
 from pathlib import Path
 
@@ -48,6 +55,7 @@ ASSETS = [
     "assets/mold_conversion_cases.json",
     "assets/measure_display_cases.json",
     "assets/rounding_boundary_cases.json",
+    "assets/personalization_cases.json",
 ]
 
 
