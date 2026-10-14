@@ -15,7 +15,7 @@ from decimal import Decimal
 from typing import Any, Literal, cast
 
 from redis import Redis
-from sqlalchemy import delete, or_, select, update
+from sqlalchemy import or_, select
 from sqlalchemy.orm import Session
 
 from gramtree.accounts.models import User
@@ -2304,20 +2304,13 @@ def list_recipes(
 
 def delete_recipe(session: Session, owner: User, recipe_id: uuid.UUID, settings: Settings) -> None:
     recipe = _owned_recipe(session, owner, recipe_id)
-    image_keys = [
-        image.storage_key
-        for image in session.scalars(select(RecipeImage).where(RecipeImage.recipe_id == recipe.id))
-    ]
-    # current_version_id points into the versions table; clear it before deleting snapshots.
-    session.execute(update(Recipe).where(Recipe.id == recipe.id).values(current_version_id=None))
-    session.execute(delete(RecipeImage).where(RecipeImage.recipe_id == recipe.id))
-    session.execute(delete(RecipeVersion).where(RecipeVersion.recipe_id == recipe.id))
-    session.delete(recipe)
+    from gramtree.accounts import deletion
+
+    deletion.erase_owner_caches(settings, owner.id)
+    deletion.erase_recipe(session, recipe)
     session.commit()
-    # Remove objects only after the metadata transaction succeeds. A database
-    # failure must not leave a committed row pointing at a deleted object.
-    for key in image_keys:
-        _delete_storage_object(settings, key)
+    # The durable queue survives a storage outage after metadata erasure.
+    deletion.drain_objects(session, settings)
 
 
 def _delete_storage_object(settings: Settings, key: str) -> None:

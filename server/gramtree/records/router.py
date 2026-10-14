@@ -150,6 +150,20 @@ def list_records(auth: CurrentAuth, session: SessionDep, page: PageDep) -> Cooki
     )
 
 
+@router.delete(
+    "/{record_id}", status_code=204, responses=ERROR_RESPONSES, operation_id="deleteRecord"
+)
+def delete_record(
+    record_id: IdV4, auth: CurrentAuth, session: SessionDep, settings: SettingsDep
+) -> None:
+    from gramtree.accounts import deletion
+
+    row = _owned(session, auth.user.id, record_id)
+    deletion.erase_owner_caches(settings, auth.user.id)
+    deletion.erase_record(session, row)
+    session.commit()
+
+
 @router.get("/{record_id}", response_model=CookingRecordOut, responses=ERROR_RESPONSES)
 def get_record(record_id: IdV4, auth: CurrentAuth, session: SessionDep) -> CookingRecordOut:
     return _out(_owned(session, auth.user.id, record_id))

@@ -1,5 +1,6 @@
 """汇总所有数据表模型，给 Alembic 自动比对用。新模块的模型在这里 import。"""
 
+from gramtree.accounts import deletion_models as _deletion  # noqa: F401
 from gramtree.accounts import models as _accounts  # noqa: F401
 from gramtree.ai import models as _ai  # noqa: F401
 from gramtree.analytics import models as _analytics  # noqa: F401

@@ -40,13 +40,11 @@ from gramtree.accounts.models import (
     EmailCode,
     Identity,
     IdentityKind,
+    RealNameStatus,
     RefreshToken,
     User,
     UserStatus,
 )
-from gramtree.events.models import Event
-from gramtree.events.sync_models import WriteFactOutbox, WriteReceipt
-from gramtree.recipes.measure_models import PersonalMeasure
 from gramtree.runtime_config import service as config
 from gramtree.settings import Settings
 from gramtree.taste_profiles.models import TasteProfile
@@ -618,9 +616,24 @@ def consents(session: Session, user: User) -> list[Consent]:
 
 
 def request_deletion(
-    session: Session, apple: AppleClient, user: User, ds: DeviceSession, now: datetime
+    session: Session,
+    apple: AppleClient,
+    user: User,
+    ds: DeviceSession,
+    now: datetime,
+    public_recipe_action: str | None = None,
 ) -> User:
     require_recent_reauth(session, ds, now)
+    from gramtree.accounts import deletion
+    from gramtree.accounts.deletion_models import AccountDeletion
+    from gramtree.core.errors import ApiError
+
+    session.refresh(user, with_for_update=True)
+    if user.status != UserStatus.active:
+        raise AccountUnavailable()
+    if deletion.public_recipes(session, user.id) and public_recipe_action is None:
+        raise ApiError(400, "public_recipe_action_required", "请选择公开菜谱匿名保留或下架")
+    deletion.require_supported_recipes(session, user.id)
     from gramtree.taste_profiles import allergies
     from gramtree.taste_profiles import service as taste_service
 
@@ -636,6 +649,15 @@ def request_deletion(
     user.status = UserStatus.deleting
     user.deletion_requested_at = now
     user.deletion_due_at = add_business_days(now, days)
+    session.add(
+        AccountDeletion(
+            user_id=user.id,
+            public_recipe_action=public_recipe_action,
+            requested_at=now,
+            due_at=user.deletion_due_at,
+            steps={"requested": now.isoformat()},
+        )
+    )
     from gramtree.ai.privacy import clear_user_content
 
     clear_user_content(session, user.id)
@@ -656,19 +678,33 @@ def request_deletion(
 
 def purge_due_accounts(session: Session, apple: AppleClient, now: datetime) -> int:
     """删除到期的注销中账号的个人数据。账号行保留为“已注销”，ID 不复用。"""
+    from gramtree.accounts import deletion
+    from gramtree.accounts.deletion_models import AccountDeletion
+    from gramtree.settings import get_settings
+
+    settings = get_settings()
+    # Also retry failed single-recipe photo erasures when no account is due.
+    deletion.drain_objects(session, settings)
     due = list(
         session.scalars(
             select(User)
             .where(User.status == UserStatus.deleting, User.deletion_due_at <= now)
+            .order_by(User.id)
             .with_for_update()
         )
     )
+    completed = 0
     for user in due:
+        session.refresh(user, with_for_update=True)
+        if user.status != UserStatus.deleting:
+            continue
         ids = identities(session, user)
         for identity in ids:
             # 注销时撤销失败的，这里再试一次
-            if identity.apple_refresh_token:
-                apple.revoke(identity.apple_refresh_token)
+            if identity.apple_refresh_token and not apple.revoke(identity.apple_refresh_token):
+                from gramtree.core.errors import ApiError
+
+                raise ApiError(503, "apple_revocation_pending", "授权撤销暂未完成，后台将重试")
         emails = [i.subject for i in ids if i.kind == IdentityKind.email]
         if emails:
             session.execute(delete(EmailCode).where(EmailCode.email.in_(emails)))
@@ -677,30 +713,43 @@ def purge_due_accounts(session: Session, apple: AppleClient, now: datetime) -> i
 
         erase_sensitive(session, user.id)
         session.execute(delete(Consent).where(Consent.user_id == user.id))
-        from gramtree.events.field_adjudication import FieldEntity, FieldHistory
-
-        session.execute(delete(FieldHistory).where(FieldHistory.owner_id == user.id))
-        session.execute(delete(FieldEntity).where(FieldEntity.owner_id == user.id))
-        session.execute(delete(PersonalMeasure).where(PersonalMeasure.owner_id == user.id))
-        # User IDs are retained, so FK cascade cannot remove delivery payloads.
-        # Delete dependent fact bundles before their immutable receipts; other
-        # accounts' confirmations and retry dependencies remain untouched.
-        session.execute(delete(WriteFactOutbox).where(WriteFactOutbox.owner_id == user.id))
-        session.execute(delete(WriteReceipt).where(WriteReceipt.owner_id == user.id))
-        session.execute(
-            delete(Event).where(
-                Event.user_id == user.id, Event.correlation.has_key("taste_profile_change_id")
+        deletion.erase_private_domains(session, user.id)
+        job = session.get(AccountDeletion, user.id)
+        if job is None:
+            # Existing deleting accounts created before the upgrade also get an
+            # auditable receipt; no personal payload enters the step record.
+            job = AccountDeletion(
+                user_id=user.id,
+                public_recipe_action=None,
+                requested_at=user.deletion_requested_at or now,
+                due_at=user.deletion_due_at or now,
+                steps={},
             )
-        )
-        session.execute(delete(TasteProfile).where(TasteProfile.owner_id == user.id))
+            session.add(job)
+        job.steps = {
+            **job.steps,
+            "personal_data_erased": job.steps.get("personal_data_erased", now.isoformat()),
+        }
+        session.commit()
+        # Storage retries remain durable after metadata erasure. Do not mark the
+        # account completed when storage deletion failed.
+        deletion.drain_objects(session, settings)
+        job.steps = {**job.steps, "objects_erased": now.isoformat()}
+        deletion.erase_owner_caches(settings, user.id)
+        job.steps = {**job.steps, "caches_erased": now.isoformat()}
+        job.completed_at = now
         session_ids = select(DeviceSession.id).where(DeviceSession.user_id == user.id)
         session.execute(delete(RefreshToken).where(RefreshToken.session_id.in_(session_ids)))
         session.execute(delete(DeviceSession).where(DeviceSession.user_id == user.id))
         user.nickname = "已注销用户"
         user.phone = None
+        user.real_name_status = RealNameStatus.none
+        user.timezone = "Asia/Shanghai"
         user.status = UserStatus.deleted
         user.deleted_at = now
+        session.commit()
+        completed += 1
     session.commit()
-    if due:
-        logger.info("purged deleted accounts", extra={"count": len(due)})
-    return len(due)
+    if completed:
+        logger.info("purged deleted accounts", extra={"count": completed})
+    return completed
