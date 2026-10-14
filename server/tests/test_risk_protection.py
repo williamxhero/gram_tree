@@ -281,6 +281,8 @@ def test_recurrence_waits_for_configured_score_thresholds(api: Api, capsys) -> N
     def request():
         nonlocal source
         source += 1
+        # Audit listing breaks equal-time ties by random UUID, not request order.
+        api.clock.advance(milliseconds=1)
         cast(Any, api.client._transport).client = (f"198.51.100.{source}", 50000)
         return api.client.get("/v1/me", headers=headers)
 
