@@ -28,6 +28,8 @@
 | [`personalized-recipe.html`](personalized-recipe.html) | 默认按口味视图、原版切换、解释面板、多人/儿童分盛、过敏阻断、厨具降级与做菜模式一致 | #31 SPEC-005.2 | 2026-10-13 已尝试发布；Artifact 要求 claude.ai 登录，当前 API-token 认证不支持。本地交互 HTML 样稿 |
 | [`34-mockup.html`](34-mockup.html) | 场景组合样稿：新手/熟手详略、常做差异、失败前置与当步提醒、近期口味变化、统一为什么面板、固定骨架与标准布局 | #34 SPEC-009.2；#279–#282 | 2026-10-14 按本次任务决定使用仓库内 HTML，浏览器直接打开；PR #284 给出文件路径，不依赖 Artifact |
 
+| [`improved-public.html`](improved-public.html) | 草稿公开门槛、待验证、永久来源署名与微调保存二选一；浅色/深色静态样稿，数据明确为示例 | #41 SPEC-007.1；#221–#226 | 2026-10-15 已尝试发布；Artifact 要求 claude.ai 登录，当前 API-token 认证不支持。按本次任务默认改用仓库内 HTML |
+
 ## 说明
 
 - `recipe-detail/` 是画布的**源文件**：`index.html` 引用平台运行时 `artifact-type/app.js`，`Pro.dc.html` 引用 `support.js`，这两个运行时文件属于 claude.ai 平台，没有导出，所以这份不能在本地直接打开渲染；要看效果请去 claude.ai 的原 Artifact，这里保存的是设计内容的备份。
