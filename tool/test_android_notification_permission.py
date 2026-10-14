@@ -358,6 +358,64 @@ class NotificationCliTest(unittest.TestCase):
                 self.assertEqual(result.returncode, 1, result.stderr)
                 self.assert_no_tap(commands)
 
+    def test_button_mismatch_diagnostics_are_exact_and_private(self):
+        for attribute, value, matches in (
+            (
+                "package",
+                "private.fixture.controller",
+                "package_match=False, text_match=True, class_match=True, "
+                "enabled_match=True, clickable_match=True",
+            ),
+            (
+                "text",
+                "private button text",
+                "package_match=True, text_match=False, class_match=True, "
+                "enabled_match=True, clickable_match=True",
+            ),
+            (
+                "class",
+                "private.fixture.Button",
+                "package_match=True, text_match=True, class_match=False, "
+                "enabled_match=True, clickable_match=True",
+            ),
+            (
+                "enabled",
+                "false",
+                "package_match=True, text_match=True, class_match=True, "
+                "enabled_match=False, clickable_match=True",
+            ),
+            (
+                "clickable",
+                "false",
+                "package_match=True, text_match=True, class_match=True, "
+                "enabled_match=True, clickable_match=False",
+            ),
+        ):
+            with self.subTest(attribute=attribute):
+                tree = ET.fromstring(UI)
+                button = list(tree.iter("node"))[-1]
+                button.set(attribute, value)
+                button.set("content-desc", "private-ui-marker")
+                xml = ET.tostring(tree, encoding="unicode")
+                result, commands = self.invoke(ui=xml, wait_for="ui_read")
+                self.assertEqual(result.returncode, 1, result.stderr)
+                self.assertEqual(
+                    result.stderr,
+                    "Android notification observer FAILED: "
+                    "Notification Allow button is not an enabled controller button "
+                    f"({matches})\n",
+                )
+                self.assert_no_tap(commands)
+                output = result.stdout + result.stderr
+                for private in (
+                    xml,
+                    "private-ui-marker",
+                    "private.fixture.controller",
+                    "private button text",
+                    "private.fixture.Button",
+                ):
+                    self.assertNotIn(private, output)
+
     def test_controller_identity_and_resource_ids(self):
         tree = ET.fromstring(UI)
         button = list(tree.iter("node"))[-1]

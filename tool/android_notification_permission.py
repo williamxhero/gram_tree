@@ -110,7 +110,15 @@ def allow_center(xml: str) -> tuple[int, int] | None:
         or button.get("enabled") != "true"
         or button.get("clickable") != "true"
     ):
-        raise DriverError("Notification Allow button is not an enabled controller button")
+        # Only comparison results cross the CLI boundary, never OS attribute values.
+        raise DriverError(
+            "Notification Allow button is not an enabled controller button "
+            f"(package_match={button.get('package') == CONTROLLER}, "
+            f"text_match={button.get('text') == 'Allow'}, "
+            f"class_match={button.get('class') == 'android.widget.Button'}, "
+            f"enabled_match={button.get('enabled') == 'true'}, "
+            f"clickable_match={button.get('clickable') == 'true'})"
+        )
     bounds = re.fullmatch(r"\[(\d+),(\d+)\]\[(\d+),(\d+)\]", button.get("bounds", ""))
     if bounds is None:
         raise DriverError("Malformed notification Allow bounds")
