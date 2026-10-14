@@ -71,8 +71,12 @@ public class ExportSaveActivity extends Activity {
 
     private void report(Uri destination) {
         int grants = Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_WRITE_URI_PERMISSION;
+        if (stream != null) {
+            // Keep source verification access after this receiver Activity finishes.
+            grantUriPermission("app.gramtree.gram_tree", stream, grants);
+        }
         if (destination != null) {
-            // Keep test verification access after this receiver Activity finishes.
+            // Keep saved-document verification access after this receiver Activity finishes.
             grantUriPermission("app.gramtree.gram_tree", destination, grants);
         }
         sendBroadcast(new Intent("app.gramtree.TEST_ZIP_SAVED")
