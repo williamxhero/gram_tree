@@ -1,15 +1,15 @@
 """Rule-based machine behaviour risk and graduated enforcement.
 
-Revision ID: 0031
-Revises: 0028
+Revision ID: 0033
+Revises: 0032
 """
 
 import sqlalchemy as sa
 from alembic import op
 from sqlalchemy.dialects import postgresql
 
-revision = "0031"
-down_revision = "0028"
+revision = "0033"
+down_revision = "0032"
 branch_labels = None
 depends_on = None
 
