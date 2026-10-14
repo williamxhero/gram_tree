@@ -94,7 +94,7 @@ Future<void> _tapCooking(WidgetTester tester, Finder finder) async {
 }
 
 Future<void> _back(WidgetTester tester) =>
-    _tap(tester, find.byType(BackButton).last);
+    _tap(tester, _key('recipe-list-button'));
 
 Future<void> _openRecipe(WidgetTester tester) async {
   await _tap(tester, find.text(_dish).last);
