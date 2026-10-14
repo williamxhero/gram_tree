@@ -22,6 +22,11 @@ Future<void> _pump(WidgetTester tester) async {
 }
 
 Future<void> _wait(WidgetTester tester, Finder finder) async {
+  final binding = IntegrationTestWidgetsFlutterBinding.instance;
+  binding.reportData = {
+    ...?binding.reportData,
+    'e2e_wait_for': finder.toString(),
+  };
   for (var i = 0; i < 150 && finder.evaluate().isEmpty; i++) {
     await tester.pump(const Duration(milliseconds: 100));
   }
@@ -207,130 +212,144 @@ void main() {
       tester.testTextInput.register();
       addTearDown(tester.testTextInput.unregister);
     }
-    await signInFreshUser(tester);
-    final auth = Options(
-      headers: {
-        'Authorization': 'Bearer ${accessTokenOf(containerOf(tester))}',
-      },
-    );
-    final recipe = await _post('/v1/recipes', _recipeInput(), auth);
-    final recipeId = recipe['id'] as String;
+    try {
+      await signInFreshUser(tester);
+      final auth = Options(
+        headers: {
+          'Authorization': 'Bearer ${accessTokenOf(containerOf(tester))}',
+        },
+      );
+      final recipe = await _post('/v1/recipes', _recipeInput(), auth);
+      final recipeId = recipe['id'] as String;
 
-    await _tap(tester, find.text('我的'));
-    await _tap(tester, _key('my-recipes-list-entry'));
-    await _openRecipe(tester);
-    await _reveal(tester, find.text('详细步骤'));
-    await _reveal(tester, find.textContaining(_note));
-    await _tap(tester, _key('scenario-detail-brief'), inRecipe: true);
-    await _reveal(tester, find.text('紧凑清单'));
-    expect((await _get('/v1/ui/preferences', auth))['detail'], 'auto');
-    await _back(tester);
-    await _openRecipe(tester);
-    await _reveal(tester, find.text('详细步骤'));
-    await _back(tester);
+      await _tap(tester, find.text('我的'));
+      await _tap(tester, _key('my-recipes-list-entry'));
+      await _openRecipe(tester);
+      await _reveal(tester, find.text('详细步骤'));
+      await _reveal(tester, find.textContaining(_note));
+      await _tap(tester, _key('scenario-detail-brief'), inRecipe: true);
+      await _reveal(tester, find.text('紧凑清单'));
+      expect((await _get('/v1/ui/preferences', auth))['detail'], 'auto');
+      await _back(tester);
+      await _openRecipe(tester);
+      await _reveal(tester, find.text('详细步骤'));
+      await _back(tester);
 
-    await _seedHistory(auth, recipe);
-    await _openRecipe(tester);
-    final differenceId = 'scene:difference:$recipeId';
-    await _reveal(tester, _key(differenceId));
-    await _reveal(tester, find.text('紧凑清单'));
-    expect(find.textContaining('上次 7.5 g'), findsNothing);
-    await _tap(tester, _key('$differenceId:expand'), inRecipe: true);
-    await _reveal(tester, find.textContaining('上次 7.5 g'));
-    expect(find.textContaining('本次 12.5 g'), findsWidgets);
-    await _reveal(tester, _key('scenario-expand-steps'));
-    expect(find.textContaining(_instruction), findsNothing);
-    await _tap(tester, _key('scenario-expand-steps'), inRecipe: true);
-    await _reveal(tester, find.textContaining(_instruction));
-    await _reveal(tester, _key('scene:failure:$recipeId:dry_meat:cook:at'));
-    await _reveal(tester, _key('recipe-food-safety-card'));
-    await _reveal(tester, _key('recipe-allergen-card'));
+      await _seedHistory(auth, recipe);
+      await _openRecipe(tester);
+      final differenceId = 'scene:difference:$recipeId';
+      await _reveal(tester, _key(differenceId));
+      await _reveal(tester, find.text('紧凑清单'));
+      expect(find.textContaining('上次 7.5 g'), findsNothing);
+      await _tap(tester, _key('$differenceId:expand'), inRecipe: true);
+      await _reveal(tester, find.textContaining('上次 7.5 g'));
+      expect(find.textContaining('本次 12.5 g'), findsWidgets);
+      await _reveal(tester, _key('scenario-expand-steps'));
+      expect(find.textContaining(_instruction), findsNothing);
+      await _tap(tester, _key('scenario-expand-steps'), inRecipe: true);
+      await _reveal(tester, find.textContaining(_instruction));
+      await _reveal(tester, _key('scene:failure:$recipeId:dry_meat:cook:at'));
+      await _reveal(tester, _key('recipe-food-safety-card'));
+      await _reveal(tester, _key('recipe-allergen-card'));
 
-    final history = await _get('/v1/me/taste-profile/changes', auth);
-    final change = (history['items'] as List).cast<Map>().firstWhere(
-      (row) =>
-          row['field'] == 'flavors.salty' &&
-          (row['new_value'] as Map)['coefficient'] == 1.25,
-    );
-    final changeId = change['id'] as String;
-    final tasteId = 'scene:taste:$changeId';
-    final currentProfile = await _get('/v1/me/taste-profile', auth);
-    await _reveal(tester, find.text('盐  12.5 g'));
-    await _tap(
-      tester,
-      _key('$tasteId:show_before_taste_change'),
-      inRecipe: true,
-    );
-    await _reveal(tester, find.text('盐  7.5 g'));
-    expect(find.text('盐  10 g'), findsNothing);
-    expect(await _get('/v1/me/taste-profile', auth), currentProfile);
-    await _tap(tester, _key('scenario-restore-current-taste'), inRecipe: true);
-    await _reveal(tester, find.text('盐  12.5 g'));
-    await _tap(tester, _key('$tasteId:open_taste_change'), inRecipe: true);
-    await _wait(tester, find.byType(AlertDialog));
-    await _tap(tester, find.text('取消'));
-    expect(await _get('/v1/me/taste-profile', auth), currentProfile);
+      final history = await _get('/v1/me/taste-profile/changes', auth);
+      final change = (history['items'] as List).cast<Map>().firstWhere(
+        (row) =>
+            row['field'] == 'flavors.salty' &&
+            (row['new_value'] as Map)['coefficient'] == 1.25,
+      );
+      final changeId = change['id'] as String;
+      final tasteId = 'scene:taste:$changeId';
+      final currentProfile = await _get('/v1/me/taste-profile', auth);
+      await _reveal(tester, find.text('盐  12.5 g'));
+      await _tap(
+        tester,
+        _key('$tasteId:show_before_taste_change'),
+        inRecipe: true,
+      );
+      await _reveal(tester, find.text('盐  7.5 g'));
+      expect(find.text('盐  10 g'), findsNothing);
+      expect(await _get('/v1/me/taste-profile', auth), currentProfile);
+      await _tap(
+        tester,
+        _key('scenario-restore-current-taste'),
+        inRecipe: true,
+      );
+      await _reveal(tester, find.text('盐  12.5 g'));
+      await _tap(tester, _key('$tasteId:open_taste_change'), inRecipe: true);
+      await _wait(tester, find.byType(AlertDialog));
+      await _tap(tester, find.text('取消'));
+      expect(await _get('/v1/me/taste-profile', auth), currentProfile);
 
-    final mark = find.descendant(
-      of: _key(differenceId),
-      matching: find.text('按场景调整'),
-    );
-    await _tap(tester, mark, inRecipe: true);
-    await _wait(tester, _key('why-panel'));
-    await _tap(tester, find.text('这次不用'));
-    await _reveal(tester, _key('scenario-detail-brief'));
-    expect(_key(differenceId), findsNothing);
-    expect(await _get('/v1/me/taste-profile', auth), currentProfile);
-    await _back(tester);
-    await _openRecipe(tester);
-    await _reveal(tester, _key(differenceId));
-    await _tap(tester, mark, inRecipe: true);
-    await _tap(tester, find.text('以后别这样'));
-    await _back(tester);
-    await _openRecipe(tester);
-    await _reveal(tester, _key('scenario-detail-brief'));
-    expect(_key(differenceId), findsNothing);
-    await _reveal(tester, _key('recipe-food-safety-card'));
-    await _reveal(tester, _key('recipe-allergen-card'));
-    expect(await _get('/v1/me/taste-profile', auth), currentProfile);
-    await _tap(tester, _key('$tasteId:open_taste_change'), inRecipe: true);
-    await _wait(tester, find.byType(AlertDialog));
-    await _tap(tester, _key('scenario-confirm-revert'));
-    await _reveal(tester, find.text('盐  7.5 g'));
-    final revertedProfile = await _get('/v1/me/taste-profile', auth);
-    expect((revertedProfile['flavors'] as Map)['salty']['coefficient'], 0.75);
-    expect(_key('scenario-restore-current-taste'), findsNothing);
+      final mark = find.descendant(
+        of: _key(differenceId),
+        matching: find.text('按场景调整'),
+      );
+      await _tap(tester, mark, inRecipe: true);
+      await _wait(tester, _key('why-panel'));
+      await _tap(tester, find.text('这次不用'));
+      await _reveal(tester, _key('scenario-detail-brief'));
+      expect(_key(differenceId), findsNothing);
+      expect(await _get('/v1/me/taste-profile', auth), currentProfile);
+      await _back(tester);
+      await _openRecipe(tester);
+      await _reveal(tester, _key(differenceId));
+      await _tap(tester, mark, inRecipe: true);
+      await _tap(tester, find.text('以后别这样'));
+      await _back(tester);
+      await _openRecipe(tester);
+      await _reveal(tester, _key('scenario-detail-brief'));
+      expect(_key(differenceId), findsNothing);
+      await _reveal(tester, _key('recipe-food-safety-card'));
+      await _reveal(tester, _key('recipe-allergen-card'));
+      expect(await _get('/v1/me/taste-profile', auth), currentProfile);
+      await _tap(tester, _key('$tasteId:open_taste_change'), inRecipe: true);
+      await _wait(tester, find.byType(AlertDialog));
+      await _tap(tester, _key('scenario-confirm-revert'));
+      await _reveal(tester, find.text('盐  7.5 g'));
+      final revertedProfile = await _get('/v1/me/taste-profile', auth);
+      expect((revertedProfile['flavors'] as Map)['salty']['coefficient'], 0.75);
+      expect(_key('scenario-restore-current-taste'), findsNothing);
 
-    await _tap(tester, _key('start-cooking-button'), inRecipe: true);
-    await _wait(tester, find.text('先准备食材'));
-    await _tap(tester, find.text('开始第一步'));
-    final before = 'scene:failure:$recipeId:dry_meat:cook:before';
-    final at = 'scene:failure:$recipeId:dry_meat:cook:at';
-    await _revealCooking(tester, _key('cooking-reminders-cook-before'));
-    expect(_key(before), findsOneWidget);
-    expect(_key(at), findsNothing);
-    await _revealCooking(tester, find.text('计时 60 秒'));
-    await _revealCooking(tester, find.text('记录问题'));
-    await _revealCooking(tester, find.text('下一步'));
-    // A real flip must move the active step despite reminder cards adding
-    // their own nested scrollables above the normal cooking controls.
-    await tester.drag(find.byType(Scrollable).first, const Offset(-350, 0));
-    await _pump(tester);
-    await _revealCooking(tester, find.text('步骤 2 / 2'));
-    await _revealCooking(tester, _key('cooking-reminders-cook-at'));
-    expect(_key(at), findsOneWidget);
-    expect(_key(before), findsNothing);
-    await _tapCooking(tester, find.text('记录问题'));
-    await _wait(tester, find.byType(AlertDialog));
-    await _tap(tester, find.text('取消'));
-    await _tapCooking(tester, find.text('记录临时调整'));
-    await _wait(tester, find.byType(AlertDialog));
-    await _tap(tester, find.text('取消'));
-    await _tapCooking(tester, find.text('计时 120 秒'));
-    await _revealCooking(tester, find.text('步骤计时'));
-    await _tapCooking(tester, find.text('完成'));
-    await _wait(tester, _key('cooking-complete'));
-    expect(find.text('已完成 $_dish'), findsOneWidget);
-    expect(tester.takeException(), isNull);
+      await _tap(tester, _key('start-cooking-button'), inRecipe: true);
+      await _wait(tester, find.text('先准备食材'));
+      await _tap(tester, find.text('开始第一步'));
+      final before = 'scene:failure:$recipeId:dry_meat:cook:before';
+      final at = 'scene:failure:$recipeId:dry_meat:cook:at';
+      await _revealCooking(tester, _key('cooking-reminders-cook-before'));
+      expect(_key(before), findsOneWidget);
+      expect(_key(at), findsNothing);
+      await _revealCooking(tester, find.text('计时 60 秒'));
+      await _revealCooking(tester, find.text('记录问题'));
+      await _revealCooking(tester, find.text('下一步'));
+      // A real flip must move the active step despite reminder cards adding
+      // their own nested scrollables above the normal cooking controls.
+      await tester.drag(find.byType(Scrollable).first, const Offset(-350, 0));
+      await _pump(tester);
+      await _revealCooking(tester, find.text('步骤 2 / 2'));
+      await _revealCooking(tester, _key('cooking-reminders-cook-at'));
+      expect(_key(at), findsOneWidget);
+      expect(_key(before), findsNothing);
+      await _tapCooking(tester, find.text('记录问题'));
+      await _wait(tester, find.byType(AlertDialog));
+      await _tap(tester, find.text('取消'));
+      await _tapCooking(tester, find.text('记录临时调整'));
+      await _wait(tester, find.byType(AlertDialog));
+      await _tap(tester, find.text('取消'));
+      await _tapCooking(tester, find.text('计时 120 秒'));
+      await _revealCooking(tester, find.text('步骤计时'));
+      await _tapCooking(tester, find.text('完成'));
+      await _wait(tester, _key('cooking-complete'));
+      expect(find.text('已完成 $_dish'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    } catch (error, stack) {
+      final binding = IntegrationTestWidgetsFlutterBinding.instance;
+      binding.reportData = {
+        ...?binding.reportData,
+        'e2e_error': error.toString(),
+        'e2e_stack': stack.toString(),
+      };
+      rethrow;
+    }
   }, timeout: const Timeout(Duration(minutes: 5)));
 }

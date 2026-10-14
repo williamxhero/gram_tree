@@ -624,7 +624,9 @@ def test_failure_first_step_live_adjustments_and_latest_success(api: Api) -> Non
     # A different owner of the same dish has independent feedback and history.
     other = bearer(api.login("scene-first-step-other@example.com"))
     other_recipe = api.client.post("/v1/recipes", headers=other, json=body).json()
-    other_record = record(api, other, other_recipe, source_context={"completed_steps": ["cook:main"]})
+    other_record = record(
+        api, other, other_recipe, source_context={"completed_steps": ["cook:main"]}
+    )
     assert (
         api.client.post(
             f"/v1/records/{other_record['id']}/revisions",
