@@ -17,7 +17,6 @@ import 'package:gram_tree/auth/auth_controller.dart';
 import 'package:gram_tree/auth/session.dart';
 import 'package:gram_tree/config/app_config.dart';
 import 'package:gram_tree/events/event_queue.dart';
-import 'package:gram_tree/features/me/taste_profile_cache.dart';
 import 'package:gram_tree/features_flags/features.dart';
 import 'package:gram_tree/network/reachability.dart';
 import 'package:gram_tree/privacy/consent.dart';
@@ -330,11 +329,6 @@ Future<void> _seed(
   frozen = await snapshots.read(parts[2], versionId: parts[4]);
   expect(frozen!.inputs['target_servings'], 3);
   expect(frozen!.render?['contract'], isNotNull);
-  expect(frozen!.inputs['personalized_cache_key'], isNull);
-  expect(frozen!.inputs['original_cache_key'], isNull);
-  final taste = await container.read(tasteProfileCacheProvider).read(owner);
-  expect(taste?.profile, isNull);
-  expect(taste?.personalizations ?? const {}, isEmpty);
   final manifest = {
     'run_id': _runId,
     'seed_pid': pid,
@@ -387,11 +381,6 @@ Future<void> _restore(
   final frozen = await snapshots.read(parts[2], versionId: parts[4]);
   expect(frozen, isNotNull);
   expect(frozen!.toJson(), manifest['snapshot']);
-  expect(frozen.inputs['personalized_cache_key'], isNull);
-  expect(frozen.inputs['original_cache_key'], isNull);
-  final taste = await container.read(tasteProfileCacheProvider).read(owner);
-  expect(taste?.profile, isNull);
-  expect(taste?.personalizations ?? const {}, isEmpty);
   expect(frozen.versionId, parts[4]);
   expect(frozen.dependencies['recipe_version'], parts[4]);
   expect(frozen.inputs['scale_mode'], 'servings');

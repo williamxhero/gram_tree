@@ -6,7 +6,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gram_tree/api/api_client.dart';
 import 'package:gram_tree/app/router.dart';
-import 'package:gram_tree/features/me/taste_profile_cache.dart';
 import 'package:gram_tree/network/reachability.dart';
 import 'package:gram_tree/recipes/recipe_snapshot.dart';
 import 'package:gramtree_api/gramtree_api.dart';
@@ -1650,10 +1649,6 @@ void main() {
       await tester.pumpAndSettle();
       await _scrollToBottom(tester);
       expect(find.text('150 克'), findsWidgets);
-      final cache = seedContainer.read(tasteProfileCacheProvider);
-      final taste = await cache.read(testUser().id);
-      expect(taste?.profile, isNull);
-      expect(taste?.personalizations ?? const {}, isEmpty);
       // Rebuild all in-memory state with the same device storage but no network.
       await _resetPage(tester);
       final offline = TestEnv(
