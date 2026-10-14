@@ -2,9 +2,9 @@
 
 from typing import Any
 
-from gramtree.main import create_app
+from fastapi.testclient import TestClient
+
 from tests.accounts_support import Api, bearer
-from tests.conftest import make_settings
 from tests.test_recipes import recipe_input
 
 # These are storage/learning fields, never a client's recipe projection.
@@ -81,8 +81,10 @@ def _schema_keys(node: dict, schemas: dict, seen: set[str] | None = None) -> set
     return keys
 
 
-def test_openapi_public_and_existing_recipe_projections_are_bounded() -> None:
-    spec = create_app(make_settings()).openapi()
+def test_openapi_public_and_existing_recipe_projections_are_bounded(client: TestClient) -> None:
+    response = client.get("/openapi.json")
+    assert response.status_code == 200, response.text
+    spec = response.json()
     schemas = spec["components"]["schemas"]
     assert set(schemas["RecipeListItem"]["properties"]) == CARD_FIELDS
     assert set(schemas["RecipeVersionSummary"]["properties"]) == HISTORY_FIELDS
