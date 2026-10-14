@@ -8,7 +8,7 @@ import re
 import time
 from dataclasses import dataclass
 from datetime import datetime, timedelta
-from typing import Literal
+from typing import Literal, cast
 
 from redis import Redis
 from sqlalchemy.orm import Session
@@ -126,7 +126,11 @@ def _active_action(
     level = raw.decode() if isinstance(raw, bytes) else str(raw)
     if level == "captcha":
         return "captcha", None
-    ends = redis.hget(f"risk:enforcement:{subject.kind}:{subject.value}", "ends_at")
+    # Redis command annotations also cover async clients; this service uses sync Redis.
+    ends = cast(
+        bytes | str | None,
+        redis.hget(f"risk:enforcement:{subject.kind}:{subject.value}", "ends_at"),
+    )
     if ends is not None:
         end = int(ends)
         if end <= int(_now_ts(now)):
@@ -194,7 +198,10 @@ def _activate(
     key = f"risk:enforcement:{subject.kind}:{subject.value}"
     existing = _active_action(redis, subject, now)
     if existing is not None and existing[0] == level:
-        challenge = redis.hget(f"risk:captcha:{subject.kind}:{subject.value}", "challenge_id")
+        challenge = cast(
+            bytes | str | None,
+            redis.hget(f"risk:captcha:{subject.kind}:{subject.value}", "challenge_id"),
+        )
         return challenge.decode() if isinstance(challenge, bytes) else challenge
     ends_at: datetime | None = None
     if level == "throttle":
@@ -242,7 +249,7 @@ def _apply_signal(
     captcha: CaptchaAdapter,
 ) -> RiskDecision | None:
     score_key = f"risk:score:{subject.kind}:{subject.value}"
-    score = int(redis.incrby(score_key, points))
+    score = cast(int, redis.incrby(score_key, points))
     redis.expire(score_key, _int(session, "risk.score_ttl_seconds"))
     previous = _active_level(redis, subject)
     _record(session, subject, rule, evidence, points, now)
@@ -269,7 +276,7 @@ def _window_count(redis: Redis, key: str, now: datetime, seconds: int) -> int:
     redis.zremrangebyscore(key, 0, timestamp - seconds)
     redis.zadd(key, {f"{timestamp}:{time.monotonic_ns()}": timestamp})
     redis.expire(key, seconds * 2)
-    return int(redis.zcard(key))
+    return cast(int, redis.zcard(key))
 
 
 def _observe_one(
@@ -284,7 +291,10 @@ def _observe_one(
     active = _active_action(redis, subject, now)
     if active is not None:
         level, retry = active
-        challenge = redis.hget(f"risk:captcha:{subject.kind}:{subject.value}", "challenge_id")
+        challenge = cast(
+            bytes | str | None,
+            redis.hget(f"risk:captcha:{subject.kind}:{subject.value}", "challenge_id"),
+        )
         return RiskDecision(
             level, retry, challenge.decode() if isinstance(challenge, bytes) else challenge
         )
@@ -307,10 +317,10 @@ def _observe_one(
     redis.zremrangebyscore(uniform_key, 0, timestamp - 86400)
     redis.zadd(uniform_key, {f"{timestamp}:{time.monotonic_ns()}": timestamp})
     redis.expire(uniform_key, 2 * 86400)
-    uniform_count = int(redis.zcard(uniform_key))
+    uniform_count = cast(int, redis.zcard(uniform_key))
     if uniform_count >= _int(session, "risk.uniform_daily_limit"):
-        first = redis.zrange(uniform_key, 0, 0, withscores=True)
-        last = redis.zrange(uniform_key, -1, -1, withscores=True)
+        first = cast(list[tuple[bytes, float]], redis.zrange(uniform_key, 0, 0, withscores=True))
+        last = cast(list[tuple[bytes, float]], redis.zrange(uniform_key, -1, -1, withscores=True))
         span_hours = ((float(last[0][1]) - float(first[0][1])) / 3600) if first and last else 0
         if span_hours >= _int(session, "risk.uniform_min_span_hours"):
             return _apply_signal(
@@ -326,14 +336,14 @@ def _observe_one(
             )
     if _is_detail(path):
         detail_key = f"risk:detail:{subject.kind}:{subject.value}"
-        previous = redis.get(detail_key)
+        previous = cast(bytes | None, redis.get(detail_key))
         previous_at = float(previous) if previous is not None else None
         redis.set(detail_key, str(_now_ts(now)), ex=window)
         if previous_at is not None and _now_ts(now) - previous_at <= int(
             config.get(session, "risk.detail_interval_seconds")
         ):
             rapid_key = f"risk:rapid:{subject.kind}:{subject.value}"
-            rapid = int(redis.incr(rapid_key))
+            rapid = cast(int, redis.incr(rapid_key))
             redis.expire(rapid_key, window)
             if rapid >= _int(session, "risk.detail_repeat_limit"):
                 return _apply_signal(
@@ -355,11 +365,11 @@ def _observe_one(
     identifier = _DETAIL_RE.match(path)
     if identifier:
         sequence_key = f"risk:sequence:{subject.kind}:{subject.value}"
-        previous_id = redis.get(sequence_key)
+        previous_id = cast(bytes | None, redis.get(sequence_key))
         current_id = identifier.group(1)
         if previous_id is not None and previous_id.decode() != current_id:
             redis.set(sequence_key, current_id, ex=window)
-            sequential = int(redis.incr(f"{sequence_key}:count"))
+            sequential = cast(int, redis.incr(f"{sequence_key}:count"))
             redis.expire(f"{sequence_key}:count", window)
             if sequential >= _int(session, "risk.sequential_limit"):
                 return _apply_signal(
@@ -427,7 +437,7 @@ def observe_account(
         members_key = f"risk:device-accounts:{device.value}"
         redis.sadd(members_key, account.value)
         redis.expire(members_key, _int(session, "risk.score_ttl_seconds"))
-        count = int(redis.scard(members_key))
+        count = cast(int, redis.scard(members_key))
         if count >= _int(session, "risk.multi_account_limit"):
             return _apply_signal(
                 redis,
@@ -472,7 +482,7 @@ def observe_login(
     if subnet and is_new_account:
         subject = _subject("ip", f"subnet:{subnet}", settings)
         key = f"risk:new-accounts:{subject.value}"
-        count = int(redis.incr(key))
+        count = cast(int, redis.incr(key))
         redis.expire(key, _int(session, "risk.short_window_seconds"))
         if count >= _int(session, "risk.subnet_new_account_limit"):
             return _apply_signal(
