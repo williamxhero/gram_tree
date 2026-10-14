@@ -2,6 +2,8 @@
 
 from pathlib import Path
 
+import pytest
+
 from tests.accounts_support import Api, bearer, new_uuid
 from tests.test_allergies import sensitive_api as sensitive_api
 from tests.test_personalization_adaptations import personalization_api as personalization_api
@@ -541,7 +543,58 @@ def test_prior_view_keeps_current_allergy_authorization_and_projected_safety(
     assert api.client.get(PATH, headers=headers).json() == updated.json()
 
 
-def test_failure_first_step_live_adjustments_and_latest_success(api: Api) -> None:
+@pytest.mark.parametrize(
+    ("step_id", "text", "expected"),
+    [
+        ("cook", "肉柴", True),
+        ("cook", "  肉柴  ", True),
+        ("marinate", "肉柴", False),
+        ("missing", "肉柴", False),
+        ("cook", "少放一点盐", False),
+        ("cook", "肉没有炒柴", False),
+    ],
+)
+def test_app_adjustment_labels_require_exact_negative_text_and_matching_step(
+    api: Api,
+    step_id: str,
+    text: str,
+    expected: bool,
+) -> None:
+    headers = bearer(api.login("scene-adjustment-text@example.com"))
+    recipe = api.client.post("/v1/recipes", headers=headers, json=recipe_input()).json()
+    last = record(
+        api,
+        headers,
+        recipe,
+        adjustments=[{"step_id": step_id, "text": text, "created_at": "2026-10-14T00:00:00Z"}],
+    )
+    cards = [
+        c for c in compose(api, headers, recipe)["components"] if c["type"] == "failure_reminder"
+    ]
+    if expected:
+        assert {c["data"]["placement"] for c in cards} == {"before", "at"}
+        assert all(c["data"]["step_id"] == "cook" for c in cards)
+        assert all(c["data"]["record_id"] == last["id"] for c in cards)
+    else:
+        assert cards == []
+
+
+@pytest.mark.parametrize(
+    "adjustment",
+    [
+        {"flavor": "salty", "delta": -1},
+        {
+            "step_id": "cook:main",
+            "text": "偏咸",
+            "created_at": "2026-10-14T00:00:00Z",
+        },
+    ],
+    ids=["structured-reduction", "app-recorded-text"],
+)
+def test_failure_first_step_live_adjustments_and_latest_success(
+    api: Api,
+    adjustment: dict,
+) -> None:
     headers = bearer(api.login("scene-first-step@example.com"))
     body = recipe_input()
     body["snapshot"]["steps"] = [body["snapshot"]["steps"][1]]
@@ -563,7 +616,7 @@ def test_failure_first_step_live_adjustments_and_latest_success(api: Api) -> Non
         api,
         headers,
         recipe,
-        adjustments=[{"flavor": "salty", "delta": -1}],
+        adjustments=[adjustment],
         source_context={"completed_steps": ["cook:main"]},
     )
     path = f"/v1/records/{last['id']}/revisions"

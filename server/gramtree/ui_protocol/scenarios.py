@@ -434,10 +434,19 @@ def failure_cards(
         )
         if adjustment_revision and adjustment_revision.get("deleted"):
             adjustments = []
+        adjustment_labels: dict[str, set[str]] = {}
         if isinstance(adjustments, list):
             for adjustment in adjustments:
                 if not isinstance(adjustment, dict):
                     continue
+                text = adjustment.get("text")
+                step_id = adjustment.get("step_id")
+                # The App records free text, not flavor deltas. Only exact negative
+                # labels are evidence; ordinary edits like "少放一点盐" are not failures.
+                if isinstance(text, str) and isinstance(step_id, str):
+                    label = text.strip()
+                    if any(label in labels for labels, _, _ in FAILURE_RULES.values()):
+                        adjustment_labels.setdefault(label, set()).add(step_id)
                 flavor_key = adjustment.get("flavor", adjustment.get("flavor_key"))
                 delta = adjustment.get("delta", adjustment.get("direction"))
                 # Explicit reductions of a named flavor are observable live-cook
@@ -450,7 +459,7 @@ def failure_cards(
         if previous is None:
             continue
         for rule_id, (labels, flavor, advice) in FAILURE_RULES.items():
-            matched = tags.intersection(labels)
+            matched = tags.intersection(labels) | labels.intersection(adjustment_labels)
             if rule_id in seen or not matched:
                 continue
             seen.add(rule_id)
@@ -475,6 +484,13 @@ def failure_cards(
             historical, candidates = targets(previous), targets(current)
             if len(historical) != 1 or candidates != historical:
                 continue  # Ambiguous or changed step identity: do not invent confidence.
+            matched = {
+                label
+                for label in matched
+                if label in tags or historical[0] in adjustment_labels.get(label, set())
+            }
+            if not matched:
+                continue  # A text label recorded at another step cannot identify this one.
             date = row.occurred_at.date().isoformat()
             for placement in ("before", "at"):
                 component_id = f"scene:failure:{recipe_id}:{rule_id}:{candidates[0]}:{placement}"
