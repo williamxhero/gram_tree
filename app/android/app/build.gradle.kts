@@ -52,7 +52,7 @@ flutter {
 // Android's platform instrumentation APIs are test-only; no new runtime SDK.
 dependencies {
     val sdk = androidComponents.sdkComponents.sdkDirectory.get().asFile
-    androidTestImplementation(files(
+    androidTestCompileOnly(files(
         "$sdk/platforms/android-${flutter.compileSdkVersion}/optional/android.test.runner.jar",
         "$sdk/platforms/android-${flutter.compileSdkVersion}/optional/android.test.base.jar",
     ))
