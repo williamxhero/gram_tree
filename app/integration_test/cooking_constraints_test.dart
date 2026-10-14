@@ -30,29 +30,7 @@ void main() {
     double delta = 350,
   }) async {
     lastTarget = 'reveal $finder (delta: $delta)';
-    tester.testTextInput.hide();
-    await tester.pump();
-    final dialog = find.byType(AlertDialog);
-    if (dialog.evaluate().isEmpty &&
-        find
-            .byKey(const ValueKey('taste-profile-content'))
-            .evaluate()
-            .isNotEmpty) {
-      await revealProfileTarget(tester, finder, delta: delta);
-      return;
-    }
-    final scrollable = dialog.evaluate().isEmpty
-        ? find
-              .byWidgetPredicate(
-                (widget) =>
-                    widget is Scrollable &&
-                    widget.axisDirection == AxisDirection.down,
-              )
-              .first
-        : find.descendant(of: dialog, matching: find.byType(Scrollable)).first;
-    await tester.scrollUntilVisible(finder, delta, scrollable: scrollable);
-    await tester.ensureVisible(finder);
-    await tester.pumpAndSettle();
+    await revealProfileOrDialogTarget(tester, finder, delta: delta);
   }
 
   Future<void> tap(

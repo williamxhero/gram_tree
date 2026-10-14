@@ -1,6 +1,27 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+Future<void> revealProfileOrDialogTarget(
+  WidgetTester tester,
+  Finder finder, {
+  double delta = 350,
+}) async {
+  tester.testTextInput.hide();
+  await tester.pump();
+  final dialog = find.byType(AlertDialog);
+  // A profile refresh can begin before this search, with no list mounted yet.
+  if (dialog.evaluate().isEmpty) {
+    await revealProfileTarget(tester, finder, delta: delta);
+    return;
+  }
+  final scrollable = find
+      .descendant(of: dialog, matching: find.byType(Scrollable))
+      .first;
+  await tester.scrollUntilVisible(finder, delta, scrollable: scrollable);
+  await tester.ensureVisible(finder);
+  await tester.pumpAndSettle();
+}
+
 Future<void> revealProfileTarget(
   WidgetTester tester,
   Finder finder, {
