@@ -1,6 +1,13 @@
 """SPEC-009.2 scenarios, observed only through authenticated HTTP interfaces."""
 
+from pathlib import Path
+
 from tests.accounts_support import Api, bearer, new_uuid
+from tests.test_allergies import sensitive_api as sensitive_api
+from tests.test_personalization_adaptations import personalization_api as personalization_api
+from tests.test_personalization_adaptations import (
+    personalization_recordings as personalization_recordings,
+)
 from tests.test_recipes import recipe_input
 
 COMPONENTS = [
@@ -495,30 +502,21 @@ def test_prior_view_restores_earlier_change_that_was_reverted_after_target(api: 
     assert api.client.get(profile_path, headers=headers).json() == current
 
 
-def test_prior_view_keeps_current_allergy_authorization_and_projected_safety(api: Api) -> None:
-    import base64
-    import os
-
-    from pydantic import SecretStr
-
+def test_prior_view_keeps_current_allergy_authorization_and_projected_safety(
+    personalization_api: Api,
+    personalization_recordings: Path,
+) -> None:
     from tests.test_allergies import PATH, consent, save
+    from tests.test_personalization_adaptations import CORPUS, ingredient, record_replacement
 
-    api.client.app.state.settings = api.client.app.state.settings.model_copy(
-        update={"sensitive_data_key": SecretStr(base64.urlsafe_b64encode(os.urandom(32)).decode())}
-    )
+    api = personalization_api
     headers = bearer(api.login("scene-allergy-history@example.com"))
     body = recipe_input()
     body["snapshot"]["ingredients"].append(
-        {
-            "id": "peanut",
-            "display_name": "花生",
-            "quantity": 10,
-            "unit": "g",
-            "group": "配料",
-            "flavor_contribution": {"salty": 3},
-        }
+        ingredient("花生", "peanut", flavor_contribution={"salty": 3})
     )
     recipe = api.client.post("/v1/recipes", headers=headers, json=body).json()
+    record_replacement(personalization_recordings, recipe, "花生", CORPUS["no_replacement"])
     assert (
         api.client.patch(
             "/v1/me/taste-profile", headers=headers, json={"flavors": {"salty": 1.25}}
