@@ -17,6 +17,8 @@ const _changeId = '44444444-4444-4444-8444-444444444444';
 const _date = '2026-10-10T08:00:00Z';
 const _instruction = '煮熟鸡肉后加盐';
 const _stepNote = '关火前试味，再决定是否补盐';
+const _doneness = '鸡肉中心温度达到 74°C';
+const _why = '充分加热可降低食源性风险';
 const _differenceId = 'scene:difference:$_recipeId';
 const _tasteId = 'scene:taste:$_changeId';
 const _failureId = 'scene:failure:$_recipeId:too-salty:cook:at';
@@ -53,6 +55,8 @@ RecipeDetail _detail() => RecipeDetail.fromJson({
           'id': 'cook',
           'instruction': _instruction,
           'notes': _stepNote,
+          'doneness': _doneness,
+          'why': _why,
           'ingredient_ids': ['chicken', 'salt'],
         },
       ],
@@ -392,8 +396,12 @@ void main() {
     await _open(tester, server);
     await _reveal(tester, find.text('第一次做，完整展开'));
     await _reveal(tester, find.textContaining(_stepNote));
+    await _reveal(tester, find.textContaining(_doneness));
+    await _reveal(tester, find.textContaining(_why));
     await _tap(tester, _key('scenario-detail-brief'));
     await _reveal(tester, find.text('常做这道菜，先看本次变化'));
+    await _reveal(tester, find.textContaining(_doneness));
+    expect(find.textContaining(_why), findsNothing);
     expect(server.calls('PUT', '/v1/ui/preferences'), isEmpty);
     final router = ProviderScope.containerOf(
       tester.element(find.byType(Scaffold).first),
@@ -404,6 +412,7 @@ void main() {
     await _pump(tester);
     await _reveal(tester, find.text('第一次做，完整展开'));
     await _reveal(tester, find.textContaining(_stepNote));
+    await _reveal(tester, find.textContaining(_why));
     expect(tester.takeException(), isNull);
   });
 
