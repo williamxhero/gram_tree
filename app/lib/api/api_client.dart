@@ -56,10 +56,21 @@ final offlineSimulationProvider = NotifierProvider<OfflineSimulation, bool>(
 
 const deviceIdHeader = 'X-Device-ID';
 
-bool _isPublicShareRequest(RequestOptions options) =>
-    options.extra['public_request'] == true &&
-    options.method == 'GET' &&
-    RegExp(r'^/v1/shares/[^/?#]+$').hasMatch(options.uri.path);
+bool _isPublicShareRequest(RequestOptions options) {
+  if (options.extra['public_request'] != true) return false;
+  final path = options.uri.path;
+  if (options.method == 'GET' &&
+      (RegExp(r'^/v1/shares/[^/?#]+$').hasMatch(path) ||
+          RegExp(r'^/s/[^/?#]+/image$').hasMatch(path))) {
+    return true;
+  }
+  // Only recovery spawned by an anonymous share request bypasses consent and
+  // identity headers. Ordinary authenticated challenges retain their account.
+  return options.extra['public_share_captcha'] == true &&
+      ((options.method == 'GET' &&
+              RegExp(r'^/v1/risk/captcha/[^/?#]+$').hasMatch(path)) ||
+          (options.method == 'POST' && path == '/v1/risk/captcha'));
+}
 
 Dio _baseDio(Ref ref) {
   final config = ref.watch(appConfigProvider);
@@ -285,10 +296,14 @@ class RequestProtectionInterceptor extends Interceptor {
             dio: _retryDio,
             interceptors: const [],
           ).getRiskApi();
+          final recoveryExtra = {
+            ...options.extra,
+            if (_isPublicShareRequest(options)) 'public_share_captcha': true,
+          };
           final response = await riskApi.getCaptchaChallenge(
             challengeId: Uri.encodeComponent(challengeId),
             headers: {'Authorization': options.headers['Authorization']},
-            extra: {...options.extra},
+            extra: recoveryExtra,
           );
           final challenge = response.data;
           final imageUri = challenge?.imageDataUri;
@@ -324,7 +339,7 @@ class RequestProtectionInterceptor extends Interceptor {
                 response: answer,
               ),
               headers: {'Authorization': options.headers['Authorization']},
-              extra: {...options.extra, _captchaRetried: true},
+              extra: {...recoveryExtra, _captchaRetried: true},
             );
             if (verification.data?.accepted != true ||
                 verification.data?.accessRestored != true ||
@@ -440,6 +455,10 @@ class AuthInterceptor extends QueuedInterceptor {
   ) async {
     if (_isPublicShareRequest(options)) {
       options.headers.remove('Authorization');
+      // Anonymous recovery still belongs to the login generation that opened
+      // the link; never replay it across a login/logout or account switch.
+      options.extra['auth_owner_id'] = session.current?.user.id;
+      options.extra['auth_identity_epoch'] = session.identityEpoch;
       handler.next(options);
       return;
     }

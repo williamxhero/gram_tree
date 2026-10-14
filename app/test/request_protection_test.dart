@@ -25,6 +25,62 @@ Future<void> pumpUntilVisible(WidgetTester tester, Finder finder) async {
 }
 
 void main() {
+  for (final signedIn in [false, true]) {
+    testWidgets('public share CAPTCHA stays anonymous: signedIn=$signedIn', (
+      tester,
+    ) async {
+      final env = SharingTestEnv(signedIn: signedIn, consented: false);
+      var calls = 0;
+      env.server.responseHeaders['GET /v1/shares/$publicShareId'] = {
+        'x-risk-challenge': ['challenge-123'],
+      };
+      env.server.on('GET', '/v1/shares/$publicShareId', (_) {
+        if (++calls == 1) {
+          return FakeServer.error(403, 'risk_captcha_required', '需要安全验证');
+        }
+        return (
+          200,
+          {
+            'share_id': publicShareId,
+            'recipe_id': sharedRecipeId,
+            'app_path': '/recipes/$sharedRecipeId',
+          },
+        );
+      });
+      env.server.on(
+        'POST',
+        '/v1/risk/captcha',
+        (_) => (200, {'accepted': true, 'access_restored': true}),
+      );
+      await pumpApp(tester, env: env);
+      final container = ProviderScope.containerOf(
+        tester.element(find.byType(Scaffold).first),
+      );
+      container.read(routerProvider).go('/s/$publicShareId');
+      await pumpUntilVisible(tester, find.text('安全验证'));
+      await tester.enterText(
+        find.byKey(const ValueKey('captcha-response')),
+        'verified',
+      );
+      await tester.tap(find.text('验证并继续'));
+      await tester.pumpAndSettle();
+      expect(calls, 2);
+      expect(find.text('菜谱不存在或已下架'), findsNothing);
+      expect(env.server.calls('POST', '/v1/risk/captcha'), hasLength(1));
+      final requests = [
+        ...env.server.calls('GET', '/v1/shares/$publicShareId'),
+        ...env.server.calls('GET', '/v1/risk/captcha/challenge-123'),
+        ...env.server.calls('POST', '/v1/risk/captcha'),
+      ];
+      expect(requests, hasLength(4));
+      for (final request in requests) {
+        expect(request.headers['Authorization'], isNull);
+        expect(request.headers['X-Device-ID'], isNull);
+        expect(request.headers['X-Request-Signature'], isNull);
+      }
+    });
+  }
+
   testWidgets(
     'clock replay can refresh expired tokens without a second clock or auth retry',
     (tester) async {
