@@ -324,7 +324,11 @@ void main() {
       await _revealCooking(tester, find.text('下一步'));
       // A real flip must move the active step despite reminder cards adding
       // their own nested scrollables above the normal cooking controls.
-      await tester.drag(find.byType(Scrollable).first, const Offset(-350, 0));
+      await tester.fling(
+        find.byType(Scrollable).first,
+        const Offset(-350, 0),
+        1000,
+      );
       await _pump(tester);
       await _revealCooking(tester, find.text('步骤 2 / 2'));
       await _revealCooking(tester, _key('cooking-reminders-cook-at'));
