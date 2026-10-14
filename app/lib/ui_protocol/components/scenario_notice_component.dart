@@ -52,8 +52,21 @@ Widget buildScenarioNoticeComponent(
           if (data['problem'] is String) Text(data['problem'] as String),
           if (data['advice'] is String) Text(data['advice'] as String),
           if (differences is List)
-            for (final item in differences.whereType<Map>())
-              Text('${item['label']}：上次 ${item['before']}，本次 ${item['after']}'),
+            ExpansionTile(
+              key: ValueKey('${component.id}:expand'),
+              title: const Text('查看本次与上次的差异'),
+              initiallyExpanded:
+                  component.detail == ComponentDescriptorDetailEnum.detailed,
+              children: [
+                for (final item in differences.whereType<Map>())
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      '${item['label']}：上次 ${item['before']}，本次 ${item['after']}',
+                    ),
+                  ),
+              ],
+            ),
           if (data['record_date'] is String)
             Text('依据做过记录：${data['record_date']}'),
           if (data['change_date'] is String)

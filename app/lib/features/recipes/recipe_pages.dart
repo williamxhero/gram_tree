@@ -3318,9 +3318,18 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
     if (_networkUnavailable) return;
     setState(() {
       _beforeTasteChangeId = changeId;
+      _personalized = null;
       _showOriginal = false;
     });
     await _loadPersonalization();
+  }
+
+  void _restoreCurrentTaste() {
+    setState(() {
+      _beforeTasteChangeId = null;
+      _personalized = null;
+    });
+    unawaited(_loadPersonalization());
   }
 
   Future<void> _loadPersonalization({bool? confirmAllergyRisk}) async {
@@ -3383,7 +3392,13 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
         stackTrace: stack,
       );
       if (current()) {
-        setState(() => _personalizationError = '按我的口味暂时不可用，仍显示原版内容。');
+        setState(() {
+          if (_beforeTasteChangeId != null) {
+            _beforeTasteChangeId = null;
+            _personalized = null;
+          }
+          _personalizationError = '按我的口味暂时不可用，仍显示原版内容。';
+        });
       }
     } finally {
       if (current()) setState(() => _personalizationLoading = false);
@@ -4151,10 +4166,7 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
             }),
             onSkip: (id) => setState(() => _sceneSkippedComponents.add(id)),
             onBeforeTaste: _showBeforeTasteChange,
-            onTasteReverted: () {
-              setState(() => _beforeTasteChangeId = null);
-              unawaited(_loadPersonalization());
-            },
+            onTasteReverted: _restoreCurrentTaste,
             child: RecipeSafetyProtocolSection(
               result: detail.version.safety ?? detail.version.safetyAtSave,
               legacyDerived: derived,
@@ -4170,10 +4182,7 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
           if (_beforeTasteChangeId != null)
             TextButton(
               key: const ValueKey('scenario-restore-current-taste'),
-              onPressed: () {
-                setState(() => _beforeTasteChangeId = null);
-                unawaited(_loadPersonalization());
-              },
+              onPressed: _restoreCurrentTaste,
               child: const Text('本次按调整前口味显示 · 恢复最近口味'),
             ),
           _RecipePhotoDisplay(images: detail.version.images),

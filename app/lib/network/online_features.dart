@@ -46,7 +46,16 @@ abstract final class OnlineFeatures {
       return forPage(registeredPages[params['page']] ?? '');
     }
     if (intent == 'call_operation') return operations[params['operation']];
-    if (intent == 'skip_this_time') return OnlineFeature.serverConversion;
+    if (intent == 'dont_do_again' &&
+        params['source_type'] == 'scenario_adjusted' &&
+        (params['component_id'] as String? ?? '').startsWith('scene:')) {
+      return OnlineFeature.serverConversion;
+    }
+    if (intent == 'skip_this_time' ||
+        intent == 'show_before_taste_change' ||
+        intent == 'open_taste_change') {
+      return OnlineFeature.serverConversion;
+    }
     return operations[intent];
   }
 

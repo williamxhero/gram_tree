@@ -26,6 +26,7 @@ import 'recipe_operations.dart';
 import 'source_overrides.dart';
 import 'source_types.dart';
 import 'scenario_detail_scope.dart';
+import 'scenario_actions.dart';
 
 /// App 内置意图登记表（SPEC-009.1 #81）：组件上的每个动作只能是这里登记过的意图，
 /// 按钮、菜单、以后的一句话输入都落到同一批意图，都走同一个处理器
@@ -286,6 +287,20 @@ Future<Object?> _handleSkipThisTime(
         },
       );
 
+  if (sourceType == sourceTypeScenarioAdjusted &&
+      componentId.startsWith('scene:')) {
+    if (!context.mounted) return null;
+    final scope = ScenarioDetailScope.of(context);
+    if (componentId.startsWith('scene:taste:')) {
+      await scope?.onBeforeTaste?.call(
+        componentId.substring('scene:taste:'.length),
+      );
+    } else {
+      scope?.onSkip?.call(componentId);
+    }
+    return null;
+  }
+
   try {
     final response = await ref
         .read(apiClientProvider)
@@ -327,6 +342,10 @@ Future<Object?> _handleDontDoAgain(
   final componentId = params['component_id'] as String;
   final sourceType = params['source_type'] as String;
   final compositionId = params['composition_id'] as String?;
+  if (sourceType == sourceTypeScenarioAdjusted &&
+      componentId.startsWith('scene:')) {
+    return handleScenarioFeedback(context, ref, params);
+  }
   await ref
       .read(eventRecorderProvider)
       .record(
@@ -363,7 +382,22 @@ void _handleScenarioDetail(
   Map<String, dynamic> params,
 ) => ScenarioDetailScope.change(context, params['detail'] as String);
 
+bool _validateTasteChange(Map<String, dynamic> params) =>
+    params.length == 1 && isRecipeId(params['change_id']);
+
 final defaultIntentRegistry = IntentRegistry([
+  const IntentSpec(
+    name: 'show_before_taste_change',
+    defaultLabel: '按调整前的口味显示',
+    validateParams: _validateTasteChange,
+    handler: handleBeforeTasteChange,
+  ),
+  const IntentSpec(
+    name: 'open_taste_change',
+    defaultLabel: '撤销这个变化',
+    validateParams: _validateTasteChange,
+    handler: handleOpenTasteChange,
+  ),
   const IntentSpec(
     name: 'set_scenario_detail',
     defaultLabel: '切换本页详略',
