@@ -15,7 +15,7 @@ import UserNotifications
     GeneratedPluginRegistrant.register(with: engineBridge.pluginRegistry)
     let shareChannel = FlutterMethodChannel(
       name: "app.gramtree/share",
-      binaryMessenger: engineBridge.binaryMessenger
+      binaryMessenger: engineBridge.applicationRegistrar.messenger()
     )
     shareChannel.setMethodCallHandler { call, result in
       guard call.method == "shareRecipe",
@@ -54,7 +54,7 @@ import UserNotifications
     }
     let channel = FlutterMethodChannel(
       name: "app.gramtree/device_capabilities",
-      binaryMessenger: engineBridge.binaryMessenger
+      binaryMessenger: engineBridge.applicationRegistrar.messenger()
     )
     channel.setMethodCallHandler { call, result in
       if call.method == "scheduleTimerReminder",
