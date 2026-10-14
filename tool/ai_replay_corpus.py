@@ -65,6 +65,19 @@ def main() -> None:
                 {"names": ["鸡腿肉", "盐"], "candidates": []},
                 corpus["normalization"],
             ),
+            # Runtime digest 9be8dac5...: exact library matches remove 盐 before
+            # normalization. Preserve the original key and this observed input only.
+            (
+                "normalize",
+                {"names": ["鸡腿肉"], "candidates": []},
+                {
+                    "matches": [
+                        match
+                        for match in corpus["normalization"]["matches"]
+                        if match["name"] == "鸡腿肉"
+                    ]
+                },
+            ),
             ("embedding", {"text": "宫保鸡丁"}, corpus["embedding"]),
             (
                 "embedding",
