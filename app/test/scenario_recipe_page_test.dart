@@ -1,9 +1,12 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gram_tree/app/router.dart';
 import 'package:gramtree_api/gramtree_api.dart';
 
+import 'allergies_page_test.dart' show allergyFixture;
 import 'helpers.dart';
 import 'taste_profile_page_test.dart' show profileFixture;
 
@@ -530,6 +533,238 @@ void main() {
       server.calls('POST', '/v1/me/taste-profile/changes/$_changeId/revert'),
       isEmpty,
     );
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('详情保持打开时修改口味，刷新用量也必须重新组合并显示新通知', (tester) async {
+    const updatedChangeId = '66666666-6666-4666-8666-666666666666';
+    var profile = profileFixture().copyWith(version: 7);
+    final updatedProjection = Completer<void>();
+    final updatedScene = Completer<void>();
+    // Keep both responses pending to exercise what is visible between updates.
+    addTearDown(() {
+      if (!updatedProjection.isCompleted) updatedProjection.complete();
+      if (!updatedScene.isCompleted) updatedScene.complete();
+    });
+    final server = _server(taste: true);
+    server.on('GET', '/v1/me/taste-profile', (_) => (200, profile.toJson()));
+    server.on('PATCH', '/v1/me/taste-profile', (_) {
+      profile = profileFixture(
+        saltyLevel: 1,
+        manual: true,
+      ).copyWith(version: 8);
+      return (200, profile.toJson());
+    });
+    server.on('POST', '/v1/recipes/$_recipeId/personalized', (request) async {
+      final version = profile.version;
+      if (version == 8) await updatedProjection.future;
+      return (
+        200,
+        _projection(
+          request.body as Map,
+          salt: version == 7 ? 8 : 7.5,
+        ).copyWith(profileVersion: version).toJson(),
+      );
+    });
+    server.on('POST', '/v1/ui/compositions', (_) async {
+      final page = _page('detailed', taste: true);
+      if (profile.version == 8) {
+        await updatedScene.future;
+        final notice = (page['components'] as List).cast<Map>().firstWhere(
+          (component) => component['type'] == 'taste_change_notice',
+        );
+        notice['id'] = 'scene:taste:$updatedChangeId';
+        notice['data'] = {
+          'conclusion': '新口味已生效，本次盐量为 7.5 g',
+          'change_id': updatedChangeId,
+          'change_date': _date,
+          'source': _source('按新档案换算为 7.5 g'),
+        };
+        notice['actions'] = [
+          for (final intent in [
+            'show_before_taste_change',
+            'open_taste_change',
+          ])
+            {
+              'intent': intent,
+              'params': {'change_id': updatedChangeId},
+            },
+        ];
+      }
+      return (200, PageDescription.fromJson(page).toJson());
+    });
+    int recipeSceneRequests() => server
+        .calls('POST', '/v1/ui/compositions')
+        .where(
+          (request) => (request.body as Map)['page_type'] == 'recipe_detail',
+        )
+        .length;
+    await _open(tester, server);
+    await _reveal(tester, find.text('盐  8 g'));
+    await _reveal(tester, _key(_tasteId));
+    final initialRequests = recipeSceneRequests();
+    final router = ProviderScope.containerOf(
+      tester.element(find.byType(Scaffold).first),
+    ).read(routerProvider);
+    // Push another public page: the recipe route stays mounted underneath it.
+    router.push('/me/taste-profile');
+    await _pump(tester);
+    await tester.ensureVisible(_key('taste-level-salty'));
+    await tester.tap(_key('taste-level-salty').hitTestable());
+    await _pump(tester);
+    await tester.tap(find.text('淡一点').last.hitTestable());
+    await _pump(tester);
+    expect(server.calls('PATCH', '/v1/me/taste-profile').length, 1);
+    router.pop();
+    await _pump(tester);
+    expect(_key(_tasteId), findsNothing, reason: '新档案用量尚未返回时，旧口味变化通知不能继续显示');
+    expect(
+      recipeSceneRequests(),
+      initialRequests,
+      reason: '尚未取得新档案用量时不能用旧用量重新组合',
+    );
+    updatedProjection.complete();
+    await _pump(tester);
+    await _reveal(tester, find.text('盐  7.5 g'));
+    expect(
+      recipeSceneRequests(),
+      greaterThan(initialRequests),
+      reason: '新档案用量生效时，同一详情页的场景不能继续使用旧通知',
+    );
+    expect(_key(_tasteId), findsNothing, reason: '新场景请求尚未返回时不能回显缓存的旧通知');
+    expect(_key('scene:taste:$updatedChangeId'), findsNothing);
+    updatedScene.complete();
+    await _pump(tester);
+    await _reveal(tester, find.text('新口味已生效，本次盐量为 7.5 g'));
+    expect(_key(_tasteId), findsNothing);
+    expect(_key('scene:taste:$updatedChangeId'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('详情保持打开时撤回敏感同意，旧个人过敏提醒不得残留在场景中', (tester) async {
+    var withdrawn = false;
+    final updatedProjection = Completer<void>();
+    final updatedScene = Completer<void>();
+    addTearDown(() {
+      if (!updatedProjection.isCompleted) updatedProjection.complete();
+      if (!updatedScene.isCompleted) updatedScene.complete();
+    });
+    final server = _server();
+    final privateAlert = {
+      'person': '你',
+      'kind': 'allergy',
+      'target': '花生',
+      'ingredient': '鸡肉',
+      'replacement': false,
+    };
+    server.on(
+      'GET',
+      '/v1/me/taste-profile/allergies',
+      (_) => (
+        200,
+        allergyFixture(
+              consentId: withdrawn ? null : _recordId,
+              selected: withdrawn ? const [] : const ['花生'],
+            )
+            .copyWith(
+              profileVersion: 7,
+              authorizationVersion: withdrawn ? 2 : 1,
+            )
+            .toJson(),
+      ),
+    );
+    server.on('POST', '/v1/me/consents', (request) {
+      final records = (request.body as Map)['records'] as List;
+      if (records.any(
+        (record) =>
+            record['kind'] == 'sensitive_personal_info' &&
+            record['action'] == 'withdraw',
+      )) {
+        withdrawn = true;
+      }
+      return (204, null);
+    });
+    server.on('POST', '/v1/recipes/$_recipeId/personalized', (request) async {
+      final afterWithdrawal = withdrawn;
+      if (afterWithdrawal) await updatedProjection.future;
+      final projection = _projection(request.body as Map).toJson();
+      projection['authorization_version'] = afterWithdrawal ? 2 : 1;
+      projection['safety'] = {
+        'status': afterWithdrawal ? 'not_authorized' : 'available',
+        'alerts': afterWithdrawal ? <Object>[] : [privateAlert],
+      };
+      projection['blocked'] = !afterWithdrawal;
+      return (200, RecipePersonalizedOut.fromJson(projection).toJson());
+    });
+    server.on('POST', '/v1/ui/compositions', (_) async {
+      final afterWithdrawal = withdrawn;
+      if (afterWithdrawal) await updatedScene.future;
+      final page = _page('detailed');
+      final allergens = (page['components'] as List).cast<Map>().firstWhere(
+        (component) => component['type'] == 'allergen_notice',
+      );
+      (allergens['data'] as Map)['personal_safety'] = {
+        'status': afterWithdrawal ? 'not_authorized' : 'available',
+        'alerts': afterWithdrawal ? <Object>[] : [privateAlert],
+        'unknown_ingredients': <String>[],
+        'incomplete': false,
+      };
+      return (200, PageDescription.fromJson(page).toJson());
+    });
+    int recipeSceneRequests() => server
+        .calls('POST', '/v1/ui/compositions')
+        .where(
+          (request) => (request.body as Map)['page_type'] == 'recipe_detail',
+        )
+        .length;
+    await _open(tester, server);
+    await _reveal(tester, find.text('过敏提醒：你，花生（鸡肉）'));
+    final initialRequests = recipeSceneRequests();
+    final router = ProviderScope.containerOf(
+      tester.element(find.byType(Scaffold).first),
+    ).read(routerProvider);
+    router.push('/me/settings');
+    await _pump(tester);
+    await tester.scrollUntilVisible(
+      _key('sensitive-withdraw'),
+      200,
+      scrollable: find.byType(Scrollable).last,
+      maxScrolls: 20,
+    );
+    await tester.ensureVisible(_key('sensitive-withdraw'));
+    await tester.tap(_key('sensitive-withdraw').hitTestable());
+    await _pump(tester);
+    await tester.tap(_key('sensitive-withdraw-confirm').hitTestable());
+    await _pump(tester);
+    expect(withdrawn, isTrue);
+    expect(find.text('敏感同意已撤回，过敏、家庭成员及私密历史已删除'), findsOneWidget);
+    router.pop();
+    await _pump(tester);
+    await _reveal(tester, _key('recipe-allergen-card'));
+    expect(
+      find.text('过敏提醒：你，花生（鸡肉）'),
+      findsNothing,
+      reason: '撤回后新用量尚未返回，组合卡也不能泄露已撤回的个人过敏',
+    );
+    expect(_key('personal-safety-你-allergy-鸡肉'), findsNothing);
+    expect(_key('personalized-allergy-鸡肉'), findsNothing);
+    expect(recipeSceneRequests(), initialRequests);
+    updatedProjection.complete();
+    await _pump(tester);
+    await _reveal(tester, find.text('盐  8 g'));
+    expect(recipeSceneRequests(), greaterThan(initialRequests));
+    await _reveal(tester, _key('recipe-allergen-card'));
+    expect(
+      _key('personal-safety-你-allergy-鸡肉'),
+      findsNothing,
+      reason: '新组合尚未返回，不能复用含个人过敏的旧安全卡',
+    );
+    updatedScene.complete();
+    await _pump(tester);
+    await _reveal(tester, _key('recipe-food-safety-card'));
+    await _reveal(tester, _key('recipe-allergen-card'));
+    expect(find.text('过敏提醒：你，花生（鸡肉）'), findsNothing);
+    expect(_key('personalized-allergy-鸡肉'), findsNothing);
     expect(tester.takeException(), isNull);
   });
 
