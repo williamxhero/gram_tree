@@ -16,6 +16,7 @@ lib/src/api/health_api.dart
 lib/src/api/ingredients_api.dart
 lib/src/api/personal_measures_api.dart
 lib/src/api/recipe_ai_api.dart
+lib/src/api/recipe_imports_api.dart
 lib/src/api/recipes_api.dart
 lib/src/api/records_api.dart
 lib/src/api/sync_api.dart
@@ -39,6 +40,10 @@ lib/src/model/apple_login_request.dart
 lib/src/model/apple_reauth_request.dart
 lib/src/model/assisted_step_pair.dart
 lib/src/model/attribute_status.dart
+lib/src/model/attribution_answer.dart
+lib/src/model/attribution_out.dart
+lib/src/model/attribution_state_out.dart
+lib/src/model/automation_out.dart
 lib/src/model/batch_advice.dart
 lib/src/model/batch_advice_input.dart
 lib/src/model/batch_request.dart
@@ -98,6 +103,7 @@ lib/src/model/family_avoidance_out.dart
 lib/src/model/family_member_out.dart
 lib/src/model/family_member_write.dart
 lib/src/model/family_members_out.dart
+lib/src/model/field_lock_write.dart
 lib/src/model/flavor_attribute.dart
 lib/src/model/flavor_profile.dart
 lib/src/model/generate_input.dart
@@ -107,12 +113,17 @@ lib/src/model/graded_comparison_change.dart
 lib/src/model/graded_ingredient_comparison_row.dart
 lib/src/model/health_checks.dart
 lib/src/model/health_response.dart
+lib/src/model/http_validation_error.dart
 lib/src/model/identity_out.dart
+lib/src/model/import_input.dart
+lib/src/model/import_original_out.dart
+lib/src/model/import_out.dart
 lib/src/model/ingredient_attributes.dart
 lib/src/model/ingredient_comparison_row.dart
 lib/src/model/ingredient_detail.dart
 lib/src/model/ingredient_preference.dart
 lib/src/model/ingredient_preference_out.dart
+lib/src/model/learning_run_out.dart
 lib/src/model/local_cuisine_out.dart
 lib/src/model/measure_display_out.dart
 lib/src/model/measure_display_request.dart
@@ -182,6 +193,8 @@ lib/src/model/recipe_list.dart
 lib/src/model/recipe_list_item.dart
 lib/src/model/recipe_mold_conversion_out.dart
 lib/src/model/recipe_mold_conversion_request.dart
+lib/src/model/recipe_personal_safety.dart
+lib/src/model/recipe_personal_safety_alert.dart
 lib/src/model/recipe_quantification_out.dart
 lib/src/model/recipe_question.dart
 lib/src/model/recipe_replacement.dart
@@ -195,6 +208,7 @@ lib/src/model/recipe_safety_finding.dart
 lib/src/model/recipe_safety_result.dart
 lib/src/model/recipe_serving_conversion_out.dart
 lib/src/model/recipe_snapshot.dart
+lib/src/model/recipe_source.dart
 lib/src/model/recipe_step.dart
 lib/src/model/recipe_version_create.dart
 lib/src/model/recipe_version_history.dart
@@ -222,6 +236,7 @@ lib/src/model/step_comparison_change.dart
 lib/src/model/step_comparison_row.dart
 lib/src/model/storage_advice.dart
 lib/src/model/storage_attribute.dart
+lib/src/model/taste_change_status_out.dart
 lib/src/model/taste_flavor_out.dart
 lib/src/model/taste_level.dart
 lib/src/model/taste_profile_change_out.dart
@@ -232,6 +247,7 @@ lib/src/model/text_attribute.dart
 lib/src/model/token_pair.dart
 lib/src/model/unrecorded_ingredient_item.dart
 lib/src/model/user_out.dart
+lib/src/model/validation_error.dart
 lib/src/model/value_source.dart
 lib/src/model/write_batch.dart
 lib/src/model/write_batch_response.dart

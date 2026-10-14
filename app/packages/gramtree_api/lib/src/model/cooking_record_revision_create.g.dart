@@ -125,4 +125,5 @@ const _$CookingRecordRevisionCreateFieldEnumEnumMap = {
   CookingRecordRevisionCreateFieldEnum.rating: 'rating',
   CookingRecordRevisionCreateFieldEnum.feedback: 'feedback',
   CookingRecordRevisionCreateFieldEnum.tags: 'tags',
+  CookingRecordRevisionCreateFieldEnum.adjustments: 'adjustments',
 };

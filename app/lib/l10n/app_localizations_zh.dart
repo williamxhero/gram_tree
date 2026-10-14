@@ -1169,7 +1169,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get textEditSupportedChanges =>
-      '支持改文字、换厨具、调整时间或难度、调整做法；口味和缺料替代暂未支持。确认前不会保存。';
+      '支持调味、缺料替代、改文字、换厨具、调整时间或难度、调整做法。确认前不会保存。';
 
   @override
   String get textEditRequestLabel => '想怎样修改菜谱？';
@@ -1181,8 +1181,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get textEditRetrySaveCleanup => '重试保存与本机清理';
 
   @override
-  String get textEditUnsupportedIntent =>
-      '这类修改暂未支持，不会应用。支持改文字、换厨具、调整时间或难度、调整做法；口味和缺料替代请手动编辑。';
+  String get textEditUnsupportedIntent => '这类修改暂未支持，不会应用。请换个说法，或继续手动编辑。';
 
   @override
   String get recipeSaveVersion => '保存为新版本';
@@ -1976,7 +1975,46 @@ class AppLocalizationsZh extends AppLocalizations {
   String get tasteHistoryEmpty => '还没有修改记录';
 
   @override
-  String get tasteHistoryReadonly => '只读查看原因和历史，暂不提供撤销或锁定。';
+  String get tasteHistoryReadonly => '每条变更都有原因和来源，可以确认、撤销或锁定对应口味。';
+
+  @override
+  String get tasteSource => '来源';
+
+  @override
+  String get tasteSourceManual => '你手动修改';
+
+  @override
+  String get tasteSourceAuto => '系统按你的做菜记录学习';
+
+  @override
+  String get tasteSourceExplicitSave => '你在做菜时选择存进口味';
+
+  @override
+  String get tasteSourceRecords => '来源记录';
+
+  @override
+  String get tasteSourceRecordHint => '查看这条变更来自哪次做菜';
+
+  @override
+  String get tasteConfirm => '确认';
+
+  @override
+  String get tasteRevert => '撤销';
+
+  @override
+  String get tasteLock => '锁定';
+
+  @override
+  String get tasteUnlock => '解锁';
+
+  @override
+  String get tasteLockedHint => '已锁定：自动学习不再改动这项，你仍可手动修改。';
+
+  @override
+  String get tastePending => '待确认';
+
+  @override
+  String get tasteConfirmed => '已确认';
 
   @override
   String get tasteLocal => '菜系局部偏好';

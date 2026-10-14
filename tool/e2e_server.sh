@@ -35,9 +35,6 @@ start() {
   # Browser acceptance is deterministic and never calls an external model.
   export GRAMTREE_AI_MODE="${GRAMTREE_AI_MODE:-replay}"
   export GRAMTREE_AI_REPLAY_DIR="${GRAMTREE_AI_REPLAY_DIR:-.data/ai-e2e}"
-  if [[ "$GRAMTREE_AI_MODE" == replay ]]; then
-    uv run python ../tool/ai_replay_corpus.py --out "$GRAMTREE_AI_REPLAY_DIR"
-  fi
 
   uv run python - "$PG" "$DATABASE_NAME" <<'EOF'
 import sys
@@ -61,6 +58,10 @@ EOF
   uv run gramtree config set auth.email_code_daily_limit 1000 \
     --by e2e --reason 'Shared-IP acceptance suite' >/dev/null
   uv run gramtree ingredients import tests/data/ingredients >/dev/null
+  if [[ "$GRAMTREE_AI_MODE" == replay ]]; then
+    uv run python ../tool/ai_replay_corpus.py --out "$GRAMTREE_AI_REPLAY_DIR" \
+      --import-substitution-library
+  fi
   # 单进程运行：验证码存在进程内存里，多进程时读不到
   nohup uv run uvicorn gramtree.asgi:app --host 0.0.0.0 --port "$PORT" >"$LOG_FILE" 2>&1 &
   echo $! >"$PID_FILE"

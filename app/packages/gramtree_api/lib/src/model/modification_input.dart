@@ -18,6 +18,8 @@ part 'modification_input.g.dart';
 class ModificationInput {
   /// Returns a new [ModificationInput] instance.
   ModificationInput({
+    this.adjustmentPercent,
+
     this.baseVersionId,
 
     this.generationRequestId,
@@ -30,6 +32,9 @@ class ModificationInput {
 
     required this.text,
   });
+
+  @JsonKey(name: r'adjustment_percent', required: false, includeIfNull: false)
+  final ModificationInputAdjustmentPercentEnum? adjustmentPercent;
 
   @JsonKey(name: r'base_version_id', required: false, includeIfNull: false)
   final String? baseVersionId;
@@ -62,6 +67,7 @@ class ModificationInput {
   bool operator ==(Object other) =>
       identical(this, other) ||
       other is ModificationInput &&
+          other.adjustmentPercent == adjustmentPercent &&
           other.baseVersionId == baseVersionId &&
           other.generationRequestId == generationRequestId &&
           other.recipeId == recipeId &&
@@ -71,6 +77,7 @@ class ModificationInput {
 
   @override
   int get hashCode =>
+      (adjustmentPercent == null ? 0 : adjustmentPercent.hashCode) +
       (baseVersionId == null ? 0 : baseVersionId.hashCode) +
       (generationRequestId == null ? 0 : generationRequestId.hashCode) +
       (recipeId == null ? 0 : recipeId.hashCode) +
@@ -87,4 +94,20 @@ class ModificationInput {
   String toString() {
     return toJson().toString();
   }
+}
+
+enum ModificationInputAdjustmentPercentEnum {
+  @JsonValue(20)
+  number20('20'),
+  @JsonValue(25)
+  number25('25'),
+  @JsonValue(30)
+  number30('30');
+
+  const ModificationInputAdjustmentPercentEnum(this.value);
+
+  final String value;
+
+  @override
+  String toString() => value;
 }

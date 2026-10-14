@@ -125,7 +125,78 @@ class TasteProfileRepository {
     } while (cursor != null);
     return items;
   }
+
+  /// Capability switches (SPEC-005.3): whether automatic learning runs and
+  /// whether the record card may offer "存进我的口味".
+  Future<TasteAutomation> automation() async {
+    final value = (await api.getAutomation()).data!;
+    return TasteAutomation(
+      automaticLearning: value.automaticLearning,
+      saveToTaste: value.saveToTaste,
+    );
+  }
+
+  Future<TasteProfileChangeOut> confirmChange(String changeId) async {
+    final identity = _identity();
+    final value = (await api.confirmChange(
+      changeId: changeId,
+      extra: _identityExtra(identity),
+    )).data!;
+    if (!session.matches(identity)) throw StateError('stale_profile_response');
+    return value;
+  }
+
+  Future<TasteProfileChangeOut> revertChange(String changeId) async {
+    final identity = _identity();
+    final value = (await api.revertChange(
+      changeId: changeId,
+      extra: _identityExtra(identity),
+    )).data!;
+    if (!session.matches(identity)) throw StateError('stale_profile_response');
+    return value;
+  }
+
+  /// Locking only stops automatic learning; the owner can still edit by hand.
+  Future<TasteAutomation> setLock(String field, bool locked) async {
+    final identity = _identity();
+    final value = (await api.setFieldLock(
+      fieldLockWrite: FieldLockWrite(field: field, locked: locked),
+      extra: _identityExtra(identity),
+    )).data!;
+    if (!session.matches(identity)) throw StateError('stale_profile_response');
+    return TasteAutomation(
+      automaticLearning: value.automaticLearning,
+      saveToTaste: value.saveToTaste,
+    );
+  }
 }
+
+/// Capability switches from `/automation` (SPEC-005.3).
+class TasteAutomation {
+  const TasteAutomation({
+    required this.automaticLearning,
+    required this.saveToTaste,
+  });
+
+  final bool automaticLearning;
+  final bool saveToTaste;
+}
+
+/// Fields the owner locked against automatic learning. The server is the
+/// source of truth; this only reflects locks confirmed by a successful
+/// `PUT /locks` in this session, so no lock state is ever guessed locally.
+class TasteFieldLocks extends Notifier<Set<String>> {
+  @override
+  Set<String> build() => <String>{};
+
+  void mark(String field, bool locked) =>
+      state = locked ? <String>{...state, field} : <String>{...state}
+        ..remove(field);
+}
+
+final tasteFieldLocksProvider = NotifierProvider<TasteFieldLocks, Set<String>>(
+  TasteFieldLocks.new,
+);
 
 final tasteProfileRepositoryProvider =
     Provider.autoDispose<TasteProfileRepository>((ref) {
@@ -154,3 +225,7 @@ final tasteProfileChangesProvider =
     FutureProvider.autoDispose<List<TasteProfileChangeOut>>(
       (ref) => ref.watch(tasteProfileRepositoryProvider).changes(),
     );
+
+final tasteAutomationProvider = FutureProvider.autoDispose<TasteAutomation>(
+  (ref) => ref.watch(tasteProfileRepositoryProvider).automation(),
+);

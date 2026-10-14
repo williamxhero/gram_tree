@@ -17,6 +17,7 @@
     "total_time_seconds": 0, "active_time_seconds": 0, "difficulty": null,
     "dish_type": null, "description": null, "tags": [], "cuisine": null,
     "design_rationale": null,
+    "source": null,
     "text_source": {"source": "author_filled", "original": null, "confidence": null, "basis": null, "confidence_level": null, "baseline": null, "adjustment": null},
     "servings_source": {"source": "author_filled", "original": null, "confidence": null, "basis": null, "confidence_level": null, "baseline": null, "adjustment": null},
     "ingredients": [{

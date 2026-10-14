@@ -11,7 +11,10 @@ class RecordsRepository {
   RecordsRepository(this._ref);
   final Ref _ref;
 
-  Future<void> saveCompletedSession(CookingSession session) async {
+  Future<void> saveCompletedSession(
+    CookingSession session, {
+    List<String> coDinerIds = const [],
+  }) async {
     final auth = _ref.read(sessionStoreProvider).current;
     if (auth == null) return;
     final snapshot = session.snapshot.toJson();
@@ -33,6 +36,7 @@ class RecordsRepository {
         'skipped_steps': session.skipped,
         'questions': session.questions,
       },
+      'co_diner_ids': coDinerIds,
     };
     await _ref
         .read(eventQueueProvider)

@@ -26,6 +26,8 @@ class TasteProfile(Base):
     local_cuisines: Mapped[list[dict[str, Any]]] = mapped_column(JSONB, default=list)
     ingredient_preferences: Mapped[list[dict[str, Any]]] = mapped_column(JSONB, default=list)
     cooking_constraints: Mapped[dict[str, Any]] = mapped_column(JSONB, default=dict)
+    # SPEC-005.3: a locked field never moves automatically; manual edits still work.
+    locked_fields: Mapped[list[str]] = mapped_column(JSONB, default=list)
     sensitive_consent_id: Mapped[uuid.UUID | None] = mapped_column(default=None)
     sensitive_authorization_version: Mapped[int] = mapped_column(default=0)
     created_at: Mapped[datetime] = mapped_column(default=utcnow)
@@ -55,7 +57,14 @@ class TasteProfileChange(Base):
     __tablename__ = "taste_profile_changes"
     __table_args__ = (
         Index("ix_taste_changes_owner_created", "owner_id", "created_at", "id"),
-        CheckConstraint("status IN ('active', 'reverted')", name="ck_taste_change_status"),
+        CheckConstraint(
+            "status IN ('active', 'reverted', 'pending', 'confirmed')",
+            name="ck_taste_change_status",
+        ),
+        CheckConstraint(
+            "origin IN ('manual', 'auto', 'explicit_save')",
+            name="ck_taste_change_origin",
+        ),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=new_id)
@@ -70,4 +79,11 @@ class TasteProfileChange(Base):
     reason: Mapped[str] = mapped_column(String(200))
     source: Mapped[str] = mapped_column(String(32))
     status: Mapped[str] = mapped_column(String(16), default="active")
+    # SPEC-005.3: automatic learning, explicit "save to my taste" and manual
+    # edits must stay distinguishable, e.g. for the revert-rate fact.
+    origin: Mapped[str] = mapped_column(String(16), default="manual")
+    # Traceability: which cooking records produced this change.
+    source_record_ids: Mapped[list[str]] = mapped_column(JSONB, default=list)
+    locked_fields: Mapped[list[str]] = mapped_column(JSONB, default=list)
+    reverted_at: Mapped[datetime | None] = mapped_column(nullable=True, default=None)
     created_at: Mapped[datetime] = mapped_column(default=utcnow)

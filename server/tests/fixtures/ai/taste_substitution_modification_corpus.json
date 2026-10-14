@@ -1,0 +1,47 @@
+{
+  "note": "Synthetic HTTP and Chromium replay cases; quantities are worked examples, not model guesses. Flavor strengths are this recipe's author choices, not sodium measurements.",
+  "taste": {
+    "generation_text": "合成测试：做一道包含盐、生抽、蚝油和豆瓣酱的家常鸡丁",
+    "text": "太咸了",
+    "intent": {"category": "taste", "parameters": {"axis": "salty", "direction": "reduce"}, "confidence": 0.95},
+    "ingredients": [
+      {"id": "salt", "display_name": "盐", "quantity": 3, "unit": "g", "flavor_contribution": {"salty": 3, "umami": 0}},
+      {"id": "soy", "display_name": "生抽", "quantity": 15, "unit": "ml", "flavor_contribution": {"salty": 2, "umami": 2}},
+      {"id": "oyster", "display_name": "蚝油", "quantity": 10, "unit": "g", "flavor_contribution": {"salty": 2, "umami": 3}},
+      {"id": "bean", "display_name": "豆瓣酱", "quantity": 15, "unit": "g", "flavor_contribution": {"salty": 3, "umami": 1}}
+    ],
+    "quantities": {
+      "20": {"salt": 2.4, "soy": 12, "oyster": 8, "bean": 12},
+      "25": {"salt": 2.25, "soy": 11.25, "oyster": 7.5, "bean": 11.25},
+      "30": {"salt": 2.1, "soy": 10.5, "oyster": 7, "bean": 10.5}
+    },
+    "reason": "按本菜谱已填写的咸味强度和基础用量分摊降低咸度，不改其他配方",
+    "risk": "生抽减少可能颜色变浅，鲜味下降，调味液变化也影响收汁；补救需独立确认",
+    "side_effects": [
+      {"operation_id": "color-notes", "type": "change_step_field", "id": "cook", "field": "notes", "after": "生抽减少后颜色可能变浅；可自行观察后少量补老抽，不能据颜色判断鸡肉熟透。", "depends_on": ["reduce-soy"]},
+      {"operation_id": "umami-why", "type": "change_step_field", "id": "cook", "field": "why", "after": "蚝油减少后鲜味可能下降，出锅前单独尝味确认。", "depends_on": ["reduce-oyster"]},
+      {"operation_id": "reduction-instruction", "type": "change_step_field", "id": "cook", "field": "instruction", "after": "中火炒鸡肉至中心温度达到74°C，酌情延长收汁并观察浓度，不用表面颜色代替中心温度。", "depends_on": ["reduce-soy"]}
+    ]
+  },
+  "substitution": {
+    "generation_text": "合成测试：做一道需要料酒的家常鸡丁",
+    "text": "没有料酒",
+    "peanut_text": "没有料酒，换成花生调味汁",
+    "omit_text": "没有料酒，不用替代，直接省略",
+    "intent": {"category": "substitution", "parameters": {"ingredient_id": "wine", "missing_ingredient": "料酒"}, "confidence": 0.95},
+    "wine_id": "00000000-0000-4000-8000-000000001721",
+    "white_wine_id": "00000000-0000-4000-8000-000000001722",
+    "peanut_id": "00000000-0000-4000-8000-000000001723",
+    "unknown_id": "00000000-0000-4000-8000-000000001724",
+    "original_quantity": 10,
+    "replacement_quantity": 20,
+    "ratio": 2,
+    "white_wine_name": "白葡萄酒",
+    "peanut_name": "花生调味汁",
+    "reason": "使用本版本已登记的1:2替代关系：10ml料酒换20ml白葡萄酒；味型和适用场景需单独确认",
+    "risk": "去腥效果和风味不同；功能性用料不能保证等效，未经实做验证，不适用于所有菜谱",
+    "omit_reason": "没有适用替代；省略会减弱去腥和酒香，只供作者确认",
+    "omit_risk": "无法保证省略后风味或功能等效；引用清理和删除均需作者选择"
+  },
+  "usage": {"prompt_tokens": 120, "completion_tokens": 240}
+}

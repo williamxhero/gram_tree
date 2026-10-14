@@ -25,6 +25,7 @@ class CookingRecordCreate(BaseModel):
     snapshot: dict[str, Any] | None = None
     adjustments: list[dict[str, Any]] = Field(default_factory=list)
     source_context: dict[str, Any] = Field(default_factory=dict)
+    co_diner_ids: list[IdV4] = Field(default_factory=list, max_length=50)
     verification: Verification = "unverified"
 
 
@@ -42,12 +43,14 @@ class CookingRecordOut(BaseModel):
     snapshot: dict[str, Any] | None
     adjustments: list[dict[str, Any]]
     source_context: dict[str, Any]
+    taste_summary: dict[str, Any]
+    co_diner_ids: list[IdV4]
     created_at: Timestamp
 
 
 class CookingRecordRevisionCreate(BaseModel):
     revision_id: IdV4
-    field: Literal["rating", "feedback", "tags"]
+    field: Literal["rating", "feedback", "tags", "adjustments"]
     value: dict[str, Any]
     note: str = ""
 

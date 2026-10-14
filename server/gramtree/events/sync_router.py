@@ -299,4 +299,12 @@ def upload_writes(
         for write, result in zip(body.writes, results, strict=True)
     ):
         recipe_service._drain_save_events(session, redis, auth.user)
+    if any(
+        write.write_type == "cooking_record.create"
+        and result.status in ("confirmed", "already_processed")
+        for write, result in zip(body.writes, results, strict=True)
+    ):
+        from gramtree.tasks.jobs import run_taste_learning
+
+        run_taste_learning.delay(str(auth.user.id))
     return WriteBatchResponse(results=results)

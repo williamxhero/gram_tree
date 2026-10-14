@@ -340,6 +340,15 @@ class RecipeMoldConversionOut(BaseModel):
     conversion: MoldConversion
 
 
+class RecipeSource(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    kind: Literal["imported"] = "imported"
+    url: str | None = Field(default=None, max_length=2048)
+    platform: str = Field(default="unknown", max_length=255)
+    note: str | None = Field(default=None, max_length=500)
+
+
 class RecipeSnapshot(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -354,6 +363,7 @@ class RecipeSnapshot(BaseModel):
     tags: list[str] = Field(default_factory=list, max_length=50)
     cuisine: str | None = Field(default=None, max_length=100)
     design_rationale: str | None = Field(default=None, max_length=4000)
+    source: RecipeSource | None = None
     text_source: ValueSource | None = None
     servings_source: ValueSource | None = None
     ingredients: list[RecipeIngredient] = Field(default_factory=list, max_length=500)

@@ -12,8 +12,9 @@ from gramtree.core.errors import ERROR_RESPONSES, ApiError, NotFound
 from gramtree.core.ids import IdV4
 from gramtree.core.pagination import PageParams, decode_cursor, encode_cursor, page_params
 from gramtree.core.time import utcnow
-from gramtree.deps import SessionDep
+from gramtree.deps import SessionDep, SettingsDep
 from gramtree.recipes.models import Recipe, RecipeVersion
+from gramtree.records import context as record_context
 from gramtree.records.models import CookingRecord, CookingRecordRevision
 from gramtree.records.schemas import (
     CookingRecordCreate,
@@ -67,11 +68,26 @@ def _validate_recipe_reference(
     return recipe, version
 
 
+def _record_context(
+    session: Session, owner: uuid.UUID, ids: list[uuid.UUID], settings
+) -> tuple[dict, list[uuid.UUID]]:
+    try:
+        return record_context.build(session, owner, ids, settings)
+    except ValueError as exc:
+        code = str(exc)
+        if code == "sensitive_consent_required":
+            raise ApiError(403, code, "请先单独同意收集家庭成员信息") from exc
+        raise ApiError(422, code, "同吃成员不是本账号已授权成员") from exc
+
+
 @router.post("", response_model=CookingRecordOut, status_code=201, responses=ERROR_RESPONSES)
 def create_record(
-    body: CookingRecordCreate, auth: CurrentAuth, session: SessionDep
+    body: CookingRecordCreate, auth: CurrentAuth, session: SessionDep, settings: SettingsDep
 ) -> CookingRecordOut:
     recipe, version = _validate_recipe_reference(session, auth.user.id, body)
+    taste_summary, co_diner_ids = _record_context(
+        session, auth.user.id, body.co_diner_ids, settings
+    )
     if body.source == "cooking_session" and body.recipe_version_id is None:
         raise ApiError(422, "invalid_record", "记录内容有误", "做菜模式记录需要菜谱版本")
     if body.source != "cooking_session" and body.verification == "cooking_mode":
@@ -99,6 +115,8 @@ def create_record(
         snapshot=body.snapshot,
         adjustments=body.adjustments,
         source_context=body.source_context,
+        taste_summary=taste_summary,
+        co_diner_ids=[str(item) for item in co_diner_ids],
     )
     session.add(row)
     session.flush()
@@ -175,9 +193,47 @@ def revise_record(
         note=body.note,
     )
     session.add(revision)
+    session.flush()
+    _learn_from_record(session, auth.user.id, row)
     session.commit()
+    from gramtree.tasks.jobs import run_taste_learning
+
+    run_taste_learning.delay(str(auth.user.id))
     session.refresh(revision)
     return CookingRecordRevisionOut.model_validate(revision, from_attributes=True)
+
+
+def _learn_from_record(session: Session, owner_id: uuid.UUID, row: CookingRecord) -> None:
+    """New feedback revisions update attribution and existing signals once."""
+    from gramtree.taste_profiles import learning
+    from gramtree.taste_profiles import service as taste_service
+
+    if not learning.automation_enabled(session):
+        return
+    scale = taste_service.scale_for(session)
+    profile = taste_service.locked_profile(session, owner_id, scale)
+    revisions = list(
+        session.scalars(
+            select(CookingRecordRevision).where(
+                CookingRecordRevision.record_id == row.id,
+                CookingRecordRevision.field == "feedback",
+            )
+        )
+    )
+    flavors = learning.feedback_flavors(revisions)
+    if flavors:
+        existing = session.get(learning.TasteAttribution, row.id)
+        if existing is None or existing.decision_source != "user":
+            verdict = learning.rule_verdict(session, row.recipe_version_id, owner_id, flavors)
+            learning.record_verdict(
+                session,
+                profile,
+                row,
+                verdict,
+                flavors,
+                learning._latest_feedback_revision_id(session, row.id),
+            )
+    learning.collect_signals(session, profile, row)
 
 
 @router.get(

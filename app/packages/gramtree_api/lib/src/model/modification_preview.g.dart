@@ -21,6 +21,8 @@ abstract class _$ModificationPreviewCWProxy {
 
   ModificationPreview operations(List<ModificationOperation>? operations);
 
+  ModificationPreview personalSafety(RecipePersonalSafety personalSafety);
+
   ModificationPreview recipeId(String? recipeId);
 
   ModificationPreview reproducibility(
@@ -51,6 +53,7 @@ abstract class _$ModificationPreviewCWProxy {
     String id,
     ModificationIntent? intent,
     List<ModificationOperation>? operations,
+    RecipePersonalSafety personalSafety,
     String? recipeId,
     RecipeReproducibilityResult reproducibility,
     int revision,
@@ -94,6 +97,10 @@ class _$ModificationPreviewCWProxyImpl implements _$ModificationPreviewCWProxy {
       this(operations: operations);
 
   @override
+  ModificationPreview personalSafety(RecipePersonalSafety personalSafety) =>
+      this(personalSafety: personalSafety);
+
+  @override
   ModificationPreview recipeId(String? recipeId) => this(recipeId: recipeId);
 
   @override
@@ -133,6 +140,7 @@ class _$ModificationPreviewCWProxyImpl implements _$ModificationPreviewCWProxy {
     Object? id = const $CopyWithPlaceholder(),
     Object? intent = const $CopyWithPlaceholder(),
     Object? operations = const $CopyWithPlaceholder(),
+    Object? personalSafety = const $CopyWithPlaceholder(),
     Object? recipeId = const $CopyWithPlaceholder(),
     Object? reproducibility = const $CopyWithPlaceholder(),
     Object? revision = const $CopyWithPlaceholder(),
@@ -170,6 +178,10 @@ class _$ModificationPreviewCWProxyImpl implements _$ModificationPreviewCWProxy {
           ? _value.operations
           // ignore: cast_nullable_to_non_nullable
           : operations as List<ModificationOperation>?,
+      personalSafety: personalSafety == const $CopyWithPlaceholder()
+          ? _value.personalSafety
+          // ignore: cast_nullable_to_non_nullable
+          : personalSafety as RecipePersonalSafety,
       recipeId: recipeId == const $CopyWithPlaceholder()
           ? _value.recipeId
           // ignore: cast_nullable_to_non_nullable
@@ -223,6 +235,7 @@ ModificationPreview _$ModificationPreviewFromJson(
       json,
       requiredKeys: const [
         'id',
+        'personal_safety',
         'reproducibility',
         'revision',
         'safety',
@@ -261,6 +274,10 @@ ModificationPreview _$ModificationPreviewFromJson(
             )
             .toList(),
       ),
+      personalSafety: $checkedConvert(
+        'personal_safety',
+        (v) => RecipePersonalSafety.fromJson(v as Map<String, dynamic>),
+      ),
       recipeId: $checkedConvert('recipe_id', (v) => v as String?),
       reproducibility: $checkedConvert(
         'reproducibility',
@@ -289,6 +306,7 @@ ModificationPreview _$ModificationPreviewFromJson(
   fieldKeyMap: const {
     'baseVersionId': 'base_version_id',
     'generationRequestId': 'generation_request_id',
+    'personalSafety': 'personal_safety',
     'recipeId': 'recipe_id',
   },
 );
@@ -303,6 +321,7 @@ Map<String, dynamic> _$ModificationPreviewToJson(
   'id': instance.id,
   'intent': ?instance.intent?.toJson(),
   'operations': ?instance.operations?.map((e) => e.toJson()).toList(),
+  'personal_safety': instance.personalSafety.toJson(),
   'recipe_id': ?instance.recipeId,
   'reproducibility': instance.reproducibility.toJson(),
   'revision': instance.revision,

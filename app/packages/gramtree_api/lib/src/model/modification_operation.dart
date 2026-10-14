@@ -149,6 +149,8 @@ enum ModificationOperationTypeEnum {
   changeGroupOrOptional(r'change_group_or_optional'),
   @JsonValue(r'change_functional')
   changeFunctional(r'change_functional'),
+  @JsonValue(r'change_flavor_contribution')
+  changeFlavorContribution(r'change_flavor_contribution'),
   @JsonValue(r'change_scaling')
   changeScaling(r'change_scaling'),
   @JsonValue(r'change_replacement')

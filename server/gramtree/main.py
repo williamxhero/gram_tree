@@ -19,6 +19,7 @@ from gramtree.events import router as events
 from gramtree.events import sync_router as sync
 from gramtree.ingredients import router as ingredients
 from gramtree.legal import router as legal
+from gramtree.recipes import imports as recipe_imports
 from gramtree.recipes import measure_router as personal_measures
 from gramtree.recipes import router as recipes
 from gramtree.records import router as records
@@ -29,6 +30,7 @@ from gramtree.settings import Settings, get_settings
 from gramtree.taste_profiles import allergy_router as allergies
 from gramtree.taste_profiles import constraint_router as cooking_constraints
 from gramtree.taste_profiles import family_router as family_members
+from gramtree.taste_profiles import learning_router as taste_learning
 from gramtree.taste_profiles import router as taste_profiles
 from gramtree.ui_protocol import router as ui_protocol
 
@@ -95,9 +97,12 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     v1.include_router(ingredients.router)
     v1.include_router(recipes.router)
     v1.include_router(records.router)
+    v1.include_router(recipe_imports.router)
     v1.include_router(recipe_ai.router)
     v1.include_router(personal_measures.router)
     v1.include_router(taste_profiles.router)
+    v1.include_router(taste_learning.router)
+    v1.include_router(taste_learning.record_router)
     v1.include_router(cooking_constraints.router)
     v1.include_router(allergies.router)
     v1.include_router(family_members.router)

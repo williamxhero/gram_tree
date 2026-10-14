@@ -11,6 +11,8 @@ abstract class _$CookingRecordOutCWProxy {
 
   CookingRecordOut clientId(String clientId);
 
+  CookingRecordOut coDinerIds(List<String> coDinerIds);
+
   CookingRecordOut countsAsCooked(bool countsAsCooked);
 
   CookingRecordOut createdAt(String createdAt);
@@ -33,6 +35,8 @@ abstract class _$CookingRecordOutCWProxy {
 
   CookingRecordOut sourceContext(Object sourceContext);
 
+  CookingRecordOut tasteSummary(Object tasteSummary);
+
   CookingRecordOut verification(CookingRecordOutVerificationEnum verification);
 
   /// This function **does support** nullification of nullable fields. All `null` values passed to `non-nullable` fields will be ignored. You can also use `CookingRecordOut(...).copyWith.fieldName(...)` to override fields one at a time with nullification support.
@@ -44,6 +48,7 @@ abstract class _$CookingRecordOutCWProxy {
   CookingRecordOut call({
     List<Object> adjustments,
     String clientId,
+    List<String> coDinerIds,
     bool countsAsCooked,
     String createdAt,
     String? dishName,
@@ -55,6 +60,7 @@ abstract class _$CookingRecordOutCWProxy {
     Object? snapshot,
     CookingRecordOutSource_Enum source_,
     Object sourceContext,
+    Object tasteSummary,
     CookingRecordOutVerificationEnum verification,
   });
 }
@@ -71,6 +77,10 @@ class _$CookingRecordOutCWProxyImpl implements _$CookingRecordOutCWProxy {
 
   @override
   CookingRecordOut clientId(String clientId) => this(clientId: clientId);
+
+  @override
+  CookingRecordOut coDinerIds(List<String> coDinerIds) =>
+      this(coDinerIds: coDinerIds);
 
   @override
   CookingRecordOut countsAsCooked(bool countsAsCooked) =>
@@ -111,6 +121,10 @@ class _$CookingRecordOutCWProxyImpl implements _$CookingRecordOutCWProxy {
       this(sourceContext: sourceContext);
 
   @override
+  CookingRecordOut tasteSummary(Object tasteSummary) =>
+      this(tasteSummary: tasteSummary);
+
+  @override
   CookingRecordOut verification(
     CookingRecordOutVerificationEnum verification,
   ) => this(verification: verification);
@@ -125,6 +139,7 @@ class _$CookingRecordOutCWProxyImpl implements _$CookingRecordOutCWProxy {
   CookingRecordOut call({
     Object? adjustments = const $CopyWithPlaceholder(),
     Object? clientId = const $CopyWithPlaceholder(),
+    Object? coDinerIds = const $CopyWithPlaceholder(),
     Object? countsAsCooked = const $CopyWithPlaceholder(),
     Object? createdAt = const $CopyWithPlaceholder(),
     Object? dishName = const $CopyWithPlaceholder(),
@@ -136,6 +151,7 @@ class _$CookingRecordOutCWProxyImpl implements _$CookingRecordOutCWProxy {
     Object? snapshot = const $CopyWithPlaceholder(),
     Object? source_ = const $CopyWithPlaceholder(),
     Object? sourceContext = const $CopyWithPlaceholder(),
+    Object? tasteSummary = const $CopyWithPlaceholder(),
     Object? verification = const $CopyWithPlaceholder(),
   }) {
     return CookingRecordOut(
@@ -147,6 +163,10 @@ class _$CookingRecordOutCWProxyImpl implements _$CookingRecordOutCWProxy {
           ? _value.clientId
           // ignore: cast_nullable_to_non_nullable
           : clientId as String,
+      coDinerIds: coDinerIds == const $CopyWithPlaceholder()
+          ? _value.coDinerIds
+          // ignore: cast_nullable_to_non_nullable
+          : coDinerIds as List<String>,
       countsAsCooked: countsAsCooked == const $CopyWithPlaceholder()
           ? _value.countsAsCooked
           // ignore: cast_nullable_to_non_nullable
@@ -191,6 +211,10 @@ class _$CookingRecordOutCWProxyImpl implements _$CookingRecordOutCWProxy {
           ? _value.sourceContext
           // ignore: cast_nullable_to_non_nullable
           : sourceContext as Object,
+      tasteSummary: tasteSummary == const $CopyWithPlaceholder()
+          ? _value.tasteSummary
+          // ignore: cast_nullable_to_non_nullable
+          : tasteSummary as Object,
       verification: verification == const $CopyWithPlaceholder()
           ? _value.verification
           // ignore: cast_nullable_to_non_nullable
@@ -219,6 +243,7 @@ CookingRecordOut _$CookingRecordOutFromJson(Map<String, dynamic> json) =>
           requiredKeys: const [
             'adjustments',
             'client_id',
+            'co_diner_ids',
             'counts_as_cooked',
             'created_at',
             'dish_name',
@@ -230,6 +255,7 @@ CookingRecordOut _$CookingRecordOutFromJson(Map<String, dynamic> json) =>
             'snapshot',
             'source',
             'source_context',
+            'taste_summary',
             'verification',
           ],
         );
@@ -239,6 +265,10 @@ CookingRecordOut _$CookingRecordOutFromJson(Map<String, dynamic> json) =>
             (v) => (v as List<dynamic>).map((e) => e as Object).toList(),
           ),
           clientId: $checkedConvert('client_id', (v) => v as String),
+          coDinerIds: $checkedConvert(
+            'co_diner_ids',
+            (v) => (v as List<dynamic>).map((e) => e as String).toList(),
+          ),
           countsAsCooked: $checkedConvert('counts_as_cooked', (v) => v as bool),
           createdAt: $checkedConvert('created_at', (v) => v as String),
           dishName: $checkedConvert('dish_name', (v) => v as String?),
@@ -259,6 +289,7 @@ CookingRecordOut _$CookingRecordOutFromJson(Map<String, dynamic> json) =>
             (v) => $enumDecode(_$CookingRecordOutSource_EnumEnumMap, v),
           ),
           sourceContext: $checkedConvert('source_context', (v) => v as Object),
+          tasteSummary: $checkedConvert('taste_summary', (v) => v as Object),
           verification: $checkedConvert(
             'verification',
             (v) => $enumDecode(_$CookingRecordOutVerificationEnumEnumMap, v),
@@ -268,6 +299,7 @@ CookingRecordOut _$CookingRecordOutFromJson(Map<String, dynamic> json) =>
       },
       fieldKeyMap: const {
         'clientId': 'client_id',
+        'coDinerIds': 'co_diner_ids',
         'countsAsCooked': 'counts_as_cooked',
         'createdAt': 'created_at',
         'dishName': 'dish_name',
@@ -276,6 +308,7 @@ CookingRecordOut _$CookingRecordOutFromJson(Map<String, dynamic> json) =>
         'recipeVersionId': 'recipe_version_id',
         'source_': 'source',
         'sourceContext': 'source_context',
+        'tasteSummary': 'taste_summary',
       },
     );
 
@@ -283,6 +316,7 @@ Map<String, dynamic> _$CookingRecordOutToJson(CookingRecordOut instance) =>
     <String, dynamic>{
       'adjustments': instance.adjustments,
       'client_id': instance.clientId,
+      'co_diner_ids': instance.coDinerIds,
       'counts_as_cooked': instance.countsAsCooked,
       'created_at': instance.createdAt,
       'dish_name': instance.dishName,
@@ -294,6 +328,7 @@ Map<String, dynamic> _$CookingRecordOutToJson(CookingRecordOut instance) =>
       'snapshot': instance.snapshot,
       'source': _$CookingRecordOutSource_EnumEnumMap[instance.source_]!,
       'source_context': instance.sourceContext,
+      'taste_summary': instance.tasteSummary,
       'verification':
           _$CookingRecordOutVerificationEnumEnumMap[instance.verification]!,
     };
