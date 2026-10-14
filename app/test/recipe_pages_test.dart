@@ -4,15 +4,19 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:gram_tree/api/api_client.dart';
 import 'package:gram_tree/app/router.dart';
+import 'package:gram_tree/features/me/taste_profile_cache.dart';
 import 'package:gram_tree/network/reachability.dart';
 import 'package:gram_tree/recipes/recipe_snapshot.dart';
 import 'package:gramtree_api/gramtree_api.dart';
 
 import 'package:gram_tree/storage/local_store.dart';
 
+import '../integration_test/frozen_conversion_support.dart';
 import 'fixtures/conversion_cases.g.dart';
 import 'helpers.dart';
+import 'taste_profile_page_test.dart' show profileFixture;
 
 const _recipeId = '11111111-1111-4111-8111-111111111111';
 const _firstVersionId = '22222222-2222-4222-8222-222222222222';
@@ -1623,8 +1627,18 @@ void main() {
     (tester) async {
       final server = FakeServer();
       _installRecipeApi(server);
+      // Real fresh accounts return a default profile, not a missing profile.
+      server.on(
+        'GET',
+        '/v1/me/taste-profile',
+        (_) => (200, profileFixture().toJson()),
+      );
       final env = TestEnv.signedIn(server: server);
       await pumpApp(tester, env: env);
+      final seedContainer = ProviderScope.containerOf(
+        tester.element(find.byType(Scaffold).first),
+      );
+      installFrozenConversionFixture(seedContainer.read(dioProvider));
       await _openMyRecipes(tester);
       await tester.tap(find.byKey(const ValueKey('recipe-card-$_recipeId')));
       await tester.pumpAndSettle();
@@ -1636,6 +1650,10 @@ void main() {
       await tester.pumpAndSettle();
       await _scrollToBottom(tester);
       expect(find.text('150 克'), findsWidgets);
+      final cache = seedContainer.read(tasteProfileCacheProvider);
+      final taste = await cache.read(testUser().id);
+      expect(taste?.profile, isNull);
+      expect(taste?.personalizations ?? const {}, isEmpty);
       // Rebuild all in-memory state with the same device storage but no network.
       await _resetPage(tester);
       final offline = TestEnv(
@@ -1655,9 +1673,11 @@ void main() {
         size: const Size(320, 640),
         textScale: 1.5,
       );
-      ProviderScope.containerOf(tester.element(find.byType(Scaffold).first))
-          .read(routerProvider)
-          .go('/recipes/$_recipeId');
+      final restoreContainer = ProviderScope.containerOf(
+        tester.element(find.byType(Scaffold).first),
+      );
+      installFrozenConversionFixture(restoreContainer.read(dioProvider));
+      restoreContainer.read(routerProvider).go('/recipes/$_recipeId');
       await tester.pumpAndSettle();
       expect(find.textContaining('离线快照 · 第 1 版'), findsOneWidget);
       await _scrollUntilVisible(tester, find.textContaining('已保存 3 份'));
