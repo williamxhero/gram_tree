@@ -784,6 +784,11 @@ Future<void> _restoreBusinessRestart(
   final session = await container.read(sessionStoreProvider).load();
   expect(session!.user.id, manifest['owner']);
   expect(container.read(deviceIdProvider), manifest['device']);
+  registerProbeSession(
+    server,
+    session,
+    deviceId: container.read(deviceIdProvider),
+  );
   final business = Map<String, dynamic>.from(manifest['business'] as Map);
   final entries = await container
       .read(eventQueueProvider)
