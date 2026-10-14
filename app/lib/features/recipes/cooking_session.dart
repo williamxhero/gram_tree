@@ -21,6 +21,7 @@ import 'cooking_voice.dart';
 import 'press_hold_voice_question.dart';
 import '../records/records_repository.dart';
 import '../../features/me/family_members_data.dart';
+import '../../features/me/allergies_data.dart';
 
 const _cookingStoreKey = 'cooking_sessions:v1';
 
@@ -337,6 +338,7 @@ class _CookingPageState extends ConsumerState<CookingPage>
     with WidgetsBindingObserver {
   CookingSession? _session;
   String? _sceneDetailOverride;
+  ScenarioCompositionKey? _activeSceneKey;
   final _skippedSceneComponents = <String>{};
   Timer? _ticker;
   bool _reportingDueTimers = false;
@@ -351,6 +353,18 @@ class _CookingPageState extends ConsumerState<CookingPage>
   void initState() {
     super.initState();
     _deviceCapabilities = ref.read(deviceCapabilitiesProvider);
+    ref.listenManual(sensitiveMemoryProvider, (previous, next) {
+      final key = _activeSceneKey;
+      if (key != null && previous?.epoch != next.epoch) {
+        // Consent changes revoke presentation data, not the frozen execution
+        // inputs. Invalidate even while another route covers this page so an
+        // old in-flight reply cannot be reused after authorization recovers.
+        ref.invalidate(scenarioCompositionProvider(key));
+        // Riverpod pauses build watches on covered routes. Remove the private
+        // descendants there too, rather than waiting for navigation to resume.
+        if (mounted) setState(() {});
+      }
+    });
     WidgetsBinding.instance.addObserver(this);
     unawaited(_load());
     _ticker = Timer.periodic(const Duration(seconds: 1), (_) {
@@ -1029,34 +1043,44 @@ class _CookingPageState extends ConsumerState<CookingPage>
         : null;
     // Presentation always targets the session's frozen version. A newer recipe,
     // profile, or scenario response must never rewrite the execution snapshot.
-    final scene = ref.watch(
-      scenarioCompositionProvider((
-        recipeId: session.snapshot.recipeId,
-        versionId: session.snapshot.versionId,
-        screenWidth: MediaQuery.sizeOf(context).width.round().clamp(1, 16384),
-        detailOverride: _sceneDetailOverride,
-        beforeChangeId: session.snapshot.inputs['before_change_id'] is String
-            ? session.snapshot.inputs['before_change_id'] as String
-            : null,
-        personalizationView:
-            session.snapshot.inputs['personalized_view'] == 'original'
-            ? 'original'
-            : 'personalized',
-        personalizationJson: targetServings == null && targetMold == null
-            ? null
-            : jsonEncode(
-                PersonalizationRequest(
-                  versionId: session.snapshot.versionId,
-                  targetServings: targetServings,
-                  targetMold: targetMold,
-                  dinerMemberIds: const [],
-                ).toJson(),
-              ),
-        skippedComponentsJson: jsonEncode(
-          _skippedSceneComponents.toList()..sort(),
-        ),
-      )),
+    final sceneKey = (
+      recipeId: session.snapshot.recipeId,
+      versionId: session.snapshot.versionId,
+      screenWidth: MediaQuery.sizeOf(context).width.round().clamp(1, 16384),
+      detailOverride: _sceneDetailOverride,
+      beforeChangeId: session.snapshot.inputs['before_change_id'] is String
+          ? session.snapshot.inputs['before_change_id'] as String
+          : null,
+      personalizationView:
+          session.snapshot.inputs['personalized_view'] == 'original'
+          ? 'original'
+          : 'personalized',
+      personalizationJson: targetServings == null && targetMold == null
+          ? null
+          : jsonEncode(
+              PersonalizationRequest(
+                versionId: session.snapshot.versionId,
+                targetServings: targetServings,
+                targetMold: targetMold,
+                dinerMemberIds: const [],
+              ).toJson(),
+            ),
+      skippedComponentsJson: jsonEncode(
+        _skippedSceneComponents.toList()..sort(),
+      ),
     );
+    _activeSceneKey = sceneKey;
+    final sensitive = ref.watch(sensitiveMemoryProvider);
+    const pendingScene = AsyncValue<CompositionResult>.loading();
+    final rawScene = sensitive.suppressed
+        ? pendingScene
+        : ref.watch(scenarioCompositionProvider(sceneKey));
+    // Refresh/error AsyncValues may retain an authorized personal_safety card.
+    // Never render those values; the independent generic safety fallback stays.
+    final scene =
+        sensitive.suppressed || rawScene.isLoading || rawScene.hasError
+        ? pendingScene
+        : rawScene;
     final description = switch (scene.value) {
       CompositionReady(:final description) => description,
       _ => null,

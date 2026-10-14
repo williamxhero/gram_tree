@@ -1,4 +1,9 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:gram_tree/app/app.dart';
+import 'package:gram_tree/app/router.dart';
+import 'package:gram_tree/features/me/taste_profile_page.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gram_tree/app/theme.dart';
@@ -10,6 +15,9 @@ import 'package:gram_tree/ui_protocol/component_registry.dart';
 import 'package:gramtree_api/gramtree_api.dart';
 
 import 'helpers.dart';
+import 'allergies_page_test.dart' show allergyFixture;
+import 'taste_profile_page_test.dart'
+    show installProfile, profileFixture, chooseSalty;
 import 'recipe_snapshot_test.dart' show recipeSnapshotFixture;
 
 PageDescription cookingComposition(String detail) => PageDescription(
@@ -69,8 +77,16 @@ ComponentDescriptor failureReminder(String step, String placement) =>
 Future<CookingSessionStore> sessionStore(
   TestEnv env, {
   Map<String, dynamic> inputs = const {},
+  RecipeSafetyResult? safety,
+  RecipeDerived? derived,
 }) async {
-  final detail = recipeSnapshotFixture('frozen-v1');
+  final source = recipeSnapshotFixture('frozen-v1');
+  final detail = source.copyWith(
+    version: source.version.copyWith(
+      safety: safety,
+      derived: derived ?? source.version.derived,
+    ),
+  );
   detail.version.snapshot.steps!.clear();
   detail.version.snapshot.steps!.addAll([
     RecipeStep(
@@ -423,6 +439,278 @@ void main() {
         await tester.tap(find.text('下一步'));
         await tester.pumpAndSettle();
         expect(find.text('步骤 2 / 2'), findsOneWidget);
+        await tester.pumpWidget(const SizedBox.shrink());
+      },
+    );
+  }
+
+  for (final inputs in [
+    <String, dynamic>{
+      'personalized_view': 'original',
+      'scale_mode': 'servings',
+      'target_servings': 3,
+      'before_change_id': 'frozen-change',
+    },
+    <String, dynamic>{
+      'personalized_view': 'personalized',
+      'scale_mode': 'mold',
+      'target_mold': {'shape': 'round', 'diameter': 18, 'unit': 'cm'},
+      'before_change_id': 'frozen-change',
+    },
+  ]) {
+    testWidgets(
+      'mounted cooking revokes private scene without changing frozen ${inputs['scale_mode']} inputs',
+      (tester) async {
+        var withdrawn = false;
+        var restored = false;
+        var saltyLevel = 2;
+        final withdrawal = Completer<void>();
+        final refreshedScene = Completer<void>();
+        addTearDown(() {
+          if (!withdrawal.isCompleted) withdrawal.complete();
+          if (!refreshedScene.isCompleted) refreshedScene.complete();
+        });
+        final env = TestEnv.signedIn();
+        final store = await sessionStore(
+          env,
+          inputs: inputs,
+          safety: inputs['scale_mode'] == 'servings'
+              ? RecipeSafetyResult(
+                  checkedAt: '2026-10-14T00:00:00Z',
+                  rulesVersion: 'frozen-safety-v1',
+                  allergens: const ['花生'],
+                  findings: [
+                    RecipeSafetyFinding(
+                      basis: '食品安全规则',
+                      message: '鸡肉必须熟透',
+                      ruleId: 'poultry',
+                      severity: RecipeSafetyFindingSeverityEnum.warning,
+                    ),
+                  ],
+                )
+              : null,
+          derived: RecipeDerived(
+            activeTimeSeconds: 0,
+            totalTimeSeconds: 0,
+            allergens: const ['花生'],
+          ),
+        );
+        installProfile(
+          env.server,
+          () => profileFixture(saltyLevel: saltyLevel, manual: saltyLevel != 2),
+        );
+        env.server.on('PATCH', '/v1/me/taste-profile', (_) {
+          saltyLevel = 1;
+          return (200, profileFixture(saltyLevel: 1, manual: true).toJson());
+        });
+        env.server.on(
+          'GET',
+          '/v1/me/taste-profile/allergies',
+          (_) => (
+            200,
+            allergyFixture(
+                  consentId: withdrawn && !restored
+                      ? null
+                      : '33333333-3333-4333-8333-333333333333',
+                  selected: withdrawn && !restored ? const [] : const ['花生'],
+                )
+                .copyWith(
+                  authorizationVersion: restored
+                      ? 3
+                      : withdrawn
+                      ? 2
+                      : 1,
+                )
+                .toJson(),
+          ),
+        );
+        env.server.on('POST', '/v1/me/consents', (request) async {
+          final records = (request.body as Map)['records'] as List;
+          if (records.any(
+            (record) =>
+                record['kind'] == 'sensitive_personal_info' &&
+                record['action'] == 'withdraw',
+          )) {
+            withdrawn = true;
+            await withdrawal.future;
+          }
+          if (records.any(
+            (record) =>
+                record['kind'] == 'sensitive_personal_info' &&
+                record['action'] == 'agree',
+          )) {
+            restored = true;
+          }
+          return (204, null);
+        });
+        env.server.on('POST', '/v1/ui/compositions', (request) async {
+          final body = request.body as Map;
+          if (body['recipe_id'] != 'recipe') {
+            return FakeServer.error(500, 'server_error', '组合不可用');
+          }
+          if (withdrawn && !restored) {
+            await refreshedScene.future;
+            return FakeServer.error(500, 'server_error', '组合不可用');
+          }
+          final page = cookingComposition(
+            body['detail_override'] as String? ?? 'detailed',
+          );
+          final allergen = page.components!.firstWhere(
+            (c) => c.type == 'allergen_notice',
+          );
+          final personalSafety = {
+            'status': 'available',
+            'alerts': [
+              {
+                'person': restored ? '新授权成员' : '小禾',
+                'kind': 'allergy',
+                'target': '花生',
+                'ingredient': '鸡肉',
+                'replacement': false,
+              },
+            ],
+            'unknown_ingredients': <String>[],
+            'incomplete': false,
+          };
+          page.components![page.components!.indexOf(allergen)] = allergen
+              .copyWith(
+                data: <String, dynamic>{
+                  ...allergen.data as Map,
+                  'personal_safety': personalSafety,
+                },
+              );
+          return (200, page.toJson());
+        });
+        Iterable<Recorded> cookingRequests() => env.server
+            .calls('POST', '/v1/ui/compositions')
+            .where((request) => (request.body as Map)['recipe_id'] == 'recipe');
+        Finder key(String value) => find.byKey(ValueKey(value));
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [
+              ...env.overrides,
+              cookingSessionStoreProvider.overrideWithValue(store),
+            ],
+            child: const GramTreeApp(),
+          ),
+        );
+        await tester.pumpAndSettle();
+        final router = ProviderScope.containerOf(
+          tester.element(find.byType(Scaffold).first),
+        ).read(routerProvider);
+        router.push('/cooking/session');
+        await tester.pumpAndSettle();
+        expect(find.text('过敏提醒：小禾，花生（鸡肉）'), findsOneWidget);
+        await revealCooking(tester, find.text('过敏提醒：小禾，花生（鸡肉）'));
+        final initialRequest = Map<String, dynamic>.from(
+          cookingRequests().last.body as Map,
+        );
+        final initialRequestCount = cookingRequests().length;
+        router.push(TasteProfilePage.path);
+        await tester.pumpAndSettle();
+        expect(find.byType(TasteProfilePage), findsOneWidget);
+        await chooseSalty(tester);
+        expect(saltyLevel, 1);
+        expect(
+          cookingRequests().length,
+          initialRequestCount,
+          reason: '可变口味不得刷新冻结的做菜请求',
+        );
+        // The public withdrawal control lives in settings, not the taste editor.
+        router.push('/me/settings');
+        await tester.pumpAndSettle();
+        await tester.scrollUntilVisible(
+          key('sensitive-withdraw'),
+          200,
+          scrollable: find.byType(Scrollable).last,
+        );
+        await tester.ensureVisible(key('sensitive-withdraw'));
+        await tester.pumpAndSettle();
+        await tester.tap(key('sensitive-withdraw').hitTestable());
+        await tester.pumpAndSettle();
+        await tester.tap(key('sensitive-withdraw-confirm').hitTestable());
+        await tester.pumpAndSettle();
+        expect(withdrawn, isTrue);
+        expect(find.byType(CookingPage, skipOffstage: false), findsOneWidget);
+        expect(
+          find.text('过敏提醒：小禾，花生（鸡肉）', skipOffstage: false),
+          findsNothing,
+          reason: '撤回尚未确认时也必须移除挂载 cooking 中的私密卡',
+        );
+        withdrawal.complete();
+        await tester.pumpAndSettle();
+        expect(find.text('敏感同意已撤回，过敏、家庭成员及私密历史已删除'), findsOneWidget);
+        router.pop();
+        await tester.pumpAndSettle();
+        router.pop();
+        await tester.pumpAndSettle();
+        await revealCooking(
+          tester,
+          key('recipe-food-safety-card'),
+          upward: true,
+        );
+        expect(key('recipe-allergen-card'), findsOneWidget);
+        expect(
+          find.text('过敏提醒：小禾，花生（鸡肉）'),
+          findsNothing,
+          reason: '新组合未返回时不得显示 retained AsyncValue 的授权姓名/过敏',
+        );
+        expect(cookingRequests().length, greaterThan(initialRequestCount));
+        refreshedScene.complete();
+        await tester.pumpAndSettle();
+        expect(key('recipe-food-safety-card'), findsOneWidget);
+        expect(key('recipe-allergen-card'), findsOneWidget);
+        expect(find.text('过敏提醒：小禾，花生（鸡肉）'), findsNothing);
+        expect(
+          find.text('过敏原：花生'),
+          findsOneWidget,
+          reason: 'frozen safety/result 或 legacyDerived 的通用过敏原仍应显示，而非个人提醒',
+        );
+        if (inputs['scale_mode'] == 'servings') {
+          expect(find.text('鸡肉必须熟透'), findsOneWidget);
+        }
+        expect(find.text('步骤 1 / 2'), findsOneWidget);
+        // Public re-consent and reopening cooking can load a legal, fresh
+        // header; recovery must not permanently suppress generic safety.
+        router.push(TasteProfilePage.path);
+        await tester.pumpAndSettle();
+        await tester.scrollUntilVisible(
+          key('allergies-edit'),
+          250,
+          scrollable: find.byType(Scrollable).last,
+          maxScrolls: 30,
+        );
+        await tester.ensureVisible(key('allergies-edit'));
+        await tester.pumpAndSettle();
+        await tester.tap(key('allergies-edit').hitTestable());
+        await tester.pumpAndSettle();
+        await tester.tap(key('allergies-agree').hitTestable());
+        await tester.pumpAndSettle();
+        expect(restored, isTrue);
+        await tester.tap(find.text('取消').hitTestable());
+        await tester.pumpAndSettle();
+        router.pop();
+        await tester.pumpAndSettle();
+        // Failed composition has no summary controls. Remount via the public
+        // cooking route to request the same immutable key after reauthorization.
+        router.pop();
+        await tester.pumpAndSettle();
+        router.push('/cooking/session');
+        await tester.pumpAndSettle();
+        await revealCooking(tester, find.text('过敏提醒：新授权成员，花生（鸡肉）'));
+        expect(find.text('过敏提醒：小禾，花生（鸡肉）'), findsNothing);
+        for (final request in cookingRequests()) {
+          expect(
+            request.body,
+            initialRequest,
+            reason: '敏感授权变化只刷新 header，冻结 key 和 inputs 必须完全相同',
+          );
+        }
+        expect(
+          env.server.calls('POST', '/v1/recipes/recipe/personalized'),
+          isEmpty,
+        );
+        expect(tester.takeException(), isNull);
         await tester.pumpWidget(const SizedBox.shrink());
       },
     );
