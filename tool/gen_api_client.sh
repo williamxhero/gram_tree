@@ -13,6 +13,9 @@ GENERATOR_VERSION="7.16.0"
 JAR="${OPENAPI_GENERATOR_JAR:-$HOME/.cache/gramtree/openapi-generator-cli-$GENERATOR_VERSION.jar}"
 SPEC="$ROOT/api/openapi.json"
 OUT="$ROOT/app/packages/gramtree_api"
+# Build outside the tracked package. A cancelled generator/build must not leave
+# the checked-in client half-written or without its copy_with/json_serializable outputs.
+STAGE="$ROOT/app/packages/.gramtree_api.generated.$$"
 
 if [[ ! -f "$JAR" ]]; then
   mkdir -p "$(dirname "$JAR")"
@@ -25,21 +28,27 @@ fi
 
 JAR="$(native_path "$JAR")"
 CLIENT_SPEC="$(native_path "$(mktemp)")"
-trap 'rm -f "$CLIENT_SPEC"' EXIT
+cleanup() {
+  rm -f "$CLIENT_SPEC"
+  rm -rf "$STAGE"
+}
+trap cleanup EXIT
 (cd "$ROOT/server" && uv run --quiet python "$ROOT/tool/prepare_api_client.py" "$SPEC" "$CLIENT_SPEC")
 
-rm -rf "$OUT"
 java -jar "$JAR" generate --skip-validate-spec \
-  -i "$CLIENT_SPEC" -g dart-dio -o "$OUT" \
+  -i "$CLIENT_SPEC" -g dart-dio -o "$STAGE" \
   --global-property=apiTests=false,modelTests=false,apiDocs=false,modelDocs=false \
   --additional-properties=pubName=gramtree_api,pubVersion=1.0.0,pubDescription="GramTree API client (generated)",serializationLibrary=json_serializable \
   >/dev/null
 
-# 生成的 json_serializable 代码用到 null-aware elements，需要 Dart 3.8
-sed -i.bak "s/sdk: '>=3.5.0 <4.0.0'/sdk: '>=3.8.0 <4.0.0'/" "$OUT/pubspec.yaml" && rm "$OUT/pubspec.yaml.bak"
-rm -rf "$OUT/doc" "$OUT/test" "$OUT/README.md" "$OUT/.travis.yml" "$OUT/git_push.sh"
+# Java writes the file manifest with platform line endings; keep CI generation deterministic.
+sed -i.bak 's/\r$//' "$STAGE/.openapi-generator/FILES" && rm "$STAGE/.openapi-generator/FILES.bak"
 
-cd "$OUT"
+# 生成的 json_serializable 代码用到 null-aware elements，需要 Dart 3.8
+sed -i.bak "s/sdk: '>=3.5.0 <4.0.0'/sdk: '>=3.8.0 <4.0.0'/" "$STAGE/pubspec.yaml" && rm "$STAGE/pubspec.yaml.bak"
+rm -rf "$STAGE/doc" "$STAGE/test" "$STAGE/README.md" "$STAGE/.travis.yml" "$STAGE/git_push.sh"
+
+cd "$STAGE"
 if ! command -v flutter >/dev/null 2>&1; then
   FLUTTER_ROOT="${GRAMTREE_FLUTTER_ROOT:-$HOME/.cache/gramtree/flutter}"
   if [[ -x "$FLUTTER_ROOT/bin/flutter" ]]; then
@@ -50,4 +59,11 @@ fi
 flutter pub get >/dev/null
 dart run build_runner build --delete-conflicting-outputs >/dev/null
 dart format lib >/dev/null
+if [[ ! -s "$STAGE/lib/src/model/recipe_detail.g.dart" ]] ||
+  ! grep -q 'class _\$RecipeDetailCWProxy' "$STAGE/lib/src/model/recipe_detail.g.dart"; then
+  echo "generated client is missing copy_with output" >&2
+  exit 1
+fi
+rm -rf "$OUT"
+mv "$STAGE" "$OUT"
 echo "generated $OUT"

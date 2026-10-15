@@ -6,10 +6,13 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:gram_tree/auth/session.dart';
 import 'package:gram_tree/config/app_config.dart';
 import 'package:gram_tree/main.dart' as app;
+import 'package:gram_tree/storage/device_id.dart';
 import 'package:gramtree_api/gramtree_api.dart';
 import 'package:integration_test/integration_test.dart';
 
 import 'event_pipeline_support.dart' show containerOf;
+import '../test/profile_scroll_support.dart';
+import 'signed_probe_support.dart';
 
 enum _FamilyStep {
   login,
@@ -88,7 +91,11 @@ void main() {
       ),
       headers: device,
     );
-    return {'Authorization': 'Bearer ${response.data!.accessToken}'};
+    return registerProbeSession(
+      server,
+      AuthSession.fromTokens(response.data!),
+      deviceId: device['X-Device-ID']!,
+    );
   }
 
   Future<void> expectStatus(
@@ -139,45 +146,7 @@ void main() {
     WidgetTester tester,
     Finder finder, [
     double delta = 300,
-  ]) async {
-    final scrollables = find.byWidgetPredicate(
-      (widget) =>
-          widget is Scrollable && widget.axisDirection == AxisDirection.down,
-    );
-    await waitFor(tester, scrollables);
-    final profile = find.byKey(const ValueKey('taste-profile-content'));
-    final profileScrollables = find.descendant(
-      of: profile,
-      matching: scrollables,
-    );
-    final scrollable =
-        profile.evaluate().isNotEmpty &&
-            profileScrollables.evaluate().isNotEmpty
-        ? profileScrollables.first
-        : scrollables.first;
-    final position = tester.state<ScrollableState>(scrollable).position;
-    final step = delta.abs().clamp(100.0, 500.0).toDouble();
-    // Reset the lazy profile list before each bounded forward search so a
-    // target cannot be stranded above the previous viewport.
-    position.jumpTo(position.minScrollExtent);
-    await tester.pumpAndSettle();
-    for (var i = 0; i < 300 && finder.evaluate().isEmpty; i++) {
-      position.jumpTo(
-        (position.pixels + step).clamp(
-          position.minScrollExtent,
-          position.maxScrollExtent,
-        ),
-      );
-      await tester.pump(const Duration(milliseconds: 100));
-    }
-    expect(finder, findsOneWidget);
-    await Scrollable.ensureVisible(
-      tester.element(finder),
-      alignment: 0.5,
-      alignmentPolicy: ScrollPositionAlignmentPolicy.explicit,
-    );
-    await tester.pumpAndSettle();
-  }
+  ]) => revealProfileTarget(tester, finder, delta: delta);
 
   Future<void> tap(WidgetTester tester, Finder finder) async {
     await Scrollable.ensureVisible(tester.element(finder), alignment: 0.5);
@@ -224,7 +193,7 @@ void main() {
       queryParameters: {'email': email},
     );
     await tester.enterText(key('code-input'), code.data['code'] as String);
-    await waitFor(tester, find.text('先添加一道你常做的菜'));
+    await waitFor(tester, find.text('今天还没有安排'));
     await tester.tap(find.text('我的'));
     await tester.pumpAndSettle();
     await openProfile(tester);
@@ -279,10 +248,12 @@ void main() {
     markStep(_FamilyStep.unauthorizedWrite);
     // The UI already authenticated this owner. A second code request would
     // correctly hit the resend guard before any privacy assertion runs.
-    final owner = <String, dynamic>{
-      'Authorization':
-          'Bearer ${containerOf(tester).read(sessionStoreProvider).current!.accessToken}',
-    };
+    final container = containerOf(tester);
+    final owner = registerProbeSession(
+      server,
+      container.read(sessionStoreProvider).current!,
+      deviceId: container.read(deviceIdProvider),
+    );
     final refused = (await familyApi.listFamilyMembers(headers: owner)).data!;
     expect(refused.consentId, isNull);
     expect(refused.items, isEmpty);

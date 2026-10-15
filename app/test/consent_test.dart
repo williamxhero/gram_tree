@@ -59,7 +59,7 @@ void main() {
         .cast<Map<String, dynamic>>();
     expect(
       saved.map((r) => (r['kind'], r['version'], r['agree'], r['uploaded'])),
-      [('terms', 'v1', true, false), ('privacy', 'v1', true, false)],
+      [('terms', 'v1', true, false), ('privacy', 'v2', true, false)],
     );
     expect(saved.first['device_id'], env.local.getString('device_id'));
 
@@ -72,13 +72,14 @@ void main() {
     final server = FakeServer();
     final env = TestEnv(
       server: server,
-      local: MemoryLocalStore(consentedStore(privacy: 'v0')),
+      local: MemoryLocalStore(consentedStore(privacy: 'v1')),
       secure: TestEnv.signedIn(server: server).secure,
     );
     await pumpApp(tester, env: env);
     expect(find.text('隐私政策已更新'), findsOneWidget);
     expect(find.text('这次改了什么'), findsOneWidget);
-    expect(find.text('v0 → v1'), findsOneWidget);
+    expect(find.text('v1 → v2'), findsOneWidget);
+    expect(find.text('新增：接口访问日志的收集目的、记录内容和默认 180 天保存期限。'), findsOneWidget);
     expect(find.text('今天'), findsNothing);
     expect(server.requests, isEmpty);
 
@@ -88,7 +89,7 @@ void main() {
     final upload = server.calls('POST', '/v1/me/consents').single.body as Map;
     expect((upload['records'] as List).map((r) => (r['kind'], r['version'])), [
       ('terms', 'v1'),
-      ('privacy', 'v1'),
+      ('privacy', 'v2'),
     ]);
   });
 

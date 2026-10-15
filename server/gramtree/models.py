@@ -3,6 +3,7 @@
 from gramtree.accounts import models as _accounts  # noqa: F401
 from gramtree.ai import models as _ai  # noqa: F401
 from gramtree.analytics import models as _analytics  # noqa: F401
+from gramtree.core import access_log as _access_log  # noqa: F401
 from gramtree.db import Base
 from gramtree.events import field_adjudication as _field_adjudication  # noqa: F401
 from gramtree.events import models as _events  # noqa: F401
@@ -13,6 +14,7 @@ from gramtree.recipes import import_models as _recipe_imports  # noqa: F401
 from gramtree.recipes import measure_models as _measure_models  # noqa: F401
 from gramtree.recipes import models as _recipes  # noqa: F401
 from gramtree.records import models as _records  # noqa: F401
+from gramtree.risk import models as _risk  # noqa: F401
 from gramtree.runtime_config import models as _runtime_config  # noqa: F401
 from gramtree.taste_profiles import learning_models as _taste_learning_models  # noqa: F401
 from gramtree.taste_profiles import models as _taste_profiles  # noqa: F401

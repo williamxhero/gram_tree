@@ -4,8 +4,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'helpers.dart';
+import 'profile_scroll_support.dart';
 import 'taste_profile_page_test.dart'
-    show installProfile, profileFixture, openTaste;
+    show installProfile, profileFixture, openTaste, tastePath;
 
 const constraintsPath = '/v1/me/taste-profile/cooking-constraints';
 
@@ -328,6 +329,49 @@ void main() {
     // Native settings are not rendered from a server composition. Do not invent
     // a non-UUID correlation ID or carry private account/measure identifiers.
     expect(actions.single['correlation'], <String, dynamic>{});
+  });
+
+  testWidgets('cleared household target survives a delayed phone refresh', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(412, 915));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    final server = FakeServer();
+    installProfile(server, () => profileFixture());
+    var current = constraintsFixture(values: {'household_servings': 4});
+    var clearedOnServer = false;
+    server.on('GET', tastePath, (_) async {
+      if (clearedOnServer) {
+        await Future<void>.delayed(const Duration(milliseconds: 500));
+      }
+      return (200, profileFixture().toJson());
+    });
+    server.on('GET', constraintsPath, (_) => (200, current));
+    server.on('PUT', constraintsPath, (request) async {
+      await Future<void>.delayed(const Duration(seconds: 1));
+      clearedOnServer = true;
+      current = constraintsFixture();
+      return (200, current);
+    });
+    await pumpApp(tester, env: TestEnv.signedIn(server: server));
+    await openTaste(tester);
+    final clear = find.byKey(const ValueKey('cooking-constraints-clear'));
+    await revealProfileTarget(tester, clear);
+    await tapVisible(tester, clear);
+    await tapVisible(
+      tester,
+      find.byKey(const ValueKey('cooking-constraints-clear-confirm')),
+    );
+    // The dialog has closed, but HTTP has not returned: finding the existing
+    // card is not evidence that the clear or the subsequent reload finished.
+    expect(find.text('家庭默认：4 人'), findsOneWidget);
+    final cleared = find.text('人数未设置，菜谱沿用作者份数');
+    await revealProfileTarget(tester, cleared);
+    expect(cleared, findsOneWidget);
+    expect(cleared.hitTestable(), findsOneWidget);
+    expect(server.calls('PUT', constraintsPath), hasLength(1));
+    expect(jsonEncode(server.calls('PUT', constraintsPath).single.body), '{}');
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets(

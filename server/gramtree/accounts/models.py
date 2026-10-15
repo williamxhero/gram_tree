@@ -115,6 +115,11 @@ class DeviceSession(Base):
     reauthenticated_at: Mapped[datetime | None] = mapped_column(default=None)
     revoked_at: Mapped[datetime | None] = mapped_column(default=None)
     revoked_reason: Mapped[str | None] = mapped_column(String(32), default=None)
+    # Historical column name: this derived HMAC credential is a secret verifier.
+    # It is returned only at login/refresh and must never appear in logs.
+    signing_secret_hash: Mapped[str | None] = mapped_column(String(128), default=None)
+    previous_signing_secret_hash: Mapped[str | None] = mapped_column(String(128), default=None)
+    previous_signing_secret_expires_at: Mapped[datetime | None] = mapped_column(default=None)
 
 
 class RefreshToken(Base):

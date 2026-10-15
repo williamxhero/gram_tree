@@ -6,6 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:gram_tree/app/router.dart';
 import 'package:gram_tree/features/create/create_page.dart';
 import 'package:gram_tree/network/reachability.dart';
+import 'package:gram_tree/storage/local_store.dart';
 import 'package:gram_tree/ui_protocol/intent_dispatcher.dart';
 import 'package:gramtree_api/gramtree_api.dart';
 import 'package:integration_test/integration_test.dart';
@@ -32,11 +33,25 @@ void main() {
       final probe = HttpApiReachabilityProbe(url);
       addTearDown(probe.dispose);
       final signedIn = TestEnv.signedIn();
-      final env = TestEnv(secure: signedIn.secure, probe: probe);
+      final env = TestEnv(
+        // Retain the credential's installation binding, but not prior consent.
+        local: MemoryLocalStore({
+          'device_id': signedIn.local.getString('device_id')!,
+        }),
+        secure: signedIn.secure,
+        probe: probe,
+      );
       await pumpApp(tester, env: env);
       expect(find.byKey(const ValueKey('consent-agree')), findsOneWidget);
       expect((await control.get<List<dynamic>>('/test/probes')).data, isEmpty);
       await tapVisible(tester, find.byKey(const ValueKey('consent-agree')));
+      // Real browser signing can finish after frame animations have settled.
+      // Wait for the authenticated home before trying to use its navigation.
+      final create = find.byKey(const ValueKey('primary-create-button'));
+      for (var i = 0; i < 220 && create.evaluate().isEmpty; i++) {
+        await tester.pump(const Duration(milliseconds: 100));
+      }
+      expect(create, findsOneWidget);
       await tapTab(tester, 2);
 
       Future<void> waitForConnection(bool online) async {

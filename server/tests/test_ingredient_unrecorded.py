@@ -155,11 +155,11 @@ def test_unrecorded_pagination_is_count_descending_and_deterministic(api: Api) -
     assert page["next_cursor"]
 
     second = api.client.get(
-        "/v1/ingredients/unrecorded?limit=2",
-        params={"cursor": page["next_cursor"]},
+        "/v1/ingredients/unrecorded",
+        params={"limit": 2, "cursor": page["next_cursor"]},
         headers=headers,
     )
-    assert second.status_code == 200
+    assert second.status_code == 200, second.text
     assert [item["name"] for item in second.json()["items"]] == ["同数甲"]
 
 

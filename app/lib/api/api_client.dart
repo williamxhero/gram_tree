@@ -1,10 +1,14 @@
 import 'dart:async';
+import 'dart:convert';
 
+import 'package:cryptography/cryptography.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gramtree_api/gramtree_api.dart';
 
 import '../auth/session.dart';
+import 'request_signing.dart';
+import 'access_protection.dart';
 import '../config/app_config.dart';
 import '../privacy/consent.dart';
 import '../network/reachability.dart';
@@ -26,6 +30,13 @@ final apiClientProvider = Provider<GramtreeApi>(
 /// null 表示真的发请求。
 final fakeServerProvider = Provider<Interceptor?>((ref) => null);
 
+/// Keep the platform implementation in production and live integration tests.
+/// Automated widget fixtures can select the package's real Dart algorithms,
+/// whose futures do not depend on native browser events outside the fake clock.
+final requestSigningCryptographyProvider = Provider<Cryptography>(
+  (ref) => Cryptography.instance,
+);
+
 /// 端到端测试专用的"飞行模式"开关：默认 false（正常联网），只有测试代码会把它
 /// 置成 true。跟 [fakeServerProvider] 不一样——这里仍然是真的服务端，只是本机
 /// 暂时不让任何请求发出去，用来在安卓模拟器上模拟断网又不用真的操作系统级飞行模式
@@ -44,6 +55,22 @@ final offlineSimulationProvider = NotifierProvider<OfflineSimulation, bool>(
 );
 
 const deviceIdHeader = 'X-Device-ID';
+
+bool _isPublicShareRequest(RequestOptions options) {
+  if (options.extra['public_request'] != true) return false;
+  final path = options.uri.path;
+  if (options.method == 'GET' &&
+      (RegExp(r'^/v1/shares/[^/?#]+$').hasMatch(path) ||
+          RegExp(r'^/s/[^/?#]+/image$').hasMatch(path))) {
+    return true;
+  }
+  // Only recovery spawned by an anonymous share request bypasses consent and
+  // identity headers. Ordinary authenticated challenges retain their account.
+  return options.extra['public_share_captcha'] == true &&
+      ((options.method == 'GET' &&
+              RegExp(r'^/v1/risk/captcha/[^/?#]+$').hasMatch(path)) ||
+          (options.method == 'POST' && path == '/v1/risk/captcha'));
+}
 
 Dio _baseDio(Ref ref) {
   final config = ref.watch(appConfigProvider);
@@ -120,7 +147,9 @@ Dio _baseDio(Ref ref) {
   dio.interceptors.add(
     InterceptorsWrapper(
       onRequest: (options, handler) {
-        options.headers[deviceIdHeader] = ref.read(deviceIdProvider);
+        if (!_isPublicShareRequest(options)) {
+          options.headers[deviceIdHeader] = ref.read(deviceIdProvider);
+        }
         handler.next(options);
       },
     ),
@@ -138,28 +167,229 @@ final dioProvider = Provider<Dio>((ref) {
   // 续期和续期后的重试都用单独的 Dio，不经过下面的续期拦截：
   // 续期拦截是排队执行的，在它里面再走同一条拦截链，重试失败时会互相等待、永远卡住
   final plainDio = _baseDio(ref);
-  _addFakeServer(ref, plainDio);
-  dio.interceptors.add(
-    AuthInterceptor(
-      retryDio: plainDio,
-      session: ref.watch(sessionStoreProvider),
-      refresh: (token) async {
-        final api = GramtreeApi(dio: plainDio, interceptors: const []);
-        final resp = await api.getAuthApi().refreshTokens(
-          refreshRequest: RefreshRequest(refreshToken: token),
-        );
-        return resp.data!;
-      },
-      canRefresh: () =>
-          !ref.read(offlineSimulationProvider) &&
-          ref.read(apiReachabilityProvider) != ApiReachability.unavailable,
-      onSessionExpired: () =>
-          ref.read(sessionStoreProvider).expire(reason: 'refresh_failed'),
-    ),
+  final signer = RequestSigner(
+    ref.watch(sessionStoreProvider),
+    cryptography: ref.watch(requestSigningCryptographyProvider),
   );
+  final auth = AuthInterceptor(
+    retryDio: plainDio,
+    session: ref.watch(sessionStoreProvider),
+    refresh: (token) async {
+      final api = GramtreeApi(dio: plainDio, interceptors: const []);
+      final resp = await api.getAuthApi().refreshTokens(
+        refreshRequest: RefreshRequest(refreshToken: token),
+      );
+      return resp.data!;
+    },
+    canRefresh: () =>
+        !ref.read(offlineSimulationProvider) &&
+        ref.read(apiReachabilityProvider) != ApiReachability.unavailable,
+    onSessionExpired: () =>
+        ref.read(sessionStoreProvider).expire(reason: 'refresh_failed'),
+  );
+  // A clock/captcha replay may encounter token expiry. Apply the same fenced,
+  // once-only recovery without entering the queued interceptor recursively.
+  // The auth_retried flag prevents a refresh-retry from refreshing again.
+  plainDio.interceptors.add(InterceptorsWrapper(onError: auth.onError));
+  plainDio.interceptors.add(
+    RequestProtectionInterceptor(plainDio, signer, ref),
+  );
+  _addFakeServer(ref, plainDio);
+  dio.interceptors.add(auth);
+  dio.interceptors.add(RequestProtectionInterceptor(plainDio, signer, ref));
   _addFakeServer(ref, dio);
   return dio;
 });
+
+class RequestProtectionInterceptor extends Interceptor {
+  RequestProtectionInterceptor(this._retryDio, this._signer, this._ref);
+
+  final Dio _retryDio;
+  final RequestSigner _signer;
+  final Ref _ref;
+  static const _clockRetried = 'signing_clock_retried';
+  static const _captchaRetried = 'captcha_retried';
+
+  bool _rebindRetryBearer(RequestOptions options) {
+    final revocation = options.extra['auth_revocation_session'];
+    if (options.extra['auth_revocation'] == true &&
+        options.method == 'POST' &&
+        options.uri.path == '/v1/auth/logout' &&
+        revocation is AuthSession &&
+        options.headers['Authorization'] ==
+            'Bearer ${revocation.accessToken}') {
+      // Revocation is explicitly authorized for this captured, already-logged-out
+      // session; never replace its bearer with the next account's credential.
+      return true;
+    }
+    final session = _ref.read(sessionStoreProvider);
+    if (options.extra['auth_identity_epoch'] != session.identityEpoch ||
+        options.extra['auth_owner_id'] != session.current?.user.id) {
+      return false;
+    }
+    // Security subrequests can rotate credentials while the original operation
+    // waits for a challenge. Rebind only its already-captured login generation.
+    if (options.headers['Authorization'] != null &&
+        session.current != null &&
+        options.extra['auth_revocation'] != true) {
+      options.headers['Authorization'] =
+          'Bearer ${session.current!.accessToken}';
+    }
+    return true;
+  }
+
+  @override
+  Future<void> onRequest(
+    RequestOptions options,
+    RequestInterceptorHandler handler,
+  ) async {
+    try {
+      await _signer.sign(options, transformer: _retryDio.transformer);
+      handler.next(options);
+    } catch (error) {
+      handler.reject(
+        DioException(
+          requestOptions: options,
+          type: DioExceptionType.cancel,
+          error: error,
+        ),
+      );
+    }
+  }
+
+  @override
+  void onResponse(
+    Response<dynamic> response,
+    ResponseInterceptorHandler handler,
+  ) {
+    if (response.headers.value('x-pagination-limit-reached') == 'true') {
+      _ref.read(accessProtectionProvider.notifier).paginationLimit(true);
+    }
+    handler.next(response);
+  }
+
+  @override
+  Future<void> onError(
+    DioException err,
+    ErrorInterceptorHandler handler,
+  ) async {
+    final options = err.requestOptions;
+    var data = err.response?.data;
+    // Image requests retain byte responses even when the server sends JSON
+    // protection errors. Decode only for classification, not the caller's data.
+    if (data is List<int> && data.length <= 1024 * 1024) {
+      try {
+        data = jsonDecode(utf8.decode(data));
+      } on FormatException {
+        // Non-JSON image failures must still propagate without a retry.
+      }
+    }
+    final body = data is Map ? data['error'] : null;
+    final headers = err.response?.headers;
+    if (body is Map && body['code'] == 'pagination_limit_reached') {
+      _ref.read(accessProtectionProvider.notifier).paginationLimit(true);
+    }
+    final retrySeconds = int.tryParse(headers?.value('retry-after') ?? '');
+    if (err.response?.statusCode == 429 && retrySeconds != null) {
+      _ref.read(accessProtectionProvider.notifier).rateLimited(retrySeconds);
+    }
+    if (body is Map &&
+        body['code'] == 'risk_captcha_required' &&
+        options.extra[_captchaRetried] != true &&
+        !options.uri.path.startsWith('/v1/risk/captcha')) {
+      final challengeId = headers?.value('x-risk-challenge');
+      if (challengeId != null && _rebindRetryBearer(options)) {
+        options.extra[_captchaRetried] = true;
+        try {
+          final riskApi = GramtreeApi(
+            dio: _retryDio,
+            interceptors: const [],
+          ).getRiskApi();
+          final recoveryExtra = {
+            ...options.extra,
+            if (_isPublicShareRequest(options)) 'public_share_captcha': true,
+          };
+          final response = await riskApi.getCaptchaChallenge(
+            challengeId: Uri.encodeComponent(challengeId),
+            headers: {
+              if (options.headers['Authorization'] != null)
+                'Authorization': options.headers['Authorization'],
+            },
+            extra: recoveryExtra,
+          );
+          final challenge = response.data;
+          final imageUri = challenge?.imageDataUri;
+          if (challenge?.challengeId != challengeId ||
+              imageUri == null ||
+              !imageUri.startsWith('data:image/png;base64,') ||
+              imageUri.length > 1024 * 1024) {
+            handler.next(err);
+            return;
+          }
+          if (!_rebindRetryBearer(options)) {
+            handler.next(err);
+            return;
+          }
+          final answer = await _ref
+              .read(captchaAdapterProvider)
+              .solve(
+                CaptchaChallenge(
+                  id: challengeId,
+                  prompt: challenge!.prompt,
+                  image: base64Decode(
+                    imageUri.substring('data:image/png;base64,'.length),
+                  ),
+                ),
+              );
+          if (answer != null &&
+              answer.isNotEmpty &&
+              _rebindRetryBearer(options)) {
+            // Preserve the original account fence through challenge, verification and replay.
+            final verification = await riskApi.verifyCaptcha(
+              captchaVerification: CaptchaVerification(
+                challengeId: challengeId,
+                response: answer,
+              ),
+              headers: {
+                if (options.headers['Authorization'] != null)
+                  'Authorization': options.headers['Authorization'],
+              },
+              extra: {...recoveryExtra, _captchaRetried: true},
+            );
+            if (verification.data?.accepted != true ||
+                verification.data?.accessRestored != true ||
+                !_rebindRetryBearer(options)) {
+              handler.next(err);
+              return;
+            }
+            handler.resolve(await _retryDio.fetch<dynamic>(options));
+            return;
+          }
+        } on DioException catch (retryError) {
+          handler.next(retryError);
+          return;
+        } on FormatException {
+          handler.next(err);
+          return;
+        }
+      }
+    }
+    if (body is! Map ||
+        body['code'] != 'signature_clock_skew' ||
+        options.extra[_clockRetried] == true ||
+        !_rebindRetryBearer(options) ||
+        !_signer.correctServerTime(body['server_time'])) {
+      handler.next(err);
+      return;
+    }
+    options.extra[_clockRetried] = true;
+    try {
+      handler.resolve(await _retryDio.fetch<dynamic>(options));
+    } on DioException catch (retryError) {
+      handler.next(retryError);
+    }
+  }
+}
 
 /// 同意之前拒绝一切请求：请求根本不会交给网络层。
 class ConsentGate extends Interceptor {
@@ -169,7 +399,7 @@ class ConsentGate extends Interceptor {
 
   @override
   void onRequest(RequestOptions options, RequestInterceptorHandler handler) {
-    if (_consented()) {
+    if (_consented() || _isPublicShareRequest(options)) {
       handler.next(options);
     } else {
       handler.reject(
@@ -213,8 +443,11 @@ class AuthInterceptor extends QueuedInterceptor {
   bool _sensitiveOriginMatches(RequestOptions options) {
     final owner = options.extra['sensitive_account_id'];
     if (owner == null) return true;
+    final epoch = options.extra['sensitive_identity_epoch'];
     return session.current?.user.id == owner &&
-        identical(options.extra['sensitive_session'], session.current);
+        (epoch != null
+            ? epoch == session.identityEpoch
+            : identical(options.extra['sensitive_session'], session.current));
   }
 
   bool _matchesIdentity(RequestOptions options) {
@@ -231,7 +464,61 @@ class AuthInterceptor extends QueuedInterceptor {
   }
 
   @override
-  void onRequest(RequestOptions options, RequestInterceptorHandler handler) {
+  Future<void> onRequest(
+    RequestOptions options,
+    RequestInterceptorHandler handler,
+  ) async {
+    if (_isPublicShareRequest(options)) {
+      options.headers.remove('Authorization');
+      // Anonymous recovery still belongs to the login generation that opened
+      // the link; never replay it across a login/logout or account switch.
+      options.extra['auth_owner_id'] = session.current?.user.id;
+      options.extra['auth_identity_epoch'] = session.identityEpoch;
+      handler.next(options);
+      return;
+    }
+    // Upgrade an older saved login before dispatching any protected request.
+    // The refresh endpoint is token-authenticated and does not need a bearer MAC.
+    final legacy = session.current;
+    if (legacy != null &&
+        legacy.requestSigningKey == null &&
+        options.extra['auth_revocation'] != true &&
+        _matchesIdentity(options) &&
+        _sensitiveOriginMatches(options)) {
+      final identity = session.identity!;
+      try {
+        if (canRefresh?.call() == false) {
+          throw StateError('refresh_waiting_for_network');
+        }
+        final tokens = await refresh(legacy.refreshToken);
+        if (!session.matches(identity) || !identical(session.current, legacy)) {
+          throw StateError('account_changed');
+        }
+        if (tokens.user.id != legacy.user.id) {
+          throw StateError('account_changed');
+        }
+        await session.saveRefreshed(tokens, identity: identity);
+        if (!session.matches(identity)) throw StateError('account_changed');
+        // Only this verified same-login rotation may update a sensitive capture.
+        if (identical(options.extra['sensitive_session'], legacy)) {
+          options.extra['sensitive_session'] = session.current;
+        }
+        if (options.headers['Authorization'] ==
+            'Bearer ${legacy.accessToken}') {
+          options.headers['Authorization'] =
+              'Bearer ${session.current!.accessToken}';
+        }
+      } catch (error) {
+        handler.reject(
+          DioException(
+            requestOptions: options,
+            type: DioExceptionType.cancel,
+            error: error,
+          ),
+        );
+        return;
+      }
+    }
     // Confirmed local logout fences the session before HTTP dispatch. Allow
     // only this captured-token revocation, never inject a new account's token.
     if (options.extra['auth_revocation'] == true &&
@@ -256,7 +543,10 @@ class AuthInterceptor extends QueuedInterceptor {
     options.extra['auth_owner_id'] = session.current?.user.id;
     options.extra['auth_identity_epoch'] = session.identityEpoch;
     final token = session.current?.accessToken;
-    if (token != null && !options.headers.containsKey('Authorization')) {
+    if (token != null &&
+        (!options.headers.containsKey('Authorization') ||
+            options.extra['sensitive_identity_epoch'] ==
+                session.identityEpoch)) {
       options.headers['Authorization'] = 'Bearer $token';
     }
     if (token != null) {
@@ -313,6 +603,11 @@ class AuthInterceptor extends QueuedInterceptor {
         );
         expected = session.current!;
         await saving;
+        if (identical(err.requestOptions.extra['sensitive_session'], current) &&
+            _matchesIdentity(err.requestOptions) &&
+            identical(session.current, expected)) {
+          err.requestOptions.extra['sensitive_session'] = expected;
+        }
       }
     } catch (error) {
       // A transport outage is not a revoked login. Return the transport error

@@ -104,7 +104,9 @@ class RecipeListItem {
 
 enum RecipeListItemVisibilityEnum {
   @JsonValue(r'private')
-  private(r'private');
+  private(r'private'),
+  @JsonValue(r'public')
+  public(r'public');
 
   const RecipeListItemVisibilityEnum(this.value);
 

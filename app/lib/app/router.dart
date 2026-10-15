@@ -21,6 +21,7 @@ import '../features/me/withdraw_page.dart';
 import '../features/onboarding/consent_page.dart';
 import '../features/recipes/personal_measures_page.dart';
 import '../features/recipes/recipe_pages.dart';
+import '../features/recipes/share_link_page.dart';
 import '../features/recipes/cooking_session.dart';
 import '../features/recipes/ingredient_comparison_page.dart';
 import '../features/recipes/full_comparison_page.dart';
@@ -45,6 +46,9 @@ String? guard({
   required AsyncValue<Object?> auth,
   required String location,
 }) {
+  // Public opaque shares contain no recipe data; keep their resolver page
+  // reachable before consent and while login is pending.
+  if (location == '/s' || location.startsWith('/s/')) return null;
   if (!consented) {
     return location == consentPath || location == goodbyePath
         ? null
@@ -53,6 +57,7 @@ String? guard({
   if (auth.isLoading && !auth.hasValue) {
     return location == loadingPath ? null : loadingPath;
   }
+  if (location == '/s' || location.startsWith('/s/')) return null;
   if (auth.value == null) {
     return location.startsWith(loginPath) ? null : loginPath;
   }
@@ -65,14 +70,35 @@ final routerProvider = Provider<GoRouter>((ref) {
   final refresh = ValueNotifier<int>(0);
   ref.listen(privacyConsentProvider, (_, _) => refresh.value++);
   ref.listen(authProvider, (_, _) => refresh.value++);
+  String? pendingShare;
   final router = GoRouter(
     initialLocation: TabPaths.today,
     refreshListenable: refresh,
-    redirect: (context, state) => guard(
-      consented: ref.read(privacyConsentProvider),
-      auth: ref.read(authProvider),
-      location: state.matchedLocation,
-    ),
+    redirect: (context, state) {
+      final location = state.matchedLocation;
+      if (location.startsWith('/s/')) pendingShare = state.uri.path;
+      final consented = ref.read(privacyConsentProvider);
+      final auth = ref.read(authProvider);
+      final destination = guard(
+        consented: consented,
+        auth: auth,
+        location: location,
+      );
+      // Consent/loading/login redirects must not lose the incoming opaque link.
+      if (pendingShare != null &&
+          consented &&
+          !auth.isLoading &&
+          (destination == TabPaths.today ||
+              (location == loadingPath && destination == loginPath))) {
+        return pendingShare;
+      }
+      if (auth.value != null &&
+          destination == null &&
+          location.startsWith('/recipes/')) {
+        pendingShare = null;
+      }
+      return destination;
+    },
     routes: [
       GoRoute(path: consentPath, builder: (_, _) => const ConsentPage()),
       GoRoute(path: goodbyePath, builder: (_, _) => const GoodbyePage()),
@@ -82,6 +108,15 @@ final routerProvider = Provider<GoRouter>((ref) {
             const Scaffold(body: Center(child: CircularProgressIndicator())),
       ),
       GoRoute(path: loginPath, builder: (_, _) => const LoginPage()),
+      GoRoute(
+        path: '/s/:shareId',
+        builder: (_, state) =>
+            ShareLinkPage(shareId: state.pathParameters['shareId']!),
+      ),
+      GoRoute(
+        path: '/s',
+        builder: (_, _) => const ShareLinkPage(shareId: ''),
+      ),
       GoRoute(
         path: CodePage.path,
         builder: (_, state) {

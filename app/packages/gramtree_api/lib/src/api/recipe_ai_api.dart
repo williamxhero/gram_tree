@@ -39,6 +39,10 @@ class RecipeAiApi {
   /// * [recipeId]
   /// * [versionId]
   /// * [recipeQuestion]
+  /// * [xRequestSignature] - HMAC-SHA256 请求签名
+  /// * [xRequestTimestamp] - Unix 秒时间戳
+  /// * [xRequestNonce] - 每次请求唯一的随机数
+  /// * [xDeviceID] - 登录时的设备安装 ID
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -52,6 +56,10 @@ class RecipeAiApi {
     required String recipeId,
     required String versionId,
     required RecipeQuestion recipeQuestion,
+    String? xRequestSignature,
+    String? xRequestTimestamp,
+    String? xRequestNonce,
+    String? xDeviceID,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
     Map<String, dynamic>? extra,
@@ -74,7 +82,13 @@ class RecipeAiApi {
         );
     final _options = Options(
       method: r'POST',
-      headers: <String, dynamic>{...?headers},
+      headers: <String, dynamic>{
+        r'X-Request-Signature': xRequestSignature,
+        r'X-Request-Timestamp': xRequestTimestamp,
+        r'X-Request-Nonce': xRequestNonce,
+        r'X-Device-ID': xDeviceID,
+        ...?headers,
+      },
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
           {'type': 'http', 'scheme': 'bearer', 'name': 'HTTPBearer'},
@@ -146,6 +160,10 @@ class RecipeAiApi {
   /// Parameters:
   /// * [requestId]
   /// * [existingChoice]
+  /// * [xRequestSignature] - HMAC-SHA256 请求签名
+  /// * [xRequestTimestamp] - Unix 秒时间戳
+  /// * [xRequestNonce] - 每次请求唯一的随机数
+  /// * [xDeviceID] - 登录时的设备安装 ID
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -158,6 +176,10 @@ class RecipeAiApi {
   Future<Response<RecipeDetail>> chooseExistingRecipe({
     required String requestId,
     required ExistingChoice existingChoice,
+    String? xRequestSignature,
+    String? xRequestTimestamp,
+    String? xRequestNonce,
+    String? xDeviceID,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
     Map<String, dynamic>? extra,
@@ -173,7 +195,13 @@ class RecipeAiApi {
     );
     final _options = Options(
       method: r'POST',
-      headers: <String, dynamic>{...?headers},
+      headers: <String, dynamic>{
+        r'X-Request-Signature': xRequestSignature,
+        r'X-Request-Timestamp': xRequestTimestamp,
+        r'X-Request-Nonce': xRequestNonce,
+        r'X-Device-ID': xDeviceID,
+        ...?headers,
+      },
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
           {'type': 'http', 'scheme': 'bearer', 'name': 'HTTPBearer'},
@@ -245,6 +273,10 @@ class RecipeAiApi {
   /// Parameters:
   /// * [modificationId]
   /// * [modificationConfirmInput]
+  /// * [xRequestSignature] - HMAC-SHA256 请求签名
+  /// * [xRequestTimestamp] - Unix 秒时间戳
+  /// * [xRequestNonce] - 每次请求唯一的随机数
+  /// * [xDeviceID] - 登录时的设备安装 ID
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -257,6 +289,10 @@ class RecipeAiApi {
   Future<Response<RecipeDetail>> confirmRecipeModification({
     required String modificationId,
     required ModificationConfirmInput modificationConfirmInput,
+    String? xRequestSignature,
+    String? xRequestTimestamp,
+    String? xRequestNonce,
+    String? xDeviceID,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
     Map<String, dynamic>? extra,
@@ -273,7 +309,13 @@ class RecipeAiApi {
         );
     final _options = Options(
       method: r'POST',
-      headers: <String, dynamic>{...?headers},
+      headers: <String, dynamic>{
+        r'X-Request-Signature': xRequestSignature,
+        r'X-Request-Timestamp': xRequestTimestamp,
+        r'X-Request-Nonce': xRequestNonce,
+        r'X-Device-ID': xDeviceID,
+        ...?headers,
+      },
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
           {'type': 'http', 'scheme': 'bearer', 'name': 'HTTPBearer'},
@@ -345,6 +387,10 @@ class RecipeAiApi {
   /// Parameters:
   /// * [modificationId]
   /// * [modificationDecisionsInput]
+  /// * [xRequestSignature] - HMAC-SHA256 请求签名
+  /// * [xRequestTimestamp] - Unix 秒时间戳
+  /// * [xRequestNonce] - 每次请求唯一的随机数
+  /// * [xDeviceID] - 登录时的设备安装 ID
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -357,6 +403,10 @@ class RecipeAiApi {
   Future<Response<ModificationPreview>> decideRecipeModification({
     required String modificationId,
     required ModificationDecisionsInput modificationDecisionsInput,
+    String? xRequestSignature,
+    String? xRequestTimestamp,
+    String? xRequestNonce,
+    String? xDeviceID,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
     Map<String, dynamic>? extra,
@@ -373,7 +423,13 @@ class RecipeAiApi {
         );
     final _options = Options(
       method: r'POST',
-      headers: <String, dynamic>{...?headers},
+      headers: <String, dynamic>{
+        r'X-Request-Signature': xRequestSignature,
+        r'X-Request-Timestamp': xRequestTimestamp,
+        r'X-Request-Nonce': xRequestNonce,
+        r'X-Device-ID': xDeviceID,
+        ...?headers,
+      },
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
           {'type': 'http', 'scheme': 'bearer', 'name': 'HTTPBearer'},
@@ -444,6 +500,10 @@ class RecipeAiApi {
   ///
   /// Parameters:
   /// * [changeExplanationInput]
+  /// * [xRequestSignature] - HMAC-SHA256 请求签名
+  /// * [xRequestTimestamp] - Unix 秒时间戳
+  /// * [xRequestNonce] - 每次请求唯一的随机数
+  /// * [xDeviceID] - 登录时的设备安装 ID
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -455,6 +515,10 @@ class RecipeAiApi {
   /// Throws [DioException] if API call or serialization fails
   Future<Response<ChangeExplanationResult>> explainRecipeChanges({
     required ChangeExplanationInput changeExplanationInput,
+    String? xRequestSignature,
+    String? xRequestTimestamp,
+    String? xRequestNonce,
+    String? xDeviceID,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
     Map<String, dynamic>? extra,
@@ -465,7 +529,13 @@ class RecipeAiApi {
     final _path = r'/v1/ai/recipes/change-explanation';
     final _options = Options(
       method: r'POST',
-      headers: <String, dynamic>{...?headers},
+      headers: <String, dynamic>{
+        r'X-Request-Signature': xRequestSignature,
+        r'X-Request-Timestamp': xRequestTimestamp,
+        r'X-Request-Nonce': xRequestNonce,
+        r'X-Device-ID': xDeviceID,
+        ...?headers,
+      },
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
           {'type': 'http', 'scheme': 'bearer', 'name': 'HTTPBearer'},
@@ -536,6 +606,10 @@ class RecipeAiApi {
   ///
   /// Parameters:
   /// * [oneLineInput]
+  /// * [xRequestSignature] - HMAC-SHA256 请求签名
+  /// * [xRequestTimestamp] - Unix 秒时间戳
+  /// * [xRequestNonce] - 每次请求唯一的随机数
+  /// * [xDeviceID] - 登录时的设备安装 ID
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -547,6 +621,10 @@ class RecipeAiApi {
   /// Throws [DioException] if API call or serialization fails
   Future<Response<RetrievalResult>> findRecipeForRequest({
     required OneLineInput oneLineInput,
+    String? xRequestSignature,
+    String? xRequestTimestamp,
+    String? xRequestNonce,
+    String? xDeviceID,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
     Map<String, dynamic>? extra,
@@ -557,7 +635,13 @@ class RecipeAiApi {
     final _path = r'/v1/ai/recipes/requests';
     final _options = Options(
       method: r'POST',
-      headers: <String, dynamic>{...?headers},
+      headers: <String, dynamic>{
+        r'X-Request-Signature': xRequestSignature,
+        r'X-Request-Timestamp': xRequestTimestamp,
+        r'X-Request-Nonce': xRequestNonce,
+        r'X-Device-ID': xDeviceID,
+        ...?headers,
+      },
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
           {'type': 'http', 'scheme': 'bearer', 'name': 'HTTPBearer'},
@@ -629,6 +713,10 @@ class RecipeAiApi {
   /// Parameters:
   /// * [requestId]
   /// * [generateInput]
+  /// * [xRequestSignature] - HMAC-SHA256 请求签名
+  /// * [xRequestTimestamp] - Unix 秒时间戳
+  /// * [xRequestNonce] - 每次请求唯一的随机数
+  /// * [xDeviceID] - 登录时的设备安装 ID
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -641,6 +729,10 @@ class RecipeAiApi {
   Future<Response<GenerationResult>> generateRecipeDraft({
     required String requestId,
     required GenerateInput generateInput,
+    String? xRequestSignature,
+    String? xRequestTimestamp,
+    String? xRequestNonce,
+    String? xDeviceID,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
     Map<String, dynamic>? extra,
@@ -656,7 +748,13 @@ class RecipeAiApi {
     );
     final _options = Options(
       method: r'POST',
-      headers: <String, dynamic>{...?headers},
+      headers: <String, dynamic>{
+        r'X-Request-Signature': xRequestSignature,
+        r'X-Request-Timestamp': xRequestTimestamp,
+        r'X-Request-Nonce': xRequestNonce,
+        r'X-Device-ID': xDeviceID,
+        ...?headers,
+      },
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
           {'type': 'http', 'scheme': 'bearer', 'name': 'HTTPBearer'},
@@ -727,6 +825,10 @@ class RecipeAiApi {
   ///
   /// Parameters:
   /// * [modificationId]
+  /// * [xRequestSignature] - HMAC-SHA256 请求签名
+  /// * [xRequestTimestamp] - Unix 秒时间戳
+  /// * [xRequestNonce] - 每次请求唯一的随机数
+  /// * [xDeviceID] - 登录时的设备安装 ID
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -738,6 +840,10 @@ class RecipeAiApi {
   /// Throws [DioException] if API call or serialization fails
   Future<Response<ModificationPreview>> getRecipeModification({
     required String modificationId,
+    String? xRequestSignature,
+    String? xRequestTimestamp,
+    String? xRequestNonce,
+    String? xDeviceID,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
     Map<String, dynamic>? extra,
@@ -753,7 +859,13 @@ class RecipeAiApi {
     );
     final _options = Options(
       method: r'GET',
-      headers: <String, dynamic>{...?headers},
+      headers: <String, dynamic>{
+        r'X-Request-Signature': xRequestSignature,
+        r'X-Request-Timestamp': xRequestTimestamp,
+        r'X-Request-Nonce': xRequestNonce,
+        r'X-Device-ID': xDeviceID,
+        ...?headers,
+      },
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
           {'type': 'http', 'scheme': 'bearer', 'name': 'HTTPBearer'},
@@ -809,6 +921,10 @@ class RecipeAiApi {
   ///
   /// Parameters:
   /// * [modificationInput]
+  /// * [xRequestSignature] - HMAC-SHA256 请求签名
+  /// * [xRequestTimestamp] - Unix 秒时间戳
+  /// * [xRequestNonce] - 每次请求唯一的随机数
+  /// * [xDeviceID] - 登录时的设备安装 ID
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -820,6 +936,10 @@ class RecipeAiApi {
   /// Throws [DioException] if API call or serialization fails
   Future<Response<ModificationPreview>> proposeRecipeModification({
     required ModificationInput modificationInput,
+    String? xRequestSignature,
+    String? xRequestTimestamp,
+    String? xRequestNonce,
+    String? xDeviceID,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
     Map<String, dynamic>? extra,
@@ -830,7 +950,13 @@ class RecipeAiApi {
     final _path = r'/v1/ai/recipes/modifications';
     final _options = Options(
       method: r'POST',
-      headers: <String, dynamic>{...?headers},
+      headers: <String, dynamic>{
+        r'X-Request-Signature': xRequestSignature,
+        r'X-Request-Timestamp': xRequestTimestamp,
+        r'X-Request-Nonce': xRequestNonce,
+        r'X-Device-ID': xDeviceID,
+        ...?headers,
+      },
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
           {'type': 'http', 'scheme': 'bearer', 'name': 'HTTPBearer'},
@@ -900,6 +1026,10 @@ class RecipeAiApi {
   ///
   ///
   /// Parameters:
+  /// * [xRequestSignature] - HMAC-SHA256 请求签名
+  /// * [xRequestTimestamp] - Unix 秒时间戳
+  /// * [xRequestNonce] - 每次请求唯一的随机数
+  /// * [xDeviceID] - 登录时的设备安装 ID
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -910,6 +1040,10 @@ class RecipeAiApi {
   /// Returns a [Future] containing a [Response] with a [AIStatus] as data
   /// Throws [DioException] if API call or serialization fails
   Future<Response<AIStatus>> recipeAiStatus({
+    String? xRequestSignature,
+    String? xRequestTimestamp,
+    String? xRequestNonce,
+    String? xDeviceID,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
     Map<String, dynamic>? extra,
@@ -920,7 +1054,13 @@ class RecipeAiApi {
     final _path = r'/v1/ai/recipes/status';
     final _options = Options(
       method: r'GET',
-      headers: <String, dynamic>{...?headers},
+      headers: <String, dynamic>{
+        r'X-Request-Signature': xRequestSignature,
+        r'X-Request-Timestamp': xRequestTimestamp,
+        r'X-Request-Nonce': xRequestNonce,
+        r'X-Device-ID': xDeviceID,
+        ...?headers,
+      },
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
           {'type': 'http', 'scheme': 'bearer', 'name': 'HTTPBearer'},
@@ -975,6 +1115,10 @@ class RecipeAiApi {
   ///
   ///
   /// Parameters:
+  /// * [xRequestSignature] - HMAC-SHA256 请求签名
+  /// * [xRequestTimestamp] - Unix 秒时间戳
+  /// * [xRequestNonce] - 每次请求唯一的随机数
+  /// * [xDeviceID] - 登录时的设备安装 ID
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -985,6 +1129,10 @@ class RecipeAiApi {
   /// Returns a [Future] containing a [Response] with a [AIStatus] as data
   /// Throws [DioException] if API call or serialization fails
   Future<Response<AIStatus>> recipeModificationStatus({
+    String? xRequestSignature,
+    String? xRequestTimestamp,
+    String? xRequestNonce,
+    String? xDeviceID,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
     Map<String, dynamic>? extra,
@@ -995,7 +1143,13 @@ class RecipeAiApi {
     final _path = r'/v1/ai/recipes/modifications/status';
     final _options = Options(
       method: r'GET',
-      headers: <String, dynamic>{...?headers},
+      headers: <String, dynamic>{
+        r'X-Request-Signature': xRequestSignature,
+        r'X-Request-Timestamp': xRequestTimestamp,
+        r'X-Request-Nonce': xRequestNonce,
+        r'X-Device-ID': xDeviceID,
+        ...?headers,
+      },
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
           {'type': 'http', 'scheme': 'bearer', 'name': 'HTTPBearer'},
@@ -1052,6 +1206,10 @@ class RecipeAiApi {
   /// Parameters:
   /// * [requestId]
   /// * [recipeCreate]
+  /// * [xRequestSignature] - HMAC-SHA256 请求签名
+  /// * [xRequestTimestamp] - Unix 秒时间戳
+  /// * [xRequestNonce] - 每次请求唯一的随机数
+  /// * [xDeviceID] - 登录时的设备安装 ID
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -1064,6 +1222,10 @@ class RecipeAiApi {
   Future<Response<RecipeDetail>> saveGeneratedRecipe({
     required String requestId,
     required RecipeCreate recipeCreate,
+    String? xRequestSignature,
+    String? xRequestTimestamp,
+    String? xRequestNonce,
+    String? xDeviceID,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
     Map<String, dynamic>? extra,
@@ -1079,7 +1241,13 @@ class RecipeAiApi {
     );
     final _options = Options(
       method: r'POST',
-      headers: <String, dynamic>{...?headers},
+      headers: <String, dynamic>{
+        r'X-Request-Signature': xRequestSignature,
+        r'X-Request-Timestamp': xRequestTimestamp,
+        r'X-Request-Nonce': xRequestNonce,
+        r'X-Device-ID': xDeviceID,
+        ...?headers,
+      },
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
           {'type': 'http', 'scheme': 'bearer', 'name': 'HTTPBearer'},

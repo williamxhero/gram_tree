@@ -2,6 +2,8 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:developer' as developer;
 
+import 'package:flutter/foundation.dart' show kIsWeb;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -60,12 +62,9 @@ import '../../widgets/empty_state.dart';
 import '../../util/ids.dart';
 
 final myRecipesProvider = FutureProvider.autoDispose<RecipeList>((ref) async {
-  // Wait for the initial projection before subscribing to subsequent changes;
-  // otherwise its loading-to-data transition issues the first HTTP page twice.
-  await ref.watch(localRecipeVersionsProvider.future);
-  final local =
-      ref.watch(localRecipeVersionsProvider).value ??
-      const <LocalRecipeVersion>[];
+  // Watch the resolved projection, not its loading-to-data state transition.
+  // Subsequent local recipe changes remain reactive through this future.
+  final local = await ref.watch(localRecipeVersionsProvider.future);
   RecipeList page;
   try {
     page = await ref.watch(recipeRepositoryProvider).listPage();
@@ -110,6 +109,15 @@ class _RecipeListPageState extends ConsumerState<RecipeListPage> {
   String? _nextCursor;
   bool _loadingMore = false;
   Object? _loadMoreError;
+
+  bool get _cursorInvalid => const {
+    'cursor_expired',
+    'cursor_invalid',
+    'invalid_cursor',
+    'cursor_query_mismatch',
+    'page_limit_reached',
+    'pagination_limit_reached',
+  }.contains(ApiFailure.from(_loadMoreError ?? '').code);
 
   Future<void> _loadMore() async {
     final cursor = _nextCursor;
@@ -192,7 +200,11 @@ class _RecipeListPageState extends ConsumerState<RecipeListPage> {
                   const SizedBox(height: 8),
                   OutlinedButton.icon(
                     key: const ValueKey('recipe-load-more'),
-                    onPressed: _loadingMore ? null : _loadMore,
+                    onPressed: _loadingMore
+                        ? null
+                        : _cursorInvalid
+                        ? () => ref.invalidate(myRecipesProvider)
+                        : _loadMore,
                     icon: _loadingMore
                         ? const SizedBox(
                             width: 18,
@@ -201,7 +213,12 @@ class _RecipeListPageState extends ConsumerState<RecipeListPage> {
                           )
                         : const Icon(Icons.expand_more),
                     label: Text(
-                      _loadMoreError == null
+                      _cursorInvalid
+                          ? ApiFailure.from(_loadMoreError!).code ==
+                                    'pagination_limit_reached'
+                                ? l10n.paginationLimitNotice
+                                : l10n.recipeCursorExpired
+                          : _loadMoreError == null
                           ? l10n.recipeLoadMore
                           : l10n.recipeLoadMoreRetry,
                     ),
@@ -2742,6 +2759,7 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
   String? _lastCapture;
   String? _capacityMessage;
   bool _offline = false;
+  bool _sharing = false;
   bool _offlineRecomputed = false;
   LocalRecipeVersion? _localVersion;
   int _loadGeneration = 0;
@@ -3650,6 +3668,41 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
     }
   }
 
+  Future<void> _share() async {
+    if (_sharing) return;
+    setState(() => _sharing = true);
+    try {
+      final image = _detail?.version.images?.firstOrNull;
+      final shared = await ref
+          .read(intentDispatcherProvider)
+          .dispatch(
+            context,
+            compositionId: CompositionIdScope.of(context),
+            componentId: 'recipe-share-button',
+            action: ActionDescriptor(
+              intent: 'share_recipe',
+              params: {
+                'recipe_id': widget.recipeId,
+                if (image != null) 'image_id': image.id,
+                if (image != null) 'image_content_type': image.contentType,
+              },
+            ),
+          );
+      if (shared == true && mounted && kIsWeb) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(AppLocalizations.of(context).shareCopied)),
+        );
+      }
+    } catch (error) {
+      if (!mounted) return;
+      final failure = ApiFailure.from(error);
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(failure.message)));
+    } finally {
+      if (mounted) setState(() => _sharing = false);
+    }
+  }
+
   Future<void> _delete() async {
     final l10n = AppLocalizations.of(context);
     final confirmed = await showDialog<bool>(
@@ -4121,6 +4174,21 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
             onPressed: () =>
                 context.push('/recipes/${widget.recipeId}/history'),
           ),
+          if (widget.versionId == null &&
+              detail.visibility.value == 'public' &&
+              ref.watch(featureEnabledProvider(Feature.publicRecipes)))
+            IconButton(
+              key: const ValueKey('recipe-share-button'),
+              tooltip: l10n.shareRecipeAction,
+              icon: _sharing
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.share_outlined),
+              onPressed: _sharing ? null : _share,
+            ),
           if (widget.versionId == null)
             IconButton(
               key: const ValueKey('edit-recipe-button'),

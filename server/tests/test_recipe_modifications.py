@@ -1,5 +1,6 @@
 """Natural-language edits at the owned HTTP boundary, using recorded answers only."""
 
+import asyncio
 import copy
 import json
 import subprocess
@@ -9,9 +10,11 @@ from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from threading import Barrier
 
+import httpx
 import pytest
 
 from tests.accounts_support import bearer
+from tests.signing_support import signed_headers
 from tests.test_ai_recipes import (
     CORPUS,
     begin,
@@ -389,9 +392,65 @@ def test_canonical_selected_display_name_matches_version_and_event_audit(
     assert version_event[0]["content"]["edit_operations"][0]["after"] == "Poultry"
 
 
-def test_concurrent_proposal_retries_reserve_one_owned_receipt(modification_api):
+@pytest.mark.parametrize("device", [None, "text-slow-read-device"])
+@pytest.mark.parametrize(
+    ("concurrency", "tampered", "risk_enabled"),
+    [(16, False, True), (16, True, True), (80, False, True), (80, False, False)],
+)
+def test_slow_signed_read_burst_completes_without_blocking_other_requests(
+    api, device, concurrency, tampered, risk_enabled
+):
+    if not risk_enabled:
+        configure("risk.enabled", False)
+    tokens = api.login("text-slow-read@example.com", device=device)
+
+    async def read_burst():
+        gate = asyncio.Event()
+        started = 0
+
+        async def body():
+            nonlocal started
+            yield b"{"
+            started += 1
+            if started == concurrency:
+                gate.set()
+            # All clients finish their signed bodies together. No request may
+            # monopolize the event loop while the other bodies are in flight.
+            await asyncio.wait_for(gate.wait(), timeout=5)
+            yield b"}"
+
+        async def read(client):
+            request_headers = signed_headers(
+                tokens,
+                "GET",
+                "http://testserver/v1/me",
+                body=b"{}",
+                timestamp=int(api.clock().timestamp()),
+                device=device,
+            )
+            if tampered:
+                request_headers["X-Request-Signature"] = "0" * 64
+            return await client.request("GET", "/v1/me", headers=request_headers, content=body())
+
+        transport = httpx.ASGITransport(app=api.client.app, raise_app_exceptions=False)
+        async with httpx.AsyncClient(transport=transport, base_url="http://testserver") as client:
+            return await asyncio.gather(*(read(client) for _ in range(concurrency)))
+
+    responses = asyncio.run(read_burst())
+    assert [response.status_code for response in responses] == [
+        401 if tampered else 200
+    ] * concurrency
+    if tampered:
+        assert {response.json()["error"]["code"] for response in responses} == {"signature_invalid"}
+    else:
+        assert {response.json()["id"] for response in responses} == {tokens["user"]["id"]}
+
+
+@pytest.mark.parametrize("device", [None, "text-concurrent-device"])
+def test_concurrent_proposal_retries_reserve_one_owned_receipt(modification_api, device):
     api, directory = modification_api
-    headers = bearer(api.login("text-concurrent@example.com"))
+    tokens = api.login("text-concurrent@example.com", device=device)
+    headers = bearer(tokens)
     created = api.client.post("/v1/recipes", headers=headers, json=recipe_input()).json()
     snapshot = created["version"]["snapshot"]
     recording(directory, "modify_intent", {"text": TEXT}, INTENT)
@@ -409,14 +468,28 @@ def test_concurrent_proposal_retries_reserve_one_owned_receipt(modification_api)
         "base_version_id": created["version"]["id"],
     }
     gate = Barrier(16)
+    body_bytes = json.dumps(body, ensure_ascii=False, separators=(",", ":")).encode()
 
     def retry():
+        request_headers = signed_headers(
+            tokens,
+            "POST",
+            "http://testserver/v1/ai/recipes/modifications",
+            body=body_bytes,
+            timestamp=int(api.clock().timestamp()),
+            device=device,
+        )
         gate.wait(timeout=30)
-        return api.client.post("/v1/ai/recipes/modifications", headers=headers, json=body)
+        return api.client.post("/v1/ai/recipes/modifications", headers=request_headers, json=body)
 
     with ThreadPoolExecutor(max_workers=16) as pool:
         responses = list(pool.map(lambda _: retry(), range(16)))
-    assert all(r.status_code == 200 for r in responses), [r.text for r in responses]
+    failures = [
+        {"status": response.status_code, "error": response.json().get("error", {}).get("code")}
+        for response in responses
+        if response.status_code != 200
+    ]
+    assert not failures, failures
     assert {r.json()["id"] for r in responses} == {request_id}
     assert all(r.json()["error"] in (None, "pending") for r in responses)
     finished = api.client.get(f"/v1/ai/recipes/modifications/{request_id}", headers=headers).json()

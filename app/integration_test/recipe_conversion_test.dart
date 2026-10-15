@@ -158,7 +158,7 @@ void main() {
         find.byKey(const ValueKey('code-input')),
         await latestCode(email),
       );
-      await waitFor(tester, find.text('先添加一道你常做的菜'));
+      await waitFor(tester, find.text('今天还没有安排'));
 
       await tester.tap(find.byKey(const ValueKey('primary-create-button')));
       await settle(tester);

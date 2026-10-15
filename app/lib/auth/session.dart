@@ -6,40 +6,47 @@ import 'package:gramtree_api/gramtree_api.dart';
 
 import '../features/me/taste_profile_cache.dart';
 import '../storage/secure_store.dart';
+import '../storage/device_id.dart';
 
 /// 当前设备的登录状态：访问令牌、刷新令牌和账号资料，存在系统安全存储里。
 class AuthSession {
   const AuthSession({
     required this.accessToken,
     required this.refreshToken,
+    this.requestSigningKey,
     required this.user,
   });
 
   factory AuthSession.fromTokens(TokenPair t) => AuthSession(
     accessToken: t.accessToken,
     refreshToken: t.refreshToken,
+    requestSigningKey: t.requestSigningKey,
     user: t.user,
   );
 
   factory AuthSession.fromJson(Map<String, dynamic> json) => AuthSession(
     accessToken: json['access_token'] as String,
     refreshToken: json['refresh_token'] as String,
+    requestSigningKey: json['request_signing_key'] as String?,
     user: UserOut.fromJson(json['user'] as Map<String, dynamic>),
   );
 
   final String accessToken;
   final String refreshToken;
+  final String? requestSigningKey;
   final UserOut user;
 
   AuthSession withUser(UserOut user) => AuthSession(
     accessToken: accessToken,
     refreshToken: refreshToken,
+    requestSigningKey: requestSigningKey,
     user: user,
   );
 
   Map<String, dynamic> toJson() => {
     'access_token': accessToken,
     'refresh_token': refreshToken,
+    if (requestSigningKey != null) 'request_signing_key': requestSigningKey,
     'user': user.toJson(),
   };
 }
@@ -55,9 +62,12 @@ class SessionIdentity {
 
 /// 持有当前登录状态。拦截器同步读取令牌；登录、续期、退出时通知界面。
 class SessionStore extends ChangeNotifier {
-  SessionStore(this._secure, [TasteProfileCache? cache]) : _cache = cache;
+  SessionStore(this._secure, [TasteProfileCache? cache, String? deviceId])
+    : _cache = cache,
+      _deviceId = deviceId;
 
   final SecureStore _secure;
+  final String? _deviceId;
   final TasteProfileCache? _cache;
   AuthSession? _current;
   bool _loaded = false;
@@ -111,6 +121,7 @@ class SessionStore extends ChangeNotifier {
 
   String _encode(AuthSession session) => jsonEncode({
     ...session.toJson(),
+    if (_deviceId != null) 'device_id': _deviceId,
     if (_uploadsPausedEpoch == _identityEpoch) 'uploads_paused': true,
   });
 
@@ -128,6 +139,13 @@ class SessionStore extends ChangeNotifier {
     if (raw != null) {
       try {
         final value = jsonDecode(raw) as Map<String, dynamic>;
+        // Keychain may survive reinstall; a new installation must never reuse
+        // another device's signing credential. Legacy unsigned sessions refresh.
+        if (_deviceId != null &&
+            value['request_signing_key'] != null &&
+            value['device_id'] != _deviceId) {
+          throw const FormatException('Device session does not match');
+        }
         _current = AuthSession.fromJson(value);
         if (value['uploads_paused'] == true) {
           _uploadsPausedEpoch = _identityEpoch;
@@ -204,6 +222,7 @@ final sessionStoreProvider = Provider<SessionStore>((ref) {
   final store = SessionStore(
     ref.watch(secureStoreProvider),
     ref.watch(tasteProfileCacheProvider),
+    ref.watch(deviceIdProvider),
   );
   ref.onDispose(store.dispose);
   return store;

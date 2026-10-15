@@ -18,13 +18,16 @@ cd "$ROOT/app"
 CHROMEDRIVER="${CHROMEDRIVER:-chromedriver}"
 FLUTTER="${FLUTTER:-flutter}"
 PORT="${CHROMEDRIVER_PORT:-4444}"
+# Random Flutter ports can land on Chrome's blocked-port list (for example 6000)
+# and leave the driver waiting on an error page. Parallel runs can override this.
+WEB_PORT="${GRAMTREE_E2E_WEB_PORT:-17357}"
 if [[ $# -gt 0 ]]; then
   targets=("$@")
 else
   mapfile -t targets < <(find integration_test -name '*_test.dart' | sort)
 fi
 
-"$CHROMEDRIVER" --port="$PORT" >"${CHROMEDRIVER_LOG:-/tmp/chromedriver.log}" 2>&1 &
+"$CHROMEDRIVER" --port="$PORT" >"${CHROMEDRIVER_LOG:-${TMPDIR:-/tmp}/chromedriver.log}" 2>&1 &
 driver_pid=$!
 fixtures_created=0
 fixture_file="${GRAMTREE_E2E_ASSISTANCE_DEFINES:-${TMPDIR:-/tmp}/gramtree_e2e_server_${GRAMTREE_E2E_PORT:-8000}.assistance.json}"
@@ -36,7 +39,7 @@ if [[ " ${targets[*]} " == *api_reachability_test.dart* ]]; then
   if command -v cygpath >/dev/null 2>&1; then
     reachability_fixture="$(cygpath -m "$reachability_fixture")"
   fi
-  python3 "$reachability_fixture" --port="${REACHABILITY_TEST_PORT:-8766}" >/tmp/reachability-test.log 2>&1 &
+  python3 "$reachability_fixture" --port="${REACHABILITY_TEST_PORT:-8766}" >"${TMPDIR:-/tmp}/reachability-test.log" 2>&1 &
   reachability_pid=$!
 fi
 cleanup() {
@@ -61,7 +64,8 @@ status=0
 for target in "${targets[@]}"; do
   echo "== $target"
   fixture_args=()
-  if [[ "$target" == integration_test/comparison_assistance_test.dart ]]; then
+  if [[ "$target" == integration_test/comparison_assistance_test.dart ||
+        "$target" == integration_test/public_sharing_live_test.dart ]]; then
     defines_path="${GRAMTREE_E2E_ASSISTANCE_DEFINES:-${TMPDIR:-/tmp}/gramtree_e2e_server_${GRAMTREE_E2E_PORT:-8000}.assistance.json}"
     if command -v cygpath >/dev/null 2>&1; then
       defines_path="$(cygpath -m "$defines_path")"
@@ -71,7 +75,7 @@ for target in "${targets[@]}"; do
   "$FLUTTER" drive --timeout=300 --profile --no-web-resources-cdn \
     --driver=test_driver/integration_test.dart --driver-port="$PORT" \
     --target="$target" \
-    -d web-server --browser-name=chrome --headless --driver-port="$PORT" \
+    -d web-server --web-port="$WEB_PORT" --browser-name=chrome --headless --driver-port="$PORT" \
     ${CHROME_EXECUTABLE:+--chrome-binary="$CHROME_EXECUTABLE"} \
     --dart-define=APP_ENV=dev \
     --dart-define=API_BASE_URL="$API_BASE_URL" \

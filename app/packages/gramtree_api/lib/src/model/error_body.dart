@@ -25,6 +25,8 @@ class ErrorBody {
     required this.message,
 
     this.requestId,
+
+    this.serverTime,
   });
 
   @JsonKey(name: r'code', required: true, includeIfNull: false)
@@ -39,6 +41,9 @@ class ErrorBody {
   @JsonKey(name: r'request_id', required: false, includeIfNull: false)
   final String? requestId;
 
+  @JsonKey(name: r'server_time', required: false, includeIfNull: false)
+  final String? serverTime;
+
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -46,14 +51,16 @@ class ErrorBody {
           other.code == code &&
           other.detail == detail &&
           other.message == message &&
-          other.requestId == requestId;
+          other.requestId == requestId &&
+          other.serverTime == serverTime;
 
   @override
   int get hashCode =>
       code.hashCode +
       (detail == null ? 0 : detail.hashCode) +
       message.hashCode +
-      (requestId == null ? 0 : requestId.hashCode);
+      (requestId == null ? 0 : requestId.hashCode) +
+      (serverTime == null ? 0 : serverTime.hashCode);
 
   factory ErrorBody.fromJson(Map<String, dynamic> json) =>
       _$ErrorBodyFromJson(json);

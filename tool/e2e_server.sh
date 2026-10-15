@@ -52,11 +52,25 @@ with psycopg.connect(url, autocommit=True) as conn:
     conn.execute(sql.SQL("CREATE DATABASE {}").format(sql.Identifier(database)))
 redis.Redis.from_url(Settings().redis_url).flushdb()
 EOF
-  uv run alembic upgrade head >/dev/null
-  # All acceptance files share one server/IP. Keep production limits unchanged,
-  # but allow the isolated test database enough codes for the complete suite.
+  if ! uv run alembic upgrade head >"$LOG_FILE" 2>&1; then
+    cat "$LOG_FILE" >&2
+    return 1
+  fi
+  # All acceptance files share one server/IP and create independent accounts.
+  # Give only this disposable database enough codes/accounts for the full suite;
+  # production defaults and dedicated protection-test thresholds stay unchanged.
   uv run gramtree config set auth.email_code_daily_limit 1000 \
     --by e2e --reason 'Shared-IP acceptance suite' >/dev/null
+  uv run gramtree config set risk.subnet_new_account_limit 1000 \
+    --by e2e --reason 'Independent acceptance accounts share one subnet' >/dev/null
+  uv run gramtree config set risk.short_request_limit 100000 \
+    --by e2e --reason 'Acceptance suite generates a high request volume from one emulator IP' >/dev/null
+  for category in search_list auth ai; do
+    for dimension in account device ip; do
+      uv run gramtree config set "rate.${category}.${dimension}_per_minute" 1000 \
+        --by e2e --reason 'Acceptance suite shares one runner IP and device across independent accounts' >/dev/null
+    done
+  done
   uv run gramtree ingredients import tests/data/ingredients >/dev/null
   if [[ "$GRAMTREE_AI_MODE" == replay ]]; then
     uv run python ../tool/ai_replay_corpus.py --out "$GRAMTREE_AI_REPLAY_DIR" \

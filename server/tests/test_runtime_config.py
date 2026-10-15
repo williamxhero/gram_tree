@@ -12,6 +12,7 @@ def test_client_config_defaults(client: TestClient) -> None:
         "evolution_tree": False,
         "cooking_qa": False,
         "receipt_scan": False,
+        "public_recipes": False,
         # SPEC-005.3：口味自动学习与「存进我的口味」随本子 SPEC 一起下发。
         "taste_auto_learning": True,
         "save_to_taste": True,
@@ -79,6 +80,27 @@ def test_out_of_range_value_rejected(
     assert capsys.readouterr().out == before
     cli(["config", "history", key])
     assert capsys.readouterr().out == ""
+
+
+@pytest.mark.parametrize(
+    ("category", "minute_limit"),
+    [
+        ("search_list", 120),
+        ("detail", 120),
+        ("write", 60),
+        ("ai", 30),
+        ("auth", 30),
+        ("captcha", 30),
+        ("export", 10),
+    ],
+)
+def test_rate_defaults_are_consistent_across_dimensions(
+    category: str, minute_limit: int, capsys: pytest.CaptureFixture[str]
+) -> None:
+    for dimension in ("account", "device", "ip"):
+        for window, expected in (("minute", minute_limit), ("day", minute_limit * 40)):
+            assert cli(["config", "get", f"rate.{category}.{dimension}_per_{window}"]) == 0
+            assert int(capsys.readouterr().out.strip()) == expected
 
 
 def test_unknown_key_rejected() -> None:

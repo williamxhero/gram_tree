@@ -3,6 +3,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../events/event_upload_lifecycle.dart';
+import '../api/access_protection.dart';
 import '../l10n/app_localizations.dart';
 import '../network/reachability.dart';
 import '../observability/crash_reporting.dart';
@@ -21,20 +22,27 @@ class GramTreeApp extends ConsumerWidget {
     return EventUploadTrigger(child: _app(ref));
   }
 
-  Widget _app(WidgetRef ref) => MaterialApp.router(
-    onGenerateTitle: (context) => AppLocalizations.of(context).appTitle,
-    debugShowCheckedModeBanner: false,
-    theme: buildTheme(Brightness.light),
-    darkTheme: buildTheme(Brightness.dark),
-    themeMode: ThemeMode.system,
-    locale: const Locale.fromSubtags(languageCode: 'zh', scriptCode: 'Hans'),
-    supportedLocales: AppLocalizations.supportedLocales,
-    localizationsDelegates: const [
-      AppLocalizations.delegate,
-      GlobalMaterialLocalizations.delegate,
-      GlobalWidgetsLocalizations.delegate,
-      GlobalCupertinoLocalizations.delegate,
-    ],
-    routerConfig: ref.watch(routerProvider),
-  );
+  Widget _app(WidgetRef ref) {
+    final router = ref.watch(routerProvider);
+    return MaterialApp.router(
+      onGenerateTitle: (context) => AppLocalizations.of(context).appTitle,
+      debugShowCheckedModeBanner: false,
+      theme: buildTheme(Brightness.light),
+      darkTheme: buildTheme(Brightness.dark),
+      themeMode: ThemeMode.system,
+      locale: const Locale.fromSubtags(languageCode: 'zh', scriptCode: 'Hans'),
+      supportedLocales: AppLocalizations.supportedLocales,
+      localizationsDelegates: const [
+        AppLocalizations.delegate,
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      routerConfig: router,
+      builder: (context, child) => AccessProtectionHost(
+        navigatorKey: router.routerDelegate.navigatorKey,
+        child: child ?? const SizedBox.shrink(),
+      ),
+    );
+  }
 }

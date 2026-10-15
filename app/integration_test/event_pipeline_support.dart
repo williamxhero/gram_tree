@@ -13,7 +13,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:gram_tree/api/api_client.dart';
 import 'package:gram_tree/app/app.dart';
 import 'package:gram_tree/auth/session.dart';
-import 'package:gram_tree/config/app_config.dart';
 import 'package:gram_tree/events/event_queue.dart';
 import 'package:gram_tree/events/event_recorder.dart';
 import 'package:gram_tree/features_flags/features.dart';
@@ -23,12 +22,9 @@ import 'package:gram_tree/ui_protocol/composition_provider.dart';
 import 'package:gramtree_api/gramtree_api.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-/// 直连测试环境服务端（tool/e2e_server.sh 起的 dev/test 环境），不经过 App 的
-/// Dio/拦截链——跟 app_test.dart 里 `latestCode` 用的是同一个思路：这是"测试专用
-/// 检查手段"，不是产品接口，不应该混进 App 自己的网络层。
-final devServer = Dio(
-  BaseOptions(baseUrl: AppConfig.fromEnvironment().apiBaseUrl),
-);
+import 'signed_probe_support.dart';
+
+export 'signed_probe_support.dart' show accessTokenOf, devServer;
 
 /// 测试环境的服务端能读出刚发给某个邮箱的验证码（见 accounts/dev.py）。
 Future<String> latestEmailCode(String email) async {
@@ -173,11 +169,6 @@ Future<({String email, String deviceId})> signInFreshUser(
   await queue.removeAll((await queue.pending()).map((e) => e.id));
   return (email: email, deviceId: deviceId);
 }
-
-/// 当前登录用户的访问令牌，给 [devServer] 直接调用 dev-only 接口用（App 自己的
-/// Dio 走的是生产的 GramtreeApi 客户端，不应该混进测试专用的接口调用里）。
-String accessTokenOf(ProviderContainer container) =>
-    container.read(sessionStoreProvider).current!.accessToken;
 
 /// 记几条 `pipeline.self_check` 自检事件（服务端登记表 v1，见
 /// gramtree/events/registry.py），走真实的 EventRecorder。

@@ -198,6 +198,7 @@ class AuthController extends AsyncNotifier<UserOut?> {
           'auth_owner_id': captured.ownerId,
           'auth_identity_epoch': captured.epoch,
           'auth_revocation': true,
+          'auth_revocation_session': _session.current,
         },
       );
     } catch (_) {}

@@ -13,6 +13,7 @@ import '../features/tab_paths.dart';
 /// 新增一个可以被 `open_page` 打开的页面：在这里加一项，value 通常就是
 /// `TabPaths` 里的某个值；这张票只登记"今天"页用到的 `create`。
 const Map<String, String> registeredPages = {
+  'login': '/login',
   'create': TabPaths.create,
   'my_recipes': RecipeListPage.path,
   'personal_measures': '/me/measures',

@@ -571,7 +571,7 @@ class RecipeDetail(BaseModel):
     id: IdV4
     dish: DishOut
     author: RecipeAuthor
-    visibility: Literal["private"]
+    visibility: Literal["private", "public"]
     source_version_id: IdV4 | None = None
     root_recipe_id: IdV4 | None = None
     created_at: Timestamp
@@ -685,7 +685,7 @@ class RecipeVersionHistory(BaseModel):
 class RecipeListItem(BaseModel):
     id: IdV4
     dish: DishOut
-    visibility: Literal["private"]
+    visibility: Literal["private", "public"]
     version_number: int
     servings: int
     difficulty: str | None = None

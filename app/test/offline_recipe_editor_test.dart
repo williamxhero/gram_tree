@@ -3,7 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gram_tree/app/router.dart';
 import 'package:gram_tree/api/api_client.dart';
+import 'package:gram_tree/events/event_queue.dart';
 import 'package:gram_tree/network/reachability.dart';
+import 'package:gram_tree/recipes/offline_recipe_repository.dart';
+import 'package:gram_tree/recipes/recipe_repository.dart';
 import 'package:gram_tree/recipes/recipe_snapshot.dart';
 import 'package:gramtree_api/gramtree_api.dart';
 
@@ -66,6 +69,97 @@ Future<void> editAndSave(WidgetTester tester, String instruction) async {
 }
 
 void main() {
+  for (final metadata in ['attempts', 'nextAttemptAt']) {
+    testWidgets(
+      'recipe list retains loaded cursor pages when only retry $metadata changes',
+      (tester) async {
+        final env = TestEnv.signedIn();
+        // Finish startup's network-restored recovery before seeding backoff.
+        await pumpApp(tester, env: env);
+        final baseline = ownedRecipe();
+        final saved =
+            await OfflineRecipeRepository(
+              env.eventQueue,
+              env.server.user.id,
+            ).save(
+              baseline,
+              RecipeForm.fromSnapshot(
+                baseline.version.snapshot,
+                baseline.dish.name,
+              ),
+            );
+        // Keep automatic delivery out of this page test so the only change
+        // after pagination is the selected retry field, not a sync result.
+        final waiting = saved.entry.change(
+          state: WriteState.pending,
+          attempts: 1,
+          reasonCode: 'network_or_server_failure',
+          nextAttemptAt: DateTime.now().toUtc().add(const Duration(days: 1)),
+        );
+        await env.eventQueue.update(waiting);
+        final first = RecipeListItem(
+          id: recipeId,
+          dish: baseline.dish,
+          visibility: RecipeListItemVisibilityEnum.private,
+          versionNumber: 1,
+          servings: 2,
+          updatedAt: baseline.updatedAt,
+          totalTimeSeconds: 0,
+          activeTimeSeconds: 0,
+        );
+        final second = first.copyWith(
+          id: '33333333-3333-4333-8333-333333333333',
+          dish: DishOut(id: 'dish-2', name: '第二页的菜', aliases: const []),
+        );
+        env.server.on('GET', '/v1/recipes', (request) {
+          if (request.query['cursor'] == 'recipes-next') {
+            return (200, RecipeList(items: [second]).toJson());
+          }
+          return (
+            200,
+            RecipeList(items: [first], nextCursor: 'recipes-next').toJson(),
+          );
+        });
+        navigate(tester, '/recipes');
+        await tester.pumpAndSettle();
+        expect(find.text('汤'), findsOneWidget);
+        expect(find.textContaining('待同步'), findsOneWidget);
+        await tester.tap(find.byKey(const ValueKey('recipe-load-more')));
+        await tester.pumpAndSettle();
+        expect(find.text('汤'), findsOneWidget);
+        expect(find.text('第二页的菜'), findsOneWidget);
+        expect(find.byKey(const ValueKey('recipe-load-more')), findsNothing);
+        expect(env.server.calls('GET', '/v1/recipes'), hasLength(2));
+
+        final rescheduled = waiting.change(
+          state: waiting.state,
+          reasonCode: waiting.reasonCode,
+          attempts: metadata == 'attempts' ? 2 : waiting.attempts,
+          nextAttemptAt: metadata == 'nextAttemptAt'
+              ? waiting.nextAttemptAt!.add(const Duration(hours: 1))
+              : waiting.nextAttemptAt,
+        );
+        await env.eventQueue.update(rescheduled);
+        await tester.pumpAndSettle();
+        expect(find.text('汤'), findsOneWidget);
+        expect(find.text('第二页的菜'), findsOneWidget);
+        expect(find.textContaining('待同步'), findsOneWidget);
+        expect(find.byKey(const ValueKey('recipe-load-more')), findsNothing);
+        expect(env.server.calls('GET', '/v1/recipes'), hasLength(2));
+
+        // A genuinely changed user-facing status must still reach the page.
+        await env.eventQueue.update(
+          rescheduled.change(
+            state: WriteState.failed,
+            reasonCode: 'invalid_recipe',
+          ),
+        );
+        await tester.pumpAndSettle();
+        expect(find.textContaining('同步失败：请检查食材和步骤后重新保存'), findsOneWidget);
+        expect(find.textContaining('待同步'), findsNothing);
+      },
+    );
+  }
   for (final rejection in {
     'invalid_recipe': '同步失败：请检查食材和步骤后重新保存',
     'unexpected_reason_with_private_payload': '同步失败：修改已保留，请稍后重试',

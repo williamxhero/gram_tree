@@ -12,6 +12,7 @@ from gramtree.api import client_config, health
 from gramtree.core.errors import install_error_handlers
 from gramtree.core.logging import configure_logging
 from gramtree.core.middleware import RequestContextMiddleware
+from gramtree.core.rate_limit_middleware import RateLimitMiddleware
 from gramtree.db import make_engine, make_session_factory
 from gramtree.events import dev as events_dev
 from gramtree.events import router as events
@@ -21,7 +22,11 @@ from gramtree.legal import router as legal
 from gramtree.recipes import imports as recipe_imports
 from gramtree.recipes import measure_router as personal_measures
 from gramtree.recipes import router as recipes
+from gramtree.recipes import sharing as recipe_sharing
 from gramtree.records import router as records
+from gramtree.risk import router as risk
+from gramtree.risk.captcha import ImageCaptchaAdapter
+from gramtree.risk.middleware import RiskMiddleware
 from gramtree.settings import Settings, get_settings
 from gramtree.taste_profiles import allergy_router as allergies
 from gramtree.taste_profiles import constraint_router as cooking_constraints
@@ -56,15 +61,39 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     )
     app.state.mailer = make_mail_sender(settings)
     app.state.apple = AppleClient(settings, HttpAppleTransport())
+    app.state.captcha = ImageCaptchaAdapter(app.state.redis, settings.auth_secret)
 
     install_error_handlers(app)
+    app.add_middleware(
+        RiskMiddleware,
+        session_factory=app.state.session_factory,
+        redis=app.state.redis,
+        settings=settings,
+        captcha=app.state.captcha,
+    )
+    app.add_middleware(
+        RateLimitMiddleware,
+        session_factory=app.state.session_factory,
+        redis=app.state.redis,
+        settings=settings,
+    )
+    # Added last among guards: browsers must see early risk/rate responses too.
     app.add_middleware(
         CORSMiddleware,
         allow_origins=[o.strip() for o in settings.cors_origins.split(",") if o.strip()],
         allow_origin_regex=settings.cors_origin_regex,
         allow_methods=["*"],
         allow_headers=["*"],
-        expose_headers=["X-Request-ID", "X-Measure-Observed-Writes", "X-Measure-Snapshot-Version"],
+        expose_headers=[
+            "X-Request-ID",
+            "X-Measure-Observed-Writes",
+            "X-Measure-Snapshot-Version",
+            "Retry-After",
+            "Date",
+            "X-Risk-Level",
+            "X-Risk-Challenge",
+            "X-Pagination-Limit-Reached",
+        ],
     )
     app.add_middleware(RequestContextMiddleware)
 
@@ -78,17 +107,22 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     v1.include_router(analytics.router)
     v1.include_router(ingredients.router)
     v1.include_router(recipes.router)
+    v1.include_router(recipe_sharing.api_router)
+    v1.include_router(recipe_sharing.resolver_router)
     v1.include_router(records.router)
     v1.include_router(recipe_imports.router)
     v1.include_router(recipe_ai.router)
     v1.include_router(personal_measures.router)
-    v1.include_router(taste_profiles.router)
+    # Register literal taste-learning paths (including /changes/pending) before
+    # the taste-profile router's /changes/{change_id} route.
     v1.include_router(taste_learning.router)
+    v1.include_router(taste_profiles.router)
     v1.include_router(taste_learning.record_router)
     v1.include_router(cooking_constraints.router)
     v1.include_router(allergies.router)
     v1.include_router(family_members.router)
     v1.include_router(ui_protocol.router)
+    v1.include_router(risk.router)
     if settings.dev_tools_enabled:
         v1.include_router(accounts_dev.router)
         v1.include_router(events_dev.router)
@@ -98,6 +132,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         v1.include_router(examples_router)
     app.include_router(v1)
     app.include_router(legal.router)
+    app.include_router(recipe_sharing.web_router)
     return app
 
 

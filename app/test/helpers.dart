@@ -1,7 +1,10 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:typed_data';
 
+import 'package:cryptography/dart.dart';
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart' show BindingBase;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
@@ -89,6 +92,7 @@ class FakeServer extends Interceptor {
   }
 
   final requests = <Recorded>[];
+  final responseHeaders = <String, Map<String, List<String>>>{};
   final _routes = <String, FutureOr<(int, Object?)> Function(Recorded)>{};
 
   UserOut user = testUser();
@@ -129,6 +133,7 @@ class FakeServer extends Interceptor {
       accessToken: 'access-$tokenSerial',
       accessExpiresIn: 1800,
       refreshToken: 'refresh-$tokenSerial',
+      requestSigningKey: 'test-signing-key-$tokenSerial',
       user: user,
     ).toJson();
   }
@@ -421,7 +426,13 @@ class FakeServer extends Interceptor {
     final sent = options.data;
     final Object? body = sent == null
         ? null
-        : jsonDecode(sent is String ? sent : jsonEncode(sent));
+        : jsonDecode(
+            sent is String
+                ? sent
+                : sent is List<int>
+                ? utf8.decode(sent)
+                : jsonEncode(sent),
+          );
     final rec = Recorded(
       options.method,
       options.uri.path,
@@ -438,7 +449,14 @@ class FakeServer extends Interceptor {
     final response = Response<dynamic>(
       requestOptions: options,
       statusCode: status,
-      data: data == null ? null : jsonDecode(jsonEncode(data)),
+      headers: Headers.fromMap(
+        responseHeaders['${options.method} ${options.uri.path}'] ?? {},
+      ),
+      data: data == null
+          ? null
+          : options.responseType == ResponseType.bytes && data is List<int>
+          ? Uint8List.fromList(data)
+          : jsonDecode(jsonEncode(data)),
     );
     if (status >= 200 && status < 300) {
       handler.resolve(response, true);
@@ -561,13 +579,15 @@ Map<String, String> consentedStore({String privacy = privacyVersion}) => {
 };
 
 Map<String, String> signedInSecure(UserOut user) => {
-  sessionStorageKey: jsonEncode(
-    AuthSession(
+  sessionStorageKey: jsonEncode({
+    ...AuthSession(
       accessToken: 'access-0',
       refreshToken: 'refresh-0',
+      requestSigningKey: 'test-signing-key-0',
       user: user,
     ).toJson(),
-  ),
+    'device_id': 'device-test',
+  }),
 };
 
 class TestReachabilityProbe implements ApiReachabilityProbe {
@@ -597,6 +617,7 @@ class TestEnv {
     this.localDependencyVersions,
     this.offline = false,
     this.probe,
+    this.usePlatformCryptography = false,
   }) : server = server ?? FakeServer(),
        local = local ?? MemoryLocalStore(),
        secure = secure ?? MemorySecureStore(),
@@ -631,6 +652,7 @@ class TestEnv {
     );
   }
 
+  final bool usePlatformCryptography;
   final ApiReachabilityProbe? probe;
   late final reachability = TestReachabilityProbe(!offline);
   final FakeServer server;
@@ -669,6 +691,11 @@ class TestEnv {
     localStoreProvider.overrideWithValue(local),
     secureStoreProvider.overrideWithValue(secure),
     fakeServerProvider.overrideWithValue(server),
+    if (!usePlatformCryptography &&
+        BindingBase.debugBindingType() == AutomatedTestWidgetsFlutterBinding)
+      requestSigningCryptographyProvider.overrideWithValue(
+        DartCryptography.defaultInstance,
+      ),
     apiReachabilityProbeProvider.overrideWithValue(probe ?? reachability),
     // Page tests use the same cache interface with a fake-clock-safe store;
     // native drift persistence is exercised by installed integration tests.

@@ -30,6 +30,10 @@ class PersonalMeasuresApi {
   ///
   /// Parameters:
   /// * [personalMeasureInput]
+  /// * [xRequestSignature] - HMAC-SHA256 请求签名
+  /// * [xRequestTimestamp] - Unix 秒时间戳
+  /// * [xRequestNonce] - 每次请求唯一的随机数
+  /// * [xDeviceID] - 登录时的设备安装 ID
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -41,6 +45,10 @@ class PersonalMeasuresApi {
   /// Throws [DioException] if API call or serialization fails
   Future<Response<PersonalMeasureOut>> createPersonalMeasure({
     required PersonalMeasureInput personalMeasureInput,
+    String? xRequestSignature,
+    String? xRequestTimestamp,
+    String? xRequestNonce,
+    String? xDeviceID,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
     Map<String, dynamic>? extra,
@@ -51,7 +59,13 @@ class PersonalMeasuresApi {
     final _path = r'/v1/me/measures';
     final _options = Options(
       method: r'POST',
-      headers: <String, dynamic>{...?headers},
+      headers: <String, dynamic>{
+        r'X-Request-Signature': xRequestSignature,
+        r'X-Request-Timestamp': xRequestTimestamp,
+        r'X-Request-Nonce': xRequestNonce,
+        r'X-Device-ID': xDeviceID,
+        ...?headers,
+      },
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
           {'type': 'http', 'scheme': 'bearer', 'name': 'HTTPBearer'},
@@ -122,6 +136,10 @@ class PersonalMeasuresApi {
   ///
   /// Parameters:
   /// * [measureId]
+  /// * [xRequestSignature] - HMAC-SHA256 请求签名
+  /// * [xRequestTimestamp] - Unix 秒时间戳
+  /// * [xRequestNonce] - 每次请求唯一的随机数
+  /// * [xDeviceID] - 登录时的设备安装 ID
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -133,6 +151,10 @@ class PersonalMeasuresApi {
   /// Throws [DioException] if API call or serialization fails
   Future<Response<void>> deletePersonalMeasure({
     required String measureId,
+    String? xRequestSignature,
+    String? xRequestTimestamp,
+    String? xRequestNonce,
+    String? xDeviceID,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
     Map<String, dynamic>? extra,
@@ -148,7 +170,13 @@ class PersonalMeasuresApi {
     );
     final _options = Options(
       method: r'DELETE',
-      headers: <String, dynamic>{...?headers},
+      headers: <String, dynamic>{
+        r'X-Request-Signature': xRequestSignature,
+        r'X-Request-Timestamp': xRequestTimestamp,
+        r'X-Request-Nonce': xRequestNonce,
+        r'X-Device-ID': xDeviceID,
+        ...?headers,
+      },
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
           {'type': 'http', 'scheme': 'bearer', 'name': 'HTTPBearer'},
@@ -174,6 +202,10 @@ class PersonalMeasuresApi {
   ///
   /// Parameters:
   /// * [measureDisplayRequest]
+  /// * [xRequestSignature] - HMAC-SHA256 请求签名
+  /// * [xRequestTimestamp] - Unix 秒时间戳
+  /// * [xRequestNonce] - 每次请求唯一的随机数
+  /// * [xDeviceID] - 登录时的设备安装 ID
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -185,6 +217,10 @@ class PersonalMeasuresApi {
   /// Throws [DioException] if API call or serialization fails
   Future<Response<MeasureDisplayOut>> displayPersonalMeasure({
     required MeasureDisplayRequest measureDisplayRequest,
+    String? xRequestSignature,
+    String? xRequestTimestamp,
+    String? xRequestNonce,
+    String? xDeviceID,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
     Map<String, dynamic>? extra,
@@ -195,7 +231,13 @@ class PersonalMeasuresApi {
     final _path = r'/v1/me/measures/display';
     final _options = Options(
       method: r'POST',
-      headers: <String, dynamic>{...?headers},
+      headers: <String, dynamic>{
+        r'X-Request-Signature': xRequestSignature,
+        r'X-Request-Timestamp': xRequestTimestamp,
+        r'X-Request-Nonce': xRequestNonce,
+        r'X-Device-ID': xDeviceID,
+        ...?headers,
+      },
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
           {'type': 'http', 'scheme': 'bearer', 'name': 'HTTPBearer'},
@@ -266,6 +308,10 @@ class PersonalMeasuresApi {
   ///
   /// Parameters:
   /// * [measureId]
+  /// * [xRequestSignature] - HMAC-SHA256 请求签名
+  /// * [xRequestTimestamp] - Unix 秒时间戳
+  /// * [xRequestNonce] - 每次请求唯一的随机数
+  /// * [xDeviceID] - 登录时的设备安装 ID
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -277,6 +323,10 @@ class PersonalMeasuresApi {
   /// Throws [DioException] if API call or serialization fails
   Future<Response<PersonalMeasureOut>> getPersonalMeasure({
     required String measureId,
+    String? xRequestSignature,
+    String? xRequestTimestamp,
+    String? xRequestNonce,
+    String? xDeviceID,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
     Map<String, dynamic>? extra,
@@ -292,7 +342,13 @@ class PersonalMeasuresApi {
     );
     final _options = Options(
       method: r'GET',
-      headers: <String, dynamic>{...?headers},
+      headers: <String, dynamic>{
+        r'X-Request-Signature': xRequestSignature,
+        r'X-Request-Timestamp': xRequestTimestamp,
+        r'X-Request-Nonce': xRequestNonce,
+        r'X-Device-ID': xDeviceID,
+        ...?headers,
+      },
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
           {'type': 'http', 'scheme': 'bearer', 'name': 'HTTPBearer'},
@@ -349,6 +405,10 @@ class PersonalMeasuresApi {
   /// Parameters:
   /// * [cursor] - 上一页返回的 next_cursor
   /// * [limit] - 每页条数，上限见配置项 api.page_size_max
+  /// * [xRequestSignature] - HMAC-SHA256 请求签名
+  /// * [xRequestTimestamp] - Unix 秒时间戳
+  /// * [xRequestNonce] - 每次请求唯一的随机数
+  /// * [xDeviceID] - 登录时的设备安装 ID
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -361,6 +421,10 @@ class PersonalMeasuresApi {
   Future<Response<PagePersonalMeasureOut>> listPersonalMeasures({
     String? cursor,
     int? limit = 20,
+    String? xRequestSignature,
+    String? xRequestTimestamp,
+    String? xRequestNonce,
+    String? xDeviceID,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
     Map<String, dynamic>? extra,
@@ -371,7 +435,13 @@ class PersonalMeasuresApi {
     final _path = r'/v1/me/measures';
     final _options = Options(
       method: r'GET',
-      headers: <String, dynamic>{...?headers},
+      headers: <String, dynamic>{
+        r'X-Request-Signature': xRequestSignature,
+        r'X-Request-Timestamp': xRequestTimestamp,
+        r'X-Request-Nonce': xRequestNonce,
+        r'X-Device-ID': xDeviceID,
+        ...?headers,
+      },
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
           {'type': 'http', 'scheme': 'bearer', 'name': 'HTTPBearer'},
@@ -435,6 +505,10 @@ class PersonalMeasuresApi {
   /// * [measureId]
   /// * [cursor] - 上一页返回的 next_cursor
   /// * [limit] - 每页条数，上限见配置项 api.page_size_max
+  /// * [xRequestSignature] - HMAC-SHA256 请求签名
+  /// * [xRequestTimestamp] - Unix 秒时间戳
+  /// * [xRequestNonce] - 每次请求唯一的随机数
+  /// * [xDeviceID] - 登录时的设备安装 ID
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -448,6 +522,10 @@ class PersonalMeasuresApi {
     required String measureId,
     String? cursor,
     int? limit = 20,
+    String? xRequestSignature,
+    String? xRequestTimestamp,
+    String? xRequestNonce,
+    String? xDeviceID,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
     Map<String, dynamic>? extra,
@@ -463,7 +541,13 @@ class PersonalMeasuresApi {
     );
     final _options = Options(
       method: r'GET',
-      headers: <String, dynamic>{...?headers},
+      headers: <String, dynamic>{
+        r'X-Request-Signature': xRequestSignature,
+        r'X-Request-Timestamp': xRequestTimestamp,
+        r'X-Request-Nonce': xRequestNonce,
+        r'X-Device-ID': xDeviceID,
+        ...?headers,
+      },
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
           {'type': 'http', 'scheme': 'bearer', 'name': 'HTTPBearer'},
@@ -525,6 +609,10 @@ class PersonalMeasuresApi {
   ///
   /// Parameters:
   /// * [measureInputRequest]
+  /// * [xRequestSignature] - HMAC-SHA256 请求签名
+  /// * [xRequestTimestamp] - Unix 秒时间戳
+  /// * [xRequestNonce] - 每次请求唯一的随机数
+  /// * [xDeviceID] - 登录时的设备安装 ID
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -536,6 +624,10 @@ class PersonalMeasuresApi {
   /// Throws [DioException] if API call or serialization fails
   Future<Response<MeasureInputOut>> previewPersonalMeasureInput({
     required MeasureInputRequest measureInputRequest,
+    String? xRequestSignature,
+    String? xRequestTimestamp,
+    String? xRequestNonce,
+    String? xDeviceID,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
     Map<String, dynamic>? extra,
@@ -546,7 +638,13 @@ class PersonalMeasuresApi {
     final _path = r'/v1/me/measures/input';
     final _options = Options(
       method: r'POST',
-      headers: <String, dynamic>{...?headers},
+      headers: <String, dynamic>{
+        r'X-Request-Signature': xRequestSignature,
+        r'X-Request-Timestamp': xRequestTimestamp,
+        r'X-Request-Nonce': xRequestNonce,
+        r'X-Device-ID': xDeviceID,
+        ...?headers,
+      },
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
           {'type': 'http', 'scheme': 'bearer', 'name': 'HTTPBearer'},
@@ -618,6 +716,10 @@ class PersonalMeasuresApi {
   /// Parameters:
   /// * [measureId]
   /// * [personalMeasureUpdate]
+  /// * [xRequestSignature] - HMAC-SHA256 请求签名
+  /// * [xRequestTimestamp] - Unix 秒时间戳
+  /// * [xRequestNonce] - 每次请求唯一的随机数
+  /// * [xDeviceID] - 登录时的设备安装 ID
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -630,6 +732,10 @@ class PersonalMeasuresApi {
   Future<Response<PersonalMeasureOut>> updatePersonalMeasure({
     required String measureId,
     required PersonalMeasureUpdate personalMeasureUpdate,
+    String? xRequestSignature,
+    String? xRequestTimestamp,
+    String? xRequestNonce,
+    String? xDeviceID,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
     Map<String, dynamic>? extra,
@@ -645,7 +751,13 @@ class PersonalMeasuresApi {
     );
     final _options = Options(
       method: r'PATCH',
-      headers: <String, dynamic>{...?headers},
+      headers: <String, dynamic>{
+        r'X-Request-Signature': xRequestSignature,
+        r'X-Request-Timestamp': xRequestTimestamp,
+        r'X-Request-Nonce': xRequestNonce,
+        r'X-Device-ID': xDeviceID,
+        ...?headers,
+      },
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
           {'type': 'http', 'scheme': 'bearer', 'name': 'HTTPBearer'},

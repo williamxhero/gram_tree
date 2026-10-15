@@ -1,6 +1,6 @@
 from typing import Any, Literal
 
-from fastapi import APIRouter, status
+from fastapi import APIRouter, Request, status
 from pydantic import BaseModel, Field
 
 from gramtree.accounts import service
@@ -62,6 +62,9 @@ class TokenPair(BaseModel):
     access_token: str
     access_expires_in: int = Field(description="访问令牌多少秒后过期")
     refresh_token: str = Field(description="续期用；每次续期都会换发新的，旧的立即作废")
+    request_signing_key: str = Field(
+        description="当前设备请求签名密钥；仅在登录或刷新响应中返回，不会写入日志"
+    )
     user: UserOut
 
     @classmethod
@@ -70,6 +73,7 @@ class TokenPair(BaseModel):
             access_token=issued.access_token,
             access_expires_in=issued.access_expires_in,
             refresh_token=issued.refresh_token,
+            request_signing_key=issued.request_signing_key,
             user=UserOut.of(issued.user),
         )
 
@@ -208,6 +212,9 @@ def send_email_code(
 )
 def email_login(
     body: EmailLoginRequest,
+    request: Request,
+    redis: RedisDep,
+    ip: ClientIpDep,
     session: SessionDep,
     settings: SettingsDep,
     clock: ClockDep,
@@ -216,6 +223,9 @@ def email_login(
     issued = service.login_with_email(
         session,
         settings,
+        redis,
+        request.app.state.captcha,
+        ip=ip,
         email=service.normalize_email(body.email),
         code=body.code,
         device_id=device_id,
@@ -232,6 +242,9 @@ def email_login(
 )
 def apple_login(
     body: AppleLoginRequest,
+    request: Request,
+    redis: RedisDep,
+    ip: ClientIpDep,
     session: SessionDep,
     settings: SettingsDep,
     apple: AppleDep,
@@ -242,6 +255,9 @@ def apple_login(
         session,
         settings,
         apple,
+        redis,
+        request.app.state.captcha,
+        ip=ip,
         identity_token=body.identity_token,
         authorization_code=body.authorization_code,
         given_name=body.given_name,

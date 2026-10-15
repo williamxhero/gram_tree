@@ -44,9 +44,11 @@ from gramtree.accounts.models import (
     User,
     UserStatus,
 )
+from gramtree.accounts.signing import credential_hash
 from gramtree.events.models import Event
 from gramtree.events.sync_models import WriteFactOutbox, WriteReceipt
 from gramtree.recipes.measure_models import PersonalMeasure
+from gramtree.risk.captcha import CaptchaAdapter
 from gramtree.runtime_config import service as config
 from gramtree.settings import Settings
 from gramtree.taste_profiles.models import TasteProfile
@@ -210,6 +212,7 @@ class IssuedTokens:
     access_token: str
     access_expires_in: int
     refresh_token: str
+    request_signing_key: str
     user: User
 
 
@@ -230,6 +233,16 @@ def _issue(
         algorithm="HS256",
     )
     refresh = secrets.token_urlsafe(32)
+    signing_seed = secrets.token_urlsafe(32)
+    # Persist only a derived verifier. A refresh rotates the credential and
+    # leaves a short overlap so an in-flight request is not invalidated mid-flight.
+    signing_key = credential_hash(signing_seed, settings.auth_secret)
+    if device_session.signing_secret_hash:
+        device_session.previous_signing_secret_hash = device_session.signing_secret_hash
+        device_session.previous_signing_secret_expires_at = now + timedelta(
+            seconds=int(config.get(session, "auth.signing_key_grace_seconds"))
+        )
+    device_session.signing_secret_hash = signing_key
     session.add(
         RefreshToken(
             session_id=device_session.id,
@@ -239,13 +252,17 @@ def _issue(
         )
     )
     session.commit()
-    return IssuedTokens(access, access_minutes * 60, refresh, user)
+    return IssuedTokens(access, access_minutes * 60, refresh, signing_key, user)
 
 
 def _start_session(
     session: Session, settings: Settings, user: User, device_id: str | None, now: datetime
 ) -> IssuedTokens:
-    if user.status != UserStatus.active:
+    from gramtree.risk.service import is_permanently_banned
+
+    if user.status != UserStatus.active or is_permanently_banned(
+        session, settings, user_id=str(user.id), device_id=device_id, now=now
+    ):
         raise AccountUnavailable()
     ds = DeviceSession(user_id=user.id, device_id=device_id, created_at=now)
     session.add(ds)
@@ -254,7 +271,12 @@ def _start_session(
 
 
 def authenticate(
-    session: Session, settings: Settings, token: str, now: datetime
+    session: Session,
+    settings: Settings,
+    token: str,
+    now: datetime,
+    *,
+    enforce_risk_ban: bool = True,
 ) -> tuple[User, DeviceSession]:
     try:
         claims = jwt.decode(
@@ -280,7 +302,14 @@ def authenticate(
         raise Unauthorized("unknown session")
     if ds.revoked_at is not None:
         raise Unauthorized("session revoked")
-    if user.status != UserStatus.active:
+    from gramtree.risk.service import is_permanently_banned
+
+    if user.status != UserStatus.active or (
+        enforce_risk_ban
+        and is_permanently_banned(
+            session, settings, user_id=str(user.id), device_id=ds.device_id, now=now
+        )
+    ):
         raise Unauthorized("account unavailable")
     return user, ds
 
@@ -306,7 +335,15 @@ def refresh(session: Session, settings: Settings, token: str, now: datetime) -> 
     if row.expires_at <= now:
         raise RefreshInvalid()
     user = session.get(User, ds.user_id)
-    if user is None or user.status != UserStatus.active:
+    from gramtree.risk.service import is_permanently_banned
+
+    if (
+        user is None
+        or user.status != UserStatus.active
+        or is_permanently_banned(
+            session, settings, user_id=str(user.id), device_id=ds.device_id, now=now
+        )
+    ):
         raise RefreshInvalid()
     row.used_at = now
     return _issue(session, settings, user, ds, now)
@@ -334,7 +371,10 @@ def _user_for_identity(session: Session, kind: IdentityKind, subject: str) -> Us
 def login_with_email(
     session: Session,
     settings: Settings,
+    redis: Redis,
+    captcha: CaptchaAdapter,
     *,
+    ip: str | None,
     email: str,
     code: str,
     device_id: str | None,
@@ -342,6 +382,7 @@ def login_with_email(
 ) -> IssuedTokens:
     verify_email_code(session, settings, email=email, purpose="login", code=code, now=now)
     user = _user_for_identity(session, IdentityKind.email, email)
+    is_new_account = user is None
     if user is None:
         # 首次登录即创建账号
         user = User(nickname=default_nickname(), created_at=now)
@@ -353,6 +394,19 @@ def login_with_email(
             )
         )
         session.flush()
+    from gramtree.risk.service import observe_login
+
+    observe_login(
+        redis,
+        session,
+        settings,
+        user=user,
+        device_id=device_id,
+        ip=ip,
+        is_new_account=is_new_account,
+        now=now,
+        captcha=captcha,
+    )
     return _start_session(session, settings, user, device_id, now)
 
 
@@ -370,7 +424,10 @@ def login_with_apple(
     session: Session,
     settings: Settings,
     apple: AppleClient,
+    redis: Redis,
+    captcha: CaptchaAdapter,
     *,
+    ip: str | None,
     identity_token: str,
     authorization_code: str | None,
     given_name: str | None,
@@ -380,6 +437,7 @@ def login_with_apple(
 ) -> IssuedTokens:
     info = apple.verify_identity_token(identity_token, now.timestamp())
     user = _user_for_identity(session, IdentityKind.apple, info.subject)
+    is_new_account = user is None
     if user is None:
         max_len = int(config.get(session, "account.nickname_max_length"))
         name = _apple_nickname(given_name, family_name)
@@ -392,6 +450,19 @@ def login_with_apple(
         _add_apple_identity(session, apple, user, info, authorization_code, now)
     elif authorization_code:
         _refresh_apple_grant(session, apple, info.subject, authorization_code)
+    from gramtree.risk.service import observe_login
+
+    observe_login(
+        redis,
+        session,
+        settings,
+        user=user,
+        device_id=device_id,
+        ip=ip,
+        is_new_account=is_new_account,
+        now=now,
+        captcha=captcha,
+    )
     return _start_session(session, settings, user, device_id, now)
 
 

@@ -65,6 +65,19 @@ def main() -> None:
                 {"names": ["鸡腿肉", "盐"], "candidates": []},
                 corpus["normalization"],
             ),
+            # Runtime digest 9be8dac5...: exact library matches remove 盐 before
+            # normalization. Preserve the original key and this observed input only.
+            (
+                "normalize",
+                {"names": ["鸡腿肉"], "candidates": []},
+                {
+                    "matches": [
+                        match
+                        for match in corpus["normalization"]["matches"]
+                        if match["name"] == "鸡腿肉"
+                    ]
+                },
+            ),
             ("embedding", {"text": "宫保鸡丁"}, corpus["embedding"]),
             (
                 "embedding",
@@ -382,6 +395,20 @@ def main() -> None:
         )
     )
     taste, substitution = consequential["taste"], consequential["substitution"]
+    # Runtime payload digest ab5981d1...: none of these synthetic names matched
+    # the acceptance library. Keep the legacy normalization keys unchanged.
+    taste_names = ["鸡腿肉", *[item["display_name"] for item in taste["ingredients"]]]
+    records.append(
+        (
+            "normalize",
+            {"names": taste_names, "candidates": []},
+            {
+                "matches": [
+                    {"name": name, "standard_name": None, "confidence": 0.2} for name in taste_names
+                ]
+            },
+        )
+    )
     zero_flavor = dict.fromkeys(("salty", "sweet", "sour", "spicy", "umami", "numbing", "oily"), 0)
 
     def consequential_draft(scenario: dict) -> GeneratedDraft:

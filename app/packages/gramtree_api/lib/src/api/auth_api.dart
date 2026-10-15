@@ -202,6 +202,10 @@ class AuthApi {
   ///
   ///
   /// Parameters:
+  /// * [xRequestSignature] - HMAC-SHA256 请求签名
+  /// * [xRequestTimestamp] - Unix 秒时间戳
+  /// * [xRequestNonce] - 每次请求唯一的随机数
+  /// * [xDeviceID] - 登录时的设备安装 ID
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -212,6 +216,10 @@ class AuthApi {
   /// Returns a [Future]
   /// Throws [DioException] if API call or serialization fails
   Future<Response<void>> logout({
+    String? xRequestSignature,
+    String? xRequestTimestamp,
+    String? xRequestNonce,
+    String? xDeviceID,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
     Map<String, dynamic>? extra,
@@ -222,7 +230,13 @@ class AuthApi {
     final _path = r'/v1/auth/logout';
     final _options = Options(
       method: r'POST',
-      headers: <String, dynamic>{...?headers},
+      headers: <String, dynamic>{
+        r'X-Request-Signature': xRequestSignature,
+        r'X-Request-Timestamp': xRequestTimestamp,
+        r'X-Request-Nonce': xRequestNonce,
+        r'X-Device-ID': xDeviceID,
+        ...?headers,
+      },
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
           {'type': 'http', 'scheme': 'bearer', 'name': 'HTTPBearer'},
@@ -248,6 +262,10 @@ class AuthApi {
   ///
   /// Parameters:
   /// * [appleReauthRequest]
+  /// * [xRequestSignature] - HMAC-SHA256 请求签名
+  /// * [xRequestTimestamp] - Unix 秒时间戳
+  /// * [xRequestNonce] - 每次请求唯一的随机数
+  /// * [xDeviceID] - 登录时的设备安装 ID
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -259,6 +277,10 @@ class AuthApi {
   /// Throws [DioException] if API call or serialization fails
   Future<Response<void>> reauthApple({
     required AppleReauthRequest appleReauthRequest,
+    String? xRequestSignature,
+    String? xRequestTimestamp,
+    String? xRequestNonce,
+    String? xDeviceID,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
     Map<String, dynamic>? extra,
@@ -269,7 +291,13 @@ class AuthApi {
     final _path = r'/v1/auth/reauth/apple';
     final _options = Options(
       method: r'POST',
-      headers: <String, dynamic>{...?headers},
+      headers: <String, dynamic>{
+        r'X-Request-Signature': xRequestSignature,
+        r'X-Request-Timestamp': xRequestTimestamp,
+        r'X-Request-Nonce': xRequestNonce,
+        r'X-Device-ID': xDeviceID,
+        ...?headers,
+      },
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
           {'type': 'http', 'scheme': 'bearer', 'name': 'HTTPBearer'},
@@ -310,6 +338,10 @@ class AuthApi {
   ///
   /// Parameters:
   /// * [emailReauthRequest]
+  /// * [xRequestSignature] - HMAC-SHA256 请求签名
+  /// * [xRequestTimestamp] - Unix 秒时间戳
+  /// * [xRequestNonce] - 每次请求唯一的随机数
+  /// * [xDeviceID] - 登录时的设备安装 ID
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -321,6 +353,10 @@ class AuthApi {
   /// Throws [DioException] if API call or serialization fails
   Future<Response<void>> reauthEmail({
     required EmailReauthRequest emailReauthRequest,
+    String? xRequestSignature,
+    String? xRequestTimestamp,
+    String? xRequestNonce,
+    String? xDeviceID,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
     Map<String, dynamic>? extra,
@@ -331,7 +367,13 @@ class AuthApi {
     final _path = r'/v1/auth/reauth/email';
     final _options = Options(
       method: r'POST',
-      headers: <String, dynamic>{...?headers},
+      headers: <String, dynamic>{
+        r'X-Request-Signature': xRequestSignature,
+        r'X-Request-Timestamp': xRequestTimestamp,
+        r'X-Request-Nonce': xRequestNonce,
+        r'X-Device-ID': xDeviceID,
+        ...?headers,
+      },
       extra: <String, dynamic>{
         'secure': <Map<String, String>>[
           {'type': 'http', 'scheme': 'bearer', 'name': 'HTTPBearer'},

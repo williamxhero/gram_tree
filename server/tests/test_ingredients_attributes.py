@@ -12,6 +12,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from gramtree.cli import main as cli
+from tests.test_request_signing import configure, quiet_risk
 
 FIXTURES = Path(__file__).parent / "data" / "ingredients"
 SEED = Path(__file__).parent.parent / "data" / "ingredients"
@@ -312,6 +313,8 @@ CORE_ALLERGENS = {
 
 
 def _seed_details(client: TestClient) -> dict[str, dict[str, Any]]:
+    # This suite validates seed contents, not anonymous scraper protection.
+    quiet_risk()
     assert _import(SEED) == 0
     records = [
         record
@@ -319,10 +322,13 @@ def _seed_details(client: TestClient) -> dict[str, dict[str, Any]]:
         if path.name != "manifest.json"
         for record in json.loads(path.read_text(encoding="utf-8"))
     ]
+    # Allow the seed scan and follow-up idempotence reads in one minute;
+    # anonymous quota enforcement is covered separately by test_rate_limits.py.
+    configure("rate.detail.ip_per_minute", 2 * len(records))
     details = {}
     for record in records:
         response = client.get(f"/v1/ingredients/{record['id']}")
-        assert response.status_code == 200, record["standard_name"]
+        assert response.status_code == 200, (record["standard_name"], response.text)
         details[record["standard_name"]] = response.json()
     assert len(details) == len(records)
     return details

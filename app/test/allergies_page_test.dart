@@ -119,6 +119,62 @@ class _UnavailableTelemetry extends FakeEventQueue {
 }
 
 void main() {
+  for (final legacy in [false, true]) {
+    testWidgets(
+      'same-account signing rotation preserves sensitive consent operation, legacy=$legacy',
+      (tester) async {
+        final server = FakeServer();
+        installProfile(server, () => profileFixture());
+        var consentAttempts = 0;
+        server.on('POST', '/v1/me/consents', (r) {
+          if (!jsonEncode(r.body).contains('sensitive_personal_info')) {
+            return (204, null);
+          }
+          if (++consentAttempts == 1) {
+            return FakeServer.error(401, 'token_expired', 'expired');
+          }
+          return (204, null);
+        });
+        final env = TestEnv.signedIn(server: server);
+        if (legacy) {
+          final saved = jsonDecode(
+            env.secure.values['auth_session']!,
+          ) as Map<String, dynamic>;
+          saved.remove('request_signing_key');
+          env.secure.values['auth_session'] = jsonEncode(saved);
+        }
+        await pumpApp(tester, env: env);
+        await openTaste(tester);
+        await tester.scrollUntilVisible(
+          find.byKey(const ValueKey('allergies-edit')),
+          300,
+        );
+        await tapVisible(tester, find.byKey(const ValueKey('allergies-edit')));
+        await tapVisible(tester, find.byKey(const ValueKey('allergies-agree')));
+        expect(find.byKey(const ValueKey('allergies-agree')), findsNothing);
+        expect(find.text('登录味谱'), findsNothing);
+        expect(consentAttempts, 2);
+        expect(server.calls('POST', '/v1/auth/refresh'), isNotEmpty);
+        expect(tester.takeException(), isNull);
+      },
+    );
+  }
+
+  testWidgets(
+    'a signing credential from another installation requires a fresh login',
+    (tester) async {
+      final env = TestEnv.signedIn();
+      final saved = jsonDecode(
+        env.secure.values['auth_session']!,
+      ) as Map<String, dynamic>;
+      saved['device_id'] = 'another-installation';
+      env.secure.values['auth_session'] = jsonEncode(saved);
+      await pumpApp(tester, env: env);
+      expect(find.text('登录味谱'), findsOneWidget);
+      expect(env.server.calls('GET', allergyPath), isEmpty);
+    },
+  );
+
   testWidgets(
     'delayed refresh persistence cannot resurrect a signed-out allergy account after restart',
     (tester) async {

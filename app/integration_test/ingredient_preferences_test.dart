@@ -1,11 +1,14 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:gram_tree/auth/session.dart';
 import 'package:gram_tree/config/app_config.dart';
 import 'package:gram_tree/main.dart' as app;
 import 'package:integration_test/integration_test.dart';
 
 import 'event_pipeline_support.dart' show resetLocalAppState;
+import '../test/profile_scroll_support.dart';
+import 'signed_probe_support.dart';
 
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
@@ -22,45 +25,8 @@ void main() {
     expect(finder, findsWidgets);
   }
 
-  Future<void> reveal(WidgetTester tester, Finder finder) async {
-    final profileScroll = find.byKey(const ValueKey('taste-profile-content'));
-    final verticalScroll = find.byWidgetPredicate(
-      (w) => w is Scrollable && w.axisDirection == AxisDirection.down,
-    );
-    final profileScrollables = find.descendant(
-      of: profileScroll,
-      matching: verticalScroll,
-    );
-    // The profile key is on the ListView/ScrollView wrapper, so resolve the
-    // actual Scrollable state before reading its position.
-    final scroll =
-        profileScroll.evaluate().isNotEmpty &&
-            profileScrollables.evaluate().isNotEmpty
-        ? profileScrollables
-        : verticalScroll;
-    await waitFor(tester, scroll);
-    final position = tester.state<ScrollableState>(scroll.first).position;
-    // Reset before each search so rows above and below the current viewport
-    // are mounted through the same bounded forward scan.
-    position.jumpTo(position.minScrollExtent);
-    await tester.pumpAndSettle();
-    for (var i = 0; i < 300 && finder.evaluate().isEmpty; i++) {
-      position.jumpTo(
-        (position.pixels + 250).clamp(
-          position.minScrollExtent,
-          position.maxScrollExtent,
-        ),
-      );
-      await tester.pump(const Duration(milliseconds: 100));
-    }
-    expect(finder, findsOneWidget);
-    await Scrollable.ensureVisible(
-      tester.element(finder),
-      alignment: 0.5,
-      alignmentPolicy: ScrollPositionAlignmentPolicy.explicit,
-    );
-    await tester.pumpAndSettle();
-  }
+  Future<void> reveal(WidgetTester tester, Finder finder) =>
+      revealProfileTarget(tester, finder, delta: 250);
 
   Future<void> tapKey(WidgetTester tester, String key) async {
     final finder = find.byKey(ValueKey(key));
@@ -81,7 +47,7 @@ void main() {
             )).data['code']
             as String;
     await tester.enterText(find.byKey(const ValueKey('code-input')), code);
-    await waitFor(tester, find.text('先添加一道你常做的菜'));
+    await waitFor(tester, find.text('今天还没有安排'));
     await tester.tap(find.text('我的'));
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const ValueKey('taste-profile-entry')));
@@ -105,7 +71,11 @@ void main() {
       options: device,
     )).data;
     return Options(
-      headers: {'Authorization': 'Bearer ${tokens['access_token']}'},
+      headers: registerProbeSession(
+        server,
+        AuthSession.fromJson(Map<String, dynamic>.from(tokens as Map)),
+        deviceId: email,
+      ),
     );
   }
 

@@ -25,6 +25,7 @@
 | [`offline-online.html`](offline-online.html) | 在线入口降级：需要联网说明、原话保留、本机能力可用，浅色/深色 | #27 SPEC-013.3 / #215 | 本会话无 Artifact 发布工具；本地 HTML 样稿 |
 
 | [`offline-writes.html`](offline-writes.html) | 离线手工编辑与保存、个人量具修改历史、账号退出保留提醒、同步分类与重试；浅色/深色交互 | #27 / #216、#218、#219、#220 | 本会话无 Artifact 发布工具；本地 HTML 样稿 |
+| [`recipe-sharing.html`](recipe-sharing.html) | 公开分享最小信息、系统图加链接分享、无效链接兜底与时钟/验证码/限流/分页保护状态 | #46 / #256–263 | Artifact 发布被当前登录方式阻塞；本地交互 HTML 样稿（示例数据） |
 | [`personalized-recipe.html`](personalized-recipe.html) | 默认按口味视图、原版切换、解释面板、多人/儿童分盛、过敏阻断、厨具降级与做菜模式一致 | #31 SPEC-005.2 | 2026-10-13 已尝试发布；Artifact 要求 claude.ai 登录，当前 API-token 认证不支持。本地交互 HTML 样稿 |
 | [`34-mockup.html`](34-mockup.html) | 场景组合样稿：新手/熟手详略、常做差异、失败前置与当步提醒、近期口味变化、统一为什么面板、固定骨架与标准布局 | #34 SPEC-009.2；#279–#282 | 2026-10-14 按本次任务决定使用仓库内 HTML，浏览器直接打开；PR #284 给出文件路径，不依赖 Artifact |
 

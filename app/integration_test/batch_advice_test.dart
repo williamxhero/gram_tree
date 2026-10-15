@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:gram_tree/api/api_client.dart';
 import 'package:gram_tree/config/app_config.dart';
 import 'package:gram_tree/main.dart' as app;
 import 'package:integration_test/integration_test.dart';
@@ -99,12 +100,13 @@ void main() {
         find.byKey(const ValueKey('code-input')),
         code.data['code'] as String,
       );
-      await waitFor(tester, find.text('先添加一道你常做的菜'));
-      server.options.headers['Authorization'] =
-          'Bearer ${support.accessTokenOf(support.containerOf(tester))}';
+      await waitFor(tester, find.text('今天还没有安排'));
+      // Business setup and read-only checks need the same current credential
+      // and signing contract as the UI; raw dev access is only for the OTP.
+      final signedServer = support.containerOf(tester).read(dioProvider);
 
       // Public API setup matches the sanitized server batch_advice_corpus.json.
-      final created = await server.post(
+      final created = await signedServer.post(
         '/v1/recipes',
         data: {
           'dish_name': '大份量回放鸡丁',
@@ -148,7 +150,7 @@ void main() {
       final recipeId = created.data['id'] as String;
       final firstVersionId = created.data['version']['id'] as String;
       final originalSnapshot = created.data['version']['snapshot'];
-      await server.post(
+      await signedServer.post(
         '/v1/recipes/$recipeId/versions',
         data: {
           'base_version_id': firstVersionId,
@@ -156,8 +158,8 @@ void main() {
           'change_note': '同配方历史对照',
         },
       );
-      final before = await server.get('/v1/recipes/$recipeId/versions');
-      final currentBefore = await server.get('/v1/recipes/$recipeId');
+      final before = await signedServer.get('/v1/recipes/$recipeId/versions');
+      final currentBefore = await signedServer.get('/v1/recipes/$recipeId');
       final snapshotBefore = jsonEncode(
         currentBefore.data['version']['snapshot'],
       );
@@ -216,14 +218,14 @@ void main() {
       await tester.tap(find.text('AI 建议时间'));
       await waitFor(tester, find.text('AI 建议 · 只读，不修改菜谱'));
 
-      final after = await server.get('/v1/recipes/$recipeId/versions');
+      final after = await signedServer.get('/v1/recipes/$recipeId/versions');
       expect(after.data['items'].length, before.data['items'].length);
-      final currentAfter = await server.get('/v1/recipes/$recipeId');
+      final currentAfter = await signedServer.get('/v1/recipes/$recipeId');
       expect(
         jsonEncode(currentAfter.data['version']['snapshot']),
         snapshotBefore,
       );
-      final oldAfter = await server.get(
+      final oldAfter = await signedServer.get(
         '/v1/recipes/$recipeId/versions/$firstVersionId',
       );
       expect(

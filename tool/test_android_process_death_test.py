@@ -33,6 +33,21 @@ class SafeFailureLogTest(unittest.TestCase):
             watch.safe_failure_log(),
         )
 
+    def test_keeps_local_probe_rejection_distinct_from_transport_failure(self) -> None:
+        watch = _MODULE.LogWatch.__new__(_MODULE.LogWatch)
+        watch.run_id = "abc123"
+        watch.recent = collections.deque(maxlen=200)
+        watch.safe_recent = collections.deque(maxlen=200)
+        diagnostic = (
+            "GRAMTREE_PROCESS_DETAIL abc123 pid=4935 phase=business_restore "
+            "step=verify authoritative version, fact and history "
+            "DioException type=unknown status=null cause=probe_credential_missing"
+        )
+        watch._remember_safe_line(f"I/flutter: {diagnostic}")
+        watch._remember_safe_line("I/flutter: Authorization: Bearer secret")
+
+        self.assertEqual(watch.safe_failure_log(), diagnostic)
+
     def test_keeps_markers_and_redacts_framework_failure(self) -> None:
         watch = _MODULE.LogWatch.__new__(_MODULE.LogWatch)
         watch.run_id = "abc123"

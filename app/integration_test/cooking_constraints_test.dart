@@ -5,6 +5,8 @@ import 'package:gram_tree/config/app_config.dart';
 import 'package:gram_tree/main.dart' as app;
 import 'package:integration_test/integration_test.dart';
 
+import '../test/profile_scroll_support.dart';
+
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
   final server = Dio(
@@ -28,21 +30,7 @@ void main() {
     double delta = 350,
   }) async {
     lastTarget = 'reveal $finder (delta: $delta)';
-    tester.testTextInput.hide();
-    await tester.pump();
-    final dialog = find.byType(AlertDialog);
-    final scrollable = dialog.evaluate().isEmpty
-        ? find
-              .byWidgetPredicate(
-                (widget) =>
-                    widget is Scrollable &&
-                    widget.axisDirection == AxisDirection.down,
-              )
-              .first
-        : find.descendant(of: dialog, matching: find.byType(Scrollable)).first;
-    await tester.scrollUntilVisible(finder, delta, scrollable: scrollable);
-    await tester.ensureVisible(finder);
-    await tester.pumpAndSettle();
+    await revealProfileOrDialogTarget(tester, finder, delta: delta);
   }
 
   Future<void> tap(
@@ -164,16 +152,16 @@ void main() {
         tester,
         find.byKey(const ValueKey('taste-profile-content')),
       );
-      await reveal(tester, find.byKey(const ValueKey('cooking-constraints')));
-      await waitFor(tester, find.text('人数未设置，菜谱沿用作者份数'));
+      // The old card can remain mounted until the clear request completes.
+      // Locate the actual cleared value even if the refresh replaces the list.
+      await reveal(tester, find.text('人数未设置，菜谱沿用作者份数'));
       await back(tester);
       await tap(tester, 'taste-profile-entry');
       await waitFor(
         tester,
         find.byKey(const ValueKey('taste-profile-content')),
       );
-      await reveal(tester, find.byKey(const ValueKey('cooking-constraints')));
-      await waitFor(tester, find.text('人数未设置，菜谱沿用作者份数'));
+      await reveal(tester, find.text('人数未设置，菜谱沿用作者份数'));
       expect(find.text('厨具未设置'), findsOneWidget);
       await tap(tester, 'cooking-constraints-edit', scroll: true);
       await tester.enterText(

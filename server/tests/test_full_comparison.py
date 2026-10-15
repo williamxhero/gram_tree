@@ -6,12 +6,11 @@ from pathlib import Path
 from uuid import uuid4
 
 import pytest
-from fastapi.testclient import TestClient
+from redis import Redis
 
 from gramtree.cli import main as cli
-from gramtree.main import create_app
+from gramtree.deps import get_redis
 from tests.accounts_support import Api, bearer
-from tests.conftest import make_settings
 
 
 def ingredient(quantity: float = 15, **fields) -> dict:
@@ -541,24 +540,44 @@ def test_other_dish_cannot_use_even_owned_versions(api: Api) -> None:
     assert compare(api, headers, other, first).status_code == 422
 
 
-def test_durable_outbox_retains_conclusion_after_delete_and_retry(api: Api, capsys) -> None:
+def test_durable_outbox_retains_conclusion_after_delete_and_retry(
+    api: Api, capsys, monkeypatch
+) -> None:
     headers = bearer(api.login("full-durable-event@example.com"))
     first = create(api, headers)
-    # Redis is an external boundary; use an unavailable endpoint, not mocks of
-    # the application's outbox/event collaborators.
-    with TestClient(
-        create_app(make_settings(redis_url="redis://127.0.0.1:63999/6")),
-        raise_server_exceptions=False,
-    ) as broken:
-        snapshot = deepcopy(first["version"]["snapshot"])
-        snapshot["ingredients"][0]["quantity"] = 13
-        response = broken.post(
-            f"/v1/recipes/{first['id']}/versions", headers=headers, json={"snapshot": snapshot}
-        )
-        assert response.status_code == 201, response.text
-        second = response.json()
-        assert second["version"]["conclusion"] == "minor_only"
-        assert broken.delete(f"/v1/recipes/{first['id']}", headers=headers).status_code == 204
+    live_redis = api.client.app.state.redis
+    unavailable_redis = Redis.from_url(
+        "redis://127.0.0.1:63999/6", socket_timeout=0.1, socket_connect_timeout=0.1
+    )
+
+    class EventTransportRedis:
+        def ping(self):
+            return unavailable_redis.ping()
+
+        def __getattr__(self, name):
+            return getattr(live_redis, name)
+
+    # Route dependencies keep using real Redis except the event transport PING;
+    # middleware protection and PostgreSQL remain entirely real.
+    try:
+        with monkeypatch.context() as fault:
+            fault.setitem(
+                api.client.app.dependency_overrides, get_redis, lambda: EventTransportRedis()
+            )
+            snapshot = deepcopy(first["version"]["snapshot"])
+            snapshot["ingredients"][0]["quantity"] = 13
+            response = api.client.post(
+                f"/v1/recipes/{first['id']}/versions",
+                headers=headers,
+                json={"snapshot": snapshot},
+            )
+            assert response.status_code == 201, response.text
+            second = response.json()
+            assert second["version"]["conclusion"] == "minor_only"
+            deleted = api.client.delete(f"/v1/recipes/{first['id']}", headers=headers)
+            assert deleted.status_code == 204
+    finally:
+        unavailable_redis.close()
     capsys.readouterr()
     assert cli(["recipes", "drain-save-events"]) == 0
     assert "已投递 1 条" in capsys.readouterr().out

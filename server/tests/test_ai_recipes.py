@@ -140,6 +140,67 @@ def test_ai_status_requires_auth(api: Api) -> None:
     assert api.client.get("/v1/ai/recipes/status").status_code == 401
 
 
+@pytest.fixture(params=[False, True], ids=["empty-library", "salt-exact-match"])
+def materialized_recordings(request, recordings: Path, database_url: str, monkeypatch) -> Path:
+    directory = recordings / "materialized"
+    script = Path(__file__).resolve().parents[2] / "tool" / "ai_replay_corpus.py"
+    if request.param:
+        library = recordings / "salt-library"
+        library.mkdir()
+        # The generic seed calls this ingredient 测试盐. Reproduce the observed
+        # runtime exact match via the operator import contract, not an ORM patch.
+        (library / "manifest.json").write_text(
+            json.dumps({"version": "1.0.0", "changelog": "合成精确食材匹配回归"}),
+            encoding="utf-8",
+        )
+        (library / "data.json").write_text(
+            json.dumps(
+                [
+                    {
+                        "id": "00000000-0000-4000-8000-000000000002",
+                        "standard_name": "盐",
+                        "aliases": [],
+                        "pinyin": "yan",
+                        "pinyin_initials": "y",
+                        "category": "调料",
+                    }
+                ],
+                ensure_ascii=False,
+            ),
+            encoding="utf-8",
+        )
+        cli("ingredients", "import", str(library))
+    result = subprocess.run(
+        [sys.executable, str(script), "--out", str(directory)],
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+    )
+    assert result.returncode == 0, result.stdout + result.stderr
+    monkeypatch.setenv("GRAMTREE_AI_REPLAY_DIR", str(directory))
+    return directory
+
+
+@pytest.fixture
+def materialized_api(materialized_recordings: Path, api: Api) -> Api:
+    return api
+
+
+def test_materialized_corpus_normalization_succeeds_with_exact_library_matches(
+    materialized_api: Api,
+) -> None:
+    tokens = materialized_api.login("materialized-normalization@example.com")
+    headers = bearer(tokens)
+    result = generate(materialized_api, headers, begin(materialized_api, headers)["request_id"])
+    assert result["error"] is None, result
+    # Generation tolerates normalization failure; HTTP 200 alone misses the replay defect.
+    audit = cli("ai", "audit", "--user", tokens["user"]["id"])
+    normalization = [call for call in audit["calls"] if call["capability"] == "normalize"]
+    assert len(normalization) == 1
+    assert normalization[0]["status"] == "succeeded", normalization
+    assert normalization[0]["error_code"] is None, normalization
+
+
 def test_unknown_usage_retains_budget_reservation(replay_api: Api, recordings: Path) -> None:
     for path in recordings.glob("*.json"):
         record = json.loads(path.read_text(encoding="utf-8"))

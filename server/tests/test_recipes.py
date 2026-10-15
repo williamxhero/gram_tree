@@ -7,13 +7,13 @@ import os
 import subprocess
 from pathlib import Path
 
-from fastapi.testclient import TestClient
 from PIL import Image
 from PIL.TiffImagePlugin import IFDRational
+from redis import Redis
 
-from gramtree.main import create_app
+from gramtree.deps import get_redis
 from tests.accounts_support import Api, bearer
-from tests.conftest import make_settings
+from tests.signing_support import signed_headers
 from tests.test_conventions import assert_error_shape
 
 
@@ -234,16 +234,36 @@ def test_author_can_save_read_list_and_delete_private_recipe(api: Api) -> None:
     assert api.client.get("/v1/recipes", headers=headers).json()["items"] == []
 
 
-def test_recipe_event_retries_after_delete_via_http_and_cli(api: Api, database_url: str) -> None:
+def test_recipe_event_retries_after_delete_via_http_and_cli(
+    api: Api, database_url: str, monkeypatch
+) -> None:
     tokens = api.login("retry-after-delete@example.com")
     headers = bearer(tokens)
-    unavailable = make_settings(redis_url="redis://127.0.0.1:63999/15")
-    with TestClient(create_app(unavailable), raise_server_exceptions=False) as broken:
-        for name in ("待重试菜谱一", "待重试菜谱二"):
-            saved = broken.post("/v1/recipes", json=recipe_input(name), headers=headers)
-            assert saved.status_code == 201, saved.text
-            recipe_id = saved.json()["id"]
-            assert broken.delete(f"/v1/recipes/{recipe_id}", headers=headers).status_code == 204
+    live_redis = api.client.app.state.redis
+    unavailable_redis = Redis.from_url(
+        "redis://127.0.0.1:63999/15", socket_timeout=0.1, socket_connect_timeout=0.1
+    )
+
+    class EventTransportRedis:
+        def ping(self):
+            return unavailable_redis.ping()
+
+        def __getattr__(self, name):
+            return getattr(live_redis, name)
+
+    try:
+        with monkeypatch.context() as fault:
+            fault.setitem(
+                api.client.app.dependency_overrides, get_redis, lambda: EventTransportRedis()
+            )
+            for name in ("待重试菜谱一", "待重试菜谱二"):
+                saved = api.client.post("/v1/recipes", json=recipe_input(name), headers=headers)
+                assert saved.status_code == 201, saved.text
+                recipe_id = saved.json()["id"]
+                deleted = api.client.delete(f"/v1/recipes/{recipe_id}", headers=headers)
+                assert deleted.status_code == 204
+    finally:
+        unavailable_redis.close()
 
     env = os.environ.copy()
     env["GRAMTREE_DATABASE_URL"] = database_url
@@ -259,12 +279,21 @@ def test_recipe_event_retries_after_delete_via_http_and_cli(api: Api, database_u
         check=True,
     )
     assert "已投递 2 条菜谱版本事件" in first_retry.stdout
-    count = api.client.get(
-        "/v1/dev/events/count",
-        params={"event_type": "recipe.version_saved"},
-        headers=headers,
-    )
-    assert count.status_code == 200
+    count_url = "/v1/dev/events/count?event_type=recipe.version_saved"
+
+    def event_count():
+        return api.client.get(
+            count_url,
+            headers=signed_headers(
+                tokens,
+                "GET",
+                f"http://testserver{count_url}",
+                timestamp=int(api.clock().timestamp()),
+            ),
+        )
+
+    count = event_count()
+    assert count.status_code == 200, count.text
     assert count.json() == {"count": 2}
 
     second_retry = subprocess.run(
@@ -276,11 +305,7 @@ def test_recipe_event_retries_after_delete_via_http_and_cli(api: Api, database_u
         check=True,
     )
     assert "已投递 0 条菜谱版本事件" in second_retry.stdout
-    assert api.client.get(
-        "/v1/dev/events/count",
-        params={"event_type": "recipe.version_saved"},
-        headers=headers,
-    ).json() == {"count": 2}
+    assert event_count().json() == {"count": 2}
 
 
 def test_private_recipe_is_isolated_between_accounts(api: Api) -> None:

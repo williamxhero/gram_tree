@@ -11,7 +11,11 @@ sed -i 's/\r$//' "$SPEC" "$OUT/.openapi-generator/FILES"
 find "$OUT/lib" -type f -name '*.dart' -exec sed -i 's/\r$//' {} +
 
 cd "$ROOT"
-changes="$(git status --porcelain -- api/openapi.json app/packages/gramtree_api)"
+# Compare normalized content, not a Windows stat-cache-only dirty marker. Include
+# staged changes and new generated files so neither can hide real contract drift.
+changes="$(git diff --name-only HEAD -- api/openapi.json app/packages/gramtree_api
+  git diff --cached --name-only -- api/openapi.json app/packages/gramtree_api
+  git ls-files --others --exclude-standard -- api/openapi.json app/packages/gramtree_api)"
 if [[ -n "$changes" ]]; then
   echo "服务端接口和仓库里的 OpenAPI 描述或 Dart 客户端不一致："
   echo "$changes"

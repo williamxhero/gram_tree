@@ -238,6 +238,22 @@ ITEMS: tuple[ConfigItem, ...] = (
         minimum=1,
         maximum=500,
     ),
+    ConfigItem(
+        "api.cursor_ttl_seconds",
+        "int",
+        600,
+        "分页游标有效期（秒）",
+        minimum=1,
+        maximum=86400,
+    ),
+    ConfigItem(
+        "api.cursor_max_pages",
+        "int",
+        100,
+        "单次查询最多可连续翻页的页数",
+        minimum=1,
+        maximum=10000,
+    ),
     # —— 已验证条件占位（SPEC-002.4；判定在 SPEC-007.3 实现） ——
     ConfigItem(
         "recipe.verification_min_distinct_cooks",
@@ -424,6 +440,195 @@ ITEMS: tuple[ConfigItem, ...] = (
         "注销账号等敏感操作要求在多少分钟内重新验证过身份",
         minimum=1,
         maximum=120,
+    ),
+    ConfigItem(
+        "auth.signing_clock_tolerance_seconds",
+        "int",
+        300,
+        "请求签名允许的客户端时钟误差（秒）",
+        minimum=1,
+        maximum=3600,
+    ),
+    ConfigItem(
+        "auth.signing_nonce_ttl_seconds",
+        "int",
+        600,
+        "请求签名随机数的 Redis 保留时间（秒）",
+        minimum=1,
+        maximum=86400,
+    ),
+    ConfigItem(
+        "auth.signing_key_grace_seconds",
+        "int",
+        30,
+        "刷新令牌后旧请求签名密钥的过渡时间（秒）",
+        minimum=1,
+        maximum=300,
+    ),
+    # —— 接口限流（SPEC-011.2） ——
+    *(
+        ConfigItem(
+            f"rate.{category}.{dimension}_per_{window}",
+            "int",
+            default,
+            f"{category} 接口按{dimension}维度的{window}窗口额度",
+            minimum=1,
+            maximum=10_000_000,
+        )
+        for category, minute_limit in (
+            ("search_list", 120),
+            ("detail", 120),
+            ("write", 60),
+            ("ai", 30),
+            ("auth", 30),
+            ("captcha", 30),
+            ("export", 10),
+        )
+        for dimension in ("account", "device", "ip")
+        for window, default in (("minute", minute_limit), ("day", minute_limit * 40))
+    ),
+    *(
+        ConfigItem(
+            f"rate.detail.{dimension}_distinct_recipes_per_day",
+            "int",
+            1000,
+            f"详情接口按{dimension}维度每天访问不同菜谱的数量上限",
+            minimum=1,
+            maximum=1_000_000,
+        )
+        for dimension in ("account", "device", "ip")
+    ),
+    # —— 规则型机器行为保护（SPEC-011.2） ——
+    ConfigItem("risk.enabled", "bool", True, "是否启用机器行为风险规则"),
+    ConfigItem(
+        "risk.short_window_seconds", "int", 600, "短时行为计数窗口（秒）", minimum=10, maximum=86400
+    ),
+    ConfigItem(
+        "risk.short_request_limit", "int", 1000, "窗口内请求数触发点", minimum=1, maximum=1_000_000
+    ),
+    ConfigItem(
+        "risk.detail_interval_seconds",
+        "int",
+        2,
+        "详情请求视为几乎无停留的间隔（秒）",
+        minimum=1,
+        maximum=3600,
+    ),
+    ConfigItem(
+        "risk.detail_repeat_limit", "int", 20, "连续快速详情次数触发点", minimum=1, maximum=10000
+    ),
+    ConfigItem(
+        "risk.sequential_limit", "int", 100, "顺序详情访问数量触发点", minimum=1, maximum=100000
+    ),
+    ConfigItem(
+        "risk.uniform_daily_limit",
+        "int",
+        2000,
+        "全天均匀请求数量触发点",
+        minimum=1,
+        maximum=1_000_000,
+    ),
+    ConfigItem(
+        "risk.uniform_min_span_hours",
+        "int",
+        12,
+        "全天均匀请求至少覆盖的小时数",
+        minimum=1,
+        maximum=24,
+    ),
+    ConfigItem(
+        "risk.multi_account_limit", "int", 5, "单设备关联账号数触发点", minimum=2, maximum=1000
+    ),
+    ConfigItem(
+        "risk.subnet_new_account_limit",
+        "int",
+        10,
+        "网段窗口内新账号数触发点",
+        minimum=1,
+        maximum=10000,
+    ),
+    ConfigItem("risk.captcha_points", "int", 10, "验证码风险分阈值", minimum=1, maximum=100000),
+    ConfigItem("risk.throttle_points", "int", 20, "降速风险分阈值", minimum=2, maximum=100000),
+    ConfigItem(
+        "risk.temporary_block_points", "int", 40, "临时封禁风险分阈值", minimum=3, maximum=100000
+    ),
+    ConfigItem(
+        "risk.permanent_block_points", "int", 80, "人工封禁风险分阈值", minimum=4, maximum=100000
+    ),
+    ConfigItem("risk.throttle_seconds", "int", 30, "降速持续时间（秒）", minimum=1, maximum=86400),
+    ConfigItem(
+        "risk.temporary_block_seconds",
+        "int",
+        900,
+        "临时封禁持续时间（秒）",
+        minimum=1,
+        maximum=604800,
+    ),
+    ConfigItem(
+        "risk.captcha_seconds", "int", 600, "验证码挑战有效期（秒）", minimum=1, maximum=86400
+    ),
+    ConfigItem(
+        "risk.score_ttl_seconds",
+        "int",
+        86400,
+        "风险分滚动保留时间（秒）",
+        minimum=60,
+        maximum=2_592_000,
+    ),
+    ConfigItem(
+        "risk.retention_seconds",
+        "int",
+        604800,
+        "Redis 处置状态保留时间（秒）",
+        minimum=60,
+        maximum=2_592_000,
+    ),
+    ConfigItem("risk.uniform_days", "int", 3, "全天均匀请求观察天数", minimum=1, maximum=30),
+    ConfigItem(
+        "risk.uniform_bucket_seconds",
+        "int",
+        3600,
+        "均匀请求分桶时长（秒）",
+        minimum=1,
+        maximum=3600,
+    ),
+    ConfigItem(
+        "risk.uniform_tolerance_percent",
+        "int",
+        25,
+        "均匀请求计数偏差百分比",
+        minimum=0,
+        maximum=100,
+    ),
+    ConfigItem(
+        "risk.detail_interval_tolerance_ms",
+        "int",
+        250,
+        "详情间隔稳定性容差（毫秒）",
+        minimum=0,
+        maximum=10000,
+    ),
+    ConfigItem(
+        "risk.security_failure_limit", "int", 5, "签名失败或重放触发次数", minimum=1, maximum=10000
+    ),
+    ConfigItem(
+        "risk.throttle_request_limit", "int", 1, "降速窗口允许请求数", minimum=1, maximum=1000
+    ),
+    ConfigItem(
+        "risk.throttle_window_seconds", "int", 5, "降速窗口长度（秒）", minimum=1, maximum=3600
+    ),
+    ConfigItem("feature.public_recipes", "bool", False, "是否允许公开菜谱分享", public=True),
+    ConfigItem(
+        "sharing.ai_crawlers",
+        "json",
+        {"values": ["GPTBot", "CCBot", "ClaudeBot", "Google-Extended", "Bytespider", "Amazonbot"]},
+        "拒绝的 AI 训练爬虫",
+    ),
+    ConfigItem("sharing.public_base_url", "str", "https://gramtree.app", "分享页 HTTPS 公开基地址"),
+    ConfigItem("sharing.download_url", "str", "", "App 下载或测试版地址"),
+    ConfigItem("sharing.complaint_contact", "str", "", "侵权投诉联系方式"),
+    ConfigItem(
+        "ops.access_log_retention_days", "int", 180, "安全访问日志保存天数", minimum=1, maximum=3650
     ),
     ConfigItem(
         "account.nickname_max_length",

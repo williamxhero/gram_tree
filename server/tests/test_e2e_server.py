@@ -35,6 +35,31 @@ def test_e2e_bootstrap_supports_more_than_one_hundred_logins(tmp_path: Path) -> 
     ]
     try:
         subprocess.run([*command, "start"], cwd=root, env=env, check=True, timeout=300)
+        # Independent acceptance accounts share one runner IP/device. Only
+        # burst budgets are enlarged; production daily budgets remain in force.
+        for category, day_limit in (("search_list", 4800), ("auth", 1200), ("ai", 1200)):
+            for dimension in ("account", "device", "ip"):
+                for window, expected in (("minute", 1000), ("day", day_limit)):
+                    configured = subprocess.run(
+                        [
+                            "uv",
+                            "run",
+                            "gramtree",
+                            "config",
+                            "get",
+                            f"rate.{category}.{dimension}_per_{window}",
+                        ],
+                        cwd=root / "server",
+                        env={
+                            **env,
+                            "GRAMTREE_DATABASE_URL": target.render_as_string(hide_password=False),
+                        },
+                        check=True,
+                        capture_output=True,
+                        text=True,
+                        timeout=30,
+                    )
+                    assert int(configured.stdout.strip()) == expected
         with httpx.Client(base_url=f"http://127.0.0.1:{port}") as client:
             for index in range(101):
                 response = client.post(
@@ -43,12 +68,23 @@ def test_e2e_bootstrap_supports_more_than_one_hundred_logins(tmp_path: Path) -> 
                 )
                 assert response.status_code == 200, response.text
             # Only the daily budget is overridden, not the same-email cooldown.
+            # Retry the latest address: 101 requests can outlast the first cooldown.
             response = client.post(
                 "/v1/auth/email/code",
-                json={"email": "acceptance-0@example.com", "purpose": "login"},
+                json={"email": "acceptance-100@example.com", "purpose": "login"},
             )
             assert response.status_code == 429
             assert response.json()["error"]["code"] == "resend_too_soon"
+            # Independent browser accounts also share the runner subnet. Exercise
+            # actual logins beyond its production budget, not only code delivery.
+            for index in range(11):
+                email = f"acceptance-{index}@example.com"
+                code = client.get("/v1/dev/latest-email-code", params={"email": email})
+                assert code.status_code == 200
+                response = client.post(
+                    "/v1/auth/email/login", json={"email": email, "code": code.json()["code"]}
+                )
+                assert response.status_code == 200, response.text
     finally:
         try:
             subprocess.run([*command, "stop"], cwd=root, env=env, check=True, timeout=30)

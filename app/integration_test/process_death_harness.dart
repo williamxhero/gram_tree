@@ -35,6 +35,7 @@ import 'event_pipeline_support.dart' show resetLocalAppState;
 import '../test/frozen_conversion_support.dart'
     show installFrozenConversionFixture;
 import 'offline_writes_support.dart' as acceptance;
+import 'signed_probe_support.dart' show registerProbeSession;
 
 const _runId = String.fromEnvironment('PROCESS_DEATH_RUN_ID');
 const _manifestKey = 'process_death_harness:$_runId';
@@ -186,7 +187,13 @@ Future<String> _seedAccountAndRecipe(
       .read(sessionStoreProvider)
       .save(TokenPair.fromJson(login.data!));
   await container.read(consentProvider.notifier).agree();
-  final token = container.read(sessionStoreProvider).current!.accessToken;
+  final session = container.read(sessionStoreProvider).current!;
+  final token = session.accessToken;
+  registerProbeSession(
+    server,
+    session,
+    deviceId: container.read(deviceIdProvider),
+  );
   final recipe = await server.post<Map<String, dynamic>>(
     '/v1/recipes',
     options: Options(headers: {'Authorization': 'Bearer $token'}),
@@ -231,6 +238,7 @@ Future<void> _seed(
   Dio server,
 ) async {
   final path = await _seedAccountAndRecipe(container, server);
+  final signedServer = server;
   await container.read(authProvider.future);
   container.read(routerProvider).go(path);
   await tester.pumpWidget(
@@ -273,7 +281,7 @@ Future<void> _seed(
             .every((e) => e.state == WriteState.confirmed),
     reason: 'online seed quiescence',
   );
-  final baseline = await _count(server, session.accessToken, device);
+  final baseline = await _count(signedServer, session.accessToken, device);
   expect(baseline, 0);
   container.read(offlineSimulationProvider.notifier).set(true);
   await container.read(apiReachabilityProvider.notifier).check();
@@ -324,7 +332,7 @@ Future<void> _seed(
       ])}',
     ),
   );
-  expect(await _count(server, session.accessToken, device), baseline);
+  expect(await _count(signedServer, session.accessToken, device), baseline);
   // Drain the snapshot store's serialized persistence tail after the page has
   // entered offline mode; do not retain an earlier local-render capture while
   // the authoritative display contract is still completing.
@@ -368,6 +376,11 @@ Future<void> _restore(
   expect(session, isNotNull);
   expect(session!.user.id, manifest['owner']);
   expect(container.read(deviceIdProvider), manifest['device']);
+  registerProbeSession(
+    server,
+    session,
+    deviceId: container.read(deviceIdProvider),
+  );
   final queue = container.read(eventQueueProvider);
   final owner = session.user.id;
   // No auth controller/root widget has been created yet: automatic upload cannot
@@ -787,6 +800,11 @@ Future<void> _restoreBusinessRestart(
   final session = await container.read(sessionStoreProvider).load();
   expect(session!.user.id, manifest['owner']);
   expect(container.read(deviceIdProvider), manifest['device']);
+  registerProbeSession(
+    server,
+    session,
+    deviceId: container.read(deviceIdProvider),
+  );
   final business = Map<String, dynamic>.from(manifest['business'] as Map);
   final entries = await container
       .read(eventQueueProvider)
@@ -955,7 +973,8 @@ void main() {
       failureReported = true;
       final detail = error is DioException
           ? 'DioException type=${error.type.name} '
-                'status=${error.response?.statusCode}'
+                'status=${error.response?.statusCode} '
+                'cause=${error.error == 'probe_credential_missing' ? 'probe_credential_missing' : error.error.runtimeType}'
           : error.runtimeType.toString();
       final sourceStack = _sourceStack(stack.toString());
       binding.reportData = {
@@ -964,7 +983,8 @@ void main() {
         'stack': sourceStack,
       };
       _diagnostic(
-        'phase=${binding.reportData?['phase']} $detail\n$sourceStack',
+        'phase=${binding.reportData?['phase']} '
+        'step=${binding.reportData?['e2e_step']} $detail\n$sourceStack',
       );
       _marker('FAILED');
       rethrow;
