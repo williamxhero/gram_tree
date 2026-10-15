@@ -240,10 +240,21 @@ class _PublicationPanelCardState extends ConsumerState<PublicationPanelCard> {
                 ),
               );
           final l10n = AppLocalizations.of(context);
-          final label = publicationLabel(
-            l10n,
-            panel?.state.value ?? widget.detail.version.publicationState.value,
-          );
+          final state =
+              panel?.state.value ??
+              widget.detail.version.publicationState.value;
+          final label = publicationLabel(l10n, state);
+          // A cooked version can remain draft for risk or identity conditions.
+          // Prefer the server's exact cooking gates over the publication label.
+          final needsCooking = panel == null
+              ? state != 'published'
+              : state == 'pending_verification' ||
+                    (panel.missing?.any(
+                          (condition) =>
+                              condition.code == 'not_cooked' ||
+                              condition.code == 'cook_again',
+                        ) ??
+                        false);
           return ComponentCard(
             key: const ValueKey('publication-panel'),
             detail: ComponentDescriptorDetailEnum.standard,
@@ -261,6 +272,8 @@ class _PublicationPanelCardState extends ConsumerState<PublicationPanelCard> {
             standardExtra: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
+                if (widget.detail.version.aiAssisted && needsCooking)
+                  Text(l10n.publicationAiUnverified),
                 if ((panel?.state.value ??
                         widget.detail.version.publicationState.value) ==
                     'draft')

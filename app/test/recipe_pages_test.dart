@@ -15,6 +15,7 @@ import 'package:gram_tree/storage/local_store.dart';
 import 'frozen_conversion_support.dart';
 import 'fixtures/conversion_cases.g.dart';
 import 'helpers.dart';
+import 'publication_panel_test.dart' show panelFixture;
 import 'taste_profile_page_test.dart' show profileFixture;
 
 const _recipeId = '11111111-1111-4111-8111-111111111111';
@@ -754,6 +755,46 @@ void main() {
         expect(tester.takeException(), isNull);
       },
     );
+  }
+
+  for (final missingCode in [
+    'not_cooked',
+    'cook_again',
+    'risk_confirmation',
+    'real_name',
+  ]) {
+    testWidgets('AI warning follows exact cooking gate $missingCode', (
+      tester,
+    ) async {
+      final server = FakeServer();
+      final state = _installRecipeApi(server);
+      (state.current['version'] as Map)['ai_assisted'] = true;
+      server.on(
+        'GET',
+        '/v1/recipes/$_recipeId/publication',
+        (_) => (
+          200,
+          panelFixture(
+            missing: [
+              {'code': missingCode, 'label': missingCode, 'action': 'review'},
+            ],
+          ),
+        ),
+      );
+      await pumpApp(tester, env: TestEnv.signedIn(server: server));
+      await _openMyRecipes(tester);
+      await tester.tap(find.byKey(const ValueKey('recipe-card-$_recipeId')));
+      await tester.pumpAndSettle();
+      expect(find.text('AI 协助生成 · 发起作者 @味友0001'), findsOneWidget);
+      expect(
+        find.text('AI 辅助 · 尚未做过验证'),
+        missingCode == 'not_cooked' || missingCode == 'cook_again'
+            ? findsOneWidget
+            : findsNothing,
+      );
+      expect(find.text(missingCode), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
   }
 
   for (final aiAssisted in [false, true]) {

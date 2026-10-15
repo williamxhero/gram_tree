@@ -4354,8 +4354,9 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
             SelectableText(l10n.sourceOriginalLink(link)),
           if (detail.version.aiAssisted) ...[
             Text(l10n.sourceAiAuthor(detail.author.nickname)),
-            if (detail.version.publicationState !=
-                RecipeVersionOutPublicationStateEnum.published)
+            if (detail.author.id != ref.watch(authProvider).value?.id &&
+                detail.version.publicationState ==
+                    RecipeVersionOutPublicationStateEnum.pendingVerification)
               Text(l10n.publicationAiUnverified),
             SourceMark(
               sourceType: sourceTypeAiEstimated,
