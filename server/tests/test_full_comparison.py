@@ -541,7 +541,7 @@ def test_other_dish_cannot_use_even_owned_versions(api: Api) -> None:
     assert compare(api, headers, other, first).status_code == 422
 
 
-def test_durable_outbox_retains_conclusion_after_delete_and_retry(api: Api, capsys) -> None:
+def test_durable_outbox_retains_conclusion_on_retry_but_not_after_delete(api: Api, capsys) -> None:
     headers = bearer(api.login("full-durable-event@example.com"))
     first = create(api, headers)
     # Redis is an external boundary; use an unavailable endpoint, not mocks of
@@ -558,7 +558,14 @@ def test_durable_outbox_retains_conclusion_after_delete_and_retry(api: Api, caps
         assert response.status_code == 201, response.text
         second = response.json()
         assert second["version"]["conclusion"] == "minor_only"
-        assert broken.delete(f"/v1/recipes/{first['id']}", headers=headers).status_code == 204
+        # SPEC47 must not acknowledge deletion while private caches cannot be
+        # erased. Keep the committed version/outbox intact for a real retry.
+        failed = broken.delete(f"/v1/recipes/{first['id']}", headers=headers)
+        assert failed.status_code == 503, failed.text
+        assert failed.json()["error"]["code"] == "erasure_unavailable"
+        retained = broken.get(f"/v1/recipes/{first['id']}", headers=headers)
+        assert retained.status_code == 200, retained.text
+        assert retained.json() == second
     capsys.readouterr()
     assert cli(["recipes", "drain-save-events"]) == 0
     assert "已投递 1 条" in capsys.readouterr().out
@@ -572,6 +579,21 @@ def test_durable_outbox_retains_conclusion_after_delete_and_retry(api: Api, caps
     assert event["base_version_id"] == first["version"]["id"]
     assert cli(["recipes", "drain-save-events"]) == 0
     assert "已投递 0 条" in capsys.readouterr().out
+
+    # Recovery preserves comparison evidence until the owner actually deletes
+    # the recipe. Successful deletion must erase it, not replay private content.
+    assert api.client.delete(f"/v1/recipes/{first['id']}", headers=headers).status_code == 204
+    assert api.client.get(f"/v1/recipes/{first['id']}", headers=headers).status_code == 404
+    assert cli(["recipes", "drain-save-events"]) == 0
+    assert "已投递 0 条" in capsys.readouterr().out
+    for version in (first["version"], second["version"]):
+        assert cli(["recipes", "save-event-receipt", version["id"]]) == 1
+        assert "未找到菜谱版本保存事件" in capsys.readouterr().err
+    count = api.client.get(
+        "/v1/dev/events/count", headers=headers, params={"event_type": "recipe.version_saved"}
+    )
+    assert count.status_code == 200, count.text
+    assert count.json() == {"count": 0}
 
 
 @pytest.mark.parametrize(
