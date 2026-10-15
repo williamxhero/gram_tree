@@ -66,13 +66,13 @@ Future<void> openExport(WidgetTester tester) async {
 
 void main() {
   for (final item in ['导出我的数据', '注销账号']) {
-    testWidgets('端到端设置导航：手机视口可打开未构建的$item', (tester) async {
+    testWidgets('端到端设置导航：手机视口可滚动打开屏幕外的$item', (tester) async {
       await pumpApp(tester, size: const Size(360, 640));
       await integration.tapText(tester, '我的');
       expect(find.text('设置'), findsOneWidget);
       await integration.tapText(tester, '设置');
-      // The real lazy settings list has not built the target at phone height.
-      expect(find.text(item), findsNothing);
+      // The entry starts outside the phone viewport and cannot yet be tapped.
+      expect(find.text(item).hitTestable(), findsNothing);
 
       await integration.tapPortabilitySettingsItem(tester, item);
 
