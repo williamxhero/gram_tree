@@ -1013,6 +1013,7 @@ void main() {
     await _tap(tester, 'save-recipe-button');
     expect(find.byKey(const ValueKey('recipe-detail-content')), findsOneWidget);
     expect(find.text('AI 协助生成 · 发起作者 @味友0001'), findsOneWidget);
+    expect(find.text('AI 辅助 · 尚未做过验证'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 

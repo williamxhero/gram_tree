@@ -729,6 +729,33 @@ Future<void> _scrollUntilVisible(
 }
 
 void main() {
+  for (final publicationState in [
+    'draft',
+    'pending_verification',
+    'published',
+  ]) {
+    testWidgets(
+      'AI origin retains exact version warning for $publicationState',
+      (tester) async {
+        final server = FakeServer();
+        final state = _installRecipeApi(server);
+        final version = state.current['version'] as Map;
+        version['ai_assisted'] = true;
+        version['publication_state'] = publicationState;
+        await pumpApp(tester, env: TestEnv.signedIn(server: server));
+        await _openMyRecipes(tester);
+        await tester.tap(find.byKey(const ValueKey('recipe-card-$_recipeId')));
+        await tester.pumpAndSettle();
+        expect(find.text('AI 协助生成 · 发起作者 @味友0001'), findsOneWidget);
+        expect(
+          find.text('AI 辅助 · 尚未做过验证'),
+          publicationState == 'published' ? findsNothing : findsOneWidget,
+        );
+        expect(tester.takeException(), isNull);
+      },
+    );
+  }
+
   for (final aiAssisted in [false, true]) {
     testWidgets(
       'small phone shows saved author tags before long checks while retaining AI origin $aiAssisted',
