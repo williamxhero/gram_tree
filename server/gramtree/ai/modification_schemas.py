@@ -23,10 +23,18 @@ class ModificationInput(BaseModel):
     recipe_id: IdV4 | None = None
     base_version_id: IdV4 | None = None
     generation_request_id: IdV4 | None = None
+    improvement_draft_id: IdV4 | None = None
 
     @model_validator(mode="after")
     def one_target(self):
-        if self.generation_request_id is not None:
+        if self.improvement_draft_id is not None:
+            if (
+                self.generation_request_id is not None
+                or self.recipe_id is not None
+                or self.base_version_id is not None
+            ):
+                raise ValueError("只能选择一个修改入口")
+        elif self.generation_request_id is not None:
             if self.recipe_id is not None or self.base_version_id is not None:
                 raise ValueError("只能选择一个修改入口")
         elif self.recipe_id is None or self.base_version_id is None:

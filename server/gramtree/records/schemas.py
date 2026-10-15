@@ -2,7 +2,7 @@
 
 from typing import Any, Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from gramtree.core.ids import IdV4
 from gramtree.core.time import Timestamp
@@ -12,6 +12,19 @@ RecordSource = Literal[
     "cooking_session", "recommendation", "calendar", "external_cooking", "dining"
 ]
 Verification = Literal["cooking_mode", "unverified"]
+
+
+class CookingCompletion(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    session_id: IdV4
+    execution_token: str = Field(min_length=64, max_length=64, pattern=r"^[0-9a-f]{64}$")
+    status: Literal["completed"]
+    started_at: Timestamp
+    finished_at: Timestamp
+    reached_steps: list[str] = Field(max_length=200)
+    completed_steps: list[str] = Field(max_length=200)
+    skipped_steps: list[str] = Field(default_factory=list, max_length=200)
 
 
 class CookingRecordCreate(BaseModel):
@@ -27,6 +40,7 @@ class CookingRecordCreate(BaseModel):
     source_context: dict[str, Any] = Field(default_factory=dict)
     co_diner_ids: list[IdV4] = Field(default_factory=list, max_length=50)
     verification: Verification = "unverified"
+    completion: CookingCompletion | None = None
 
 
 class CookingRecordOut(BaseModel):

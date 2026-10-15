@@ -1,0 +1,47 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://gramtree.app/contracts/ui_protocol/1.0/components/source_attribution.schema.json",
+  "title": "source_attribution 组件数据",
+  "description": "所有菜谱详情必显的永久署名，不受组合档位或跳过影响；不是数值的来源标记。",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["conclusion", "attribution"],
+  "properties": {
+    "conclusion": {"type": "string", "minLength": 1},
+    "attribution": {
+      "oneOf": [
+        {"type": "null"},
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["source_recipe_id", "source_version_id", "root_recipe_id", "branch_type", "conclusion", "rules_version", "chain", "label"],
+          "properties": {
+            "source_recipe_id": {"type": "string", "format": "uuid"},
+            "source_version_id": {"type": "string", "format": "uuid"},
+            "root_recipe_id": {"type": "string", "format": "uuid"},
+            "branch_type": {"type": "string", "enum": ["normal", "microadjust"]},
+            "conclusion": {"type": "string", "minLength": 1},
+            "rules_version": {"type": "string", "minLength": 1},
+            "label": {"type": "string", "minLength": 1},
+            "chain": {
+              "type": "array", "minItems": 1,
+              "items": {
+                "type": "object", "additionalProperties": false,
+                "required": ["recipe_id", "version_id", "version_number", "author_id", "author", "title", "withdrawn"],
+                "properties": {
+                  "recipe_id": {"type": "string", "format": "uuid"},
+                  "version_id": {"type": "string", "format": "uuid"},
+                  "version_number": {"type": "integer", "minimum": 1},
+                  "author_id": {"type": "string", "format": "uuid"},
+                  "author": {"type": "string", "minLength": 1},
+                  "title": {"type": "string", "minLength": 1},
+                  "withdrawn": {"type": "boolean"}
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

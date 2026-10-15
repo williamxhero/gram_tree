@@ -149,6 +149,15 @@ void main() {
             'experiment': null,
             'components': [
               {
+                'type': 'source_attribution',
+                'id': 'source-1',
+                'detail': 'standard',
+                'data': {'conclusion': '作者 @原作者', 'attribution': null},
+                'actions': [],
+                'reason': {'code': 'required', 'text': '来源永久保留'},
+                'required': true,
+              },
+              {
                 'type': 'food_safety',
                 'id': 'safety-1',
                 'detail': 'standard',

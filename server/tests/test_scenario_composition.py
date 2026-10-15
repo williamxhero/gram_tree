@@ -16,6 +16,7 @@ from tests.test_recipes import recipe_input
 COMPONENTS = [
     "food_safety",
     "allergen_notice",
+    "source_attribution",
     "scenario_summary",
     "scenario_difference",
     "failure_reminder",

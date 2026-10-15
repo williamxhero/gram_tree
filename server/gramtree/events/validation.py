@@ -69,6 +69,9 @@ def validate_event(
             f"{event_type} v{type_version} 已经停止支持，请升级客户端到更新的版本",
         )
 
+    if not spec.client_upload_allowed:
+        return Rejection("server_only_event", "这个事实只能由服务端登记")
+
     bad_field = _bad_correlation_field(correlation)
     if bad_field is not None:
         return Rejection("invalid_correlation_id", f"关联 ID 格式不对：{bad_field}")

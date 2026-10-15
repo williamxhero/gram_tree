@@ -3,12 +3,21 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gramtree_api/gramtree_api.dart';
 
 import '../../api/api_client.dart';
+import '../../auth/auth_controller.dart';
+import '../../l10n/app_localizations.dart';
+import '../../ui_protocol/recipe_operations.dart';
+import '../../ui_protocol/intent_dispatcher.dart';
+import '../../util/ids.dart';
+import '../me/taste_profile_data.dart';
+import '../recipes/improvement_save.dart';
+import '../recipes/recipe_pages.dart';
 import '../../widgets/empty_state.dart';
 import '../../widgets/tab_page.dart';
 
 final recordsProvider = FutureProvider.autoDispose<CookingRecordListOut>((
   ref,
 ) async {
+  ref.watch(authProvider.select((value) => value.value?.id));
   try {
     final response = await ref
         .watch(apiClientProvider)
@@ -47,7 +56,8 @@ class RecordsPage extends ConsumerWidget {
                     style: Theme.of(context).textTheme.headlineSmall,
                   ),
                   const SizedBox(height: 16),
-                  for (final record in page.items) _RecordCard(record: record),
+                  for (final record in page.items)
+                    _RecordCard(key: ValueKey(record.id), record: record),
                 ],
               ),
       ),
@@ -55,30 +65,200 @@ class RecordsPage extends ConsumerWidget {
   }
 }
 
-class _RecordCard extends StatelessWidget {
-  const _RecordCard({required this.record});
+class _RecordCard extends ConsumerStatefulWidget {
+  const _RecordCard({super.key, required this.record});
   final CookingRecordOut record;
+  @override
+  ConsumerState<_RecordCard> createState() => _RecordCardState();
+}
+
+class _RecordCardState extends ConsumerState<_RecordCard> {
+  bool _saving = false;
+  final _requestId = newUuidV4();
+  CookingRecordOut get record => widget.record;
+  RecipeDetail? get _savedDetail {
+    final raw = record.snapshot;
+    if (raw is! Map || raw['detail'] is! Map) return null;
+    try {
+      return RecipeDetail.fromJson(
+        Map<String, dynamic>.from(raw['detail'] as Map),
+      );
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<void> _save() async {
+    final owner = ref.read(authProvider).value?.id;
+    if (_saving ||
+        record.recipeId == null ||
+        record.recipeVersionId == null ||
+        owner == null) {
+      return;
+    }
+    setState(() => _saving = true);
+    try {
+      final own = _savedDetail?.author.id == owner;
+      final result = own
+          ? (await ref
+                    .read(apiClientProvider)
+                    .getImprovementsApi()
+                    .saveRecordVersion(
+                      recordId: record.id,
+                      recordVersionSaveInput: RecordVersionSaveInput(
+                        requestId: _requestId,
+                        changeNote: '临场调整',
+                      ),
+                    ))
+                .data
+          : await saveImprovementWithChoice(
+              context,
+              ref,
+              recipeId: record.recipeId!,
+              versionId: record.recipeVersionId!,
+              requestId: _requestId,
+              recordId: record.id,
+              changeNote: '临场调整',
+            );
+      if (!mounted ||
+          owner != ref.read(authProvider).value?.id ||
+          result == null) {
+        return;
+      }
+      ref.invalidate(myRecipesProvider);
+      ref.invalidate(tasteProfileProvider);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            result.recipe == null
+                ? AppLocalizations.of(context).improvementSavedTaste
+                : own
+                ? AppLocalizations.of(context).recordSavedVersion
+                : AppLocalizations.of(context).recordSavedImprovement,
+          ),
+        ),
+      );
+    } catch (error) {
+      if (mounted && owner == ref.read(authProvider).value?.id) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(ApiFailure.from(error).message)));
+      }
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  void _showSnapshot() {
+    final saved = _savedDetail;
+    showDialog<void>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(
+          record.dishName ?? AppLocalizations.of(context).recordCookingTitle,
+        ),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(AppLocalizations.of(context).recordSnapshotGuidance),
+              if (saved != null) ...[
+                Text(
+                  AppLocalizations.of(context).recordSnapshotVersion(
+                    saved.version.versionNumber,
+                    saved.author.nickname,
+                  ),
+                ),
+                for (final item
+                    in saved.version.snapshot.ingredients ??
+                        <RecipeIngredient>[])
+                  Text('${item.displayName} ${item.quantity} ${item.unit}'),
+                for (final step
+                    in saved.version.snapshot.steps ?? <RecipeStep>[])
+                  Text(step.instruction),
+              ] else
+                Text(AppLocalizations.of(context).recordNoSnapshot),
+              for (final adjustment in record.adjustments) Text('$adjustment'),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text(AppLocalizations.of(context).familyClose),
+          ),
+        ],
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
     final when = DateTime.tryParse(record.occurredAt)?.toLocal();
+    final saved = _savedDetail;
+    final own = saved?.author.id == ref.watch(authProvider).value?.id;
+    final canSave =
+        saved != null &&
+        record.recipeId != null &&
+        record.recipeVersionId != null;
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
-      child: ListTile(
-        leading: const Icon(Icons.restaurant_outlined),
-        title: Text(record.dishName ?? '未命名菜谱'),
-        subtitle: Text(
-          [
-            if (when != null) '${when.year}/${when.month}/${when.day}',
-            record.source_ == CookingRecordOutSource_Enum.cookingSession
-                ? '做菜模式'
-                : '手动记录',
-            if (record.adjustments.isNotEmpty) '有临时调整',
-          ].join(' · '),
-        ),
-        trailing: record.countsAsCooked
-            ? const Icon(Icons.check_circle_outline)
-            : const Icon(Icons.edit_note),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          ListTile(
+            key: ValueKey('record-${record.id}'),
+            onTap: _showSnapshot,
+            leading: const Icon(Icons.restaurant_outlined),
+            title: Text(
+              record.dishName ??
+                  AppLocalizations.of(context).recordUnnamedRecipe,
+            ),
+            subtitle: Text(
+              [
+                if (when != null) '${when.year}/${when.month}/${when.day}',
+                record.source_ == CookingRecordOutSource_Enum.cookingSession
+                    ? AppLocalizations.of(context).recordCookingMode
+                    : AppLocalizations.of(context).recordManual,
+                if (record.adjustments.isNotEmpty)
+                  AppLocalizations.of(context).recordHasAdjustments,
+              ].join(' · '),
+            ),
+            trailing: record.countsAsCooked
+                ? const Icon(Icons.check_circle_outline)
+                : const Icon(Icons.edit_note),
+          ),
+          if (canSave)
+            RecipeOperationScope(
+              handlers: {'improvement_save': (_) => _save()},
+              child: Builder(
+                builder: (context) => TextButton(
+                  key: ValueKey('record-improve-${record.id}'),
+                  onPressed: _saving
+                      ? null
+                      : () => ref
+                            .read(intentDispatcherProvider)
+                            .dispatch(
+                              context,
+                              compositionId: _requestId,
+                              componentId: 'record-improvement',
+                              action: ActionDescriptor(
+                                intent: 'recipe_operation',
+                                params: {'operation': 'improvement_save'},
+                              ),
+                            ),
+                  child: Text(
+                    _saving
+                        ? AppLocalizations.of(context).recordSaving
+                        : own
+                        ? AppLocalizations.of(context).recordSaveVersion
+                        : AppLocalizations.of(context).recordSaveImprovement,
+                  ),
+                ),
+              ),
+            ),
+        ],
       ),
     );
   }

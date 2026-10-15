@@ -31,6 +31,8 @@ class TextEditPanel extends ConsumerStatefulWidget {
     this.recipeId,
     this.baseVersionId,
     this.generationRequestId,
+    this.improvementDraftId,
+    this.onImprovementConfirmed,
     this.manualEdits = false,
     required this.onSaved,
     this.onSavingChanged,
@@ -38,6 +40,9 @@ class TextEditPanel extends ConsumerStatefulWidget {
   final String? recipeId;
   final String? baseVersionId;
   final String? generationRequestId;
+  final String? improvementDraftId;
+  final Future<bool> Function(ModificationPreview, String, String?)?
+  onImprovementConfirmed;
   final bool manualEdits;
   final Future<void> Function(RecipeDetail) onSaved;
   final ValueChanged<bool>? onSavingChanged;
@@ -91,8 +96,9 @@ class _TextEditPanelState extends ConsumerState<TextEditPanel>
   late final String _accountId;
   late int _draftEpoch;
 
-  String get _recipeKey =>
-      widget.recipeId ?? 'ai-${widget.generationRequestId}';
+  String get _recipeKey => widget.improvementDraftId == null
+      ? widget.recipeId ?? 'ai-${widget.generationRequestId}'
+      : 'improvement-${widget.improvementDraftId}';
   RecipeRepository get _repo => ref.read(recipeRepositoryProvider);
 
   @override
@@ -291,6 +297,7 @@ class _TextEditPanelState extends ConsumerState<TextEditPanel>
           'request_id': _requestId,
           'text': text.trim(),
           'recipe_id': widget.recipeId,
+          'improvement_draft_id': widget.improvementDraftId,
           'base_version_id': widget.baseVersionId,
           'generation_request_id': widget.generationRequestId,
           'retry_failed': _failedRequest,
@@ -458,6 +465,15 @@ class _TextEditPanelState extends ConsumerState<TextEditPanel>
     final onSaved = widget.onSaved;
     final repo = _repo;
     try {
+      if (widget.onImprovementConfirmed != null) {
+        final confirmed = await widget.onImprovementConfirmed!(
+          preview,
+          explanation.note,
+          explanation.fingerprint,
+        );
+        if (confirmed) await _discard();
+        return;
+      }
       _pendingConfirmation ??= {
         'id': preview.id,
         'revision': preview.revision,

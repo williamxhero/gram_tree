@@ -53,6 +53,7 @@ RecipeDetail _detail() => RecipeDetail(
   createdAt: '2026-10-01T00:00:00Z',
   updatedAt: '2026-10-01T00:00:00Z',
   version: RecipeVersionOut(
+    publicationState: RecipeVersionOutPublicationStateEnum.draft,
     id: _versionId,
     versionNumber: 1,
     snapshot: _snapshot(),
@@ -588,6 +589,8 @@ void main() {
     await tester.tap(find.text('开始第一步'));
     await _settle(tester);
     expect(find.text(_childInstruction), findsWidgets);
+    await tester.ensureVisible(find.text('下一步'));
+    await _settle(tester);
     await tester.tap(find.text('下一步'));
     await _settle(tester);
     expect(find.text(_originalInstruction), findsWidgets);

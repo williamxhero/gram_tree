@@ -23,6 +23,10 @@ abstract class _$RecipeVersionSummaryCWProxy {
 
   RecipeVersionSummary previousVersionId(String? previousVersionId);
 
+  RecipeVersionSummary publicationState(
+    RecipeVersionSummaryPublicationStateEnum publicationState,
+  );
+
   RecipeVersionSummary rulesVersion(String? rulesVersion);
 
   RecipeVersionSummary versionNumber(int versionNumber);
@@ -41,6 +45,7 @@ abstract class _$RecipeVersionSummaryCWProxy {
     String createdAt,
     String id,
     String? previousVersionId,
+    RecipeVersionSummaryPublicationStateEnum publicationState,
     String? rulesVersion,
     int versionNumber,
   });
@@ -82,6 +87,11 @@ class _$RecipeVersionSummaryCWProxyImpl
       this(previousVersionId: previousVersionId);
 
   @override
+  RecipeVersionSummary publicationState(
+    RecipeVersionSummaryPublicationStateEnum publicationState,
+  ) => this(publicationState: publicationState);
+
+  @override
   RecipeVersionSummary rulesVersion(String? rulesVersion) =>
       this(rulesVersion: rulesVersion);
 
@@ -104,6 +114,7 @@ class _$RecipeVersionSummaryCWProxyImpl
     Object? createdAt = const $CopyWithPlaceholder(),
     Object? id = const $CopyWithPlaceholder(),
     Object? previousVersionId = const $CopyWithPlaceholder(),
+    Object? publicationState = const $CopyWithPlaceholder(),
     Object? rulesVersion = const $CopyWithPlaceholder(),
     Object? versionNumber = const $CopyWithPlaceholder(),
   }) {
@@ -136,6 +147,10 @@ class _$RecipeVersionSummaryCWProxyImpl
           ? _value.previousVersionId
           // ignore: cast_nullable_to_non_nullable
           : previousVersionId as String?,
+      publicationState: publicationState == const $CopyWithPlaceholder()
+          ? _value.publicationState
+          // ignore: cast_nullable_to_non_nullable
+          : publicationState as RecipeVersionSummaryPublicationStateEnum,
       rulesVersion: rulesVersion == const $CopyWithPlaceholder()
           ? _value.rulesVersion
           // ignore: cast_nullable_to_non_nullable
@@ -172,6 +187,7 @@ RecipeVersionSummary _$RecipeVersionSummaryFromJson(
         'change_note',
         'created_at',
         'id',
+        'publication_state',
         'version_number',
       ],
     );
@@ -190,6 +206,11 @@ RecipeVersionSummary _$RecipeVersionSummaryFromJson(
         'previous_version_id',
         (v) => v as String?,
       ),
+      publicationState: $checkedConvert(
+        'publication_state',
+        (v) =>
+            $enumDecode(_$RecipeVersionSummaryPublicationStateEnumEnumMap, v),
+      ),
       rulesVersion: $checkedConvert('rules_version', (v) => v as String?),
       versionNumber: $checkedConvert(
         'version_number',
@@ -204,6 +225,7 @@ RecipeVersionSummary _$RecipeVersionSummaryFromJson(
     'changeNote': 'change_note',
     'createdAt': 'created_at',
     'previousVersionId': 'previous_version_id',
+    'publicationState': 'publication_state',
     'rulesVersion': 'rules_version',
     'versionNumber': 'version_number',
   },
@@ -220,6 +242,9 @@ Map<String, dynamic> _$RecipeVersionSummaryToJson(
   'created_at': instance.createdAt,
   'id': instance.id,
   'previous_version_id': ?instance.previousVersionId,
+  'publication_state':
+      _$RecipeVersionSummaryPublicationStateEnumEnumMap[instance
+          .publicationState]!,
   'rules_version': ?instance.rulesVersion,
   'version_number': instance.versionNumber,
 };
@@ -229,4 +254,11 @@ const _$RecipeVersionSummaryConclusionEnumEnumMap = {
   RecipeVersionSummaryConclusionEnum.minorOnly: 'minor_only',
   RecipeVersionSummaryConclusionEnum.general: 'general',
   RecipeVersionSummaryConclusionEnum.significant: 'significant',
+};
+
+const _$RecipeVersionSummaryPublicationStateEnumEnumMap = {
+  RecipeVersionSummaryPublicationStateEnum.draft: 'draft',
+  RecipeVersionSummaryPublicationStateEnum.published: 'published',
+  RecipeVersionSummaryPublicationStateEnum.pendingVerification:
+      'pending_verification',
 };

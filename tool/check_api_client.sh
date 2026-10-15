@@ -11,11 +11,15 @@ sed -i 's/\r$//' "$SPEC" "$OUT/.openapi-generator/FILES"
 find "$OUT/lib" -type f -name '*.dart' -exec sed -i 's/\r$//' {} +
 
 cd "$ROOT"
-changes="$(git status --porcelain -- api/openapi.json app/packages/gramtree_api)"
-if [[ -n "$changes" ]]; then
+# A rewritten manifest can have stale index stat data on Windows even when its
+# bytes are unchanged. Compare content in both diffs, and still reject new files.
+paths=(api/openapi.json app/packages/gramtree_api)
+untracked="$(git ls-files --others --exclude-standard -- "${paths[@]}")"
+if ! git diff --quiet -- "${paths[@]}" ||
+   ! git diff --cached --quiet -- "${paths[@]}" || [[ -n "$untracked" ]]; then
   echo "服务端接口和仓库里的 OpenAPI 描述或 Dart 客户端不一致："
-  echo "$changes"
-  git --no-pager diff --stat -- api/openapi.json app/packages/gramtree_api
+  git status --short -- "${paths[@]}"
+  git --no-pager diff --stat -- "${paths[@]}"
   echo "请运行 tool/gen_api_client.sh 并提交结果。"
   exit 1
 fi

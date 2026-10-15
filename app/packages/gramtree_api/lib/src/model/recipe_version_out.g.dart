@@ -27,6 +27,10 @@ abstract class _$RecipeVersionOutCWProxy {
 
   RecipeVersionOut previousVersionId(String? previousVersionId);
 
+  RecipeVersionOut publicationState(
+    RecipeVersionOutPublicationStateEnum publicationState,
+  );
+
   RecipeVersionOut reproducibility(
     RecipeReproducibilityResult? reproducibility,
   );
@@ -58,6 +62,7 @@ abstract class _$RecipeVersionOutCWProxy {
     String id,
     List<RecipeImageOut>? images,
     String? previousVersionId,
+    RecipeVersionOutPublicationStateEnum publicationState,
     RecipeReproducibilityResult? reproducibility,
     String? rulesVersion,
     RecipeSafetyResult? safety,
@@ -109,6 +114,11 @@ class _$RecipeVersionOutCWProxyImpl implements _$RecipeVersionOutCWProxy {
       this(previousVersionId: previousVersionId);
 
   @override
+  RecipeVersionOut publicationState(
+    RecipeVersionOutPublicationStateEnum publicationState,
+  ) => this(publicationState: publicationState);
+
+  @override
   RecipeVersionOut reproducibility(
     RecipeReproducibilityResult? reproducibility,
   ) => this(reproducibility: reproducibility);
@@ -150,6 +160,7 @@ class _$RecipeVersionOutCWProxyImpl implements _$RecipeVersionOutCWProxy {
     Object? id = const $CopyWithPlaceholder(),
     Object? images = const $CopyWithPlaceholder(),
     Object? previousVersionId = const $CopyWithPlaceholder(),
+    Object? publicationState = const $CopyWithPlaceholder(),
     Object? reproducibility = const $CopyWithPlaceholder(),
     Object? rulesVersion = const $CopyWithPlaceholder(),
     Object? safety = const $CopyWithPlaceholder(),
@@ -198,6 +209,10 @@ class _$RecipeVersionOutCWProxyImpl implements _$RecipeVersionOutCWProxy {
           ? _value.previousVersionId
           // ignore: cast_nullable_to_non_nullable
           : previousVersionId as String?,
+      publicationState: publicationState == const $CopyWithPlaceholder()
+          ? _value.publicationState
+          // ignore: cast_nullable_to_non_nullable
+          : publicationState as RecipeVersionOutPublicationStateEnum,
       reproducibility: reproducibility == const $CopyWithPlaceholder()
           ? _value.reproducibility
           // ignore: cast_nullable_to_non_nullable
@@ -251,6 +266,7 @@ RecipeVersionOut _$RecipeVersionOutFromJson(
         'derived',
         'edit_operations',
         'id',
+        'publication_state',
         'snapshot',
         'version_number',
       ],
@@ -282,6 +298,10 @@ RecipeVersionOut _$RecipeVersionOutFromJson(
       previousVersionId: $checkedConvert(
         'previous_version_id',
         (v) => v as String?,
+      ),
+      publicationState: $checkedConvert(
+        'publication_state',
+        (v) => $enumDecode(_$RecipeVersionOutPublicationStateEnumEnumMap, v),
       ),
       reproducibility: $checkedConvert(
         'reproducibility',
@@ -320,6 +340,7 @@ RecipeVersionOut _$RecipeVersionOutFromJson(
     'createdAt': 'created_at',
     'editOperations': 'edit_operations',
     'previousVersionId': 'previous_version_id',
+    'publicationState': 'publication_state',
     'rulesVersion': 'rules_version',
     'safetyAtSave': 'safety_at_save',
     'versionNumber': 'version_number',
@@ -339,6 +360,8 @@ Map<String, dynamic> _$RecipeVersionOutToJson(
   'id': instance.id,
   'images': ?instance.images?.map((e) => e.toJson()).toList(),
   'previous_version_id': ?instance.previousVersionId,
+  'publication_state':
+      _$RecipeVersionOutPublicationStateEnumEnumMap[instance.publicationState]!,
   'reproducibility': ?instance.reproducibility?.toJson(),
   'rules_version': ?instance.rulesVersion,
   'safety': ?instance.safety?.toJson(),
@@ -352,4 +375,11 @@ const _$RecipeVersionOutConclusionEnumEnumMap = {
   RecipeVersionOutConclusionEnum.minorOnly: 'minor_only',
   RecipeVersionOutConclusionEnum.general: 'general',
   RecipeVersionOutConclusionEnum.significant: 'significant',
+};
+
+const _$RecipeVersionOutPublicationStateEnumEnumMap = {
+  RecipeVersionOutPublicationStateEnum.draft: 'draft',
+  RecipeVersionOutPublicationStateEnum.published: 'published',
+  RecipeVersionOutPublicationStateEnum.pendingVerification:
+      'pending_verification',
 };

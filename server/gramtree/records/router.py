@@ -24,7 +24,7 @@ from gramtree.records.schemas import (
     CookingRecordRevisionCreate,
     CookingRecordRevisionOut,
 )
-from gramtree.records.service import record_created_event
+from gramtree.records.service import matches_submission, record_created_event
 from gramtree.runtime_config import service as config
 
 router = APIRouter(prefix="/records", tags=["records"])
@@ -56,15 +56,25 @@ def _validate_recipe_reference(
     version = session.get(RecipeVersion, body.recipe_version_id)
     if version is None:
         raise NotFound()
-    recipe = session.get(Recipe, version.recipe_id)
-    if recipe is None or recipe.owner_id != owner:
-        raise NotFound()
+    from gramtree.recipes.publication import readable_version
+
+    try:
+        recipe, version = readable_version(session, owner, version.recipe_id, version.id)
+    except NotFound:
+        # A signed frozen execution authorizes only this record write. Withdrawal
+        # must not destroy somebody else's offline data or restore public access.
+        from gramtree.records.completion import completed_context
+
+        if body.completion is None:
+            raise
+        completed_context(owner, body, session.info["settings"])
+        recipe = session.get(Recipe, version.recipe_id)
+        if recipe is None or body.recipe_id != recipe.id:
+            raise NotFound() from None
     if body.recipe_id is not None and body.recipe_id != recipe.id:
         raise ApiError(422, "invalid_record", "记录内容有误", "菜谱版本关联不一致")
     if body.verification == "cooking_mode":
-        # The client cannot self-attest execution. This first slice only permits
-        # unverified history; a trusted session handoff will enable this value.
-        raise ApiError(422, "verification_unavailable", "暂时不能确认做菜模式验证")
+        raise ApiError(422, "verification_unavailable", "不能自行声明做菜模式验证")
     return recipe, version
 
 
@@ -84,7 +94,13 @@ def _record_context(
 def create_record(
     body: CookingRecordCreate, auth: CurrentAuth, session: SessionDep, settings: SettingsDep
 ) -> CookingRecordOut:
+    from gramtree.records.completion import completed_context
+    from gramtree.taste_profiles.service import lock_owner
+
     recipe, version = _validate_recipe_reference(session, auth.user.id, body)
+    verification, source_context = completed_context(auth.user.id, body, settings)
+    # Serialize retries before inserting FK rows, matching durable sync's order.
+    lock_owner(session, auth.user.id)
     taste_summary, co_diner_ids = _record_context(
         session, auth.user.id, body.co_diner_ids, settings
     )
@@ -98,7 +114,7 @@ def create_record(
         )
     )
     if existing is not None:
-        if existing.recipe_version_id != body.recipe_version_id or existing.source != body.source:
+        if not matches_submission(existing, body, verification, source_context):
             raise ApiError(409, "record_id_reused", "记录 ID 已用于其他内容")
         return _out(existing)
     row = CookingRecord(
@@ -108,19 +124,24 @@ def create_record(
         recipe_version_id=version.id if version else None,
         dish_name=body.dish_name,
         source=body.source,
-        verification="unverified",
-        counts_as_cooked=body.source != "dining",
+        verification=verification,
+        counts_as_cooked=body.source != "dining"
+        and (body.completion is None or bool(body.completion.completed_steps)),
         meal=body.meal,
-        occurred_at=body.occurred_at or utcnow(),
+        occurred_at=body.occurred_at
+        or (body.completion.finished_at if body.completion else utcnow()),
         snapshot=body.snapshot,
         adjustments=body.adjustments,
-        source_context=body.source_context,
+        source_context=source_context,
         taste_summary=taste_summary,
         co_diner_ids=[str(item) for item in co_diner_ids],
     )
     session.add(row)
     session.flush()
     record_created_event(session, auth.user.id, row)
+    from gramtree.recipes.publication import record_completed
+
+    record_completed(session, settings, row)
     session.commit()
     session.refresh(row)
     return _out(row)

@@ -35,6 +35,27 @@ class ConfigItem:
 
 ITEMS: tuple[ConfigItem, ...] = (
     ConfigItem(
+        "feature.public_recipes",
+        "bool",
+        False,
+        "非作者读取公开菜谱；生产默认关闭，开发/测试默认开启（待 SPEC-008.2）",
+        public=True,
+    ),
+    ConfigItem(
+        "recipe.significant_branch_cooked_users",
+        "int",
+        5,
+        "显著改良版做过人数参考阈值；仅保留数据，不在阶段一公开聚合排名",
+        minimum=1,
+        maximum=10000,
+    ),
+    ConfigItem(
+        "publication.require_real_name",
+        "bool",
+        False,
+        "公开内容需要实名；阶段一默认关闭，复用账号实名状态",
+    ),
+    ConfigItem(
         "taste.equipment",
         "json",
         {

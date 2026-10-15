@@ -36,6 +36,7 @@ RecipeDetail detail() => RecipeDetail(
   id: recipeId,
   visibility: RecipeDetailVisibilityEnum.private,
   version: RecipeVersionOut(
+    publicationState: RecipeVersionOutPublicationStateEnum.draft,
     aiAssisted: false,
     changeNote: '手动确认版',
     createdAt: '2026-10-08T00:00:00+00:00',

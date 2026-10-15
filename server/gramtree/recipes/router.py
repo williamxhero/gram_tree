@@ -15,10 +15,15 @@ from gramtree.core.errors import ERROR_RESPONSES, ApiError, ErrorResponse
 from gramtree.core.ids import IdV4
 from gramtree.core.pagination import PageParams, page_params
 from gramtree.deps import RedisDep, SessionDep, SettingsDep
-from gramtree.recipes import batch_advice, quantification, reproducibility, service
+from gramtree.recipes import batch_advice, publication, quantification, reproducibility, service
 from gramtree.recipes.comparison import RecipeIngredientComparison, compare_ingredients
 from gramtree.recipes.comparison_assistance import RecipeComparisonAssistance, request_assistance
 from gramtree.recipes.full_comparison import RecipeFullComparison, compare_full
+from gramtree.recipes.publication_schemas import (
+    PublicationNotificationAck,
+    PublicationNotifications,
+    PublicationPanel,
+)
 from gramtree.recipes.quantification_schemas import (
     QuantificationDecisionsInput,
     QuantificationInput,
@@ -111,6 +116,55 @@ def _parse_target_mold(raw: str | None) -> MoldSpec | None:
         return MoldSpec.model_validate(value)
     except (TypeError, ValueError, json.JSONDecodeError) as exc:
         raise ApiError(422, "invalid_mold", "目标模具参数有误") from exc
+
+
+@router.get(
+    "/publication/notifications", response_model=PublicationNotifications, responses=_errors(401)
+)
+def get_publication_notifications(
+    auth: CurrentAuth, session: SessionDep, page: PageDep
+) -> PublicationNotifications:
+    return publication.notifications(session, auth.user, cursor=page.cursor, limit=page.limit)
+
+
+@router.post("/publication/notifications/acknowledge", status_code=204, responses=_errors(401))
+def acknowledge_publication_notifications(
+    body: PublicationNotificationAck, auth: CurrentAuth, session: SessionDep
+) -> None:
+    publication.acknowledge(session, auth.user, body)
+
+
+@router.get(
+    "/{recipe_id}/publication", response_model=PublicationPanel, responses=_errors(401, 404)
+)
+def get_recipe_publication(
+    recipe_id: IdV4,
+    auth: CurrentAuth,
+    session: SessionDep,
+    version_id: IdV4 | None = None,
+) -> PublicationPanel:
+    return publication.panel(session, auth.user, recipe_id, version_id)
+
+
+@router.post(
+    "/{recipe_id}/versions/{version_id}/risk-confirmation",
+    response_model=RecipeDetail,
+    responses=_errors(401, 404),
+)
+def confirm_recipe_publication_risk(
+    recipe_id: IdV4, version_id: IdV4, auth: CurrentAuth, session: SessionDep
+) -> RecipeDetail:
+    return publication.confirm_risk(session, auth.user, recipe_id, version_id)
+
+
+@router.post("/{recipe_id}/withdraw", response_model=RecipeDetail, responses=_errors(401, 404, 409))
+def withdraw_recipe(recipe_id: IdV4, auth: CurrentAuth, session: SessionDep) -> RecipeDetail:
+    return publication.set_withdrawn(session, auth.user, recipe_id, True)
+
+
+@router.post("/{recipe_id}/restore", response_model=RecipeDetail, responses=_errors(401, 404, 409))
+def restore_recipe(recipe_id: IdV4, auth: CurrentAuth, session: SessionDep) -> RecipeDetail:
+    return publication.set_withdrawn(session, auth.user, recipe_id, False)
 
 
 @router.post("", response_model=RecipeDetail, status_code=201, responses=_errors(401, 409))
@@ -534,9 +588,10 @@ def read_recipe_image(
     settings: SettingsDep,
     expires: int = Query(),
     signature: str = Query(),
+    public: bool = Query(default=False),
 ) -> Response:
     content, content_type = service.signed_image_file(
-        session, settings, recipe_id, image_id, expires, signature
+        session, settings, recipe_id, image_id, expires, signature, public=public
     )
     return Response(
         content=content,

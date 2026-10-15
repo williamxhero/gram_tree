@@ -17,6 +17,8 @@ abstract class _$RecipePersonalizedOutCWProxy {
 
   RecipePersonalizedOut effectiveFlavors(Map<String, num> effectiveFlavors);
 
+  RecipePersonalizedOut executionToken(String? executionToken);
+
   RecipePersonalizedOut fallback(String? fallback);
 
   RecipePersonalizedOut foodSafety(RecipeSafetyResult foodSafety);
@@ -57,6 +59,7 @@ abstract class _$RecipePersonalizedOutCWProxy {
     bool blocked,
     String cacheKey,
     Map<String, num> effectiveFlavors,
+    String? executionToken,
     String? fallback,
     RecipeSafetyResult foodSafety,
     List<PersonalizedIngredientOut> ingredients,
@@ -97,6 +100,10 @@ class _$RecipePersonalizedOutCWProxyImpl
   @override
   RecipePersonalizedOut effectiveFlavors(Map<String, num> effectiveFlavors) =>
       this(effectiveFlavors: effectiveFlavors);
+
+  @override
+  RecipePersonalizedOut executionToken(String? executionToken) =>
+      this(executionToken: executionToken);
 
   @override
   RecipePersonalizedOut fallback(String? fallback) => this(fallback: fallback);
@@ -162,6 +169,7 @@ class _$RecipePersonalizedOutCWProxyImpl
     Object? blocked = const $CopyWithPlaceholder(),
     Object? cacheKey = const $CopyWithPlaceholder(),
     Object? effectiveFlavors = const $CopyWithPlaceholder(),
+    Object? executionToken = const $CopyWithPlaceholder(),
     Object? fallback = const $CopyWithPlaceholder(),
     Object? foodSafety = const $CopyWithPlaceholder(),
     Object? ingredients = const $CopyWithPlaceholder(),
@@ -197,6 +205,10 @@ class _$RecipePersonalizedOutCWProxyImpl
           ? _value.effectiveFlavors
           // ignore: cast_nullable_to_non_nullable
           : effectiveFlavors as Map<String, num>,
+      executionToken: executionToken == const $CopyWithPlaceholder()
+          ? _value.executionToken
+          // ignore: cast_nullable_to_non_nullable
+          : executionToken as String?,
       fallback: fallback == const $CopyWithPlaceholder()
           ? _value.fallback
           // ignore: cast_nullable_to_non_nullable
@@ -303,6 +315,7 @@ RecipePersonalizedOut _$RecipePersonalizedOutFromJson(
         'effective_flavors',
         (v) => Map<String, num>.from(v as Map),
       ),
+      executionToken: $checkedConvert('execution_token', (v) => v as String?),
       fallback: $checkedConvert('fallback', (v) => v as String?),
       foodSafety: $checkedConvert(
         'food_safety',
@@ -361,6 +374,7 @@ RecipePersonalizedOut _$RecipePersonalizedOutFromJson(
     'authorizationVersion': 'authorization_version',
     'cacheKey': 'cache_key',
     'effectiveFlavors': 'effective_flavors',
+    'executionToken': 'execution_token',
     'foodSafety': 'food_safety',
     'profileVersion': 'profile_version',
     'recipeId': 'recipe_id',
@@ -377,6 +391,7 @@ Map<String, dynamic> _$RecipePersonalizedOutToJson(
   'blocked': instance.blocked,
   'cache_key': instance.cacheKey,
   'effective_flavors': instance.effectiveFlavors,
+  'execution_token': ?instance.executionToken,
   'fallback': ?instance.fallback,
   'food_safety': instance.foodSafety.toJson(),
   'ingredients': instance.ingredients.map((e) => e.toJson()).toList(),

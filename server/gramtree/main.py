@@ -19,6 +19,7 @@ from gramtree.events import sync_router as sync
 from gramtree.ingredients import router as ingredients
 from gramtree.legal import router as legal
 from gramtree.recipes import imports as recipe_imports
+from gramtree.recipes import improvement_router as recipe_improvements
 from gramtree.recipes import measure_router as personal_measures
 from gramtree.recipes import router as recipes
 from gramtree.records import router as records
@@ -77,6 +78,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     v1.include_router(sync.router)
     v1.include_router(analytics.router)
     v1.include_router(ingredients.router)
+    v1.include_router(recipe_improvements.router)
     v1.include_router(recipes.router)
     v1.include_router(records.router)
     v1.include_router(recipe_imports.router)

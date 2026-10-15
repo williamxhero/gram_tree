@@ -25,6 +25,10 @@ abstract class _$RecipeComparisonCandidateCWProxy {
 
   RecipeComparisonCandidate previousVersionId(String? previousVersionId);
 
+  RecipeComparisonCandidate publicationState(
+    RecipeComparisonCandidatePublicationStateEnum publicationState,
+  );
+
   RecipeComparisonCandidate recipeId(String recipeId);
 
   RecipeComparisonCandidate rulesVersion(String? rulesVersion);
@@ -46,6 +50,7 @@ abstract class _$RecipeComparisonCandidateCWProxy {
     String createdAt,
     String id,
     String? previousVersionId,
+    RecipeComparisonCandidatePublicationStateEnum publicationState,
     String recipeId,
     String? rulesVersion,
     int versionNumber,
@@ -91,6 +96,11 @@ class _$RecipeComparisonCandidateCWProxyImpl
       this(previousVersionId: previousVersionId);
 
   @override
+  RecipeComparisonCandidate publicationState(
+    RecipeComparisonCandidatePublicationStateEnum publicationState,
+  ) => this(publicationState: publicationState);
+
+  @override
   RecipeComparisonCandidate recipeId(String recipeId) =>
       this(recipeId: recipeId);
 
@@ -118,6 +128,7 @@ class _$RecipeComparisonCandidateCWProxyImpl
     Object? createdAt = const $CopyWithPlaceholder(),
     Object? id = const $CopyWithPlaceholder(),
     Object? previousVersionId = const $CopyWithPlaceholder(),
+    Object? publicationState = const $CopyWithPlaceholder(),
     Object? recipeId = const $CopyWithPlaceholder(),
     Object? rulesVersion = const $CopyWithPlaceholder(),
     Object? versionNumber = const $CopyWithPlaceholder(),
@@ -155,6 +166,10 @@ class _$RecipeComparisonCandidateCWProxyImpl
           ? _value.previousVersionId
           // ignore: cast_nullable_to_non_nullable
           : previousVersionId as String?,
+      publicationState: publicationState == const $CopyWithPlaceholder()
+          ? _value.publicationState
+          // ignore: cast_nullable_to_non_nullable
+          : publicationState as RecipeComparisonCandidatePublicationStateEnum,
       recipeId: recipeId == const $CopyWithPlaceholder()
           ? _value.recipeId
           // ignore: cast_nullable_to_non_nullable
@@ -196,6 +211,7 @@ RecipeComparisonCandidate _$RecipeComparisonCandidateFromJson(
         'change_note',
         'created_at',
         'id',
+        'publication_state',
         'recipe_id',
         'version_number',
       ],
@@ -218,6 +234,13 @@ RecipeComparisonCandidate _$RecipeComparisonCandidateFromJson(
         'previous_version_id',
         (v) => v as String?,
       ),
+      publicationState: $checkedConvert(
+        'publication_state',
+        (v) => $enumDecode(
+          _$RecipeComparisonCandidatePublicationStateEnumEnumMap,
+          v,
+        ),
+      ),
       recipeId: $checkedConvert('recipe_id', (v) => v as String),
       rulesVersion: $checkedConvert('rules_version', (v) => v as String?),
       versionNumber: $checkedConvert(
@@ -233,6 +256,7 @@ RecipeComparisonCandidate _$RecipeComparisonCandidateFromJson(
     'changeNote': 'change_note',
     'createdAt': 'created_at',
     'previousVersionId': 'previous_version_id',
+    'publicationState': 'publication_state',
     'recipeId': 'recipe_id',
     'rulesVersion': 'rules_version',
     'versionNumber': 'version_number',
@@ -251,6 +275,9 @@ Map<String, dynamic> _$RecipeComparisonCandidateToJson(
   'created_at': instance.createdAt,
   'id': instance.id,
   'previous_version_id': ?instance.previousVersionId,
+  'publication_state':
+      _$RecipeComparisonCandidatePublicationStateEnumEnumMap[instance
+          .publicationState]!,
   'recipe_id': instance.recipeId,
   'rules_version': ?instance.rulesVersion,
   'version_number': instance.versionNumber,
@@ -261,4 +288,11 @@ const _$RecipeComparisonCandidateConclusionEnumEnumMap = {
   RecipeComparisonCandidateConclusionEnum.minorOnly: 'minor_only',
   RecipeComparisonCandidateConclusionEnum.general: 'general',
   RecipeComparisonCandidateConclusionEnum.significant: 'significant',
+};
+
+const _$RecipeComparisonCandidatePublicationStateEnumEnumMap = {
+  RecipeComparisonCandidatePublicationStateEnum.draft: 'draft',
+  RecipeComparisonCandidatePublicationStateEnum.published: 'published',
+  RecipeComparisonCandidatePublicationStateEnum.pendingVerification:
+      'pending_verification',
 };

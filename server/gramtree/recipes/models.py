@@ -47,12 +47,15 @@ class Recipe(Base):
     dish_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("dishes.id"), index=True)
     owner_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"), index=True)
     visibility: Mapped[str] = mapped_column(String(16), default="private")
+    ever_public: Mapped[bool] = mapped_column(default=False)
+    withdrawn: Mapped[bool] = mapped_column(default=False)
+    lifecycle_sequence: Mapped[int] = mapped_column(Integer, default=0)
     current_version_id: Mapped[uuid.UUID | None] = mapped_column(
         ForeignKey("recipe_versions.id", ondelete="SET NULL"), default=None
     )
     # 为后续公开改良版预留；本阶段始终为空且只允许私有菜谱。
     source_version_id: Mapped[uuid.UUID | None] = mapped_column(
-        ForeignKey("recipe_versions.id", ondelete="SET NULL"), default=None
+        ForeignKey("recipe_versions.id", ondelete="RESTRICT"), default=None
     )
     root_recipe_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("recipes.id"), default=None)
     created_at: Mapped[datetime] = mapped_column(default=utcnow)
@@ -94,6 +97,55 @@ class RecipeVersion(Base):
     change_note: Mapped[str] = mapped_column(Text, default="")
     ai_assisted: Mapped[bool] = mapped_column(default=False)
     created_at: Mapped[datetime] = mapped_column(default=utcnow)
+
+
+class RecipePublication(Base):
+    """Mutable publication projection, separate from the immutable version snapshot."""
+
+    __tablename__ = "recipe_publications"
+
+    version_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("recipe_versions.id", ondelete="CASCADE"), primary_key=True
+    )
+    state: Mapped[str] = mapped_column(String(32), default="draft", index=True)
+    published_at: Mapped[datetime | None] = mapped_column(default=None)
+    verified_at: Mapped[datetime | None] = mapped_column(default=None)
+    verification_record_id: Mapped[uuid.UUID | None] = mapped_column(default=None)
+    derived_record_id: Mapped[uuid.UUID | None] = mapped_column(default=None)
+    baseline_version_id: Mapped[uuid.UUID | None] = mapped_column(default=None)
+    baseline_record_id: Mapped[uuid.UUID | None] = mapped_column(default=None)
+    cumulative_conclusion: Mapped[str | None] = mapped_column(String(16), default=None)
+    rules_version: Mapped[str | None] = mapped_column(String(64), default=None)
+    risk_confirmed_rules_version: Mapped[str | None] = mapped_column(String(64), default=None)
+    review_level: Mapped[str] = mapped_column(String(16), default="standard")
+    eligibility: Mapped[dict[str, Any]] = mapped_column(JSONB, default=dict)
+
+
+class RecipePublicationNotice(Base):
+    """One durable in-App notification per first publication of an exact version."""
+
+    __tablename__ = "recipe_publication_notices"
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=new_id)
+    owner_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
+    recipe_id: Mapped[uuid.UUID] = mapped_column()
+    version_id: Mapped[uuid.UUID] = mapped_column(unique=True)
+    version_number: Mapped[int] = mapped_column(Integer)
+    title: Mapped[str] = mapped_column(String(200))
+    created_at: Mapped[datetime] = mapped_column(default=utcnow)
+    seen_at: Mapped[datetime | None] = mapped_column(default=None)
+
+
+class RecipePublicationLicense(Base):
+    """Account-wide license explanation display receipt, not a consent gate."""
+
+    __tablename__ = "recipe_publication_licenses"
+
+    owner_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), primary_key=True
+    )
+    created_at: Mapped[datetime] = mapped_column(default=utcnow)
+    seen_at: Mapped[datetime | None] = mapped_column(default=None)
 
 
 class RecipeComparisonCache(Base):

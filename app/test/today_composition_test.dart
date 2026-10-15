@@ -33,6 +33,7 @@ void main() {
       'recipe_steps',
       'recipe_card',
       'source_demo',
+      'source_attribution',
       'scenario_summary',
       'scenario_difference',
       'failure_reminder',

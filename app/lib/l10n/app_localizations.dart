@@ -94,6 +94,509 @@ abstract class AppLocalizations {
   /// A list of this localizations delegate's supported locales.
   static const List<Locale> supportedLocales = <Locale>[Locale('zh')];
 
+  /// No description provided for @publicationPublished.
+  ///
+  /// In zh, this message translates to:
+  /// **'已公开'**
+  String get publicationPublished;
+
+  /// No description provided for @publicationPending.
+  ///
+  /// In zh, this message translates to:
+  /// **'已公开 · 待验证'**
+  String get publicationPending;
+
+  /// No description provided for @publicationWithdrawn.
+  ///
+  /// In zh, this message translates to:
+  /// **'已下架'**
+  String get publicationWithdrawn;
+
+  /// No description provided for @publicationDraft.
+  ///
+  /// In zh, this message translates to:
+  /// **'草稿 · 仅自己可见'**
+  String get publicationDraft;
+
+  /// No description provided for @publicationLoadError.
+  ///
+  /// In zh, this message translates to:
+  /// **'公开状态暂时无法读取，请联网重试。'**
+  String get publicationLoadError;
+
+  /// No description provided for @publicationMutationError.
+  ///
+  /// In zh, this message translates to:
+  /// **'操作未确认，请联网重试。'**
+  String get publicationMutationError;
+
+  /// No description provided for @publicationRiskTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'公开高风险菜谱前请确认'**
+  String get publicationRiskTitle;
+
+  /// No description provided for @publicationRiskBody.
+  ///
+  /// In zh, this message translates to:
+  /// **'这道菜包含高风险食材或做法。请核对食品安全提示；公开后会接受更严格的审核。确认不代表安全风险已消除。'**
+  String get publicationRiskBody;
+
+  /// No description provided for @publicationRiskLater.
+  ///
+  /// In zh, this message translates to:
+  /// **'暂不确认'**
+  String get publicationRiskLater;
+
+  /// No description provided for @publicationRiskConfirm.
+  ///
+  /// In zh, this message translates to:
+  /// **'我已了解风险'**
+  String get publicationRiskConfirm;
+
+  /// No description provided for @publicationRestoreTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'重新上架菜谱？'**
+  String get publicationRestoreTitle;
+
+  /// No description provided for @publicationWithdrawTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'下架菜谱？'**
+  String get publicationWithdrawTitle;
+
+  /// No description provided for @publicationRestoreBody.
+  ///
+  /// In zh, this message translates to:
+  /// **'仅恢复符合条件的公开版本，草稿仍仅自己可见。'**
+  String get publicationRestoreBody;
+
+  /// No description provided for @publicationWithdrawBody.
+  ///
+  /// In zh, this message translates to:
+  /// **'别人将无法打开此菜谱；已有改良版来源署名和做菜记录仍保留。公开过的菜谱不能删除。'**
+  String get publicationWithdrawBody;
+
+  /// No description provided for @publicationRestore.
+  ///
+  /// In zh, this message translates to:
+  /// **'重新上架'**
+  String get publicationRestore;
+
+  /// No description provided for @publicationWithdraw.
+  ///
+  /// In zh, this message translates to:
+  /// **'下架'**
+  String get publicationWithdraw;
+
+  /// No description provided for @publicationWithdrawRecipe.
+  ///
+  /// In zh, this message translates to:
+  /// **'下架菜谱'**
+  String get publicationWithdrawRecipe;
+
+  /// No description provided for @publicationReview.
+  ///
+  /// In zh, this message translates to:
+  /// **'正在等待审核；审核通过后会自动更新公开状态。'**
+  String get publicationReview;
+
+  /// No description provided for @publicationBasis.
+  ///
+  /// In zh, this message translates to:
+  /// **'公开条件由服务端检查，离线做完后需先同步。'**
+  String get publicationBasis;
+
+  /// No description provided for @publicationComparisonBasis.
+  ///
+  /// In zh, this message translates to:
+  /// **'和最近一次做过验证的版本比较：{conclusion}；规则 {rules}'**
+  String publicationComparisonBasis(String conclusion, String rules);
+
+  /// No description provided for @publicationUndetermined.
+  ///
+  /// In zh, this message translates to:
+  /// **'未判定'**
+  String get publicationUndetermined;
+
+  /// No description provided for @publicationDraftConditions.
+  ///
+  /// In zh, this message translates to:
+  /// **'做过后会自动公开；还需满足以下公开条件。'**
+  String get publicationDraftConditions;
+
+  /// No description provided for @publicationConditionCount.
+  ///
+  /// In zh, this message translates to:
+  /// **'{label}（{count} 处）'**
+  String publicationConditionCount(String label, int count);
+
+  /// No description provided for @publicationRiskGuidance.
+  ///
+  /// In zh, this message translates to:
+  /// **'高风险菜谱 · 公开前请核对安全提示，并确认风险。'**
+  String get publicationRiskGuidance;
+
+  /// No description provided for @publicationRefresh.
+  ///
+  /// In zh, this message translates to:
+  /// **'刷新公开状态'**
+  String get publicationRefresh;
+
+  /// No description provided for @publicationCommand.
+  ///
+  /// In zh, this message translates to:
+  /// **'一句话操作'**
+  String get publicationCommand;
+
+  /// No description provided for @publicationCommandHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'刷新公开状态 / 确认公开风险 / 下架菜谱 / 重新上架'**
+  String get publicationCommandHint;
+
+  /// No description provided for @publicationUnderstood.
+  ///
+  /// In zh, this message translates to:
+  /// **'知道了'**
+  String get publicationUnderstood;
+
+  /// No description provided for @publicationMoreNotices.
+  ///
+  /// In zh, this message translates to:
+  /// **'查看下一页公开提示'**
+  String get publicationMoreNotices;
+
+  /// No description provided for @improvementChoiceBasis.
+  ///
+  /// In zh, this message translates to:
+  /// **'依据：{conclusion}；确定性规则判定，与来源精确版本比较。'**
+  String improvementChoiceBasis(String conclusion);
+
+  /// No description provided for @improvementProfileProposal.
+  ///
+  /// In zh, this message translates to:
+  /// **'拟更新口味档案第 {version} 版：'**
+  String improvementProfileProposal(String version);
+
+  /// No description provided for @improvementTasteOnly.
+  ///
+  /// In zh, this message translates to:
+  /// **'确认后只更新我的口味，不生成菜谱。'**
+  String get improvementTasteOnly;
+
+  /// No description provided for @improvementTasteUnavailable.
+  ///
+  /// In zh, this message translates to:
+  /// **'这些微调不能安全转换为口味系数，可坚持保存微调分支。'**
+  String get improvementTasteUnavailable;
+
+  /// No description provided for @improvementSaveTaste.
+  ///
+  /// In zh, this message translates to:
+  /// **'存进我的口味'**
+  String get improvementSaveTaste;
+
+  /// No description provided for @improvementSaveBranch.
+  ///
+  /// In zh, this message translates to:
+  /// **'仍然保存'**
+  String get improvementSaveBranch;
+
+  /// No description provided for @sourceChainTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'到根菜谱的来源链'**
+  String get sourceChainTitle;
+
+  /// No description provided for @sourceChainPreserved.
+  ///
+  /// In zh, this message translates to:
+  /// **'来源关系永久保留；下架来源不提供隐藏内容。'**
+  String get sourceChainPreserved;
+
+  /// No description provided for @sourceImmutableBasis.
+  ///
+  /// In zh, this message translates to:
+  /// **'保留精确来源版本，来源署名和关系不能修改或删除。'**
+  String get sourceImmutableBasis;
+
+  /// No description provided for @sourceViewChain.
+  ///
+  /// In zh, this message translates to:
+  /// **'查看来源链'**
+  String get sourceViewChain;
+
+  /// No description provided for @sourceUnavailable.
+  ///
+  /// In zh, this message translates to:
+  /// **'来源署名暂不可用 · 来源关系仍永久保留'**
+  String get sourceUnavailable;
+
+  /// No description provided for @sourceDeletedAuthor.
+  ///
+  /// In zh, this message translates to:
+  /// **'已注销用户'**
+  String get sourceDeletedAuthor;
+
+  /// No description provided for @sourceLineage.
+  ///
+  /// In zh, this message translates to:
+  /// **'改良自 @{author}《{dish}》第 {version} 版{withdrawn}'**
+  String sourceLineage(
+    String author,
+    String dish,
+    String version,
+    String withdrawn,
+  );
+
+  /// No description provided for @sourceWithdrawnSuffix.
+  ///
+  /// In zh, this message translates to:
+  /// **' · 已下架'**
+  String get sourceWithdrawnSuffix;
+
+  /// No description provided for @improvementSavedTaste.
+  ///
+  /// In zh, this message translates to:
+  /// **'已存进我的口味，没有生成改良版。'**
+  String get improvementSavedTaste;
+
+  /// No description provided for @improvementDraftGuidance.
+  ///
+  /// In zh, this message translates to:
+  /// **'改良工作副本 · 做过后会自动公开。保存前可以取消，不会生成菜谱。'**
+  String get improvementDraftGuidance;
+
+  /// No description provided for @publicationPrivateDraftGuidance.
+  ///
+  /// In zh, this message translates to:
+  /// **'草稿仅自己可见；做过后满足条件会自动公开。'**
+  String get publicationPrivateDraftGuidance;
+
+  /// No description provided for @improvementEditorCommandHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'保存改良版 / 检查可复刻性 / 定位下一处'**
+  String get improvementEditorCommandHint;
+
+  /// No description provided for @publicationEditorCommandHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'检查可复刻性 / 请求量化 / 定位下一处 / 全部接受 / 暂不处理'**
+  String get publicationEditorCommandHint;
+
+  /// No description provided for @publicationAiUnverified.
+  ///
+  /// In zh, this message translates to:
+  /// **'AI 辅助 · 尚未做过验证'**
+  String get publicationAiUnverified;
+
+  /// No description provided for @publicationAiUnsaved.
+  ///
+  /// In zh, this message translates to:
+  /// **'AI 协助生成 · 本次编辑尚未保存'**
+  String get publicationAiUnsaved;
+
+  /// No description provided for @improvementSave.
+  ///
+  /// In zh, this message translates to:
+  /// **'保存改良版'**
+  String get improvementSave;
+
+  /// No description provided for @improvementStart.
+  ///
+  /// In zh, this message translates to:
+  /// **'我来改一版'**
+  String get improvementStart;
+
+  /// No description provided for @sourceOriginalLink.
+  ///
+  /// In zh, this message translates to:
+  /// **'原始来源：{link}'**
+  String sourceOriginalLink(String link);
+
+  /// No description provided for @sourceAiAuthor.
+  ///
+  /// In zh, this message translates to:
+  /// **'AI 协助生成 · 发起作者 @{author}'**
+  String sourceAiAuthor(String author);
+
+  /// No description provided for @sourceAuthor.
+  ///
+  /// In zh, this message translates to:
+  /// **'作者 @{author}'**
+  String sourceAuthor(String author);
+
+  /// No description provided for @publicationAiBasis.
+  ///
+  /// In zh, this message translates to:
+  /// **'AI 参与配方设计；公开验证状态见本版状态。'**
+  String get publicationAiBasis;
+
+  /// No description provided for @cookingAdjustmentTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'记录临时调整'**
+  String get cookingAdjustmentTitle;
+
+  /// No description provided for @cookingAdjustmentType.
+  ///
+  /// In zh, this message translates to:
+  /// **'调整类型'**
+  String get cookingAdjustmentType;
+
+  /// No description provided for @cookingAdjustmentNote.
+  ///
+  /// In zh, this message translates to:
+  /// **'文字备注'**
+  String get cookingAdjustmentNote;
+
+  /// No description provided for @cookingAdjustmentQuantity.
+  ///
+  /// In zh, this message translates to:
+  /// **'实际食材用量'**
+  String get cookingAdjustmentQuantity;
+
+  /// No description provided for @cookingAdjustmentDuration.
+  ///
+  /// In zh, this message translates to:
+  /// **'本步实际时长'**
+  String get cookingAdjustmentDuration;
+
+  /// No description provided for @cookingAdjustmentIngredient.
+  ///
+  /// In zh, this message translates to:
+  /// **'食材'**
+  String get cookingAdjustmentIngredient;
+
+  /// No description provided for @cookingActualQuantity.
+  ///
+  /// In zh, this message translates to:
+  /// **'实际用量（原单位）'**
+  String get cookingActualQuantity;
+
+  /// No description provided for @cookingActualDuration.
+  ///
+  /// In zh, this message translates to:
+  /// **'实际时长（秒）'**
+  String get cookingActualDuration;
+
+  /// No description provided for @cookingAdjustmentHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'例如：少放一点盐'**
+  String get cookingAdjustmentHint;
+
+  /// No description provided for @cookingAdjustmentExactGuidance.
+  ///
+  /// In zh, this message translates to:
+  /// **'文字备注会完整保留；要从记录保存精确做法，请填写实际用量或时长。'**
+  String get cookingAdjustmentExactGuidance;
+
+  /// No description provided for @cookingAdjustmentNoteRequired.
+  ///
+  /// In zh, this message translates to:
+  /// **'请填写备注'**
+  String get cookingAdjustmentNoteRequired;
+
+  /// No description provided for @cookingAdjustmentNumberRequired.
+  ///
+  /// In zh, this message translates to:
+  /// **'请填写范围内的非负数值'**
+  String get cookingAdjustmentNumberRequired;
+
+  /// No description provided for @cookingCompletedDish.
+  ///
+  /// In zh, this message translates to:
+  /// **'已完成 {dish}'**
+  String cookingCompletedDish(String dish);
+
+  /// No description provided for @cookingPublicationSyncGuidance.
+  ///
+  /// In zh, this message translates to:
+  /// **'完成记录联网同步后，服务端会检查公开条件。'**
+  String get cookingPublicationSyncGuidance;
+
+  /// No description provided for @recordSavedVersion.
+  ///
+  /// In zh, this message translates to:
+  /// **'已存为我的新一版；公开状态以服务端同步结果为准。'**
+  String get recordSavedVersion;
+
+  /// No description provided for @recordSavedImprovement.
+  ///
+  /// In zh, this message translates to:
+  /// **'已存成改良版；公开状态以服务端同步结果为准。'**
+  String get recordSavedImprovement;
+
+  /// No description provided for @recordCookingTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'做菜记录'**
+  String get recordCookingTitle;
+
+  /// No description provided for @recordSnapshotGuidance.
+  ///
+  /// In zh, this message translates to:
+  /// **'当时显示的内容快照；来源下架后仍可回看。'**
+  String get recordSnapshotGuidance;
+
+  /// No description provided for @recordSnapshotVersion.
+  ///
+  /// In zh, this message translates to:
+  /// **'第 {version} 版 · @{author}'**
+  String recordSnapshotVersion(int version, String author);
+
+  /// No description provided for @recordNoSnapshot.
+  ///
+  /// In zh, this message translates to:
+  /// **'这条记录没有保留配方快照。'**
+  String get recordNoSnapshot;
+
+  /// No description provided for @recordUnnamedRecipe.
+  ///
+  /// In zh, this message translates to:
+  /// **'未命名菜谱'**
+  String get recordUnnamedRecipe;
+
+  /// No description provided for @recordCookingMode.
+  ///
+  /// In zh, this message translates to:
+  /// **'做菜模式'**
+  String get recordCookingMode;
+
+  /// No description provided for @recordManual.
+  ///
+  /// In zh, this message translates to:
+  /// **'手动记录'**
+  String get recordManual;
+
+  /// No description provided for @recordHasAdjustments.
+  ///
+  /// In zh, this message translates to:
+  /// **'有临时调整'**
+  String get recordHasAdjustments;
+
+  /// No description provided for @recordSaving.
+  ///
+  /// In zh, this message translates to:
+  /// **'正在保存…'**
+  String get recordSaving;
+
+  /// No description provided for @recordSaveVersion.
+  ///
+  /// In zh, this message translates to:
+  /// **'存为我的新一版'**
+  String get recordSaveVersion;
+
+  /// No description provided for @recordSaveImprovement.
+  ///
+  /// In zh, this message translates to:
+  /// **'存成改良版'**
+  String get recordSaveImprovement;
+
   /// No description provided for @familyTitle.
   ///
   /// In zh, this message translates to:
@@ -2669,7 +3172,7 @@ abstract class AppLocalizations {
   /// No description provided for @recipeEditAction.
   ///
   /// In zh, this message translates to:
-  /// **'我来改一版'**
+  /// **'编辑我的菜谱'**
   String get recipeEditAction;
 
   /// No description provided for @recipeBaseOnVersion.

@@ -11,6 +11,19 @@ import '../observability/crash_reporting.dart';
 import '../privacy/consent.dart';
 import 'event_queue.dart';
 
+/// Refresh mounted publication notices only after the server confirms a record.
+/// Offline enqueue alone cannot establish publication or show the first license.
+final confirmedCookingRecordRevisionProvider =
+    NotifierProvider<ConfirmedCookingRecordRevision, int>(
+      ConfirmedCookingRecordRevision.new,
+    );
+
+class ConfirmedCookingRecordRevision extends Notifier<int> {
+  @override
+  int build() => 0;
+  void confirmed() => state++;
+}
+
 final eventUploaderProvider = Provider<EventUploader>((ref) {
   final uploader = EventUploader(ref);
   final session = ref.read(sessionStoreProvider);
@@ -350,6 +363,12 @@ class EventUploader {
                 confirmedAt: confirmedAt,
               );
               byId[entry.write.id] = entry.change(state: WriteState.confirmed);
+              if (entry.write.writeType == 'cooking_record.create' &&
+                  _sameAccount(owner, epoch)) {
+                _ref
+                    .read(confirmedCookingRecordRevisionProvider.notifier)
+                    .confirmed();
+              }
               progressed = true;
             case WriteResultStatusEnum.deferred_:
               final wait = _retryAt(entry.attempts);

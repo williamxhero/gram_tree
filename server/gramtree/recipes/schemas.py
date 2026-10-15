@@ -469,6 +469,34 @@ class RecipeCreate(RecipeSnapshotInput):
 
 
 class RecipeVersionCreate(RecipeSnapshotInput):
+    @model_validator(mode="before")
+    @classmethod
+    def reject_server_facts(cls, value: Any) -> Any:
+        # Legacy clients send harmless creation fields with a version snapshot.
+        # Keep ignoring those, but reject attempts to supply immutable ancestry
+        # or server-owned publication facts explicitly.
+        protected = {
+            "source_version_id",
+            "source_recipe_id",
+            "root_recipe_id",
+            "source_path",
+            "source_attribution",
+            "branch_type",
+            "publication_state",
+            "visibility",
+            "ever_public",
+            "withdrawn",
+            "verification_record_id",
+            "derived_record_id",
+            "baseline_record_id",
+            "verified_at",
+            "published_at",
+            "eligibility",
+        }
+        if isinstance(value, dict) and protected.intersection(value):
+            raise ValueError("来源关系和公开事实只能由服务端登记")
+        return value
+
     snapshot: RecipeSnapshot
     change_note: str = Field(default="", max_length=2000)
     ai_assisted: bool = False
@@ -546,6 +574,7 @@ class RecipeImageStagedOut(BaseModel):
 
 
 class RecipeVersionOut(BaseModel):
+    publication_state: Literal["draft", "published", "pending_verification"] = "draft"
     id: IdV4
     version_number: int
     previous_version_id: IdV4 | None = None
@@ -565,13 +594,18 @@ class RecipeVersionOut(BaseModel):
 
 
 class RecipeDetail(BaseModel):
+    ever_public: bool = False
+    withdrawn: bool = False
+    source_attribution: dict[str, Any] | None = None
+    license: str = "菜谱内容按 CC BY-NC-SA 4.0 共享；成品图版权归上传者。"
+    source_links: list[str] = Field(default_factory=list)
     # Viewer defaults live outside the immutable author snapshot.
     default_servings: int | None = None
     taste_profile_version: int | None = None
     id: IdV4
     dish: DishOut
     author: RecipeAuthor
-    visibility: Literal["private"]
+    visibility: Literal["private", "public"]
     source_version_id: IdV4 | None = None
     root_recipe_id: IdV4 | None = None
     created_at: Timestamp
@@ -635,6 +669,7 @@ class PersonalizedStepOut(BaseModel):
 
 
 class RecipePersonalizedOut(BaseModel):
+    execution_token: str | None = None
     recipe_id: IdV4
     version_id: IdV4
     view: Literal["personalized", "original"]
@@ -656,6 +691,7 @@ class RecipePersonalizedOut(BaseModel):
 
 
 class RecipeVersionSummary(BaseModel):
+    publication_state: Literal["draft", "published", "pending_verification"] = "draft"
     id: IdV4
     version_number: int
     previous_version_id: IdV4 | None = None
@@ -685,7 +721,7 @@ class RecipeVersionHistory(BaseModel):
 class RecipeListItem(BaseModel):
     id: IdV4
     dish: DishOut
-    visibility: Literal["private"]
+    visibility: Literal["private", "public"]
     version_number: int
     servings: int
     difficulty: str | None = None
