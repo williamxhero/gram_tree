@@ -25,6 +25,14 @@ String accessTokenOf(ProviderContainer container, {Dio? server}) {
   return session.accessToken;
 }
 
+Future<int> recipeSavedFactCount(Dio server, String token) async =>
+    (await server.get<Map<String, dynamic>>(
+          '/v1/dev/events/count',
+          queryParameters: {'event_type': 'recipe.version_saved'},
+          options: Options(headers: {'Authorization': 'Bearer $token'}),
+        )).data!['count']
+        as int;
+
 /// Independent HTTP observers retain each login's full credential. Selecting a
 /// bearer never substitutes the App's current account or its offline transport.
 Map<String, dynamic> registerProbeSession(

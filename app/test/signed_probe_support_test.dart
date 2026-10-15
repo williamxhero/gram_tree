@@ -84,14 +84,6 @@ TokenPair _login(String owner, String generation) => TokenPair(
   user: UserOut.fromJson({...testUser().toJson(), 'id': owner}),
 );
 
-Future<int> _recipeSavedFactCount(Dio server, String token) async =>
-    (await server.get<Map<String, dynamic>>(
-          '/v1/dev/events/count',
-          queryParameters: {'event_type': 'recipe.version_saved'},
-          options: Options(headers: {'Authorization': 'Bearer $token'}),
-        )).data!['count']
-        as int;
-
 void main() {
   test(
     'business count observer follows persisted restore and A/B/A relogin',
@@ -124,12 +116,12 @@ void main() {
         restored.current!,
         deviceId: 'probe-device',
       );
-      expect(await _recipeSavedFactCount(server, 'probe-a1'), 2);
+      expect(await support.recipeSavedFactCount(server, 'probe-a1'), 2);
       for (final login in [_login('owner-b', 'b'), _login('owner-a', 'a2')]) {
         await restored.clear();
         await restored.save(login);
         final token = support.accessTokenOf(container, server: server);
-        expect(await _recipeSavedFactCount(server, token), 2);
+        expect(await support.recipeSavedFactCount(server, token), 2);
       }
       expect(adapter.received, [
         'Bearer probe-a1',
@@ -137,7 +129,7 @@ void main() {
         'Bearer probe-a2',
       ]);
       // Selecting a new account must not replace an explicitly captured bearer.
-      expect(await _recipeSavedFactCount(server, 'probe-a1'), 2);
+      expect(await support.recipeSavedFactCount(server, 'probe-a1'), 2);
       expect(adapter.received.last, 'Bearer probe-a1');
     },
   );
@@ -159,7 +151,7 @@ void main() {
     support.devServer.httpClientAdapter = adapter;
     addTearDown(() => support.devServer.httpClientAdapter = original);
     final token = support.accessTokenOf(container);
-    expect(await _recipeSavedFactCount(support.devServer, token), 2);
+    expect(await support.recipeSavedFactCount(support.devServer, token), 2);
     expect(adapter.received, ['Bearer probe-default']);
   });
 }

@@ -14,6 +14,9 @@ import 'package:gram_tree/network/reachability.dart';
 import 'package:integration_test/integration_test.dart';
 
 import 'event_pipeline_support.dart' as support;
+import 'signed_probe_support.dart' show recipeSavedFactCount;
+
+export 'signed_probe_support.dart' show recipeSavedFactCount;
 
 const editedInstruction = '搅拌均匀后静置 3 分钟';
 
@@ -21,14 +24,6 @@ void acceptanceStep(String step) {
   final binding = IntegrationTestWidgetsFlutterBinding.instance;
   binding.reportData = {...?binding.reportData, 'e2e_step': step};
 }
-
-Future<int> recipeSavedFactCount(Dio server, String token) async =>
-    (await server.get<Map<String, dynamic>>(
-          '/v1/dev/events/count',
-          queryParameters: {'event_type': 'recipe.version_saved'},
-          options: authorization(token),
-        )).data!['count']
-        as int;
 
 /// Outage affects health too: real online health probes remain unchanged.
 class AcceptanceOutageProbe implements ApiReachabilityProbe {
