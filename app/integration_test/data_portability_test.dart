@@ -37,7 +37,7 @@ void main() {
     await tapText(tester, '我的');
     await waitFor(tester, find.text('设置'));
     await tapText(tester, '设置');
-    await tapText(tester, '导出我的数据');
+    await tapPortabilitySettingsItem(tester, '导出我的数据');
     expect(
       tester
           .widget<FilledButton>(
@@ -161,7 +161,7 @@ void main() {
 
     await tapText(tester, '我的');
     await tapText(tester, '设置');
-    await tapText(tester, '注销账号');
+    await tapPortabilitySettingsItem(tester, '注销账号');
     await tapText(tester, '发送验证码');
     await waitFor(tester, find.byKey(const ValueKey('code-input')));
     await tester.enterText(

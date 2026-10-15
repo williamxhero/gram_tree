@@ -8,6 +8,7 @@ import 'package:gram_tree/auth/session.dart';
 import 'package:gram_tree/features/me/export_data_page.dart';
 
 import 'helpers.dart';
+import 'integration_navigation.dart' as integration;
 import 'settings_test.dart' show openSettings;
 
 const _jobId = 'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee';
@@ -64,6 +65,29 @@ Future<void> openExport(WidgetTester tester) async {
 }
 
 void main() {
+  for (final item in ['导出我的数据', '注销账号']) {
+    testWidgets('端到端设置导航：手机视口可打开未构建的$item', (tester) async {
+      await pumpApp(tester, size: const Size(360, 640));
+      await integration.tapText(tester, '我的');
+      expect(find.text('设置'), findsOneWidget);
+      await integration.tapText(tester, '设置');
+      // The real lazy settings list has not built the target at phone height.
+      expect(find.text(item), findsNothing);
+
+      await integration.tapPortabilitySettingsItem(tester, item);
+
+      expect(find.text('发送验证码'), findsOneWidget);
+      if (item == '导出我的数据') {
+        expect(find.text('把自己的味谱带走'), findsOneWidget);
+        expect(find.byKey(const ValueKey('export-start')), findsOneWidget);
+      } else {
+        expect(find.text('先确认是你本人'), findsOneWidget);
+        expect(find.byKey(const ValueKey('delete-confirm')), findsNothing);
+      }
+      expect(tester.takeException(), isNull);
+    });
+  }
+
   testWidgets('导出：重新验证、后台进度、完成提醒和登录下载系统保存', (tester) async {
     final server = FakeServer();
     String? status;
