@@ -92,7 +92,7 @@ Future<void> _back(WidgetTester tester) =>
 Future<void> _openRecipe(WidgetTester tester) async {
   await _tap(tester, find.text(_dish).last);
   await _wait(tester, _key('recipe-detail-content'));
-  await _wait(tester, _key('scenario-detail-brief'));
+  await _reveal(tester, _key('scenario-detail-brief'));
 }
 
 Map<String, dynamic> _recipeInput() => {

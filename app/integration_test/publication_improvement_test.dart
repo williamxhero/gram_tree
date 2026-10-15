@@ -8,6 +8,7 @@ import 'package:gram_tree/main.dart' as app;
 import 'package:gramtree_api/gramtree_api.dart';
 import 'package:integration_test/integration_test.dart';
 
+import '../test/cooking_controls_support.dart';
 import 'event_pipeline_support.dart' show containerOf, resetLocalAppState;
 
 void main() {
@@ -185,10 +186,16 @@ void main() {
         await reveal(tester, key('draft-auto-public'));
         expect(find.textContaining('做过后会自动公开'), findsWidgets);
         await tap(tester, key('publication-condition-not_cooked'));
+        await ready(tester, find.byTooltip('暂离'));
+        await revealCookingControl(tester, find.text('开始第一步'));
         await ready(tester, find.text('开始第一步'));
-        await tap(tester, find.text('开始第一步'));
+        await tester.tap(find.text('开始第一步').hitTestable());
+        await tester.pumpAndSettle();
+        await revealCookingControl(tester, key('cooking-action'));
         await ready(tester, key('cooking-action'));
-        await tap(tester, find.text('完成'));
+        await revealCookingControl(tester, find.text('完成'));
+        await tester.tap(find.text('完成').hitTestable());
+        await tester.pumpAndSettle();
         await ready(tester, key('cooking-complete'));
         await ready(tester, key('publication-license-notice'));
         expect(find.textContaining('CC BY-NC-SA 4.0'), findsWidgets);

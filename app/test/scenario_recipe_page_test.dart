@@ -8,6 +8,7 @@ import 'package:gramtree_api/gramtree_api.dart';
 
 import 'allergies_page_test.dart' show allergyFixture;
 import 'helpers.dart';
+import 'publication_panel_test.dart' show panelFixture;
 import 'taste_profile_page_test.dart' show profileFixture;
 
 const _recipeId = '11111111-1111-4111-8111-111111111111';
@@ -355,8 +356,17 @@ Future<void> _pump(WidgetTester tester, {bool advanceTime = true}) async {
   }
 }
 
-Future<void> _open(WidgetTester tester, FakeServer server) async {
-  await pumpApp(tester, env: TestEnv.signedIn(server: server), settle: false);
+Future<void> _open(
+  WidgetTester tester,
+  FakeServer server, {
+  Size size = const Size(360, 780),
+}) async {
+  await pumpApp(
+    tester,
+    env: TestEnv.signedIn(server: server),
+    size: size,
+    settle: false,
+  );
   await _pump(tester);
   ProviderScope.containerOf(tester.element(find.byType(Scaffold).first))
       .read(routerProvider)
@@ -399,6 +409,43 @@ Future<void> _sourcePanel(WidgetTester tester, String id) =>
     _tap(tester, find.descendant(of: _key(id), matching: find.text('按场景调整')));
 
 void main() {
+  testWidgets(
+    'phone reveals lazy scenario controls below populated publication panel',
+    (tester) async {
+      final server = _server();
+      server.on(
+        'GET',
+        '/v1/recipes/$_recipeId/publication',
+        (_) => (
+          200,
+          panelFixture(
+            missing: [
+              {
+                'code': 'not_cooked',
+                'label': '做过后会自动公开',
+                'action': 'start_cooking',
+              },
+              {
+                'code': 'identity',
+                'label': '请先完成实名验证',
+                'action': 'verify_identity',
+              },
+            ],
+          ),
+        ),
+      );
+      await _open(tester, server, size: const Size(320, 480));
+      expect(_key('publication-panel'), findsOneWidget);
+      await _pump(tester);
+      expect(_key('scenario-detail-brief'), findsNothing);
+      await _reveal(tester, _key('scenario-detail-brief'));
+      await _tap(tester, _key('scenario-detail-brief'));
+      await _reveal(tester, find.text('常做这道菜，先看本次变化'));
+      expect(server.calls('PUT', '/v1/ui/preferences'), isEmpty);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
   testWidgets('第一次做展开步骤，页面临时简洁不写默认设置，重新打开恢复详细', (tester) async {
     final server = _server();
     await _open(tester, server);
