@@ -15,8 +15,9 @@ from tests.test_recipe_reproducibility import draft
 
 
 @pytest.mark.parametrize("original", ["0", "0.0"], ids=["web", "native"])
+@pytest.mark.parametrize("empty_text", ["", None], ids=["legacy-empty", "editor-unset"])
 def test_native_and_web_corpus_materializes_a_real_saved_recipe_proposal(
-    quantification_api, original
+    quantification_api, original, empty_text
 ):
     api, directory = quantification_api
     root = Path(__file__).resolve().parents[2]
@@ -30,6 +31,10 @@ def test_native_and_web_corpus_materializes_a_real_saved_recipe_proposal(
     # RecipeIngredientDraft's double.toString() is "0" on web and "0.0"
     # natively. That author evidence survives the save-before-quantify round trip.
     corpus["recipe"]["snapshot"]["ingredients"][0]["quantity_source"]["original"] = original
+    if empty_text is None:
+        # The current editor omits blank optional text rather than sending "".
+        for field in ("difficulty", "dish_type"):
+            corpus["recipe"]["snapshot"].pop(field)
     headers = bearer(api.login("quantification-platform-corpus@example.com"))
     created_response = api.client.post("/v1/recipes", headers=headers, json=corpus["recipe"])
     assert created_response.status_code == 201, created_response.text

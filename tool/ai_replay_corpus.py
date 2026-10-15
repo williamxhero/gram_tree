@@ -119,6 +119,11 @@ def main() -> None:
             source.original = str(ingredient.quantity)
     if native_snapshot != snapshot:
         snapshots.append(native_snapshot)
+    # Current forms omit blank optional text; keep legacy empty-string recordings too.
+    snapshots.extend(
+        snapshot.model_copy(update={"difficulty": None, "dish_type": None}, deep=True)
+        for snapshot in list(snapshots)
+    )
     for snapshot in snapshots:
         records.append(
             (
@@ -191,14 +196,15 @@ def main() -> None:
         ingredient.scaling_mode = "proportional"
         ingredient.ingredient_id = None
     # Generation previews retain model provenance; first saves also normalize
-    # missing author sources. The editor serializes unset difficulty as "",
-    # so register that exact saved input without weakening semantic replay keys.
+    # missing author sources. Register both legacy empty text and current omitted
+    # difficulty without weakening semantic replay keys.
     saved_modification_snapshot = normalize_sources(draft.recipe.snapshot)
     editor_modification_snapshot = editor_snapshot(saved_modification_snapshot)
     modification_snapshots = [
         draft.recipe.snapshot,
         saved_modification_snapshot,
         editor_modification_snapshot,
+        editor_modification_snapshot.model_copy(update={"difficulty": None}, deep=True),
     ]
     records.append(("modify_intent", {"text": modification["text"]}, modification["intent"]))
     for modification_snapshot in modification_snapshots:
@@ -288,16 +294,16 @@ def main() -> None:
         )
         manual = modification_snapshot.model_copy(deep=True)
         manual.steps[0].instruction = "鸡腿肉切成大小一致的两厘米丁"
-        # Editing the existing form serializes an unset difficulty as empty text.
-        manual.difficulty = ""
-        for baseline in [saved_modification_snapshot, editor_modification_snapshot]:
-            records.append(
-                (
-                    "change_explanation",
-                    {"operations": facts(_operations(baseline, manual))},
-                    {"change_note": "写清鸡肉切丁大小。", "tags": ["步骤更清楚"]},
+        for difficulty in ("", None):
+            manual.difficulty = difficulty
+            for baseline in modification_snapshots[1:]:
+                records.append(
+                    (
+                        "change_explanation",
+                        {"operations": facts(_operations(baseline, manual))},
+                        {"change_note": "写清鸡肉切丁大小。", "tags": ["步骤更清楚"]},
+                    )
                 )
-            )
     method = json.loads(
         (ROOT / "server/tests/fixtures/ai/method_modification_corpus.json").read_text("utf-8")
     )
@@ -335,7 +341,15 @@ def main() -> None:
     method_editor = editor_snapshot(method_saved)
     scenarios = [
         (method["time"], modification_snapshots),
-        (method["difficulty"], [method_raw.recipe.snapshot, method_saved, method_editor]),
+        (
+            method["difficulty"],
+            [
+                method_raw.recipe.snapshot,
+                method_saved,
+                method_editor,
+                method_editor.model_copy(update={"difficulty": None}, deep=True),
+            ],
+        ),
     ]
     for scenario, scenario_snapshots in scenarios:
         records.append(("modify_intent", {"text": scenario["text"]}, scenario["intent"]))
