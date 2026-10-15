@@ -211,7 +211,9 @@ Future<Map<String, dynamic>> seedOfflineBusinessWrites(
   await tester.tap(find.text('验收量勺'));
   await support.waitFor(tester, find.byKey(const ValueKey('measure-capacity')));
   await tester.enterText(find.byKey(const ValueKey('measure-capacity')), '22');
-  await tester.tap(find.byKey(const ValueKey('measure-save')));
+  final measureSave = find.byKey(const ValueKey('measure-save'));
+  await revealAcceptance(tester, measureSave);
+  await tester.tap(measureSave);
   await support.waitFor(tester, find.textContaining('22'));
   expect(find.text('待同步'), findsWidgets);
   final queue = container.read(eventQueueProvider);
