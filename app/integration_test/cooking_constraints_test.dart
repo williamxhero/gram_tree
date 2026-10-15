@@ -13,9 +13,27 @@ void main() {
 
   var lastTarget = 'startup';
 
-  Future<void> waitFor(WidgetTester tester, Finder finder) async {
+  Future<void> waitFor(
+    WidgetTester tester,
+    Finder finder, {
+    bool scrollProfile = false,
+  }) async {
     lastTarget = 'wait for $finder';
     for (var i = 0; i < 300 && finder.evaluate().isEmpty; i++) {
+      if (scrollProfile) {
+        // Mutations reload the profile and replace its lazy list. Reacquire it
+        // rather than waiting below the card revealed before the refresh.
+        final scrollable = find.descendant(
+          of: find.byKey(const ValueKey('taste-profile-content')),
+          matching: find.byType(Scrollable),
+        );
+        if (scrollable.evaluate().isNotEmpty) {
+          await tester.drag(
+            scrollable.first,
+            Offset(0, i % 20 == 0 ? 5000 : -350),
+          );
+        }
+      }
       await tester.pump(const Duration(milliseconds: 100));
     }
     expect(finder, findsWidgets);
@@ -165,7 +183,7 @@ void main() {
         find.byKey(const ValueKey('taste-profile-content')),
       );
       await reveal(tester, find.byKey(const ValueKey('cooking-constraints')));
-      await waitFor(tester, find.text('人数未设置，菜谱沿用作者份数'));
+      await waitFor(tester, find.text('人数未设置，菜谱沿用作者份数'), scrollProfile: true);
       await back(tester);
       await tap(tester, 'taste-profile-entry');
       await waitFor(
@@ -173,7 +191,7 @@ void main() {
         find.byKey(const ValueKey('taste-profile-content')),
       );
       await reveal(tester, find.byKey(const ValueKey('cooking-constraints')));
-      await waitFor(tester, find.text('人数未设置，菜谱沿用作者份数'));
+      await waitFor(tester, find.text('人数未设置，菜谱沿用作者份数'), scrollProfile: true);
       expect(find.text('厨具未设置'), findsOneWidget);
       await tap(tester, 'cooking-constraints-edit', scroll: true);
       await tester.enterText(

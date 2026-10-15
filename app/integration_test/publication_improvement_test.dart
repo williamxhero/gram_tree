@@ -9,6 +9,7 @@ import 'package:gramtree_api/gramtree_api.dart';
 import 'package:integration_test/integration_test.dart';
 
 import '../test/cooking_controls_support.dart';
+import '../test/lazy_list_controls_support.dart';
 import 'event_pipeline_support.dart' show containerOf, resetLocalAppState;
 
 void main() {
@@ -41,27 +42,15 @@ void main() {
   }
 
   Future<void> reveal(WidgetTester tester, Finder finder) async {
-    tester.testTextInput.hide();
-    await tester.pump();
-    final scroll = find
-        .byWidgetPredicate(
-          (w) => w is Scrollable && w.axisDirection == AxisDirection.down,
-        )
-        .first;
-    final position = tester.state<ScrollableState>(scroll).position;
-    position.jumpTo(position.minScrollExtent);
-    for (var n = 0; n < 50 && finder.evaluate().isEmpty; n++) {
-      position.jumpTo(
-        (position.pixels + 250).clamp(
-          position.minScrollExtent,
-          position.maxScrollExtent,
-        ),
-      );
-      await tester.pump(const Duration(milliseconds: 100));
-    }
-    await ready(tester, finder);
-    await tester.ensureVisible(finder.last);
-    await tester.pumpAndSettle();
+    await revealLazyListControl(
+      tester,
+      finder,
+      scrollable: find
+          .byWidgetPredicate(
+            (w) => w is Scrollable && w.axisDirection == AxisDirection.down,
+          )
+          .first,
+    );
   }
 
   Future<void> tap(WidgetTester tester, Finder finder) async {

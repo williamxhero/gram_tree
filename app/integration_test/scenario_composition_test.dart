@@ -6,6 +6,7 @@ import 'package:integration_test/integration_test.dart';
 import 'package:gram_tree/util/ids.dart';
 
 import '../test/cooking_controls_support.dart';
+import '../test/lazy_list_controls_support.dart';
 import 'event_pipeline_support.dart'
     show accessTokenOf, containerOf, devServer, signInFreshUser;
 
@@ -36,22 +37,16 @@ Future<void> _wait(WidgetTester tester, Finder finder) async {
 }
 
 Future<void> _reveal(WidgetTester tester, Finder finder) async {
-  FocusManager.instance.primaryFocus?.unfocus();
-  if (tester.testTextInput.isRegistered) tester.testTextInput.hide();
-  final body = _key('recipe-detail-content');
-  if (finder.evaluate().isEmpty) {
-    for (var i = 0; i < 12; i++) {
-      await tester.drag(body, const Offset(0, 500));
-      await tester.pump(const Duration(milliseconds: 100));
-    }
-    for (var i = 0; i < 45 && finder.evaluate().isEmpty; i++) {
-      await tester.drag(body, const Offset(0, -250));
-      await tester.pump(const Duration(milliseconds: 100));
-    }
-  }
-  await _wait(tester, finder);
-  await tester.ensureVisible(finder.last);
-  await _pump(tester);
+  await revealLazyListControl(
+    tester,
+    finder,
+    scrollable: find
+        .descendant(
+          of: _key('recipe-detail-content'),
+          matching: find.byType(Scrollable),
+        )
+        .first,
+  );
   expect(finder.last.hitTestable(), findsOneWidget);
 }
 
