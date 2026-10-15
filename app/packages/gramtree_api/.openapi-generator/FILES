@@ -11,6 +11,7 @@ lib/src/api/analytics_api.dart
 lib/src/api/auth_api.dart
 lib/src/api/config_api.dart
 lib/src/api/events_api.dart
+lib/src/api/exports_api.dart
 lib/src/api/family_members_api.dart
 lib/src/api/health_api.dart
 lib/src/api/ingredients_api.dart
@@ -79,6 +80,9 @@ lib/src/model/cooking_record_revision_out.dart
 lib/src/model/count_unit.dart
 lib/src/model/count_units_attribute.dart
 lib/src/model/deletion_out.dart
+lib/src/model/deletion_preview.dart
+lib/src/model/deletion_public_recipe.dart
+lib/src/model/deletion_request.dart
 lib/src/model/density_attribute.dart
 lib/src/model/detail_preference.dart
 lib/src/model/dish_input.dart
@@ -96,6 +100,8 @@ lib/src/model/event_upload_response.dart
 lib/src/model/event_upload_result_item.dart
 lib/src/model/existing_choice.dart
 lib/src/model/experiment_info.dart
+lib/src/model/export_job_list.dart
+lib/src/model/export_job_view.dart
 lib/src/model/fallback_info.dart
 lib/src/model/family_allergies_out.dart
 lib/src/model/family_allergies_write.dart

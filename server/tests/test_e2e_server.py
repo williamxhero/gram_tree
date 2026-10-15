@@ -42,6 +42,7 @@ def test_e2e_bootstrap_supports_more_than_one_hundred_logins(tmp_path: Path) -> 
                     json={"email": f"acceptance-{index}@example.com", "purpose": "login"},
                 )
                 assert response.status_code == 200, response.text
+                assert response.json()["resend_after_seconds"] == 60
             # Only the daily budget is overridden, not the same-email cooldown.
             response = client.post(
                 "/v1/auth/email/code",

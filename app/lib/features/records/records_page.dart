@@ -3,17 +3,32 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gramtree_api/gramtree_api.dart';
 
 import '../../api/api_client.dart';
+import '../../auth/auth_controller.dart';
+import '../../auth/session.dart';
 import '../../widgets/empty_state.dart';
 import '../../widgets/tab_page.dart';
 
 final recordsProvider = FutureProvider.autoDispose<CookingRecordListOut>((
   ref,
 ) async {
+  final auth = ref.watch(authProvider);
+  if (auth.value == null) return CookingRecordListOut(items: const []);
+  final session = ref.read(sessionStoreProvider);
+  final identity = session.identity;
+  if (identity == null) return CookingRecordListOut(items: const []);
   try {
     final response = await ref
         .watch(apiClientProvider)
         .getRecordsApi()
-        .listRecords();
+        .listRecords(
+          extra: {
+            'auth_owner_id': identity.ownerId,
+            'auth_identity_epoch': identity.epoch,
+          },
+        );
+    if (!session.matches(identity)) {
+      return CookingRecordListOut(items: const []);
+    }
     return response.data ?? CookingRecordListOut(items: const []);
   } catch (_) {
     // Keep the tab usable while offline; completed sessions remain in the
@@ -47,7 +62,8 @@ class RecordsPage extends ConsumerWidget {
                     style: Theme.of(context).textTheme.headlineSmall,
                   ),
                   const SizedBox(height: 16),
-                  for (final record in page.items) _RecordCard(record: record),
+                  for (final record in page.items)
+                    _RecordCard(key: ValueKey(record.id), record: record),
                 ],
               ),
       ),
@@ -55,17 +71,78 @@ class RecordsPage extends ConsumerWidget {
   }
 }
 
-class _RecordCard extends StatelessWidget {
-  const _RecordCard({required this.record});
+class _RecordCard extends ConsumerStatefulWidget {
+  const _RecordCard({super.key, required this.record});
   final CookingRecordOut record;
 
   @override
+  ConsumerState<_RecordCard> createState() => _RecordCardState();
+}
+
+class _RecordCardState extends ConsumerState<_RecordCard> {
+  bool _deleting = false;
+
+  Future<void> _delete() async {
+    final session = ref.read(sessionStoreProvider);
+    final identity = session.identity;
+    if (identity == null) return;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('删除这条做菜记录？'),
+        content: const Text(
+          '记录和修订将从个人历史中删除，经验统计只保留不可关联账号的字段。此操作不可撤回，不影响其他人的记录。',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('取消'),
+          ),
+          TextButton(
+            key: const ValueKey('record-delete-confirm'),
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('删除'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted || !session.matches(identity)) return;
+    setState(() => _deleting = true);
+    try {
+      await ref
+          .read(apiClientProvider)
+          .getRecordsApi()
+          .deleteRecord(
+            recordId: widget.record.id,
+            extra: {
+              'auth_owner_id': identity.ownerId,
+              'auth_identity_epoch': identity.epoch,
+            },
+          );
+      if (mounted && session.matches(identity)) ref.invalidate(recordsProvider);
+    } catch (error) {
+      if (mounted && session.matches(identity)) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(ApiFailure.from(error).message)));
+      }
+    } finally {
+      if (mounted && session.matches(identity)) {
+        setState(() => _deleting = false);
+      }
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final record = widget.record;
     final when = DateTime.tryParse(record.occurredAt)?.toLocal();
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
       child: ListTile(
-        leading: const Icon(Icons.restaurant_outlined),
+        leading: Icon(
+          record.countsAsCooked ? Icons.check_circle_outline : Icons.edit_note,
+        ),
         title: Text(record.dishName ?? '未命名菜谱'),
         subtitle: Text(
           [
@@ -76,9 +153,12 @@ class _RecordCard extends StatelessWidget {
             if (record.adjustments.isNotEmpty) '有临时调整',
           ].join(' · '),
         ),
-        trailing: record.countsAsCooked
-            ? const Icon(Icons.check_circle_outline)
-            : const Icon(Icons.edit_note),
+        trailing: IconButton(
+          key: ValueKey('record-delete-${record.id}'),
+          tooltip: '删除记录',
+          onPressed: _deleting ? null : _delete,
+          icon: const Icon(Icons.delete_outline),
+        ),
       ),
     );
   }

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../auth/auth_controller.dart';
 import '../../auth/session.dart';
@@ -8,6 +9,7 @@ import '../../privacy/consent.dart';
 import '../../recipes/recipe_snapshot_provider.dart';
 import '../../recipes/personal_measure_repository.dart';
 import '../../widgets/page_frame.dart';
+import 'settings_page.dart';
 
 /// 撤回同意：说明已存数据怎么处理 → 确认后停止采集、退出登录、回到同意页。
 class WithdrawConsentPage extends ConsumerStatefulWidget {
@@ -64,6 +66,14 @@ class _WithdrawConsentPageState extends ConsumerState<WithdrawConsentPage> {
       content: [
         BodyText(l10n.withdrawBody),
         InfoCard(label: l10n.withdrawDataLabel, lines: [l10n.withdrawDataBody]),
+        SecondaryButton(
+          label: '先导出我的数据',
+          onPressed: _busy ? null : () => context.push(SettingsPage.export),
+        ),
+        SecondaryButton(
+          label: l10n.deleteAccount,
+          onPressed: _busy ? null : () => context.push(SettingsPage.delete),
+        ),
       ],
       actions: [
         PrimaryButton(

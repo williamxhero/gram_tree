@@ -23,6 +23,9 @@ import 'package:gram_tree/ui_protocol/composition_provider.dart';
 import 'package:gramtree_api/gramtree_api.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../test/integration_navigation.dart';
+export '../test/integration_navigation.dart';
+
 /// 直连测试环境服务端（tool/e2e_server.sh 起的 dev/test 环境），不经过 App 的
 /// Dio/拦截链——跟 app_test.dart 里 `latestCode` 用的是同一个思路：这是"测试专用
 /// 检查手段"，不是产品接口，不应该混进 App 自己的网络层。
@@ -54,16 +57,6 @@ Future<int> selfCheckEventCount(
     options: Options(headers: {'Authorization': 'Bearer $accessToken'}),
   );
   return resp.data!['count'] as int;
-}
-
-Future<void> settle(WidgetTester tester) =>
-    tester.pumpAndSettle(const Duration(milliseconds: 200));
-
-Future<void> tapText(WidgetTester tester, String text) async {
-  await tester.ensureVisible(find.text(text).last);
-  await settle(tester);
-  await tester.tap(find.text(text).last);
-  await settle(tester);
 }
 
 /// 等到 [finder] 出现（网络请求要一点时间），跟 app_test.dart 里的写法一样。

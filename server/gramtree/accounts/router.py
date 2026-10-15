@@ -150,6 +150,24 @@ class ConsentUpload(BaseModel):
     records: list[ConsentRecord] = Field(max_length=100)
 
 
+class DeletionRequest(BaseModel):
+    public_recipe_action: Literal["keep_anonymous", "withdraw"] | None = None
+
+
+class DeletionPublicRecipe(BaseModel):
+    id: IdV4
+    title: str
+    published_versions: int
+
+
+class DeletionPreview(BaseModel):
+    public_recipes: list[DeletionPublicRecipe]
+    public_recipe_action_required: bool
+    deletes: list[str]
+    retains: list[str]
+    can_export: bool
+
+
 class DeletionOut(BaseModel):
     status: Literal["active", "deleting", "deleted"]
     deletion_due_at: Timestamp | None
@@ -443,11 +461,46 @@ def upload_consents(
     )
 
 
+@me_router.get(
+    "/me/deletion",
+    response_model=DeletionPreview,
+    responses=_errors(401, 403, 409),
+    operation_id="getDeletionPreview",
+    summary="查看注销前的删除和保留说明",
+)
+def get_deletion_preview(
+    auth: CurrentAuth, session: SessionDep, clock: ClockDep
+) -> DeletionPreview:
+    from gramtree.accounts import deletion
+
+    service.require_recent_reauth(session, auth.device_session, clock())
+    deletion.require_supported_recipes(session, auth.user.id)
+    return DeletionPreview(
+        public_recipes=[],
+        public_recipe_action_required=False,
+        deletes=[
+            "登录身份、个人资料和同意记录",
+            "全部私密菜谱、版本、导入原文和照片",
+            "做菜记录、评分、原话和修订历史",
+            "口味档案、家庭成员、个人量具和 AI 内容",
+            "与账号关联的经验事件、产品埋点和同步内容",
+        ],
+        retains=[
+            "无法关联账号的按周、粗粒度经验统计",
+            "不含个人内容的注销步骤凭证",
+            "其他用户保存的当时内容不受影响",
+            "依法保留的访问和审核日志按各自期限清理",
+        ],
+        can_export=True,
+    )
+
+
 @me_router.post(
     "/me/deletion",
     response_model=DeletionOut,
     status_code=status.HTTP_202_ACCEPTED,
-    responses=_errors(401, 403),
+    operation_id="requestDeletion",
+    responses=_errors(400, 401, 403, 409),
     summary="注销账号",
     description=(
         "要求最近几分钟内重新验证过身份。成功后所有设备立即退出，账号变为注销中，"
@@ -455,7 +508,18 @@ def upload_consents(
     ),
 )
 def request_deletion(
-    auth: CurrentAuth, session: SessionDep, apple: AppleDep, clock: ClockDep
+    auth: CurrentAuth,
+    session: SessionDep,
+    apple: AppleDep,
+    clock: ClockDep,
+    body: DeletionRequest | None = None,
 ) -> DeletionOut:
-    user = service.request_deletion(session, apple, auth.user, auth.device_session, clock())
+    user = service.request_deletion(
+        session,
+        apple,
+        auth.user,
+        auth.device_session,
+        clock(),
+        public_recipe_action=body.public_recipe_action if body else None,
+    )
     return DeletionOut(status=user.status.value, deletion_due_at=user.deletion_due_at)
