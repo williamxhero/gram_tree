@@ -178,10 +178,11 @@ Future<({String email, String deviceId})> signInFreshUser(
 
 /// 当前登录用户的访问令牌，给 [devServer] 直接调用 dev-only 接口用（App 自己的
 /// Dio 走的是生产的 GramtreeApi 客户端，不应该混进测试专用的接口调用里）。
-String accessTokenOf(ProviderContainer container) {
+/// 独立恢复 harness 要传入实际 observer，重新登录后的签名凭据不能登记到另一个 Dio。
+String accessTokenOf(ProviderContainer container, {Dio? server}) {
   final session = container.read(sessionStoreProvider).current!;
   registerProbeSession(
-    devServer,
+    server ?? devServer,
     session,
     deviceId: container.read(deviceIdProvider),
   );

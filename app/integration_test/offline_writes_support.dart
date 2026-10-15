@@ -167,7 +167,7 @@ Future<Map<String, dynamic>> seedOfflineBusinessWrites(
   required String email,
 }) async {
   acceptanceStep('seed business baselines');
-  final token = support.accessTokenOf(container);
+  final token = support.accessTokenOf(container, server: server);
   final factBaseline = await recipeSavedFactCount(server, token);
   final baseline = (await server.get<Map<String, dynamic>>(
     '/v1/recipes/$recipeId/versions/$versionId',
@@ -565,7 +565,7 @@ Future<void> replayAndVerifyBusiness(
     expect(now.result, isNotNull);
     expect(now.confirmedAt, isNotNull);
   }
-  final token = support.accessTokenOf(container);
+  final token = support.accessTokenOf(container, server: server);
   await assertBusinessServerState(server, token, manifest, confirmed: true);
   final replay =
       (await server.post<Map<String, dynamic>>(
