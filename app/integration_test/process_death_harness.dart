@@ -957,7 +957,8 @@ void main() {
       failureReported = true;
       final detail = error is DioException
           ? 'DioException type=${error.type.name} '
-                'status=${error.response?.statusCode}'
+                'status=${error.response?.statusCode} '
+                'cause=${error.error == 'probe_credential_missing' ? 'probe_credential_missing' : error.error.runtimeType}'
           : error.runtimeType.toString();
       final sourceStack = _sourceStack(stack.toString());
       binding.reportData = {
@@ -966,7 +967,8 @@ void main() {
         'stack': sourceStack,
       };
       _diagnostic(
-        'phase=${binding.reportData?['phase']} $detail\n$sourceStack',
+        'phase=${binding.reportData?['phase']} '
+        'step=${binding.reportData?['e2e_step']} $detail\n$sourceStack',
       );
       _marker('FAILED');
       rethrow;

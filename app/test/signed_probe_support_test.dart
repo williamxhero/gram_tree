@@ -11,9 +11,7 @@ import 'package:gram_tree/storage/device_id.dart';
 import 'package:gram_tree/storage/secure_store.dart';
 import 'package:gramtree_api/gramtree_api.dart';
 
-import '../integration_test/event_pipeline_support.dart' as support;
-import '../integration_test/offline_writes_support.dart' as acceptance;
-import '../integration_test/signed_probe_support.dart';
+import 'signed_probe_support.dart' as support;
 import 'helpers.dart' show testUser;
 
 /// Verifies the independent observer's outgoing bytes, without using RequestSigner.
@@ -86,6 +84,14 @@ TokenPair _login(String owner, String generation) => TokenPair(
   user: UserOut.fromJson({...testUser().toJson(), 'id': owner}),
 );
 
+Future<int> _recipeSavedFactCount(Dio server, String token) async =>
+    (await server.get<Map<String, dynamic>>(
+          '/v1/dev/events/count',
+          queryParameters: {'event_type': 'recipe.version_saved'},
+          options: Options(headers: {'Authorization': 'Bearer $token'}),
+        )).data!['count']
+        as int;
+
 void main() {
   test(
     'business count observer follows persisted restore and A/B/A relogin',
@@ -113,13 +119,17 @@ void main() {
       final server = Dio(BaseOptions(baseUrl: 'http://observer.test'))
         ..httpClientAdapter = adapter;
       addTearDown(() => server.close(force: true));
-      registerProbeSession(server, restored.current!, deviceId: 'probe-device');
-      expect(await acceptance.recipeSavedFactCount(server, 'probe-a1'), 2);
+      support.registerProbeSession(
+        server,
+        restored.current!,
+        deviceId: 'probe-device',
+      );
+      expect(await _recipeSavedFactCount(server, 'probe-a1'), 2);
       for (final login in [_login('owner-b', 'b'), _login('owner-a', 'a2')]) {
         await restored.clear();
         await restored.save(login);
         final token = support.accessTokenOf(container, server: server);
-        expect(await acceptance.recipeSavedFactCount(server, token), 2);
+        expect(await _recipeSavedFactCount(server, token), 2);
       }
       expect(adapter.received, [
         'Bearer probe-a1',
@@ -127,7 +137,7 @@ void main() {
         'Bearer probe-a2',
       ]);
       // Selecting a new account must not replace an explicitly captured bearer.
-      expect(await acceptance.recipeSavedFactCount(server, 'probe-a1'), 2);
+      expect(await _recipeSavedFactCount(server, 'probe-a1'), 2);
       expect(adapter.received.last, 'Bearer probe-a1');
     },
   );
@@ -149,7 +159,7 @@ void main() {
     support.devServer.httpClientAdapter = adapter;
     addTearDown(() => support.devServer.httpClientAdapter = original);
     final token = support.accessTokenOf(container);
-    expect(await acceptance.recipeSavedFactCount(support.devServer, token), 2);
+    expect(await _recipeSavedFactCount(support.devServer, token), 2);
     expect(adapter.received, ['Bearer probe-default']);
   });
 }

@@ -13,7 +13,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:gram_tree/api/api_client.dart';
 import 'package:gram_tree/app/app.dart';
 import 'package:gram_tree/auth/session.dart';
-import 'package:gram_tree/config/app_config.dart';
 import 'package:gram_tree/events/event_queue.dart';
 import 'package:gram_tree/events/event_recorder.dart';
 import 'package:gram_tree/features_flags/features.dart';
@@ -25,12 +24,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'signed_probe_support.dart';
 
-/// 直连测试环境服务端（tool/e2e_server.sh 起的 dev/test 环境），不经过 App 的
-/// Dio/拦截链——跟 app_test.dart 里 `latestCode` 用的是同一个思路：这是"测试专用
-/// 检查手段"，不是产品接口，不应该混进 App 自己的网络层。
-final devServer = Dio(
-  BaseOptions(baseUrl: AppConfig.fromEnvironment().apiBaseUrl),
-);
+export 'signed_probe_support.dart' show accessTokenOf, devServer;
 
 /// 测试环境的服务端能读出刚发给某个邮箱的验证码（见 accounts/dev.py）。
 Future<String> latestEmailCode(String email) async {
@@ -174,19 +168,6 @@ Future<({String email, String deviceId})> signInFreshUser(
   });
   await queue.removeAll((await queue.pending()).map((e) => e.id));
   return (email: email, deviceId: deviceId);
-}
-
-/// 当前登录用户的访问令牌，给 [devServer] 直接调用 dev-only 接口用（App 自己的
-/// Dio 走的是生产的 GramtreeApi 客户端，不应该混进测试专用的接口调用里）。
-/// 独立恢复 harness 要传入实际 observer，重新登录后的签名凭据不能登记到另一个 Dio。
-String accessTokenOf(ProviderContainer container, {Dio? server}) {
-  final session = container.read(sessionStoreProvider).current!;
-  registerProbeSession(
-    server ?? devServer,
-    session,
-    deviceId: container.read(deviceIdProvider),
-  );
-  return session.accessToken;
 }
 
 /// 记几条 `pipeline.self_check` 自检事件（服务端登记表 v1，见
