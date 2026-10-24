@@ -49,7 +49,8 @@ cleanup() {
 }
 trap cleanup EXIT
 if [[ "${GRAMTREE_E2E_SERVER:-}" != external ]]; then
-  "$ROOT/tool/e2e_server.sh" start
+  GRAMTREE_E2E_EMAIL_CODE_RESEND_SECONDS="${GRAMTREE_E2E_EMAIL_CODE_RESEND_SECONDS:-1}" \
+    "$ROOT/tool/e2e_server.sh" start
   fixtures_created=1
 fi
 for _ in $(seq 1 50); do

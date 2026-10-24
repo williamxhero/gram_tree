@@ -4,9 +4,10 @@ import 'package:gramtree_api/gramtree_api.dart';
 
 import '../../api/api_client.dart';
 import '../../auth/auth_controller.dart';
+import '../../auth/session.dart';
 import '../../l10n/app_localizations.dart';
-import '../../ui_protocol/recipe_operations.dart';
 import '../../ui_protocol/intent_dispatcher.dart';
+import '../../ui_protocol/recipe_operations.dart';
 import '../../util/ids.dart';
 import '../me/taste_profile_data.dart';
 import '../recipes/improvement_save.dart';
@@ -17,12 +18,24 @@ import '../../widgets/tab_page.dart';
 final recordsProvider = FutureProvider.autoDispose<CookingRecordListOut>((
   ref,
 ) async {
-  ref.watch(authProvider.select((value) => value.value?.id));
+  final auth = ref.watch(authProvider);
+  if (auth.value == null) return CookingRecordListOut(items: const []);
+  final session = ref.read(sessionStoreProvider);
+  final identity = session.identity;
+  if (identity == null) return CookingRecordListOut(items: const []);
   try {
     final response = await ref
         .watch(apiClientProvider)
         .getRecordsApi()
-        .listRecords();
+        .listRecords(
+          extra: {
+            'auth_owner_id': identity.ownerId,
+            'auth_identity_epoch': identity.epoch,
+          },
+        );
+    if (!session.matches(identity)) {
+      return CookingRecordListOut(items: const []);
+    }
     return response.data ?? CookingRecordListOut(items: const []);
   } catch (_) {
     // Keep the tab usable while offline; completed sessions remain in the
@@ -68,14 +81,17 @@ class RecordsPage extends ConsumerWidget {
 class _RecordCard extends ConsumerStatefulWidget {
   const _RecordCard({super.key, required this.record});
   final CookingRecordOut record;
+
   @override
   ConsumerState<_RecordCard> createState() => _RecordCardState();
 }
 
 class _RecordCardState extends ConsumerState<_RecordCard> {
   bool _saving = false;
+  bool _deleting = false;
   final _requestId = newUuidV4();
   CookingRecordOut get record => widget.record;
+
   RecipeDetail? get _savedDetail {
     final raw = record.snapshot;
     if (raw is! Map || raw['detail'] is! Map) return null;
@@ -193,6 +209,57 @@ class _RecordCardState extends ConsumerState<_RecordCard> {
     );
   }
 
+  Future<void> _delete() async {
+    final session = ref.read(sessionStoreProvider);
+    final identity = session.identity;
+    if (identity == null) return;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('删除这条做菜记录？'),
+        content: const Text(
+          '记录和修订将从个人历史中删除，经验统计只保留不可关联账号的字段。此操作不可撤回，不影响其他人的记录。',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('取消'),
+          ),
+          TextButton(
+            key: const ValueKey('record-delete-confirm'),
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('删除'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted || !session.matches(identity)) return;
+    setState(() => _deleting = true);
+    try {
+      await ref
+          .read(apiClientProvider)
+          .getRecordsApi()
+          .deleteRecord(
+            recordId: widget.record.id,
+            extra: {
+              'auth_owner_id': identity.ownerId,
+              'auth_identity_epoch': identity.epoch,
+            },
+          );
+      if (mounted && session.matches(identity)) ref.invalidate(recordsProvider);
+    } catch (error) {
+      if (mounted && session.matches(identity)) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(ApiFailure.from(error).message)));
+      }
+    } finally {
+      if (mounted && session.matches(identity)) {
+        setState(() => _deleting = false);
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final when = DateTime.tryParse(record.occurredAt)?.toLocal();
@@ -225,9 +292,20 @@ class _RecordCardState extends ConsumerState<_RecordCard> {
                   AppLocalizations.of(context).recordHasAdjustments,
               ].join(' · '),
             ),
-            trailing: record.countsAsCooked
-                ? const Icon(Icons.check_circle_outline)
-                : const Icon(Icons.edit_note),
+            trailing: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                record.countsAsCooked
+                    ? const Icon(Icons.check_circle_outline)
+                    : const Icon(Icons.edit_note),
+                IconButton(
+                  key: ValueKey('record-delete-${record.id}'),
+                  tooltip: '删除记录',
+                  onPressed: _deleting ? null : _delete,
+                  icon: const Icon(Icons.delete_outline),
+                ),
+              ],
+            ),
           ),
           if (canSave)
             RecipeOperationScope(

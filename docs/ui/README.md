@@ -29,6 +29,7 @@
 | [`34-mockup.html`](34-mockup.html) | 场景组合样稿：新手/熟手详略、常做差异、失败前置与当步提醒、近期口味变化、统一为什么面板、固定骨架与标准布局 | #34 SPEC-009.2；#279–#282 | 2026-10-14 按本次任务决定使用仓库内 HTML，浏览器直接打开；PR #284 给出文件路径，不依赖 Artifact |
 
 | [`improved-public.html`](improved-public.html) | 草稿公开门槛、待验证、永久来源署名与微调保存二选一；浅色/深色静态样稿，数据明确为示例 | #41 SPEC-007.1；#221–#226 | 2026-10-15 已尝试发布；Artifact 要求 claude.ai 登录，当前 API-token 认证不支持。按本次任务默认改用仓库内 HTML |
+| [`data-portability.html`](data-portability.html) | 数据导出、完成下载与注销两种公开菜谱选择；不收集凭证的静态样稿，遵循项目主题 | #47 SPEC-010.2；#286–#288 | 2026-10-15 已尝试 Artifact：当前 API-token 认证不支持发布；使用仓库内 HTML，不等待人工登录 |
 
 ## 说明
 

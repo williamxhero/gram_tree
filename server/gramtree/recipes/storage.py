@@ -61,10 +61,9 @@ class FilesystemObjectStorage:
     def delete(self, key: str) -> None:
         try:
             self._path(key).unlink(missing_ok=True)
-        except OSError:
-            logger.warning(
-                "could not delete recipe image", extra={"storage_key": key}, exc_info=True
-            )
+        except OSError as exc:
+            # Erasure workers must retain their retry receipt on failure.
+            raise ApiError(503, "storage_unavailable", "图片暂时无法删除，请稍后再试") from exc
 
     def signed_get_url(self, key: str, expires_in: int) -> str | None:
         del key, expires_in
@@ -131,8 +130,8 @@ class S3ObjectStorage:
     def delete(self, key: str) -> None:
         try:
             self._client.delete_object(Bucket=self.bucket, Key=key)
-        except Exception:
-            logger.warning("could not delete recipe image from object storage", exc_info=True)
+        except Exception as exc:
+            raise ApiError(503, "storage_unavailable", "图片暂时无法删除，请稍后再试") from exc
 
     def signed_get_url(self, key: str, expires_in: int) -> str:
         try:

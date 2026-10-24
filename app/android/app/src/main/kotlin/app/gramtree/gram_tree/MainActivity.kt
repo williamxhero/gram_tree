@@ -12,6 +12,9 @@ import io.flutter.plugin.common.MethodChannel
 class MainActivity : FlutterActivity() {
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
+        val messenger = flutterEngine.dartExecutor.binaryMessenger
+        MethodChannel(messenger, "app.gramtree/export_file")
+            .setMethodCallHandler(ExportFileShare(this))
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "app.gramtree/device_capabilities")
             .setMethodCallHandler { call, result ->
                 if (call.method == "scheduleTimerReminder") {

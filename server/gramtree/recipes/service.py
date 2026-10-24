@@ -15,7 +15,7 @@ from decimal import Decimal
 from typing import Any, Literal, cast
 
 from redis import Redis
-from sqlalchemy import delete, or_, select, update
+from sqlalchemy import or_, select
 from sqlalchemy.orm import Session
 
 from gramtree.accounts.models import User
@@ -2393,27 +2393,19 @@ def list_recipes(
 
 
 def delete_recipe(session: Session, owner: User, recipe_id: uuid.UUID, settings: Settings) -> None:
-    recipe = session.scalar(
-        select(Recipe).where(Recipe.id == recipe_id, Recipe.owner_id == owner.id).with_for_update()
-    )
-    if recipe is None:
-        raise NotFound()
+    from gramtree.accounts import deletion
+    from gramtree.exports import service as exports
+
+    exports.lock_owner(session, owner.id)
+    recipe = _owned_recipe(session, owner, recipe_id)
     if recipe.ever_public:
         raise ApiError(409, "published_recipe_immutable", "公开过的菜谱不能删除，只能下架")
-    image_keys = [
-        image.storage_key
-        for image in session.scalars(select(RecipeImage).where(RecipeImage.recipe_id == recipe.id))
-    ]
-    # current_version_id points into the versions table; clear it before deleting snapshots.
-    session.execute(update(Recipe).where(Recipe.id == recipe.id).values(current_version_id=None))
-    session.execute(delete(RecipeImage).where(RecipeImage.recipe_id == recipe.id))
-    session.execute(delete(RecipeVersion).where(RecipeVersion.recipe_id == recipe.id))
-    session.delete(recipe)
+    deletion.erase_owner_caches(settings, owner.id)
+    deletion.erase_recipe(session, recipe)
+    exports.invalidate_owner_exports(session, settings, owner.id)
     session.commit()
-    # Remove objects only after the metadata transaction succeeds. A database
-    # failure must not leave a committed row pointing at a deleted object.
-    for key in image_keys:
-        _delete_storage_object(settings, key)
+    # The durable queue survives a storage outage after metadata erasure.
+    deletion.drain_objects(session, settings)
 
 
 def _delete_storage_object(settings: Settings, key: str) -> None:

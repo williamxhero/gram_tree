@@ -13,8 +13,14 @@ LOG_FILE="${GRAMTREE_E2E_LOG_FILE:-${TMPDIR:-/tmp}/gramtree_e2e_server_${PORT}.l
 PG="${GRAMTREE_E2E_PG:-postgresql+psycopg://postgres:postgres@localhost:5432}"
 DATABASE_NAME="${GRAMTREE_E2E_DATABASE_NAME:-gramtree_e2e}"
 ASSISTANCE_DEFINES="${GRAMTREE_E2E_ASSISTANCE_DEFINES:-${TMPDIR:-/tmp}/gramtree_e2e_server_${PORT}.assistance.json}"
+EXPORT_WORKER_PID="${GRAMTREE_E2E_EXPORT_WORKER_PID:-${PID_FILE}.exports}"
+EXPORT_WORKER_LOG="${GRAMTREE_E2E_EXPORT_WORKER_LOG:-${LOG_FILE}.exports}"
 
 stop() {
+  if [[ -f "$EXPORT_WORKER_PID" ]]; then
+    kill "$(cat "$EXPORT_WORKER_PID")" 2>/dev/null || true
+    rm -f "$EXPORT_WORKER_PID"
+  fi
   if [[ -f "$PID_FILE" ]]; then
     kill "$(cat "$PID_FILE")" 2>/dev/null || true
     rm -f "$PID_FILE"
@@ -28,6 +34,10 @@ start() {
   export GRAMTREE_DATABASE_URL="$PG/$DATABASE_NAME"
   export GRAMTREE_REDIS_URL="${GRAMTREE_E2E_REDIS:-redis://localhost:6379/14}"
   export GRAMTREE_MAIL_BACKEND=memory
+  export GRAMTREE_EXPORT_DIR="${GRAMTREE_E2E_EXPORT_DIR:-${TMPDIR:-/tmp}/gramtree_e2e_exports_${PORT}}"
+  if command -v cygpath >/dev/null 2>&1; then
+    export GRAMTREE_EXPORT_DIR="$(cygpath -m "$GRAMTREE_EXPORT_DIR")"
+  fi
   # Ephemeral test-only key; honor an explicitly supplied key and never print it.
   if [[ -z "${GRAMTREE_SENSITIVE_DATA_KEY:-}" ]]; then
     export GRAMTREE_SENSITIVE_DATA_KEY="$(uv run python -c 'import base64,secrets; print(base64.urlsafe_b64encode(secrets.token_bytes(32)).decode())')"
@@ -57,15 +67,45 @@ EOF
   # but allow the isolated test database enough codes for the complete suite.
   uv run gramtree config set auth.email_code_daily_limit 1000 \
     --by e2e --reason 'Shared-IP acceptance suite' >/dev/null
+  # Full UI suites reauthenticate the same owner twice. Keep ordinary bootstrap
+  # cooldowns unchanged unless that suite explicitly opts into a shorter window.
+  if [[ -n "${GRAMTREE_E2E_EMAIL_CODE_RESEND_SECONDS:-}" ]]; then
+    uv run gramtree config set auth.email_code_resend_seconds \
+      "$GRAMTREE_E2E_EMAIL_CODE_RESEND_SECONDS" \
+      --by e2e --reason 'Explicit UI reauthentication acceptance override' >/dev/null
+  fi
   uv run gramtree ingredients import tests/data/ingredients >/dev/null
   if [[ "$GRAMTREE_AI_MODE" == replay ]]; then
     uv run python ../tool/ai_replay_corpus.py --out "$GRAMTREE_AI_REPLAY_DIR" \
       --import-substitution-library
   fi
+  # Exercise the durable asynchronous queue through the production operator
+  # command. This recovery drain works on Windows too (no eager/test-only API).
+  (
+    child=""
+    trap '[[ -z "$child" ]] || kill "$child" 2>/dev/null || true; exit' TERM INT
+    while true; do
+      uv run python -m gramtree.exports run &
+      child=$!
+      wait "$child"
+      child=""
+      sleep 1 &
+      child=$!
+      wait "$child"
+      child=""
+    done
+  ) >"$EXPORT_WORKER_LOG" 2>&1 &
+  echo $! >"$EXPORT_WORKER_PID"
   # 单进程运行：验证码存在进程内存里，多进程时读不到
   nohup uv run uvicorn gramtree.asgi:app --host 0.0.0.0 --port "$PORT" >"$LOG_FILE" 2>&1 &
   echo $! >"$PID_FILE"
   for _ in $(seq 1 100); do
+    if ! kill -0 "$(cat "$EXPORT_WORKER_PID")" 2>/dev/null; then
+      echo "e2e export worker did not start; log follows" >&2
+      cat "$EXPORT_WORKER_LOG" >&2
+      stop
+      return 1
+    fi
     if curl -fs "http://localhost:$PORT/v1/health" >/dev/null 2>&1; then
       local defines_path="$ASSISTANCE_DEFINES"
       if command -v cygpath >/dev/null 2>&1; then

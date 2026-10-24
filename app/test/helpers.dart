@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
@@ -22,6 +23,7 @@ import 'package:gram_tree/network/reachability.dart';
 import 'package:gram_tree/platform/app_exit.dart';
 import 'package:gram_tree/platform/apple_sign_in.dart';
 import 'package:gram_tree/platform/device_capabilities.dart';
+import 'package:gram_tree/platform/export_file_share.dart';
 import 'package:gram_tree/platform/fake_device_capabilities.dart';
 import 'package:gram_tree/platform/link_opener.dart';
 import 'package:gram_tree/platform/permissions.dart';
@@ -404,6 +406,21 @@ class FakeServer extends Interceptor {
         },
       );
     });
+    on('GET', '/v1/me/exports', (_) => (200, {'items': []}));
+    on(
+      'GET',
+      '/v1/me/deletion',
+      (_) => (
+        200,
+        DeletionPreview(
+          publicRecipes: const [],
+          publicRecipeActionRequired: false,
+          deletes: const ['私密菜谱、记录与照片、口味和量具'],
+          retains: const ['不含个人内容的步骤凭证'],
+          canExport: true,
+        ).toJson(),
+      ),
+    );
     on('POST', '/v1/me/deletion', (_) {
       if (!reauthed) return error(403, 'reauth_required', '为了安全，请先重新验证身份');
       return (
@@ -427,18 +444,24 @@ class FakeServer extends Interceptor {
       options.uri.path,
       body,
       Map.of(options.headers),
-      Map.of(options.queryParameters),
+      {...options.uri.queryParameters, ...options.queryParameters},
     );
     requests.add(rec);
     final handle = _routes['${options.method} ${options.uri.path}'];
     final (status, data) = handle == null
         ? error(404, 'not_found', '没有找到')
         : await handle(rec);
-    // 和真的网络响应一样，数据是解析好的 JSON
+    // Binary response mode applies to failures too, just like real Dio.
     final response = Response<dynamic>(
       requestOptions: options,
       statusCode: status,
-      data: data == null ? null : jsonDecode(jsonEncode(data)),
+      data: data == null
+          ? null
+          : options.responseType == ResponseType.bytes
+          ? Uint8List.fromList(
+              data is List<int> ? data : utf8.encode(jsonEncode(data)),
+            )
+          : jsonDecode(jsonEncode(data)),
     );
     if (status >= 200 && status < 300) {
       handler.resolve(response, true);
@@ -465,6 +488,30 @@ class FakeAppExit implements AppExit {
   Future<bool> exit() async {
     calls++;
     return canExit;
+  }
+}
+
+class FakeExportFileShare implements ExportFileShare {
+  final files = <(String, Uint8List)>[];
+  Completer<void>? preparation;
+  int cancellations = 0;
+  int _generation = 0;
+
+  @override
+  bool get isWebSubstitute => true;
+
+  @override
+  Future<void> share(Uint8List bytes, {required String filename}) async {
+    final generation = _generation;
+    await preparation?.future;
+    if (generation != _generation) throw StateError('share_cancelled');
+    files.add((filename, bytes));
+  }
+
+  @override
+  Future<void> cancelPendingShare() async {
+    cancellations++;
+    _generation++;
   }
 }
 
@@ -642,6 +689,7 @@ class TestEnv {
   final FakeEventQueue eventQueue;
   final FakeEventReportBackend eventReports;
   final links = FakeLinkOpener();
+  final exports = FakeExportFileShare();
   final String? timezone;
   final Map<String, bool> features;
 
@@ -684,6 +732,7 @@ class TestEnv {
     appExitProvider.overrideWithValue(exit),
     appleSignInProvider.overrideWithValue(apple),
     linkOpenerProvider.overrideWithValue(links),
+    exportFileShareProvider.overrideWithValue(exports),
     timezoneSourceProvider.overrideWithValue(FakeTimezone(timezone)),
     permissionServiceProvider.overrideWithValue(permissions),
     eventQueueProvider.overrideWithValue(eventQueue),

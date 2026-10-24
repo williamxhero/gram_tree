@@ -23,6 +23,7 @@ class SettingsPage extends ConsumerWidget {
   static const bindEmail = '$path/identities/email';
   static const withdraw = '$path/withdraw';
   static const delete = '$path/delete';
+  static const export = '$path/export';
   static String document(String id) => '$path/doc/$id';
 
   @override
@@ -94,6 +95,7 @@ class SettingsPage extends ConsumerWidget {
             SensitiveWithdrawalTile(
               key: ValueKey('sensitive-withdraw-${user.id}'),
             ),
+          item('导出我的数据', onTap: () => context.push(export)),
           item(l10n.settingsWithdraw, onTap: () => context.push(withdraw)),
           const Divider(height: 32),
           item(l10n.signOut, onTap: () => confirmLogout(context, ref)),

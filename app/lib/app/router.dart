@@ -12,6 +12,7 @@ import '../features/create/create_page.dart';
 import '../features/create/one_line_recipe_page.dart';
 import '../features/discover/discover_page.dart';
 import '../features/me/delete_account_page.dart';
+import '../features/me/export_data_page.dart';
 import '../features/me/document_page.dart';
 import '../features/me/identities_page.dart';
 import '../features/me/me_page.dart';
@@ -203,6 +204,7 @@ final routerProvider = Provider<GoRouter>((ref) {
             builder: (_, _) => const WithdrawConsentPage(),
           ),
           GoRoute(path: 'delete', builder: (_, _) => const DeleteAccountPage()),
+          GoRoute(path: 'export', builder: (_, _) => const ExportDataPage()),
         ],
       ),
     ],

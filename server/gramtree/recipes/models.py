@@ -244,9 +244,9 @@ class RecipeSaveOutbox(Base):
     )
 
     id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=new_id)
-    # Keep these identifiers as immutable event payload references.  They must
-    # survive recipe deletion so a delayed experience event can still be
-    # delivered; the owner foreign key remains cascading for account erasure.
+    # Immutable event payload references let delivery retry independently of
+    # version loading. SPEC47 erasure explicitly removes these rows with the
+    # recipe, so a delayed delivery cannot resurrect deleted private content.
     recipe_id: Mapped[uuid.UUID] = mapped_column()
     version_id: Mapped[uuid.UUID] = mapped_column()
     owner_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))

@@ -26,6 +26,8 @@ class Settings(BaseSettings):
     # 备份：本机目录和异地位置（rclone 的 remote:path，留空表示只存本机）
     backup_dir: str = "/var/backups/gramtree"
     backup_remote: str = ""
+    # Private persistent volume shared by API and export workers; never a static web root.
+    export_dir: str = ".data/exports"
     smtp_port: int = 25
     smtp_from: str = "alerts@gramtree.local"
     smtp_username: str = ""
