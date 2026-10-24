@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -7,6 +8,9 @@ import 'package:go_router/go_router.dart';
 import 'package:gram_tree/auth/auth_controller.dart';
 import 'package:gram_tree/auth/session.dart';
 import 'package:gram_tree/events/event_uploader.dart';
+import 'package:gram_tree/events/event_queue.dart';
+import 'package:gram_tree/events/fake_event_queue.dart';
+import 'package:gram_tree/features/records/records_page.dart';
 import 'package:gram_tree/l10n/app_localizations.dart';
 import 'package:gram_tree/app/theme.dart';
 import 'package:gram_tree/features/recipes/publication_panel.dart';
@@ -195,6 +199,133 @@ Future<void> saveEditor(WidgetTester tester) async {
   await tester.pumpAndSettle();
 }
 
+class _BacklogGateQueue extends FakeEventQueue {
+  int? readsUntilGate;
+  final blocked = Completer<void>();
+  final release = Completer<void>();
+
+  @override
+  Future<List<QueueEntry>> entries({String? ownerId}) async {
+    final snapshot = await super.entries(ownerId: ownerId);
+    final remaining = readsUntilGate;
+    if (remaining != null) {
+      readsUntilGate = remaining - 1;
+      if (remaining == 1) {
+        readsUntilGate = null;
+        blocked.complete();
+        await release.future;
+      }
+    }
+    return snapshot;
+  }
+}
+
+class _DiscoveryGateQueue extends FakeEventQueue {
+  bool held = false;
+  final release = Completer<void>();
+
+  @override
+  Future<List<QueueEntry>> entries({String? ownerId}) async {
+    final snapshot = await super.entries(ownerId: ownerId);
+    if (held) await release.future;
+    return snapshot;
+  }
+}
+
+const _savedRecordId = '66666666-6666-4666-8666-666666666666';
+
+void _recordRoutes(
+  TestEnv env, {
+  required bool own,
+  String serverId = _savedRecordId,
+}) {
+  final detail = publicationRecipeFixture().toJson();
+  if (!own) {
+    (detail['author'] as Map)['id'] = '77777777-7777-4777-8777-777777777777';
+  }
+  final record = CookingRecordOut.fromJson({
+    'id': serverId,
+    'client_id': _savedRecordId,
+    'recipe_id': recipeId,
+    'recipe_version_id': versionId,
+    'dish_name': '番茄汤',
+    'source': 'cooking_session',
+    'verification': 'unverified',
+    'occurred_at': '2026-10-01T00:00:00Z',
+    'created_at': '2026-10-01T00:00:00Z',
+    'counts_as_cooked': true,
+    'meal': null,
+    'co_diner_ids': <String>[],
+    'snapshot': {'detail': detail},
+    'adjustments': [
+      {'ingredient_id': 'ingredient-1', 'quantity': 98},
+    ],
+    'source_context': <String, Object>{},
+    'taste_summary': <String, Object>{},
+  });
+  env.server.on(
+    'GET',
+    '/v1/records',
+    (_) => (200, CookingRecordListOut(items: [record]).toJson()),
+  );
+}
+
+Iterable<Map> _recordWrites(TestEnv env) => env.server
+    .calls('POST', '/v1/sync/writes')
+    .expand((request) => ((request.body as Map)['writes'] as List).cast<Map>())
+    .where((write) => write['write_type'] == 'record_improvement.save');
+
+(int, Object?) _recordConfirmation(Recorded request, {bool preview = false}) =>
+    (
+      200,
+      {
+        'results': [
+          for (final write
+              in ((request.body as Map)['writes'] as List).cast<Map>())
+            {
+              'write_id': write['write_id'],
+              'status': 'confirmed',
+              'confirmed_at': '2026-10-01T00:00:00Z',
+              'result': write['write_type'] == 'record_improvement.save'
+                  ? {
+                      'resource_type': 'record.improvement',
+                      'resource_id': _savedRecordId,
+                      'values':
+                          preview &&
+                              (write['payload'] as Map)['microadjust_choice'] ==
+                                  null
+                          ? {'preview': improvementPreviewFixture()}
+                          : {
+                              'response': {
+                                'outcome':
+                                    (write['payload']
+                                            as Map)['microadjust_choice'] ==
+                                        'taste'
+                                    ? 'taste'
+                                    : 'branch',
+                                'recipe':
+                                    (write['payload']
+                                            as Map)['microadjust_choice'] ==
+                                        'taste'
+                                    ? null
+                                    : publicationRecipeFixture().toJson(),
+                              },
+                            },
+                    }
+                  : write['write_type'] == 'cooking_record.create'
+                  ? {
+                      'resource_type': 'cooking.record',
+                      'resource_id': '99999999-9999-4999-8999-999999999999',
+                    }
+                  : {
+                      'resource_type': 'experience.event',
+                      'resource_id': write['write_id'],
+                    },
+            },
+        ],
+      },
+    );
+
 void main() {
   for (final own in [false, true]) {
     testWidgets(
@@ -249,21 +380,37 @@ void main() {
           '/v1/recipes/$recipeId/improvements/preview',
           (_) => (200, preview),
         );
-        final endpoint = own
-            ? '/v1/records/$recordId/save-version'
-            : '/v1/recipes/$recipeId/improvements';
-        env.server.on(
-          'POST',
-          endpoint,
-          (_) => (
+        final saveResponse = {
+          'outcome': 'branch',
+          'recipe': publicationRecipeFixture().toJson(),
+          'profile_version': null,
+        };
+        env.server.on('POST', '/v1/sync/writes', (request) {
+          final body = request.body as Map;
+          return (
             200,
             {
-              'outcome': 'branch',
-              'recipe': publicationRecipeFixture().toJson(),
-              'profile_version': null,
+              'results': [
+                for (final write in (body['writes'] as List).cast<Map>())
+                  {
+                    'write_id': write['write_id'],
+                    'status': 'confirmed',
+                    'confirmed_at': '2026-10-01T00:00:00Z',
+                    'result': write['write_type'] == 'record_improvement.save'
+                        ? {
+                            'resource_type': 'record.improvement',
+                            'resource_id': recordId,
+                            'values': {'response': saveResponse},
+                          }
+                        : {
+                            'resource_type': 'experience.event',
+                            'resource_id': write['write_id'],
+                          },
+                  },
+              ],
             },
-          ),
-        );
+          );
+        });
         await pumpApp(tester, env: env);
         await tester.tap(find.text('记录'));
         await tester.pumpAndSettle();
@@ -275,17 +422,41 @@ void main() {
         await tester.pumpAndSettle();
         await tester.tap(find.text(own ? '存为我的新一版' : '存成改良版'));
         await tester.pumpAndSettle();
-        final body = env.server.calls('POST', endpoint).single.body as Map;
-        expect(body['request_id'], isA<String>());
+        final write = env.server
+            .calls('POST', '/v1/sync/writes')
+            .expand(
+              (request) =>
+                  ((request.body as Map)['writes'] as List).cast<Map>(),
+            )
+            .where((write) => write['write_type'] == 'record_improvement.save')
+            .single;
         expect(
-          body.containsKey('snapshot'),
+          write['write_id'],
+          matches(
+            RegExp(
+              r'^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$',
+            ),
+          ),
+        );
+        expect(write['payload'], isA<Map>());
+        final payload = write['payload'] as Map;
+        expect(
+          payload.containsKey('snapshot'),
           isFalse,
           reason: 'server must derive executed record snapshot',
         );
-        if (!own) {
-          expect(body['source_version_id'], versionId);
-          expect(body['from_cooking_record_id'], recordId);
-        }
+        expect(
+          env.server.calls('POST', '/v1/records/$recordId/save-version'),
+          isEmpty,
+        );
+        expect(
+          env.server.calls('POST', '/v1/recipes/$recipeId/improvements'),
+          isEmpty,
+        );
+        expect(payload['change_note'], '记录临时调整');
+        expect(payload['record_id'], recordId);
+        expect(payload['recipe_id'], recipeId);
+        expect(payload['source_version_id'], versionId);
         expect(env.server.calls('GET', '/v1/recipes/$recipeId'), isEmpty);
         expect(
           find.textContaining(own ? '已存为我的新一版' : '已存成改良版'),
@@ -294,6 +465,498 @@ void main() {
       },
     );
   }
+  testWidgets('foreground record save joins a drain paused in backlog read', (
+    tester,
+  ) async {
+    final base = TestEnv.signedIn();
+    final queue = _BacklogGateQueue();
+    final env = TestEnv(
+      server: base.server,
+      local: base.local,
+      secure: base.secure,
+      eventQueue: queue,
+    );
+    _recordRoutes(env, own: true);
+    env.server.on('POST', '/v1/sync/writes', _recordConfirmation);
+    await pumpApp(tester, env: env);
+    await tester.tap(find.text('记录'));
+    await tester.pumpAndSettle();
+    final container = ProviderScope.containerOf(
+      tester.element(find.text('存为我的新一版')),
+    );
+    queue.readsUntilGate = 2;
+    unawaited(container.read(eventUploaderProvider).triggerUpload());
+    for (var frame = 0; frame < 10 && !queue.blocked.isCompleted; frame++) {
+      await tester.pump();
+    }
+    expect(queue.blocked.isCompleted, isTrue);
+    await tester.tap(find.text('存为我的新一版'));
+    for (var frame = 0; frame < 10; frame++) {
+      await tester.pump();
+    }
+    expect(find.textContaining('已存为我的新一版'), findsNothing);
+    queue.release.complete();
+    await tester.pumpAndSettle();
+    expect(_recordWrites(env), hasLength(1));
+    expect(find.textContaining('已存为我的新一版'), findsOneWidget);
+  });
+
+  testWidgets('simultaneous record cards retain one immutable save ID', (
+    tester,
+  ) async {
+    final base = TestEnv.signedIn();
+    final queue = _DiscoveryGateQueue();
+    final env = TestEnv(
+      server: base.server,
+      local: base.local,
+      secure: base.secure,
+      eventQueue: queue,
+    );
+    _recordRoutes(env, own: true);
+    env.server.on(
+      'POST',
+      '/v1/sync/writes',
+      (_) => FakeServer.error(503, 'unavailable', '暂不可用'),
+    );
+    await mount(
+      tester,
+      env,
+      (_) => const SizedBox(
+        height: 500,
+        child: Row(
+          children: [
+            Expanded(child: RecordsPage()),
+            Expanded(child: RecordsPage()),
+          ],
+        ),
+      ),
+    );
+    final buttons = find.text('存为我的新一版');
+    expect(buttons, findsNWidgets(2));
+    queue.held = true;
+    await tester.tap(buttons.at(0));
+    await tester.tap(buttons.at(1));
+    for (var frame = 0; frame < 10; frame++) {
+      await tester.pump();
+    }
+    queue.held = false;
+    queue.release.complete();
+    await tester.pumpAndSettle();
+    await restartApp(tester, env);
+    await tester.tap(find.text('记录'));
+    await tester.pumpAndSettle();
+    env.server.on('POST', '/v1/sync/writes', _recordConfirmation);
+    final container = ProviderScope.containerOf(tester.element(buttons.first));
+    unawaited(container.read(eventUploaderProvider).networkRestored());
+    await tester.pumpAndSettle();
+    await tester.tap(buttons.first);
+    await tester.pumpAndSettle();
+    expect(find.textContaining('已存为我的新一版'), findsOneWidget);
+    expect(
+      _recordWrites(env).map((write) => write['write_id']).toSet(),
+      hasLength(1),
+    );
+  });
+
+  for (final own in [false, true]) {
+    testWidgets(
+      'offline record save survives reopen with stable retry ID ${own ? "own" : "foreign"}',
+      (tester) async {
+        final env = TestEnv.signedIn();
+        _recordRoutes(env, own: own);
+        env.server.on(
+          'POST',
+          '/v1/sync/writes',
+          (_) => FakeServer.error(503, 'unavailable', '暂不可用'),
+        );
+        await pumpApp(tester, env: env);
+        await tester.tap(find.text('记录'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text(own ? '存为我的新一版' : '存成改良版'));
+        await tester.pumpAndSettle();
+        expect(find.textContaining(own ? '已存为我的新一版' : '已存成改良版'), findsNothing);
+        final sent = _recordWrites(env).first;
+        final id = sent['write_id'];
+        final payload = sent['payload'] as Map;
+        await restartApp(tester, env);
+        env.server.on('POST', '/v1/sync/writes', _recordConfirmation);
+        await tester.tap(find.text('记录'));
+        await tester.pumpAndSettle();
+        final container = ProviderScope.containerOf(
+          tester.element(find.text(own ? '存为我的新一版' : '存成改良版')),
+        );
+        unawaited(container.read(eventUploaderProvider).networkRestored());
+        await tester.pumpAndSettle();
+        await tester.tap(find.text(own ? '存为我的新一版' : '存成改良版'));
+        await tester.pumpAndSettle();
+        expect(
+          find.textContaining(own ? '已存为我的新一版' : '已存成改良版'),
+          findsOneWidget,
+        );
+        expect(_recordWrites(env).map((write) => write['write_id']).toSet(), {
+          id,
+        });
+        expect(
+          _recordWrites(env)
+              .every((write) => mapEquals(write['payload'] as Map, payload)),
+          isTrue,
+        );
+        expect(
+          env.server.calls(
+            'POST',
+            '/v1/recipes/$recipeId/improvements/preview',
+          ),
+          isEmpty,
+        );
+        await tester.tap(find.text(own ? '存为我的新一版' : '存成改良版'));
+        await tester.pumpAndSettle();
+        expect(_recordWrites(env).map((write) => write['write_id']).toSet(), {
+          id,
+        });
+      },
+    );
+  }
+
+  for (final choice in ['cancel', 'taste', 'branch']) {
+    testWidgets('record microadjust keeps explicit $choice across reopen', (
+      tester,
+    ) async {
+      final env = TestEnv.signedIn();
+      _recordRoutes(env, own: false);
+      env.server.on(
+        'POST',
+        '/v1/sync/writes',
+        (request) => _recordConfirmation(request, preview: true),
+      );
+      await pumpApp(tester, env: env);
+      await tester.tap(find.text('记录'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('存成改良版'));
+      await tester.pumpAndSettle();
+      expect(find.text('这个改动更像个人口味'), findsOneWidget);
+      expect(_recordWrites(env), hasLength(1));
+      await tester.tap(find.text('取消'));
+      await tester.pumpAndSettle();
+      expect(_recordWrites(env), hasLength(1));
+      await restartApp(tester, env);
+      await tester.tap(find.text('记录'));
+      await tester.pumpAndSettle();
+      expect(find.text('这个改动更像个人口味'), findsNothing);
+      expect(
+        _recordWrites(env),
+        hasLength(1),
+        reason: 'reopen is not a save or choice',
+      );
+      await tester.tap(find.text('存成改良版'));
+      await tester.pumpAndSettle();
+      await tester.tap(
+        find.text(
+          choice == 'cancel'
+              ? '取消'
+              : choice == 'taste'
+              ? '存进我的口味'
+              : '仍然保存',
+        ),
+      );
+      await tester.pumpAndSettle();
+      final writes = _recordWrites(env).toList();
+      expect(writes, hasLength(choice == 'cancel' ? 1 : 2));
+      if (choice != 'cancel') {
+        expect((writes.last['payload'] as Map)['microadjust_choice'], choice);
+        expect(writes.last['write_id'], isNot(writes.first['write_id']));
+        final id = writes.last['write_id'];
+        await restartApp(tester, env);
+        await tester.tap(find.text('记录'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('存成改良版'));
+        await tester.pumpAndSettle();
+        expect(find.text('这个改动更像个人口味'), findsNothing);
+        expect(_recordWrites(env).last['write_id'], id);
+        expect(_recordWrites(env), hasLength(2));
+        expect(
+          find.textContaining(choice == 'taste' ? '已存进我的口味' : '已存成改良版'),
+          findsOneWidget,
+        );
+      }
+    });
+  }
+
+  for (final lost in [false, true]) {
+    testWidgets(
+      'direct record save identity survives late producer mapping ${lost ? "lost response" : "confirmed"}',
+      (tester) async {
+        final env = TestEnv.signedIn();
+        _recordRoutes(
+          env,
+          own: false,
+          serverId: '99999999-9999-4999-8999-999999999999',
+        );
+        var available = !lost;
+        env.server.on(
+          'POST',
+          '/v1/sync/writes',
+          (request) => available
+              ? _recordConfirmation(request)
+              : FakeServer.error(503, 'lost_response', '暂不可用'),
+        );
+        await pumpApp(tester, env: env);
+        await tester.tap(find.text('记录'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('存成改良版'));
+        await tester.pumpAndSettle();
+        final first = _recordWrites(env).first;
+        expect(
+          (first['payload'] as Map)['record_id'],
+          '99999999-9999-4999-8999-999999999999',
+        );
+        final detail = publicationRecipeFixture().toJson();
+        (detail['author'] as Map)['id'] =
+            '77777777-7777-4777-8777-777777777777';
+        await env.eventQueue.enqueue(
+          QueuedEvent.write(
+            id: '88888888-8888-4888-8888-888888888888',
+            ownerId: testUser().id,
+            deviceTime: DateTime.utc(2026, 10, 1),
+            writeType: 'cooking_record.create',
+            payload: {
+              'record': {
+                'client_id': _savedRecordId,
+                'recipe_id': recipeId,
+                'recipe_version_id': versionId,
+                'dish_name': '番茄汤',
+                'source': 'cooking_session',
+                'verification': 'unverified',
+                'occurred_at': '2026-10-01T00:00:00Z',
+                'snapshot': {'detail': detail},
+                'adjustments': <Object>[],
+                'co_diner_ids': <String>[],
+                'source_context': <String, Object>{},
+              },
+            },
+          ),
+        );
+        available = true;
+        final container = ProviderScope.containerOf(
+          tester.element(find.text('存成改良版')),
+        );
+        unawaited(container.read(eventUploaderProvider).networkRestored());
+        await tester.pumpAndSettle();
+        await restartApp(tester, env);
+        await tester.tap(find.text('记录'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('存成改良版'));
+        await tester.pumpAndSettle();
+        expect(find.textContaining('已存成改良版'), findsOneWidget);
+        expect(_recordWrites(env).map((write) => write['write_id']).toSet(), {
+          first['write_id'],
+        });
+        for (final write in _recordWrites(env)) {
+          expect(
+            write['payload'],
+            first['payload'],
+            reason: 'reference spelling cannot change an existing envelope',
+          );
+          expect(write['dependencies'], first['dependencies']);
+        }
+      },
+    );
+  }
+
+  for (final own in [false, true]) {
+    testWidgets(
+      'offline-created record exposes durable dependent save ${own ? "own" : "foreign"}',
+      (tester) async {
+        final env = TestEnv.signedIn();
+        final detail = publicationRecipeFixture().toJson();
+        if (!own) {
+          (detail['author'] as Map)['id'] =
+              '77777777-7777-4777-8777-777777777777';
+        }
+        await env.eventQueue.enqueue(
+          QueuedEvent.write(
+            id: _savedRecordId,
+            ownerId: testUser().id,
+            deviceTime: DateTime.utc(2026, 10, 1),
+            writeType: 'cooking_record.create',
+            payload: {
+              'record': {
+                'client_id': _savedRecordId,
+                'recipe_id': recipeId,
+                'recipe_version_id': versionId,
+                'dish_name': '番茄汤',
+                'source': 'cooking_session',
+                'verification': 'unverified',
+                'occurred_at': '2026-10-01T00:00:00Z',
+                'snapshot': {'detail': detail},
+                'adjustments': [
+                  {'ingredient_id': 'ingredient-1', 'quantity': 98},
+                ],
+                'co_diner_ids': <String>[],
+                'source_context': <String, Object>{},
+              },
+            },
+          ),
+        );
+        env.server.on(
+          'GET',
+          '/v1/records',
+          (_) => FakeServer.error(503, 'offline', '暂不可用'),
+        );
+        env.server.on(
+          'POST',
+          '/v1/sync/writes',
+          (_) => FakeServer.error(503, 'offline', '暂不可用'),
+        );
+        await pumpApp(tester, env: env);
+        await tester.tap(find.text('记录'));
+        await tester.pumpAndSettle();
+        expect(find.text('番茄汤'), findsOneWidget);
+        final label = own ? '存为我的新一版' : '存成改良版';
+        await tester.tap(find.text(label));
+        await tester.pumpAndSettle();
+        expect(find.textContaining(own ? '已存为我的新一版' : '已存成改良版'), findsNothing);
+        await restartApp(tester, env);
+        await tester.tap(find.text('记录'));
+        await tester.pumpAndSettle();
+        expect(find.text(label), findsOneWidget);
+        _recordRoutes(
+          env,
+          own: own,
+          serverId: '99999999-9999-4999-8999-999999999999',
+        );
+        env.server.on('POST', '/v1/sync/writes', _recordConfirmation);
+        final container = ProviderScope.containerOf(
+          tester.element(find.text(label)),
+        );
+        unawaited(container.read(eventUploaderProvider).networkRestored());
+        await tester.pumpAndSettle();
+        expect(
+          find.text('番茄汤'),
+          findsOneWidget,
+          reason: 'confirmed parent replaces local card, not a duplicate',
+        );
+        await tester.tap(find.text(label));
+        await tester.pumpAndSettle();
+        expect(
+          find.textContaining(own ? '已存为我的新一版' : '已存成改良版'),
+          findsOneWidget,
+        );
+        final saves = _recordWrites(env).toList();
+        expect(saves.map((write) => write['write_id']).toSet(), hasLength(1));
+        for (final save in saves) {
+          expect(save['dependencies'], [_savedRecordId]);
+          expect((save['payload'] as Map)['record_write_id'], _savedRecordId);
+          expect((save['payload'] as Map).containsKey('record_id'), isFalse);
+        }
+      },
+    );
+  }
+
+  for (final nextChoice in ['taste', 'branch']) {
+    testWidgets(
+      'definite profile rejection requires fresh explicit $nextChoice',
+      (tester) async {
+        final env = TestEnv.signedIn();
+        _recordRoutes(env, own: false);
+        var version = 2;
+        env.server.on('POST', '/v1/sync/writes', (request) {
+          final (status, body) = _recordConfirmation(request, preview: true);
+          for (final result in ((body as Map)['results'] as List).cast<Map>()) {
+            final write =
+                (((request.body as Map)['writes'] as List).cast<Map>())
+                    .singleWhere(
+                      (item) => item['write_id'] == result['write_id'],
+                    );
+            if (write['write_type'] != 'record_improvement.save') continue;
+            final payload = write['payload'] as Map;
+            if (payload['microadjust_choice'] == null) {
+              final preview =
+                  ((result['result'] as Map)['values'] as Map)['preview']
+                      as Map;
+              (preview['taste_proposal'] as Map)['profile_version'] = version;
+            } else if (payload['microadjust_choice'] == 'taste' &&
+                payload['expected_profile_version'] == 2) {
+              result['status'] = 'failed';
+              result['reason_code'] = 'profile_changed';
+              result['result'] = null;
+              version = 3;
+            }
+          }
+          return (status, body);
+        });
+        await pumpApp(tester, env: env);
+        await tester.tap(find.text('记录'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('存成改良版'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('存进我的口味'));
+        await tester.pumpAndSettle();
+        expect(find.textContaining('已存进我的口味'), findsNothing);
+        final rejected = _recordWrites(env).last;
+        expect((rejected['payload'] as Map)['expected_profile_version'], 2);
+        await restartApp(tester, env);
+        await tester.tap(find.text('记录'));
+        await tester.pumpAndSettle();
+        expect(find.text('这个改动更像个人口味'), findsNothing);
+        await tester.tap(find.text('存成改良版'));
+        await tester.pumpAndSettle();
+        expect(find.textContaining('第 3 版'), findsOneWidget);
+        expect(
+          (rejected['payload'] as Map)['expected_profile_version'],
+          2,
+          reason: 'old rejected intent is immutable',
+        );
+        await tester.tap(find.text(nextChoice == 'taste' ? '存进我的口味' : '仍然保存'));
+        await tester.pumpAndSettle();
+        final selected = _recordWrites(env).last;
+        expect(selected['write_id'], isNot(rejected['write_id']));
+        expect((selected['payload'] as Map)['microadjust_choice'], nextChoice);
+        if (nextChoice == 'taste') {
+          expect((selected['payload'] as Map)['expected_profile_version'], 3);
+        }
+        expect(
+          find.textContaining(nextChoice == 'taste' ? '已存进我的口味' : '已存成改良版'),
+          findsOneWidget,
+        );
+      },
+    );
+  }
+
+  testWidgets('record choice cannot cross same-owner login epoch', (
+    tester,
+  ) async {
+    final env = TestEnv.signedIn();
+    _recordRoutes(env, own: false);
+    env.server.on(
+      'POST',
+      '/v1/sync/writes',
+      (request) => _recordConfirmation(request, preview: true),
+    );
+    await pumpApp(tester, env: env);
+    await tester.tap(find.text('记录'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('存成改良版'));
+    await tester.pumpAndSettle();
+    final container = ProviderScope.containerOf(
+      tester.element(find.byType(AlertDialog)),
+    );
+    await container
+        .read(sessionStoreProvider)
+        .save(
+          TokenPair(
+            accessToken: 'replacement-login',
+            refreshToken: 'replacement-refresh',
+            accessExpiresIn: 1800,
+            user: testUser(),
+          ),
+        );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('仍然保存'));
+    await tester.pumpAndSettle();
+    expect(_recordWrites(env), hasLength(1));
+    expect(find.textContaining('已存成改良版'), findsNothing);
+  });
+
   for (final failure in [
     FallbackInfoReasonCodeEnum.invalidData,
     FallbackInfoReasonCodeEnum.unknownComponent,

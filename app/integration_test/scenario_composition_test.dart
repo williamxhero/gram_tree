@@ -17,6 +17,12 @@ const _note = '观察中心熟透后再出锅';
 
 Finder _key(String value) => find.byKey(ValueKey(value));
 
+// The adjustment summary repeats amounts; check the actual ingredient row.
+Finder _saltAmount(String text) => find.descendant(
+  of: _key('personalized-detail-salt'),
+  matching: find.text(text),
+);
+
 Future<void> _pump(WidgetTester tester) async {
   for (var i = 0; i < 12; i++) {
     await tester.pump(const Duration(milliseconds: 100));
@@ -249,13 +255,13 @@ void main() {
       final changeId = change['id'] as String;
       final tasteId = 'scene:taste:$changeId';
       final currentProfile = await _get('/v1/me/taste-profile', auth);
-      await _reveal(tester, find.text('盐  12.5 g'));
+      await _reveal(tester, _saltAmount('盐  12.5 g'));
       await _tap(
         tester,
         _key('$tasteId:show_before_taste_change'),
         inRecipe: true,
       );
-      await _reveal(tester, find.text('盐  7.5 g'));
+      await _reveal(tester, _saltAmount('盐  7.5 g'));
       expect(find.text('盐  10 g'), findsNothing);
       expect(await _get('/v1/me/taste-profile', auth), currentProfile);
       await _tap(
@@ -263,7 +269,7 @@ void main() {
         _key('scenario-restore-current-taste'),
         inRecipe: true,
       );
-      await _reveal(tester, find.text('盐  12.5 g'));
+      await _reveal(tester, _saltAmount('盐  12.5 g'));
       await _tap(tester, _key('$tasteId:open_taste_change'), inRecipe: true);
       await _wait(tester, find.byType(AlertDialog));
       await _tap(tester, find.text('取消'));
@@ -294,7 +300,7 @@ void main() {
       await _tap(tester, _key('$tasteId:open_taste_change'), inRecipe: true);
       await _wait(tester, find.byType(AlertDialog));
       await _tap(tester, _key('scenario-confirm-revert'));
-      await _reveal(tester, find.text('盐  7.5 g'));
+      await _reveal(tester, _saltAmount('盐  7.5 g'));
       final revertedProfile = await _get('/v1/me/taste-profile', auth);
       expect((revertedProfile['flavors'] as Map)['salty']['coefficient'], 0.75);
       expect(_key('scenario-restore-current-taste'), findsNothing);

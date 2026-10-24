@@ -27,7 +27,10 @@ from gramtree.events.sync_contract import (
 from gramtree.events.sync_models import WriteFactOutbox, WriteReceipt
 from gramtree.events.sync_registry import REGISTERED_WRITES, authorize_envelope
 from gramtree.recipes import service as recipe_service
-from gramtree.recipes.sync_adapter import recipe_version_write_spec
+from gramtree.recipes.sync_adapter import (
+    recipe_version_write_spec,
+    record_improvement_write_spec,
+)
 from gramtree.runtime_config import service as config_service
 from gramtree.taste_profiles.service import lock_owner
 
@@ -282,6 +285,7 @@ def upload_writes(
     registrations = {
         **REGISTERED_WRITES,
         "recipe_version.save": recipe_version_write_spec(settings, redis),
+        "record_improvement.save": record_improvement_write_spec(settings, redis),
     }
     results = []
     for write in body.writes:
@@ -294,7 +298,7 @@ def upload_writes(
             reason_code=result.reason_code,
         )
     if any(
-        write.write_type == "recipe_version.save"
+        write.write_type in {"recipe_version.save", "record_improvement.save"}
         and result.status in ("confirmed", "already_processed")
         for write, result in zip(body.writes, results, strict=True)
     ):

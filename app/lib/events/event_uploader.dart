@@ -66,6 +66,7 @@ class EventUploader {
   final int maxAttempts;
   Timer? _retryTimer;
   bool _uploading = false;
+  Completer<void>? _uploadCompletion;
   bool _rerunRequested = false;
   bool _rerunAttemptedOnly = true;
   bool _disposed = false;
@@ -159,7 +160,12 @@ class EventUploader {
       _session.canUpload(SessionIdentity(ownerId: owner, epoch: epoch)) &&
       _ref.read(privacyConsentProvider);
 
-  Future<void> triggerUpload() => _triggerUpload();
+  Future<void> triggerUpload({bool waitForDrain = false}) async {
+    await _triggerUpload();
+    // A foreground save may join a lifecycle/intent drain already in flight.
+    // Wait for that attempt, not for backoff retries while the device is offline.
+    if (waitForDrain) await _uploadCompletion?.future;
+  }
 
   Future<void> _triggerUpload({bool attemptedOnly = false}) async {
     if (_disposed || !_ref.mounted) return;
@@ -171,6 +177,7 @@ class EventUploader {
       return;
     }
     _uploading = true;
+    final completion = _uploadCompletion = Completer<void>();
     _retryTimer?.cancel();
     _retryTimer = null;
     try {
@@ -185,9 +192,9 @@ class EventUploader {
           attemptedOnly = false;
         }
         await _drain(attemptedOnly: attemptedOnly);
+        if (!_disposed && _ref.mounted) await _checkBacklog();
         attemptedOnly = _rerunAttemptedOnly;
       } while (_rerunRequested && !_disposed && _ref.mounted);
-      if (!_disposed && _ref.mounted) await _checkBacklog();
     } catch (_) {
       // Uploads are lifecycle/background work. Per-write failures are retained
       // durably by _drain; an unexpected queue/storage failure must wait for a
@@ -195,10 +202,8 @@ class EventUploader {
     } finally {
       _uploading = false;
       _manualRetryInProgress = false;
-    }
-    // An overdue retry can fire during the asynchronous backlog read too.
-    if (_rerunRequested) {
-      unawaited(_triggerUpload(attemptedOnly: _rerunAttemptedOnly));
+      _uploadCompletion = null;
+      completion.complete();
     }
   }
 

@@ -376,6 +376,8 @@ def save(
     owner: User,
     recipe_id: uuid.UUID,
     body: ImprovementSaveInput,
+    *,
+    commit: bool = True,
 ) -> ImprovementSaveOut:
     # Owner lock serializes all retry/profile/branch mutations, including first use.
     taste.lock_owner(session, owner.id)
@@ -395,6 +397,8 @@ def save(
     if receipt:
         if receipt.fingerprint != fingerprint:
             raise ApiError(409, "idempotency_conflict", "这个保存请求已经用于其他内容")
+        if receipt.response.get("resource_deleted") is True:
+            raise NotFound()
         return ImprovementSaveOut.model_validate(receipt.response)
     recipe, source = _working_source(
         session, owner, recipe_id, body.source_version_id, body.from_cooking_record_id
@@ -565,8 +569,9 @@ def save(
             response=result.model_dump(mode="json"),
         )
     )
-    session.commit()
-    service._drain_save_events(session, redis, owner)
+    if commit:
+        session.commit()
+        service._drain_save_events(session, redis, owner)
     return result
 
 
@@ -577,6 +582,8 @@ def save_record_version(
     owner: User,
     record_id: uuid.UUID,
     body: RecordVersionSaveInput,
+    *,
+    commit: bool = True,
 ) -> ImprovementSaveOut:
     from gramtree.recipes import publication
     from gramtree.recipes.schemas import RecipeVersionCreate
@@ -596,6 +603,8 @@ def save_record_version(
     if receipt:
         if receipt.fingerprint != fingerprint:
             raise ApiError(409, "idempotency_conflict", "这个保存请求已经用于其他内容")
+        if receipt.response.get("resource_deleted") is True:
+            raise NotFound()
         return ImprovementSaveOut.model_validate(receipt.response)
     record = session.scalar(
         select(CookingRecord).where(
@@ -657,8 +666,9 @@ def save_record_version(
             response=result.model_dump(mode="json"),
         )
     )
-    session.commit()
-    service._drain_save_events(session, redis, owner)
+    if commit:
+        session.commit()
+        service._drain_save_events(session, redis, owner)
     return result
 
 

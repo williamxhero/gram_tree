@@ -11,10 +11,11 @@ from pathlib import Path
 import pytest
 
 from tests.accounts_support import Api, bearer, new_uuid
-from tests.cooking_completion_support import complete_recipe
+from tests.cooking_completion_support import complete_recipe, completed_record_body
 from tests.test_ai_recipes import recording
 from tests.test_recipe_modifications import INTENT, TEXT, operation
 from tests.test_recipes import recipe_input
+from tests.test_sync_writes import envelope, submit
 
 
 def public_source(api: Api):
@@ -589,6 +590,293 @@ def test_concurrent_own_record_retry_creates_one_linear_version(api: Api):
     assert event_count(api, author, "recipe.version_published") == 2
 
 
+@pytest.mark.parametrize("own", [False, True])
+def test_durable_record_save_child_first_replays_one_exact_published_version(api: Api, own):
+    author, reader, source = public_source(api)
+    owner = author if own else reader
+    body = completed_record_body(
+        api, owner, source, adjustments=[{"step_id": "cook", "fields": {"cookware": "烤箱"}}]
+    )
+    parent = envelope(
+        owner["user"]["id"], write_type="cooking_record.create", payload={"record": body}
+    )
+    child = envelope(
+        owner["user"]["id"],
+        write_type="record_improvement.save",
+        dependencies=[parent["write_id"]],
+        payload={
+            "record_write_id": parent["write_id"],
+            "recipe_id": source["id"],
+            "source_version_id": source["version"]["id"],
+        },
+    )
+    first = submit(api, owner, child, parent)
+    assert first[0]["status"] == "deferred"
+    assert first[0]["reason_code"] == "dependency_not_arrived"
+    assert first[1]["status"] == "confirmed"
+    saved = submit(api, owner, child)[0]
+    assert saved["status"] == "confirmed", saved
+    result = saved["result"]["values"]["response"]
+    recipe = result["recipe"]
+    assert recipe["version"]["snapshot"]["steps"][1]["cookware"] == "烤箱"
+    assert panel(api, owner, recipe)["state"] == "published"
+    assert (recipe["id"] == source["id"]) == own
+    assert recipe["version"]["version_number"] == (2 if own else 1)
+    assert recipe["source_version_id"] == (None if own else source["version"]["id"])
+    replay = submit(api, owner, child)[0]
+    assert replay["status"] == "already_processed"
+    assert replay["result"] == saved["result"]
+    assert replay["confirmed_at"] == saved["confirmed_at"]
+    assert len(api.client.get("/v1/records", headers=bearer(owner)).json()["items"]) == (
+        2 if own else 1
+    )
+    assert (
+        event_count(
+            api, owner, "recipe.record_version_saved" if own else "recipe.improvement_created"
+        )
+        == 1
+    )
+    assert event_count(api, owner, "recipe.version_published") == (2 if own else 1)
+    record = api.client.get(
+        f"/v1/records/{first[1]['result']['resource_id']}", headers=bearer(owner)
+    ).json()
+    assert record["recipe_version_id"] == source["version"]["id"]
+
+
+@pytest.mark.parametrize("choice", ["branch", "taste"])
+def test_durable_record_microadjust_retains_choice_without_premature_mutation(api: Api, choice):
+    _, reader, source = public_source(api)
+    record = complete_recipe(
+        api, reader, source, adjustments=[{"ingredient_id": "pepper", "quantity": 9, "unit": "g"}]
+    )
+    intent = envelope(
+        reader["user"]["id"],
+        write_type="record_improvement.save",
+        payload={
+            "record_id": record["id"],
+            "recipe_id": source["id"],
+            "source_version_id": source["version"]["id"],
+        },
+    )
+    preview = submit(api, reader, intent)[0]
+    assert preview["status"] == "confirmed", preview
+    values = preview["result"]["values"]
+    assert "response" not in values
+    assert values["preview"]["microadjust_prompt"]
+    assert api.client.get("/v1/recipes", headers=bearer(reader)).json()["items"] == []
+    assert event_count(api, reader, "recipe.improvement_created") == 0
+    assert event_count(api, reader, "recipe.improvement_saved_to_taste") == 0
+    selected = envelope(
+        reader["user"]["id"],
+        write_type="record_improvement.save",
+        payload={
+            **intent["payload"],
+            "microadjust_choice": choice,
+            "expected_profile_version": values["preview"]["taste_proposal"]["profile_version"]
+            if choice == "taste"
+            else None,
+        },
+    )
+    confirmed = submit(api, reader, selected)[0]
+    assert confirmed["status"] == "confirmed", confirmed
+    result = confirmed["result"]["values"]["response"]
+    assert result["outcome"] == choice
+    assert submit(api, reader, selected)[0]["result"] == confirmed["result"]
+    assert len(api.client.get("/v1/recipes", headers=bearer(reader)).json()["items"]) == (
+        1 if choice == "branch" else 0
+    )
+    if choice == "branch":
+        assert panel(api, reader, result["recipe"])["state"] == "published"
+    assert (
+        event_count(
+            api,
+            reader,
+            "recipe.improvement_created"
+            if choice == "branch"
+            else "recipe.improvement_saved_to_taste",
+        )
+        == 1
+    )
+
+
+@pytest.mark.parametrize("case", ["other_owner", "wrong_version", "wrong_dependency"])
+def test_durable_record_save_rejects_foreign_or_mismatched_evidence(api: Api, case):
+    author, reader, source = public_source(api)
+    record = complete_recipe(
+        api, reader, source, adjustments=[{"step_id": "cook", "fields": {"cookware": "烤箱"}}]
+    )
+    payload = {
+        "record_id": record["id"],
+        "recipe_id": source["id"],
+        "source_version_id": new_uuid() if case == "wrong_version" else source["version"]["id"],
+    }
+    owner = author if case == "other_owner" else reader
+    dependencies = []
+    if case == "wrong_dependency":
+        parent = envelope(owner["user"]["id"])
+        assert submit(api, owner, parent)[0]["status"] == "confirmed"
+        payload["record_write_id"] = parent["write_id"]
+        dependencies.append(parent["write_id"])
+    write = envelope(
+        owner["user"]["id"],
+        write_type="record_improvement.save",
+        payload=payload,
+        dependencies=dependencies,
+    )
+    result = submit(api, owner, write)[0]
+    assert result["status"] == "failed", result
+    assert result["result"] is None
+    assert (
+        result["reason_code"]
+        == {
+            "other_owner": "record_not_writable",
+            "wrong_version": "reference_forbidden",
+            "wrong_dependency": "record_dependency_type",
+        }[case]
+    )
+    assert event_count(api, reader, "recipe.improvement_created") == 0
+
+
+def test_durable_record_save_rolls_back_mutation_and_receipts_on_interrupted_transaction(
+    api: Api, monkeypatch
+):
+    from gramtree.recipes import improvements
+
+    _, reader, source = public_source(api)
+    record = complete_recipe(
+        api, reader, source, adjustments=[{"step_id": "cook", "fields": {"cookware": "烤箱"}}]
+    )
+    write = envelope(
+        reader["user"]["id"],
+        write_type="record_improvement.save",
+        payload={
+            "record_id": record["id"],
+            "recipe_id": source["id"],
+            "source_version_id": source["version"]["id"],
+        },
+    )
+
+    def interrupted(*args, **kwargs):
+        raise RuntimeError("injected transaction interruption")
+
+    with monkeypatch.context() as fault:
+        fault.setattr(improvements, "creation_event", interrupted)
+        failed = api.client.post(
+            "/v1/sync/writes", headers=bearer(reader), json={"writes": [write]}
+        )
+    assert failed.status_code == 500
+    assert api.client.get("/v1/recipes", headers=bearer(reader)).json()["items"] == []
+    assert event_count(api, reader, "recipe.improvement_created") == 0
+    confirmed = submit(api, reader, write)[0]
+    assert confirmed["status"] == "confirmed", confirmed
+    assert submit(api, reader, write)[0]["result"] == confirmed["result"]
+    assert len(api.client.get("/v1/recipes", headers=bearer(reader)).json()["items"]) == 1
+    assert event_count(api, reader, "recipe.improvement_created") == 1
+
+
+@pytest.mark.parametrize("queued", [False, True])
+def test_private_improvement_erasure_cannot_replay_deleted_snapshot(api: Api, queued):
+    _, reader, source = public_source(api)
+    write: dict | None = None
+    body: dict | None = None
+    if queued:
+        record = complete_recipe(
+            api, reader, source, adjustments=[{"step_id": "cook", "fields": {"heat": "大火"}}]
+        )
+        write = envelope(
+            reader["user"]["id"],
+            write_type="record_improvement.save",
+            payload={
+                "record_id": record["id"],
+                "recipe_id": source["id"],
+                "source_version_id": source["version"]["id"],
+            },
+        )
+        first = submit(api, reader, write)[0]
+        assert first["status"] == "confirmed", first
+        branch = first["result"]["values"]["response"]["recipe"]
+    else:
+        body = improvement_body(source)
+        first = post_save(api, reader, source, body)
+        assert first.status_code == 201, first.text
+        branch = first.json()["recipe"]
+    assert panel(api, reader, branch)["state"] == "draft"
+    removed = api.client.delete(f"/v1/recipes/{branch['id']}", headers=bearer(reader))
+    assert removed.status_code == 204, removed.text
+    if queued:
+        assert write is not None
+        replay = submit(api, reader, write)[0]
+        assert replay["status"] == "failed", replay
+        assert replay["reason_code"] == "resource_deleted"
+        assert replay["result"] is None
+    else:
+        assert body is not None
+        replay = post_save(api, reader, source, body)
+        assert replay.status_code == 404, replay.text
+        assert "snapshot" not in replay.text
+    assert api.client.get("/v1/recipes", headers=bearer(reader)).json()["items"] == []
+    assert api.client.get(f"/v1/recipes/{branch['id']}", headers=bearer(reader)).status_code == 404
+    assert api.client.get(f"/v1/recipes/{source['id']}", headers=bearer(reader)).status_code == 200
+    stored = api.client.get("/v1/dev/deletion-storage", headers=bearer(reader)).json()
+    assert stored["owned_counts"]["improvement_receipt_payloads"] == 0
+    assert stored["owned_counts"]["recipe_improvement_facts"] == 0
+    assert stored["orphan_improvement_private_payloads"] == 0
+    statistics = stored["anonymous_improvement_statistics"]
+    assert len(statistics) == 1
+    assert set(statistics[0]) == {
+        "recipe_version_id",
+        "source_version_id",
+        "branch_type",
+        "conclusion",
+        "rules_version",
+        "week",
+    }
+    assert reader["user"]["id"] not in str(statistics)
+    assert statistics[0]["source_version_id"] == source["version"]["id"]
+
+
+def test_account_erasure_removes_new_improvement_private_domains(api: Api):
+    from tests.test_account_deletion import _purge, _reauth_email
+
+    author, reader, source = public_source(api)
+    draft = api.client.post(
+        f"/v1/recipes/{source['id']}/improvement-drafts",
+        headers=bearer(reader),
+        json={"source_version_id": source["version"]["id"]},
+    )
+    assert draft.status_code == 201, draft.text
+    saved = post_save(api, reader, source, improvement_body(source))
+    assert saved.status_code == 201, saved.text
+    before = api.client.get("/v1/dev/deletion-storage", headers=bearer(reader)).json()
+    assert before["owned_counts"]["improvement_drafts"] == 1
+    assert before["owned_counts"]["improvement_receipts"] == 1
+    assert before["owned_counts"]["recipe_improvement_facts"] == 1
+    assert _reauth_email(api, reader, "improvement-reader@example.com") == 204
+    requested = api.client.post(
+        "/v1/me/deletion", headers=bearer(reader), json={"public_recipe_action": None}
+    )
+    assert requested.status_code == 202, requested.text
+    assert "已删除 1 个" in _purge(requested.json()["deletion_due_at"])
+    observed = api.client.get(
+        "/v1/dev/deletion-storage",
+        headers=bearer(author),
+        params={"owner_id": reader["user"]["id"]},
+    )
+    assert observed.status_code == 200, observed.text
+    stored = observed.json()
+    assert all(value == 0 for value in stored["owned_counts"].values()), stored
+    assert stored["orphan_improvement_private_payloads"] == 0
+    assert len(stored["anonymous_improvement_statistics"]) == 1
+    assert reader["user"]["id"] not in str(stored)
+    assert api.client.get(f"/v1/recipes/{source['id']}", headers=bearer(author)).status_code == 200
+    assert (
+        api.client.get(
+            f"/v1/improvement-drafts/{draft.json()['id']}", headers=bearer(author)
+        ).status_code
+        == 404
+    )
+
+
 def test_curated_cli_is_audited_and_user_cannot_write_it(api: Api):
     _, reader, source = public_source(api)
     response = post_save(api, reader, source, improvement_body(source))
@@ -634,8 +922,10 @@ def test_curated_cli_is_audited_and_user_cannot_write_it(api: Api):
     )
     removed = api.client.delete(f"/v1/recipes/{branch['id']}", headers=bearer(reader))
     assert removed.status_code == 204, removed.text
-    assert event_count(api, reader, "recipe.improvement_created") == 1
-    assert event_count(api, reader, "recipe.improvement_curated") == 2
+    # Private deletion removes owner-linked history under SPEC-010.2; public
+    # lineage and anonymous cooking statistics have separate regression coverage.
+    assert event_count(api, reader, "recipe.improvement_created") == 0
+    assert event_count(api, reader, "recipe.improvement_curated") == 0
 
 
 @pytest.fixture

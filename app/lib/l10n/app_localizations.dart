@@ -381,6 +381,48 @@ abstract class AppLocalizations {
   /// **'保存改良版 / 检查可复刻性 / 定位下一处'**
   String get improvementEditorCommandHint;
 
+  /// No description provided for @recipeQuantifyGuidance.
+  ///
+  /// In zh, this message translates to:
+  /// **'请求量化前会先保存当前私有版本，处理建议后再保存新版本。'**
+  String get recipeQuantifyGuidance;
+
+  /// No description provided for @recipeReproducibilityCheck.
+  ///
+  /// In zh, this message translates to:
+  /// **'检查可复刻性'**
+  String get recipeReproducibilityCheck;
+
+  /// No description provided for @recipeReproducibilityChecking.
+  ///
+  /// In zh, this message translates to:
+  /// **'正在检查可复刻性…'**
+  String get recipeReproducibilityChecking;
+
+  /// No description provided for @recipeQuantify.
+  ///
+  /// In zh, this message translates to:
+  /// **'保存并请求 AI 量化'**
+  String get recipeQuantify;
+
+  /// No description provided for @recipeQuantifySaving.
+  ///
+  /// In zh, this message translates to:
+  /// **'正在保存或量化…'**
+  String get recipeQuantifySaving;
+
+  /// No description provided for @recipeOperationInvalid.
+  ///
+  /// In zh, this message translates to:
+  /// **'请输入提示中的菜谱操作'**
+  String get recipeOperationInvalid;
+
+  /// No description provided for @scenarioRestoreCurrentTaste.
+  ///
+  /// In zh, this message translates to:
+  /// **'本次按调整前口味显示 · 恢复最近口味'**
+  String get scenarioRestoreCurrentTaste;
+
   /// No description provided for @publicationEditorCommandHint.
   ///
   /// In zh, this message translates to:

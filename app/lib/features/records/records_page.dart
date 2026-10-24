@@ -5,6 +5,9 @@ import 'package:gramtree_api/gramtree_api.dart';
 import '../../api/api_client.dart';
 import '../../auth/auth_controller.dart';
 import '../../auth/session.dart';
+import '../../events/event_queue.dart';
+import '../../events/event_uploader.dart';
+import '../../events/sync_status.dart';
 import '../../l10n/app_localizations.dart';
 import '../../ui_protocol/intent_dispatcher.dart';
 import '../../ui_protocol/recipe_operations.dart';
@@ -50,37 +53,84 @@ class RecordsPage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final records = ref.watch(recordsProvider);
+    final queued =
+        ref.watch(syncStatusProvider).value?.entries ?? const <QueueEntry>[];
+    ref.listen(
+      confirmedCookingRecordRevisionProvider,
+      (_, _) => ref.invalidate(recordsProvider),
+    );
     return TabPage(
       child: records.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (_, _) =>
             _RecordsError(onRetry: () => ref.invalidate(recordsProvider)),
-        data: (page) => page.items.isEmpty
-            ? const EmptyState(
-                icon: Icons.menu_book_outlined,
-                title: '还没有做菜记录',
-                message: '每次做完菜后的记录和心得会保存在这里。',
-              )
-            : ListView(
-                padding: const EdgeInsets.fromLTRB(20, 24, 20, 32),
-                children: [
-                  Text(
-                    '做过记录',
-                    style: Theme.of(context).textTheme.headlineSmall,
-                  ),
-                  const SizedBox(height: 16),
-                  for (final record in page.items)
-                    _RecordCard(key: ValueKey(record.id), record: record),
-                ],
-              ),
+        data: (page) {
+          final byId = <String, (CookingRecordOut, String?, bool)>{
+            for (final record in page.items) record.id: (record, null, false),
+          };
+          for (final entry in queued.where(
+            (entry) => entry.write.writeType == 'cooking_record.create',
+          )) {
+            final raw = entry.write.payload['record'];
+            if (raw is! Map || raw['client_id'] is! String) continue;
+            final remote = page.items
+                .where((record) => record.clientId == raw['client_id'])
+                .firstOrNull;
+            if (remote == null && entry.state == WriteState.confirmed) continue;
+            try {
+              final local =
+                  remote ??
+                  CookingRecordOut.fromJson({
+                    ...Map<String, dynamic>.from(raw),
+                    'id': raw['client_id'],
+                    'created_at': entry.write.deviceTime.toIso8601String(),
+                    'verification': 'unverified',
+                    'counts_as_cooked': false,
+                    'meal': raw['meal'],
+                    'taste_summary': <String, Object>{},
+                  });
+              byId[local.id] = (local, entry.write.id, remote == null);
+            } catch (_) {
+              // A legacy malformed write remains on the sync page, not a broken record card.
+            }
+          }
+          if (byId.isEmpty) {
+            return const EmptyState(
+              icon: Icons.menu_book_outlined,
+              title: '还没有做菜记录',
+              message: '每次做完菜后的记录和心得会保存在这里。',
+            );
+          }
+          return ListView(
+            padding: const EdgeInsets.fromLTRB(20, 24, 20, 32),
+            children: [
+              Text('做过记录', style: Theme.of(context).textTheme.headlineSmall),
+              const SizedBox(height: 16),
+              for (final (record, writeId, pending) in byId.values)
+                _RecordCard(
+                  key: ValueKey(record.id),
+                  record: record,
+                  recordWriteId: writeId,
+                  pending: pending,
+                ),
+            ],
+          );
+        },
       ),
     );
   }
 }
 
 class _RecordCard extends ConsumerStatefulWidget {
-  const _RecordCard({super.key, required this.record});
+  const _RecordCard({
+    super.key,
+    required this.record,
+    this.recordWriteId,
+    this.pending = false,
+  });
   final CookingRecordOut record;
+  final String? recordWriteId;
+  final bool pending;
 
   @override
   ConsumerState<_RecordCard> createState() => _RecordCardState();
@@ -105,40 +155,50 @@ class _RecordCardState extends ConsumerState<_RecordCard> {
   }
 
   Future<void> _save() async {
-    final owner = ref.read(authProvider).value?.id;
+    final session = ref.read(sessionStoreProvider);
+    final identity = session.identity;
+    final owner = identity?.ownerId;
     if (_saving ||
         record.recipeId == null ||
         record.recipeVersionId == null ||
-        owner == null) {
+        owner == null ||
+        identity == null) {
       return;
     }
     setState(() => _saving = true);
     try {
       final own = _savedDetail?.author.id == owner;
+      var cancelled = false;
       final result = own
-          ? (await ref
-                    .read(apiClientProvider)
-                    .getImprovementsApi()
-                    .saveRecordVersion(
-                      recordId: record.id,
-                      recordVersionSaveInput: RecordVersionSaveInput(
-                        requestId: _requestId,
-                        changeNote: '临场调整',
-                      ),
-                    ))
-                .data
+          ? await enqueueRecordImprovementSave(
+              ref,
+              requestId: _requestId,
+              recordId: widget.recordWriteId == null ? record.id : null,
+              recordWriteId: widget.recordWriteId,
+              recordClientId: record.clientId,
+              recipeId: record.recipeId!,
+              sourceVersionId: record.recipeVersionId!,
+              changeNote: AppLocalizations.of(context).cookingAdjustmentTitle,
+            )
           : await saveImprovementWithChoice(
               context,
               ref,
               recipeId: record.recipeId!,
               versionId: record.recipeVersionId!,
               requestId: _requestId,
-              recordId: record.id,
-              changeNote: '临场调整',
+              recordId: widget.recordWriteId == null ? record.id : null,
+              recordWriteId: widget.recordWriteId,
+              recordClientId: record.clientId,
+              changeNote: AppLocalizations.of(context).cookingAdjustmentTitle,
+              onCancelled: () => cancelled = true,
             );
-      if (!mounted ||
-          owner != ref.read(authProvider).value?.id ||
-          result == null) {
+      if (!mounted || !session.matches(identity) || cancelled) return;
+      if (result == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(AppLocalizations.of(context).syncPendingReason),
+          ),
+        );
         return;
       }
       ref.invalidate(myRecipesProvider);
@@ -155,7 +215,7 @@ class _RecordCardState extends ConsumerState<_RecordCard> {
         ),
       );
     } catch (error) {
-      if (mounted && owner == ref.read(authProvider).value?.id) {
+      if (mounted && session.matches(identity)) {
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: Text(ApiFailure.from(error).message)));
@@ -288,6 +348,8 @@ class _RecordCardState extends ConsumerState<_RecordCard> {
                 record.source_ == CookingRecordOutSource_Enum.cookingSession
                     ? AppLocalizations.of(context).recordCookingMode
                     : AppLocalizations.of(context).recordManual,
+                if (widget.pending)
+                  AppLocalizations.of(context).syncPendingReason,
                 if (record.adjustments.isNotEmpty)
                   AppLocalizations.of(context).recordHasAdjustments,
               ].join(' · '),
@@ -298,12 +360,13 @@ class _RecordCardState extends ConsumerState<_RecordCard> {
                 record.countsAsCooked
                     ? const Icon(Icons.check_circle_outline)
                     : const Icon(Icons.edit_note),
-                IconButton(
-                  key: ValueKey('record-delete-${record.id}'),
-                  tooltip: '删除记录',
-                  onPressed: _deleting ? null : _delete,
-                  icon: const Icon(Icons.delete_outline),
-                ),
+                if (!widget.pending)
+                  IconButton(
+                    key: ValueKey('record-delete-${record.id}'),
+                    tooltip: '删除记录',
+                    onPressed: _deleting ? null : _delete,
+                    icon: const Icon(Icons.delete_outline),
+                  ),
               ],
             ),
           ),

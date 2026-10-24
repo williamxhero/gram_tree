@@ -168,6 +168,27 @@ class AppLocalizationsZh extends AppLocalizations {
   String get improvementEditorCommandHint => '保存改良版 / 检查可复刻性 / 定位下一处';
 
   @override
+  String get recipeQuantifyGuidance => '请求量化前会先保存当前私有版本，处理建议后再保存新版本。';
+
+  @override
+  String get recipeReproducibilityCheck => '检查可复刻性';
+
+  @override
+  String get recipeReproducibilityChecking => '正在检查可复刻性…';
+
+  @override
+  String get recipeQuantify => '保存并请求 AI 量化';
+
+  @override
+  String get recipeQuantifySaving => '正在保存或量化…';
+
+  @override
+  String get recipeOperationInvalid => '请输入提示中的菜谱操作';
+
+  @override
+  String get scenarioRestoreCurrentTaste => '本次按调整前口味显示 · 恢复最近口味';
+
+  @override
   String get publicationEditorCommandHint =>
       '检查可复刻性 / 请求量化 / 定位下一处 / 全部接受 / 暂不处理';
 

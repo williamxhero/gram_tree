@@ -1351,7 +1351,9 @@ class _RecipeEditorPageState extends ConsumerState<RecipeEditorPage> {
                               ? null
                               : () => operation('check'),
                           child: Text(
-                            _checkingReproducibility ? '正在检查可复刻性…' : '检查可复刻性',
+                            _checkingReproducibility
+                                ? l10n.recipeReproducibilityChecking
+                                : l10n.recipeReproducibilityCheck,
                           ),
                         ),
                         ReproducibilityCard(
@@ -1360,13 +1362,17 @@ class _RecipeEditorPageState extends ConsumerState<RecipeEditorPage> {
                         ),
                         if (_reproducibilityError != null)
                           Text(_reproducibilityError!),
-                        const Text('请求量化前会先保存当前私有版本，处理建议后再保存新版本。'),
+                        Text(l10n.recipeQuantifyGuidance),
                         OutlinedButton(
                           key: const ValueKey('recipe-quantify'),
                           onPressed: _saving || widget.improvementDraft != null
                               ? null
                               : () => operation('quantify'),
-                          child: Text(_saving ? '正在保存或量化…' : '保存并请求 AI 量化'),
+                          child: Text(
+                            _saving
+                                ? l10n.recipeQuantifySaving
+                                : l10n.recipeQuantify,
+                          ),
                         ),
                         TextField(
                           key: const ValueKey('recipe-operation-command'),
@@ -1382,7 +1388,9 @@ class _RecipeEditorPageState extends ConsumerState<RecipeEditorPage> {
                               unawaited(dispatch(action));
                             } else {
                               ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(content: Text('请输入提示中的菜谱操作')),
+                                SnackBar(
+                                  content: Text(l10n.recipeOperationInvalid),
+                                ),
                               );
                             }
                           },
@@ -4329,7 +4337,11 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
                           hintText: l10n.improvementStart,
                         ),
                         onSubmitted: (text) {
-                          if (text.trim() == '我来改一版' && !_startingImprovement) {
+                          final action = recipeCommand(text);
+                          final params = action?.params;
+                          if (!_startingImprovement &&
+                              params is Map &&
+                              params['operation'] == 'improvement_start') {
                             unawaited(dispatch());
                           }
                         },
@@ -4427,7 +4439,7 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
             TextButton(
               key: const ValueKey('scenario-restore-current-taste'),
               onPressed: _restoreCurrentTaste,
-              child: const Text('本次按调整前口味显示 · 恢复最近口味'),
+              child: Text(l10n.scenarioRestoreCurrentTaste),
             ),
           _RecipePhotoDisplay(images: detail.version.images),
           if (detail.author.id == ref.watch(authProvider).value?.id &&

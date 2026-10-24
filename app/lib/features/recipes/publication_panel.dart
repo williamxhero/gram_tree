@@ -198,7 +198,7 @@ class _PublicationPanelCardState extends ConsumerState<PublicationPanelCard> {
         }
       case 'verify_identity':
       case 'real_name':
-        if (mounted) context.push('/me/identities');
+        if (mounted) context.push('/me/settings/identities');
       default:
         if (mounted) {
           context.push(

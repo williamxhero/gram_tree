@@ -27,6 +27,11 @@ from gramtree.events.field_adjudication import FieldEntity, FieldHistory
 from gramtree.events.models import Event
 from gramtree.events.sync_models import WriteFactOutbox, WriteReceipt
 from gramtree.recipes.import_models import RecipeImport
+from gramtree.recipes.improvement_models import (
+    ImprovementDraft,
+    ImprovementReceipt,
+    RecipeImprovementFact,
+)
 from gramtree.recipes.measure_models import PersonalMeasure
 from gramtree.recipes.models import (
     Recipe,
@@ -164,7 +169,18 @@ def _erase_receipts(
             and receipt.write_type == "recipe_version.save"
             and result.get("recipe_id") == str(recipe_id)
         )
-        if confirmed or conflict:
+        improvement = (
+            recipe_id is not None
+            and receipt.write_type == "record_improvement.save"
+            and (result.get("values", {}).get("response", {}).get("recipe") or {}).get("id")
+            == str(recipe_id)
+        )
+        record_improvement = (
+            resource_type == "cooking.record"
+            and result.get("resource_type") == "record.improvement"
+            and result.get("resource_id") in ids
+        )
+        if confirmed or conflict or improvement or record_improvement:
             session.execute(
                 delete(WriteFactOutbox).where(WriteFactOutbox.write_id == receipt.write_id)
             )
@@ -207,6 +223,27 @@ def drain_objects(session: Session, settings: Settings) -> None:
         storage.delete(row.storage_key)
         session.delete(row)
     session.commit()
+
+
+def _anonymize_deleted_improvements(session: Session, owner: uuid.UUID) -> None:
+    facts = session.scalars(
+        select(RecipeImprovementFact).where(
+            RecipeImprovementFact.owner_id == owner,
+            RecipeImprovementFact.recipe_id.not_in(select(Recipe.id)),
+        )
+    )
+    for fact in facts:
+        at = fact.created_at.astimezone(UTC)
+        fact.owner_id = None
+        fact.comparison = {}
+        fact.cooking_record_id = None
+        fact.source_path = [
+            {"recipe_id": node.get("recipe_id"), "version_id": node.get("version_id")}
+            for node in fact.source_path
+        ]
+        fact.created_at = at.replace(hour=0, minute=0, second=0, microsecond=0) - timedelta(
+            days=at.weekday()
+        )
 
 
 def erase_recipe(session: Session, recipe: Recipe) -> None:
@@ -252,6 +289,14 @@ def erase_recipe(session: Session, recipe: Recipe) -> None:
             Event.correlation["recipe_version_id"].astext.in_([str(v) for v in versions]),
         )
     )
+    session.execute(
+        update(ImprovementReceipt)
+        .where(
+            ImprovementReceipt.owner_id == recipe.owner_id,
+            ImprovementReceipt.response["recipe"]["id"].astext == str(recipe.id),
+        )
+        .values(response={"resource_deleted": True})
+    )
     _erase_receipts(
         session,
         recipe.owner_id,
@@ -271,6 +316,8 @@ def erase_recipe(session: Session, recipe: Recipe) -> None:
     )
     session.execute(delete(RecipeVersion).where(RecipeVersion.recipe_id == recipe.id))
     session.delete(recipe)
+    session.flush()
+    _anonymize_deleted_improvements(session, recipe.owner_id)
 
 
 def erase_private_domains(session: Session, owner: uuid.UUID) -> None:
@@ -281,6 +328,7 @@ def erase_private_domains(session: Session, owner: uuid.UUID) -> None:
     recipes = list(session.scalars(select(Recipe).where(Recipe.owner_id == owner)))
     for recipe in recipes:
         erase_recipe(session, recipe)
+    _anonymize_deleted_improvements(session, owner)
     staging = list(
         session.scalars(
             select(RecipeImageStaging.storage_key).where(RecipeImageStaging.owner_id == owner)
@@ -292,6 +340,8 @@ def erase_private_domains(session: Session, owner: uuid.UUID) -> None:
     for model, column in (
         (WriteFactOutbox, WriteFactOutbox.owner_id),
         (WriteReceipt, WriteReceipt.owner_id),
+        (ImprovementDraft, ImprovementDraft.owner_id),
+        (ImprovementReceipt, ImprovementReceipt.owner_id),
         (Event, Event.user_id),
         (AnalyticsEvent, AnalyticsEvent.user_id),
         (FieldHistory, FieldHistory.owner_id),

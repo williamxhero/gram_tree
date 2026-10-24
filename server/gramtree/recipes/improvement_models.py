@@ -27,13 +27,13 @@ class ImprovementDraft(Base):
 
 
 class RecipeImprovementFact(Base):
-    """Creation identity survives removal of a never-public experimental branch."""
+    """Immutable lineage; erased private branches retain only anonymous statistics."""
 
     __tablename__ = "recipe_improvement_facts"
 
     recipe_id: Mapped[uuid.UUID] = mapped_column(primary_key=True)
     version_id: Mapped[uuid.UUID] = mapped_column()
-    owner_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"))
+    owner_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id"))
     source_recipe_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("recipes.id"))
     source_version_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("recipe_versions.id"))
     root_recipe_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("recipes.id"))
