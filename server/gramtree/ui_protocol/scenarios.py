@@ -117,8 +117,13 @@ def calendar_signal(user: User, now: datetime) -> dict[str, Any]:
 
 def records_for(session: Session, user: User, recipe_id: uuid.UUID) -> list[CookingRecord]:
     recipe = session.get(Recipe, recipe_id)
+    # The router authorizes the recipe before composing. A recipe can still
+    # disappear between those reads (for example, a stale request racing an
+    # account switch), so scenario history treats that race as no history.
+    # Never turn it into a successful recipe read: the authorization boundary
+    # remains `readable_version()` in the router.
     if recipe is None or recipe.owner_id != user.id:
-        raise ApiError(404, "not_found", "没有这份菜谱")
+        return []
     recipes = select(Recipe.id).where(Recipe.dish_id == recipe.dish_id)
     versions = select(RecipeVersion.id).where(RecipeVersion.recipe_id.in_(recipes))
     return list(
