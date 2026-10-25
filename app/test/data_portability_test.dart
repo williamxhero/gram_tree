@@ -88,6 +88,79 @@ void main() {
     });
   }
 
+  testWidgets('端到端设置导航：小屏异步导出通知不能遮挡注销入口的点击', (tester) async {
+    final server = FakeServer();
+    final completed = Completer<(int, Object?)>();
+    var fetched = false;
+    server.on('GET', '/v1/me/exports', (_) {
+      if (fetched) return completed.future;
+      fetched = true;
+      return (
+        200,
+        {
+          'items': [job('pending')],
+        },
+      );
+    });
+    final fatalBefore = WidgetController.hitTestWarningShouldBeFatal;
+    WidgetController.hitTestWarningShouldBeFatal = true;
+    addTearDown(
+      () => WidgetController.hitTestWarningShouldBeFatal = fatalBefore,
+    );
+    await pumpApp(
+      tester,
+      env: TestEnv.signedIn(server: server),
+      size: const Size(320, 480),
+    );
+    await openSettings(tester);
+    // Complete the real background poll only after the settings route is open.
+    await tester.pump(const Duration(seconds: 5));
+    await tester.pump();
+    completed.complete((
+      200,
+      {
+        'items': [job('completed')],
+      },
+    ));
+    await integration.settle(tester);
+    expect(find.text('导出已完成，可在设置 → 导出我的数据中下载'), findsOneWidget);
+    expect(find.text('注销账号').hitTestable(), findsNothing);
+
+    await integration.tapPortabilitySettingsItem(tester, '注销账号');
+
+    expect(find.text('先确认是你本人'), findsOneWidget);
+    expect(find.text('发送验证码').hitTestable(), findsOneWidget);
+    expect(find.byKey(const ValueKey('delete-confirm')), findsNothing);
+    expect(server.calls('POST', '/v1/me/deletion'), isEmpty);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('端到端设置导航：小屏设置异步展开后仍能打开注销验证页', (tester) async {
+    final server = FakeServer();
+    await pumpApp(
+      tester,
+      env: TestEnv.signedIn(server: server),
+      size: const Size(320, 480),
+    );
+    // Loading text becomes a multi-row chip group while navigation is scrolling.
+    // This is the production settings request, not a synthetic replacement UI.
+    server.on('GET', '/v1/ui/preferences', (_) async {
+      await Future<void>.delayed(const Duration(seconds: 1));
+      return (200, {'detail': 'auto'});
+    });
+    await openSettings(tester);
+    expect(find.text('正在读取默认设置…'), findsOneWidget);
+    expect(find.text('注销账号').hitTestable(), findsNothing);
+
+    await integration.tapPortabilitySettingsItem(tester, '注销账号');
+
+    expect(find.text('先确认是你本人'), findsOneWidget);
+    expect(find.text('发送验证码').hitTestable(), findsOneWidget);
+    expect(find.byKey(const ValueKey('delete-confirm')), findsNothing);
+    expect(server.calls('POST', '/v1/me/deletion'), isEmpty);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('导出：重新验证、后台进度、完成提醒和登录下载系统保存', (tester) async {
     final server = FakeServer();
     String? status;

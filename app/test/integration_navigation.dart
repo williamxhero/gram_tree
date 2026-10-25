@@ -2,6 +2,8 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gram_tree/features/me/settings_page.dart';
 
+import 'lazy_list_controls_support.dart';
+
 // Shared with installed integration tests; kept under test/ so Chrome page
 // tests can exercise the same navigation without imports outside their root.
 Future<void> settle(WidgetTester tester) =>
@@ -18,15 +20,20 @@ Future<void> tapPortabilitySettingsItem(
   WidgetTester tester,
   String text,
 ) async {
-  // Phone viewports do not build distant settings entries until we scroll.
-  // Use the settings list, not a scrollable retained by an underlying route.
-  await tester.scrollUntilVisible(
-    find.text(text),
-    200,
+  // A built entry can still sit behind an asynchronous export SnackBar. Discover
+  // an actually tappable entry with bounded gestures in this route's lazy list.
+  final target = find.descendant(
+    of: find.byType(SettingsPage),
+    matching: find.text(text),
+  );
+  await revealLazyListControl(
+    tester,
+    target,
     scrollable: find.descendant(
       of: find.byType(SettingsPage),
       matching: find.byType(Scrollable),
     ),
   );
-  await tapText(tester, text);
+  await tester.tap(target.hitTestable());
+  await settle(tester);
 }
