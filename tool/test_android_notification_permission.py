@@ -13,6 +13,7 @@ import tempfile
 import time
 import unittest
 import xml.etree.ElementTree as ET
+from contextlib import suppress
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 PACKAGE = "app.gramtree.gram_tree"
@@ -122,14 +123,42 @@ assert (p / "activity_seen").exists(), "observer must start before child"
     }),
     encoding="utf-8",
 )
+wrapper_pid = os.getppid()
+if c.get("process_audit"):
+    audit = pathlib.Path(c["process_audit"])
+    pending = audit.with_suffix(".tmp")
+    owned = {"wrapper": wrapper_pid, "child": c.get("audit_child_pid", os.getpid())}
+    if os.name == "nt":
+        import ctypes
+        from ctypes import wintypes
+        kernel = ctypes.WinDLL("kernel32", use_last_error=True)
+        kernel.GetCurrentProcess.restype = wintypes.HANDLE
+        pointer = ctypes.POINTER(wintypes.FILETIME)
+        kernel.GetProcessTimes.argtypes = (wintypes.HANDLE, pointer, pointer, pointer, pointer)
+        kernel.GetProcessTimes.restype = wintypes.BOOL
+        times = (wintypes.FILETIME * 4)()
+        if not kernel.GetProcessTimes(
+            kernel.GetCurrentProcess(), *(ctypes.byref(item) for item in times)
+        ):
+            raise ctypes.WinError(ctypes.get_last_error())
+        owned["created"] = [times[0].dwHighDateTime, times[0].dwLowDateTime]
+    pending.write_text(json.dumps(owned), encoding="utf-8")
+    pending.replace(audit)
+wrapper_exited = False
 deadline = time.monotonic() + 12
 while not (p / c["wait_for"]).exists():
+    if c.get("exit_wrapper") and not wrapper_exited and (p / "diagnostic_seen").exists():
+        import signal
+        os.kill(wrapper_pid, signal.SIGTERM)
+        wrapper_exited = True
     if time.monotonic() >= deadline:
+        (p / "child_finished").touch()
         sys.exit(91)
     time.sleep(0.02)
 # Give the observer time to consume the fixture response before child shutdown.
 time.sleep(0.5)
 print("fixture child output", flush=True)
+(p / "child_finished").touch()
 if c.get("child_signal"):
     import signal
     os.kill(os.getpid(), signal.SIGTERM)
@@ -137,8 +166,90 @@ sys.exit(c.get("child_code", 0))
 """
 
 
+def stop_owned_windows_child(owned, deadline):
+    """Never authorize termination from a historical PID alone."""
+    import ctypes
+    from ctypes import wintypes
+
+    kernel = ctypes.WinDLL("kernel32", use_last_error=True)
+    kernel.OpenProcess.argtypes = (wintypes.DWORD, wintypes.BOOL, wintypes.DWORD)
+    kernel.OpenProcess.restype = wintypes.HANDLE
+    pointer = ctypes.POINTER(wintypes.FILETIME)
+    kernel.GetProcessTimes.argtypes = (wintypes.HANDLE, pointer, pointer, pointer, pointer)
+    kernel.GetProcessTimes.restype = wintypes.BOOL
+    kernel.TerminateProcess.argtypes = (wintypes.HANDLE, wintypes.UINT)
+    kernel.TerminateProcess.restype = wintypes.BOOL
+    kernel.WaitForSingleObject.argtypes = (wintypes.HANDLE, wintypes.DWORD)
+    kernel.WaitForSingleObject.restype = wintypes.DWORD
+    kernel.CloseHandle.argtypes = (wintypes.HANDLE,)
+    # SYNCHRONIZE | PROCESS_QUERY_LIMITED_INFORMATION | PROCESS_TERMINATE.
+    handle = kernel.OpenProcess(0x00101001, False, owned["child"])
+    if not handle:
+        if ctypes.get_last_error() == 87:
+            return  # The original child has already exited.
+        raise ctypes.WinError(ctypes.get_last_error())
+    try:
+        times = (wintypes.FILETIME * 4)()
+        if not kernel.GetProcessTimes(handle, *(ctypes.byref(item) for item in times)):
+            raise ctypes.WinError(ctypes.get_last_error())
+        if [times[0].dwHighDateTime, times[0].dwLowDateTime] != owned.get("created"):
+            return  # Reused or unverifiable PID: never fall back to taskkill.
+        status = kernel.WaitForSingleObject(handle, 0)
+        if status == 0x00000102:  # WAIT_TIMEOUT: the identified child is still alive.
+            if not kernel.TerminateProcess(handle, 1):
+                raise ctypes.WinError(ctypes.get_last_error())
+            status = kernel.WaitForSingleObject(
+                handle, max(0, int((deadline - time.monotonic()) * 1000))
+            )
+        if status == 0x00000102:
+            raise subprocess.TimeoutExpired("owned fixture child cleanup", 0)
+        if status != 0:
+            raise ctypes.WinError(ctypes.get_last_error())
+    finally:
+        # Retain this same identity-bound handle through termination and wait.
+        kernel.CloseHandle(handle)
+
+
+def stop_owned_cli(process, deadline, audit_path):
+    """Reap this CLI and its descendants without extending the invocation budget."""
+    try:
+        if os.name == "nt":
+            # The receipt binds creation identity to this Popen's fixture child,
+            # even after the wrapper exits and loses its taskkill /T ancestry.
+            owned = (
+                json.loads(audit_path.read_text(encoding="utf-8")) if audit_path.exists() else {}
+            )
+            if owned.get("wrapper") == process.pid:
+                stop_owned_windows_child(owned, deadline)
+        else:
+            # Let the CLI reap its child first; escalate only our new session.
+            with suppress(ProcessLookupError):
+                os.killpg(process.pid, signal.SIGINT)
+            with suppress(subprocess.TimeoutExpired):
+                process.wait(timeout=min(1, max(0.01, deadline - time.monotonic())))
+    finally:
+        try:
+            if os.name == "nt" and process.poll() is None:
+                # Popen retains the wrapper's process handle, fixing its identity.
+                subprocess.run(
+                    ["taskkill", "/PID", str(process.pid), "/T", "/F"],
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL,
+                    timeout=min(1, max(0.01, deadline - time.monotonic())),
+                    check=False,
+                )
+            if os.name != "nt":
+                # A dead wrapper does not prove that its process group is empty.
+                with suppress(ProcessLookupError):
+                    os.killpg(process.pid, signal.SIGKILL)
+        finally:
+            if process.poll() is None:
+                process.kill()
+            process.wait(timeout=max(0.01, deadline - time.monotonic()))
+
+
 class NotificationCliTest(unittest.TestCase):
-    def invoke(self, **overrides):
+    def invoke(self, *, require_immediate_diagnostic=False, command_timeout=45, **overrides):
         build = ROOT / "build"
         build.mkdir(exist_ok=True)
         config = {
@@ -153,6 +264,7 @@ class NotificationCliTest(unittest.TestCase):
         config.update(overrides)
         with tempfile.TemporaryDirectory(prefix="notification-cli-", dir=build) as temporary:
             path = pathlib.Path(temporary)
+            config.setdefault("process_audit", str(path / "owned-processes.json"))
             (path / "config.json").write_text(json.dumps(config), encoding="utf-8")
             (path / "adb.py").write_text(FAKE_ADB, encoding="utf-8")
             (path / "child.py").write_text(CHILD, encoding="utf-8")
@@ -171,29 +283,89 @@ class NotificationCliTest(unittest.TestCase):
                 "-d",
                 "fixture-device",
             ]
-            result = subprocess.run(
-                [
-                    sys.executable,
-                    "-B",
-                    str(ROOT / "tool/android_notification_permission.py"),
-                    "--serial",
-                    "fixture-device",
-                    "--adb",
-                    sys.executable,
-                    str(path / "adb.py"),
-                    "--",
-                    sys.executable,
-                    str(path / "child.py"),
-                    *argv,
-                ],
-                cwd=path,
-                env=env,
-                capture_output=True,
-                text=True,
-                encoding="utf-8",
-                timeout=45,
-                check=False,
-            )
+            command = [
+                sys.executable,
+                "-B",
+                str(ROOT / "tool/android_notification_permission.py"),
+                "--serial",
+                "fixture-device",
+                "--adb",
+                sys.executable,
+                str(path / "adb.py"),
+                "--",
+                sys.executable,
+                str(path / "child.py"),
+                *argv,
+            ]
+            if require_immediate_diagnostic:
+                # File reads cannot block waiting for a newline. One deadline covers
+                # observing the first line, child completion, and owned-tree cleanup.
+                deadline = time.monotonic() + command_timeout
+                work_deadline = deadline - min(5, command_timeout / 3)
+                errors = path / "stderr.txt"
+                output = path / "stdout.txt"
+                with (
+                    errors.open("w", encoding="utf-8") as sink,
+                    errors.open(encoding="utf-8") as reader,
+                    output.open("w", encoding="utf-8") as output_sink,
+                ):
+                    process = subprocess.Popen(
+                        command,
+                        cwd=path,
+                        env=env,
+                        stdout=output_sink,
+                        stderr=sink,
+                        text=True,
+                        encoding="utf-8",
+                        start_new_session=os.name != "nt",
+                    )
+                    try:
+                        first_error = ""
+                        while not first_error.endswith("\n"):
+                            first_error += reader.readline()
+                            if first_error.endswith("\n") or process.poll() is not None:
+                                break
+                            if time.monotonic() >= work_deadline:
+                                raise subprocess.TimeoutExpired(command, command_timeout)
+                            time.sleep(0.02)
+                        before_child_exit = not (path / "child_finished").exists()
+                        (path / "diagnostic_seen").touch()
+                        process.wait(timeout=max(0, work_deadline - time.monotonic()))
+                        if not (path / "child_finished").exists():
+                            raise subprocess.CalledProcessError(process.returncode, command)
+                        result = subprocess.CompletedProcess(
+                            command,
+                            process.returncode,
+                            output.read_text(encoding="utf-8"),
+                            errors.read_text(encoding="utf-8"),
+                        )
+                    except BaseException as error:
+                        try:
+                            stop_owned_cli(process, deadline, pathlib.Path(config["process_audit"]))
+                        except Exception as cleanup_error:
+                            error.add_note(
+                                f"Owned CLI cleanup failed ({type(cleanup_error).__name__})"
+                            )
+                        raise
+                self.assertTrue(before_child_exit, "diagnostic was delayed until child exit")
+                self.assertRegex(
+                    first_error,
+                    r"^Android notification observer error observed "
+                    r"at=\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}\+00:00 "
+                    r"phase=activity_scan: Cannot identify a unique "
+                    r"top-resumed permission activity ",
+                )
+            else:
+                result = subprocess.run(
+                    command,
+                    cwd=path,
+                    env=env,
+                    capture_output=True,
+                    text=True,
+                    encoding="utf-8",
+                    timeout=45,
+                    check=False,
+                )
             commands = [
                 json.loads(line)[2:]
                 for line in (path / "adb.jsonl").read_text(encoding="utf-8").splitlines()
@@ -225,6 +397,149 @@ class NotificationCliTest(unittest.TestCase):
 
     def assert_no_tap(self, commands):
         self.assertFalse(any(command[:3] == ["shell", "input", "tap"] for command in commands))
+
+    def test_diagnostic_timeout_reaps_silent_cli_and_hanging_child(self):
+        activity_without_top = DIALOG_ACTIVITY.replace(f"    topResumedActivity={RECORD}\n", "")
+        for name, activity, exit_wrapper in (
+            ("no_first_line", MAIN_ACTIVITY, False),
+            ("after_first_line", activity_without_top, False),
+            ("exited_wrapper", activity_without_top, True),
+        ):
+            with self.subTest(stage=name), tempfile.TemporaryDirectory() as audit_dir:
+                audit = pathlib.Path(audit_dir) / "owned-processes.json"
+                started = time.monotonic()
+                expected_error = (
+                    subprocess.CalledProcessError if exit_wrapper else subprocess.TimeoutExpired
+                )
+                with self.assertRaises(expected_error):
+                    self.invoke(
+                        activity=activity,
+                        wait_for="never_release_child",
+                        process_audit=str(audit),
+                        exit_wrapper=exit_wrapper,
+                        require_immediate_diagnostic=True,
+                        command_timeout=4,
+                    )
+                self.assertLess(time.monotonic() - started, 5)
+                owned = json.loads(audit.read_text(encoding="utf-8"))
+                for role in ("wrapper", "child"):
+                    self.assertFalse(
+                        self.process_is_running(owned[role]), f"owned {role} remains alive"
+                    )
+
+    @unittest.skipUnless(os.name == "nt", "Windows process-creation identity")
+    def test_timeout_does_not_kill_a_reused_child_pid(self):
+        # A separate owned process stands in for a PID reused after child exit.
+        sentinel = subprocess.Popen(
+            [sys.executable, "-c", "import time; time.sleep(15)"],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
+        try:
+            with self.assertRaises(subprocess.TimeoutExpired):
+                self.invoke(
+                    activity=MAIN_ACTIVITY,
+                    wait_for="never_release_child",
+                    audit_child_pid=sentinel.pid,
+                    require_immediate_diagnostic=True,
+                    command_timeout=4,
+                )
+            self.assertIsNone(sentinel.poll(), "stale child PID killed another owned process")
+        finally:
+            if sentinel.poll() is None:
+                sentinel.terminate()
+            try:
+                sentinel.wait(timeout=1)
+            except subprocess.TimeoutExpired:
+                sentinel.kill()
+                sentinel.wait(timeout=1)
+
+    @staticmethod
+    def process_is_running(pid):
+        # Only inspect PIDs reported by this invocation's own fixture child.
+        if os.name == "nt":
+            import ctypes
+            from ctypes import wintypes
+
+            kernel = ctypes.WinDLL("kernel32", use_last_error=True)
+            kernel.OpenProcess.argtypes = (wintypes.DWORD, wintypes.BOOL, wintypes.DWORD)
+            kernel.OpenProcess.restype = wintypes.HANDLE
+            kernel.WaitForSingleObject.argtypes = (wintypes.HANDLE, wintypes.DWORD)
+            kernel.WaitForSingleObject.restype = wintypes.DWORD
+            kernel.CloseHandle.argtypes = (wintypes.HANDLE,)
+            handle = kernel.OpenProcess(0x00100000, False, pid)
+            if not handle:
+                if ctypes.get_last_error() == 87:  # PID no longer exists.
+                    return False
+                raise ctypes.WinError(ctypes.get_last_error())
+            try:
+                result = kernel.WaitForSingleObject(handle, 0)
+                if result == 0xFFFFFFFF:
+                    raise ctypes.WinError(ctypes.get_last_error())
+                return result == 0x00000102  # WAIT_TIMEOUT: still running.
+            finally:
+                kernel.CloseHandle(handle)
+        try:
+            os.kill(pid, 0)
+        except ProcessLookupError:
+            return False
+        return True
+
+    def test_activity_shape_diagnostic_is_immediate_and_still_fails_closed(self):
+        top_line = f"    topResumedActivity={RECORD}\n"
+        cases = (
+            (
+                "missing_top_with_history",
+                DIALOG_ACTIVITY.replace(top_line, ""),
+                "top_fields=0, top_matches=0, permission_top_fields=0, "
+                "permission_history_headers=1, permission_history_only_hint=True",
+            ),
+            (
+                "present_but_unmatched_top",
+                DIALOG_ACTIVITY.replace("topResumedActivity=", "topResumedActivity = "),
+                "top_fields=1, top_matches=0, permission_top_fields=1, "
+                "permission_history_headers=1, permission_history_only_hint=False",
+            ),
+            (
+                "null_top_with_history",
+                DIALOG_ACTIVITY.replace(top_line, "    topResumedActivity=null\n"),
+                "top_fields=1, top_matches=0, permission_top_fields=0, "
+                "permission_history_headers=1, permission_history_only_hint=True",
+            ),
+            (
+                "multiple_matching_tops",
+                DIALOG_ACTIVITY.replace(top_line, top_line + top_line),
+                "top_fields=2, top_matches=2, permission_top_fields=2, "
+                "permission_history_headers=1, permission_history_only_hint=False",
+            ),
+        )
+        for name, activity, counts in cases:
+            with self.subTest(shape=name):
+                result, commands = self.invoke(
+                    activity=activity + "private-diagnostic-fixture-label\n",
+                    wait_for="diagnostic_seen",
+                    require_immediate_diagnostic=True,
+                )
+                self.assertEqual(result.returncode, 1, result.stderr)
+                self.assertIn(counts, result.stderr)
+                self.assert_no_tap(commands)
+                self.assertNotIn("permission granted and OS dialog closed", result.stdout)
+                self.assertNotIn(RECORD, result.stdout + result.stderr)
+                self.assertNotIn(PACKAGE, result.stdout + result.stderr)
+                self.assertNotIn("private-diagnostic-fixture-label", result.stdout + result.stderr)
+                self.assertNotIn(UI, result.stdout + result.stderr)
+
+    def test_activity_shape_diagnostic_keeps_failed_child_status(self):
+        activity = DIALOG_ACTIVITY.replace(f"    topResumedActivity={RECORD}\n", "")
+        result, commands = self.invoke(
+            activity=activity,
+            child_code=37,
+            wait_for="diagnostic_seen",
+            require_immediate_diagnostic=True,
+        )
+        self.assertEqual(result.returncode, 37, result.stderr)
+        self.assertIn("top_fields=0, top_matches=0", result.stderr)
+        self.assert_no_tap(commands)
 
     def test_exact_notification_grant_and_child_argv(self):
         result, commands = self.invoke()
@@ -328,7 +643,9 @@ class NotificationCliTest(unittest.TestCase):
         for spaces in (1, 2):
             with self.subTest(spaces=spaces):
                 activity = DIALOG_ACTIVITY.replace("Hist  #", "Hist" + " " * spaces + "#")
-                result, commands = self.invoke(activity=activity, wait_for="dialog_seen")
+                # Seeing history is not a completed grant. Keep the child alive
+                # until the existing dialog-closure verification is reached.
+                result, commands = self.invoke(activity=activity)
                 self.assertEqual(result.returncode, 0, result.stderr)
                 self.assertIn("permission granted and OS dialog closed", result.stdout)
                 self.assertEqual(commands.count(["shell", "input", "tap", "540", "1460"]), 1)

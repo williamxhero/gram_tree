@@ -17,6 +17,7 @@ import threading
 import time
 import uuid
 import xml.etree.ElementTree as ET
+from datetime import UTC, datetime
 
 PACKAGE = "app.gramtree.gram_tree"
 CONTROLLER = "com.android.permissioncontroller"
@@ -40,7 +41,22 @@ def permission_activity(output: str) -> str | None:
     )
     if len(tops) != 1:
         if "GrantPermissionsActivity" in output:
-            raise DriverError("Cannot identify a unique top-resumed permission activity")
+            lines = output.splitlines()
+            top_fields = [line for line in lines if re.match(r"^\s*topResumedActivity\s*=", line)]
+            permission_lines = [line for line in lines if "GrantPermissionsActivity" in line]
+            history_headers = sum(
+                bool(re.match(r"^\s*\* Hist {1,2}#\d+: ActivityRecord\{", line))
+                for line in permission_lines
+            )
+            # Counts are clues, not authorization. Unknown structures still fail closed.
+            raise DriverError(
+                "Cannot identify a unique top-resumed permission activity "
+                f"(top_fields={len(top_fields)}, top_matches={len(tops)}, "
+                "permission_top_fields="
+                f"{sum('GrantPermissionsActivity' in line for line in top_fields)}, "
+                f"permission_history_headers={history_headers}, "
+                f"permission_history_only_hint={history_headers == len(permission_lines)})"
+            )
         return None
     top = tops[0]
     match = re.fullmatch(r"ActivityRecord\{([0-9a-f]+) u0 (\S+) t\d+\}", top)
@@ -178,6 +194,7 @@ class Observer:
         self.stop = threading.Event()
         self.ready = threading.Event()
         self.error: str | None = None
+        self.phase = "not_started"
         self.thread = threading.Thread(target=self._watch, daemon=True)
         self.dump = f"/data/local/tmp/gramtree-notification-{uuid.uuid4().hex}.xml"
 
@@ -213,6 +230,7 @@ class Observer:
             self.run("shell", "rm", "-f", self.dump)
 
     def observe(self) -> None:
+        self.phase = "activity_scan"
         token = permission_activity(self.activity())
         if token is None or self.stop.is_set():
             return
@@ -221,6 +239,7 @@ class Observer:
             return
         # UI dumping takes time: revalidate the resumed record/caller immediately
         # before using these freshly matched bounds. Never reuse old coordinates.
+        self.phase = "activity_revalidation"
         if permission_activity(self.activity()) != token:
             raise DriverError("Permission activity changed before notification tap")
         if self.stop.is_set():
@@ -233,6 +252,7 @@ class Observer:
             xml = self.ui()
             # Paused/history records may outlive the dialog. Revalidate the
             # top-resumed identity and the current UI, not the entire dump text.
+            self.phase = "grant_verification"
             closed = permission_activity(activity) is None and not any(
                 node.get("resource-id", "").startswith(f"{CONTROLLER}:id/permission_")
                 for node in self.parse_ui(xml).iter("node")
@@ -272,6 +292,14 @@ class Observer:
                 if isinstance(error, DriverError)
                 else "Unexpected notification observer failure"
             )
+            if self.error.startswith("Cannot identify a unique top-resumed permission activity"):
+                print(
+                    "Android notification observer error observed "
+                    f"at={datetime.now(UTC).isoformat(timespec='milliseconds')} "
+                    f"phase={self.phase}: {self.error}",
+                    file=sys.stderr,
+                    flush=True,
+                )
         finally:
             self.ready.set()
 
