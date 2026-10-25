@@ -179,7 +179,9 @@ jobs:
   android-e2e:
     name: 安卓模拟器端到端测试
     runs-on: ubuntu-24.04
-    timeout-minutes: 45
+    # 25 Flutter targets rebuild separately; leave room for restart and native sharing checks.
+    # Keep individual test and harness timeouts unchanged.
+    timeout-minutes: 75
     services:
       postgres:
         image: pgvector/pgvector:pg16
