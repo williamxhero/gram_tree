@@ -160,7 +160,7 @@ def reports(root: Path) -> tuple[str, list[dict], int]:
             continue
         try:
             document = ET.fromstring(data)
-        except ET.ParseError:
+        except (ET.ParseError, LookupError):
             status = "invalid"
             continue
         for case in document.iter("testcase"):

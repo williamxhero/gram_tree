@@ -264,6 +264,21 @@ E/AndroidRuntime(99): \tat android.app.UiAutomation.connect(File.java:123)
                 self.assertEqual(json.loads(result.stdout)["xml_status"], "invalid")
                 self.assertNotIn("PRIVATE", result.stdout + result.stderr)
 
+    def test_unknown_xml_encoding_does_not_leak_fields_or_tracebacks(self):
+        result, commands = self.invoke(
+            {
+                "TEST-fixture.xml": (
+                    '<?xml version="1.0" encoding="PRIVATE_ENCODING_CANARY"?><testsuite/>'
+                )
+            }
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(json.loads(result.stdout)["xml_status"], "invalid")
+        self.assertEqual(result.stderr, "")
+        self.assertNotIn("PRIVATE", result.stdout)
+        self.assertNotIn("Traceback", result.stdout)
+        self.assertEqual(len(commands), 1)
+
     def test_file_count_size_and_frame_output_have_hard_limits(self):
         frames = "\n".join(
             "    at android.app.UiAutomation.connect(File.java:339)" for _ in range(40)
