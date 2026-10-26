@@ -245,8 +245,15 @@ final localRecipeVersionsProvider = StreamProvider<List<LocalRecipeVersion>>((
     yield const [];
     return;
   }
-  yield await repository.versions();
+  final initial = await repository.versions();
+  if (!ref.mounted) return;
+  yield initial;
   await for (final _ in repository.queue.changes) {
-    yield await repository.versions();
+    // An admitted write can emit a change while the disposed root's queue drains.
+    // Stream cancellation alone does not prevent this loop from starting a read.
+    if (!ref.mounted) return;
+    final versions = await repository.versions();
+    if (!ref.mounted) return;
+    yield versions;
   }
 });
