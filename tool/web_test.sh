@@ -69,7 +69,15 @@ for target in "${targets[@]}"; do
     fi
     fixture_args=("--dart-define-from-file=$defines_path")
   fi
-  "$FLUTTER" drive --timeout=300 --profile --no-web-resources-cdn \
+  # Diagnose this one target in standard CI too; explicit 0 retains the SDK path.
+  lifecycle_diagnostics=0
+  if [[ "${GRAMTREE_WEB_LIFECYCLE_DIAGNOSTICS:-1}" == 1 &&
+        "$target" == integration_test/recipe_consequential_edit_test.dart ]]; then
+    lifecycle_diagnostics=1
+  fi
+  GRAMTREE_WEB_LIFECYCLE_DIAGNOSTICS="$lifecycle_diagnostics" \
+    GRAMTREE_WEB_LIFECYCLE_TARGET="$target" \
+    "$FLUTTER" drive --timeout=300 --profile --no-web-resources-cdn \
     --driver=test_driver/integration_test.dart --driver-port="$PORT" \
     --target="$target" \
     -d web-server --browser-name=chrome --headless --driver-port="$PORT" \
