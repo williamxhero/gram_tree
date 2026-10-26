@@ -65,8 +65,24 @@ class ExportFileShareTest : InstrumentationTestCase() {
         assertFalse("Repeated exports must have distinct granted URIs", firstSource == secondSource)
         assertZip(firstSource, "first export")
         assertZip(secondSource, "second export")
-        assertZip(requireNotNull(first.data), "first export")
-        assertZip(requireNotNull(second.data), "second export")
+        assertZip(requireNotNull(first.getParcelableExtra<Uri>("destination")), "first export")
+        assertZip(requireNotNull(second.getParcelableExtra<Uri>("destination")), "second export")
+    }
+
+    fun testCompletionBroadcastMatchesActionOnlyReceiver() {
+        val filter = IntentFilter("app.gramtree.TEST_ZIP_SAVED")
+        val source = Uri.parse("content://app.gramtree.gram_tree.export_files/exports/fixture.zip")
+        val destination = Uri.parse("content://com.android.providers.downloads.documents/document/fixture")
+        for (savedUri in listOf(destination, null)) {
+            val completion = ExportSaveActivity.completionIntent(source, savedUri)
+            assertTrue(
+                "Both successful and failed saves must match the completion receiver",
+                filter.match(completion.action, completion.type, completion.scheme, completion.data,
+                    completion.categories, "ExportFileShareTest") >= 0,
+            )
+            assertEquals(source, completion.getParcelableExtra<Uri>("source"))
+            assertEquals(savedUri, completion.getParcelableExtra<Uri>("destination"))
+        }
     }
 
     fun testCancellationInvalidatesPreparationBeforePresentation() {
@@ -104,7 +120,9 @@ class ExportFileShareTest : InstrumentationTestCase() {
         }
         click(waitForNode { it.isEnabled && it.text?.toString()?.equals("Save", true) == true })
         val result = saved.poll(30, TimeUnit.SECONDS) ?: error("Receiving app did not finish saving")
-        val uri = requireNotNull(result.data) { "Receiver could not read/save the granted ZIP" }
+        val uri = requireNotNull(result.getParcelableExtra<Uri>("destination")) {
+            "Receiver could not read/save the granted ZIP"
+        }
         documents.add(uri)
         activity.contentResolver.query(uri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)!!.use {
             check(it.moveToFirst())

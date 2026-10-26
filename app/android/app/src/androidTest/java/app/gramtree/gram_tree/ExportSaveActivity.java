@@ -79,9 +79,14 @@ public class ExportSaveActivity extends Activity {
             // Keep saved-document verification access after this receiver Activity finishes.
             grantUriPermission("app.gramtree.gram_tree", destination, grants);
         }
-        sendBroadcast(new Intent("app.gramtree.TEST_ZIP_SAVED")
-                .setPackage("app.gramtree.gram_tree").setData(destination)
-                .putExtra("source", stream).addFlags(grants));
+        sendBroadcast(completionIntent(stream, destination));
         finish();
+    }
+
+    static Intent completionIntent(Uri source, Uri destination) {
+        // An action-only receiver rejects broadcasts with a non-null data URI.
+        return new Intent("app.gramtree.TEST_ZIP_SAVED")
+                .setPackage("app.gramtree.gram_tree")
+                .putExtra("source", source).putExtra("destination", destination);
     }
 }
