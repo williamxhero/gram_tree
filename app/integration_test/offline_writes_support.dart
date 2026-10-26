@@ -13,6 +13,7 @@ import 'package:gram_tree/events/event_queue.dart';
 import 'package:gram_tree/network/reachability.dart';
 import 'package:integration_test/integration_test.dart';
 
+import '../test/integration_navigation.dart' show waitForSavedMeasureCapacity;
 import 'event_pipeline_support.dart' as support;
 
 const editedInstruction = '搅拌均匀后静置 3 分钟';
@@ -217,7 +218,11 @@ Future<Map<String, dynamic>> seedOfflineBusinessWrites(
   await support.waitFor(tester, find.byKey(const ValueKey('measure-capacity')));
   await tester.enterText(find.byKey(const ValueKey('measure-capacity')), '22');
   await tester.tap(find.byKey(const ValueKey('measure-save')));
-  await support.waitFor(tester, find.textContaining('22'));
+  await waitForSavedMeasureCapacity(
+    tester,
+    measureId: measureId,
+    capacity: '22',
+  );
   expect(find.text('待同步'), findsWidgets);
   final queue = container.read(eventQueueProvider);
   final owner = container.read(sessionStoreProvider).current!.user.id;

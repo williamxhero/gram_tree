@@ -9,6 +9,30 @@ import 'lazy_list_controls_support.dart';
 Future<void> settle(WidgetTester tester) =>
     tester.pumpAndSettle(const Duration(milliseconds: 200));
 
+Future<void> waitForSavedMeasureCapacity(
+  WidgetTester tester, {
+  required String measureId,
+  required String capacity,
+}) async {
+  final save = find.byKey(const ValueKey('measure-save'), skipOffstage: false);
+  final savedCapacity = find.descendant(
+    of: find.byKey(ValueKey('measure-$measureId')),
+    matching: find.textContaining(capacity),
+  );
+  // The input also matches the capacity until the dialog closes. Keep the
+  // original waitFor budget, but wait for the actual saved list projection.
+  for (
+    var i = 0;
+    i < 100 && (save.evaluate().isNotEmpty || savedCapacity.evaluate().isEmpty);
+    i++
+  ) {
+    await tester.pump(const Duration(milliseconds: 100));
+  }
+  await settle(tester);
+  expect(save, findsNothing);
+  expect(savedCapacity, findsWidgets);
+}
+
 Future<void> tapText(WidgetTester tester, String text) async {
   await tester.ensureVisible(find.text(text).last);
   await settle(tester);
