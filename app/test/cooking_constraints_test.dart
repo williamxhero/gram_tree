@@ -1,9 +1,11 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'helpers.dart';
+import 'integration_navigation.dart' show revealConstraintsTestControl;
 import 'taste_profile_page_test.dart'
     show installProfile, profileFixture, openTaste;
 
@@ -33,6 +35,125 @@ Map<String, dynamic> constraintsFixture({Map<String, dynamic>? values}) => {
 };
 
 void main() {
+  testWidgets(
+    'constraints navigation returns from lazy recipe fields to save',
+    (tester) async {
+      final server = FakeServer();
+      await pumpApp(
+        tester,
+        env: TestEnv.signedIn(server: server),
+        size: const Size(320, 480),
+      );
+      await tester.tap(find.byKey(const ValueKey('primary-create-button')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('create-recipe-entry')));
+      await tester.pumpAndSettle();
+      final step = find.byKey(const ValueKey('recipe-step-instruction'));
+      await revealConstraintsTestControl(tester, step);
+      expect(step.hitTestable(), findsOneWidget);
+      await tester.enterText(step, '烤至成熟');
+      final save = find.byKey(const ValueKey('save-recipe-button'));
+      expect(save.hitTestable(), findsNothing);
+      await revealConstraintsTestControl(tester, save);
+      expect(save.hitTestable(), findsOneWidget);
+      await tester.tap(save.hitTestable());
+      await tester.pumpAndSettle();
+      final error = find.byKey(const ValueKey('recipe-save-error'));
+      await revealConstraintsTestControl(tester, error);
+      expect(error.hitTestable(), findsOneWidget);
+      expect(find.text('请先填写菜名'), findsOneWidget);
+      expect(server.calls('POST', '/v1/recipes'), isEmpty);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets('constraints navigation reacquires lazy list after save refresh', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(320, 480);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    final server = FakeServer();
+    installProfile(server, () => profileFixture());
+    var current = constraintsFixture();
+    final refreshed = Completer<(int, Object?)>();
+    var refreshRequested = false;
+    server.on('GET', constraintsPath, (_) => (200, current));
+    server.on('PUT', constraintsPath, (request) {
+      current = constraintsFixture(
+        values: Map<String, dynamic>.from(request.body as Map),
+      );
+      server.on('GET', '/v1/me/taste-profile', (_) {
+        refreshRequested = true;
+        return refreshed.future;
+      });
+      return (200, current);
+    });
+    await pumpApp(tester, env: TestEnv.signedIn(server: server));
+    await openTaste(tester);
+    final edit = find.byKey(const ValueKey('cooking-constraints-edit'));
+    await revealConstraintsTestControl(tester, edit);
+    await tester.tap(edit.hitTestable());
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.byKey(const ValueKey('household-servings')),
+      '4',
+    );
+    final equipment = find.byKey(const ValueKey('equipment-wok'));
+    await revealConstraintsTestControl(tester, equipment);
+    await tester.tap(equipment.hitTestable());
+    final minutes = find.byKey(const ValueKey('meal-minutes-weekday-dinner'));
+    await revealConstraintsTestControl(tester, minutes);
+    await tester.enterText(minutes, '30');
+    final template = find.byKey(const ValueKey('meal-template-weekday-dinner'));
+    await revealConstraintsTestControl(tester, template);
+    await tester.enterText(template, '荤菜,素菜,汤');
+    await tester.tap(
+      find.byKey(const ValueKey('cooking-constraints-save')).hitTestable(),
+    );
+    for (var i = 0; i < 30 && !refreshRequested; i++) {
+      await tester.pump(const Duration(milliseconds: 20));
+    }
+    expect(refreshRequested, isTrue);
+    for (
+      var i = 0;
+      i < 30 && find.byType(AlertDialog).evaluate().isNotEmpty;
+      i++
+    ) {
+      await tester.pump(const Duration(milliseconds: 20));
+    }
+    expect(find.byType(AlertDialog), findsNothing);
+    expect(find.byType(Scrollable), findsNothing);
+    expect(find.byType(CircularProgressIndicator), findsOneWidget);
+    // Hold the actual profile HTTP refresh across navigation, as a slow response
+    // does on a device. The navigation helper must wait and reacquire its list.
+    final response = Timer(const Duration(milliseconds: 300), () {
+      refreshed.complete((200, profileFixture().toJson()));
+    });
+    addTearDown(response.cancel);
+    final card = find.byKey(const ValueKey('cooking-constraints'));
+    await revealConstraintsTestControl(tester, card);
+    expect(card.hitTestable(), findsOneWidget);
+    expect(find.text('家庭默认：4 人'), findsOneWidget);
+    await revealConstraintsTestControl(tester, edit);
+    expect(edit.hitTestable(), findsOneWidget);
+    await tester.tap(edit.hitTestable());
+    await tester.pumpAndSettle();
+    expect(find.byType(AlertDialog), findsOneWidget);
+    expect(
+      tester
+          .widget<TextFormField>(
+            find.byKey(const ValueKey('household-servings')),
+          )
+          .controller!
+          .text,
+      '4',
+    );
+    expect(server.calls('PUT', constraintsPath), hasLength(1));
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets(
     'cooking history and why show actual old and new settings with configured names',
     (tester) async {

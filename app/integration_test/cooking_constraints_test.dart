@@ -5,6 +5,8 @@ import 'package:gram_tree/config/app_config.dart';
 import 'package:gram_tree/main.dart' as app;
 import 'package:integration_test/integration_test.dart';
 
+import '../test/integration_navigation.dart' show revealConstraintsTestControl;
+
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
   final server = Dio(
@@ -40,37 +42,18 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  Future<void> reveal(
-    WidgetTester tester,
-    Finder finder, {
-    double delta = 350,
-  }) async {
-    lastTarget = 'reveal $finder (delta: $delta)';
-    tester.testTextInput.hide();
-    await tester.pump();
-    final dialog = find.byType(AlertDialog);
-    final scrollable = dialog.evaluate().isEmpty
-        ? find
-              .byWidgetPredicate(
-                (widget) =>
-                    widget is Scrollable &&
-                    widget.axisDirection == AxisDirection.down,
-              )
-              .first
-        : find.descendant(of: dialog, matching: find.byType(Scrollable)).first;
-    await tester.scrollUntilVisible(finder, delta, scrollable: scrollable);
-    await tester.ensureVisible(finder);
-    await tester.pumpAndSettle();
+  Future<void> reveal(WidgetTester tester, Finder finder) async {
+    lastTarget = 'reveal $finder';
+    await revealConstraintsTestControl(tester, finder);
   }
 
   Future<void> tap(
     WidgetTester tester,
     String key, {
     bool scroll = false,
-    double delta = 350,
   }) async {
     final finder = find.byKey(ValueKey(key));
-    if (scroll) await reveal(tester, finder, delta: delta);
+    if (scroll) await reveal(tester, finder);
     await waitFor(tester, finder);
     lastTarget = 'tap $key';
     await tester.tap(finder);
@@ -176,7 +159,7 @@ void main() {
       );
       await reveal(tester, find.text('家用勺 · 15.0 毫升'));
       phase = 'clear, reopen, and restore household default';
-      await tap(tester, 'cooking-constraints-clear', scroll: true, delta: -350);
+      await tap(tester, 'cooking-constraints-clear', scroll: true);
       await tap(tester, 'cooking-constraints-clear-confirm');
       await waitFor(
         tester,
@@ -226,7 +209,7 @@ void main() {
       await tester.enterText(instruction, '烤至成熟');
       phase = 'save recipe';
       // Save is above the lazy ingredient and step rows, not below them.
-      await tap(tester, 'save-recipe-button', scroll: true, delta: -350);
+      await tap(tester, 'save-recipe-button', scroll: true);
       await waitFor(
         tester,
         find.byKey(const ValueKey('recipe-history-button')),
@@ -247,11 +230,7 @@ void main() {
         '5',
       );
       await tap(tester, 'recipe-measure-refresh', scroll: true);
-      await reveal(
-        tester,
-        find.byKey(const ValueKey('recipe-serving-value')),
-        delta: -350,
-      );
+      await reveal(tester, find.byKey(const ValueKey('recipe-serving-value')));
       expect(
         tester
             .widget<Text>(find.byKey(const ValueKey('recipe-serving-value')))
@@ -266,7 +245,7 @@ void main() {
         '2',
       );
       phase = 'verify unchanged author quantity';
-      await tap(tester, 'edit-recipe-button', scroll: true, delta: -350);
+      await tap(tester, 'edit-recipe-button', scroll: true);
       await waitFor(
         tester,
         find.byKey(const ValueKey('recipe-editor-content')),

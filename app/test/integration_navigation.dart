@@ -1,4 +1,4 @@
-import 'package:flutter/widgets.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gram_tree/features/me/settings_page.dart';
 
@@ -14,6 +14,33 @@ Future<void> tapText(WidgetTester tester, String text) async {
   await settle(tester);
   await tester.tap(find.text(text).last);
   await settle(tester);
+}
+
+Future<void> revealConstraintsTestControl(
+  WidgetTester tester,
+  Finder finder,
+) async {
+  // A save can replace the profile list with a loading indicator. Reacquire the
+  // active route's list with bounded gestures instead of reading an empty first.
+  final dialog = find.byType(AlertDialog);
+  final surface = dialog.evaluate().isEmpty
+      ? find.byType(Scaffold).last
+      : dialog.last;
+  await revealLazyListControl(
+    tester,
+    find.descendant(of: surface, matching: finder),
+    scrollable: find
+        .descendant(
+          of: surface,
+          matching: find.byWidgetPredicate(
+            (widget) =>
+                widget is Scrollable &&
+                widget.axisDirection == AxisDirection.down,
+          ),
+        )
+        .first,
+  );
+  await tester.pumpAndSettle();
 }
 
 Future<void> tapPortabilitySettingsItem(
