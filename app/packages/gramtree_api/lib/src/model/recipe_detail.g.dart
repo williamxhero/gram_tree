@@ -15,9 +15,17 @@ abstract class _$RecipeDetailCWProxy {
 
   RecipeDetail dish(DishOut dish);
 
+  RecipeDetail everPublic(bool? everPublic);
+
   RecipeDetail id(String id);
 
+  RecipeDetail license(String? license);
+
   RecipeDetail rootRecipeId(String? rootRecipeId);
+
+  RecipeDetail sourceAttribution(Object? sourceAttribution);
+
+  RecipeDetail sourceLinks(List<String>? sourceLinks);
 
   RecipeDetail sourceVersionId(String? sourceVersionId);
 
@@ -28,6 +36,8 @@ abstract class _$RecipeDetailCWProxy {
   RecipeDetail version(RecipeVersionOut version);
 
   RecipeDetail visibility(RecipeDetailVisibilityEnum visibility);
+
+  RecipeDetail withdrawn(bool? withdrawn);
 
   /// This function **does support** nullification of nullable fields. All `null` values passed to `non-nullable` fields will be ignored. You can also use `RecipeDetail(...).copyWith.fieldName(...)` to override fields one at a time with nullification support.
   ///
@@ -40,13 +50,18 @@ abstract class _$RecipeDetailCWProxy {
     String createdAt,
     int? defaultServings,
     DishOut dish,
+    bool? everPublic,
     String id,
+    String? license,
     String? rootRecipeId,
+    Object? sourceAttribution,
+    List<String>? sourceLinks,
     String? sourceVersionId,
     int? tasteProfileVersion,
     String updatedAt,
     RecipeVersionOut version,
     RecipeDetailVisibilityEnum visibility,
+    bool? withdrawn,
   });
 }
 
@@ -70,11 +85,25 @@ class _$RecipeDetailCWProxyImpl implements _$RecipeDetailCWProxy {
   RecipeDetail dish(DishOut dish) => this(dish: dish);
 
   @override
+  RecipeDetail everPublic(bool? everPublic) => this(everPublic: everPublic);
+
+  @override
   RecipeDetail id(String id) => this(id: id);
+
+  @override
+  RecipeDetail license(String? license) => this(license: license);
 
   @override
   RecipeDetail rootRecipeId(String? rootRecipeId) =>
       this(rootRecipeId: rootRecipeId);
+
+  @override
+  RecipeDetail sourceAttribution(Object? sourceAttribution) =>
+      this(sourceAttribution: sourceAttribution);
+
+  @override
+  RecipeDetail sourceLinks(List<String>? sourceLinks) =>
+      this(sourceLinks: sourceLinks);
 
   @override
   RecipeDetail sourceVersionId(String? sourceVersionId) =>
@@ -95,6 +124,9 @@ class _$RecipeDetailCWProxyImpl implements _$RecipeDetailCWProxy {
       this(visibility: visibility);
 
   @override
+  RecipeDetail withdrawn(bool? withdrawn) => this(withdrawn: withdrawn);
+
+  @override
   /// This function **does support** nullification of nullable fields. All `null` values passed to `non-nullable` fields will be ignored. You can also use `RecipeDetail(...).copyWith.fieldName(...)` to override fields one at a time with nullification support.
   ///
   /// Usage
@@ -106,13 +138,18 @@ class _$RecipeDetailCWProxyImpl implements _$RecipeDetailCWProxy {
     Object? createdAt = const $CopyWithPlaceholder(),
     Object? defaultServings = const $CopyWithPlaceholder(),
     Object? dish = const $CopyWithPlaceholder(),
+    Object? everPublic = const $CopyWithPlaceholder(),
     Object? id = const $CopyWithPlaceholder(),
+    Object? license = const $CopyWithPlaceholder(),
     Object? rootRecipeId = const $CopyWithPlaceholder(),
+    Object? sourceAttribution = const $CopyWithPlaceholder(),
+    Object? sourceLinks = const $CopyWithPlaceholder(),
     Object? sourceVersionId = const $CopyWithPlaceholder(),
     Object? tasteProfileVersion = const $CopyWithPlaceholder(),
     Object? updatedAt = const $CopyWithPlaceholder(),
     Object? version = const $CopyWithPlaceholder(),
     Object? visibility = const $CopyWithPlaceholder(),
+    Object? withdrawn = const $CopyWithPlaceholder(),
   }) {
     return RecipeDetail(
       author: author == const $CopyWithPlaceholder()
@@ -131,14 +168,30 @@ class _$RecipeDetailCWProxyImpl implements _$RecipeDetailCWProxy {
           ? _value.dish
           // ignore: cast_nullable_to_non_nullable
           : dish as DishOut,
+      everPublic: everPublic == const $CopyWithPlaceholder()
+          ? _value.everPublic
+          // ignore: cast_nullable_to_non_nullable
+          : everPublic as bool?,
       id: id == const $CopyWithPlaceholder()
           ? _value.id
           // ignore: cast_nullable_to_non_nullable
           : id as String,
+      license: license == const $CopyWithPlaceholder()
+          ? _value.license
+          // ignore: cast_nullable_to_non_nullable
+          : license as String?,
       rootRecipeId: rootRecipeId == const $CopyWithPlaceholder()
           ? _value.rootRecipeId
           // ignore: cast_nullable_to_non_nullable
           : rootRecipeId as String?,
+      sourceAttribution: sourceAttribution == const $CopyWithPlaceholder()
+          ? _value.sourceAttribution
+          // ignore: cast_nullable_to_non_nullable
+          : sourceAttribution as Object?,
+      sourceLinks: sourceLinks == const $CopyWithPlaceholder()
+          ? _value.sourceLinks
+          // ignore: cast_nullable_to_non_nullable
+          : sourceLinks as List<String>?,
       sourceVersionId: sourceVersionId == const $CopyWithPlaceholder()
           ? _value.sourceVersionId
           // ignore: cast_nullable_to_non_nullable
@@ -159,6 +212,10 @@ class _$RecipeDetailCWProxyImpl implements _$RecipeDetailCWProxy {
           ? _value.visibility
           // ignore: cast_nullable_to_non_nullable
           : visibility as RecipeDetailVisibilityEnum,
+      withdrawn: withdrawn == const $CopyWithPlaceholder()
+          ? _value.withdrawn
+          // ignore: cast_nullable_to_non_nullable
+          : withdrawn as bool?,
     );
   }
 }
@@ -204,8 +261,21 @@ RecipeDetail _$RecipeDetailFromJson(Map<String, dynamic> json) =>
             'dish',
             (v) => DishOut.fromJson(v as Map<String, dynamic>),
           ),
+          everPublic: $checkedConvert(
+            'ever_public',
+            (v) => v as bool? ?? false,
+          ),
           id: $checkedConvert('id', (v) => v as String),
+          license: $checkedConvert(
+            'license',
+            (v) => v as String? ?? '菜谱内容按 CC BY-NC-SA 4.0 共享；成品图版权归上传者。',
+          ),
           rootRecipeId: $checkedConvert('root_recipe_id', (v) => v as String?),
+          sourceAttribution: $checkedConvert('source_attribution', (v) => v),
+          sourceLinks: $checkedConvert(
+            'source_links',
+            (v) => (v as List<dynamic>?)?.map((e) => e as String).toList(),
+          ),
           sourceVersionId: $checkedConvert(
             'source_version_id',
             (v) => v as String?,
@@ -223,13 +293,17 @@ RecipeDetail _$RecipeDetailFromJson(Map<String, dynamic> json) =>
             'visibility',
             (v) => $enumDecode(_$RecipeDetailVisibilityEnumEnumMap, v),
           ),
+          withdrawn: $checkedConvert('withdrawn', (v) => v as bool? ?? false),
         );
         return val;
       },
       fieldKeyMap: const {
         'createdAt': 'created_at',
         'defaultServings': 'default_servings',
+        'everPublic': 'ever_public',
         'rootRecipeId': 'root_recipe_id',
+        'sourceAttribution': 'source_attribution',
+        'sourceLinks': 'source_links',
         'sourceVersionId': 'source_version_id',
         'tasteProfileVersion': 'taste_profile_version',
         'updatedAt': 'updated_at',
@@ -242,15 +316,21 @@ Map<String, dynamic> _$RecipeDetailToJson(RecipeDetail instance) =>
       'created_at': instance.createdAt,
       'default_servings': ?instance.defaultServings,
       'dish': instance.dish.toJson(),
+      'ever_public': ?instance.everPublic,
       'id': instance.id,
+      'license': ?instance.license,
       'root_recipe_id': ?instance.rootRecipeId,
+      'source_attribution': ?instance.sourceAttribution,
+      'source_links': ?instance.sourceLinks,
       'source_version_id': ?instance.sourceVersionId,
       'taste_profile_version': ?instance.tasteProfileVersion,
       'updated_at': instance.updatedAt,
       'version': instance.version.toJson(),
       'visibility': _$RecipeDetailVisibilityEnumEnumMap[instance.visibility]!,
+      'withdrawn': ?instance.withdrawn,
     };
 
 const _$RecipeDetailVisibilityEnumEnumMap = {
   RecipeDetailVisibilityEnum.private: 'private',
+  RecipeDetailVisibilityEnum.public: 'public',
 };

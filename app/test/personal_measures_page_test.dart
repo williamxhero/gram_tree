@@ -13,6 +13,7 @@ import 'package:gram_tree/events/fake_event_queue.dart';
 import 'package:gram_tree/auth/session.dart';
 import 'package:gramtree_api/gramtree_api.dart';
 
+import 'integration_navigation.dart' as acceptance;
 import 'helpers.dart';
 import 'settings_test.dart' show openSettings;
 
@@ -24,6 +25,40 @@ import 'package:gram_tree/storage/secure_store.dart';
 class _SnapshotOnlyQueue extends FakeEventQueue {
   @override
   Stream<void> get changes => const Stream.empty();
+}
+
+class _DelayedMeasureProjectionQueue extends FakeEventQueue {
+  bool delayNextMeasure = false;
+  bool _holdingReads = false;
+  final readStarted = Completer<void>();
+  final _release = Completer<void>();
+
+  void releaseReads() {
+    _holdingReads = false;
+    if (!_release.isCompleted) _release.complete();
+  }
+
+  @override
+  Future<void> enqueue(
+    QueuedEvent event, {
+    Map<String, dynamic>? businessRecord,
+  }) async {
+    if (delayNextMeasure && event.writeType == 'personal_measure.change') {
+      delayNextMeasure = false;
+      _holdingReads = true;
+    }
+    await super.enqueue(event, businessRecord: businessRecord);
+  }
+
+  @override
+  Future<List<QueueEntry>> entries({String? ownerId}) async {
+    final snapshot = await super.entries(ownerId: ownerId);
+    if (_holdingReads) {
+      if (!readStarted.isCompleted) readStarted.complete();
+      await _release.future;
+    }
+    return snapshot;
+  }
 }
 
 class _DelayedMeasureCache extends MemoryLocalStore {
@@ -247,6 +282,110 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('还没有登记量具'), findsOneWidget);
   });
+
+  testWidgets(
+    'offline measure save waits for the closed dialog and refreshed target card',
+    (tester) async {
+      final server = FakeServer();
+      final measures = _MeasureServer(server);
+      const id = '88888888-8888-4888-8888-888888888888';
+      measures.values[id] = {
+        'id': id,
+        'name': '验收量勺',
+        'kind': 'spoon',
+        'capacity_ml': 15,
+        'created_at': '2026-10-08T00:00:00Z',
+        'updated_at': '2026-10-08T00:00:00Z',
+      };
+      final queue = _DelayedMeasureProjectionQueue();
+      addTearDown(queue.releaseReads);
+      final env = TestEnv(
+        server: server,
+        local: MemoryLocalStore(consentedStore()),
+        secure: MemorySecureStore(signedInSecure(server.user)),
+        eventQueue: queue,
+      );
+      await pumpApp(
+        tester,
+        env: env,
+        size: const Size(320, 640),
+        textScale: 1.5,
+      );
+      await tester.tap(find.text('我的'));
+      await tester.pumpAndSettle();
+      final entry = find.byKey(const ValueKey('personal-measures-entry'));
+      await tester.scrollUntilVisible(entry, 250);
+      await tester.tap(entry);
+      await tester.pumpAndSettle();
+      final card = find.byKey(const ValueKey('measure-$id'));
+      expect(
+        find.descendant(of: card, matching: find.textContaining('15')),
+        findsOneWidget,
+      );
+      final container = ProviderScope.containerOf(tester.element(card));
+      container.read(offlineSimulationProvider.notifier).set(true);
+      await tester.tap(find.text('验收量勺'));
+      await tester.pumpAndSettle();
+      await tester.enterText(
+        find.byKey(const ValueKey('measure-capacity')),
+        '22',
+      );
+      tester.testTextInput.hide();
+      await tester.pumpAndSettle();
+      final save = find.byKey(const ValueKey('measure-save'));
+      final dialog = find.byType(AlertDialog, skipOffstage: false);
+      expect(dialog, findsOneWidget);
+      expect(save.hitTestable(), findsOneWidget);
+      queue.delayNextMeasure = true;
+      await tester.tap(save);
+      // The input already matches the old global finder before the result does.
+      expect(find.textContaining('22'), findsOneWidget);
+      expect(
+        find.descendant(of: card, matching: find.textContaining('22')),
+        findsNothing,
+      );
+      var watching = true;
+      Timer? response;
+      addTearDown(() {
+        watching = false;
+        response?.cancel();
+      });
+      void releaseAfterDialogClosed(Duration _) => scheduleMicrotask(() {
+        if (!watching) return;
+        if (dialog.evaluate().isEmpty &&
+            card.hitTestable().evaluate().isNotEmpty) {
+          expect(queue.readStarted.isCompleted, isTrue);
+          // Deliver I/O on the next event-loop turn after the dialog leaves,
+          // without scheduling a rendering frame or sleeping for a fixed time.
+          response = Timer(Duration.zero, queue.releaseReads);
+        } else {
+          tester.binding.addPostFrameCallback(releaseAfterDialogClosed);
+        }
+      });
+
+      tester.binding.addPostFrameCallback(releaseAfterDialogClosed);
+      await acceptance.waitForSavedMeasureCapacity(
+        tester,
+        measureId: id,
+        capacity: '22',
+      );
+      expect(save, findsNothing);
+      expect(dialog, findsNothing);
+      expect(
+        find.descendant(of: card, matching: find.textContaining('15')),
+        findsNothing,
+      );
+      expect(
+        find.descendant(of: card, matching: find.textContaining('22')),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(of: card, matching: find.text('待同步')),
+        findsOneWidget,
+      );
+      expect(tester.takeException(), isNull);
+    },
+  );
 
   testWidgets('refreshes measures changed on another device after restart', (
     tester,

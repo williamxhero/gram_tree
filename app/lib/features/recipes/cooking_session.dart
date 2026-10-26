@@ -20,6 +20,8 @@ import '../../ui_protocol/scenario_detail_scope.dart';
 import 'cooking_voice.dart';
 import 'press_hold_voice_question.dart';
 import '../records/records_repository.dart';
+import 'publication_panel.dart';
+import '../../l10n/app_localizations.dart';
 import '../../features/me/family_members_data.dart';
 import '../../features/me/allergies_data.dart';
 
@@ -110,9 +112,11 @@ class CookingSession {
     this.adjustments = const [],
     this.questions = const [],
     this.finishedAt,
+    this.ownerId,
   });
 
   final String id;
+  final String? ownerId;
   final FrozenRecipeSnapshot snapshot;
   final DateTime startedAt;
   final int stepIndex;
@@ -136,6 +140,7 @@ class CookingSession {
 
   Map<String, dynamic> toJson() => {
     'id': id,
+    'owner_id': ownerId,
     'snapshot': snapshot.toJson(),
     'started_at': startedAt.toUtc().toIso8601String(),
     'step_index': stepIndex,
@@ -161,6 +166,7 @@ class CookingSession {
     DateTime? finishedAt,
   }) => CookingSession(
     id: id,
+    ownerId: ownerId,
     snapshot: snapshot,
     startedAt: startedAt,
     stepIndex: stepIndex ?? this.stepIndex,
@@ -181,6 +187,7 @@ class CookingSession {
       if (snapshot == null) return null;
       return CookingSession(
         id: map['id'] as String,
+        ownerId: map['owner_id'] as String?,
         snapshot: snapshot,
         startedAt: DateTime.parse(map['started_at'] as String),
         stepIndex: map['step_index'] as int? ?? -1,
@@ -292,6 +299,7 @@ class CookingSessionStore {
     }
     final session = CookingSession(
       id: newUuidV4(),
+      ownerId: accountId,
       snapshot: snapshot,
       startedAt: DateTime.now().toUtc(),
     );
@@ -514,7 +522,10 @@ class _CookingPageState extends ConsumerState<CookingPage>
     final completed = [...session.completed];
     if (delta > 0 && session.stepIndex >= 0) {
       final previous = session.steps[session.stepIndex].id;
-      if (!completed.contains(previous)) completed.add(previous);
+      if (!session.skipped.contains(previous) &&
+          !completed.contains(previous)) {
+        completed.add(previous);
+      }
     }
     // Forward navigation finishes the current step before entering its
     // dependent. Validate this candidate without saving it: another missing
@@ -627,10 +638,14 @@ class _CookingPageState extends ConsumerState<CookingPage>
     final session = _session;
     if (session == null || session.steps.isEmpty) return;
     final completed = [...session.completed];
+    final reached = [...session.reached];
     final currentIndex = session.stepIndex;
     if (currentIndex >= 0 && currentIndex < session.steps.length) {
       final current = session.steps[currentIndex].id;
-      if (!completed.contains(current)) completed.add(current);
+      if (!session.skipped.contains(current) && !completed.contains(current)) {
+        completed.add(current);
+      }
+      if (!reached.contains(current)) reached.add(current);
     }
     final unfinished = session.steps
         .where(
@@ -653,6 +668,7 @@ class _CookingPageState extends ConsumerState<CookingPage>
     // needs attention.
     final finished = session.copyWith(
       status: 'completed',
+      reached: reached,
       completed: completed,
       timers: [
         for (final timer in session.timers)
@@ -728,7 +744,10 @@ class _CookingPageState extends ConsumerState<CookingPage>
     final stepId = session.steps[session.stepIndex].id;
     if (session.skipped.contains(stepId)) return;
     await _save(
-      session.copyWith(skipped: [...session.skipped, stepId]),
+      session.copyWith(
+        skipped: [...session.skipped, stepId],
+        completed: session.completed.where((id) => id != stepId).toList(),
+      ),
       event: 'step_skip',
     );
   }
@@ -789,11 +808,11 @@ class _CookingPageState extends ConsumerState<CookingPage>
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('取消'),
+            child: Text(AppLocalizations.of(context).cancel),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(context, draft.trim()),
-            child: const Text('保存'),
+            child: Text(AppLocalizations.of(context).save),
           ),
         ],
       ),
@@ -813,41 +832,140 @@ class _CookingPageState extends ConsumerState<CookingPage>
   Future<void> _recordAdjustment() async {
     final session = _session;
     if (session == null || session.stepIndex < 0) return;
-    // The field owns its controller through the dialog's reverse transition.
+    final l10n = AppLocalizations.of(context);
+    final ingredients =
+        session.snapshot.detail.version.snapshot.ingredients ??
+        const <RecipeIngredient>[];
+    var mode = 'note';
+    var ingredientId = ingredients.isEmpty ? null : ingredients.first.id;
     var draft = '';
-    final text = await showDialog<String>(
+    String? error;
+    final adjustment = await showDialog<Map<String, dynamic>>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('记录临时调整'),
-        content: TextField(
-          onChanged: (value) => draft = value,
-          autofocus: true,
-          decoration: const InputDecoration(hintText: '例如：少放一点盐'),
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: Text(l10n.cookingAdjustmentTitle),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                DropdownButtonFormField<String>(
+                  initialValue: mode,
+                  decoration: InputDecoration(
+                    labelText: l10n.cookingAdjustmentType,
+                  ),
+                  items: [
+                    DropdownMenuItem(
+                      value: 'note',
+                      child: Text(l10n.cookingAdjustmentNote),
+                    ),
+                    if (ingredients.isNotEmpty)
+                      DropdownMenuItem(
+                        value: 'quantity',
+                        child: Text(l10n.cookingAdjustmentQuantity),
+                      ),
+                    DropdownMenuItem(
+                      value: 'duration',
+                      child: Text(l10n.cookingAdjustmentDuration),
+                    ),
+                  ],
+                  onChanged: (value) => setDialogState(() {
+                    mode = value ?? 'note';
+                    draft = '';
+                    error = null;
+                  }),
+                ),
+                if (mode == 'quantity')
+                  DropdownButtonFormField<String>(
+                    initialValue: ingredientId,
+                    decoration: InputDecoration(
+                      labelText: l10n.cookingAdjustmentIngredient,
+                    ),
+                    items: [
+                      for (final item in ingredients)
+                        DropdownMenuItem(
+                          value: item.id,
+                          child: Text('${item.displayName}（${item.unit}）'),
+                        ),
+                    ],
+                    onChanged: (value) => ingredientId = value,
+                  ),
+                TextField(
+                  key: ValueKey('adjustment-$mode'),
+                  onChanged: (value) => draft = value,
+                  autofocus: true,
+                  keyboardType: mode == 'note'
+                      ? TextInputType.text
+                      : const TextInputType.numberWithOptions(decimal: true),
+                  decoration: InputDecoration(
+                    labelText: mode == 'quantity'
+                        ? l10n.cookingActualQuantity
+                        : mode == 'duration'
+                        ? l10n.cookingActualDuration
+                        : null,
+                    hintText: mode == 'note'
+                        ? l10n.cookingAdjustmentHint
+                        : null,
+                    errorText: error,
+                  ),
+                ),
+                if (mode == 'note') Text(l10n.cookingAdjustmentExactGuidance),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text(AppLocalizations.of(context).cancel),
+            ),
+            FilledButton(
+              onPressed: () {
+                final value = draft.trim();
+                final number = num.tryParse(value);
+                if (value.isEmpty ||
+                    (mode != 'note' &&
+                        (number == null ||
+                            !number.isFinite ||
+                            number < 0 ||
+                            (mode == 'quantity' && number > 10000000) ||
+                            (mode == 'duration' &&
+                                (number > 86400 ||
+                                    number != number.round()))))) {
+                  setDialogState(
+                    () => error = mode == 'note'
+                        ? l10n.cookingAdjustmentNoteRequired
+                        : l10n.cookingAdjustmentNumberRequired,
+                  );
+                  return;
+                }
+                Navigator.pop(context, <String, dynamic>{
+                  if (mode == 'note') ...{
+                    'step_id': session.steps[session.stepIndex].id,
+                    'text': value,
+                  },
+                  if (mode == 'quantity') ...{
+                    'ingredient_id': ingredientId,
+                    'quantity': number,
+                    'unit': ingredients
+                        .firstWhere((item) => item.id == ingredientId)
+                        .unit,
+                  },
+                  if (mode == 'duration') ...{
+                    'step_id': session.steps[session.stepIndex].id,
+                    'fields': {'duration_seconds': number!.toInt()},
+                  },
+                  'created_at': DateTime.now().toUtc().toIso8601String(),
+                });
+              },
+              child: Text(AppLocalizations.of(context).save),
+            ),
+          ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('取消'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(context, draft.trim()),
-            child: const Text('保存'),
-          ),
-        ],
       ),
     );
-    if (text == null || text.isEmpty) return;
+    if (adjustment == null) return;
     await _save(
-      session.copyWith(
-        adjustments: [
-          ...session.adjustments,
-          {
-            'step_id': session.steps[session.stepIndex].id,
-            'text': text,
-            'created_at': DateTime.now().toUtc().toIso8601String(),
-          },
-        ],
-      ),
+      session.copyWith(adjustments: [...session.adjustments, adjustment]),
       event: 'adjustment_recorded',
     );
   }
@@ -1028,11 +1146,18 @@ class _CookingPageState extends ConsumerState<CookingPage>
     if (session.isComplete) {
       return Scaffold(
         appBar: AppBar(title: const Text('做菜完成')),
-        body: Center(
-          child: Text(
-            '已完成 ${session.snapshot.detail.dish.name}',
-            key: const ValueKey('cooking-complete'),
-          ),
+        body: ListView(
+          padding: const EdgeInsets.all(24),
+          children: [
+            Text(
+              AppLocalizations.of(context)
+                  .cookingCompletedDish(session.snapshot.detail.dish.name),
+              key: const ValueKey('cooking-complete'),
+            ),
+            const SizedBox(height: 16),
+            Text(AppLocalizations.of(context).cookingPublicationSyncGuidance),
+            const PublicationNotices(),
+          ],
         ),
       );
     }

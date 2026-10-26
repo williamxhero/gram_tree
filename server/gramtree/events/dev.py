@@ -115,6 +115,21 @@ def taste_profile_storage(
             and event.correlation == {"taste_profile_change_id": str(event.id)}
             and event.id in changes
             for event in taste_events
+        )
+        and all(
+            set(event.content)
+            == {
+                "source_recipe_id",
+                "source_version_id",
+                "conclusion",
+                "rules_version",
+                "profile_id",
+                "profile_version",
+            }
+            and event.content["conclusion"] == "minor_only"
+            and event.correlation == {"recipe_version_id": event.content["source_version_id"]}
+            for event in events
+            if event.event_type == "recipe.improvement_saved_to_taste"
         ),
     }
     if include_sensitive:

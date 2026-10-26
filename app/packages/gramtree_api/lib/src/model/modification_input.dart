@@ -24,6 +24,8 @@ class ModificationInput {
 
     this.generationRequestId,
 
+    this.improvementDraftId,
+
     this.recipeId,
 
     this.requestId,
@@ -45,6 +47,9 @@ class ModificationInput {
     includeIfNull: false,
   )
   final String? generationRequestId;
+
+  @JsonKey(name: r'improvement_draft_id', required: false, includeIfNull: false)
+  final String? improvementDraftId;
 
   @JsonKey(name: r'recipe_id', required: false, includeIfNull: false)
   final String? recipeId;
@@ -70,6 +75,7 @@ class ModificationInput {
           other.adjustmentPercent == adjustmentPercent &&
           other.baseVersionId == baseVersionId &&
           other.generationRequestId == generationRequestId &&
+          other.improvementDraftId == improvementDraftId &&
           other.recipeId == recipeId &&
           other.requestId == requestId &&
           other.retryFailed == retryFailed &&
@@ -80,6 +86,7 @@ class ModificationInput {
       (adjustmentPercent == null ? 0 : adjustmentPercent.hashCode) +
       (baseVersionId == null ? 0 : baseVersionId.hashCode) +
       (generationRequestId == null ? 0 : generationRequestId.hashCode) +
+      (improvementDraftId == null ? 0 : improvementDraftId.hashCode) +
       (recipeId == null ? 0 : recipeId.hashCode) +
       (requestId == null ? 0 : requestId.hashCode) +
       retryFailed.hashCode +

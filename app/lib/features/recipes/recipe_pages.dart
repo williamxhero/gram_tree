@@ -46,6 +46,8 @@ import 'recipe_source_badge.dart';
 import 'text_edit_panel.dart';
 import 'change_explanation_panel.dart';
 import 'cooking_session.dart';
+import 'publication_panel.dart';
+import 'improvement_save.dart';
 import '../../storage/local_store.dart';
 import '../../ui_protocol/components/component_scaffold.dart';
 import '../../ui_protocol/composition_provider.dart';
@@ -235,12 +237,14 @@ class RecipeEditorPage extends ConsumerStatefulWidget {
     this.recipeId,
     this.versionId,
     this.generation,
+    this.improvementDraft,
   });
 
   static const path = '/recipes/new';
   final String? recipeId;
   final String? versionId;
   final GenerationResult? generation;
+  final ImprovementDraftOut? improvementDraft;
 
   @override
   ConsumerState<RecipeEditorPage> createState() => _RecipeEditorPageState();
@@ -285,7 +289,12 @@ class _RecipeEditorPageState extends ConsumerState<RecipeEditorPage> {
   final Map<String, List<IngredientDetail>> _replacementResults = {};
   final Map<String, bool> _searching = {};
 
+  String? _improvementRequestId;
+
   String get _recipeKey =>
+      (widget.improvementDraft == null
+          ? null
+          : 'improvement-${widget.improvementDraft!.id}') ??
       widget.recipeId ??
       (widget.generation == null
           ? 'new'
@@ -310,6 +319,13 @@ class _RecipeEditorPageState extends ConsumerState<RecipeEditorPage> {
             )
             ..aiAssisted = true
             ..changeNote = generated.changeNote ?? '';
+    }
+    final improvement = widget.improvementDraft;
+    if (improvement != null) {
+      _form = RecipeForm.fromSnapshot(
+        improvement.snapshot,
+        improvement.dishName,
+      )..aiAssisted = improvement.aiAssisted;
     }
     unawaited(_load());
   }
@@ -736,7 +752,7 @@ class _RecipeEditorPageState extends ConsumerState<RecipeEditorPage> {
   }
 
   Future<void> _quantify() async {
-    if (!_validate()) return;
+    if (widget.improvementDraft != null || !_validate()) return;
     setState(() {
       _saving = true;
       _error = null;
@@ -805,6 +821,10 @@ class _RecipeEditorPageState extends ConsumerState<RecipeEditorPage> {
     });
     try {
       await _flushDraft();
+      if (widget.improvementDraft != null) {
+        await _saveImprovement();
+        return;
+      }
       final repo = ref.read(recipeRepositoryProvider);
       final localRepository = ref.read(offlineRecipeRepositoryProvider);
       final localBaseline = _loaded == null
@@ -888,6 +908,49 @@ class _RecipeEditorPageState extends ConsumerState<RecipeEditorPage> {
     } finally {
       if (mounted) setState(() => _saving = false);
     }
+  }
+
+  Future<bool> _saveImprovement({
+    ModificationPreview? modification,
+    String? note,
+    String? fingerprint,
+  }) async {
+    final draft = widget.improvementDraft!;
+    final owner = _accountId;
+    _improvementRequestId ??= newUuidV4();
+    final result = await saveImprovementWithChoice(
+      context,
+      ref,
+      recipeId: draft.sourceRecipeId,
+      versionId: draft.sourceVersionId,
+      requestId: _improvementRequestId!,
+      snapshot: modification == null ? _form.snapshot : null,
+      modificationId: modification?.id,
+      modificationRevision: modification?.revision,
+      changeNote: note ?? _form.changeNote,
+      explanationFingerprint: fingerprint ?? _form.explanationFingerprint,
+    );
+    if (result == null ||
+        !mounted ||
+        owner != _accountId ||
+        !_sameEditorAccount) {
+      return false;
+    }
+    await _discardDraft();
+    ref.invalidate(myRecipesProvider);
+    ref.invalidate(tasteProfileProvider);
+    if (!mounted || !_sameEditorAccount) return true;
+    if (result.recipe != null) {
+      context.pushReplacement('/recipes/${result.recipe!.id}');
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(AppLocalizations.of(context).improvementSavedTaste),
+        ),
+      );
+      context.pop();
+    }
+    return true;
   }
 
   Future<void> _saveLocalVersion() async {
@@ -1187,6 +1250,28 @@ class _RecipeEditorPageState extends ConsumerState<RecipeEditorPage> {
           controller: _editorScroll,
           padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
           children: [
+            if (widget.improvementDraft == null && _loaded == null)
+              Text(l10n.publicationPrivateDraftGuidance),
+            if (widget.improvementDraft != null) ...[
+              Text(l10n.improvementDraftGuidance),
+              TextEditPanel(
+                key: ValueKey(
+                  'improvement-text-${widget.improvementDraft!.id}',
+                ),
+                improvementDraftId: widget.improvementDraft!.id,
+                manualEdits: _hasManualEdits,
+                onSaved: (_) async {},
+                onImprovementConfirmed: (preview, note, fingerprint) =>
+                    _saveImprovement(
+                      modification: preview,
+                      note: note,
+                      fingerprint: fingerprint,
+                    ),
+                onSavingChanged: (saving) {
+                  if (mounted) setState(() => _saving = saving);
+                },
+              ),
+            ],
             if (_loaded != null && _loaded!.author.id == accountId)
               TextEditPanel(
                 key: ValueKey(
@@ -1224,6 +1309,8 @@ class _RecipeEditorPageState extends ConsumerState<RecipeEditorPage> {
             RecipeOperationScope(
               key: const ValueKey('recipe-reproducibility-operations'),
               handlers: {
+                'improvement_save': (_) =>
+                    widget.improvementDraft == null || _saving ? null : _save(),
                 'check': (_) => _checkingReproducibility || _saving
                     ? null
                     : _checkReproducibility(),
@@ -1264,7 +1351,9 @@ class _RecipeEditorPageState extends ConsumerState<RecipeEditorPage> {
                               ? null
                               : () => operation('check'),
                           child: Text(
-                            _checkingReproducibility ? '正在检查可复刻性…' : '检查可复刻性',
+                            _checkingReproducibility
+                                ? l10n.recipeReproducibilityChecking
+                                : l10n.recipeReproducibilityCheck,
                           ),
                         ),
                         ReproducibilityCard(
@@ -1273,19 +1362,25 @@ class _RecipeEditorPageState extends ConsumerState<RecipeEditorPage> {
                         ),
                         if (_reproducibilityError != null)
                           Text(_reproducibilityError!),
-                        const Text('请求量化前会先保存当前私有版本，处理建议后再保存新版本。'),
+                        Text(l10n.recipeQuantifyGuidance),
                         OutlinedButton(
                           key: const ValueKey('recipe-quantify'),
-                          onPressed: _saving
+                          onPressed: _saving || widget.improvementDraft != null
                               ? null
                               : () => operation('quantify'),
-                          child: Text(_saving ? '正在保存或量化…' : '保存并请求 AI 量化'),
+                          child: Text(
+                            _saving
+                                ? l10n.recipeQuantifySaving
+                                : l10n.recipeQuantify,
+                          ),
                         ),
                         TextField(
                           key: const ValueKey('recipe-operation-command'),
-                          decoration: const InputDecoration(
-                            labelText: '一句话操作',
-                            hintText: '检查可复刻性 / 请求量化 / 定位下一处 / 全部接受 / 暂不处理',
+                          decoration: InputDecoration(
+                            labelText: l10n.publicationCommand,
+                            hintText: widget.improvementDraft == null
+                                ? l10n.publicationEditorCommandHint
+                                : l10n.improvementEditorCommandHint,
                           ),
                           onSubmitted: (text) {
                             final action = recipeCommand(text);
@@ -1293,7 +1388,9 @@ class _RecipeEditorPageState extends ConsumerState<RecipeEditorPage> {
                               unawaited(dispatch(action));
                             } else {
                               ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(content: Text('请输入提示中的菜谱操作')),
+                                SnackBar(
+                                  content: Text(l10n.recipeOperationInvalid),
+                                ),
                               );
                             }
                           },
@@ -1313,7 +1410,11 @@ class _RecipeEditorPageState extends ConsumerState<RecipeEditorPage> {
               ),
             ),
             if (_form.aiAssisted) ...[
-              const Text('AI 辅助 · 尚未做过验证'),
+              Text(
+                _loaded == null && widget.improvementDraft == null
+                    ? l10n.publicationAiUnverified
+                    : l10n.publicationAiUnsaved,
+              ),
               SourceMark(
                 sourceType: sourceTypeAiEstimated,
                 componentId: 'recipe-ai-editor',
@@ -1324,10 +1425,35 @@ class _RecipeEditorPageState extends ConsumerState<RecipeEditorPage> {
                 onAction: null,
               ),
             ],
-            FilledButton(
-              key: const ValueKey('save-recipe-button'),
-              onPressed: _saving ? null : _save,
-              child: Text(_saving ? l10n.recipeSaving : l10n.recipeSaveVersion),
+            RecipeOperationScope(
+              handlers: {'improvement_save': (_) => _save()},
+              child: Builder(
+                builder: (context) => FilledButton(
+                  key: const ValueKey('save-recipe-button'),
+                  onPressed: _saving
+                      ? null
+                      : widget.improvementDraft == null
+                      ? _save
+                      : () => ref
+                            .read(intentDispatcherProvider)
+                            .dispatch(
+                              context,
+                              compositionId: _operationCompositionId,
+                              componentId: 'improvement-save',
+                              action: ActionDescriptor(
+                                intent: 'recipe_operation',
+                                params: {'operation': 'improvement_save'},
+                              ),
+                            ),
+                  child: Text(
+                    _saving
+                        ? l10n.recipeSaving
+                        : widget.improvementDraft == null
+                        ? l10n.recipeSaveVersion
+                        : l10n.improvementSave,
+                  ),
+                ),
+              ),
             ),
             OutlinedButton(
               key: const ValueKey('discard-recipe-draft'),
@@ -3676,6 +3802,36 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
     context.go(RecipeListPage.path);
   }
 
+  bool _startingImprovement = false;
+  final _improvementCompositionId = newUuidV4();
+
+  Future<void> _startImprovement() async {
+    final detail = _detail;
+    final owner = ref.read(authProvider).value?.id;
+    if (detail == null ||
+        _startingImprovement ||
+        owner == null ||
+        owner == detail.author.id) {
+      return;
+    }
+    setState(() => _startingImprovement = true);
+    try {
+      final draft = await ref
+          .read(recipeRepositoryProvider)
+          .startImprovement(detail.id, detail.version.id);
+      if (!mounted || ref.read(authProvider).value?.id != owner) return;
+      await context.push<void>(RecipeEditorPage.path, extra: draft);
+    } catch (error) {
+      if (mounted && ref.read(authProvider).value?.id == owner) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(ApiFailure.from(error).message)));
+      }
+    } finally {
+      if (mounted) setState(() => _startingImprovement = false);
+    }
+  }
+
   Future<void> _startCooking() async {
     final store = ref.read(cookingSessionStoreProvider);
     final frozen = _frozenSnapshot;
@@ -3701,6 +3857,7 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
       capturedAt: DateTime.now(),
       inputs: {
         ...frozen.inputs,
+        'execution_token': result.executionToken,
         'personalized_view': _showOriginal ? 'original' : 'personalized',
         'before_change_id': _showOriginal ? null : _beforeTasteChangeId,
         'scale_mode': _scaleMode.name,
@@ -4121,14 +4278,15 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
             onPressed: () =>
                 context.push('/recipes/${widget.recipeId}/history'),
           ),
-          if (widget.versionId == null)
+          if (detail.author.id == ref.watch(authProvider).value?.id &&
+              widget.versionId == null)
             IconButton(
               key: const ValueKey('edit-recipe-button'),
               tooltip: l10n.recipeEditAction,
               icon: const Icon(Icons.edit_outlined),
               onPressed: () => context.push('/recipes/${widget.recipeId}/edit'),
             )
-          else
+          else if (detail.author.id == ref.watch(authProvider).value?.id)
             IconButton(
               key: const ValueKey('edit-old-recipe-button'),
               tooltip: l10n.recipeBaseOnVersion,
@@ -4149,13 +4307,74 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
                   '离线快照 · 第 ${detail.version.versionNumber} 版 · ${_frozenSnapshot?.capturedAt.toLocal().toIso8601String() ?? ''}',
             ),
           if (_capacityMessage != null) _SmallHint(text: _capacityMessage!),
+          if (detail.author.id != ref.watch(authProvider).value?.id && !offline)
+            RecipeOperationScope(
+              handlers: {'improvement_start': (_) => _startImprovement()},
+              child: Builder(
+                builder: (context) {
+                  Future<void> dispatch() => ref
+                      .read(intentDispatcherProvider)
+                      .dispatch(
+                        context,
+                        compositionId: _improvementCompositionId,
+                        componentId: 'improvement-entry',
+                        action: ActionDescriptor(
+                          intent: 'recipe_operation',
+                          params: {'operation': 'improvement_start'},
+                        ),
+                      );
+                  return Column(
+                    children: [
+                      FilledButton(
+                        key: const ValueKey('improve-recipe-button'),
+                        onPressed: _startingImprovement ? null : dispatch,
+                        child: Text(l10n.improvementStart),
+                      ),
+                      TextField(
+                        key: const ValueKey('improvement-command'),
+                        decoration: InputDecoration(
+                          labelText: l10n.publicationCommand,
+                          hintText: l10n.improvementStart,
+                        ),
+                        onSubmitted: (text) {
+                          final action = recipeCommand(text);
+                          final params = action?.params;
+                          if (!_startingImprovement &&
+                              params is Map &&
+                              params['operation'] == 'improvement_start') {
+                            unawaited(dispatch());
+                          }
+                        },
+                      ),
+                    ],
+                  );
+                },
+              ),
+            ),
+          if (detail.author.id == ref.watch(authProvider).value?.id)
+            PublicationPanelCard(
+              key: ValueKey('publication-${detail.version.id}'),
+              detail: detail,
+              onChanged: _load,
+              onCook: _startCooking,
+            )
+          else
+            PublicationStateLabel(state: detail.version.publicationState.value),
+          if (detail.license != null)
+            Text(detail.license!, key: const ValueKey('recipe-public-license')),
+          for (final link in detail.sourceLinks ?? const <String>[])
+            SelectableText(l10n.sourceOriginalLink(link)),
           if (detail.version.aiAssisted) ...[
-            const Text('AI 辅助 · 尚未做过验证'),
+            Text(l10n.sourceAiAuthor(detail.author.nickname)),
+            if (detail.author.id != ref.watch(authProvider).value?.id &&
+                detail.version.publicationState ==
+                    RecipeVersionOutPublicationStateEnum.pendingVerification)
+              Text(l10n.publicationAiUnverified),
             SourceMark(
               sourceType: sourceTypeAiEstimated,
               componentId: 'recipe-ai-design',
               value: '菜谱设计',
-              basisText: snapshot.designRationale ?? '一般经验；尚未做过验证',
+              basisText: snapshot.designRationale ?? l10n.publicationAiBasis,
               required: false,
               feedbackEnabled: false,
               onAction: null,
@@ -4208,16 +4427,24 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
               authoring: false,
               loading: false,
               composition: scene,
+              sourceAttribution:
+                  detail.sourceAttribution ??
+                  {
+                    'label': l10n.sourceAuthor(detail.author.nickname),
+                    'chain': <Object>[],
+                  },
             ),
           ),
           if (_beforeTasteChangeId != null)
             TextButton(
               key: const ValueKey('scenario-restore-current-taste'),
               onPressed: _restoreCurrentTaste,
-              child: const Text('本次按调整前口味显示 · 恢复最近口味'),
+              child: Text(l10n.scenarioRestoreCurrentTaste),
             ),
           _RecipePhotoDisplay(images: detail.version.images),
-          if (widget.versionId == null && !offline)
+          if (detail.author.id == ref.watch(authProvider).value?.id &&
+              widget.versionId == null &&
+              !offline)
             RecipePhotoPanel(
               recipeId: widget.recipeId,
               onUploaded: (_) => _load(),
@@ -4475,11 +4702,13 @@ class _RecipeDetailPageState extends ConsumerState<RecipeDetailPage> {
                       l10n: l10n,
                     ),
           const SizedBox(height: 16),
-          TextButton(
-            key: const ValueKey('delete-recipe-button'),
-            onPressed: _delete,
-            child: Text(l10n.recipeDelete),
-          ),
+          if (detail.author.id == ref.watch(authProvider).value?.id &&
+              detail.everPublic != true)
+            TextButton(
+              key: const ValueKey('delete-recipe-button'),
+              onPressed: _delete,
+              child: Text(l10n.recipeDelete),
+            ),
         ],
       ),
     );

@@ -54,6 +54,7 @@ RecipeDetail _detail({String version = 'baseline'}) => RecipeDetail(
   id: _recipe,
   visibility: RecipeDetailVisibilityEnum.private,
   version: RecipeVersionOut(
+    publicationState: RecipeVersionOutPublicationStateEnum.draft,
     aiAssisted: false,
     changeNote: '',
     createdAt: '2026-10-07T00:00:00+00:00',

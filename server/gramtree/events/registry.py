@@ -45,6 +45,8 @@ class EventTypeSpec:
     content_schema: type[BaseModel] | None = None
     # 这个版本是否还接收新事件；正式停止支持后改成 False，事件会被拒收（不要删除登记项）
     supported: bool = True
+    # Authoritative lifecycle facts are appended by server transactions only.
+    client_upload_allowed: bool = True
 
 
 class SelfCheckContentV1(BaseModel):
@@ -247,7 +249,137 @@ class CookingRecordCreatedContentV1(BaseModel):
     counts_as_cooked: bool
 
 
+class RecipePublicationContentV1(BaseModel):
+    recipe_id: str
+    version_id: str | None = None
+    state: str | None = None
+    verification_record_id: str | None = None
+    baseline_version_id: str | None = None
+    baseline_record_id: str | None = None
+    conclusion: str | None = None
+    rules_version: str | None = None
+    eligibility: dict[str, object] = Field(default_factory=dict)
+    review_level: str | None = None
+    actor_id: str | None = None
+    sequence: int | None = None
+
+
+class ImprovementSourceContentV1(BaseModel):
+    source_recipe_id: str
+    source_version_id: str
+    root_recipe_id: str
+    source_path: list[dict[str, object]]
+    conclusion: Literal["minor_only", "general", "significant"]
+    rules_version: str
+    basis: list[str]
+    actor_id: str
+    cooking_record_id: str | None = None
+
+
+class ImprovementCreatedContentV1(ImprovementSourceContentV1):
+    recipe_id: str
+    version_id: str
+    branch_type: Literal["normal", "microadjust"]
+    intent: str
+
+
+class ImprovementTasteContentV1(BaseModel):
+    source_recipe_id: str
+    source_version_id: str
+    conclusion: Literal["minor_only"]
+    rules_version: str
+    profile_id: str
+    profile_version: int
+
+
+class RecordVersionSavedContentV1(BaseModel):
+    recipe_id: str
+    version_id: str
+    source_version_id: str
+    cooking_record_id: str
+    intent: str
+    conclusion: Literal["minor_only", "general", "significant"]
+    rules_version: str
+
+
+class ImprovementCuratedContentV1(BaseModel):
+    recipe_id: str
+    curated: bool
+    changed_by: str
+    reason: str
+
+
 ITEMS: tuple[EventTypeSpec, ...] = (
+    EventTypeSpec(
+        event_type="recipe.improvement_created",
+        version=1,
+        description="改良分支首次保存的永久来源链、差异与临场记录关联",
+        correlation_fields=("recipe_version_id", "cooking_record_id"),
+        exportable=True,
+        content_schema=ImprovementCreatedContentV1,
+        client_upload_allowed=False,
+    ),
+    EventTypeSpec(
+        event_type="recipe.improvement_saved_to_taste",
+        version=1,
+        description="微调确认转换为口味档案，不创建菜谱分支",
+        correlation_fields=("recipe_version_id",),
+        exportable=True,
+        content_schema=ImprovementTasteContentV1,
+        client_upload_allowed=False,
+    ),
+    EventTypeSpec(
+        event_type="recipe.record_version_saved",
+        version=1,
+        description="本人做菜记录的实际临场调整保存为线性新版本",
+        correlation_fields=("recipe_version_id", "cooking_record_id"),
+        exportable=True,
+        content_schema=RecordVersionSavedContentV1,
+        client_upload_allowed=False,
+    ),
+    EventTypeSpec(
+        event_type="recipe.improvement_curated",
+        version=1,
+        description="运营精选标记变更与操作审计",
+        correlation_fields=("recipe_version_id",),
+        exportable=True,
+        content_schema=ImprovementCuratedContentV1,
+        client_upload_allowed=False,
+    ),
+    EventTypeSpec(
+        event_type="recipe.version_published",
+        version=1,
+        description="服务端事务性版本公开事实及精确验证关联",
+        correlation_fields=("recipe_version_id", "cooking_record_id"),
+        exportable=True,
+        content_schema=RecipePublicationContentV1,
+        client_upload_allowed=False,
+    ),
+    EventTypeSpec(
+        event_type="recipe.pending_verification_cleared",
+        version=1,
+        description="可信完成精确版本后消除待验证；与数值已验证不同",
+        correlation_fields=("recipe_version_id", "cooking_record_id"),
+        exportable=True,
+        content_schema=RecipePublicationContentV1,
+        client_upload_allowed=False,
+    ),
+    EventTypeSpec(
+        event_type="recipe.withdrawn",
+        version=1,
+        description="作者下架菜谱；不删除公开或来源事实",
+        exportable=True,
+        content_schema=RecipePublicationContentV1,
+        client_upload_allowed=False,
+    ),
+    EventTypeSpec(
+        event_type="recipe.restored",
+        version=1,
+        description="作者重新上架菜谱；不重复首次公开",
+        exportable=True,
+        content_schema=RecipePublicationContentV1,
+        client_upload_allowed=False,
+    ),
     EventTypeSpec(
         event_type="recipe.personalized_view_changed",
         version=1,

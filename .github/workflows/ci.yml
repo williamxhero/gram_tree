@@ -47,6 +47,8 @@ jobs:
       - run: uv run ruff format --check .
       - run: uv run ruff check .
       - run: uv run pyright
+      - name: 原生失败诊断工具回归（不访问设备）
+        run: uv run python -B -m unittest discover -s ../tool -p test_android_native_diagnostics.py -v
       - run: uv run alembic heads | tee /dev/stderr | wc -l | grep -qx 1
         env:
           GRAMTREE_DATABASE_URL: postgresql+psycopg://postgres:postgres@localhost:5432/postgres
@@ -179,7 +181,9 @@ jobs:
   android-e2e:
     name: 安卓模拟器端到端测试
     runs-on: ubuntu-24.04
-    timeout-minutes: 45
+    # 25 Flutter targets rebuild separately; leave room for restart and native sharing checks.
+    # Keep individual test and harness timeouts unchanged.
+    timeout-minutes: 75
     services:
       postgres:
         image: pgvector/pgvector:pg16
@@ -232,7 +236,7 @@ jobs:
             python3 ../tool/android_notification_permission.py --serial emulator-5554 -- flutter test integration_test --dart-define=APP_ENV=dev --dart-define=E2E_COMPOSITION_TIMEOUT_MS=3000 --dart-define=API_BASE_URL=http://10.0.2.2:8000 --dart-define-from-file="${TMPDIR:-/tmp}/gramtree_e2e_server_8000.assistance.json" -d emulator-5554
             python3 ../tool/android_process_death_test.py --serial emulator-5554
             # Native sharing uses a separate receiving test APK and the real DocumentsUI.
-            (cd android && ./gradlew :app:connectedDebugAndroidTest -Ptarget=lib/main.dart -Pandroid.testInstrumentationRunnerArguments.class=app.gramtree.gram_tree.ExportFileShareTest)
+            (cd android && ./gradlew :app:connectedDebugAndroidTest -Ptarget=lib/main.dart -Pandroid.testInstrumentationRunnerArguments.class=app.gramtree.gram_tree.ExportFileShareTest) || { native_status=$?; python3 ../tool/android_native_diagnostics.py --serial emulator-5554 || :; exit "$native_status"; }
       - name: 服务端日志
         if: failure()
         run: cat /tmp/gramtree_e2e_server_8000.log || true

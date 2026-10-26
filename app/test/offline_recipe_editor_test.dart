@@ -1,12 +1,24 @@
+import 'dart:async';
+
+import 'package:drift/drift.dart' as drift;
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:gram_tree/app/router.dart';
 import 'package:gram_tree/api/api_client.dart';
+import 'package:gram_tree/app/router.dart';
+import 'package:gram_tree/app/theme.dart';
+import 'package:gram_tree/auth/session.dart';
+import 'package:gram_tree/events/event_queue.dart';
+import 'package:gram_tree/events/event_queue_mobile.dart' as mobile;
+import 'package:gram_tree/features/recipes/recipe_pages.dart';
+import 'package:gram_tree/l10n/app_localizations.dart';
 import 'package:gram_tree/network/reachability.dart';
+import 'package:gram_tree/recipes/offline_recipe_repository.dart';
 import 'package:gram_tree/recipes/recipe_snapshot.dart';
 import 'package:gramtree_api/gramtree_api.dart';
 
+import 'event_queue_test_executor.dart';
 import 'helpers.dart';
 import 'recipe_snapshot_test.dart' show recipeSnapshotFixture;
 
@@ -66,6 +78,175 @@ Future<void> editAndSave(WidgetTester tester, String instruction) async {
 }
 
 void main() {
+  testWidgets(
+    'native recipe list restart drains admitted writes and preserves account isolation',
+    (tester) async {
+      final database = (await tester.runAsync(createQueueTestDatabase))!;
+      final gate = _RecipeQueueGate();
+      final env = TestEnv.signedIn(offline: true);
+      final roots = <ProviderContainer>[];
+      final queues = <mobile.DriftEventQueue>[];
+      ProviderContainer root(mobile.DriftEventQueue queue) {
+        final container = ProviderContainer(
+          overrides: [
+            for (final override in env.overrides)
+              if (override.origin != eventQueueProvider) override,
+            eventQueueProvider.overrideWith((ref) {
+              ref.onDispose(queue.close);
+              return queue;
+            }),
+          ],
+        );
+        roots.add(container);
+        return container;
+      }
+
+      Future<void> page(ProviderContainer container) async {
+        await container.read(sessionStoreProvider).load();
+        await tester.pumpWidget(
+          UncontrolledProviderScope(
+            container: container,
+            child: MaterialApp(
+              theme: buildTheme(Brightness.light),
+              localizationsDelegates: AppLocalizations.localizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+              locale: const Locale('zh'),
+              home: const RecipeListPage(),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+      }
+
+      try {
+        final queue = mobile.DriftEventQueue(
+          mobile.EventQueueDatabase.withExecutor(
+            _RecipeQueueExecutor(database.open(), gate),
+          ),
+        );
+        queues.add(queue);
+        Future<void> enqueueRecipe(RecipeDetail detail, String writeId) =>
+            queue.enqueue(
+              QueuedEvent.write(
+                id: writeId,
+                ownerId: env.server.user.id,
+                deviceTime: DateTime.utc(2026, 10, 26),
+                writeType: recipeVersionWriteType,
+                payload: {
+                  'recipe_id': detail.id,
+                  'candidate_version_id': detail.version.id,
+                  'baseline_version_id': '44444444-4444-4444-8444-444444444444',
+                  'candidate': RecipeVersionCreate(
+                    snapshot: detail.version.snapshot,
+                    aiAssisted: false,
+                  ).toJson(),
+                },
+              ),
+              businessRecord: {
+                'recipe_id': detail.id,
+                'candidate_version_id': detail.version.id,
+                'baseline_version_id': '44444444-4444-4444-8444-444444444444',
+                'detail': detail.toJson(),
+              },
+            );
+        await tester.runAsync(
+          () => enqueueRecipe(
+            ownedRecipe(),
+            '33333333-3333-4333-8333-333333333333',
+          ),
+        );
+        final oldRoot = root(queue);
+        await page(oldRoot);
+        expect(
+          find.byKey(const ValueKey('recipe-card-$recipeId')),
+          findsOneWidget,
+        );
+        expect(find.textContaining('待同步'), findsOneWidget);
+
+        const admittedRecipeId = '77777777-7777-4777-8777-777777777777';
+        final admittedRecipe = ownedRecipe().copyWith(
+          id: admittedRecipeId,
+          dish: DishOut(id: 'late-soup', name: '关闭前已接纳的汤', aliases: const []),
+          version: ownedRecipe().version.copyWith(
+            id: '88888888-8888-4888-8888-888888888888',
+          ),
+        );
+        gate.armed = true;
+        final admitted = enqueueRecipe(
+          admittedRecipe,
+          '55555555-5555-4555-8555-555555555555',
+        );
+        final enqueued = expectLater(admitted, completes);
+        await tester.pumpAndSettle();
+        expect(gate.started.isCompleted, isTrue, reason: '真实事务已接纳并等待提交');
+        expect(find.text('关闭前已接纳的汤'), findsNothing);
+        // Shutdown must drain this admitted transaction. Its change notification
+        // arrives after the page and provider root have already been disposed.
+        await tester.pumpWidget(const SizedBox.shrink());
+        oldRoot.dispose();
+        final closed = queue.close();
+        gate.release.complete();
+        await tester.pumpAndSettle();
+        await enqueued;
+        await closed;
+        expect(tester.takeException(), isNull);
+
+        final recovered = mobile.DriftEventQueue(
+          mobile.EventQueueDatabase.withExecutor(database.open()),
+        );
+        queues.add(recovered);
+        await tester.runAsync(() => recovered.entries());
+        final recoveredRoot = root(recovered);
+        await page(recoveredRoot);
+        expect(
+          find.byKey(const ValueKey('recipe-card-$recipeId')),
+          findsOneWidget,
+        );
+        expect(find.text('关闭前已接纳的汤'), findsOneWidget);
+        expect(find.textContaining('待同步'), findsNWidgets(2));
+        final originalUser = env.server.user;
+        final originalTokens = TokenPair.fromJson(env.server.tokens());
+        env.server.user = UserOut.fromJson({
+          ...originalUser.toJson(),
+          'id': '66666666-6666-4666-8666-666666666666',
+          'nickname': '另一个账号',
+        });
+        final session = recoveredRoot.read(sessionStoreProvider);
+        await session.save(TokenPair.fromJson(env.server.tokens()));
+        await tester.pumpAndSettle();
+        expect(
+          find.byKey(const ValueKey('recipe-card-$recipeId')),
+          findsNothing,
+        );
+        expect(find.text('关闭前已接纳的汤'), findsNothing);
+        expect(find.textContaining('待同步'), findsNothing);
+        env.server.user = originalUser;
+        await session.save(originalTokens);
+        await tester.pumpAndSettle();
+        expect(
+          find.byKey(const ValueKey('recipe-card-$recipeId')),
+          findsOneWidget,
+        );
+        expect(find.text('关闭前已接纳的汤'), findsOneWidget);
+        expect(find.textContaining('待同步'), findsNWidgets(2));
+        expect(tester.takeException(), isNull);
+      } finally {
+        if (!gate.release.isCompleted) gate.release.complete();
+        await tester.pumpWidget(const SizedBox.shrink());
+        for (final container in roots.reversed) {
+          container.dispose();
+        }
+        final closed = Future.wait([for (final queue in queues) queue.close()]);
+        await tester.pumpAndSettle();
+        await tester.runAsync(() async {
+          await closed;
+          await database.dispose();
+        });
+      }
+    },
+    skip: kIsWeb,
+  );
+
   for (final rejection in {
     'invalid_recipe': '同步失败：请检查食材和步骤后重新保存',
     'unexpected_reason_with_private_payload': '同步失败：修改已保留，请稍后重试',
@@ -447,4 +628,72 @@ void main() {
       expect(env.server.calls('GET', '/v1/recipes/$recipeId'), isEmpty);
     },
   );
+}
+
+class _RecipeQueueGate {
+  bool armed = false;
+  final started = Completer<void>();
+  final release = Completer<void>();
+}
+
+// Only delay a real SQLite response; do not replace queue data or notifications.
+class _RecipeQueueExecutor extends drift.QueryExecutor {
+  _RecipeQueueExecutor(this.delegate, this.gate);
+  final drift.QueryExecutor delegate;
+  final _RecipeQueueGate gate;
+  @override
+  drift.SqlDialect get dialect => delegate.dialect;
+  @override
+  Future<bool> ensureOpen(drift.QueryExecutorUser user) =>
+      delegate.ensureOpen(user);
+  @override
+  Future<List<Map<String, Object?>>> runSelect(
+    String statement,
+    List<Object?> args,
+  ) => delegate.runSelect(statement, args);
+
+  @override
+  Future<int> runUpdate(String statement, List<Object?> args) =>
+      delegate.runUpdate(statement, args);
+  @override
+  Future<int> runInsert(String statement, List<Object?> args) async {
+    final result = await delegate.runInsert(statement, args);
+    if (gate.armed && statement.contains('queued_events')) {
+      gate.armed = false;
+      gate.started.complete();
+      await gate.release.future;
+    }
+    return result;
+  }
+
+  @override
+  Future<int> runDelete(String statement, List<Object?> args) =>
+      delegate.runDelete(statement, args);
+  @override
+  Future<void> runCustom(String statement, [List<Object?>? args]) =>
+      delegate.runCustom(statement, args);
+  @override
+  Future<void> runBatched(drift.BatchedStatements statements) =>
+      delegate.runBatched(statements);
+  @override
+  drift.QueryExecutor beginExclusive() =>
+      _RecipeQueueExecutor(delegate.beginExclusive(), gate);
+  @override
+  drift.TransactionExecutor beginTransaction() =>
+      _RecipeQueueTransaction(delegate.beginTransaction(), gate);
+  @override
+  Future<void> close() => delegate.close();
+}
+
+class _RecipeQueueTransaction extends _RecipeQueueExecutor
+    implements drift.TransactionExecutor {
+  _RecipeQueueTransaction(drift.TransactionExecutor super.delegate, super.gate);
+  drift.TransactionExecutor get transaction =>
+      delegate as drift.TransactionExecutor;
+  @override
+  bool get supportsNestedTransactions => transaction.supportsNestedTransactions;
+  @override
+  Future<void> send() => transaction.send();
+  @override
+  Future<void> rollback() => transaction.rollback();
 }

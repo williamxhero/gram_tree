@@ -10,6 +10,305 @@ class AppLocalizationsZh extends AppLocalizations {
   AppLocalizationsZh([String locale = 'zh']) : super(locale);
 
   @override
+  String get publicationPublished => '已公开';
+
+  @override
+  String get publicationPending => '已公开 · 待验证';
+
+  @override
+  String get publicationWithdrawn => '已下架';
+
+  @override
+  String get publicationDraft => '草稿 · 仅自己可见';
+
+  @override
+  String get publicationLoadError => '公开状态暂时无法读取，请联网重试。';
+
+  @override
+  String get publicationMutationError => '操作未确认，请联网重试。';
+
+  @override
+  String get publicationRiskTitle => '公开高风险菜谱前请确认';
+
+  @override
+  String get publicationRiskBody =>
+      '这道菜包含高风险食材或做法。请核对食品安全提示；公开后会接受更严格的审核。确认不代表安全风险已消除。';
+
+  @override
+  String get publicationRiskLater => '暂不确认';
+
+  @override
+  String get publicationRiskConfirm => '我已了解风险';
+
+  @override
+  String get publicationRestoreTitle => '重新上架菜谱？';
+
+  @override
+  String get publicationWithdrawTitle => '下架菜谱？';
+
+  @override
+  String get publicationRestoreBody => '仅恢复符合条件的公开版本，草稿仍仅自己可见。';
+
+  @override
+  String get publicationWithdrawBody =>
+      '别人将无法打开此菜谱；已有改良版来源署名和做菜记录仍保留。公开过的菜谱不能删除。';
+
+  @override
+  String get publicationRestore => '重新上架';
+
+  @override
+  String get publicationWithdraw => '下架';
+
+  @override
+  String get publicationWithdrawRecipe => '下架菜谱';
+
+  @override
+  String get publicationReview => '正在等待审核；审核通过后会自动更新公开状态。';
+
+  @override
+  String get publicationBasis => '公开条件由服务端检查，离线做完后需先同步。';
+
+  @override
+  String publicationComparisonBasis(String conclusion, String rules) {
+    return '和最近一次做过验证的版本比较：$conclusion；规则 $rules';
+  }
+
+  @override
+  String get publicationUndetermined => '未判定';
+
+  @override
+  String get publicationDraftConditions => '做过后会自动公开；还需满足以下公开条件。';
+
+  @override
+  String publicationConditionCount(String label, int count) {
+    return '$label（$count 处）';
+  }
+
+  @override
+  String get publicationRiskGuidance => '高风险菜谱 · 公开前请核对安全提示，并确认风险。';
+
+  @override
+  String get publicationRefresh => '刷新公开状态';
+
+  @override
+  String get publicationCommand => '一句话操作';
+
+  @override
+  String get publicationCommandHint => '刷新公开状态 / 确认公开风险 / 下架菜谱 / 重新上架';
+
+  @override
+  String get publicationUnderstood => '知道了';
+
+  @override
+  String get publicationMoreNotices => '查看下一页公开提示';
+
+  @override
+  String improvementChoiceBasis(String conclusion) {
+    return '依据：$conclusion；确定性规则判定，与来源精确版本比较。';
+  }
+
+  @override
+  String improvementProfileProposal(String version) {
+    return '拟更新口味档案第 $version 版：';
+  }
+
+  @override
+  String get improvementTasteOnly => '确认后只更新我的口味，不生成菜谱。';
+
+  @override
+  String get improvementTasteUnavailable => '这些微调不能安全转换为口味系数，可坚持保存微调分支。';
+
+  @override
+  String get improvementSaveTaste => '存进我的口味';
+
+  @override
+  String get improvementSaveBranch => '仍然保存';
+
+  @override
+  String get sourceChainTitle => '到根菜谱的来源链';
+
+  @override
+  String get sourceChainPreserved => '来源关系永久保留；下架来源不提供隐藏内容。';
+
+  @override
+  String get sourceImmutableBasis => '保留精确来源版本，来源署名和关系不能修改或删除。';
+
+  @override
+  String get sourceViewChain => '查看来源链';
+
+  @override
+  String get sourceUnavailable => '来源署名暂不可用 · 来源关系仍永久保留';
+
+  @override
+  String get sourceDeletedAuthor => '已注销用户';
+
+  @override
+  String sourceLineage(
+    String author,
+    String dish,
+    String version,
+    String withdrawn,
+  ) {
+    return '改良自 @$author《$dish》第 $version 版$withdrawn';
+  }
+
+  @override
+  String get sourceWithdrawnSuffix => ' · 已下架';
+
+  @override
+  String get improvementSavedTaste => '已存进我的口味，没有生成改良版。';
+
+  @override
+  String get improvementDraftGuidance => '改良工作副本 · 做过后会自动公开。保存前可以取消，不会生成菜谱。';
+
+  @override
+  String get publicationPrivateDraftGuidance => '草稿仅自己可见；做过后满足条件会自动公开。';
+
+  @override
+  String get improvementEditorCommandHint => '保存改良版 / 检查可复刻性 / 定位下一处';
+
+  @override
+  String get recipeQuantifyGuidance => '请求量化前会先保存当前私有版本，处理建议后再保存新版本。';
+
+  @override
+  String get recipeReproducibilityCheck => '检查可复刻性';
+
+  @override
+  String get recipeReproducibilityChecking => '正在检查可复刻性…';
+
+  @override
+  String get recipeQuantify => '保存并请求 AI 量化';
+
+  @override
+  String get recipeQuantifySaving => '正在保存或量化…';
+
+  @override
+  String get recipeOperationInvalid => '请输入提示中的菜谱操作';
+
+  @override
+  String get scenarioRestoreCurrentTaste => '本次按调整前口味显示 · 恢复最近口味';
+
+  @override
+  String get publicationEditorCommandHint =>
+      '检查可复刻性 / 请求量化 / 定位下一处 / 全部接受 / 暂不处理';
+
+  @override
+  String get publicationAiUnverified => 'AI 辅助 · 尚未做过验证';
+
+  @override
+  String get publicationAiUnsaved => 'AI 协助生成 · 本次编辑尚未保存';
+
+  @override
+  String get improvementSave => '保存改良版';
+
+  @override
+  String get improvementStart => '我来改一版';
+
+  @override
+  String sourceOriginalLink(String link) {
+    return '原始来源：$link';
+  }
+
+  @override
+  String sourceAiAuthor(String author) {
+    return 'AI 协助生成 · 发起作者 @$author';
+  }
+
+  @override
+  String sourceAuthor(String author) {
+    return '作者 @$author';
+  }
+
+  @override
+  String get publicationAiBasis => 'AI 参与配方设计；公开验证状态见本版状态。';
+
+  @override
+  String get cookingAdjustmentTitle => '记录临时调整';
+
+  @override
+  String get cookingAdjustmentType => '调整类型';
+
+  @override
+  String get cookingAdjustmentNote => '文字备注';
+
+  @override
+  String get cookingAdjustmentQuantity => '实际食材用量';
+
+  @override
+  String get cookingAdjustmentDuration => '本步实际时长';
+
+  @override
+  String get cookingAdjustmentIngredient => '食材';
+
+  @override
+  String get cookingActualQuantity => '实际用量（原单位）';
+
+  @override
+  String get cookingActualDuration => '实际时长（秒）';
+
+  @override
+  String get cookingAdjustmentHint => '例如：少放一点盐';
+
+  @override
+  String get cookingAdjustmentExactGuidance =>
+      '文字备注会完整保留；要从记录保存精确做法，请填写实际用量或时长。';
+
+  @override
+  String get cookingAdjustmentNoteRequired => '请填写备注';
+
+  @override
+  String get cookingAdjustmentNumberRequired => '请填写范围内的非负数值';
+
+  @override
+  String cookingCompletedDish(String dish) {
+    return '已完成 $dish';
+  }
+
+  @override
+  String get cookingPublicationSyncGuidance => '完成记录联网同步后，服务端会检查公开条件。';
+
+  @override
+  String get recordSavedVersion => '已存为我的新一版；公开状态以服务端同步结果为准。';
+
+  @override
+  String get recordSavedImprovement => '已存成改良版；公开状态以服务端同步结果为准。';
+
+  @override
+  String get recordCookingTitle => '做菜记录';
+
+  @override
+  String get recordSnapshotGuidance => '当时显示的内容快照；来源下架后仍可回看。';
+
+  @override
+  String recordSnapshotVersion(int version, String author) {
+    return '第 $version 版 · @$author';
+  }
+
+  @override
+  String get recordNoSnapshot => '这条记录没有保留配方快照。';
+
+  @override
+  String get recordUnnamedRecipe => '未命名菜谱';
+
+  @override
+  String get recordCookingMode => '做菜模式';
+
+  @override
+  String get recordManual => '手动记录';
+
+  @override
+  String get recordHasAdjustments => '有临时调整';
+
+  @override
+  String get recordSaving => '正在保存…';
+
+  @override
+  String get recordSaveVersion => '存为我的新一版';
+
+  @override
+  String get recordSaveImprovement => '存成改良版';
+
+  @override
   String get familyTitle => '家庭成员';
 
   @override
@@ -1418,7 +1717,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get recipeAi => ' · AI 协助';
 
   @override
-  String get recipeEditAction => '我来改一版';
+  String get recipeEditAction => '编辑我的菜谱';
 
   @override
   String get recipeBaseOnVersion => '基于这一版继续编辑';

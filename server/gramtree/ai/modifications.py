@@ -110,6 +110,11 @@ SOURCE_FIELDS = {
 
 
 def _target(session: Session, owner: User, body: ModificationInput) -> dict[str, Any]:
+    if body.improvement_draft_id is not None:
+        from gramtree.recipes.improvements import owned_draft
+
+        row = owned_draft(session, owner, body.improvement_draft_id)
+        return {"snapshot": row.snapshot, "dish_name": row.dish_name, "dish_aliases": []}
     if body.recipe_id is not None and body.base_version_id is not None:
         recipe, version = recipes._owned_version(
             session, owner, body.recipe_id, body.base_version_id
@@ -1395,7 +1400,7 @@ def decide(
     body: ModificationDecisionsInput,
 ):
     row = _owned(session, owner, request_id)
-    if row.saved_version_id:
+    if row.saved_version_id or row.confirmation:
         raise ApiError(409, "modification_already_saved", "这批修改已经保存")
     _fresh(session, owner, row)
     if row.error:
@@ -1430,6 +1435,8 @@ def confirm(
     body: ModificationConfirmInput,
 ):
     row = _owned(session, owner, request_id)
+    if row.request.get("improvement_draft_id"):
+        raise ApiError(409, "improvement_save_required", "请在改良保存页确认来源和微调选择后保存")
     canonical = body.model_dump(mode="json", exclude_none=True)
     if row.saved_version_id:
         if row.confirmation != canonical:

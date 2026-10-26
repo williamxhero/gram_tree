@@ -162,6 +162,46 @@ def _report_conflict(session: Session, redis: Redis, existing: Event) -> None:
     )
 
 
+def append_server_event(
+    session: Session,
+    user_id: uuid.UUID,
+    event_type: str,
+    content: dict[str, Any],
+    correlation: dict[str, str],
+) -> None:
+    """Append in the caller's transaction; transition locks provide idempotency."""
+    from gramtree.core.ids import new_id
+    from gramtree.core.time import utcnow
+
+    now = utcnow()
+    item = EventInput(
+        id=new_id(),
+        event_type=event_type,
+        type_version=1,
+        device_id="server",
+        device_time=now,
+        app_version="server",
+        correlation=correlation,
+        content=content,
+    )
+    session.add(
+        Event(
+            id=item.id,
+            user_id=user_id,
+            event_type=event_type,
+            type_version=1,
+            device_id=item.device_id,
+            device_time=now,
+            app_version=item.app_version,
+            correlation=correlation,
+            content=content,
+            content_fingerprint=_fingerprint(user_id, item),
+            received_at=now,
+            device_time_suspicious=False,
+        )
+    )
+
+
 def record_taste_profile_changed(
     session: Session, user_id: uuid.UUID, change_id: uuid.UUID, *, now: datetime
 ) -> None:

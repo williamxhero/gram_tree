@@ -6,6 +6,7 @@ import 'package:integration_test/integration_test.dart';
 import 'package:gram_tree/util/ids.dart';
 
 import '../test/cooking_controls_support.dart';
+import '../test/lazy_list_controls_support.dart';
 import 'event_pipeline_support.dart'
     show accessTokenOf, containerOf, devServer, signInFreshUser;
 
@@ -15,6 +16,12 @@ const _instruction = '炒熟鸡肉，关火后加盐';
 const _note = '观察中心熟透后再出锅';
 
 Finder _key(String value) => find.byKey(ValueKey(value));
+
+// The adjustment summary repeats amounts; check the actual ingredient row.
+Finder _saltAmount(String text) => find.descendant(
+  of: _key('personalized-detail-salt'),
+  matching: find.text(text),
+);
 
 Future<void> _pump(WidgetTester tester) async {
   for (var i = 0; i < 12; i++) {
@@ -36,22 +43,16 @@ Future<void> _wait(WidgetTester tester, Finder finder) async {
 }
 
 Future<void> _reveal(WidgetTester tester, Finder finder) async {
-  FocusManager.instance.primaryFocus?.unfocus();
-  if (tester.testTextInput.isRegistered) tester.testTextInput.hide();
-  final body = _key('recipe-detail-content');
-  if (finder.evaluate().isEmpty) {
-    for (var i = 0; i < 12; i++) {
-      await tester.drag(body, const Offset(0, 500));
-      await tester.pump(const Duration(milliseconds: 100));
-    }
-    for (var i = 0; i < 45 && finder.evaluate().isEmpty; i++) {
-      await tester.drag(body, const Offset(0, -250));
-      await tester.pump(const Duration(milliseconds: 100));
-    }
-  }
-  await _wait(tester, finder);
-  await tester.ensureVisible(finder.last);
-  await _pump(tester);
+  await revealLazyListControl(
+    tester,
+    finder,
+    scrollable: find
+        .descendant(
+          of: _key('recipe-detail-content'),
+          matching: find.byType(Scrollable),
+        )
+        .first,
+  );
   expect(finder.last.hitTestable(), findsOneWidget);
 }
 
@@ -92,7 +93,7 @@ Future<void> _back(WidgetTester tester) =>
 Future<void> _openRecipe(WidgetTester tester) async {
   await _tap(tester, find.text(_dish).last);
   await _wait(tester, _key('recipe-detail-content'));
-  await _wait(tester, _key('scenario-detail-brief'));
+  await _reveal(tester, _key('scenario-detail-brief'));
 }
 
 Map<String, dynamic> _recipeInput() => {
@@ -254,13 +255,13 @@ void main() {
       final changeId = change['id'] as String;
       final tasteId = 'scene:taste:$changeId';
       final currentProfile = await _get('/v1/me/taste-profile', auth);
-      await _reveal(tester, find.text('盐  12.5 g'));
+      await _reveal(tester, _saltAmount('盐  12.5 g'));
       await _tap(
         tester,
         _key('$tasteId:show_before_taste_change'),
         inRecipe: true,
       );
-      await _reveal(tester, find.text('盐  7.5 g'));
+      await _reveal(tester, _saltAmount('盐  7.5 g'));
       expect(find.text('盐  10 g'), findsNothing);
       expect(await _get('/v1/me/taste-profile', auth), currentProfile);
       await _tap(
@@ -268,7 +269,7 @@ void main() {
         _key('scenario-restore-current-taste'),
         inRecipe: true,
       );
-      await _reveal(tester, find.text('盐  12.5 g'));
+      await _reveal(tester, _saltAmount('盐  12.5 g'));
       await _tap(tester, _key('$tasteId:open_taste_change'), inRecipe: true);
       await _wait(tester, find.byType(AlertDialog));
       await _tap(tester, find.text('取消'));
@@ -299,7 +300,7 @@ void main() {
       await _tap(tester, _key('$tasteId:open_taste_change'), inRecipe: true);
       await _wait(tester, find.byType(AlertDialog));
       await _tap(tester, _key('scenario-confirm-revert'));
-      await _reveal(tester, find.text('盐  7.5 g'));
+      await _reveal(tester, _saltAmount('盐  7.5 g'));
       final revertedProfile = await _get('/v1/me/taste-profile', auth);
       expect((revertedProfile['flavors'] as Map)['salty']['coefficient'], 0.75);
       expect(_key('scenario-restore-current-taste'), findsNothing);

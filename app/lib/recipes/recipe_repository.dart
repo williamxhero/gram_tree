@@ -15,6 +15,30 @@ class RecipeRepository {
   RecipesApi get _recipes => _api.getRecipesApi();
   RecipeAiApi get _ai => _api.getRecipeAiApi();
 
+  Future<ImprovementDraftOut> startImprovement(
+    String recipeId,
+    String versionId,
+  ) async => (await _api.getImprovementsApi().createImprovementDraft(
+    recipeId: recipeId,
+    improvementDraftInput: ImprovementDraftInput(sourceVersionId: versionId),
+  )).data!;
+
+  Future<ImprovementPreviewOut> previewImprovement(
+    String recipeId,
+    ImprovementPreviewInput input,
+  ) async => (await _api.getImprovementsApi().previewImprovement(
+    recipeId: recipeId,
+    improvementPreviewInput: input,
+  )).data!;
+
+  Future<ImprovementSaveOut> saveImprovement(
+    String recipeId,
+    ImprovementSaveInput input,
+  ) async => (await _api.getImprovementsApi().saveImprovement(
+    recipeId: recipeId,
+    improvementSaveInput: input,
+  )).data!;
+
   Future<AIStatus> aiStatus() async => (await _ai.recipeAiStatus()).data!;
 
   Future<AIStatus> modificationStatus() async =>
@@ -484,6 +508,7 @@ class RecipeIngredientDraft {
     this.flavorSource,
     this.functionalSource,
     this.replacement,
+    this.flavorContributionCleared = false,
   });
 
   factory RecipeIngredientDraft.fromModel(RecipeIngredient value) =>
@@ -509,6 +534,7 @@ class RecipeIngredientDraft {
         flavorContribution: value.flavorContribution,
         flavorSource: value.flavorSource,
         functionalSource: value.functionalSource,
+        flavorContributionCleared: false,
         replacement: value.replacement is String
             ? RecipeReplacementDraft(
                 ingredientId: null,
@@ -546,6 +572,7 @@ class RecipeIngredientDraft {
           : null,
       flavorSource: _valueSource(value['flavor_source']),
       functionalSource: _valueSource(value['functional_source']),
+      flavorContributionCleared: value['flavor_contribution_cleared'] == true,
       replacement: replacement is String
           ? RecipeReplacementDraft(ingredientId: null, displayName: replacement)
           : replacement is Map
@@ -576,11 +603,15 @@ class RecipeIngredientDraft {
   bool optional;
   bool functional;
   RecipeFlavorContribution? flavorContribution;
+
+  /// Distinguishes an intentional clear from an untouched unknown contribution.
+  bool flavorContributionCleared;
   ValueSource? flavorSource;
   ValueSource? functionalSource;
   RecipeReplacementDraft? replacement;
 
   void adoptIngredientDefaults(IngredientDetail ingredient) {
+    flavorContributionCleared = false;
     final flavor = ingredient.attributes.flavor;
     flavorContribution = flavor == null
         ? null
@@ -602,7 +633,8 @@ class RecipeIngredientDraft {
   void setFlavor(String axis, int? strength) {
     final values = flavorContribution?.toJson() ?? <String, dynamic>{};
     values[axis] = strength;
-    flavorContribution = values.values.every((value) => value == null)
+    flavorContributionCleared = values.values.every((value) => value == null);
+    flavorContribution = flavorContributionCleared
         ? null
         : RecipeFlavorContribution.fromJson(values);
     flavorSource = flavorContribution == null
@@ -618,9 +650,12 @@ class RecipeIngredientDraft {
     baseUnit: _baseUnit(baseUnit),
     displayName: displayName.trim(),
     functional: functional,
-    // dart-dio omits null properties. Send an empty, unknown profile so clearing
-    // a contribution is explicit and cannot re-adopt a mutable library default.
-    flavorContribution: flavorContribution ?? RecipeFlavorContribution(),
+    // Preserve an unknown source contribution as null. An empty contribution is
+    // a meaningful explicit edit and would make an untouched quantity change
+    // compare as a general recipe change.
+    flavorContribution: flavorContributionCleared
+        ? RecipeFlavorContribution()
+        : flavorContribution,
     flavorSource: flavorSource,
     functionalSource: functionalSource,
     group: _optionalText(group),
@@ -658,6 +693,7 @@ class RecipeIngredientDraft {
     'optional': optional,
     'functional': functional,
     'flavor_contribution': flavorContribution?.toJson(),
+    'flavor_contribution_cleared': flavorContributionCleared,
     'flavor_source': flavorSource?.toJson(),
     'functional_source': functionalSource?.toJson(),
     'replacement': replacement?.toJson(),
@@ -960,8 +996,8 @@ class RecipeForm {
     designRationale: designRationale,
     textSource: writable ? _writableSource(textSource) : textSource,
     servingsSource: writable ? _writableSource(servingsSource) : servingsSource,
-    difficulty: difficulty,
-    dishType: dishType,
+    difficulty: _optionalText(difficulty),
+    dishType: _optionalText(dishType),
     formatVersion: RecipeSnapshotFormatVersionEnum.number1,
     ingredients: [
       for (final item in ingredients) item.toModel(writable: writable),

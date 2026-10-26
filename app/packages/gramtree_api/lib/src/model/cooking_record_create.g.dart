@@ -13,6 +13,8 @@ abstract class _$CookingRecordCreateCWProxy {
 
   CookingRecordCreate coDinerIds(List<String>? coDinerIds);
 
+  CookingRecordCreate completion(CookingCompletion? completion);
+
   CookingRecordCreate dishName(String? dishName);
 
   CookingRecordCreate meal(CookingRecordCreateMealEnum? meal);
@@ -43,6 +45,7 @@ abstract class _$CookingRecordCreateCWProxy {
     List<Object>? adjustments,
     String clientId,
     List<String>? coDinerIds,
+    CookingCompletion? completion,
     String? dishName,
     CookingRecordCreateMealEnum? meal,
     DateTime? occurredAt,
@@ -71,6 +74,10 @@ class _$CookingRecordCreateCWProxyImpl implements _$CookingRecordCreateCWProxy {
   @override
   CookingRecordCreate coDinerIds(List<String>? coDinerIds) =>
       this(coDinerIds: coDinerIds);
+
+  @override
+  CookingRecordCreate completion(CookingCompletion? completion) =>
+      this(completion: completion);
 
   @override
   CookingRecordCreate dishName(String? dishName) => this(dishName: dishName);
@@ -117,6 +124,7 @@ class _$CookingRecordCreateCWProxyImpl implements _$CookingRecordCreateCWProxy {
     Object? adjustments = const $CopyWithPlaceholder(),
     Object? clientId = const $CopyWithPlaceholder(),
     Object? coDinerIds = const $CopyWithPlaceholder(),
+    Object? completion = const $CopyWithPlaceholder(),
     Object? dishName = const $CopyWithPlaceholder(),
     Object? meal = const $CopyWithPlaceholder(),
     Object? occurredAt = const $CopyWithPlaceholder(),
@@ -140,6 +148,10 @@ class _$CookingRecordCreateCWProxyImpl implements _$CookingRecordCreateCWProxy {
           ? _value.coDinerIds
           // ignore: cast_nullable_to_non_nullable
           : coDinerIds as List<String>?,
+      completion: completion == const $CopyWithPlaceholder()
+          ? _value.completion
+          // ignore: cast_nullable_to_non_nullable
+          : completion as CookingCompletion?,
       dishName: dishName == const $CopyWithPlaceholder()
           ? _value.dishName
           // ignore: cast_nullable_to_non_nullable
@@ -210,6 +222,12 @@ CookingRecordCreate _$CookingRecordCreateFromJson(Map<String, dynamic> json) =>
             'co_diner_ids',
             (v) => (v as List<dynamic>?)?.map((e) => e as String).toList(),
           ),
+          completion: $checkedConvert(
+            'completion',
+            (v) => v == null
+                ? null
+                : CookingCompletion.fromJson(v as Map<String, dynamic>),
+          ),
           dishName: $checkedConvert('dish_name', (v) => v as String?),
           meal: $checkedConvert(
             'meal',
@@ -255,6 +273,7 @@ Map<String, dynamic> _$CookingRecordCreateToJson(
   'adjustments': ?instance.adjustments,
   'client_id': instance.clientId,
   'co_diner_ids': ?instance.coDinerIds,
+  'completion': ?instance.completion?.toJson(),
   'dish_name': ?instance.dishName,
   'meal': ?_$CookingRecordCreateMealEnumEnumMap[instance.meal],
   'occurred_at': ?instance.occurredAt?.toIso8601String(),

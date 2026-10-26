@@ -49,6 +49,7 @@ Map<String, dynamic> detail(RecipeSnapshot snapshot) => RecipeDetail(
   createdAt: '2026-10-01T00:00:00+00:00',
   updatedAt: '2026-10-01T00:00:00+00:00',
   version: RecipeVersionOut(
+    publicationState: RecipeVersionOutPublicationStateEnum.draft,
     id: '22222222-2222-4222-8222-222222222222',
     versionNumber: 1,
     snapshot: snapshot,

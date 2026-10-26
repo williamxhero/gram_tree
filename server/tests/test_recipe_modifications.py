@@ -77,7 +77,10 @@ def propose(api, directory, headers, detail, *, operations=None, extra=None):
     return response.json()
 
 
-def test_materialized_corpus_previews_a_recipe_saved_through_the_editor(modification_api):
+@pytest.mark.parametrize("empty_text", ["", None], ids=["legacy-empty", "editor-unset"])
+def test_materialized_corpus_previews_a_recipe_saved_through_the_editor(
+    modification_api, empty_text
+):
     api, directory = modification_api
     root = Path(__file__).resolve().parents[2]
     subprocess.run(
@@ -89,9 +92,12 @@ def test_materialized_corpus_previews_a_recipe_saved_through_the_editor(modifica
     generated = generate(api, headers, found["request_id"])
     assert generated["error"] is None, generated
     recipe = copy.deepcopy(generated["draft"]["recipe"])
-    # RecipeForm uses an empty difficulty and dart-dio omits null sources,
-    # but still sends functional=False. Exercise that public save payload.
-    recipe["snapshot"]["difficulty"] = ""
+    # Exercise both legacy empty text and the current editor's omitted text.
+    # dart-dio also omits null sources, but still sends functional=False.
+    if empty_text is None:
+        recipe["snapshot"].pop("difficulty", None)
+    else:
+        recipe["snapshot"]["difficulty"] = empty_text
     for ingredient in recipe["snapshot"]["ingredients"]:
         ingredient["base_quantity"] = ingredient["quantity"]
         ingredient["base_unit"] = "g"
@@ -130,7 +136,10 @@ def test_materialized_corpus_previews_a_recipe_saved_through_the_editor(modifica
     assert preview["snapshot"] == detail["version"]["snapshot"]
 
 
-def test_materialized_method_corpus_previews_a_recipe_saved_through_the_editor(modification_api):
+@pytest.mark.parametrize("empty_text", ["", None], ids=["legacy-empty", "editor-unset"])
+def test_materialized_method_corpus_previews_a_recipe_saved_through_the_editor(
+    modification_api, empty_text
+):
     api, directory = modification_api
     root = Path(__file__).resolve().parents[2]
     subprocess.run(
@@ -147,7 +156,10 @@ def test_materialized_method_corpus_previews_a_recipe_saved_through_the_editor(m
     generated = generate(api, headers, found_response.json()["request_id"])
     assert generated["error"] is None, generated
     recipe = copy.deepcopy(generated["draft"]["recipe"])
-    recipe["snapshot"]["difficulty"] = ""
+    if empty_text is None:
+        recipe["snapshot"].pop("difficulty", None)
+    else:
+        recipe["snapshot"]["difficulty"] = empty_text
     for ingredient in recipe["snapshot"]["ingredients"]:
         ingredient["flavor_contribution"] = {}
         for field in ("ingredient_id", "functional_source", "flavor_source"):

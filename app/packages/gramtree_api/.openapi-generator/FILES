@@ -14,6 +14,7 @@ lib/src/api/events_api.dart
 lib/src/api/exports_api.dart
 lib/src/api/family_members_api.dart
 lib/src/api/health_api.dart
+lib/src/api/improvements_api.dart
 lib/src/api/ingredients_api.dart
 lib/src/api/personal_measures_api.dart
 lib/src/api/recipe_ai_api.dart
@@ -66,6 +67,7 @@ lib/src/model/compose_request.dart
 lib/src/model/consent_record_input.dart
 lib/src/model/consent_record_output.dart
 lib/src/model/consent_upload.dart
+lib/src/model/cooking_completion.dart
 lib/src/model/cooking_constraints.dart
 lib/src/model/cooking_constraints_out.dart
 lib/src/model/cooking_equipment.dart
@@ -125,6 +127,13 @@ lib/src/model/identity_out.dart
 lib/src/model/import_input.dart
 lib/src/model/import_original_out.dart
 lib/src/model/import_out.dart
+lib/src/model/improvement_draft_input.dart
+lib/src/model/improvement_draft_out.dart
+lib/src/model/improvement_preview_input.dart
+lib/src/model/improvement_preview_out.dart
+lib/src/model/improvement_save_input.dart
+lib/src/model/improvement_save_out.dart
+lib/src/model/improvement_taste_proposal.dart
 lib/src/model/ingredient_attributes.dart
 lib/src/model/ingredient_comparison_row.dart
 lib/src/model/ingredient_detail.dart
@@ -172,6 +181,11 @@ lib/src/model/personalization_request.dart
 lib/src/model/personalized_ingredient_out.dart
 lib/src/model/personalized_step_out.dart
 lib/src/model/profile_update.dart
+lib/src/model/publication_condition.dart
+lib/src/model/publication_notification_ack.dart
+lib/src/model/publication_notification_out.dart
+lib/src/model/publication_notifications.dart
+lib/src/model/publication_panel.dart
 lib/src/model/purchase_unit.dart
 lib/src/model/purchase_units_attribute.dart
 lib/src/model/quantification_decision.dart
@@ -225,6 +239,7 @@ lib/src/model/recipe_version_create.dart
 lib/src/model/recipe_version_history.dart
 lib/src/model/recipe_version_out.dart
 lib/src/model/recipe_version_summary.dart
+lib/src/model/record_version_save_input.dart
 lib/src/model/refresh_request.dart
 lib/src/model/rejection_reason.dart
 lib/src/model/release_note.dart

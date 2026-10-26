@@ -10,6 +10,7 @@ import 'components/scenario_summary_component.dart';
 import 'components/scenario_notice_component.dart';
 import 'components/text_block_component.dart';
 import 'recipe_components.dart';
+import 'source_attribution.dart';
 import 'recipe_safety_protocol.dart';
 
 /// 组件登记时要给的标准空态文案：结论层（各组件类型自己的必填字段，比如
@@ -85,6 +86,11 @@ class ComponentRegistry {
 /// 仅测试用，专门用来驱动"来源标记 -> 为什么面板 -> 反馈"这条链路，不是真实业务
 /// 组件（真实的换算内容留给以后的子 SPEC）。
 final defaultComponentRegistry = ComponentRegistry(const [
+  ComponentSpec(
+    type: 'source_attribution',
+    builder: buildSourceAttributionComponent,
+    emptyState: ComponentEmptyState(title: '来源署名暂不可用 · 来源关系仍永久保留'),
+  ),
   ComponentSpec(
     type: 'scenario_difference',
     builder: buildScenarioNoticeComponent,

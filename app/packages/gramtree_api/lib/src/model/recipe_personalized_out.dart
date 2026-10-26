@@ -34,6 +34,8 @@ class RecipePersonalizedOut {
 
     required this.effectiveFlavors,
 
+    this.executionToken,
+
     this.fallback,
 
     required this.foodSafety,
@@ -75,6 +77,9 @@ class RecipePersonalizedOut {
 
   @JsonKey(name: r'effective_flavors', required: true, includeIfNull: false)
   final Map<String, num> effectiveFlavors;
+
+  @JsonKey(name: r'execution_token', required: false, includeIfNull: false)
+  final String? executionToken;
 
   @JsonKey(name: r'fallback', required: false, includeIfNull: false)
   final String? fallback;
@@ -124,6 +129,7 @@ class RecipePersonalizedOut {
           other.blocked == blocked &&
           other.cacheKey == cacheKey &&
           other.effectiveFlavors == effectiveFlavors &&
+          other.executionToken == executionToken &&
           other.fallback == fallback &&
           other.foodSafety == foodSafety &&
           other.ingredients == ingredients &&
@@ -145,6 +151,7 @@ class RecipePersonalizedOut {
       blocked.hashCode +
       cacheKey.hashCode +
       effectiveFlavors.hashCode +
+      (executionToken == null ? 0 : executionToken.hashCode) +
       (fallback == null ? 0 : fallback.hashCode) +
       foodSafety.hashCode +
       ingredients.hashCode +

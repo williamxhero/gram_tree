@@ -5,6 +5,7 @@
 
 import re
 import uuid
+from datetime import UTC
 
 from fastapi import APIRouter, Query
 from sqlalchemy import func, select
@@ -53,6 +54,11 @@ def deletion_storage(
     from gramtree.events.sync_models import WriteFactOutbox, WriteReceipt
     from gramtree.exports.models import ExportJob
     from gramtree.recipes.import_models import RecipeImport
+    from gramtree.recipes.improvement_models import (
+        ImprovementDraft,
+        ImprovementReceipt,
+        RecipeImprovementFact,
+    )
     from gramtree.recipes.measure_models import PersonalMeasure
     from gramtree.recipes.models import Recipe, RecipeImageStaging, RecipeSaveOutbox
     from gramtree.records.models import CookingRecord
@@ -77,6 +83,9 @@ def deletion_storage(
         (AnalyticsEvent, AnalyticsEvent.user_id),
         (WriteReceipt, WriteReceipt.owner_id),
         (WriteFactOutbox, WriteFactOutbox.owner_id),
+        (ImprovementDraft, ImprovementDraft.owner_id),
+        (ImprovementReceipt, ImprovementReceipt.owner_id),
+        (RecipeImprovementFact, RecipeImprovementFact.owner_id),
         (TasteProfile, TasteProfile.owner_id),
         (FamilyMember, FamilyMember.owner_id),
         (PersonalMeasure, PersonalMeasure.owner_id),
@@ -93,9 +102,46 @@ def deletion_storage(
         )
         for model, column in owned
     }
+    counts["improvement_receipt_payloads"] = session.scalar(
+        select(func.count())
+        .select_from(ImprovementReceipt)
+        .where(
+            ImprovementReceipt.owner_id == owner,
+            ImprovementReceipt.response != {"resource_deleted": True},
+        )
+    )
+    orphan_facts = list(
+        session.scalars(
+            select(RecipeImprovementFact).where(
+                RecipeImprovementFact.recipe_id.not_in(select(Recipe.id))
+            )
+        )
+    )
+    private_orphans = sum(
+        fact.owner_id is not None
+        or bool(fact.comparison)
+        or fact.cooking_record_id is not None
+        or any(set(node) != {"recipe_id", "version_id"} for node in fact.source_path)
+        or fact.created_at.astimezone(UTC).weekday() != 0
+        or fact.created_at.astimezone(UTC).time().isoformat() != "00:00:00"
+        for fact in orphan_facts
+    )
     job = session.get(AccountDeletion, owner)
     stats = list(session.scalars(select(AnonymousCookingStatistic)))
     return {
+        "orphan_improvement_private_payloads": private_orphans,
+        "anonymous_improvement_statistics": [
+            {
+                "recipe_version_id": str(fact.version_id),
+                "source_version_id": str(fact.source_version_id),
+                "branch_type": fact.branch_type,
+                "conclusion": fact.conclusion,
+                "rules_version": fact.rules_version,
+                "week": fact.created_at.date().isoformat(),
+            }
+            for fact in orphan_facts
+            if fact.owner_id is None
+        ],
         "owned_counts": counts,
         "steps": job.steps if job else {},
         "completed_at": job.completed_at.isoformat() if job and job.completed_at else None,

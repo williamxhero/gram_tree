@@ -14,6 +14,7 @@ RecipeDetail recipeSnapshotFixture(
   updatedAt: '2026-10-01T00:00:00Z',
   visibility: RecipeDetailVisibilityEnum.private,
   version: RecipeVersionOut(
+    publicationState: RecipeVersionOutPublicationStateEnum.draft,
     id: version,
     versionNumber: 1,
     aiAssisted: false,

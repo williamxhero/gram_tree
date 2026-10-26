@@ -29,6 +29,15 @@ PageDescription cookingComposition(String detail) => PageDescription(
   protocol: '1.0',
   components: [
     scenarioSummary(detail),
+    ComponentDescriptor(
+      type: 'source_attribution',
+      id: 'source-attribution',
+      detail: ComponentDescriptorDetailEnum.brief,
+      required_: true,
+      actions: const [],
+      reason: ComponentReason(code: 'required', text: '来源永久保留'),
+      data: {'conclusion': '作者 @作者', 'attribution': null},
+    ),
     for (final type in ['food_safety', 'allergen_notice'])
       ComponentDescriptor(
         type: type,
@@ -952,6 +961,84 @@ void main() {
         await tester.tap(find.text('完成').hitTestable());
         await tester.pumpAndSettle();
         expect(find.text('已完成 汤'), findsOneWidget);
+        expect(tester.takeException(), isNull);
+        await tester.pumpWidget(const SizedBox.shrink());
+      },
+    );
+  }
+
+  for (final skip in ['first', 'final', 'all']) {
+    testWidgets(
+      'skip $skip step then complete persists disjoint frozen offline record',
+      (tester) async {
+        final env = TestEnv.signedIn(offline: true);
+        const id = '11111111-1111-4111-8111-111111111111';
+        final store = await sessionStore(
+          env,
+          sessionId: id,
+          stepIndex: -1,
+          inputs: {'execution_token': 'a' * 64},
+        );
+        Future<void> open() async {
+          await tester.pumpWidget(
+            ProviderScope(
+              overrides: [
+                ...env.overrides,
+                cookingSessionStoreProvider.overrideWithValue(store),
+              ],
+              child: testApp(const CookingPage(sessionId: id)),
+            ),
+          );
+          await tester.pumpAndSettle();
+        }
+
+        Future<void> tap(String text) async {
+          await revealCooking(tester, find.text(text));
+          await tester.tap(find.text(text).hitTestable());
+          await tester.pumpAndSettle();
+        }
+
+        await open();
+        await tap('开始第一步');
+        if (skip != 'final') await tap('跳过');
+        await tap('下一步');
+        if (skip != 'first') await tap('跳过');
+        await tap('完成');
+        expect(find.text('做菜完成'), findsOneWidget);
+        expect(find.text('完成记录联网同步后，服务端会检查公开条件。'), findsOneWidget);
+        final writes =
+            (await env.eventQueue.entries(ownerId: env.server.user.id))
+                .where(
+                  (entry) => entry.write.writeType == 'cooking_record.create',
+                )
+                .toList();
+        expect(writes, hasLength(1));
+        final record = writes.single.write.payload['record'] as Map;
+        final completion = record['completion'] as Map;
+        expect(completion['completed_steps'], switch (skip) {
+          'first' => ['serve'],
+          'final' => ['heat'],
+          _ => <String>[],
+        });
+        expect(completion['skipped_steps'], switch (skip) {
+          'first' => ['heat'],
+          'final' => ['serve'],
+          _ => ['heat', 'serve'],
+        });
+        expect(record['verification'], 'unverified');
+        expect(record['snapshot'], isNotNull);
+        expect(env.server.calls('POST', '/v1/sync/writes'), isEmpty);
+        await tester.pumpWidget(const SizedBox.shrink());
+        await open();
+        expect(find.text('做菜完成'), findsOneWidget);
+        final reopenedWrites =
+            (await env.eventQueue.entries(ownerId: env.server.user.id))
+                .where(
+                  (entry) => entry.write.writeType == 'cooking_record.create',
+                )
+                .toList();
+        expect(reopenedWrites, hasLength(1));
+        expect(reopenedWrites.single.write.payload['record'], record);
         expect(tester.takeException(), isNull);
         await tester.pumpWidget(const SizedBox.shrink());
       },

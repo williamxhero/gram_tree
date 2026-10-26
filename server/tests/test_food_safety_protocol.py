@@ -6,6 +6,7 @@ import pytest
 from httpx import Response
 
 from gramtree.recipes import service as recipe_service
+from gramtree.ui_protocol import service as ui_service
 from tests.accounts_support import Api, bearer
 from tests.test_conventions import assert_error_shape
 
@@ -92,6 +93,40 @@ def test_recipe_composition_uses_saved_safety_and_allergen_context(api: Api) -> 
     assert allergens["required"] is True
     assert allergens["data"]["status"] == "available"
     assert allergens["data"]["result"]["rules_version"]
+
+
+def test_original_recipe_rejects_generated_lineage_without_losing_safety(
+    api: Api, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    tokens = api.login("original-source-protocol@example.com")
+    saved = _create_recipe(api, tokens, "原始菜谱安全信息")
+    original = ui_service.compose_recipe_safety
+
+    def generated_lineage(*args: Any, **kwargs: Any):
+        description = original(*args, **kwargs)
+        description.components.append(
+            description.components[0].model_copy(
+                update={
+                    "type": "source_attribution",
+                    "id": "generated-source",
+                    "data": {"conclusion": "AI 编造的来源", "attribution": None},
+                }
+            )
+        )
+        return description
+
+    monkeypatch.setattr(ui_service, "compose_recipe_safety", generated_lineage)
+    response = _compose(
+        api, tokens, saved["id"], supported_components=[*SAFETY_COMPONENTS, "source_attribution"]
+    )
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert body["fallback"] is None
+    assert {item["type"] for item in body["components"]} == set(SAFETY_COMPONENTS)
+    safety = next(item for item in body["components"] if item["type"] == "food_safety")
+    assert safety["data"]["status"] == "available"
+    assert safety["data"]["result"]["findings"]
+    assert "AI 编造的来源" not in response.text
 
 
 def test_recipe_composition_preserves_pork_rest_guidance(api: Api) -> None:

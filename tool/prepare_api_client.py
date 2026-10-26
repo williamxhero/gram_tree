@@ -113,6 +113,8 @@ def main() -> None:
                 "Modification",
                 "ChangeExplanation",
                 "Cooking",
+                "Publication",
+                "Improvement",
                 "IngredientPreference",
                 "Allerg",
                 "Family",

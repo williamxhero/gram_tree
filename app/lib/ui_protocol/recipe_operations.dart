@@ -22,11 +22,25 @@ const recipeOperations = {
   'text_retry_status',
   'text_retry_checks',
   'explain_changes',
+  'publication_refresh',
+  'publication_risk',
+  'publication_lifecycle',
+  'publication_condition',
+  'improvement_start',
+  'improvement_save',
+  'improvement_branch',
+  'improvement_taste',
+  'source_chain',
 };
 
 bool validateRecipeOperation(Map<String, dynamic> params) {
   final operation = params['operation'];
   if (!recipeOperations.contains(operation)) return false;
+  if (operation == 'publication_condition') {
+    return params.length == 2 &&
+        params['condition'] is String &&
+        (params['condition'] as String).isNotEmpty;
+  }
   if (operation == 'text_preview') {
     return params.keys.every(
           {'operation', 'text', 'adjustment_percent'}.contains,
@@ -166,6 +180,38 @@ ActionDescriptor? recipeCommand(String text) => switch (text.trim()) {
   '暂不处理' => ActionDescriptor(
     intent: 'recipe_operation',
     params: {'operation': 'cancel'},
+  ),
+  '刷新公开状态' => ActionDescriptor(
+    intent: 'recipe_operation',
+    params: {'operation': 'publication_refresh'},
+  ),
+  '确认公开风险' => ActionDescriptor(
+    intent: 'recipe_operation',
+    params: {'operation': 'publication_risk'},
+  ),
+  '下架菜谱' || '重新上架' => ActionDescriptor(
+    intent: 'recipe_operation',
+    params: {'operation': 'publication_lifecycle'},
+  ),
+  '我来改一版' => ActionDescriptor(
+    intent: 'recipe_operation',
+    params: {'operation': 'improvement_start'},
+  ),
+  '保存改良版' => ActionDescriptor(
+    intent: 'recipe_operation',
+    params: {'operation': 'improvement_save'},
+  ),
+  '仍然保存' => ActionDescriptor(
+    intent: 'recipe_operation',
+    params: {'operation': 'improvement_branch'},
+  ),
+  '存进我的口味' => ActionDescriptor(
+    intent: 'recipe_operation',
+    params: {'operation': 'improvement_taste'},
+  ),
+  '查看来源链' => ActionDescriptor(
+    intent: 'recipe_operation',
+    params: {'operation': 'source_chain'},
   ),
   _ => null,
 };

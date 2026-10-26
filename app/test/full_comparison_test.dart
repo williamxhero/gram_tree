@@ -70,6 +70,7 @@ RecipeDetail detail(String version, int number) => RecipeDetail(
   createdAt: '2026-10-01T00:00:00Z',
   updatedAt: '2026-10-02T00:00:00Z',
   version: RecipeVersionOut(
+    publicationState: RecipeVersionOutPublicationStateEnum.draft,
     id: version,
     versionNumber: number,
     aiAssisted: false,
@@ -919,6 +920,7 @@ void main() {
         RecipeVersionHistory(
           items: [
             RecipeVersionSummary(
+              publicationState: RecipeVersionSummaryPublicationStateEnum.draft,
               id: versionB,
               versionNumber: 2,
               previousVersionId: versionA,
@@ -929,6 +931,7 @@ void main() {
               createdAt: '2026-10-02T00:00:00Z',
             ),
             RecipeVersionSummary(
+              publicationState: RecipeVersionSummaryPublicationStateEnum.draft,
               id: versionA,
               versionNumber: 1,
               aiAssisted: false,
@@ -1009,6 +1012,7 @@ void main() {
         RecipeVersionHistory(
           items: [
             RecipeVersionSummary(
+              publicationState: RecipeVersionSummaryPublicationStateEnum.draft,
               id: versionA,
               versionNumber: 1,
               aiAssisted: false,
@@ -1026,6 +1030,8 @@ void main() {
         RecipeComparisonCandidates(
           items: [
             RecipeComparisonCandidate(
+              publicationState:
+                  RecipeComparisonCandidatePublicationStateEnum.draft,
               id: firstPage ? versionA : versionB,
               recipeId: firstPage ? recipe : otherRecipe,
               author: '作者',
@@ -1080,6 +1086,7 @@ void main() {
         RecipeVersionHistory(
           items: [
             RecipeVersionSummary(
+              publicationState: RecipeVersionSummaryPublicationStateEnum.draft,
               id: versionB,
               versionNumber: 2,
               previousVersionId: versionA,
@@ -1091,6 +1098,7 @@ void main() {
               createdAt: '2026-10-02T00:00:00Z',
             ),
             RecipeVersionSummary(
+              publicationState: RecipeVersionSummaryPublicationStateEnum.draft,
               id: versionA,
               versionNumber: 1,
               aiAssisted: false,

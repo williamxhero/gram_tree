@@ -15,6 +15,7 @@ import 'package:gram_tree/storage/local_store.dart';
 import 'frozen_conversion_support.dart';
 import 'fixtures/conversion_cases.g.dart';
 import 'helpers.dart';
+import 'publication_panel_test.dart' show panelFixture;
 import 'taste_profile_page_test.dart' show profileFixture;
 
 const _recipeId = '11111111-1111-4111-8111-111111111111';
@@ -41,12 +42,13 @@ Map<String, dynamic> _minimalDetailJson({
   List<RecipeImageOut>? images,
 }) {
   final detail = RecipeDetail(
-    author: RecipeAuthor(id: 'author-id', nickname: '味友0001'),
+    author: RecipeAuthor(id: testUser().id, nickname: '味友0001'),
     createdAt: '2026-10-01T00:00:00+00:00',
     dish: DishOut(aliases: const [], id: 'dish-id', name: dishName),
     id: _recipeId,
     updatedAt: '2026-10-01T00:00:00+00:00',
     version: RecipeVersionOut(
+      publicationState: RecipeVersionOutPublicationStateEnum.draft,
       aiAssisted: false,
       changeNote: changeNote,
       createdAt: '2026-10-01T00:00:00+00:00',
@@ -245,6 +247,7 @@ _RecipeApiState _installRecipeApi(
         () {
           final detail = RecipeDetail.fromJson(raw);
           return RecipeVersionSummary(
+            publicationState: RecipeVersionSummaryPublicationStateEnum.draft,
             aiAssisted: detail.version.aiAssisted,
             changeNote: detail.version.changeNote,
             createdAt: detail.version.createdAt,
@@ -727,6 +730,73 @@ Future<void> _scrollUntilVisible(
 }
 
 void main() {
+  for (final publicationState in [
+    'draft',
+    'pending_verification',
+    'published',
+  ]) {
+    testWidgets(
+      'AI origin retains exact version warning for $publicationState',
+      (tester) async {
+        final server = FakeServer();
+        final state = _installRecipeApi(server);
+        final version = state.current['version'] as Map;
+        version['ai_assisted'] = true;
+        version['publication_state'] = publicationState;
+        await pumpApp(tester, env: TestEnv.signedIn(server: server));
+        await _openMyRecipes(tester);
+        await tester.tap(find.byKey(const ValueKey('recipe-card-$_recipeId')));
+        await tester.pumpAndSettle();
+        expect(find.text('AI 协助生成 · 发起作者 @味友0001'), findsOneWidget);
+        expect(
+          find.text('AI 辅助 · 尚未做过验证'),
+          publicationState == 'published' ? findsNothing : findsOneWidget,
+        );
+        expect(tester.takeException(), isNull);
+      },
+    );
+  }
+
+  for (final missingCode in [
+    'not_cooked',
+    'cook_again',
+    'risk_confirmation',
+    'real_name',
+  ]) {
+    testWidgets('AI warning follows exact cooking gate $missingCode', (
+      tester,
+    ) async {
+      final server = FakeServer();
+      final state = _installRecipeApi(server);
+      (state.current['version'] as Map)['ai_assisted'] = true;
+      server.on(
+        'GET',
+        '/v1/recipes/$_recipeId/publication',
+        (_) => (
+          200,
+          panelFixture(
+            missing: [
+              {'code': missingCode, 'label': missingCode, 'action': 'review'},
+            ],
+          ),
+        ),
+      );
+      await pumpApp(tester, env: TestEnv.signedIn(server: server));
+      await _openMyRecipes(tester);
+      await tester.tap(find.byKey(const ValueKey('recipe-card-$_recipeId')));
+      await tester.pumpAndSettle();
+      expect(find.text('AI 协助生成 · 发起作者 @味友0001'), findsOneWidget);
+      expect(
+        find.text('AI 辅助 · 尚未做过验证'),
+        missingCode == 'not_cooked' || missingCode == 'cook_again'
+            ? findsOneWidget
+            : findsNothing,
+      );
+      expect(find.text(missingCode), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
+  }
+
   for (final aiAssisted in [false, true]) {
     testWidgets(
       'small phone shows saved author tags before long checks while retaining AI origin $aiAssisted',
@@ -769,7 +839,7 @@ void main() {
           expect(find.text(tag).hitTestable(), findsOneWidget);
         }
         expect(
-          find.text('AI 辅助 · 尚未做过验证'),
+          find.text('AI 协助生成 · 发起作者 @味友0001'),
           aiAssisted ? findsOneWidget : findsNothing,
         );
         expect(tester.takeException(), isNull);
@@ -960,6 +1030,10 @@ void main() {
       }
 
       await openEditor();
+      await _scrollUntilVisible(
+        tester,
+        find.byKey(const ValueKey('recipe-dish-name')),
+      );
       await tester.enterText(
         find.byKey(const ValueKey('recipe-dish-name')),
         '保留来源的草稿',
@@ -988,6 +1062,10 @@ void main() {
       await tester.enterText(instruction, '作者手动改成搅拌均匀');
       await tester.pumpAndSettle();
       await _scrollToTop(tester);
+      await _scrollUntilVisible(
+        tester,
+        find.byKey(const ValueKey('save-recipe-button')),
+      );
       await tester.tap(find.byKey(const ValueKey('save-recipe-button')));
       await tester.pumpAndSettle();
       final saved = (state.current['version'] as Map)['snapshot'] as Map;
@@ -1254,6 +1332,10 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.byKey(const ValueKey('edit-recipe-button')));
       await tester.pumpAndSettle();
+      await _scrollUntilVisible(
+        tester,
+        find.byKey(const ValueKey('save-recipe-button')),
+      );
       await tester.tap(find.byKey(const ValueKey('save-recipe-button')));
       await tester.pumpAndSettle();
       expect(find.byKey(const ValueKey('recipe-save-error')), findsNothing);
@@ -1934,6 +2016,10 @@ void main() {
       find.byKey(const ValueKey('base-mold-diameter')),
       '8',
     );
+    await _scrollUntilVisible(
+      tester,
+      find.byKey(const ValueKey('save-recipe-button')),
+    );
     await tester.tap(find.byKey(const ValueKey('save-recipe-button')));
     await tester.pumpAndSettle();
     final mold = (state.current['version'] as Map)['snapshot'] as Map;
@@ -1975,6 +2061,10 @@ void main() {
       await tester.tap(find.byKey(const ValueKey('edit-old-recipe-button')));
       await tester.pumpAndSettle();
       await _scrollToTop(tester);
+      await _scrollUntilVisible(
+        tester,
+        find.byKey(const ValueKey('save-recipe-button')),
+      );
       await tester.tap(find.byKey(const ValueKey('save-recipe-button')));
       await tester.pumpAndSettle();
       await tester.tap(find.byKey(const ValueKey('recipe-list-button')));
@@ -2010,6 +2100,10 @@ void main() {
     await _enterDishName(tester, '保存后清理草稿');
     await tester.pump(const Duration(milliseconds: 400));
     await _scrollToTop(tester);
+    await _scrollUntilVisible(
+      tester,
+      find.byKey(const ValueKey('save-recipe-button')),
+    );
     await tester.tap(find.byKey(const ValueKey('save-recipe-button')));
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const ValueKey('edit-recipe-button')));
@@ -2146,6 +2240,7 @@ void main() {
     final history = RecipeVersionHistory(
       items: [
         RecipeVersionSummary(
+          publicationState: RecipeVersionSummaryPublicationStateEnum.draft,
           aiAssisted: false,
           changeNote: current.version.changeNote,
           createdAt: current.version.createdAt,
@@ -2221,6 +2316,7 @@ void main() {
     var historyPage = 0;
     server.on('GET', '/v1/recipes/$_recipeId/versions', (_) {
       final version = RecipeVersionSummary(
+        publicationState: RecipeVersionSummaryPublicationStateEnum.draft,
         aiAssisted: false,
         changeNote: historyPage == 0 ? '第一版' : '第二版',
         createdAt: current.version.createdAt,
@@ -2283,6 +2379,10 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.byKey(const ValueKey('edit-recipe-button')));
       await tester.pumpAndSettle();
+      await _scrollUntilVisible(
+        tester,
+        find.byKey(const ValueKey('save-recipe-button')),
+      );
       await tester.tap(find.byKey(const ValueKey('save-recipe-button')));
       await tester.pumpAndSettle();
       expect(
@@ -2450,6 +2550,10 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('鸡蛋'), findsWidgets);
     await _scrollToTop(tester);
+    await _scrollUntilVisible(
+      tester,
+      find.byKey(const ValueKey('save-recipe-button')),
+    );
     await tester.tap(find.byKey(const ValueKey('save-recipe-button')));
     await tester.pumpAndSettle();
     await _scrollToBottom(tester);
@@ -2501,6 +2605,10 @@ void main() {
       expect(find.text('跟随食材库默认（按个取整）'), findsOneWidget);
 
       await _scrollToTop(tester);
+      await _scrollUntilVisible(
+        tester,
+        find.byKey(const ValueKey('save-recipe-button')),
+      );
       await tester.tap(find.byKey(const ValueKey('save-recipe-button')));
       await tester.pumpAndSettle();
       final saved = server.calls('POST', '/v1/recipes').single.body as Map;
@@ -2595,6 +2703,10 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const ValueKey('edit-recipe-button')));
     await tester.pumpAndSettle();
+    await _scrollUntilVisible(
+      tester,
+      find.byKey(const ValueKey('save-recipe-button')),
+    );
     await tester.tap(find.byKey(const ValueKey('save-recipe-button')));
     await tester.pumpAndSettle();
     await _scrollToBottom(tester);
@@ -2623,6 +2735,10 @@ void main() {
       find.byKey(const ValueKey('recipe-step-ref-step-1-ingredient-1')),
     );
     await _scrollToTop(tester);
+    await _scrollUntilVisible(
+      tester,
+      find.byKey(const ValueKey('save-recipe-button')),
+    );
     await tester.tap(find.byKey(const ValueKey('save-recipe-button')));
     await tester.pumpAndSettle();
     await _scrollToBottom(tester);
@@ -2683,6 +2799,10 @@ void main() {
     await tester.pumpAndSettle();
 
     await _scrollToTop(tester);
+    await _scrollUntilVisible(
+      tester,
+      find.byKey(const ValueKey('save-recipe-button')),
+    );
     await tester.tap(find.byKey(const ValueKey('save-recipe-button')));
     await tester.pumpAndSettle();
     expect(find.byKey(const ValueKey('recipe-history-button')), findsOneWidget);
@@ -2765,6 +2885,10 @@ void main() {
       find.byKey(const ValueKey('recipe-dish-name')),
       delta: const Offset(0, 500),
     );
+    await _scrollUntilVisible(
+      tester,
+      find.byKey(const ValueKey('recipe-dish-name')),
+    );
     await tester.enterText(
       find.byKey(const ValueKey('recipe-dish-name')),
       '安全结果失效测试修改版',
@@ -2801,6 +2925,10 @@ void main() {
       tester,
       find.byKey(const ValueKey('save-recipe-button')),
       delta: const Offset(0, 500),
+    );
+    await _scrollUntilVisible(
+      tester,
+      find.byKey(const ValueKey('save-recipe-button')),
     );
     await tester.tap(find.byKey(const ValueKey('save-recipe-button')));
     await tester.pumpAndSettle();
@@ -2846,6 +2974,10 @@ void main() {
     await _openNewEditor(tester);
     await _enterDishName(tester, '服务端拒绝');
     await _scrollToTop(tester);
+    await _scrollUntilVisible(
+      tester,
+      find.byKey(const ValueKey('save-recipe-button')),
+    );
     await tester.tap(find.byKey(const ValueKey('save-recipe-button')));
     await tester.pumpAndSettle();
 
@@ -2908,6 +3040,10 @@ void main() {
       await _scrollUntilVisible(tester, changeNote);
       await tester.enterText(changeNote, '从历史版本继续修改');
       await _scrollToTop(tester);
+      await _scrollUntilVisible(
+        tester,
+        find.byKey(const ValueKey('save-recipe-button')),
+      );
       await tester.tap(find.byKey(const ValueKey('save-recipe-button')));
       await tester.pumpAndSettle();
       expect(state.versions, hasLength(2));
@@ -2929,6 +3065,10 @@ void main() {
       await _openNewEditor(tester);
       await _enterDishName(tester, '版本链测试');
       await _scrollToTop(tester);
+      await _scrollUntilVisible(
+        tester,
+        find.byKey(const ValueKey('save-recipe-button')),
+      );
       await tester.tap(find.byKey(const ValueKey('save-recipe-button')));
       await tester.pumpAndSettle();
       expect(
@@ -2948,7 +3088,14 @@ void main() {
 
       await tester.tap(find.byKey(const ValueKey('edit-old-recipe-button')));
       await tester.pumpAndSettle();
-      await tester.enterText(_fieldsWithLabel('这次改了什么'), '从第一版继续修改');
+      final changeNote = _fieldsWithLabel('这次改了什么');
+      await _scrollUntilVisible(tester, changeNote);
+      await tester.enterText(changeNote, '从第一版继续修改');
+      await _scrollToTop(tester);
+      await _scrollUntilVisible(
+        tester,
+        find.byKey(const ValueKey('save-recipe-button')),
+      );
       await tester.tap(find.byKey(const ValueKey('save-recipe-button')));
       await tester.pumpAndSettle();
       expect(state.versions, hasLength(2));

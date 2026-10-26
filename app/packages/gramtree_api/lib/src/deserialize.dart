@@ -34,6 +34,7 @@ import 'package:gramtree_api/src/model/compose_request.dart';
 import 'package:gramtree_api/src/model/consent_record_input.dart';
 import 'package:gramtree_api/src/model/consent_record_output.dart';
 import 'package:gramtree_api/src/model/consent_upload.dart';
+import 'package:gramtree_api/src/model/cooking_completion.dart';
 import 'package:gramtree_api/src/model/cooking_constraints.dart';
 import 'package:gramtree_api/src/model/cooking_constraints_out.dart';
 import 'package:gramtree_api/src/model/cooking_equipment.dart';
@@ -93,6 +94,13 @@ import 'package:gramtree_api/src/model/identity_out.dart';
 import 'package:gramtree_api/src/model/import_input.dart';
 import 'package:gramtree_api/src/model/import_original_out.dart';
 import 'package:gramtree_api/src/model/import_out.dart';
+import 'package:gramtree_api/src/model/improvement_draft_input.dart';
+import 'package:gramtree_api/src/model/improvement_draft_out.dart';
+import 'package:gramtree_api/src/model/improvement_preview_input.dart';
+import 'package:gramtree_api/src/model/improvement_preview_out.dart';
+import 'package:gramtree_api/src/model/improvement_save_input.dart';
+import 'package:gramtree_api/src/model/improvement_save_out.dart';
+import 'package:gramtree_api/src/model/improvement_taste_proposal.dart';
 import 'package:gramtree_api/src/model/ingredient_attributes.dart';
 import 'package:gramtree_api/src/model/ingredient_comparison_row.dart';
 import 'package:gramtree_api/src/model/ingredient_detail.dart';
@@ -140,6 +148,11 @@ import 'package:gramtree_api/src/model/personalization_request.dart';
 import 'package:gramtree_api/src/model/personalized_ingredient_out.dart';
 import 'package:gramtree_api/src/model/personalized_step_out.dart';
 import 'package:gramtree_api/src/model/profile_update.dart';
+import 'package:gramtree_api/src/model/publication_condition.dart';
+import 'package:gramtree_api/src/model/publication_notification_ack.dart';
+import 'package:gramtree_api/src/model/publication_notification_out.dart';
+import 'package:gramtree_api/src/model/publication_notifications.dart';
+import 'package:gramtree_api/src/model/publication_panel.dart';
 import 'package:gramtree_api/src/model/purchase_unit.dart';
 import 'package:gramtree_api/src/model/purchase_units_attribute.dart';
 import 'package:gramtree_api/src/model/quantification_decision.dart';
@@ -193,6 +206,7 @@ import 'package:gramtree_api/src/model/recipe_version_create.dart';
 import 'package:gramtree_api/src/model/recipe_version_history.dart';
 import 'package:gramtree_api/src/model/recipe_version_out.dart';
 import 'package:gramtree_api/src/model/recipe_version_summary.dart';
+import 'package:gramtree_api/src/model/record_version_save_input.dart';
 import 'package:gramtree_api/src/model/refresh_request.dart';
 import 'package:gramtree_api/src/model/rejection_reason.dart';
 import 'package:gramtree_api/src/model/release_note.dart';
@@ -359,6 +373,9 @@ ReturnType deserialize<ReturnType, BaseType>(
           as ReturnType;
     case 'ConsentUpload':
       return ConsentUpload.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'CookingCompletion':
+      return CookingCompletion.fromJson(value as Map<String, dynamic>)
           as ReturnType;
     case 'CookingConstraints':
       return CookingConstraints.fromJson(value as Map<String, dynamic>)
@@ -529,6 +546,27 @@ ReturnType deserialize<ReturnType, BaseType>(
           as ReturnType;
     case 'ImportOut':
       return ImportOut.fromJson(value as Map<String, dynamic>) as ReturnType;
+    case 'ImprovementDraftInput':
+      return ImprovementDraftInput.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'ImprovementDraftOut':
+      return ImprovementDraftOut.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'ImprovementPreviewInput':
+      return ImprovementPreviewInput.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'ImprovementPreviewOut':
+      return ImprovementPreviewOut.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'ImprovementSaveInput':
+      return ImprovementSaveInput.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'ImprovementSaveOut':
+      return ImprovementSaveOut.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'ImprovementTasteProposal':
+      return ImprovementTasteProposal.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
     case 'IngredientAttributes':
       return IngredientAttributes.fromJson(value as Map<String, dynamic>)
           as ReturnType;
@@ -668,6 +706,21 @@ ReturnType deserialize<ReturnType, BaseType>(
           as ReturnType;
     case 'ProfileUpdate':
       return ProfileUpdate.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'PublicationCondition':
+      return PublicationCondition.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'PublicationNotificationAck':
+      return PublicationNotificationAck.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'PublicationNotificationOut':
+      return PublicationNotificationOut.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'PublicationNotifications':
+      return PublicationNotifications.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'PublicationPanel':
+      return PublicationPanel.fromJson(value as Map<String, dynamic>)
           as ReturnType;
     case 'PurchaseUnit':
       return PurchaseUnit.fromJson(value as Map<String, dynamic>) as ReturnType;
@@ -823,6 +876,9 @@ ReturnType deserialize<ReturnType, BaseType>(
           as ReturnType;
     case 'RecipeVersionSummary':
       return RecipeVersionSummary.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'RecordVersionSaveInput':
+      return RecordVersionSaveInput.fromJson(value as Map<String, dynamic>)
           as ReturnType;
     case 'RefreshRequest':
       return RefreshRequest.fromJson(value as Map<String, dynamic>)

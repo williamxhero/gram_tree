@@ -1,11 +1,37 @@
-import 'package:flutter/widgets.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gram_tree/features/me/settings_page.dart';
+
+import 'lazy_list_controls_support.dart';
 
 // Shared with installed integration tests; kept under test/ so Chrome page
 // tests can exercise the same navigation without imports outside their root.
 Future<void> settle(WidgetTester tester) =>
     tester.pumpAndSettle(const Duration(milliseconds: 200));
+
+Future<void> waitForSavedMeasureCapacity(
+  WidgetTester tester, {
+  required String measureId,
+  required String capacity,
+}) async {
+  final save = find.byKey(const ValueKey('measure-save'), skipOffstage: false);
+  final savedCapacity = find.descendant(
+    of: find.byKey(ValueKey('measure-$measureId')),
+    matching: find.textContaining(capacity),
+  );
+  // The input also matches the capacity until the dialog closes. Keep the
+  // original waitFor budget, but wait for the actual saved list projection.
+  for (
+    var i = 0;
+    i < 100 && (save.evaluate().isNotEmpty || savedCapacity.evaluate().isEmpty);
+    i++
+  ) {
+    await tester.pump(const Duration(milliseconds: 100));
+  }
+  await settle(tester);
+  expect(save, findsNothing);
+  expect(savedCapacity, findsWidgets);
+}
 
 Future<void> tapText(WidgetTester tester, String text) async {
   await tester.ensureVisible(find.text(text).last);
@@ -14,19 +40,51 @@ Future<void> tapText(WidgetTester tester, String text) async {
   await settle(tester);
 }
 
+Future<void> revealConstraintsTestControl(
+  WidgetTester tester,
+  Finder finder,
+) async {
+  // A save can replace the profile list with a loading indicator. Reacquire the
+  // active route's list with bounded gestures instead of reading an empty first.
+  final dialog = find.byType(AlertDialog);
+  final surface = dialog.evaluate().isEmpty
+      ? find.byType(Scaffold).last
+      : dialog.last;
+  await revealLazyListControl(
+    tester,
+    find.descendant(of: surface, matching: finder),
+    scrollable: find
+        .descendant(
+          of: surface,
+          matching: find.byWidgetPredicate(
+            (widget) =>
+                widget is Scrollable &&
+                widget.axisDirection == AxisDirection.down,
+          ),
+        )
+        .first,
+  );
+  await tester.pumpAndSettle();
+}
+
 Future<void> tapPortabilitySettingsItem(
   WidgetTester tester,
   String text,
 ) async {
-  // Phone viewports do not build distant settings entries until we scroll.
-  // Use the settings list, not a scrollable retained by an underlying route.
-  await tester.scrollUntilVisible(
-    find.text(text),
-    200,
+  // A built entry can still sit behind an asynchronous export SnackBar. Discover
+  // an actually tappable entry with bounded gestures in this route's lazy list.
+  final target = find.descendant(
+    of: find.byType(SettingsPage),
+    matching: find.text(text),
+  );
+  await revealLazyListControl(
+    tester,
+    target,
     scrollable: find.descendant(
       of: find.byType(SettingsPage),
       matching: find.byType(Scrollable),
     ),
   );
-  await tapText(tester, text);
+  await tester.tap(target.hitTestable());
+  await settle(tester);
 }

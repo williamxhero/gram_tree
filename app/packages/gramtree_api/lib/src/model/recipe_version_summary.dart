@@ -32,6 +32,8 @@ class RecipeVersionSummary {
 
     this.previousVersionId,
 
+    required this.publicationState,
+
     this.rulesVersion,
 
     required this.versionNumber,
@@ -58,6 +60,9 @@ class RecipeVersionSummary {
   @JsonKey(name: r'previous_version_id', required: false, includeIfNull: false)
   final String? previousVersionId;
 
+  @JsonKey(name: r'publication_state', required: true, includeIfNull: false)
+  final RecipeVersionSummaryPublicationStateEnum publicationState;
+
   @JsonKey(name: r'rules_version', required: false, includeIfNull: false)
   final String? rulesVersion;
 
@@ -75,6 +80,7 @@ class RecipeVersionSummary {
           other.createdAt == createdAt &&
           other.id == id &&
           other.previousVersionId == previousVersionId &&
+          other.publicationState == publicationState &&
           other.rulesVersion == rulesVersion &&
           other.versionNumber == versionNumber;
 
@@ -87,6 +93,7 @@ class RecipeVersionSummary {
       createdAt.hashCode +
       id.hashCode +
       (previousVersionId == null ? 0 : previousVersionId.hashCode) +
+      publicationState.hashCode +
       (rulesVersion == null ? 0 : rulesVersion.hashCode) +
       versionNumber.hashCode;
 
@@ -112,6 +119,22 @@ enum RecipeVersionSummaryConclusionEnum {
   significant(r'significant');
 
   const RecipeVersionSummaryConclusionEnum(this.value);
+
+  final String value;
+
+  @override
+  String toString() => value;
+}
+
+enum RecipeVersionSummaryPublicationStateEnum {
+  @JsonValue(r'draft')
+  draft(r'draft'),
+  @JsonValue(r'published')
+  published(r'published'),
+  @JsonValue(r'pending_verification')
+  pendingVerification(r'pending_verification');
+
+  const RecipeVersionSummaryPublicationStateEnum(this.value);
 
   final String value;
 

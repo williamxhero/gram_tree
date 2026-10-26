@@ -12,7 +12,6 @@ from decimal import Decimal
 from typing import Any, Literal
 
 from pydantic import BaseModel, Field
-from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from gramtree.accounts.models import User
@@ -277,17 +276,15 @@ def compare_ingredients(
     from_version_id: uuid.UUID,
     to_version_id: uuid.UUID,
 ) -> RecipeIngredientComparison:
-    anchor = service._owned_recipe(session, owner, recipe_id)
+    from gramtree.recipes.publication import readable_version
+
+    anchor, _ = readable_version(session, owner, recipe_id)
 
     def visible(version_id: uuid.UUID) -> tuple[Recipe, RecipeVersion]:
-        row = session.execute(
-            select(Recipe, RecipeVersion)
-            .join(RecipeVersion, RecipeVersion.recipe_id == Recipe.id)
-            .where(RecipeVersion.id == version_id, Recipe.owner_id == owner.id)
-        ).one_or_none()
-        if row is None:
+        version = session.get(RecipeVersion, version_id)
+        if version is None:
             raise NotFound()
-        recipe, version = row
+        recipe, version = readable_version(session, owner, version.recipe_id, version_id)
         if recipe.dish_id != anchor.dish_id:
             raise ApiError(422, "different_dishes", "只能比较同一道菜的版本")
         return recipe, version
@@ -296,10 +293,46 @@ def compare_ingredients(
     b_recipe, b_version = visible(to_version_id)
     a = RecipeSnapshot.model_validate(a_version.snapshot)
     b = RecipeSnapshot.model_validate(b_version.snapshot)
+
+    def metadata(
+        recipe: Recipe, version: RecipeVersion, snapshot: RecipeSnapshot
+    ) -> ComparisonVersion:
+        dish = session.get(Dish, recipe.dish_id)
+        author = session.get(User, recipe.owner_id)
+        if dish is None or author is None:
+            raise NotFound()
+        return ComparisonVersion(
+            recipe_id=recipe.id,
+            version_id=version.id,
+            version_number=version.version_number,
+            author=author.nickname,
+            dish_name=dish.name,
+            servings=snapshot.servings,
+        )
+
+    return compare_snapshots(
+        session,
+        a,
+        b,
+        metadata(a_recipe, a_version, a),
+        metadata(b_recipe, b_version, b),
+        stable=(a_recipe.root_recipe_id or a_recipe.id) == (b_recipe.root_recipe_id or b_recipe.id),
+    )
+
+
+def compare_snapshots(
+    session: Session,
+    a: RecipeSnapshot,
+    b: RecipeSnapshot,
+    from_version: ComparisonVersion,
+    to_version: ComparisonVersion,
+    *,
+    stable: bool = True,
+) -> RecipeIngredientComparison:
+    """Compare already-authorized snapshots, including an unsaved working copy."""
     normalized = _normalize_servings(b, a.servings)
     identities = _identities(session, [*a.ingredients, *normalized])
     a_ids, b_ids = identities[: len(a.ingredients)], identities[len(a.ingredients) :]
-    stable = (a_recipe.root_recipe_id or a_recipe.id) == (b_recipe.root_recipe_id or b_recipe.id)
     pairs = _pair(a.ingredients, normalized, a_ids, b_ids, stable=stable)
     rows = []
     for ai, bi, reason in pairs:
@@ -368,24 +401,9 @@ def compare_ingredients(
             IngredientComparisonRow(before=before, after=after, pairing=reason, changes=changes)
         )
 
-    def metadata(
-        recipe: Recipe, version: RecipeVersion, snapshot: RecipeSnapshot
-    ) -> ComparisonVersion:
-        dish = session.get(Dish, recipe.dish_id)
-        if dish is None:
-            raise NotFound()
-        return ComparisonVersion(
-            recipe_id=recipe.id,
-            version_id=version.id,
-            version_number=version.version_number,
-            author=owner.nickname,
-            dish_name=dish.name,
-            servings=snapshot.servings,
-        )
-
     return RecipeIngredientComparison(
-        from_version=metadata(a_recipe, a_version, a),
-        to_version=metadata(b_recipe, b_version, b),
+        from_version=from_version,
+        to_version=to_version,
         normalized_servings=a.servings,
         ingredients=rows,
         snapshot_fields=_field_changes(

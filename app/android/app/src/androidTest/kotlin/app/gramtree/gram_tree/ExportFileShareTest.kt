@@ -12,6 +12,10 @@ import android.provider.DocumentsContract
 import android.provider.OpenableColumns
 import android.test.InstrumentationTestCase
 import android.view.accessibility.AccessibilityNodeInfo
+import android.widget.LinearLayout
+import android.widget.TextView
+import io.flutter.embedding.android.FlutterActivity
+import io.flutter.embedding.android.FlutterView
 import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
 import java.io.ByteArrayOutputStream
@@ -65,8 +69,50 @@ class ExportFileShareTest : InstrumentationTestCase() {
         assertFalse("Repeated exports must have distinct granted URIs", firstSource == secondSource)
         assertZip(firstSource, "first export")
         assertZip(secondSource, "second export")
-        assertZip(requireNotNull(first.data), "first export")
-        assertZip(requireNotNull(second.data), "second export")
+        assertZip(requireNotNull(first.getParcelableExtra<Uri>("destination")), "first export")
+        assertZip(requireNotNull(second.getParcelableExtra<Uri>("destination")), "second export")
+    }
+
+    fun testCompletionBroadcastMatchesActionOnlyReceiver() {
+        val filter = IntentFilter("app.gramtree.TEST_ZIP_SAVED")
+        val source = Uri.parse("content://app.gramtree.gram_tree.export_files/exports/fixture.zip")
+        val destination = Uri.parse("content://com.android.providers.downloads.documents/document/fixture")
+        for (savedUri in listOf(destination, null)) {
+            val completion = ExportSaveActivity.completionIntent(source, savedUri)
+            assertTrue(
+                "Both successful and failed saves must match the completion receiver",
+                filter.match(completion.action, completion.type, completion.scheme, completion.data,
+                    completion.categories, "ExportFileShareTest") >= 0,
+            )
+            assertEquals(source, completion.getParcelableExtra<Uri>("source"))
+            assertEquals(savedUri, completion.getParcelableExtra<Uri>("destination"))
+        }
+    }
+
+    fun testClickWaitsForActionableRowInsteadOfSameNamedTitle() {
+        instrumentation.runOnMainSync {
+            val content = LinearLayout(activity).apply { orientation = LinearLayout.VERTICAL }
+            val status = TextView(activity).apply { text = "No row selected" }
+            content.addView(TextView(activity).apply { text = "Downloads" })
+            content.addView(LinearLayout(activity).apply {
+                setOnClickListener { status.text = "Disabled row selected" }
+                isEnabled = false
+                addView(TextView(activity).apply { text = "Downloads" })
+            })
+            content.addView(LinearLayout(activity).apply {
+                setOnClickListener { status.text = "Downloads row selected" }
+                addView(TextView(activity).apply { text = "Downloads" })
+            })
+            content.addView(status)
+            // setContentView skips Flutter's normal view cleanup when replacing its content.
+            requireNotNull(activity.findViewById<FlutterView>(FlutterActivity.FLUTTER_VIEW_ID))
+                .detachFromFlutterEngine()
+            activity.setContentView(content)
+        }
+        instrumentation.waitForIdleSync()
+        clickWhenReady { it.text?.toString() == "Downloads" }
+        val status = waitForNode { it.text?.toString() == "Downloads row selected" }
+        assertTrue("The correct row selection must be visible", status.isVisibleToUser)
     }
 
     fun testCancellationInvalidatesPreparationBeforePresentation() {
@@ -92,19 +138,21 @@ class ExportFileShareTest : InstrumentationTestCase() {
 
     private fun shareAndSave(filename: String, text: String, destinationName: String): Intent {
         assertEquals("success", invoke(MethodCall("shareZip", mapOf("bytes" to zip(text), "filename" to filename))))
-        click(waitForNode { it.text?.toString() == "Save test ZIP" })
+        clickWhenReady { it.text?.toString() == "Save test ZIP" }
         // Use the actual system document picker, not a test-owned file destination.
-        click(waitForNode { it.contentDescription?.toString() == "Show roots" })
-        click(waitForNode { it.text?.toString() == "Downloads" })
+        clickWhenReady { it.contentDescription?.toString() == "Show roots" }
+        clickWhenReady { it.text?.toString() == "Downloads" }
         val nameField = waitForNode { it.isEditable && it.text?.toString() == filename }
         if (filename != destinationName) {
             check(nameField.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT, Bundle().apply {
                 putCharSequence(AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE, destinationName)
             }))
         }
-        click(waitForNode { it.isEnabled && it.text?.toString()?.equals("Save", true) == true })
+        clickWhenReady { it.isEnabled && it.text?.toString()?.equals("Save", true) == true }
         val result = saved.poll(30, TimeUnit.SECONDS) ?: error("Receiving app did not finish saving")
-        val uri = requireNotNull(result.data) { "Receiver could not read/save the granted ZIP" }
+        val uri = requireNotNull(result.getParcelableExtra<Uri>("destination")) {
+            "Receiver could not read/save the granted ZIP"
+        }
         documents.add(uri)
         activity.contentResolver.query(uri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)!!.use {
             check(it.moveToFirst())
@@ -162,10 +210,20 @@ class ExportFileShareTest : InstrumentationTestCase() {
         return null
     }
 
-    private fun click(node: AccessibilityNodeInfo) {
-        var target: AccessibilityNodeInfo? = node
-        while (target != null && !target.isClickable) target = target.parent
-        check(requireNotNull(target).performAction(AccessibilityNodeInfo.ACTION_CLICK))
+    private fun clickWhenReady(predicate: (AccessibilityNodeInfo) -> Boolean) {
+        // Do not let a same-named, nonactionable label mask a clickable row.
+        val node = waitForNode { predicate(it) && clickableTarget(it) != null }
+        check(requireNotNull(clickableTarget(node)).performAction(AccessibilityNodeInfo.ACTION_CLICK))
         instrumentation.waitForIdleSync()
+    }
+
+    private fun clickableTarget(node: AccessibilityNodeInfo): AccessibilityNodeInfo? {
+        var target: AccessibilityNodeInfo? = node
+        while (target != null) {
+            if (!target.isVisibleToUser || !target.isEnabled) return null
+            if (target.isClickable) return target
+            target = target.parent
+        }
+        return null
     }
 }
