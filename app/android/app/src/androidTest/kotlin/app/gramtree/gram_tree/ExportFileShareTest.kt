@@ -14,6 +14,8 @@ import android.test.InstrumentationTestCase
 import android.view.accessibility.AccessibilityNodeInfo
 import android.widget.LinearLayout
 import android.widget.TextView
+import io.flutter.embedding.android.FlutterActivity
+import io.flutter.embedding.android.FlutterView
 import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
 import java.io.ByteArrayOutputStream
@@ -102,6 +104,9 @@ class ExportFileShareTest : InstrumentationTestCase() {
                 addView(TextView(activity).apply { text = "Downloads" })
             })
             content.addView(status)
+            // setContentView skips Flutter's normal view cleanup when replacing its content.
+            requireNotNull(activity.findViewById<FlutterView>(FlutterActivity.FLUTTER_VIEW_ID))
+                .detachFromFlutterEngine()
             activity.setContentView(content)
         }
         instrumentation.waitForIdleSync()
