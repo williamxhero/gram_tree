@@ -99,19 +99,21 @@ class RecordsPage extends ConsumerWidget {
           if (byClient.isEmpty) {
             return ListView(
               padding: const EdgeInsets.fromLTRB(20, 24, 20, 32),
-              children: const [
-                MonthlyReviewSection(),
-                SizedBox(height: 20),
+              children: [
+                const MonthlyReviewSection(),
+                const SizedBox(height: 20),
                 SizedBox(
                   height: 240,
-                  child: EmptyState(
-                    icon: Icons.menu_book_outlined,
-                    title: '还没有做菜记录',
-                    message: '每次做完菜后的记录和心得会保存在这里。',
+                  child: ClipRect(
+                    child: EmptyState(
+                      icon: Icons.menu_book_outlined,
+                      title: '还没有做菜记录',
+                      message: '每次做完菜后的记录和心得会保存在这里。',
+                    ),
                   ),
                 ),
-                SizedBox(height: 24),
-                DietaryStatisticsWidget(),
+                const SizedBox(height: 24),
+                const DietaryStatisticsWidget(),
               ],
             );
           }

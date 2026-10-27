@@ -9,6 +9,7 @@ import '../../api/api_client.dart';
 import '../../auth/auth_controller.dart';
 import '../../auth/session.dart';
 import '../../events/event_recorder.dart';
+import '../../l10n/app_localizations.dart';
 import '../../storage/secure_store.dart';
 import '../../ui_protocol/source_mark.dart';
 import '../../ui_protocol/source_types.dart';
@@ -39,16 +40,26 @@ class MonthlyReviewRepository {
   final SessionStore _session;
   static final _cipher = AesGcm.with256bits().toSync();
 
-  Future<MonthlyReviewSnapshot> load() async {
+  static String _monthKey(DateTime month) =>
+      '${month.year.toString().padLeft(4, '0')}-${month.month.toString().padLeft(2, '0')}';
+
+  Future<MonthlyReviewSnapshot> load({DateTime? anchor}) async {
     final identity = _session.identity;
     if (identity == null || identity.ownerId != _ownerId) {
       throw StateError('account_unavailable');
     }
     try {
       final api = _ref.read(apiClientProvider);
+      final requestedMonth = anchor == null
+          ? null
+          : DateTime.utc(anchor.year, anchor.month, 15);
       final currentResponse = await api
           .getDietaryHistoryApi()
-          .getDietaryStatistics(period: 'month', extra: _authExtra(identity));
+          .getDietaryStatistics(
+            period: 'month',
+            anchor: requestedMonth,
+            extra: _authExtra(identity),
+          );
       if (!_session.matches(identity) || currentResponse.data == null) {
         throw StateError('stale_monthly_review_response');
       }
@@ -121,13 +132,13 @@ class MonthlyReviewRepository {
         cachedAt: DateTime.now().toUtc(),
         fromCache: false,
       );
-      await _write(identity, snapshot);
+      await _write(identity, snapshot, anchor: anchor);
       return snapshot;
     } catch (error) {
       if (!isNetworkFailure(error) || !_session.matches(identity)) rethrow;
       final raw = await _ref
           .read(secureStoreProvider)
-          .read(_cacheKey(_ownerId));
+          .read(_cacheKey(_ownerId, anchor));
       if (!_session.matches(identity) || raw == null) rethrow;
       try {
         final box = SecretBox.fromConcatenation(
@@ -137,8 +148,8 @@ class MonthlyReviewRepository {
         );
         final clear = await _cipher.decrypt(
           box,
-          secretKey: await _cacheSecret(create: false),
-          aad: utf8.encode(_cacheKey(_ownerId)),
+          secretKey: await _cacheSecret(create: false, anchor: anchor),
+          aad: utf8.encode(_cacheKey(_ownerId, anchor)),
         );
         final json = jsonDecode(utf8.decode(clear)) as Map<String, dynamic>;
         if (!_session.matches(identity)) {
@@ -148,8 +159,8 @@ class MonthlyReviewRepository {
       } catch (_) {
         if (_session.matches(identity)) {
           final secure = _ref.read(secureStoreProvider);
-          await secure.delete(_cacheKey(_ownerId));
-          await secure.delete('${_cacheKey(_ownerId)}:key');
+          await secure.delete(_cacheKey(_ownerId, anchor));
+          await secure.delete('${_cacheKey(_ownerId, anchor)}:key');
         }
         rethrow;
       }
@@ -158,28 +169,30 @@ class MonthlyReviewRepository {
 
   Future<void> _write(
     SessionIdentity identity,
-    MonthlyReviewSnapshot snapshot,
-  ) async {
+    MonthlyReviewSnapshot snapshot, {
+    DateTime? anchor,
+  }) async {
     if (!_session.matches(identity)) return;
     final clear = utf8.encode(jsonEncode(_encode(snapshot)));
-    final key = await _cacheSecret();
+    final cacheKey = _cacheKey(_ownerId, anchor);
+    final key = await _cacheSecret(anchor: anchor);
     if (!_session.matches(identity)) {
       return;
     }
     final box = await _cipher.encrypt(
       clear,
       secretKey: key,
-      aad: utf8.encode(_cacheKey(_ownerId)),
+      aad: utf8.encode(cacheKey),
     );
     if (!_session.matches(identity)) return;
     await _ref
         .read(secureStoreProvider)
-        .write(_cacheKey(_ownerId), base64UrlEncode(box.concatenation()));
+        .write(cacheKey, base64UrlEncode(box.concatenation()));
   }
 
-  Future<SecretKey> _cacheSecret({bool create = true}) async {
+  Future<SecretKey> _cacheSecret({bool create = true, DateTime? anchor}) async {
     final secure = _ref.read(secureStoreProvider);
-    final keyName = '${_cacheKey(_ownerId)}:key';
+    final keyName = '${_cacheKey(_ownerId, anchor)}:key';
     final existing = await secure.read(keyName);
     if (existing != null) {
       return SecretKey(base64Url.decode(existing));
@@ -197,7 +210,8 @@ class MonthlyReviewRepository {
     'auth_identity_epoch': identity.epoch,
   };
 
-  static String _cacheKey(String ownerId) => 'monthly_review_v1:$ownerId';
+  static String _cacheKey(String ownerId, DateTime? month) =>
+      'monthly_review_v2:$ownerId:${month == null ? 'latest' : _monthKey(month)}';
 
   static Map<String, dynamic> _encode(MonthlyReviewSnapshot value) => {
     'month': value.month.toIso8601String(),
@@ -228,24 +242,38 @@ class MonthlyReviewRepository {
       );
 }
 
-final monthlyReviewProvider = FutureProvider.autoDispose<MonthlyReviewSnapshot>(
-  (ref) {
-    final ownerId = ref.watch(authProvider).value?.id;
-    if (ownerId == null) throw StateError('每月回顾需要登录');
-    return MonthlyReviewRepository(
-      ref,
-      ownerId,
-      ref.watch(sessionStoreProvider),
-    ).load();
-  },
-);
+final monthlyReviewProvider = FutureProvider.autoDispose
+    .family<MonthlyReviewSnapshot, DateTime>((ref, month) {
+      final ownerId = ref.watch(authProvider).value?.id;
+      if (ownerId == null) throw StateError('每月回顾需要登录');
+      return MonthlyReviewRepository(
+        ref,
+        ownerId,
+        ref.watch(sessionStoreProvider),
+      ).load(anchor: month);
+    });
 
-class MonthlyReviewSection extends ConsumerWidget {
+class MonthlyReviewSection extends ConsumerStatefulWidget {
   const MonthlyReviewSection({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final value = ref.watch(monthlyReviewProvider);
+  ConsumerState<MonthlyReviewSection> createState() =>
+      _MonthlyReviewSectionState();
+}
+
+class _MonthlyReviewSectionState extends ConsumerState<MonthlyReviewSection> {
+  late DateTime _month;
+
+  @override
+  void initState() {
+    super.initState();
+    final now = DateTime.now();
+    _month = DateTime(now.year, now.month - 1);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final value = ref.watch(monthlyReviewProvider(_month));
     return value.when(
       loading: () => const Padding(
         padding: EdgeInsets.symmetric(vertical: 20),
@@ -254,15 +282,52 @@ class MonthlyReviewSection extends ConsumerWidget {
       error: (_, _) => Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('上月回顾', style: Theme.of(context).textTheme.titleLarge),
-          const Text('回顾暂时无法读取'),
+          Text(
+            AppLocalizations.of(context).monthlyReviewTitle,
+            style: Theme.of(context).textTheme.titleLarge,
+          ),
+          Text(AppLocalizations.of(context).monthlyReviewUnavailable),
           TextButton(
-            onPressed: () => ref.invalidate(monthlyReviewProvider),
-            child: const Text('重试'),
+            onPressed: () => ref.invalidate(monthlyReviewProvider(_month)),
+            child: Text(AppLocalizations.of(context).monthlyReviewRetry),
           ),
         ],
       ),
-      data: (snapshot) => _ReviewBody(snapshot: snapshot),
+      data: (snapshot) => Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              IconButton(
+                tooltip: AppLocalizations.of(context)
+                    .monthlyReviewPreviousMonth,
+                onPressed: () => setState(
+                  () => _month = DateTime(_month.year, _month.month - 1),
+                ),
+                icon: const Icon(Icons.chevron_left),
+              ),
+              Expanded(
+                child: Text(
+                  '${snapshot.month.year} 年 ${snapshot.month.month} 月',
+                  textAlign: TextAlign.center,
+                ),
+              ),
+              IconButton(
+                tooltip: AppLocalizations.of(context).monthlyReviewNextMonth,
+                onPressed:
+                    _month.month == DateTime.now().month &&
+                        _month.year == DateTime.now().year
+                    ? null
+                    : () => setState(
+                        () => _month = DateTime(_month.year, _month.month + 1),
+                      ),
+                icon: const Icon(Icons.chevron_right),
+              ),
+            ],
+          ),
+          _ReviewBody(snapshot: snapshot),
+        ],
+      ),
     );
   }
 }
@@ -276,6 +341,7 @@ class _ReviewBody extends ConsumerStatefulWidget {
 }
 
 class _ReviewBodyState extends ConsumerState<_ReviewBody> {
+  AppLocalizations get _l10n => AppLocalizations.of(context);
   final Set<String> _busy = {};
 
   @override
@@ -324,10 +390,16 @@ class _ReviewBodyState extends ConsumerState<_ReviewBody> {
         );
       }
       if (!mounted || !session.matches(identity)) return;
-      ref.invalidate(monthlyReviewProvider);
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(confirm ? '已确认口味变化' : '已撤销口味变化')));
+      ref.invalidate(monthlyReviewProvider(widget.snapshot.month));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            confirm
+                ? _l10n.monthlyReviewConfirmed
+                : _l10n.monthlyReviewReverted,
+          ),
+        ),
+      );
     } catch (error) {
       if (mounted && session.matches(identity)) {
         ScaffoldMessenger.of(
@@ -358,47 +430,57 @@ class _ReviewBodyState extends ConsumerState<_ReviewBody> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Text('上月回顾', style: Theme.of(context).textTheme.titleLarge),
+        Text(
+          _l10n.monthlyReviewTitle,
+          style: Theme.of(context).textTheme.titleLarge,
+        ),
         Text(monthLabel, style: Theme.of(context).textTheme.titleMedium),
         if (widget.snapshot.fromCache)
-          Text('离线回顾 · 更新于 ${widget.snapshot.cachedAt.toLocal()}'),
+          Text(
+            _l10n.monthlyReviewOffline(
+              widget.snapshot.cachedAt.toLocal().toString(),
+            ),
+          ),
         ListTile(
           contentPadding: EdgeInsets.zero,
-          title: const Text('做菜次数'),
+          title: Text(_l10n.monthlyReviewCount),
           subtitle: Text(
-            '较再上月 ${_difference(stats.cookingCount - previous.cookingCount)}',
+            _l10n.monthlyReviewCompared(
+              _difference(stats.cookingCount - previous.cookingCount),
+            ),
           ),
           trailing: Text('${stats.cookingCount}'),
         ),
         if (stats.frequentDishes.isNotEmpty)
           _ReviewList(
-            title: '常做',
+            title: _l10n.monthlyReviewFrequent,
             names: stats.frequentDishes
                 .map((item) => '${item.name} · ${item.count} 次')
                 .toList(),
           ),
         if (stats.newDishes.isNotEmpty)
           _ReviewList(
-            title: '新尝试',
+            title: _l10n.monthlyReviewNewDishes,
             names: stats.newDishes
                 .map((item) => '${item.name} · ${item.count} 次')
                 .toList(),
           ),
         if (stats.ingredientDistribution.isNotEmpty)
           _ReviewList(
-            title: '主料摘要',
+            title: _l10n.monthlyReviewMainIngredients,
             names: stats.ingredientDistribution
                 .map((item) => '${item.key} · ${item.count} 次')
                 .toList(),
           ),
         if (stats.cookingCount == 0 && widget.snapshot.changes.isEmpty)
-          const Text('上月没有做菜记录或口味变化。'),
+          Text(_l10n.monthlyReviewEmpty),
         if (automatic.isNotEmpty) ...[
-          const ListTile(
+          ListTile(
             contentPadding: EdgeInsets.zero,
-            title: Text('自动学习的口味变化'),
+            title: Text(_l10n.monthlyReviewAutomaticChanges),
           ),
-          if (widget.snapshot.fromCache) const Text('离线时不能确认或撤销，联网后重试。'),
+          if (widget.snapshot.fromCache)
+            Text(_l10n.monthlyReviewOfflineActions),
           for (final change in automatic)
             _TasteChangeTile(
               change: change,
@@ -410,7 +492,7 @@ class _ReviewBodyState extends ConsumerState<_ReviewBody> {
         ],
         if (manual.isNotEmpty)
           _ReviewList(
-            title: '手动修改',
+            title: _l10n.monthlyReviewManualChanges,
             names: manual
                 .map((change) => '${change.field} · ${change.reason}')
                 .toList(),
@@ -420,10 +502,10 @@ class _ReviewBodyState extends ConsumerState<_ReviewBody> {
   }
 
   String _difference(int value) => value == 0
-      ? '无变化'
+      ? _l10n.monthlyReviewNoChange
       : value > 0
-      ? '增加 $value 次'
-      : '减少 ${-value} 次';
+      ? _l10n.monthlyReviewIncrease(value)
+      : _l10n.monthlyReviewDecrease(-value);
 }
 
 class _ReviewList extends StatelessWidget {
@@ -456,61 +538,74 @@ class _TasteChangeTile extends StatelessWidget {
   final VoidCallback onRevert;
 
   @override
-  Widget build(BuildContext context) => ListTile(
-    contentPadding: EdgeInsets.zero,
-    title: Wrap(
-      crossAxisAlignment: WrapCrossAlignment.center,
-      spacing: 8,
-      children: [
-        Text(change.field),
-        SourceMark(
-          sourceType: change.origin == TasteProfileChangeOutOriginEnum.auto
-              ? sourceTypeTasteAdjusted
-              : sourceTypeAuthorFilled,
-          componentId: 'monthly-review-${change.id}',
-          value: change.newValue.toString(),
-          originalValue: change.oldValue.toString(),
-          basisText: change.reason,
-          required: false,
-          showWhenAuthorFilled: true,
-          labelOverride: change.origin == TasteProfileChangeOutOriginEnum.auto
-              ? null
-              : '手动修改',
-          onAction: null,
-        ),
-      ],
-    ),
-    subtitle: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(change.reason),
-        ExpansionTile(
-          tilePadding: EdgeInsets.zero,
-          title: const Text('变化明细'),
-          children: [
-            ListTile(dense: true, title: Text('变更前：${change.oldValue}')),
-            ListTile(dense: true, title: Text('变更后：${change.newValue}')),
-          ],
-        ),
-      ],
-    ),
-    trailing: Wrap(
-      spacing: 4,
-      children: [
-        if (change.status == TasteProfileChangeOutStatusEnum.pending)
-          IconButton(
-            tooltip: '确认',
-            onPressed: offline || busy ? null : onConfirm,
-            icon: const Icon(Icons.check),
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    return ListTile(
+      contentPadding: EdgeInsets.zero,
+      title: Wrap(
+        crossAxisAlignment: WrapCrossAlignment.center,
+        spacing: 8,
+        children: [
+          Text(change.field),
+          SourceMark(
+            sourceType: change.origin == TasteProfileChangeOutOriginEnum.auto
+                ? sourceTypeTasteAdjusted
+                : sourceTypeAuthorFilled,
+            componentId: 'monthly-review-${change.id}',
+            value: change.newValue.toString(),
+            originalValue: change.oldValue.toString(),
+            basisText: change.reason,
+            required: false,
+            showWhenAuthorFilled: true,
+            labelOverride: change.origin == TasteProfileChangeOutOriginEnum.auto
+                ? null
+                : l10n.monthlyReviewManualSource,
+            onAction: null,
           ),
-        if (change.status == TasteProfileChangeOutStatusEnum.active ||
-            change.status == TasteProfileChangeOutStatusEnum.confirmed)
-          IconButton(
-            tooltip: '撤销',
-            onPressed: offline || busy ? null : onRevert,
-            icon: const Icon(Icons.undo),
+        ],
+      ),
+      subtitle: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(change.reason),
+          ExpansionTile(
+            tilePadding: EdgeInsets.zero,
+            title: Text(l10n.monthlyReviewChangeDetails),
+            children: [
+              ListTile(
+                dense: true,
+                title: Text(
+                  l10n.monthlyReviewBefore(change.oldValue.toString()),
+                ),
+              ),
+              ListTile(
+                dense: true,
+                title: Text(
+                  l10n.monthlyReviewAfter(change.newValue.toString()),
+                ),
+              ),
+            ],
           ),
-      ],
-    ),
-  );
+        ],
+      ),
+      trailing: Wrap(
+        spacing: 4,
+        children: [
+          if (change.status == TasteProfileChangeOutStatusEnum.pending)
+            IconButton(
+              tooltip: l10n.monthlyReviewConfirm,
+              onPressed: offline || busy ? null : onConfirm,
+              icon: const Icon(Icons.check),
+            ),
+          if (change.status == TasteProfileChangeOutStatusEnum.active ||
+              change.status == TasteProfileChangeOutStatusEnum.confirmed)
+            IconButton(
+              tooltip: l10n.monthlyReviewRevert,
+              onPressed: offline || busy ? null : onRevert,
+              icon: const Icon(Icons.undo),
+            ),
+        ],
+      ),
+    );
+  }
 }

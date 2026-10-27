@@ -1977,6 +1977,162 @@ abstract class AppLocalizations {
   /// **'每次做完菜后的记录和心得会保存在这里。'**
   String get recordsEmptyBody;
 
+  /// No description provided for @monthlyReviewTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'上月回顾'**
+  String get monthlyReviewTitle;
+
+  /// No description provided for @monthlyReviewRetry.
+  ///
+  /// In zh, this message translates to:
+  /// **'重试'**
+  String get monthlyReviewRetry;
+
+  /// No description provided for @monthlyReviewUnavailable.
+  ///
+  /// In zh, this message translates to:
+  /// **'回顾暂时无法读取'**
+  String get monthlyReviewUnavailable;
+
+  /// No description provided for @monthlyReviewPreviousMonth.
+  ///
+  /// In zh, this message translates to:
+  /// **'上个月'**
+  String get monthlyReviewPreviousMonth;
+
+  /// No description provided for @monthlyReviewNextMonth.
+  ///
+  /// In zh, this message translates to:
+  /// **'下个月'**
+  String get monthlyReviewNextMonth;
+
+  /// No description provided for @monthlyReviewOffline.
+  ///
+  /// In zh, this message translates to:
+  /// **'离线回顾 · 更新于 {updatedAt}'**
+  String monthlyReviewOffline(String updatedAt);
+
+  /// No description provided for @monthlyReviewCount.
+  ///
+  /// In zh, this message translates to:
+  /// **'做菜次数'**
+  String get monthlyReviewCount;
+
+  /// No description provided for @monthlyReviewCompared.
+  ///
+  /// In zh, this message translates to:
+  /// **'较再上月 {difference}'**
+  String monthlyReviewCompared(String difference);
+
+  /// No description provided for @monthlyReviewNoChange.
+  ///
+  /// In zh, this message translates to:
+  /// **'无变化'**
+  String get monthlyReviewNoChange;
+
+  /// No description provided for @monthlyReviewIncrease.
+  ///
+  /// In zh, this message translates to:
+  /// **'增加 {count} 次'**
+  String monthlyReviewIncrease(int count);
+
+  /// No description provided for @monthlyReviewDecrease.
+  ///
+  /// In zh, this message translates to:
+  /// **'减少 {count} 次'**
+  String monthlyReviewDecrease(int count);
+
+  /// No description provided for @monthlyReviewFrequent.
+  ///
+  /// In zh, this message translates to:
+  /// **'常做'**
+  String get monthlyReviewFrequent;
+
+  /// No description provided for @monthlyReviewNewDishes.
+  ///
+  /// In zh, this message translates to:
+  /// **'新尝试'**
+  String get monthlyReviewNewDishes;
+
+  /// No description provided for @monthlyReviewMainIngredients.
+  ///
+  /// In zh, this message translates to:
+  /// **'主料摘要'**
+  String get monthlyReviewMainIngredients;
+
+  /// No description provided for @monthlyReviewEmpty.
+  ///
+  /// In zh, this message translates to:
+  /// **'这个月没有做菜记录或口味变化。'**
+  String get monthlyReviewEmpty;
+
+  /// No description provided for @monthlyReviewAutomaticChanges.
+  ///
+  /// In zh, this message translates to:
+  /// **'自动学习的口味变化'**
+  String get monthlyReviewAutomaticChanges;
+
+  /// No description provided for @monthlyReviewOfflineActions.
+  ///
+  /// In zh, this message translates to:
+  /// **'离线时不能确认或撤销，联网后重试。'**
+  String get monthlyReviewOfflineActions;
+
+  /// No description provided for @monthlyReviewManualChanges.
+  ///
+  /// In zh, this message translates to:
+  /// **'手动修改'**
+  String get monthlyReviewManualChanges;
+
+  /// No description provided for @monthlyReviewChangeDetails.
+  ///
+  /// In zh, this message translates to:
+  /// **'变化明细'**
+  String get monthlyReviewChangeDetails;
+
+  /// No description provided for @monthlyReviewBefore.
+  ///
+  /// In zh, this message translates to:
+  /// **'变更前：{value}'**
+  String monthlyReviewBefore(String value);
+
+  /// No description provided for @monthlyReviewAfter.
+  ///
+  /// In zh, this message translates to:
+  /// **'变更后：{value}'**
+  String monthlyReviewAfter(String value);
+
+  /// No description provided for @monthlyReviewManualSource.
+  ///
+  /// In zh, this message translates to:
+  /// **'手动修改'**
+  String get monthlyReviewManualSource;
+
+  /// No description provided for @monthlyReviewConfirm.
+  ///
+  /// In zh, this message translates to:
+  /// **'确认'**
+  String get monthlyReviewConfirm;
+
+  /// No description provided for @monthlyReviewRevert.
+  ///
+  /// In zh, this message translates to:
+  /// **'撤销'**
+  String get monthlyReviewRevert;
+
+  /// No description provided for @monthlyReviewConfirmed.
+  ///
+  /// In zh, this message translates to:
+  /// **'已确认口味变化'**
+  String get monthlyReviewConfirmed;
+
+  /// No description provided for @monthlyReviewReverted.
+  ///
+  /// In zh, this message translates to:
+  /// **'已撤销口味变化'**
+  String get monthlyReviewReverted;
+
   /// No description provided for @meEmptyTitle.
   ///
   /// In zh, this message translates to:

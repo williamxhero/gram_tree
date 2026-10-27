@@ -74,9 +74,11 @@ void main() {
       ProviderScope(
         overrides: [
           privacyConsentProvider.overrideWithValue(false),
-          monthlyReviewProvider.overrideWith(
+          monthlyReviewProvider(
+            DateTime(DateTime.now().year, DateTime.now().month - 1),
+          ).overrideWith(
             (ref) async => MonthlyReviewSnapshot(
-              month: DateTime(2026, 3),
+              month: DateTime(DateTime.now().year, DateTime.now().month - 1),
               current: current,
               previous: previous,
               changes: [change],

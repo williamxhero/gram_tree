@@ -1039,6 +1039,96 @@ class AppLocalizationsZh extends AppLocalizations {
   String get recordsEmptyBody => '每次做完菜后的记录和心得会保存在这里。';
 
   @override
+  String get monthlyReviewTitle => '上月回顾';
+
+  @override
+  String get monthlyReviewRetry => '重试';
+
+  @override
+  String get monthlyReviewUnavailable => '回顾暂时无法读取';
+
+  @override
+  String get monthlyReviewPreviousMonth => '上个月';
+
+  @override
+  String get monthlyReviewNextMonth => '下个月';
+
+  @override
+  String monthlyReviewOffline(String updatedAt) {
+    return '离线回顾 · 更新于 $updatedAt';
+  }
+
+  @override
+  String get monthlyReviewCount => '做菜次数';
+
+  @override
+  String monthlyReviewCompared(String difference) {
+    return '较再上月 $difference';
+  }
+
+  @override
+  String get monthlyReviewNoChange => '无变化';
+
+  @override
+  String monthlyReviewIncrease(int count) {
+    return '增加 $count 次';
+  }
+
+  @override
+  String monthlyReviewDecrease(int count) {
+    return '减少 $count 次';
+  }
+
+  @override
+  String get monthlyReviewFrequent => '常做';
+
+  @override
+  String get monthlyReviewNewDishes => '新尝试';
+
+  @override
+  String get monthlyReviewMainIngredients => '主料摘要';
+
+  @override
+  String get monthlyReviewEmpty => '这个月没有做菜记录或口味变化。';
+
+  @override
+  String get monthlyReviewAutomaticChanges => '自动学习的口味变化';
+
+  @override
+  String get monthlyReviewOfflineActions => '离线时不能确认或撤销，联网后重试。';
+
+  @override
+  String get monthlyReviewManualChanges => '手动修改';
+
+  @override
+  String get monthlyReviewChangeDetails => '变化明细';
+
+  @override
+  String monthlyReviewBefore(String value) {
+    return '变更前：$value';
+  }
+
+  @override
+  String monthlyReviewAfter(String value) {
+    return '变更后：$value';
+  }
+
+  @override
+  String get monthlyReviewManualSource => '手动修改';
+
+  @override
+  String get monthlyReviewConfirm => '确认';
+
+  @override
+  String get monthlyReviewRevert => '撤销';
+
+  @override
+  String get monthlyReviewConfirmed => '已确认口味变化';
+
+  @override
+  String get monthlyReviewReverted => '已撤销口味变化';
+
+  @override
   String get meEmptyTitle => '个人中心';
 
   @override
