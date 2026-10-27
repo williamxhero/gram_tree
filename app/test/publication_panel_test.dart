@@ -363,6 +363,7 @@ void main() {
           ],
           'source_context': <String, Object>{},
           'taste_summary': <String, Object>{},
+          'photos': <String>[],
         });
         env.server.on(
           'GET',
@@ -519,11 +520,16 @@ void main() {
       '/v1/sync/writes',
       (_) => FakeServer.error(503, 'unavailable', '暂不可用'),
     );
+    // The records entry now starts with a month calendar, so both record cards
+    // sit below the default 600px test viewport.
+    tester.view.physicalSize = const Size(800, 2000);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
     await mount(
       tester,
       env,
       (_) => const SizedBox(
-        height: 500,
+        height: 1600,
         child: Row(
           children: [
             Expanded(child: RecordsPage()),

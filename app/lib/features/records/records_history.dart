@@ -285,16 +285,15 @@ class RecordsHistory {
           },
         );
       }
-      if (fetched.isNotEmpty) {
-        final occurrence =
-            DateTime.tryParse(fetched.first['occurred_at'] as String? ?? '') ??
-            DateTime.now().toUtc();
-        final month = occurrence.toUtc();
+      if (fetched.isEmpty) {
+        // Offline with no cached history: keep the entry usable and let the
+        // page show its standard empty state, as it did before the calendar.
+        final month = DateTime.now().toUtc();
         return RecordHistorySnapshot(
           accountId: identity.ownerId,
           timezone: identityTimezone(identity),
           cachedAt: DateTime.now().toUtc(),
-          items: fetched,
+          items: const [],
           contexts: {
             '${month.year}-${month.month}': localContext(
               identityTimezone(identity),
@@ -304,7 +303,23 @@ class RecordsHistory {
           },
         );
       }
-      rethrow;
+      final occurrence =
+          DateTime.tryParse(fetched.first['occurred_at'] as String? ?? '') ??
+          DateTime.now().toUtc();
+      final month = occurrence.toUtc();
+      return RecordHistorySnapshot(
+        accountId: identity.ownerId,
+        timezone: identityTimezone(identity),
+        cachedAt: DateTime.now().toUtc(),
+        items: fetched,
+        contexts: {
+          '${month.year}-${month.month}': localContext(
+            identityTimezone(identity),
+            month.year,
+            month.month,
+          ),
+        },
+      );
     }
   }
 
@@ -366,6 +381,7 @@ class RecordsHistory {
         'counts_as_cooked': raw['source'] != 'dining',
         'meal': raw['meal'],
         'taste_summary': <String, dynamic>{},
+        'photos': raw['photos'] ?? <String>[],
       };
     }
     return byClient.values.toList();

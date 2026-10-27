@@ -38,6 +38,9 @@ void main() {
       'scenario_difference',
       'failure_reminder',
       'taste_change_notice',
+      'records_calendar',
+      'dietary_statistics',
+      'dietary_distribution',
     });
   });
 

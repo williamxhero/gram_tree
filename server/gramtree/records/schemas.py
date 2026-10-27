@@ -94,6 +94,19 @@ class CookingRecordHistoryOut(BaseModel):
     items: list[CookingRecordRevisionOut]
 
 
+class RecordCalendarDayOut(BaseModel):
+    date: str
+    start: Timestamp
+    end: Timestamp
+
+
+class RecordCalendarContextOut(BaseModel):
+    timezone: str
+    year: int
+    month: int
+    days: list[RecordCalendarDayOut]
+
+
 class CookingRecordListOut(BaseModel):
     items: list[CookingRecordOut]
     next_cursor: str | None = None
