@@ -58,7 +58,7 @@ class MobileDeviceCapabilities implements DeviceCapabilities {
 
   @override
   Future<void> cancelMonthlyReviewReminder(String id) =>
-      _channel.invokeMethod<void>('cancelTimerReminder', {'id': id});
+      _channel.invokeMethod<void>('cancelMonthlyReviewReminder', {'id': id});
 
   @override
   Future<void> vibrate() => HapticFeedback.mediumImpact();

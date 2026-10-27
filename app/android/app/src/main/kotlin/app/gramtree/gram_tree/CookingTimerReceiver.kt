@@ -12,6 +12,8 @@ import android.app.Notification
 class CookingTimerReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         val id = intent.getStringExtra("id") ?: return
+        val monthly = intent.getStringExtra("timezone") != null
+        if (monthly && !MonthlyReviewReminder.isEnabled(context, id)) return
         val manager = context.getSystemService(NotificationManager::class.java)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             manager.createNotificationChannel(
@@ -34,7 +36,11 @@ class CookingTimerReceiver : BroadcastReceiver() {
             .setContentText(intent.getStringExtra("body") ?: "可以回来继续做菜了。")
             .setContentIntent(openApp).setAutoCancel(true)
             .setPriority(Notification.PRIORITY_HIGH).build()
-        manager.notify(id.hashCode(), notification)
+        try {
+            manager.notify(id.hashCode(), notification)
+        } finally {
+            if (monthly) MonthlyReviewReminder.renew(context, id)
+        }
     }
 
     companion object {

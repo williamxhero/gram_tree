@@ -59,11 +59,13 @@ import UserNotifications
            let zone = TimeZone(identifier: timezone) {
           calendar.timeZone = zone
         }
-        let trigger = UNCalendarNotificationTrigger(
-          dateMatching: calendar.dateComponents(
-            [.year, .month, .day, .hour, .minute, .second], from: date
-          ), repeats: false
+        let monthly = call.method == "scheduleMonthlyReviewReminder"
+        var matching = calendar.dateComponents(
+          monthly ? [.day, .hour, .minute, .second] : [.year, .month, .day, .hour, .minute, .second],
+          from: date
         )
+        matching.timeZone = calendar.timeZone
+        let trigger = UNCalendarNotificationTrigger(dateMatching: matching, repeats: monthly)
         UNUserNotificationCenter.current().add(
           UNNotificationRequest(identifier: id, content: content, trigger: trigger)
         ) { error in
@@ -75,10 +77,13 @@ import UserNotifications
         }
         return
       }
-      if call.method == "cancelTimerReminder",
+      if (call.method == "cancelTimerReminder" || call.method == "cancelMonthlyReviewReminder"),
          let args = call.arguments as? [String: Any],
          let id = args["id"] as? String {
         UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: [id])
+        if call.method == "cancelMonthlyReviewReminder" {
+          UNUserNotificationCenter.current().removeDeliveredNotifications(withIdentifiers: [id])
+        }
         result(nil)
         return
       }
