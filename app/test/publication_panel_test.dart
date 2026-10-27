@@ -1175,6 +1175,45 @@ void main() {
     },
   );
 
+  testWidgets('late publication refresh cannot reload an unmounted recipe', (
+    tester,
+  ) async {
+    final env = TestEnv.signedIn();
+    final refresh = Completer<(int, Object?)>();
+    var reads = 0;
+    var changed = 0;
+    env.server.on('GET', '/v1/recipes/$recipeId/publication', (_) {
+      reads++;
+      return reads == 1
+          ? (200, panelFixture(state: 'published', public: true))
+          : refresh.future;
+    });
+    env.server.on(
+      'POST',
+      '/v1/recipes/$recipeId/withdraw',
+      (_) => (200, publicationRecipeFixture().toJson()),
+    );
+    await mount(
+      tester,
+      env,
+      (_) => PublicationPanelCard(
+        detail: publicationRecipeFixture(),
+        onChanged: () => changed++,
+        onCook: () {},
+      ),
+    );
+    await tester.tap(find.byKey(const ValueKey('publication-lifecycle')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('publication-confirm-lifecycle')));
+    await tester.pumpAndSettle();
+    expect(reads, 2);
+    await tester.pumpWidget(const SizedBox.shrink());
+    refresh.complete((200, panelFixture(state: 'withdrawn', public: true)));
+    await tester.pumpAndSettle();
+    expect(changed, 0);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets(
     'first license is shown without extra consent and acknowledged only once',
     (tester) async {

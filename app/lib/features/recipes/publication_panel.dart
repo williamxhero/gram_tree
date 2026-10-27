@@ -124,7 +124,7 @@ class _PublicationPanelCardState extends ConsumerState<PublicationPanelCard> {
       await action();
       if (mounted && _sameOwner) {
         await _load();
-        widget.onChanged();
+        if (mounted && _sameOwner) widget.onChanged();
       }
     } catch (_) {
       if (mounted && _sameOwner) {
