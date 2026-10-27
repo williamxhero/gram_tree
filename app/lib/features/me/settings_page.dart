@@ -9,6 +9,9 @@ import '../../l10n/app_localizations.dart';
 import '../../privacy/consent.dart';
 import '../../privacy/documents.dart';
 import '../../privacy/policy.dart';
+import '../../platform/permissions.dart';
+import '../../widgets/permission_request.dart';
+import '../records/monthly_review_notifications.dart';
 import '../../widgets/page_frame.dart';
 import '../../ui_protocol/detail_preference_setting.dart';
 import 'account_data.dart';
@@ -67,6 +70,11 @@ class SettingsPage extends ConsumerWidget {
           ),
           // 时区跟随手机自动更新，只展示
           item(l10n.settingsTimezone, value: user?.timezone),
+          if (user != null)
+            MonthlyReviewNotificationSetting(
+              key: ValueKey('monthly-review-notification-${user.id}'),
+              ownerId: user.id,
+            ),
           const DetailPreferenceSetting(),
           group(l10n.settingsPrivacy),
           item(
@@ -122,4 +130,66 @@ class SettingsPage extends ConsumerWidget {
       await ref.read(consentProvider.notifier).markUploaded([entry.id]);
     }
   }
+}
+
+class MonthlyReviewNotificationSetting extends ConsumerStatefulWidget {
+  const MonthlyReviewNotificationSetting({super.key, required this.ownerId});
+
+  final String ownerId;
+
+  @override
+  ConsumerState<MonthlyReviewNotificationSetting> createState() =>
+      _MonthlyReviewNotificationSettingState();
+}
+
+class _MonthlyReviewNotificationSettingState
+    extends ConsumerState<MonthlyReviewNotificationSetting> {
+  late Future<bool> _enabled;
+  bool _saving = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _enabled = ref
+        .read(monthlyReviewNotificationControllerProvider)
+        .enabled(widget.ownerId);
+  }
+
+  Future<void> _change(bool value) async {
+    if (_saving) return;
+    setState(() => _saving = true);
+    try {
+      final controller = ref.read(monthlyReviewNotificationControllerProvider);
+      final permissionStatus = await ref
+          .read(permissionServiceProvider)
+          .status(AppPermission.notifications);
+      final permissionWasRequested = await controller.permissionRequested(
+        widget.ownerId,
+      );
+      if (value &&
+          permissionStatus == PermissionState.denied &&
+          !permissionWasRequested) {
+        await controller.markPermissionRequested(widget.ownerId);
+        if (!mounted) return;
+        await requestPermission(context, ref, AppPermission.notifications);
+      }
+      await controller.setEnabled(widget.ownerId, value);
+      if (!mounted) return;
+      setState(() => _enabled = Future.value(value));
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) => FutureBuilder<bool>(
+    future: _enabled,
+    builder: (context, snapshot) => SwitchListTile(
+      key: const ValueKey('monthly-review-notification-switch'),
+      title: const Text('每月回顾提醒'),
+      subtitle: const Text('每月初提醒你查看上月回顾'),
+      value: snapshot.data ?? true,
+      onChanged: snapshot.hasData && !_saving ? _change : null,
+    ),
+  );
 }

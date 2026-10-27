@@ -27,5 +27,15 @@ class FakeDeviceCapabilities implements DeviceCapabilities {
   Future<void> cancelTimerReminder(String id) async {}
 
   @override
+  Future<void> scheduleMonthlyReviewReminder({
+    required String id,
+    required DateTime dueAt,
+    required String timezone,
+  }) async {}
+
+  @override
+  Future<void> cancelMonthlyReviewReminder(String id) async {}
+
+  @override
   Future<void> vibrate() async => vibrateCount++;
 }

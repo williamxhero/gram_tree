@@ -10,6 +10,7 @@ import '../platform/apple_sign_in.dart';
 import '../platform/timezone_source.dart';
 import '../privacy/consent.dart';
 import '../features/me/taste_profile_cache.dart';
+import '../features/records/monthly_review_notifications.dart';
 import 'session.dart';
 
 /// 当前登录的账号；null 表示未登录。加载本机保存的登录状态时是 loading。
@@ -183,6 +184,9 @@ class AuthController extends AsyncNotifier<UserOut?> {
     identity ??= session.identity;
     if (identity == null || !session.matches(identity)) return;
     final revoking = signOutOnServer(identity: identity);
+    await ref
+        .read(monthlyReviewNotificationControllerProvider)
+        .cancelOwner(identity.ownerId);
     await session.clear();
     await revoking;
   }
@@ -214,6 +218,9 @@ class AuthController extends AsyncNotifier<UserOut?> {
     final queue = ref.read(eventQueueProvider);
     // Capture dependencies before awaiting; provider disposal must not silently
     // skip a confirmed deletion, nor turn Alice's cleanup into Bob's cleanup.
+    await ref
+        .read(monthlyReviewNotificationControllerProvider)
+        .cancelOwner(captured.ownerId);
     if (session.matches(captured)) await session.clear();
     await ref.read(tasteProfileCacheProvider).clear(captured.ownerId);
     await queue.clearAccount(

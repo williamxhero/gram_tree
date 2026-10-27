@@ -17,7 +17,7 @@ class MainActivity : FlutterActivity() {
             .setMethodCallHandler(ExportFileShare(this))
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "app.gramtree/device_capabilities")
             .setMethodCallHandler { call, result ->
-                if (call.method == "scheduleTimerReminder") {
+                if (call.method == "scheduleTimerReminder" || call.method == "scheduleMonthlyReviewReminder") {
                     scheduleTimerReminder(call.arguments as Map<*, *>)
                     result.success(null)
                     return@setMethodCallHandler

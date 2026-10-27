@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../events/event_upload_lifecycle.dart';
 import '../features/me/export_completion_notice.dart';
+import '../features/records/monthly_review_notifications.dart';
 import '../l10n/app_localizations.dart';
 import '../network/reachability.dart';
 import '../observability/crash_reporting.dart';
@@ -19,6 +20,7 @@ class GramTreeApp extends ConsumerWidget {
     // 用户同意隐私政策后才会真正初始化崩溃上报
     ref.watch(crashReportingProvider);
     ref.watch(apiReachabilityProvider);
+    ref.watch(monthlyReviewNotificationControllerProvider);
     listenForExportCompletion(ref);
     return EventUploadTrigger(child: _app(ref));
   }

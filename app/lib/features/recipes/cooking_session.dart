@@ -9,6 +9,7 @@ import '../../app/theme.dart';
 import '../../events/event_recorder.dart';
 import '../../platform/device_capabilities.dart';
 import '../../platform/permissions.dart';
+import '../../widgets/permission_request.dart';
 import '../../recipes/recipe_snapshot.dart';
 import '../../recipes/recipe_snapshot_provider.dart';
 import '../../storage/local_store.dart';
@@ -350,6 +351,7 @@ class _CookingPageState extends ConsumerState<CookingPage>
   final _skippedSceneComponents = <String>{};
   Timer? _ticker;
   bool _reportingDueTimers = false;
+  bool _notificationPermissionAsked = false;
   double _horizontalDragStartX = 0;
   double _horizontalDragOffset = 0;
   final _voiceCommands = CookingVoiceController();
@@ -555,9 +557,13 @@ class _CookingPageState extends ConsumerState<CookingPage>
     final session = _session;
     final seconds = step.durationSeconds ?? 0;
     if (session == null || seconds <= 0) return;
-    await ref
-        .read(permissionServiceProvider)
-        .request(AppPermission.notifications);
+    final permissions = ref.read(permissionServiceProvider);
+    final permission = await permissions.status(AppPermission.notifications);
+    if (permission == PermissionState.denied && !_notificationPermissionAsked) {
+      _notificationPermissionAsked = true;
+      if (!mounted) return;
+      await requestPermission(context, ref, AppPermission.notifications);
+    }
     final existing = session.timers
         .where((timer) => timer.stepId == step.id && timer.status == 'running')
         .firstOrNull;

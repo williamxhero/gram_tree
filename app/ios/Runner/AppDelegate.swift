@@ -43,7 +43,7 @@ import UserNotifications
       binaryMessenger: engineBridge.binaryMessenger
     )
     channel.setMethodCallHandler { call, result in
-      if call.method == "scheduleTimerReminder",
+      if (call.method == "scheduleTimerReminder" || call.method == "scheduleMonthlyReviewReminder"),
          let args = call.arguments as? [String: Any],
          let id = args["id"] as? String,
          let dueAtMillis = args["dueAtMillis"] as? Int,
@@ -54,8 +54,13 @@ import UserNotifications
         content.body = body
         content.sound = .default
         let date = Date(timeIntervalSince1970: Double(dueAtMillis) / 1000)
+        var calendar = Calendar.current
+        if let timezone = args["timezone"] as? String,
+           let zone = TimeZone(identifier: timezone) {
+          calendar.timeZone = zone
+        }
         let trigger = UNCalendarNotificationTrigger(
-          dateMatching: Calendar.current.dateComponents(
+          dateMatching: calendar.dateComponents(
             [.year, .month, .day, .hour, .minute, .second], from: date
           ), repeats: false
         )
@@ -84,7 +89,6 @@ import UserNotifications
       DispatchQueue.main.async { UIApplication.shared.isIdleTimerDisabled = enabled }
       result(nil)
     }
-    UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound]) { _, _ in }
     cleanupStaleExportDirectories()
   }
 
