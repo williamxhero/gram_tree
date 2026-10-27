@@ -4,7 +4,7 @@ import 'package:gramtree_api/gramtree_api.dart';
 import '../../api/api_client.dart';
 import '../../auth/auth_controller.dart';
 import '../../auth/session.dart';
-import '../../network/reachability.dart';
+import '../../storage/secure_store.dart';
 import 'dietary_statistics_cache.dart';
 
 enum DietaryStatisticsPeriod { week, month, year }

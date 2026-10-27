@@ -39,10 +39,16 @@ def period_bounds(period: DietaryPeriod, anchor: date, timezone: str) -> Dietary
 
 
 def _snapshot_for(row: CookingRecord, versions: dict[Any, RecipeVersion]) -> dict[str, Any] | None:
-    if row.recipe_version_id is not None and row.recipe_version_id in versions:
-        snapshot = versions[row.recipe_version_id].snapshot
-        return snapshot if isinstance(snapshot, dict) else None
-    return row.snapshot if isinstance(row.snapshot, dict) else None
+    """Return only the immutable recipe-version snapshot.
+
+    Versionless calendar/external records may carry an opaque client snapshot for
+    the record detail, but that is not a structured ingredient-library or AI
+    cuisine fact. Counting it here would let a caller manufacture distributions.
+    """
+    if row.recipe_version_id is None or row.recipe_version_id not in versions:
+        return None
+    snapshot = versions[row.recipe_version_id].snapshot
+    return snapshot if isinstance(snapshot, dict) else None
 
 
 def _dish_for(
@@ -109,9 +115,11 @@ def statistics(
         else {}
     )
     aliases = list(session.scalars(select(DishAlias)))
-    names = {d.name: d for d in session.scalars(select(Dish))}
+    all_dishes = list(session.scalars(select(Dish)))
+    names = {d.name: d for d in all_dishes}
+    all_dishes_by_id = {d.id: d for d in all_dishes}
     for alias in aliases:
-        dish = dishes.get(alias.dish_id)
+        dish = all_dishes_by_id.get(alias.dish_id)
         if dish is not None:
             names[alias.alias] = dish
 

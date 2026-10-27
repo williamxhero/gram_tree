@@ -12,6 +12,7 @@ import 'components/text_block_component.dart';
 import 'recipe_components.dart';
 import 'source_attribution.dart';
 import 'recipe_safety_protocol.dart';
+import 'dietary_statistics_protocol.dart';
 
 /// 组件登记时要给的标准空态文案：结论层（各组件类型自己的必填字段，比如
 /// `hint_bar`/`text_block`/`section_title` 的 `conclusion`，`list` 的 `items`）
@@ -171,5 +172,15 @@ final defaultComponentRegistry = ComponentRegistry(const [
     type: 'allergen_notice',
     builder: buildAllergenNoticeProtocolComponent,
     emptyState: ComponentEmptyState(title: '暂时无法确认过敏原信息'),
+  ),
+  ComponentSpec(
+    type: 'dietary_statistics',
+    builder: buildDietaryStatisticsComponent,
+    emptyState: ComponentEmptyState(title: '统计暂时不可用'),
+  ),
+  ComponentSpec(
+    type: 'dietary_distribution',
+    builder: buildDietaryDistributionComponent,
+    emptyState: ComponentEmptyState(title: '分布暂时不可用'),
   ),
 ]);

@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://gramtree.app/contracts/ui_protocol/1.0/components/dietary_statistics.schema.json",
+  "title": "本人饮食统计",
+  "type": "object", "additionalProperties": false,
+  "required": ["conclusion", "period", "cooking_count", "generated_at", "source"],
+  "properties": {
+    "conclusion": {"type": "string", "minLength": 1},
+    "period": {"enum": ["week", "month", "year"]},
+    "cooking_count": {"type": "integer", "minimum": 0},
+    "generated_at": {"type": "string", "format": "date-time"},
+    "source": {"type": "object", "additionalProperties": false,
+      "required": ["source_type", "value", "basis"],
+      "properties": {
+        "source_type": {"const": "verified"},
+        "value": {"type": "string", "minLength": 1},
+        "basis": {"type": "object", "additionalProperties": false,
+          "required": ["reason_code", "text", "citation"],
+          "properties": {
+            "reason_code": {"type": "string", "minLength": 1},
+            "text": {"type": "string", "minLength": 1},
+            "citation": {"type": "string", "minLength": 1}
+          }
+        }
+      }
+    }
+  }
+}

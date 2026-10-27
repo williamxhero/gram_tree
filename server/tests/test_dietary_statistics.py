@@ -1,6 +1,11 @@
 """Dietary history is observed only through authenticated public HTTP APIs."""
 
+from pathlib import Path
+
+from gramtree.cli import main as cli
 from tests.accounts_support import Api, bearer, new_uuid
+from tests.cooking_completion_support import complete_recipe
+from tests.test_recipes import recipe_input
 from tests.test_sync_writes import envelope, submit
 
 PATH = "/v1/dietary-history/statistics"
@@ -109,3 +114,61 @@ def test_account_timezone_half_open_dst_week_and_leap_year(api: Api):
     assert leap["local_end"] == "2024-03-01"
     year = statistics(api, tokens, period="year", anchor="2024-02-29")
     assert year["local_end"] == "2025-01-01"
+
+
+def test_version_distributions_merged_dishes_and_all_history_first_attempts(api: Api):
+    assert cli(["ingredients", "import", str(Path(__file__).parents[1] / "data/ingredients")]) == 0
+    tokens = api.login("dietary-versions@example.com")
+    chicken = api.client.post("/v1/ingredients/search", json={"query": "鸡腿肉"}).json()["items"][0]
+    body = recipe_input("统计鸡丁")
+    body["dish_aliases"] = ["统计鸡丁别名"]
+    body["snapshot"]["cuisine"] = "川菜"
+    body["snapshot"]["ingredients"][0]["ingredient_id"] = chicken["id"]
+    first = api.client.post("/v1/recipes", headers=bearer(tokens), json=body)
+    assert first.status_code == 201, first.text
+    first = first.json()
+    # A second recipe and version for the same dish must not become new identities.
+    body["snapshot"]["cuisine"] = None
+    second = api.client.post("/v1/recipes", headers=bearer(tokens), json=body)
+    assert second.status_code == 201, second.text
+    second = second.json()
+    updated = api.client.post(
+        f"/v1/recipes/{first['id']}/versions", headers=bearer(tokens), json=body
+    )
+    assert updated.status_code == 201, updated.text
+    updated = updated.json()
+    for detail, at in [(first, "2026-01-01T04:00:00Z"), (first, "2026-03-01T04:00:00Z"),
+                       (second, "2026-03-02T04:00:00Z"), (updated, "2026-03-03T04:00:00Z")]:
+        record(api, tokens, at, source="calendar", recipe_id=detail["id"],
+               recipe_version_id=detail["version"]["id"], dish_name="自由显示名")
+    # Alias-only manual dishes must resolve even without an in-range recipe.
+    alias_body = recipe_input("统计豆腐")
+    alias_body["dish_aliases"] = ["统计豆腐别名"]
+    alias = api.client.post("/v1/recipes", headers=bearer(tokens), json=alias_body)
+    assert alias.status_code == 201, alias.text
+    record(api, tokens, "2026-03-04T04:00:00Z", dish_name="统计豆腐别名")
+    # A freeform/external snapshot is not a trusted version classification.
+    record(api, tokens, "2026-03-05T04:00:00Z", snapshot=first["version"]["snapshot"])
+    month = statistics(api, tokens)
+    assert month["cooking_count"] == 5
+    assert month["ingredient_record_count"] == 3
+    assert month["ingredient_distribution"] == [{"key": chicken["category"], "count": 3}]
+    assert month["cuisine_distribution"] == [
+        {"key": "unclassified", "count": 4},
+        {"key": "川菜", "count": 1},
+    ]
+    assert [(d["name"], d["count"]) for d in month["frequent_dishes"]] == [
+        ("统计鸡丁", 3),
+        ("统计豆腐", 1),
+    ]
+    assert month["frequent_dishes"][0]["first_cooked_at"] == "2026-03-01T04:00:00+00:00"
+    assert [d["name"] for d in month["new_dishes"]] == ["统计豆腐"]
+    # A backfill before the range changes first attempts, including cached results.
+    record(api, tokens, "2025-12-01T04:00:00Z", dish_name="统计豆腐别名")
+    assert statistics(api, tokens)["new_dishes"] == []
+    completed = complete_recipe(api, tokens, first)
+    current = statistics(api, tokens, anchor="2026-10-27")
+    assert current["cooking_count"] == 1
+    assert current["frequent_dishes"][0]["dish_id"] == first["dish"]["id"]
+    assert completed["counts_as_cooked"] is True
+
