@@ -31,6 +31,8 @@
 | [`improved-public.html`](improved-public.html) | 草稿公开门槛、待验证、永久来源署名与微调保存二选一；浅色/深色静态样稿，数据明确为示例 | #41 SPEC-007.1；#221–#226 | 2026-10-15 已尝试发布；Artifact 要求 claude.ai 登录，当前 API-token 认证不支持。按本次任务默认改用仓库内 HTML |
 | [`data-portability.html`](data-portability.html) | 数据导出、完成下载与注销两种公开菜谱选择；不收集凭证的静态样稿，遵循项目主题 | #47 SPEC-010.2；#286–#288 | 2026-10-15 已尝试 Artifact：当前 API-token 认证不支持发布；使用仓库内 HTML，不等待人工登录 |
 
+| [`history-monthly-review.html`](history-monthly-review.html) | 回看与每月回顾：离线日历、周/月/年统计、统一口径、学习变更确认/撤销与通知类别；浅色/深色交互，全部为示例数据 | #33 SPEC-004.3；执行记录 #290 | 2026-10-27 发布调用被当前认证模式拒绝；独立 issue #291 跟踪，按用户指令不阻塞本 SPEC 交付 |
+
 ## 说明
 
 - `recipe-detail/` 是画布的**源文件**：`index.html` 引用平台运行时 `artifact-type/app.js`，`Pro.dc.html` 引用 `support.js`，这两个运行时文件属于 claude.ai 平台，没有导出，所以这份不能在本地直接打开渲染；要看效果请去 claude.ai 的原 Artifact，这里保存的是设计内容的备份。
