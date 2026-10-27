@@ -43,7 +43,7 @@ import UserNotifications
       binaryMessenger: engineBridge.binaryMessenger
     )
     channel.setMethodCallHandler { call, result in
-      if call.method == "scheduleTimerReminder",
+      if (call.method == "scheduleTimerReminder" || call.method == "scheduleMonthlyReviewReminder"),
          let args = call.arguments as? [String: Any],
          let id = args["id"] as? String,
          let dueAtMillis = args["dueAtMillis"] as? Int,
@@ -54,11 +54,18 @@ import UserNotifications
         content.body = body
         content.sound = .default
         let date = Date(timeIntervalSince1970: Double(dueAtMillis) / 1000)
-        let trigger = UNCalendarNotificationTrigger(
-          dateMatching: Calendar.current.dateComponents(
-            [.year, .month, .day, .hour, .minute, .second], from: date
-          ), repeats: false
+        var calendar = Calendar.current
+        if let timezone = args["timezone"] as? String,
+           let zone = TimeZone(identifier: timezone) {
+          calendar.timeZone = zone
+        }
+        let monthly = call.method == "scheduleMonthlyReviewReminder"
+        var matching = calendar.dateComponents(
+          monthly ? [.day, .hour, .minute, .second] : [.year, .month, .day, .hour, .minute, .second],
+          from: date
         )
+        matching.timeZone = calendar.timeZone
+        let trigger = UNCalendarNotificationTrigger(dateMatching: matching, repeats: monthly)
         UNUserNotificationCenter.current().add(
           UNNotificationRequest(identifier: id, content: content, trigger: trigger)
         ) { error in
@@ -70,10 +77,13 @@ import UserNotifications
         }
         return
       }
-      if call.method == "cancelTimerReminder",
+      if (call.method == "cancelTimerReminder" || call.method == "cancelMonthlyReviewReminder"),
          let args = call.arguments as? [String: Any],
          let id = args["id"] as? String {
         UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: [id])
+        if call.method == "cancelMonthlyReviewReminder" {
+          UNUserNotificationCenter.current().removeDeliveredNotifications(withIdentifiers: [id])
+        }
         result(nil)
         return
       }
@@ -84,7 +94,6 @@ import UserNotifications
       DispatchQueue.main.async { UIApplication.shared.isIdleTimerDisabled = enabled }
       result(nil)
     }
-    UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound]) { _, _ in }
     cleanupStaleExportDirectories()
   }
 

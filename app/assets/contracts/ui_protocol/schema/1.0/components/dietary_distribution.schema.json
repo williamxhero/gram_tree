@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://gramtree.app/contracts/ui_protocol/1.0/components/dietary_distribution.schema.json",
+  "title": "本人饮食分布",
+  "type": "object", "additionalProperties": false,
+  "required": ["conclusion", "title", "items"],
+  "properties": {
+    "conclusion": {"type": "string", "minLength": 1},
+    "title": {"type": "string", "minLength": 1},
+    "items": {"type": "array", "maxItems": 100,
+      "items": {"type": "object", "additionalProperties": false,
+        "required": ["key", "count"],
+        "properties": {
+          "key": {"type": "string", "minLength": 1},
+          "count": {"type": "integer", "minimum": 0}
+        }
+      }
+    }
+  }
+}

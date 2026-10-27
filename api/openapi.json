@@ -1825,6 +1825,14 @@
             ],
             "title": "Occurred At"
           },
+          "photos": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 3,
+            "title": "Photos",
+            "type": "array"
+          },
           "recipe_id": {
             "anyOf": [
               {
@@ -2005,6 +2013,13 @@
             "title": "Occurred At",
             "type": "string"
           },
+          "photos": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Photos",
+            "type": "array"
+          },
           "recipe_id": {
             "anyOf": [
               {
@@ -2087,6 +2102,7 @@
           "source_context",
           "taste_summary",
           "co_diner_ids",
+          "photos",
           "created_at"
         ],
         "title": "CookingRecordOut",
@@ -2397,6 +2413,197 @@
           "detail"
         ],
         "title": "DetailPreference",
+        "type": "object"
+      },
+      "DietaryDishCount": {
+        "properties": {
+          "count": {
+            "minimum": 1.0,
+            "title": "Count",
+            "type": "integer"
+          },
+          "dish_id": {
+            "format": "uuid",
+            "title": "Dish Id",
+            "type": "string"
+          },
+          "first_cooked_at": {
+            "title": "First Cooked At",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "dish_id",
+          "name",
+          "count",
+          "first_cooked_at"
+        ],
+        "title": "DietaryDishCount",
+        "type": "object"
+      },
+      "DietaryDistributionItem": {
+        "properties": {
+          "count": {
+            "description": "Records containing this category, once per record",
+            "minimum": 0.0,
+            "title": "Count",
+            "type": "integer"
+          },
+          "key": {
+            "title": "Key",
+            "type": "string"
+          }
+        },
+        "required": [
+          "key",
+          "count"
+        ],
+        "title": "DietaryDistributionItem",
+        "type": "object"
+      },
+      "DietaryStatisticsOut": {
+        "properties": {
+          "cooking_count": {
+            "minimum": 0.0,
+            "title": "Cooking Count",
+            "type": "integer"
+          },
+          "cuisine_distribution": {
+            "items": {
+              "$ref": "#/components/schemas/DietaryDistributionItem"
+            },
+            "title": "Cuisine Distribution",
+            "type": "array"
+          },
+          "end_at": {
+            "title": "End At",
+            "type": "string"
+          },
+          "frequent_dishes": {
+            "items": {
+              "$ref": "#/components/schemas/DietaryDishCount"
+            },
+            "title": "Frequent Dishes",
+            "type": "array"
+          },
+          "generated_at": {
+            "title": "Generated At",
+            "type": "string"
+          },
+          "ingredient_distribution": {
+            "items": {
+              "$ref": "#/components/schemas/DietaryDistributionItem"
+            },
+            "title": "Ingredient Distribution",
+            "type": "array"
+          },
+          "ingredient_record_count": {
+            "minimum": 0.0,
+            "title": "Ingredient Record Count",
+            "type": "integer"
+          },
+          "local_end": {
+            "description": "Exclusive local end date",
+            "format": "date",
+            "title": "Local End",
+            "type": "string"
+          },
+          "local_start": {
+            "format": "date",
+            "title": "Local Start",
+            "type": "string"
+          },
+          "new_dishes": {
+            "items": {
+              "$ref": "#/components/schemas/DietaryDishCount"
+            },
+            "title": "New Dishes",
+            "type": "array"
+          },
+          "period": {
+            "enum": [
+              "week",
+              "month",
+              "year"
+            ],
+            "title": "Period",
+            "type": "string"
+          },
+          "start_at": {
+            "title": "Start At",
+            "type": "string"
+          },
+          "timezone": {
+            "title": "Timezone",
+            "type": "string"
+          },
+          "unclassified_dish_count": {
+            "minimum": 0.0,
+            "title": "Unclassified Dish Count",
+            "type": "integer"
+          },
+          "unclassified_dishes": {
+            "description": "Unresolved record facts, not merged dishes or claims of first attempts",
+            "items": {
+              "$ref": "#/components/schemas/DietaryUnclassifiedDish"
+            },
+            "title": "Unclassified Dishes",
+            "type": "array"
+          }
+        },
+        "required": [
+          "period",
+          "timezone",
+          "local_start",
+          "local_end",
+          "start_at",
+          "end_at",
+          "generated_at",
+          "cooking_count",
+          "ingredient_record_count",
+          "ingredient_distribution",
+          "cuisine_distribution",
+          "frequent_dishes",
+          "new_dishes",
+          "unclassified_dish_count",
+          "unclassified_dishes"
+        ],
+        "title": "DietaryStatisticsOut",
+        "type": "object"
+      },
+      "DietaryUnclassifiedDish": {
+        "properties": {
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "occurred_at": {
+            "title": "Occurred At",
+            "type": "string"
+          },
+          "record_id": {
+            "format": "uuid",
+            "title": "Record Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "record_id",
+          "name",
+          "occurred_at"
+        ],
+        "title": "DietaryUnclassifiedDish",
         "type": "object"
       },
       "DishInput": {
@@ -10111,6 +10318,60 @@
         "title": "RecipeVersionSummary",
         "type": "object"
       },
+      "RecordCalendarContextOut": {
+        "properties": {
+          "days": {
+            "items": {
+              "$ref": "#/components/schemas/RecordCalendarDayOut"
+            },
+            "title": "Days",
+            "type": "array"
+          },
+          "month": {
+            "title": "Month",
+            "type": "integer"
+          },
+          "timezone": {
+            "title": "Timezone",
+            "type": "string"
+          },
+          "year": {
+            "title": "Year",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "timezone",
+          "year",
+          "month",
+          "days"
+        ],
+        "title": "RecordCalendarContextOut",
+        "type": "object"
+      },
+      "RecordCalendarDayOut": {
+        "properties": {
+          "date": {
+            "title": "Date",
+            "type": "string"
+          },
+          "end": {
+            "title": "End",
+            "type": "string"
+          },
+          "start": {
+            "title": "Start",
+            "type": "string"
+          }
+        },
+        "required": [
+          "date",
+          "start",
+          "end"
+        ],
+        "title": "RecordCalendarDayOut",
+        "type": "object"
+      },
       "RecordVersionSaveInput": {
         "additionalProperties": false,
         "properties": {
@@ -13178,6 +13439,88 @@
         "summary": "App 用的能力开关和参数",
         "tags": [
           "config"
+        ]
+      }
+    },
+    "/v1/dietary-history/statistics": {
+      "get": {
+        "operationId": "getDietaryStatistics",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "period",
+            "required": false,
+            "schema": {
+              "default": "month",
+              "enum": [
+                "week",
+                "month",
+                "year"
+              ],
+              "title": "Period",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Account-local date; defaults to today",
+            "in": "query",
+            "name": "anchor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Account-local date; defaults to today",
+              "title": "Anchor"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DietaryStatisticsOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "参数错误"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "服务端错误"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Dietary Statistics",
+        "tags": [
+          "dietary-history"
         ]
       }
     },
@@ -16620,6 +16963,23 @@
               "title": "Change Id",
               "type": "string"
             }
+          },
+          {
+            "in": "query",
+            "name": "source",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "const": "monthly_review",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Source"
+            }
           }
         ],
         "responses": {
@@ -16717,6 +17077,23 @@
               "format": "uuid",
               "title": "Change Id",
               "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "source",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "const": "monthly_review",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Source"
             }
           }
         ],
@@ -21700,6 +22077,76 @@
           }
         ],
         "summary": "Create Record",
+        "tags": [
+          "records"
+        ]
+      }
+    },
+    "/v1/records/calendar-context": {
+      "get": {
+        "operationId": "getRecordCalendarContext",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "year",
+            "required": true,
+            "schema": {
+              "maximum": 2200,
+              "minimum": 1900,
+              "title": "Year",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "month",
+            "required": true,
+            "schema": {
+              "maximum": 12,
+              "minimum": 1,
+              "title": "Month",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecordCalendarContextOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "参数错误"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "服务端错误"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Record Calendar Context",
         "tags": [
           "records"
         ]

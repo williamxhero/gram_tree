@@ -10,6 +10,7 @@ lib/src/api/allergies_api.dart
 lib/src/api/analytics_api.dart
 lib/src/api/auth_api.dart
 lib/src/api/config_api.dart
+lib/src/api/dietary_history_api.dart
 lib/src/api/events_api.dart
 lib/src/api/exports_api.dart
 lib/src/api/family_members_api.dart
@@ -87,6 +88,10 @@ lib/src/model/deletion_public_recipe.dart
 lib/src/model/deletion_request.dart
 lib/src/model/density_attribute.dart
 lib/src/model/detail_preference.dart
+lib/src/model/dietary_dish_count.dart
+lib/src/model/dietary_distribution_item.dart
+lib/src/model/dietary_statistics_out.dart
+lib/src/model/dietary_unclassified_dish.dart
 lib/src/model/dish_input.dart
 lib/src/model/dish_out.dart
 lib/src/model/email_code_request.dart
@@ -239,6 +244,8 @@ lib/src/model/recipe_version_create.dart
 lib/src/model/recipe_version_history.dart
 lib/src/model/recipe_version_out.dart
 lib/src/model/recipe_version_summary.dart
+lib/src/model/record_calendar_context_out.dart
+lib/src/model/record_calendar_day_out.dart
 lib/src/model/record_version_save_input.dart
 lib/src/model/refresh_request.dart
 lib/src/model/rejection_reason.dart

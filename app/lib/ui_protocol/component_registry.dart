@@ -1,4 +1,4 @@
-import 'package:flutter/widgets.dart';
+import 'package:flutter/material.dart';
 import 'package:gramtree_api/gramtree_api.dart';
 
 import 'components/empty_state_component.dart';
@@ -8,10 +8,98 @@ import 'components/section_title_component.dart';
 import 'components/source_demo_component.dart';
 import 'components/scenario_summary_component.dart';
 import 'components/scenario_notice_component.dart';
+import 'components/component_scaffold.dart';
+import 'source_mark.dart';
+import 'source_types.dart';
+import 'components/records_calendar_component.dart';
 import 'components/text_block_component.dart';
 import 'recipe_components.dart';
 import 'source_attribution.dart';
 import 'recipe_safety_protocol.dart';
+import 'dietary_statistics_protocol.dart';
+
+Widget buildMonthlyReviewComponent(
+  BuildContext context,
+  ComponentDescriptor component,
+  ComponentEmptyState emptyState,
+  void Function(ActionDescriptor action) onAction,
+) {
+  final data = component.data is Map
+      ? Map<String, dynamic>.from(component.data as Map)
+      : const <String, dynamic>{};
+  final conclusion = data['conclusion'] as String?;
+  final changes = (data['taste_changes'] as List? ?? const [])
+      .whereType<Map>()
+      .toList();
+  if (conclusion == null || conclusion.isEmpty) {
+    return ComponentEmptyCard(emptyState: emptyState);
+  }
+  final detailed = component.detail == ComponentDescriptorDetailEnum.detailed;
+  final source = data['source'];
+  final sourceData = source is Map ? Map<String, dynamic>.from(source) : null;
+  final basis =
+      parseBasisText(data) ??
+      (sourceData == null ? null : parseBasisText(sourceData));
+  Widget changeList({required bool detailed}) => Column(
+    crossAxisAlignment: CrossAxisAlignment.stretch,
+    children: [
+      for (final change in changes)
+        Semantics(
+          container: true,
+          label:
+              '${change['field'] ?? '口味变化'}${detailed ? '，变更前 ${change['old_value'] ?? ''}，变更后 ${change['new_value'] ?? ''}，${change['reason'] ?? ''}' : ''}',
+          child: ListTile(
+            dense: true,
+            leading: const Icon(Icons.tune),
+            title: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    change['conclusion'] as String? ??
+                        change['field'] as String? ??
+                        '口味变化',
+                  ),
+                ),
+                if (change['source'] is Map)
+                  SourceMark(
+                    sourceType:
+                        (change['source'] as Map)['source_type'] as String? ??
+                        sourceTypeVerified,
+                    componentId: 'monthly-review-${change['field']}',
+                    value:
+                        (change['source'] as Map)['value'] as String? ?? '已登记',
+                    basisText:
+                        parseBasisText(
+                          Map<String, dynamic>.from(change['source'] as Map),
+                        ) ??
+                        '已登记的月度回顾依据',
+                    required: false,
+                    showWhenAuthorFilled: true,
+                    onAction: onAction,
+                  ),
+              ],
+            ),
+            subtitle: detailed
+                ? Text(
+                    '${change['old_value'] ?? ''} → ${change['new_value'] ?? ''}\n${change['reason'] ?? ''}',
+                  )
+                : null,
+          ),
+        ),
+    ],
+  );
+  return ComponentCard(
+    detail: component.detail,
+    conclusion: Text(conclusion),
+    conclusionSemanticsText: conclusion,
+    basisText: basis,
+    standardExtra: switch (component.detail) {
+      ComponentDescriptorDetailEnum.standard => changeList(detailed: false),
+      _ => null,
+    },
+    detailedExtra: detailed ? changeList(detailed: true) : null,
+  );
+}
 
 /// 组件登记时要给的标准空态文案：结论层（各组件类型自己的必填字段，比如
 /// `hint_bar`/`text_block`/`section_title` 的 `conclusion`，`list` 的 `items`）
@@ -168,8 +256,34 @@ final defaultComponentRegistry = ComponentRegistry(const [
     emptyState: ComponentEmptyState(title: '暂时无法确认食品安全信息'),
   ),
   ComponentSpec(
+    type: 'records_calendar',
+    builder: buildRecordsCalendarComponent,
+    emptyState: ComponentEmptyState(
+      title: '还没有记录',
+      message: '做完菜点做好了，这里就会出现你的记录。',
+    ),
+  ),
+  ComponentSpec(
     type: 'allergen_notice',
     builder: buildAllergenNoticeProtocolComponent,
     emptyState: ComponentEmptyState(title: '暂时无法确认过敏原信息'),
+  ),
+  ComponentSpec(
+    type: 'monthly_review',
+    builder: buildMonthlyReviewComponent,
+    emptyState: ComponentEmptyState(
+      title: '这个月还没有回顾内容',
+      message: '有做菜记录或口味变化后，这里会显示月度回顾。',
+    ),
+  ),
+  ComponentSpec(
+    type: 'dietary_statistics',
+    builder: buildDietaryStatisticsComponent,
+    emptyState: ComponentEmptyState(title: '统计暂时不可用'),
+  ),
+  ComponentSpec(
+    type: 'dietary_distribution',
+    builder: buildDietaryDistributionComponent,
+    emptyState: ComponentEmptyState(title: '分布暂时不可用'),
   ),
 ]);

@@ -44,5 +44,22 @@ class MobileDeviceCapabilities implements DeviceCapabilities {
       _channel.invokeMethod<void>('cancelTimerReminder', {'id': id});
 
   @override
+  Future<void> scheduleMonthlyReviewReminder({
+    required String id,
+    required DateTime dueAt,
+    required String timezone,
+  }) => _channel.invokeMethod<void>('scheduleMonthlyReviewReminder', {
+    'id': id,
+    'dueAtMillis': dueAt.toUtc().millisecondsSinceEpoch,
+    'timezone': timezone,
+    'title': '上月回顾已准备好',
+    'body': '来看看上个月的做菜记录和口味变化。',
+  });
+
+  @override
+  Future<void> cancelMonthlyReviewReminder(String id) =>
+      _channel.invokeMethod<void>('cancelMonthlyReviewReminder', {'id': id});
+
+  @override
   Future<void> vibrate() => HapticFeedback.mediumImpact();
 }

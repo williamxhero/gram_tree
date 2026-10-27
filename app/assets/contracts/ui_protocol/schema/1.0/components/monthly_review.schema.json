@@ -1,0 +1,48 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://gramtree.app/contracts/ui_protocol/1.0/components/monthly_review.schema.json",
+  "title": "每月回顾卡",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["conclusion", "month", "source", "taste_changes"],
+  "properties": {
+    "conclusion": {"type": "string", "minLength": 1},
+    "month": {"type": "string", "pattern": "^\\d{4}-(0[1-9]|1[0-2])$"},
+    "taste_changes": {"type": "array", "items": {
+      "type": "object", "additionalProperties": false,
+      "required": ["field", "conclusion", "source"],
+      "properties": {
+        "field": {"type": "string", "minLength": 1},
+        "conclusion": {"type": "string", "minLength": 1},
+        "old_value": {"type": "string"},
+        "new_value": {"type": "string"},
+        "reason": {"type": "string"},
+        "source": {"type": "object", "additionalProperties": false,
+          "required": ["source_type", "value", "basis"],
+          "properties": {
+            "source_type": {"enum": ["taste_adjusted", "author_filled"]},
+            "value": {"type": "string", "minLength": 1},
+            "basis": {"type": "object"}
+          }
+        }
+      }
+    }},
+    "source": {
+      "type": "object", "additionalProperties": false,
+      "required": ["source_type", "value", "basis"],
+      "properties": {
+        "source_type": {"const": "verified"},
+        "value": {"type": "string", "minLength": 1},
+        "basis": {
+          "type": "object", "additionalProperties": false,
+          "required": ["reason_code", "text", "citation"],
+          "properties": {
+            "reason_code": {"type": "string", "minLength": 1},
+            "text": {"type": "string", "minLength": 1},
+            "citation": {"type": "string", "minLength": 1}
+          }
+        }
+      }
+    }
+  }
+}

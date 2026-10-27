@@ -27,6 +27,16 @@ abstract class DeviceCapabilities {
 
   Future<void> cancelTimerReminder(String id);
 
+  /// Schedules a monthly review reminder using the same native notification
+  /// plumbing as cooking timers.
+  Future<void> scheduleMonthlyReviewReminder({
+    required String id,
+    required DateTime dueAt,
+    required String timezone,
+  });
+
+  Future<void> cancelMonthlyReviewReminder(String id);
+
   /// Short haptic / vibration feedback.
   Future<void> vibrate();
 }

@@ -13,6 +13,7 @@ from gramtree.core.errors import install_error_handlers
 from gramtree.core.logging import configure_logging
 from gramtree.core.middleware import RequestContextMiddleware
 from gramtree.db import make_engine, make_session_factory
+from gramtree.dietary_history import router as dietary_history
 from gramtree.events import dev as events_dev
 from gramtree.events import router as events
 from gramtree.events import sync_router as sync
@@ -84,6 +85,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     v1.include_router(recipe_improvements.router)
     v1.include_router(recipes.router)
     v1.include_router(records.router)
+    v1.include_router(dietary_history.router)
     v1.include_router(recipe_imports.router)
     v1.include_router(recipe_ai.router)
     v1.include_router(personal_measures.router)

@@ -106,6 +106,7 @@ class TasteProfileApi {
   ///
   /// Parameters:
   /// * [changeId]
+  /// * [source_]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -117,6 +118,7 @@ class TasteProfileApi {
   /// Throws [DioException] if API call or serialization fails
   Future<Response<TasteProfileChangeOut>> confirmChange({
     required String changeId,
+    String? source_,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
     Map<String, dynamic>? extra,
@@ -143,9 +145,12 @@ class TasteProfileApi {
       validateStatus: validateStatus,
     );
 
+    final _queryParameters = <String, dynamic>{r'source': source_};
+
     final _response = await _dio.request<Object>(
       _path,
       options: _options,
+      queryParameters: _queryParameters,
       cancelToken: cancelToken,
       onSendProgress: onSendProgress,
       onReceiveProgress: onReceiveProgress,
@@ -833,6 +838,7 @@ class TasteProfileApi {
   ///
   /// Parameters:
   /// * [changeId]
+  /// * [source_]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -844,6 +850,7 @@ class TasteProfileApi {
   /// Throws [DioException] if API call or serialization fails
   Future<Response<TasteProfileChangeOut>> revertChange({
     required String changeId,
+    String? source_,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
     Map<String, dynamic>? extra,
@@ -869,9 +876,12 @@ class TasteProfileApi {
       validateStatus: validateStatus,
     );
 
+    final _queryParameters = <String, dynamic>{r'source': source_};
+
     final _response = await _dio.request<Object>(
       _path,
       options: _options,
+      queryParameters: _queryParameters,
       cancelToken: cancelToken,
       onSendProgress: onSendProgress,
       onReceiveProgress: onReceiveProgress,

@@ -992,7 +992,13 @@ def before_change_state(
     return flavors, preferences, max(1, target.effective_version - 1)
 
 
-def confirm_change(session: Session, profile: TasteProfile, row: TasteProfileChange) -> None:
+def confirm_change(
+    session: Session,
+    profile: TasteProfile,
+    row: TasteProfileChange,
+    *,
+    source: str | None = None,
+) -> None:
     if row.owner_id != profile.owner_id:
         raise NotFound()
     if row.status == "pending":
@@ -1003,10 +1009,12 @@ def confirm_change(session: Session, profile: TasteProfile, row: TasteProfileCha
         row.status = "confirmed"
         row.effective_at = profile.updated_at
         row.effective_version = profile.version
-        profile_service.record_change_event(session, profile, row)
+        profile_service.record_change_event(session, profile, row, source=source)
     elif row.status == "active":
         # An already-applied numeric change: confirmation only changes status.
         row.status = "confirmed"
+        if source is not None:
+            profile_service.record_change_event(session, profile, row, source=source)
     session.flush()
 
 
@@ -1037,7 +1045,13 @@ def _apply_change_value(session: Session, profile: TasteProfile, row: TasteProfi
         profile.local_cuisines = rows
 
 
-def revert_change(session: Session, profile: TasteProfile, row: TasteProfileChange) -> None:
+def revert_change(
+    session: Session,
+    profile: TasteProfile,
+    row: TasteProfileChange,
+    *,
+    source: str | None = None,
+) -> None:
     if row.owner_id != profile.owner_id:
         raise NotFound()
     if row.status == "reverted":
@@ -1104,7 +1118,7 @@ def revert_change(session: Session, profile: TasteProfile, row: TasteProfileChan
     row.status = "reverted"
     row.reverted_at = utcnow()
     profile.version += 1
-    profile_service.record_change_event(session, profile, row)
+    profile_service.record_change_event(session, profile, row, source=source)
     # Reverted evidence must never be re-learned from the same old signal.
     for signal in session.scalars(
         select(TasteLearningSignal).where(
@@ -1119,7 +1133,7 @@ def revert_change(session: Session, profile: TasteProfile, row: TasteProfileChan
             owner_id=profile.owner_id,
             change_id=new_id(),
             event_type="auto_change_reverted",
-            source=row.origin,
+            source=source or row.origin,
             origin_change_id=row.id,
             field=row.field,
             created_at=utcnow(),

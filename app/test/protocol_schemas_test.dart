@@ -90,4 +90,42 @@ void main() {
     );
     expect(issues, isNotEmpty);
   });
+
+  test('统计组件协议接受结论、周期、次数和已验证来源', () async {
+    final issues = await schemas.validateComponentData(
+      '1.0',
+      'dietary_statistics',
+      {
+        'conclusion': '本月做了 3 次菜',
+        'period': 'month',
+        'cooking_count': 3,
+        'generated_at': '2026-03-15T00:00:00Z',
+        'source': {
+          'source_type': 'verified',
+          'value': '3 次',
+          'basis': {
+            'reason_code': 'server_statistics',
+            'text': '来自本人记录',
+            'citation': '2026-03',
+          },
+        },
+      },
+    );
+    expect(issues, isEmpty);
+  });
+
+  test('统计分布协议拒绝负数', () async {
+    final issues = await schemas.validateComponentData(
+      '1.0',
+      'dietary_distribution',
+      {
+        'conclusion': '主料分布',
+        'title': '主料分布',
+        'items': [
+          {'key': '蔬菜', 'count': -1},
+        ],
+      },
+    );
+    expect(issues, isNotEmpty);
+  });
 }

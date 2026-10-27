@@ -203,22 +203,28 @@ def append_server_event(
 
 
 def record_taste_profile_changed(
-    session: Session, user_id: uuid.UUID, change_id: uuid.UUID, *, now: datetime
+    session: Session,
+    user_id: uuid.UUID,
+    change_id: uuid.UUID,
+    *,
+    now: datetime,
+    source: str | None = None,
+    event_id: uuid.UUID | None = None,
 ) -> None:
     """Append metadata in the caller's profile/history transaction, without commit.
 
-    The immutable change UUID is also the event UUID. Upload retries therefore
-    use the existing global deduplication rule, never invent a second event.
+    Initial changes use their immutable UUID for retry deduplication. Later
+    actions use their own event UUID while retaining the original change link.
     """
     item = EventInput(
-        id=change_id,
+        id=event_id or change_id,
         event_type="taste_profile.changed",
         type_version=1,
         device_id="server",
         device_time=now,
         app_version="server",
         correlation={"taste_profile_change_id": str(change_id)},
-        content={},
+        content={"source": source} if source is not None else {},
     )
     session.add(
         Event(

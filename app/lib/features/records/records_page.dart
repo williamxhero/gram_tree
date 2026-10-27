@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:gramtree_api/gramtree_api.dart';
 
 import '../../api/api_client.dart';
@@ -8,42 +9,34 @@ import '../../auth/session.dart';
 import '../../events/event_queue.dart';
 import '../../events/event_uploader.dart';
 import '../../events/sync_status.dart';
+import 'dietary_statistics_widget.dart';
+import 'monthly_review.dart';
+import 'monthly_review_entry_card.dart';
+import 'records_calendar.dart';
+import 'records_history.dart';
 import '../../l10n/app_localizations.dart';
 import '../../ui_protocol/intent_dispatcher.dart';
 import '../../ui_protocol/recipe_operations.dart';
 import '../../util/ids.dart';
 import '../me/taste_profile_data.dart';
+import '../../recipes/recipe_snapshot.dart';
+import '../recipes/cooking_session.dart';
 import '../recipes/improvement_save.dart';
 import '../recipes/recipe_pages.dart';
 import '../../widgets/empty_state.dart';
 import '../../widgets/tab_page.dart';
 
-final recordsProvider = FutureProvider.autoDispose<CookingRecordListOut>((
+final recordsProvider = FutureProvider.autoDispose<RecordHistorySnapshot?>((
   ref,
 ) async {
   final auth = ref.watch(authProvider);
-  if (auth.value == null) return CookingRecordListOut(items: const []);
-  final session = ref.read(sessionStoreProvider);
-  final identity = session.identity;
-  if (identity == null) return CookingRecordListOut(items: const []);
+  if (auth.value == null) return null;
+  final identity = ref.read(sessionStoreProvider).identity;
+  if (identity == null) return null;
   try {
-    final response = await ref
-        .watch(apiClientProvider)
-        .getRecordsApi()
-        .listRecords(
-          extra: {
-            'auth_owner_id': identity.ownerId,
-            'auth_identity_epoch': identity.epoch,
-          },
-        );
-    if (!session.matches(identity)) {
-      return CookingRecordListOut(items: const []);
-    }
-    return response.data ?? CookingRecordListOut(items: const []);
+    return await ref.read(recordsHistoryProvider).loadCurrent(identity);
   } catch (_) {
-    // Keep the tab usable while offline; completed sessions remain in the
-    // account-scoped queue and will appear on a later successful refresh.
-    return CookingRecordListOut(items: const []);
+    return await ref.read(recordsHistoryProvider).read(identity.ownerId);
   }
 });
 
@@ -55,65 +48,89 @@ class RecordsPage extends ConsumerWidget {
     final records = ref.watch(recordsProvider);
     final queued =
         ref.watch(syncStatusProvider).value?.entries ?? const <QueueEntry>[];
-    ref.listen(
-      confirmedCookingRecordRevisionProvider,
-      (_, _) => ref.invalidate(recordsProvider),
-    );
+    ref.listen(confirmedCookingRecordRevisionProvider, (_, _) {
+      ref.invalidate(recordsProvider);
+      ref.invalidate(monthlyReviewProvider);
+    });
     return TabPage(
       child: records.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (_, _) =>
             _RecordsError(onRetry: () => ref.invalidate(recordsProvider)),
-        data: (page) {
-          final byId = <String, (CookingRecordOut, String?, bool)>{
-            for (final record in page.items) record.id: (record, null, false),
-          };
-          for (final entry in queued.where(
-            (entry) => entry.write.writeType == 'cooking_record.create',
-          )) {
-            final raw = entry.write.payload['record'];
-            if (raw is! Map || raw['client_id'] is! String) continue;
-            final remote = page.items
-                .where((record) => record.clientId == raw['client_id'])
-                .firstOrNull;
-            if (remote == null && entry.state == WriteState.confirmed) continue;
-            try {
-              final local =
-                  remote ??
-                  CookingRecordOut.fromJson({
-                    ...Map<String, dynamic>.from(raw),
-                    'id': raw['client_id'],
-                    'created_at': entry.write.deviceTime.toIso8601String(),
-                    'verification': 'unverified',
-                    'counts_as_cooked': false,
-                    'meal': raw['meal'],
-                    'taste_summary': <String, Object>{},
-                  });
-              byId[local.id] = (local, entry.write.id, remote == null);
-            } catch (_) {
-              // A legacy malformed write remains on the sync page, not a broken record card.
-            }
+        data: (snapshot) {
+          if (snapshot == null) {
+            return const _RecordsError(onRetry: null);
           }
-          if (byId.isEmpty) {
-            return const EmptyState(
-              icon: Icons.menu_book_outlined,
-              title: '还没有做菜记录',
-              message: '每次做完菜后的记录和心得会保存在这里。',
+          final pendingEntries = queued
+              .where(
+                (entry) => entry.write.writeType == 'cooking_record.create',
+              )
+              .toList();
+          final raws = ref
+              .read(recordsHistoryProvider)
+              .withPending(snapshot, pendingEntries);
+          final byClient = <String, (CookingRecordOut, String?, bool)>{};
+          for (final raw in raws) {
+            try {
+              final record = CookingRecordOut.fromJson(raw);
+              final pending = pendingEntries.any(
+                (entry) =>
+                    entry.write.payload['record'] is Map &&
+                    (entry.write.payload['record'] as Map)['client_id'] ==
+                        record.clientId &&
+                    entry.state != WriteState.confirmed,
+              );
+              byClient[record.id] = (
+                record,
+                pending
+                    ? pendingEntries
+                          .firstWhere(
+                            (entry) =>
+                                (entry.write.payload['record']
+                                    as Map)['client_id'] ==
+                                record.clientId,
+                          )
+                          .write
+                          .id
+                    : null,
+                pending,
+              );
+            } catch (_) {}
+          }
+          if (byClient.isEmpty) {
+            return ListView(
+              padding: const EdgeInsets.fromLTRB(20, 24, 20, 32),
+              children: [
+                const MonthlyReviewEntryCard(),
+                const SizedBox(
+                  height: 240,
+                  child: ClipRect(
+                    child: EmptyState(
+                      icon: Icons.menu_book_outlined,
+                      title: '还没有做菜记录',
+                      message: '每次做完菜后的记录和心得会保存在这里。',
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 24),
+                const DietaryStatisticsWidget(),
+                const SizedBox(height: 20),
+                const MonthlyReviewSection(),
+              ],
             );
           }
-          return ListView(
-            padding: const EdgeInsets.fromLTRB(20, 24, 20, 32),
-            children: [
-              Text('做过记录', style: Theme.of(context).textTheme.headlineSmall),
-              const SizedBox(height: 16),
-              for (final (record, writeId, pending) in byId.values)
-                _RecordCard(
-                  key: ValueKey(record.id),
-                  record: record,
-                  recordWriteId: writeId,
-                  pending: pending,
-                ),
-            ],
+          return RecordsCalendar(
+            snapshot: snapshot,
+            records: byClient.values.toList(),
+            above: const MonthlyReviewEntryCard(),
+            below: const Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                DietaryStatisticsWidget(),
+                SizedBox(height: 20),
+                MonthlyReviewSection(),
+              ],
+            ),
           );
         },
       ),
@@ -121,8 +138,8 @@ class RecordsPage extends ConsumerWidget {
   }
 }
 
-class _RecordCard extends ConsumerStatefulWidget {
-  const _RecordCard({
+class RecordCard extends ConsumerStatefulWidget {
+  const RecordCard({
     super.key,
     required this.record,
     this.recordWriteId,
@@ -133,10 +150,10 @@ class _RecordCard extends ConsumerStatefulWidget {
   final bool pending;
 
   @override
-  ConsumerState<_RecordCard> createState() => _RecordCardState();
+  ConsumerState<RecordCard> createState() => RecordCardState();
 }
 
-class _RecordCardState extends ConsumerState<_RecordCard> {
+class RecordCardState extends ConsumerState<RecordCard> {
   bool _saving = false;
   bool _deleting = false;
   final _requestId = newUuidV4();
@@ -225,8 +242,19 @@ class _RecordCardState extends ConsumerState<_RecordCard> {
     }
   }
 
+  Future<void> _replay() async {
+    final identity = ref.read(sessionStoreProvider).identity;
+    final frozen = FrozenRecipeSnapshot.fromJson(record.snapshot);
+    final store = ref.read(cookingSessionStoreProvider);
+    if (identity == null || frozen == null || store == null) return;
+    final session = await store.start(frozen);
+    if (!mounted || !ref.read(sessionStoreProvider).matches(identity)) return;
+    await context.push('/cooking/${session.id}');
+  }
+
   void _showSnapshot() {
     final saved = _savedDetail;
+    final canReplay = FrozenRecipeSnapshot.fromJson(record.snapshot) != null;
     showDialog<void>(
       context: context,
       builder: (context) => AlertDialog(
@@ -238,6 +266,7 @@ class _RecordCardState extends ConsumerState<_RecordCard> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
+              const Text('记录详情'),
               Text(AppLocalizations.of(context).recordSnapshotGuidance),
               if (saved != null) ...[
                 Text(
@@ -253,13 +282,24 @@ class _RecordCardState extends ConsumerState<_RecordCard> {
                 for (final step
                     in saved.version.snapshot.steps ?? <RecipeStep>[])
                   Text(step.instruction),
-              ] else
+              ] else ...[
                 Text(AppLocalizations.of(context).recordNoSnapshot),
+                const Text('没有关联菜谱，不能直接再做一次。'),
+              ],
               for (final adjustment in record.adjustments) Text('$adjustment'),
             ],
           ),
         ),
         actions: [
+          if (canReplay)
+            FilledButton(
+              key: ValueKey('record-replay-${record.id}'),
+              onPressed: () {
+                Navigator.pop(context);
+                _replay();
+              },
+              child: const Text('再做一次'),
+            ),
           TextButton(
             onPressed: () => Navigator.pop(context),
             child: Text(AppLocalizations.of(context).familyClose),
@@ -345,9 +385,13 @@ class _RecordCardState extends ConsumerState<_RecordCard> {
             subtitle: Text(
               [
                 if (when != null) '${when.year}/${when.month}/${when.day}',
-                record.source_ == CookingRecordOutSource_Enum.cookingSession
-                    ? AppLocalizations.of(context).recordCookingMode
-                    : AppLocalizations.of(context).recordManual,
+                switch (record.source_) {
+                  CookingRecordOutSource_Enum.cookingSession =>
+                    AppLocalizations.of(context).recordCookingMode,
+                  CookingRecordOutSource_Enum.externalCooking => 'App 外做菜',
+                  CookingRecordOutSource_Enum.dining => '外食/外卖',
+                  _ => AppLocalizations.of(context).recordManual,
+                },
                 if (widget.pending)
                   AppLocalizations.of(context).syncPendingReason,
                 if (record.adjustments.isNotEmpty)
@@ -407,7 +451,7 @@ class _RecordCardState extends ConsumerState<_RecordCard> {
 
 class _RecordsError extends StatelessWidget {
   const _RecordsError({required this.onRetry});
-  final VoidCallback onRetry;
+  final VoidCallback? onRetry;
 
   @override
   Widget build(BuildContext context) => Center(
@@ -416,7 +460,8 @@ class _RecordsError extends StatelessWidget {
       children: [
         const Text('记录暂时无法读取'),
         const SizedBox(height: 12),
-        FilledButton(onPressed: onRetry, child: const Text('重试')),
+        if (onRetry != null)
+          FilledButton(onPressed: onRetry, child: const Text('重试')),
       ],
     ),
   );

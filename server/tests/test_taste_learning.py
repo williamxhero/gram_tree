@@ -5,7 +5,13 @@
 """
 
 from datetime import UTC, datetime, timedelta
+from uuid import UUID
 
+from sqlalchemy import select
+from sqlalchemy.engine import Engine
+from sqlalchemy.orm import Session
+
+from gramtree.events.models import Event
 from tests.accounts_support import Api, bearer, new_uuid
 from tests.test_sync_writes import envelope, submit
 
@@ -222,7 +228,9 @@ def test_same_version_majority_blames_recipe_and_keeps_profile_untouched(api: Ap
     assert salty(api, owner) == baseline
 
 
-def test_revert_restores_value_and_blocks_relearning_then_lock_freezes_field(api: Api) -> None:
+def test_monthly_review_confirm_and_revert_events_keep_only_source_metadata(
+    api: Api, engine: Engine
+) -> None:
     tokens = api.login("taste-learning-i@example.com")
     create(api, tokens, adjustments=[{"flavor": "salty", "delta": -1}])
     outcome = run_learning(api, tokens)
@@ -230,11 +238,37 @@ def test_revert_restores_value_and_blocks_relearning_then_lock_freezes_field(api
     before = change["old_value"]["coefficient"]
     assert change["new_value"]["coefficient"] < before, "学习必须下调咸度"
 
+    confirmed = api.client.post(
+        f"/v1/me/taste-profile/changes/{change['id']}/confirm",
+        headers=bearer(tokens),
+        params={"source": "monthly_review"},
+    )
+    assert confirmed.status_code == 200, confirmed.text
+    assert confirmed.json()["status"] == "confirmed"
+
     reverted = api.client.post(
-        f"/v1/me/taste-profile/changes/{change['id']}/revert", headers=bearer(tokens)
+        f"/v1/me/taste-profile/changes/{change['id']}/revert",
+        headers=bearer(tokens),
+        params={"source": "monthly_review"},
     )
     assert reverted.status_code == 200, reverted.text
     assert salty(api, tokens) == before, "撤销必须恢复旧值"
+
+    with Session(engine) as session:
+        events = list(
+            session.scalars(
+                select(Event).where(
+                    Event.user_id == UUID(tokens["user"]["id"]),
+                    Event.event_type == "taste_profile.changed",
+                    Event.content["source"].as_string() == "monthly_review",
+                )
+            )
+        )
+    assert len(events) == 2
+    assert all(event.content == {"source": "monthly_review"} for event in events)
+    expected_correlation = {"taste_profile_change_id": change["id"]}
+    assert all(event.correlation == expected_correlation for event in events)
+    assert all("record_id" not in event.content for event in events)
 
     replay = run_learning(api, tokens)
     assert replay["applied_changes"] == [], "撤销后同样的旧信号不得马上学回来"

@@ -36,6 +36,8 @@ class CookingRecordOut {
 
     required this.occurredAt,
 
+    required this.photos,
+
     required this.recipeId,
 
     required this.recipeVersionId,
@@ -78,6 +80,9 @@ class CookingRecordOut {
   @JsonKey(name: r'occurred_at', required: true, includeIfNull: false)
   final String occurredAt;
 
+  @JsonKey(name: r'photos', required: true, includeIfNull: false)
+  final List<String> photos;
+
   @JsonKey(name: r'recipe_id', required: true, includeIfNull: true)
   final String? recipeId;
 
@@ -112,6 +117,7 @@ class CookingRecordOut {
           other.id == id &&
           other.meal == meal &&
           other.occurredAt == occurredAt &&
+          other.photos == photos &&
           other.recipeId == recipeId &&
           other.recipeVersionId == recipeVersionId &&
           other.snapshot == snapshot &&
@@ -131,6 +137,7 @@ class CookingRecordOut {
       id.hashCode +
       (meal == null ? 0 : meal.hashCode) +
       occurredAt.hashCode +
+      photos.hashCode +
       (recipeId == null ? 0 : recipeId.hashCode) +
       (recipeVersionId == null ? 0 : recipeVersionId.hashCode) +
       (snapshot == null ? 0 : snapshot.hashCode) +

@@ -128,10 +128,21 @@ def record_changes(
     return rows
 
 
-def record_change_event(session: Session, profile: TasteProfile, row: TasteProfileChange) -> None:
+def record_change_event(
+    session: Session,
+    profile: TasteProfile,
+    row: TasteProfileChange,
+    *,
+    source: str | None = None,
+) -> None:
     """Append the revert/unlock fact with its own event ID (never reuse change ID)."""
     record_taste_profile_changed(
-        session, profile.owner_id, new_id(), now=row.reverted_at or utcnow()
+        session,
+        profile.owner_id,
+        row.id,
+        now=row.reverted_at or utcnow(),
+        source=source,
+        event_id=new_id(),
     )
 
 

@@ -39,6 +39,7 @@ class CookingRecord(Base):
     source_context: Mapped[dict[str, Any]] = mapped_column(JSONB, default=dict)
     taste_summary: Mapped[dict[str, Any]] = mapped_column(JSONB, default=dict)
     co_diner_ids: Mapped[list[str]] = mapped_column(JSONB, default=list)
+    photos: Mapped[list[str]] = mapped_column(JSONB, default=list)
     created_at: Mapped[datetime] = mapped_column(default=utcnow)
 
 

@@ -8,6 +8,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gram_tree/app/theme.dart';
 import 'package:gram_tree/l10n/app_localizations.dart';
 import 'package:gram_tree/ui_protocol/component_registry.dart';
+import 'package:gram_tree/ui_protocol/dietary_statistics_protocol.dart';
 import 'package:gramtree_api/gramtree_api.dart';
 
 /// SPEC-009.1 #80：通用组件库和设计系统定稿。只看外部表现（页面显示、读屏
@@ -77,6 +78,201 @@ void main() {
 
   final registry = defaultComponentRegistry;
   final generalTypes = ['hint_bar', 'section_title', 'text_block', 'list'];
+
+  testWidgets('monthly_review 注册三档详略、空态和语义', (tester) async {
+    final spec = registry['monthly_review']!;
+    expect(spec.emptyState.title, isNotEmpty);
+    final data = {
+      'conclusion': '上月做菜 3 次',
+      'month': '2026-03',
+      'taste_changes': [
+        {
+          'field': 'flavors.spicy',
+          'conclusion': '辣度按近期记录调整',
+          'old_value': '标准',
+          'new_value': '少辣',
+          'reason': '近期做菜时多次调整',
+          'source': {
+            'source_type': 'taste_adjusted',
+            'value': '按你的口味换算',
+            'basis': {
+              'reason_code': 'learning',
+              'text': '近期记录',
+              'citation': '记录',
+            },
+          },
+        },
+      ],
+      'source': {
+        'source_type': 'verified',
+        'value': '账号记录',
+        'basis': {
+          'reason_code': 'monthly_statistics',
+          'text': '来自当月记录',
+          'citation': '月度回顾',
+        },
+      },
+    };
+    final semantics = tester.ensureSemantics();
+    for (final detail in ComponentDescriptorDetailEnum.values) {
+      await pumpSpec(
+        tester,
+        spec: spec,
+        component: descriptor(
+          type: 'monthly_review',
+          detail: detail,
+          data: data,
+        ),
+      );
+      expect(find.text('上月做菜 3 次'), findsOneWidget);
+      expect(find.bySemanticsLabel(RegExp('上月做菜 3 次')), findsWidgets);
+      if (detail == ComponentDescriptorDetailEnum.brief) {
+        expect(find.text('辣度按近期记录调整'), findsNothing);
+        expect(find.text('来自当月记录'), findsNothing);
+      } else {
+        expect(find.text('辣度按近期记录调整'), findsOneWidget);
+        expect(find.text('来自当月记录'), findsOneWidget);
+      }
+      if (detail == ComponentDescriptorDetailEnum.detailed) {
+        expect(find.textContaining('标准 → 少辣'), findsOneWidget);
+        expect(find.textContaining('近期做菜时多次调整'), findsOneWidget);
+        expect(find.text('按你的口味换算'), findsOneWidget);
+      }
+    }
+    await pumpSpec(
+      tester,
+      spec: spec,
+      component: descriptor(
+        type: 'monthly_review',
+        detail: ComponentDescriptorDetailEnum.brief,
+        data: {},
+      ),
+    );
+    expect(find.text(spec.emptyState.title), findsOneWidget);
+    semantics.dispose();
+  });
+
+  final dietaryStatisticsSpec = ComponentSpec(
+    type: 'dietary_statistics',
+    builder: buildDietaryStatisticsComponent,
+    emptyState: const ComponentEmptyState(title: '统计暂时不可用'),
+  );
+  final dietaryDistributionSpec = ComponentSpec(
+    type: 'dietary_distribution',
+    builder: buildDietaryDistributionComponent,
+    emptyState: const ComponentEmptyState(title: '分布暂时不可用'),
+  );
+
+  group('饮食统计协议：三档详略、来源和动作', () {
+    for (final spec in [dietaryStatisticsSpec, dietaryDistributionSpec]) {
+      for (final detail in ComponentDescriptorDetailEnum.values) {
+        testWidgets('${spec.type} ${detail.name} 分层显示并派发动作', (tester) async {
+          final semantics = tester.ensureSemantics();
+          final data = <String, dynamic>{
+            'conclusion': '本月统计结论',
+            'cooking_count': 3,
+            'source': {
+              'source_type': 'verified',
+              'value': '账号记录',
+              'basis': {'text': '来自当期记录', 'citation': '统计记录'},
+            },
+            'items': [
+              {'key': '清淡', 'count': 2},
+              {'key': '偏辣', 'count': 1},
+            ],
+            'action_label': '查看统计',
+            'detail_label': '查看历史',
+          };
+          final actions = [
+            ActionDescriptor(
+              intent: 'open_page',
+              params: {'page': 'statistics'},
+            ),
+            ActionDescriptor(intent: 'open_page', params: {'page': 'history'}),
+          ];
+          final triggered = await pumpSpec(
+            tester,
+            spec: spec,
+            component: descriptor(
+              type: spec.type,
+              detail: detail,
+              data: data,
+              actions: actions,
+            ),
+          );
+          expect(find.text('本月统计结论'), findsOneWidget);
+          final brief = detail == ComponentDescriptorDetailEnum.brief;
+          expect(find.text('来自当期记录'), brief ? findsNothing : findsOneWidget);
+          expect(find.text('已验证'), brief ? findsNothing : findsOneWidget);
+          expect(find.text('查看统计'), findsOneWidget);
+          expect(
+            find.text('做菜次数：3'),
+            !brief && spec == dietaryStatisticsSpec
+                ? findsOneWidget
+                : findsNothing,
+          );
+          for (final key in ['清淡', '偏辣']) {
+            expect(
+              find.text(key),
+              !brief && spec == dietaryDistributionSpec
+                  ? findsOneWidget
+                  : findsNothing,
+            );
+          }
+          final detailed = detail == ComponentDescriptorDetailEnum.detailed;
+          expect(find.text('查看历史'), detailed ? findsOneWidget : findsNothing);
+          if (!brief) {
+            final basis = tester.widget<Text>(find.text('来自当期记录'));
+            expect(basis.maxLines, detailed ? isNull : 1);
+            expect(find.bySemanticsLabel(RegExp('已验证.*')), findsOneWidget);
+          }
+          await tester.tap(find.text('查看统计'));
+          expect(triggered.single, same(actions.first));
+          if (detailed) {
+            await tester.tap(find.text('查看历史'));
+            expect(triggered.last, same(actions.last));
+          }
+          semantics.dispose();
+          expect(tester.takeException(), isNull);
+        });
+      }
+
+      testWidgets('${spec.type} 缺少结论显示标准空态', (tester) async {
+        await pumpSpec(
+          tester,
+          spec: spec,
+          component: descriptor(
+            type: spec.type,
+            detail: ComponentDescriptorDetailEnum.standard,
+            data: const {},
+          ),
+        );
+        expect(find.text(spec.emptyState.title), findsOneWidget);
+      });
+    }
+
+    testWidgets('分布未提供来源仍保留项目并显示直接依据', (tester) async {
+      await pumpSpec(
+        tester,
+        spec: dietaryDistributionSpec,
+        component: descriptor(
+          type: dietaryDistributionSpec.type,
+          detail: ComponentDescriptorDetailEnum.standard,
+          data: {
+            'conclusion': '口味分布',
+            'basis': {'text': '来自最近做菜记录'},
+            'items': [
+              {'key': '清淡', 'count': 2},
+            ],
+          },
+        ),
+      );
+      expect(find.text('清淡'), findsOneWidget);
+      expect(find.text('2'), findsOneWidget);
+      expect(find.text('来自最近做菜记录'), findsOneWidget);
+      expect(find.text('去看看'), findsNothing);
+    });
+  });
 
   group('三档详略：简略只显示结论和一个主要动作', () {
     for (final type in generalTypes) {

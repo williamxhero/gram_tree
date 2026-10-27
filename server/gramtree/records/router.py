@@ -1,9 +1,12 @@
 """Authenticated cooking-record HTTP API."""
 
+import calendar
 import uuid
+from datetime import UTC, datetime, timedelta
 from typing import Annotated
+from zoneinfo import ZoneInfo
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy import select, tuple_
 from sqlalchemy.orm import Session
 
@@ -23,6 +26,8 @@ from gramtree.records.schemas import (
     CookingRecordOut,
     CookingRecordRevisionCreate,
     CookingRecordRevisionOut,
+    RecordCalendarContextOut,
+    RecordCalendarDayOut,
 )
 from gramtree.records.service import matches_submission, record_created_event
 from gramtree.runtime_config import service as config
@@ -135,6 +140,7 @@ def create_record(
         source_context=source_context,
         taste_summary=taste_summary,
         co_diner_ids=[str(item) for item in co_diner_ids],
+        photos=body.photos,
     )
     session.add(row)
     session.flush()
@@ -168,6 +174,36 @@ def list_records(auth: CurrentAuth, session: SessionDep, page: PageDep) -> Cooki
     return CookingRecordListOut(
         items=[_out(row) for row in rows],
         next_cursor=encode_cursor(rows[-1].created_at, rows[-1].id) if more else None,
+    )
+
+
+@router.get(
+    "/calendar-context",
+    response_model=RecordCalendarContextOut,
+    responses=ERROR_RESPONSES,
+    operation_id="getRecordCalendarContext",
+)
+def record_calendar_context(
+    auth: CurrentAuth,
+    year: Annotated[int, Query(ge=1900, le=2200)],
+    month: Annotated[int, Query(ge=1, le=12)],
+) -> RecordCalendarContextOut:
+    # The account's IANA zone, never the server/device local zone. Cacheable day
+    # boundaries let the offline client group pending writes without tz guesses.
+    zone = ZoneInfo(auth.user.timezone)
+    first = datetime(year, month, 1, tzinfo=zone)
+    return RecordCalendarContextOut(
+        timezone=auth.user.timezone,
+        year=year,
+        month=month,
+        days=[
+            RecordCalendarDayOut(
+                date=(first + timedelta(days=day)).date().isoformat(),
+                start=(first + timedelta(days=day)).astimezone(UTC),
+                end=(first + timedelta(days=day + 1)).astimezone(UTC),
+            )
+            for day in range(calendar.monthrange(year, month)[1])
+        ],
     )
 
 

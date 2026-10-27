@@ -191,6 +191,13 @@ class TasteProfileChangedContentV1(BaseModel):
     """All necessary metadata lives in the owner-checked correlation ID."""
 
     model_config = ConfigDict(extra="forbid")
+    source: Literal["monthly_review"] | None = None
+
+
+class MonthlyReviewOpenedContentV1(BaseModel):
+    """A monthly review was opened; no records or taste values are included."""
+
+    month: str = Field(pattern=r"^\d{4}-(0[1-9]|1[0-2])$")
 
 
 class QuantificationDecisionContentV1(BaseModel):
@@ -426,6 +433,13 @@ ITEMS: tuple[EventTypeSpec, ...] = (
         correlation_fields=("taste_profile_change_id",),
         exportable=True,
         content_schema=TasteProfileChangedContentV1,
+    ),
+    EventTypeSpec(
+        event_type="records.monthly_review_opened",
+        version=1,
+        description="查看每月回顾；仅记录月份，不记录做菜或口味数据",
+        exportable=True,
+        content_schema=MonthlyReviewOpenedContentV1,
     ),
     EventTypeSpec(
         event_type="recipe.quantification_decision",

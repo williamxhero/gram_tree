@@ -1,8 +1,8 @@
 """SPEC-005.3 learning, attribution and change-control API."""
 
-from typing import Annotated
+from typing import Annotated, Literal
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy import select
 
 from gramtree.accounts.deps import CurrentAuth
@@ -187,23 +187,31 @@ def list_pending_changes(
     "/changes/{change_id}/confirm", response_model=TasteProfileChangeOut, responses=_ERRORS
 )
 def confirm_change(
-    change_id: IdV4, auth: CurrentAuth, session: SessionDep
+    change_id: IdV4,
+    auth: CurrentAuth,
+    session: SessionDep,
+    source: Annotated[Literal["monthly_review"] | None, Query()] = None,
 ) -> TasteProfileChangeOut:
     scale = service.scale_for(session)
     profile = service.locked_profile(session, auth.user.id, scale)
     row = learning.owned_change(session, auth.user.id, change_id)
-    learning.confirm_change(session, profile, row)
+    learning.confirm_change(session, profile, row, source=source)
     session.commit()
     session.refresh(row)
     return _out(row)
 
 
 @router.post("/changes/{change_id}/revert", response_model=TasteProfileChangeOut, responses=_ERRORS)
-def revert_change(change_id: IdV4, auth: CurrentAuth, session: SessionDep) -> TasteProfileChangeOut:
+def revert_change(
+    change_id: IdV4,
+    auth: CurrentAuth,
+    session: SessionDep,
+    source: Annotated[Literal["monthly_review"] | None, Query()] = None,
+) -> TasteProfileChangeOut:
     scale = service.scale_for(session)
     profile = service.locked_profile(session, auth.user.id, scale)
     row = learning.owned_change(session, auth.user.id, change_id)
-    learning.revert_change(session, profile, row)
+    learning.revert_change(session, profile, row, source=source)
     session.commit()
     session.refresh(row)
     return _out(row)

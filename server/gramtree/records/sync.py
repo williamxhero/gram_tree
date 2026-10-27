@@ -129,6 +129,7 @@ def _apply(
             source_context=source_context,
             taste_summary=taste_summary,
             co_diner_ids=[str(item) for item in co_diner_ids],
+            photos=parsed.photos,
         )
         session.add(row)
         session.flush()

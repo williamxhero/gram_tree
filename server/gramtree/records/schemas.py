@@ -2,7 +2,7 @@
 
 from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from gramtree.core.ids import IdV4
 from gramtree.core.time import Timestamp
@@ -40,7 +40,18 @@ class CookingRecordCreate(BaseModel):
     source_context: dict[str, Any] = Field(default_factory=dict)
     co_diner_ids: list[IdV4] = Field(default_factory=list, max_length=50)
     verification: Verification = "unverified"
+    # Record photos are explicit private evidence from this cooking record. They
+    # are never inferred from the recipe snapshot, which may contain public media.
+    photos: list[str] = Field(default_factory=list, max_length=3)
     completion: CookingCompletion | None = None
+
+    @field_validator("photos")
+    @classmethod
+    def validate_photos(cls, value: list[str]) -> list[str]:
+        for photo in value:
+            if len(photo) > 180_000 or not photo.startswith("data:image/jpeg;base64,"):
+                raise ValueError("记录照片必须是受限的 JPEG data URI")
+        return value
 
 
 class CookingRecordOut(BaseModel):
@@ -59,6 +70,7 @@ class CookingRecordOut(BaseModel):
     source_context: dict[str, Any]
     taste_summary: dict[str, Any]
     co_diner_ids: list[IdV4]
+    photos: list[str]
     created_at: Timestamp
 
 
@@ -80,6 +92,19 @@ class CookingRecordRevisionOut(BaseModel):
 
 class CookingRecordHistoryOut(BaseModel):
     items: list[CookingRecordRevisionOut]
+
+
+class RecordCalendarDayOut(BaseModel):
+    date: str
+    start: Timestamp
+    end: Timestamp
+
+
+class RecordCalendarContextOut(BaseModel):
+    timezone: str
+    year: int
+    month: int
+    days: list[RecordCalendarDayOut]
 
 
 class CookingRecordListOut(BaseModel):

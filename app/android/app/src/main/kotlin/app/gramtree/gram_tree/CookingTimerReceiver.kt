@@ -12,10 +12,16 @@ import android.app.Notification
 class CookingTimerReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         val id = intent.getStringExtra("id") ?: return
+        val monthly = intent.getStringExtra("timezone") != null
+        if (monthly && !MonthlyReviewReminder.isEnabled(context, id)) return
         val manager = context.getSystemService(NotificationManager::class.java)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             manager.createNotificationChannel(
-                NotificationChannel(CHANNEL, "做菜计时", NotificationManager.IMPORTANCE_HIGH)
+                NotificationChannel(
+                    if (intent.getStringExtra("timezone") == null) CHANNEL else MONTHLY_CHANNEL,
+                    if (intent.getStringExtra("timezone") == null) "做菜计时" else "每月回顾",
+                    NotificationManager.IMPORTANCE_DEFAULT,
+                )
             )
         }
         val openApp = PendingIntent.getActivity(
@@ -23,14 +29,22 @@ class CookingTimerReceiver : BroadcastReceiver() {
             Intent(context, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP),
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
-        val notification = Notification.Builder(context, CHANNEL)
+        val notificationChannel = if (intent.getStringExtra("timezone") == null) CHANNEL else MONTHLY_CHANNEL
+        val notification = Notification.Builder(context, notificationChannel)
             .setSmallIcon(android.R.drawable.ic_popup_reminder)
             .setContentTitle(intent.getStringExtra("title") ?: "做菜计时结束")
             .setContentText(intent.getStringExtra("body") ?: "可以回来继续做菜了。")
             .setContentIntent(openApp).setAutoCancel(true)
             .setPriority(Notification.PRIORITY_HIGH).build()
-        manager.notify(id.hashCode(), notification)
+        try {
+            manager.notify(id.hashCode(), notification)
+        } finally {
+            if (monthly) MonthlyReviewReminder.renew(context, id)
+        }
     }
 
-    companion object { const val CHANNEL = "cooking_timers" }
+    companion object {
+        const val CHANNEL = "cooking_timers"
+        const val MONTHLY_CHANNEL = "monthly_review"
+    }
 }

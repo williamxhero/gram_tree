@@ -1039,6 +1039,187 @@ class AppLocalizationsZh extends AppLocalizations {
   String get recordsEmptyBody => '每次做完菜后的记录和心得会保存在这里。';
 
   @override
+  String get dietaryStatisticsEmptyTitle => '这个时段还没有做菜统计';
+
+  @override
+  String get dietaryStatisticsEmptyBody => '做完菜点“做好了”，这里会显示你的饮食回报。';
+
+  @override
+  String get dietaryStatisticsCookingCount => '做菜次数';
+
+  @override
+  String dietaryStatisticsCached(String time) {
+    return '离线结果 · $time';
+  }
+
+  @override
+  String get dietaryStatisticsUpdated => '已更新';
+
+  @override
+  String get dietaryStatisticsIngredient => '主料分布';
+
+  @override
+  String get dietaryStatisticsCuisine => '菜系分布';
+
+  @override
+  String get dietaryStatisticsFrequent => '常做的菜';
+
+  @override
+  String get dietaryStatisticsNew => '新尝试';
+
+  @override
+  String get dietaryStatisticsUnclassified => '未归一菜名';
+
+  @override
+  String get dietaryStatisticsUnclassifiedBody => '这些记录未能安全合并为同一道菜，未用于宣称首次尝试。';
+
+  @override
+  String get dietaryStatisticsUnavailable => '统计暂时不可用';
+
+  @override
+  String get dietaryStatisticsWeek => '本周';
+
+  @override
+  String get dietaryStatisticsMonth => '本月';
+
+  @override
+  String get dietaryStatisticsYear => '今年';
+
+  @override
+  String get dietaryStatisticsUnknown => '未分类';
+
+  @override
+  String get recordsCalendarOfflineTimezone => '离线时区信息不可用，请联网后打开这个月份。';
+
+  @override
+  String get recordsCalendarPreviousMonth => '上个月';
+
+  @override
+  String get recordsCalendarNextMonth => '下个月';
+
+  @override
+  String recordsCalendarMonth(int year, int month) {
+    return '$year 年 $month 月';
+  }
+
+  @override
+  String recordsCalendarLastSync(String time) {
+    return '上次同步：$time';
+  }
+
+  @override
+  String recordsCalendarDayRecords(String date) {
+    return '$date 的全部记录';
+  }
+
+  @override
+  String get recordsCalendarEmptyDay => '这一天没有记录。';
+
+  @override
+  String recordsCalendarCount(int count) {
+    return '$count 条';
+  }
+
+  @override
+  String get recordsCalendarDining => '外食或外卖';
+
+  @override
+  String get recordsCalendarCooking => '做菜记录';
+
+  @override
+  String get recordsCalendarPhoto => '本人记录照片';
+
+  @override
+  String get monthlyReviewTitle => '上月回顾';
+
+  @override
+  String get monthlyReviewRetry => '重试';
+
+  @override
+  String get monthlyReviewUnavailable => '回顾暂时无法读取';
+
+  @override
+  String get monthlyReviewPreviousMonth => '上个月';
+
+  @override
+  String get monthlyReviewNextMonth => '下个月';
+
+  @override
+  String monthlyReviewOffline(String updatedAt) {
+    return '离线回顾 · 更新于 $updatedAt';
+  }
+
+  @override
+  String get monthlyReviewCount => '做菜次数';
+
+  @override
+  String monthlyReviewCompared(String difference) {
+    return '较再上月 $difference';
+  }
+
+  @override
+  String get monthlyReviewNoChange => '无变化';
+
+  @override
+  String monthlyReviewIncrease(int count) {
+    return '增加 $count 次';
+  }
+
+  @override
+  String monthlyReviewDecrease(int count) {
+    return '减少 $count 次';
+  }
+
+  @override
+  String get monthlyReviewFrequent => '常做';
+
+  @override
+  String get monthlyReviewNewDishes => '新尝试';
+
+  @override
+  String get monthlyReviewMainIngredients => '主料摘要';
+
+  @override
+  String get monthlyReviewEmpty => '这个月没有做菜记录或口味变化。';
+
+  @override
+  String get monthlyReviewAutomaticChanges => '自动学习的口味变化';
+
+  @override
+  String get monthlyReviewOfflineActions => '离线时不能确认或撤销，联网后重试。';
+
+  @override
+  String get monthlyReviewManualChanges => '手动修改';
+
+  @override
+  String get monthlyReviewChangeDetails => '变化明细';
+
+  @override
+  String monthlyReviewBefore(String value) {
+    return '变更前：$value';
+  }
+
+  @override
+  String monthlyReviewAfter(String value) {
+    return '变更后：$value';
+  }
+
+  @override
+  String get monthlyReviewManualSource => '手动修改';
+
+  @override
+  String get monthlyReviewConfirm => '确认';
+
+  @override
+  String get monthlyReviewRevert => '撤销';
+
+  @override
+  String get monthlyReviewConfirmed => '已确认口味变化';
+
+  @override
+  String get monthlyReviewReverted => '已撤销口味变化';
+
+  @override
   String get meEmptyTitle => '个人中心';
 
   @override
