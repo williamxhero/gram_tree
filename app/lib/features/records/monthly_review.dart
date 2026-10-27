@@ -141,11 +141,16 @@ class MonthlyReviewRepository {
           aad: utf8.encode(_cacheKey(_ownerId)),
         );
         final json = jsonDecode(utf8.decode(clear)) as Map<String, dynamic>;
+        if (!_session.matches(identity)) {
+          throw StateError('account_changed');
+        }
         return _decode(json);
       } catch (_) {
-        final secure = _ref.read(secureStoreProvider);
-        await secure.delete(_cacheKey(_ownerId));
-        await secure.delete('${_cacheKey(_ownerId)}:key');
+        if (_session.matches(identity)) {
+          final secure = _ref.read(secureStoreProvider);
+          await secure.delete(_cacheKey(_ownerId));
+          await secure.delete('${_cacheKey(_ownerId)}:key');
+        }
         rethrow;
       }
     }
