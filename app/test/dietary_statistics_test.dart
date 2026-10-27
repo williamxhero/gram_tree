@@ -4,6 +4,10 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:gram_tree/features/records/dietary_statistics_cache.dart';
 import 'package:gram_tree/features/records/dietary_statistics_data.dart';
 import 'package:gram_tree/features/records/dietary_statistics_widget.dart';
+import 'package:gram_tree/app/theme.dart';
+import 'package:gram_tree/features/records/monthly_review.dart';
+import 'package:gram_tree/l10n/app_localizations.dart';
+import 'package:gram_tree/privacy/consent.dart';
 import 'package:gram_tree/storage/secure_store.dart';
 import 'package:gramtree_api/gramtree_api.dart';
 
@@ -17,6 +21,99 @@ void main() {
     expect(await cache.read('bob', 'month'), isNull);
     await cache.clearOwner('alice');
     expect(await cache.read('alice', 'month'), isNull);
+  });
+
+  testWidgets('月回顾离线展示自动变化并禁用档案操作', (tester) async {
+    final current = DietaryStatisticsOut(
+      cookingCount: 3,
+      cuisineDistribution: [],
+      endAt: '2026-03-31T16:00:00Z',
+      frequentDishes: [],
+      generatedAt: '2026-04-01T00:00:00Z',
+      ingredientDistribution: [],
+      ingredientRecordCount: 0,
+      localEnd: DateTime(2026, 4),
+      localStart: DateTime(2026, 3),
+      newDishes: [],
+      period: DietaryStatisticsOutPeriodEnum.month,
+      startAt: '2026-02-28T16:00:00Z',
+      timezone: 'Asia/Shanghai',
+      unclassifiedDishCount: 0,
+      unclassifiedDishes: [],
+    );
+    final previous = DietaryStatisticsOut(
+      cookingCount: 1,
+      cuisineDistribution: [],
+      endAt: '2026-02-28T16:00:00Z',
+      frequentDishes: [],
+      generatedAt: '2026-03-01T00:00:00Z',
+      ingredientDistribution: [],
+      ingredientRecordCount: 0,
+      localEnd: DateTime(2026, 3),
+      localStart: DateTime(2026, 2),
+      newDishes: [],
+      period: DietaryStatisticsOutPeriodEnum.month,
+      startAt: '2026-01-31T16:00:00Z',
+      timezone: 'Asia/Shanghai',
+      unclassifiedDishCount: 0,
+      unclassifiedDishes: [],
+    );
+    final change = TasteProfileChangeOut(
+      createdAt: '2026-03-10T00:00:00Z',
+      field: 'flavors.spicy',
+      id: 'change-1',
+      newValue: {'coefficient': 1.1},
+      oldValue: {'coefficient': 1.0},
+      origin: TasteProfileChangeOutOriginEnum.auto,
+      reason: '近期做菜时调整过辣度',
+      source_: TasteProfileChangeOutSource_Enum.learning,
+      status: TasteProfileChangeOutStatusEnum.pending,
+      version: 1,
+    );
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          privacyConsentProvider.overrideWithValue(false),
+          monthlyReviewProvider.overrideWith(
+            (ref) async => MonthlyReviewSnapshot(
+              month: DateTime(2026, 3),
+              current: current,
+              previous: previous,
+              changes: [change],
+              cachedAt: DateTime.utc(2026, 4, 1),
+              fromCache: true,
+            ),
+          ),
+        ],
+        child: MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          theme: ThemeData(
+            extensions: const [
+              GramTreeColors(
+                paper: GramTreePalette.paper,
+                card: GramTreePalette.card,
+                ink: GramTreePalette.ink,
+                accent: GramTreePalette.accent,
+                verified: GramTreePalette.verified,
+              ),
+            ],
+          ),
+          home: const Scaffold(
+            body: SingleChildScrollView(child: MonthlyReviewSection()),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('较再上月 增加 2 次'), findsOneWidget);
+    expect(find.text('自动学习的口味变化'), findsOneWidget);
+    expect(find.textContaining('离线回顾'), findsOneWidget);
+    expect(find.text('离线时不能确认或撤销，联网后重试。'), findsOneWidget);
+    final confirmButton = find.byWidgetPredicate(
+      (widget) => widget is IconButton && widget.tooltip == '确认',
+    );
+    expect(tester.widget<IconButton>(confirmButton).onPressed, isNull);
   });
 
   testWidgets('统计组件显示次数、分布和离线更新时间', (tester) async {

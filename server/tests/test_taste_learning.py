@@ -231,7 +231,9 @@ def test_revert_restores_value_and_blocks_relearning_then_lock_freezes_field(api
     assert change["new_value"]["coefficient"] < before, "学习必须下调咸度"
 
     reverted = api.client.post(
-        f"/v1/me/taste-profile/changes/{change['id']}/revert", headers=bearer(tokens)
+        f"/v1/me/taste-profile/changes/{change['id']}/revert",
+        headers=bearer(tokens),
+        params={"source": "monthly_review"},
     )
     assert reverted.status_code == 200, reverted.text
     assert salty(api, tokens) == before, "撤销必须恢复旧值"

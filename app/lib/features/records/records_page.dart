@@ -10,6 +10,7 @@ import '../../events/event_queue.dart';
 import '../../events/event_uploader.dart';
 import '../../events/sync_status.dart';
 import 'dietary_statistics_widget.dart';
+import 'monthly_review.dart';
 import 'records_calendar.dart';
 import 'records_history.dart';
 import '../../l10n/app_localizations.dart';
@@ -46,10 +47,10 @@ class RecordsPage extends ConsumerWidget {
     final records = ref.watch(recordsProvider);
     final queued =
         ref.watch(syncStatusProvider).value?.entries ?? const <QueueEntry>[];
-    ref.listen(
-      confirmedCookingRecordRevisionProvider,
-      (_, _) => ref.invalidate(recordsProvider),
-    );
+    ref.listen(confirmedCookingRecordRevisionProvider, (_, _) {
+      ref.invalidate(recordsProvider);
+      ref.invalidate(monthlyReviewProvider);
+    });
     return TabPage(
       child: records.when(
         loading: () => const Center(child: CircularProgressIndicator()),
@@ -99,6 +100,8 @@ class RecordsPage extends ConsumerWidget {
             return ListView(
               padding: const EdgeInsets.fromLTRB(20, 24, 20, 32),
               children: const [
+                MonthlyReviewSection(),
+                SizedBox(height: 20),
                 SizedBox(
                   height: 240,
                   child: EmptyState(
@@ -115,6 +118,7 @@ class RecordsPage extends ConsumerWidget {
           return RecordsCalendar(
             snapshot: snapshot,
             records: byClient.values.toList(),
+            above: const MonthlyReviewSection(),
             below: const DietaryStatisticsWidget(),
           );
         },

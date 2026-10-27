@@ -9,10 +9,12 @@ class RecordsCalendar extends StatefulWidget {
     super.key,
     required this.snapshot,
     required this.records,
+    this.above,
     this.below,
   });
   final RecordHistorySnapshot snapshot;
   final List<(CookingRecordOut, String?, bool)> records;
+  final Widget? above;
   final Widget? below;
 
   @override
@@ -29,6 +31,12 @@ class _RecordsCalendarState extends State<RecordsCalendar> {
     super.initState();
     final now = DateTime.now().toUtc();
     _monthKey = '${now.year}-${now.month}';
+    for (final context in widget.snapshot.contexts.values) {
+      if (context.dayFor(now) != null) {
+        _monthKey = '${context.year}-${context.month}';
+        break;
+      }
+    }
   }
 
   RecordCalendarContext? get _context =>
@@ -71,6 +79,10 @@ class _RecordsCalendarState extends State<RecordsCalendar> {
       return ListView(
         padding: const EdgeInsets.all(20),
         children: [
+          if (widget.above != null) ...[
+            widget.above!,
+            const SizedBox(height: 20),
+          ],
           const Text('离线时区信息不可用，请联网后打开这个月份。'),
           const SizedBox(height: 12),
           for (final (record, writeId, pending) in widget.records)
@@ -104,6 +116,10 @@ class _RecordsCalendarState extends State<RecordsCalendar> {
     return ListView(
       padding: const EdgeInsets.fromLTRB(20, 24, 20, 32),
       children: [
+        if (widget.above != null) ...[
+          widget.above!,
+          const SizedBox(height: 20),
+        ],
         Row(
           children: [
             IconButton(

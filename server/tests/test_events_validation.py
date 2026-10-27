@@ -44,6 +44,29 @@ def test_unknown_event_type_is_rejected(api: Api, engine: Engine) -> None:
     assert _rows(engine) == []
 
 
+def test_monthly_review_opened_event_records_only_a_valid_month(api: Api, engine: Engine) -> None:
+    tokens = api.login("monthly-review-event@example.com")
+    opened = _event(
+        event_type="records.monthly_review_opened",
+        content={"month": "2026-03"},
+    )
+    invalid = _event(
+        event_type="records.monthly_review_opened",
+        content={"month": "2026-13", "cooking_count": 4},
+    )
+    response = api.client.post(
+        "/v1/events/upload",
+        json={"events": [opened, invalid]},
+        headers=bearer(tokens),
+    )
+    assert response.status_code == 200
+    results = {row["id"]: row for row in response.json()["results"]}
+    assert results[opened["id"]]["status"] == "accepted"
+    assert results[invalid["id"]]["status"] == "rejected"
+    assert results[invalid["id"]]["reason"]["code"] == "invalid_content"
+    assert [row["content"] for row in _rows(engine)] == [{"month": "2026-03"}]
+
+
 # —— 未登记的版本 / 已停止支持的版本 ——
 
 

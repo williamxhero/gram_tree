@@ -203,7 +203,12 @@ def append_server_event(
 
 
 def record_taste_profile_changed(
-    session: Session, user_id: uuid.UUID, change_id: uuid.UUID, *, now: datetime
+    session: Session,
+    user_id: uuid.UUID,
+    change_id: uuid.UUID,
+    *,
+    now: datetime,
+    source: str | None = None,
 ) -> None:
     """Append metadata in the caller's profile/history transaction, without commit.
 
@@ -218,7 +223,7 @@ def record_taste_profile_changed(
         device_time=now,
         app_version="server",
         correlation={"taste_profile_change_id": str(change_id)},
-        content={},
+        content={"source": source} if source is not None else {},
     )
     session.add(
         Event(
