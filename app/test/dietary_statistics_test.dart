@@ -116,6 +116,7 @@ void main() {
       (widget) => widget is IconButton && widget.tooltip == '确认',
     );
     expect(tester.widget<IconButton>(confirmButton).onPressed, isNull);
+    expect(find.byKey(const ValueKey('monthly-review-2026-3')), findsNothing);
   });
 
   testWidgets('统计组件显示次数、分布和离线更新时间', (tester) async {

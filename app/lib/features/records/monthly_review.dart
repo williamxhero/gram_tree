@@ -3,6 +3,8 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:cryptography/cryptography.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:timezone/data/latest.dart' as tzdata;
+import 'package:timezone/timezone.dart' as tz;
 import 'package:gramtree_api/gramtree_api.dart';
 
 import '../../api/api_client.dart';
@@ -262,18 +264,33 @@ class MonthlyReviewSection extends ConsumerStatefulWidget {
 }
 
 class _MonthlyReviewSectionState extends ConsumerState<MonthlyReviewSection> {
-  late DateTime _month;
+  DateTime? _month;
 
   @override
   void initState() {
     super.initState();
-    final now = DateTime.now();
-    _month = DateTime(now.year, now.month - 1);
+    _month = _accountLocalPreviousMonth();
+  }
+
+  DateTime get _latestReviewMonth => _accountLocalPreviousMonth();
+
+  DateTime _accountLocalPreviousMonth() {
+    final timezone = ref.read(authProvider).value?.timezone;
+    try {
+      tzdata.initializeTimeZones();
+      final location = tz.getLocation(timezone ?? 'UTC');
+      final now = tz.TZDateTime.now(location);
+      return DateTime(now.year, now.month - 1);
+    } catch (_) {
+      final fallback = DateTime.now().toUtc();
+      return DateTime(fallback.year, fallback.month - 1);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    final value = ref.watch(monthlyReviewProvider(_month));
+    final month = _month!;
+    final value = ref.watch(monthlyReviewProvider(month));
     return value.when(
       loading: () => const Padding(
         padding: EdgeInsets.symmetric(vertical: 20),
@@ -288,7 +305,7 @@ class _MonthlyReviewSectionState extends ConsumerState<MonthlyReviewSection> {
           ),
           Text(AppLocalizations.of(context).monthlyReviewUnavailable),
           TextButton(
-            onPressed: () => ref.invalidate(monthlyReviewProvider(_month)),
+            onPressed: () => ref.invalidate(monthlyReviewProvider(month)),
             child: Text(AppLocalizations.of(context).monthlyReviewRetry),
           ),
         ],
@@ -302,7 +319,7 @@ class _MonthlyReviewSectionState extends ConsumerState<MonthlyReviewSection> {
                 tooltip: AppLocalizations.of(context)
                     .monthlyReviewPreviousMonth,
                 onPressed: () => setState(
-                  () => _month = DateTime(_month.year, _month.month - 1),
+                  () => _month = DateTime(month.year, month.month - 1),
                 ),
                 icon: const Icon(Icons.chevron_left),
               ),
@@ -315,17 +332,20 @@ class _MonthlyReviewSectionState extends ConsumerState<MonthlyReviewSection> {
               IconButton(
                 tooltip: AppLocalizations.of(context).monthlyReviewNextMonth,
                 onPressed:
-                    _month.month == DateTime.now().month &&
-                        _month.year == DateTime.now().year
+                    month.year == _latestReviewMonth.year &&
+                        month.month == _latestReviewMonth.month
                     ? null
                     : () => setState(
-                        () => _month = DateTime(_month.year, _month.month + 1),
+                        () => _month = DateTime(month.year, month.month + 1),
                       ),
                 icon: const Icon(Icons.chevron_right),
               ),
             ],
           ),
-          _ReviewBody(snapshot: snapshot),
+          _ReviewBody(
+            key: ValueKey('${snapshot.month.year}-${snapshot.month.month}'),
+            snapshot: snapshot,
+          ),
         ],
       ),
     );
@@ -333,7 +353,7 @@ class _MonthlyReviewSectionState extends ConsumerState<MonthlyReviewSection> {
 }
 
 class _ReviewBody extends ConsumerStatefulWidget {
-  const _ReviewBody({required this.snapshot});
+  const _ReviewBody({super.key, required this.snapshot});
   final MonthlyReviewSnapshot snapshot;
 
   @override

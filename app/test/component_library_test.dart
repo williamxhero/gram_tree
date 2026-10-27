@@ -78,6 +78,69 @@ void main() {
   final registry = defaultComponentRegistry;
   final generalTypes = ['hint_bar', 'section_title', 'text_block', 'list'];
 
+  testWidgets('monthly_review 注册三档详略、空态和语义', (tester) async {
+    final spec = registry['monthly_review']!;
+    expect(spec.emptyState.title, isNotEmpty);
+    final data = {
+      'conclusion': '上月做菜 3 次',
+      'month': '2026-03',
+      'taste_changes': [
+        {
+          'field': 'flavors.spicy',
+          'conclusion': '辣度按近期记录调整',
+          'old_value': '标准',
+          'new_value': '少辣',
+          'reason': '近期做菜时多次调整',
+          'source': {
+            'source_type': 'taste_adjusted',
+            'value': '按你的口味换算',
+            'basis': {
+              'reason_code': 'learning',
+              'text': '近期记录',
+              'citation': '记录',
+            },
+          },
+        },
+      ],
+      'source': {
+        'source_type': 'verified',
+        'value': '账号记录',
+        'basis': {
+          'reason_code': 'monthly_statistics',
+          'text': '来自当月记录',
+          'citation': '月度回顾',
+        },
+      },
+    };
+    for (final detail in ComponentDescriptorDetailEnum.values) {
+      await pumpSpec(
+        tester,
+        spec: spec,
+        component: descriptor(
+          type: 'monthly_review',
+          detail: detail,
+          data: data,
+        ),
+      );
+      expect(find.text('上月做菜 3 次'), findsOneWidget);
+      expect(find.bySemanticsLabel('上月做菜 3 次'), findsWidgets);
+      if (detail == ComponentDescriptorDetailEnum.brief) {
+        expect(find.text('1 条口味变化'), findsNothing);
+        expect(find.text('来自账号月度记录与已登记口味变化'), findsNothing);
+      } else {
+        expect(find.textContaining('1 条口味变化'), findsOneWidget);
+        expect(find.text('来自账号月度记录与已登记口味变化'), findsOneWidget);
+      }
+      if (detail == ComponentDescriptorDetailEnum.detailed) {
+        expect(find.text('1 条口味变化及明细'), findsNothing);
+        expect(find.textContaining('变更前'), findsOneWidget);
+        expect(find.textContaining('变更后'), findsOneWidget);
+        expect(find.textContaining('近期做菜'), findsOneWidget);
+        expect(find.text('按你的口味换算'), findsOneWidget);
+      }
+    }
+  });
+
   group('三档详略：简略只显示结论和一个主要动作', () {
     for (final type in generalTypes) {
       testWidgets('$type 简略档', (tester) async {

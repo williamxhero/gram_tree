@@ -137,7 +137,21 @@ void main() {
     await settle(tester);
     await tapText(tester, '记录');
     await waitFor(tester, find.text('只属于本人的导出记录'));
-    await tester.tap(find.byKey(ValueKey('record-delete-${record['id']}')));
+    final recordCard = find.byKey(ValueKey('record-${record['id']}'));
+    await waitUntil(tester, () => recordCard.evaluate().isNotEmpty);
+    final recordJson = (await devServer.get<Map<String, dynamic>>(
+      '/v1/records/${record['id']}',
+      options: auth,
+    )).data!;
+    expect(recordJson['id'], record['id']);
+    final deleteButton = find.byKey(ValueKey('record-delete-${record['id']}'));
+    await waitUntil(
+      tester,
+      () =>
+          deleteButton.evaluate().isNotEmpty &&
+          tester.widget<IconButton>(deleteButton).onPressed != null,
+    );
+    await tester.tap(deleteButton);
     await settle(tester);
     await tapText(tester, '取消');
     expect(
@@ -147,7 +161,13 @@ void main() {
       )).statusCode,
       200,
     );
-    await tester.tap(find.byKey(ValueKey('record-delete-${record['id']}')));
+    await waitUntil(
+      tester,
+      () =>
+          deleteButton.evaluate().isNotEmpty &&
+          tester.widget<IconButton>(deleteButton).onPressed != null,
+    );
+    await tester.tap(deleteButton);
     await settle(tester);
     await tester.tap(find.byKey(const ValueKey('record-delete-confirm')));
     await waitFor(tester, find.text('还没有做菜记录'));
