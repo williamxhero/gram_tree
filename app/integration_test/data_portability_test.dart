@@ -3,8 +3,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gram_tree/auth/session.dart';
+import 'package:gram_tree/features/records/records_page.dart';
 import 'package:integration_test/integration_test.dart';
 
+import '../test/lazy_list_controls_support.dart';
 import 'event_pipeline_support.dart';
 
 /// Real HTTP, isolated PostgreSQL/Redis and the production background drain.
@@ -136,22 +138,38 @@ void main() {
     await tester.tap(find.byTooltip('返回').last);
     await settle(tester);
     await tapText(tester, '记录');
-    await waitFor(tester, find.text('只属于本人的导出记录'));
+    final deleteButton = find.byKey(ValueKey('record-delete-${record['id']}'));
+    // The calendar/review can keep the lazy record card outside the viewport.
+    // Wait by bounded gestures on the route's outer list, not by time alone.
+    final recordsScrollable = find
+        .descendant(
+          of: find.byType(RecordsPage),
+          matching: find.byType(Scrollable),
+        )
+        .first;
+    await revealLazyListControl(
+      tester,
+      deleteButton,
+      scrollable: recordsScrollable,
+    );
     final recordCard = find.byKey(ValueKey('record-${record['id']}'));
-    await waitUntil(tester, () => recordCard.evaluate().isNotEmpty);
+    expect(recordCard, findsOneWidget);
+    expect(
+      find.descendant(of: recordCard, matching: find.text('只属于本人的导出记录')),
+      findsOneWidget,
+    );
     final recordJson = (await devServer.get<Map<String, dynamic>>(
       '/v1/records/${record['id']}',
       options: auth,
     )).data!;
     expect(recordJson['id'], record['id']);
-    final deleteButton = find.byKey(ValueKey('record-delete-${record['id']}'));
     await waitUntil(
       tester,
       () =>
           deleteButton.evaluate().isNotEmpty &&
           tester.widget<IconButton>(deleteButton).onPressed != null,
     );
-    await tester.tap(deleteButton);
+    await tester.tap(deleteButton.hitTestable());
     await settle(tester);
     await tapText(tester, '取消');
     expect(
@@ -161,16 +179,25 @@ void main() {
       )).statusCode,
       200,
     );
+    await revealLazyListControl(
+      tester,
+      deleteButton,
+      scrollable: recordsScrollable,
+    );
     await waitUntil(
       tester,
       () =>
           deleteButton.evaluate().isNotEmpty &&
           tester.widget<IconButton>(deleteButton).onPressed != null,
     );
-    await tester.tap(deleteButton);
+    await tester.tap(deleteButton.hitTestable());
     await settle(tester);
     await tester.tap(find.byKey(const ValueKey('record-delete-confirm')));
-    await waitFor(tester, find.text('还没有做菜记录'));
+    await revealLazyListControl(
+      tester,
+      find.text('还没有做菜记录'),
+      scrollable: recordsScrollable,
+    );
     expect(
       (await devServer.get<Object>(
         '/v1/records/${record['id']}',
