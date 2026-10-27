@@ -165,16 +165,23 @@ def test_version_distributions_merged_dishes_and_all_history_first_attempts(api:
     record(api, tokens, "2026-03-04T04:00:00Z", dish_name="统计豆腐别名")
     # A freeform/external snapshot is not a trusted version classification.
     record(api, tokens, "2026-03-05T04:00:00Z", snapshot=first["version"]["snapshot"])
+    record(
+        api,
+        tokens,
+        "2026-03-06T04:00:00Z",
+        recipe_id=first["id"],
+        recipe_version_id=first["version"]["id"],
+    )
     month = statistics(api, tokens)
-    assert month["cooking_count"] == 5
+    assert month["cooking_count"] == 6
     assert month["ingredient_record_count"] == 3
     assert month["ingredient_distribution"] == [{"key": chicken["category"], "count": 3}]
     assert month["cuisine_distribution"] == [
-        {"key": "unclassified", "count": 4},
+        {"key": "unclassified", "count": 5},
         {"key": "川菜", "count": 1},
     ]
     assert [(d["name"], d["count"]) for d in month["frequent_dishes"]] == [
-        ("统计鸡丁", 3),
+        ("统计鸡丁", 4),
         ("统计豆腐", 1),
     ]
     assert month["frequent_dishes"][0]["first_cooked_at"] == "2026-03-01T04:00:00+00:00"

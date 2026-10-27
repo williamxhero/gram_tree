@@ -1039,6 +1039,56 @@ class AppLocalizationsZh extends AppLocalizations {
   String get recordsEmptyBody => '每次做完菜后的记录和心得会保存在这里。';
 
   @override
+  String get dietaryStatisticsEmptyTitle => '这个时段还没有做菜统计';
+
+  @override
+  String get dietaryStatisticsEmptyBody => '做完菜点“做好了”，这里会显示你的饮食回报。';
+
+  @override
+  String get dietaryStatisticsCookingCount => '做菜次数';
+
+  @override
+  String dietaryStatisticsCached(String time) {
+    return '离线结果 · $time';
+  }
+
+  @override
+  String get dietaryStatisticsUpdated => '已更新';
+
+  @override
+  String get dietaryStatisticsIngredient => '主料分布';
+
+  @override
+  String get dietaryStatisticsCuisine => '菜系分布';
+
+  @override
+  String get dietaryStatisticsFrequent => '常做的菜';
+
+  @override
+  String get dietaryStatisticsNew => '新尝试';
+
+  @override
+  String get dietaryStatisticsUnclassified => '未归一菜名';
+
+  @override
+  String get dietaryStatisticsUnclassifiedBody => '这些记录未能安全合并为同一道菜，未用于宣称首次尝试。';
+
+  @override
+  String get dietaryStatisticsUnavailable => '统计暂时不可用';
+
+  @override
+  String get dietaryStatisticsWeek => '本周';
+
+  @override
+  String get dietaryStatisticsMonth => '本月';
+
+  @override
+  String get dietaryStatisticsYear => '今年';
+
+  @override
+  String get dietaryStatisticsUnknown => '未分类';
+
+  @override
   String get monthlyReviewTitle => '上月回顾';
 
   @override

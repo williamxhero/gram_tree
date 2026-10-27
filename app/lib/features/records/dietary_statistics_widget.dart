@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../l10n/app_localizations.dart';
 import '../../widgets/empty_state.dart';
 import 'dietary_statistics_data.dart';
 
@@ -18,6 +19,7 @@ class _DietaryStatisticsWidgetState
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final snapshot = ref.watch(dietaryStatisticsSnapshotProvider(_period));
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -26,7 +28,7 @@ class _DietaryStatisticsWidgetState
           key: const ValueKey('dietary-statistics-period'),
           segments: [
             for (final period in DietaryStatisticsPeriod.values)
-              ButtonSegment(value: period, label: Text(period.label)),
+              ButtonSegment(value: period, label: Text(period.label(l10n))),
           ],
           selected: {_period},
           onSelectionChanged: (values) =>
@@ -57,11 +59,12 @@ class _StatisticsBody extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final stats = snapshot.statistics;
+    final l10n = AppLocalizations.of(context);
     if (stats.cookingCount == 0) {
-      return const EmptyState(
+      return EmptyState(
         icon: Icons.query_stats_outlined,
-        title: '这个时段还没有做菜统计',
-        message: '做完菜点“做好了”，这里会显示你的饮食回报。',
+        title: l10n.dietaryStatisticsEmptyTitle,
+        message: l10n.dietaryStatisticsEmptyBody,
       );
     }
     return ListView(
@@ -69,24 +72,37 @@ class _StatisticsBody extends StatelessWidget {
       physics: const AlwaysScrollableScrollPhysics(),
       children: [
         ListTile(
-          title: const Text('做菜次数'),
+          title: Text(l10n.dietaryStatisticsCookingCount),
           trailing: Text('${stats.cookingCount}'),
           subtitle: Text(
             snapshot.fromCache
-                ? '离线结果 · ${snapshot.cachedAt.toLocal()}'
-                : '已更新',
+                ? l10n.dietaryStatisticsCached(
+                    snapshot.cachedAt.toLocal().toString(),
+                  )
+                : l10n.dietaryStatisticsUpdated,
           ),
         ),
-        _Distribution(title: '主料分布', items: stats.ingredientDistribution),
-        _Distribution(title: '菜系分布', items: stats.cuisineDistribution),
+        _Distribution(
+          title: l10n.dietaryStatisticsIngredient,
+          unknownLabel: l10n.dietaryStatisticsUnknown,
+          items: stats.ingredientDistribution,
+        ),
+        _Distribution(
+          title: l10n.dietaryStatisticsCuisine,
+          unknownLabel: l10n.dietaryStatisticsUnknown,
+          items: stats.cuisineDistribution,
+        ),
         if (stats.frequentDishes.isNotEmpty)
-          _DishList(title: '常做的菜', items: stats.frequentDishes),
+          _DishList(
+            title: l10n.dietaryStatisticsFrequent,
+            items: stats.frequentDishes,
+          ),
         if (stats.newDishes.isNotEmpty)
-          _DishList(title: '新尝试', items: stats.newDishes),
+          _DishList(title: l10n.dietaryStatisticsNew, items: stats.newDishes),
         if (stats.unclassifiedDishCount > 0)
           ListTile(
-            title: const Text('未归一菜名'),
-            subtitle: const Text('这些记录未能安全合并为同一道菜，未用于宣称首次尝试。'),
+            title: Text(l10n.dietaryStatisticsUnclassified),
+            subtitle: Text(l10n.dietaryStatisticsUnclassifiedBody),
             trailing: Text('${stats.unclassifiedDishCount}'),
           ),
       ],
@@ -95,8 +111,13 @@ class _StatisticsBody extends StatelessWidget {
 }
 
 class _Distribution extends StatelessWidget {
-  const _Distribution({required this.title, required this.items});
+  const _Distribution({
+    required this.title,
+    required this.unknownLabel,
+    required this.items,
+  });
   final String title;
+  final String unknownLabel;
   final List<dynamic> items;
   @override
   Widget build(BuildContext context) => ExpansionTile(
@@ -104,7 +125,11 @@ class _Distribution extends StatelessWidget {
     children: [
       for (final item in items)
         ListTile(
-          title: Text(item.key as String),
+          title: Text(
+            item.key as String == 'unclassified'
+                ? unknownLabel
+                : item.key as String,
+          ),
           trailing: Text('${item.count}'),
         ),
     ],
@@ -132,10 +157,13 @@ class _Error extends StatelessWidget {
   const _Error({required this.onRetry});
   final VoidCallback onRetry;
   @override
-  Widget build(BuildContext context) => Column(
-    children: [
-      const Text('统计暂时不可用'),
-      TextButton(onPressed: onRetry, child: const Text('重试')),
-    ],
-  );
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    return Column(
+      children: [
+        Text(l10n.dietaryStatisticsUnavailable),
+        TextButton(onPressed: onRetry, child: Text(l10n.retry)),
+      ],
+    );
+  }
 }

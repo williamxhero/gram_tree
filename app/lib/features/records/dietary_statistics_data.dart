@@ -4,6 +4,7 @@ import 'package:gramtree_api/gramtree_api.dart';
 import '../../api/api_client.dart';
 import '../../auth/auth_controller.dart';
 import '../../auth/session.dart';
+import '../../l10n/app_localizations.dart';
 import '../../storage/secure_store.dart';
 import 'dietary_statistics_cache.dart';
 
@@ -11,10 +12,10 @@ enum DietaryStatisticsPeriod { week, month, year }
 
 extension DietaryStatisticsPeriodValue on DietaryStatisticsPeriod {
   String get wire => name;
-  String get label => switch (this) {
-    DietaryStatisticsPeriod.week => '本周',
-    DietaryStatisticsPeriod.month => '本月',
-    DietaryStatisticsPeriod.year => '今年',
+  String label(AppLocalizations l10n) => switch (this) {
+    DietaryStatisticsPeriod.week => l10n.dietaryStatisticsWeek,
+    DietaryStatisticsPeriod.month => l10n.dietaryStatisticsMonth,
+    DietaryStatisticsPeriod.year => l10n.dietaryStatisticsYear,
   };
 }
 

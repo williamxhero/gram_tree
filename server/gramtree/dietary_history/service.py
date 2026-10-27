@@ -39,13 +39,16 @@ def period_bounds(period: DietaryPeriod, anchor: date, timezone: str) -> Dietary
 
 
 def _snapshot_for(row: CookingRecord, versions: dict[Any, RecipeVersion]) -> dict[str, Any] | None:
-    """Return only the immutable recipe-version snapshot.
+    """Return trusted structured facts for an in-app cooking record only.
 
-    Versionless calendar/external records may carry an opaque client snapshot for
-    the record detail, but that is not a structured ingredient-library or AI
-    cuisine fact. Counting it here would let a caller manufacture distributions.
+    External cooking and dining records may reference a recipe for display, but
+    they do not establish structured ingredients or AI cuisine facts.
     """
-    if row.recipe_version_id is None or row.recipe_version_id not in versions:
+    if (
+        row.source not in {"cooking_session", "calendar"}
+        or row.recipe_version_id is None
+        or row.recipe_version_id not in versions
+    ):
         return None
     snapshot = versions[row.recipe_version_id].snapshot
     return snapshot if isinstance(snapshot, dict) else None

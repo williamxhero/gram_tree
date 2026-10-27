@@ -255,8 +255,10 @@ void main() {
                 ),
               ),
         ],
-        child: const MaterialApp(
-          home: Scaffold(body: DietaryStatisticsWidget()),
+        child: MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: const Scaffold(body: DietaryStatisticsWidget()),
         ),
       ),
     );

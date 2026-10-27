@@ -1977,6 +1977,102 @@ abstract class AppLocalizations {
   /// **'每次做完菜后的记录和心得会保存在这里。'**
   String get recordsEmptyBody;
 
+  /// No description provided for @dietaryStatisticsEmptyTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'这个时段还没有做菜统计'**
+  String get dietaryStatisticsEmptyTitle;
+
+  /// No description provided for @dietaryStatisticsEmptyBody.
+  ///
+  /// In zh, this message translates to:
+  /// **'做完菜点“做好了”，这里会显示你的饮食回报。'**
+  String get dietaryStatisticsEmptyBody;
+
+  /// No description provided for @dietaryStatisticsCookingCount.
+  ///
+  /// In zh, this message translates to:
+  /// **'做菜次数'**
+  String get dietaryStatisticsCookingCount;
+
+  /// No description provided for @dietaryStatisticsCached.
+  ///
+  /// In zh, this message translates to:
+  /// **'离线结果 · {time}'**
+  String dietaryStatisticsCached(String time);
+
+  /// No description provided for @dietaryStatisticsUpdated.
+  ///
+  /// In zh, this message translates to:
+  /// **'已更新'**
+  String get dietaryStatisticsUpdated;
+
+  /// No description provided for @dietaryStatisticsIngredient.
+  ///
+  /// In zh, this message translates to:
+  /// **'主料分布'**
+  String get dietaryStatisticsIngredient;
+
+  /// No description provided for @dietaryStatisticsCuisine.
+  ///
+  /// In zh, this message translates to:
+  /// **'菜系分布'**
+  String get dietaryStatisticsCuisine;
+
+  /// No description provided for @dietaryStatisticsFrequent.
+  ///
+  /// In zh, this message translates to:
+  /// **'常做的菜'**
+  String get dietaryStatisticsFrequent;
+
+  /// No description provided for @dietaryStatisticsNew.
+  ///
+  /// In zh, this message translates to:
+  /// **'新尝试'**
+  String get dietaryStatisticsNew;
+
+  /// No description provided for @dietaryStatisticsUnclassified.
+  ///
+  /// In zh, this message translates to:
+  /// **'未归一菜名'**
+  String get dietaryStatisticsUnclassified;
+
+  /// No description provided for @dietaryStatisticsUnclassifiedBody.
+  ///
+  /// In zh, this message translates to:
+  /// **'这些记录未能安全合并为同一道菜，未用于宣称首次尝试。'**
+  String get dietaryStatisticsUnclassifiedBody;
+
+  /// No description provided for @dietaryStatisticsUnavailable.
+  ///
+  /// In zh, this message translates to:
+  /// **'统计暂时不可用'**
+  String get dietaryStatisticsUnavailable;
+
+  /// No description provided for @dietaryStatisticsWeek.
+  ///
+  /// In zh, this message translates to:
+  /// **'本周'**
+  String get dietaryStatisticsWeek;
+
+  /// No description provided for @dietaryStatisticsMonth.
+  ///
+  /// In zh, this message translates to:
+  /// **'本月'**
+  String get dietaryStatisticsMonth;
+
+  /// No description provided for @dietaryStatisticsYear.
+  ///
+  /// In zh, this message translates to:
+  /// **'今年'**
+  String get dietaryStatisticsYear;
+
+  /// No description provided for @dietaryStatisticsUnknown.
+  ///
+  /// In zh, this message translates to:
+  /// **'未分类'**
+  String get dietaryStatisticsUnknown;
+
   /// No description provided for @monthlyReviewTitle.
   ///
   /// In zh, this message translates to:
