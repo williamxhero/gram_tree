@@ -13,9 +13,6 @@ import '../../auth/session.dart';
 import '../../events/event_recorder.dart';
 import '../../l10n/app_localizations.dart';
 import '../../storage/secure_store.dart';
-import '../../platform/permissions.dart';
-import '../../widgets/permission_request.dart';
-import 'monthly_review_notifications.dart';
 import '../../ui_protocol/source_mark.dart';
 import '../../ui_protocol/source_types.dart';
 
@@ -282,27 +279,6 @@ class _MonthlyReviewContentState extends ConsumerState<_MonthlyReviewContent> {
   void initState() {
     super.initState();
     _month = _accountLocalPreviousMonth();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) _requestMonthlyReminderPermission();
-    });
-  }
-
-  Future<void> _requestMonthlyReminderPermission() async {
-    final ownerId = ref.read(authProvider).value?.id;
-    if (ownerId == null) return;
-    final notifications = ref.read(monthlyReviewNotificationControllerProvider);
-    if (!await notifications.enabled(ownerId) ||
-        await notifications.permissionRequested(ownerId)) {
-      return;
-    }
-    final permission = ref.read(permissionServiceProvider);
-    if (await permission.status(AppPermission.notifications) ==
-        PermissionState.denied) {
-      await notifications.markPermissionRequested(ownerId);
-      if (!mounted) return;
-      await requestPermission(context, ref, AppPermission.notifications);
-    }
-    await notifications.reconcile();
   }
 
   DateTime get _latestReviewMonth => _accountLocalPreviousMonth();

@@ -30,14 +30,18 @@ DateTime nextMonthlyReviewReminderAt(DateTime now, String timezone) {
 class MonthlyReviewNotificationController {
   MonthlyReviewNotificationController(this._ref) {
     _session = _ref.read(sessionStoreProvider);
+    _capabilities = _ref.read(deviceCapabilitiesProvider);
     _session.addListener(_onSessionChanged);
-    unawaited(_reconcile());
+    unawaited(reconcile());
   }
 
   final Ref _ref;
   late final SessionStore _session;
+  late final DeviceCapabilities _capabilities;
   String? _scheduledOwner;
+  String? _scheduledTimezone;
   bool _disposed = false;
+  Future<void> _pendingReconcile = Future<void>.value();
 
   String _enabledKey(String ownerId) =>
       'notification_category:$ownerId:$monthlyReviewNotificationCategory';
@@ -50,7 +54,7 @@ class MonthlyReviewNotificationController {
     await _ref
         .read(secureStoreProvider)
         .write(_enabledKey(ownerId), value ? 'true' : 'false');
-    await _reconcile();
+    await reconcile();
   }
 
   Future<bool> permissionRequested(String ownerId) async =>
@@ -63,24 +67,33 @@ class MonthlyReviewNotificationController {
       .read(secureStoreProvider)
       .write('notification_permission_requested:$ownerId', 'true');
 
-  Future<void> reconcile() => _reconcile();
+  Future<void> reconcile({bool force = false}) {
+    final next = _pendingReconcile.then((_) => _reconcile(force: force));
+    _pendingReconcile = next.catchError((_) {});
+    return next;
+  }
 
   Future<void> cancelOwner(String ownerId) async {
-    await _ref
-        .read(deviceCapabilitiesProvider)
-        .cancelMonthlyReviewReminder(monthlyReviewReminderId(ownerId));
+    await _capabilities.cancelMonthlyReviewReminder(
+      monthlyReviewReminderId(ownerId),
+    );
     if (_scheduledOwner == ownerId) _scheduledOwner = null;
   }
 
-  void _onSessionChanged() => unawaited(_reconcile());
+  void _onSessionChanged() => unawaited(reconcile());
 
-  Future<void> _reconcile() async {
+  Future<void> onAppResumed() => reconcile(force: true);
+
+  Future<void> _reconcile({bool force = false}) async {
     if (_disposed) return;
     final store = _ref.read(secureStoreProvider);
-    final capabilities = _ref.read(deviceCapabilitiesProvider);
-    final ownerId = _session.current?.user.id;
+    final capabilities = _capabilities;
+    final identity = _session.identity;
+    final ownerId = identity?.ownerId;
     final oldOwner = _scheduledOwner;
-    if (oldOwner != null && oldOwner != ownerId) {
+    final timezone = _session.current?.user.timezone;
+    if (oldOwner != null &&
+        (oldOwner != ownerId || _scheduledTimezone != timezone)) {
       await capabilities.cancelMonthlyReviewReminder(
         monthlyReviewReminderId(oldOwner),
       );
@@ -108,17 +121,33 @@ class MonthlyReviewNotificationController {
         PermissionState.granted) {
       return;
     }
+    if (!force &&
+        _scheduledOwner == ownerId &&
+        _scheduledTimezone == timezone) {
+      return;
+    }
+    if (_disposed ||
+        identity == null ||
+        timezone == null ||
+        !_session.matches(identity) ||
+        timezone != _session.current?.user.timezone) {
+      return;
+    }
     final id = monthlyReviewReminderId(ownerId);
-    final dueAt = nextMonthlyReviewReminderAt(
-      DateTime.now(),
-      _session.current!.user.timezone,
-    );
+    final dueAt = nextMonthlyReviewReminderAt(DateTime.now(), timezone);
     await capabilities.scheduleMonthlyReviewReminder(
       id: id,
       dueAt: dueAt,
-      timezone: _session.current!.user.timezone,
+      timezone: timezone,
     );
+    if (_disposed ||
+        !_session.matches(identity) ||
+        timezone != _session.current?.user.timezone) {
+      await capabilities.cancelMonthlyReviewReminder(id);
+      return;
+    }
     _scheduledOwner = ownerId;
+    _scheduledTimezone = timezone;
   }
 
   Future<void> dispose() async {
@@ -126,9 +155,9 @@ class MonthlyReviewNotificationController {
     _session.removeListener(_onSessionChanged);
     final ownerId = _scheduledOwner;
     if (ownerId != null) {
-      await _ref
-          .read(deviceCapabilitiesProvider)
-          .cancelMonthlyReviewReminder(monthlyReviewReminderId(ownerId));
+      await _capabilities.cancelMonthlyReviewReminder(
+        monthlyReviewReminderId(ownerId),
+      );
     }
   }
 }

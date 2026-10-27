@@ -139,6 +139,8 @@ class AuthController extends AsyncNotifier<UserOut?> {
     }
   }
 
+  Future<void> syncTimezone() => _syncTimezone();
+
   Future<void> _syncTimezone() async {
     final session = _session;
     final identity = session.identity;

@@ -11,6 +11,7 @@ import '../../events/event_uploader.dart';
 import '../../events/sync_status.dart';
 import 'dietary_statistics_widget.dart';
 import 'monthly_review.dart';
+import 'monthly_review_entry_card.dart';
 import 'records_calendar.dart';
 import 'records_history.dart';
 import '../../l10n/app_localizations.dart';
@@ -100,6 +101,7 @@ class RecordsPage extends ConsumerWidget {
             return ListView(
               padding: const EdgeInsets.fromLTRB(20, 24, 20, 32),
               children: [
+                const MonthlyReviewEntryCard(),
                 const SizedBox(
                   height: 240,
                   child: ClipRect(
@@ -120,6 +122,7 @@ class RecordsPage extends ConsumerWidget {
           return RecordsCalendar(
             snapshot: snapshot,
             records: byClient.values.toList(),
+            above: const MonthlyReviewEntryCard(),
             below: const Column(
               mainAxisSize: MainAxisSize.min,
               children: [

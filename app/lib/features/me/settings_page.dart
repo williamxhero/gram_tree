@@ -166,16 +166,25 @@ class _MonthlyReviewNotificationSettingState
       final permissionWasRequested = await controller.permissionRequested(
         widget.ownerId,
       );
+      var effectiveValue = value && permissionStatus == PermissionState.granted;
       if (value &&
           permissionStatus == PermissionState.denied &&
           !permissionWasRequested) {
         await controller.markPermissionRequested(widget.ownerId);
         if (!mounted) return;
         await requestPermission(context, ref, AppPermission.notifications);
+        effectiveValue =
+            await ref
+                .read(permissionServiceProvider)
+                .status(AppPermission.notifications) ==
+            PermissionState.granted;
       }
-      await controller.setEnabled(widget.ownerId, value);
+      await controller.setEnabled(widget.ownerId, effectiveValue);
       if (!mounted) return;
-      setState(() => _enabled = Future.value(value));
+      final next = Future.value(effectiveValue);
+      setState(() {
+        _enabled = next;
+      });
     } finally {
       if (mounted) setState(() => _saving = false);
     }
