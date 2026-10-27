@@ -12,6 +12,8 @@ import 'package:gramtree_api/gramtree_api.dart'
         MeasureInputOut;
 
 import '../recipes/personal_measure_repository.dart';
+import '../features/records/monthly_review.dart';
+import '../features/me/taste_profile_data.dart';
 
 import '../api/api_client.dart';
 import '../auth/session.dart';
@@ -374,6 +376,39 @@ Future<void> _handleRecipeOperation(
   Map<String, dynamic> params,
 ) => RecipeOperationScope.handle(context, params);
 
+bool _validateMonthlyReviewChange(Map<String, dynamic> params) =>
+    params.length == 4 &&
+    isRecipeId(params['change_id']) &&
+    const ['confirm', 'revert'].contains(params['decision']) &&
+    params['year'] is int &&
+    (params['year'] as int) >= 1 &&
+    params['month'] is int &&
+    (params['month'] as int) >= 1 &&
+    (params['month'] as int) <= 12;
+
+Future<Object?> _handleMonthlyReviewChange(
+  BuildContext context,
+  Ref ref,
+  Map<String, dynamic> params,
+) async {
+  final repository = ref.read(tasteProfileRepositoryProvider);
+  final changeId = params['change_id'] as String;
+  if (params['decision'] == 'confirm') {
+    await repository.confirmChange(changeId, source: 'monthly_review');
+  } else {
+    await repository.revertChange(changeId, source: 'monthly_review');
+  }
+  ref.invalidate(tasteProfileSnapshotProvider);
+  ref.invalidate(tasteProfileProvider);
+  ref.invalidate(tasteProfileChangesProvider);
+  ref.invalidate(
+    monthlyReviewProvider(
+      DateTime(params['year'] as int, params['month'] as int),
+    ),
+  );
+  return true;
+}
+
 /// SPEC-009.1 #81 登记的意图表：#77/#80 用到的 `open_page`/`start_cooking`/
 /// `open_record_card` 沿用之前的默认文案，新增 `call_operation` 和四个先只登记
 /// 名字的意图。
@@ -391,6 +426,12 @@ bool _validateTasteChange(Map<String, dynamic> params) =>
     params.length == 1 && isRecipeId(params['change_id']);
 
 final defaultIntentRegistry = IntentRegistry([
+  const IntentSpec(
+    name: 'monthly_review_change',
+    defaultLabel: '确认或撤销口味变化',
+    validateParams: _validateMonthlyReviewChange,
+    handler: _handleMonthlyReviewChange,
+  ),
   const IntentSpec(
     name: 'show_before_taste_change',
     defaultLabel: '按调整前的口味显示',

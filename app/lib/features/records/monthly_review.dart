@@ -13,8 +13,21 @@ import '../../auth/session.dart';
 import '../../events/event_recorder.dart';
 import '../../l10n/app_localizations.dart';
 import '../../storage/secure_store.dart';
+import '../../ui_protocol/intent_dispatcher.dart';
 import '../../ui_protocol/source_mark.dart';
 import '../../ui_protocol/source_types.dart';
+
+DateTime _accountLocalPreviousMonth(String? timezone) {
+  try {
+    tzdata.initializeTimeZones();
+    final location = tz.getLocation(timezone ?? 'UTC');
+    final now = tz.TZDateTime.now(location);
+    return DateTime(now.year, now.month - 1);
+  } catch (_) {
+    final now = DateTime.now().toUtc();
+    return DateTime(now.year, now.month - 1);
+  }
+}
 
 class MonthlyReviewSnapshot {
   const MonthlyReviewSnapshot({
@@ -52,9 +65,9 @@ class MonthlyReviewRepository {
     }
     try {
       final api = _ref.read(apiClientProvider);
-      final requestedMonth = anchor == null
-          ? null
-          : DateTime.utc(anchor.year, anchor.month, 15);
+      final month =
+          anchor ?? _accountLocalPreviousMonth(_session.current!.user.timezone);
+      final requestedMonth = DateTime.utc(month.year, month.month, 15);
       final currentResponse = await api
           .getDietaryHistoryApi()
           .getDietaryStatistics(
@@ -65,10 +78,10 @@ class MonthlyReviewRepository {
       if (!_session.matches(identity) || currentResponse.data == null) {
         throw StateError('stale_monthly_review_response');
       }
-      final currentMonth = currentResponse.data!;
+      final current = currentResponse.data!;
       final previousMonth = DateTime.utc(
-        currentMonth.localStart.year,
-        currentMonth.localStart.month - 1,
+        current.localStart.year,
+        current.localStart.month - 1,
         15,
       );
       final previousResponse = await api
@@ -79,22 +92,6 @@ class MonthlyReviewRepository {
             extra: _authExtra(identity),
           );
       if (!_session.matches(identity) || previousResponse.data == null) {
-        throw StateError('stale_monthly_review_response');
-      }
-      final current = previousResponse.data!;
-      final precedingMonth = DateTime.utc(
-        current.localStart.year,
-        current.localStart.month - 1,
-        15,
-      );
-      final precedingResponse = await api
-          .getDietaryHistoryApi()
-          .getDietaryStatistics(
-            period: 'month',
-            anchor: precedingMonth,
-            extra: _authExtra(identity),
-          );
-      if (!_session.matches(identity) || precedingResponse.data == null) {
         throw StateError('stale_monthly_review_response');
       }
       final changes = <TasteProfileChangeOut>[];
@@ -129,7 +126,7 @@ class MonthlyReviewRepository {
       final snapshot = MonthlyReviewSnapshot(
         month: DateTime(current.localStart.year, current.localStart.month),
         current: current,
-        previous: precedingResponse.data!,
+        previous: previousResponse.data!,
         changes: changes,
         cachedAt: DateTime.now().toUtc(),
         fromCache: false,
@@ -278,23 +275,11 @@ class _MonthlyReviewContentState extends ConsumerState<_MonthlyReviewContent> {
   @override
   void initState() {
     super.initState();
-    _month = _accountLocalPreviousMonth();
+    _month = _latestReviewMonth;
   }
 
-  DateTime get _latestReviewMonth => _accountLocalPreviousMonth();
-
-  DateTime _accountLocalPreviousMonth() {
-    final timezone = ref.read(authProvider).value?.timezone;
-    try {
-      tzdata.initializeTimeZones();
-      final location = tz.getLocation(timezone ?? 'UTC');
-      final now = tz.TZDateTime.now(location);
-      return DateTime(now.year, now.month - 1);
-    } catch (_) {
-      final fallback = DateTime.now().toUtc();
-      return DateTime(fallback.year, fallback.month - 1);
-    }
-  }
+  DateTime get _latestReviewMonth =>
+      _accountLocalPreviousMonth(ref.read(authProvider).value?.timezone);
 
   @override
   Widget build(BuildContext context) {
@@ -398,28 +383,22 @@ class _ReviewBodyState extends ConsumerState<_ReviewBody> {
     if (identity == null) return;
     setState(() => _busy.add(change.id));
     try {
-      final api = ref.read(apiClientProvider).getTasteProfileApi();
-      if (confirm) {
-        await api.confirmChange(
-          changeId: change.id,
-          source_: 'monthly_review',
-          extra: {
-            'auth_owner_id': identity.ownerId,
-            'auth_identity_epoch': identity.epoch,
-          },
-        );
-      } else {
-        await api.revertChange(
-          changeId: change.id,
-          source_: 'monthly_review',
-          extra: {
-            'auth_owner_id': identity.ownerId,
-            'auth_identity_epoch': identity.epoch,
-          },
-        );
-      }
-      if (!mounted || !session.matches(identity)) return;
-      ref.invalidate(monthlyReviewProvider(widget.snapshot.month));
+      final changed = await ref
+          .read(intentDispatcherProvider)
+          .dispatch(
+            context,
+            componentId: 'monthly-review-${change.id}',
+            action: ActionDescriptor(
+              intent: 'monthly_review_change',
+              params: {
+                'change_id': change.id,
+                'decision': confirm ? 'confirm' : 'revert',
+                'year': widget.snapshot.month.year,
+                'month': widget.snapshot.month.month,
+              },
+            ),
+          );
+      if (changed != true || !mounted || !session.matches(identity)) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
@@ -620,7 +599,8 @@ class _TasteChangeTile extends StatelessWidget {
       trailing: Wrap(
         spacing: 4,
         children: [
-          if (change.status == TasteProfileChangeOutStatusEnum.pending)
+          if (change.status == TasteProfileChangeOutStatusEnum.pending ||
+              change.status == TasteProfileChangeOutStatusEnum.active)
             IconButton(
               tooltip: l10n.monthlyReviewConfirm,
               onPressed: offline || busy ? null : onConfirm,

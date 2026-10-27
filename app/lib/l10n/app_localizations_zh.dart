@@ -1089,6 +1089,47 @@ class AppLocalizationsZh extends AppLocalizations {
   String get dietaryStatisticsUnknown => '未分类';
 
   @override
+  String get recordsCalendarOfflineTimezone => '离线时区信息不可用，请联网后打开这个月份。';
+
+  @override
+  String get recordsCalendarPreviousMonth => '上个月';
+
+  @override
+  String get recordsCalendarNextMonth => '下个月';
+
+  @override
+  String recordsCalendarMonth(int year, int month) {
+    return '$year 年 $month 月';
+  }
+
+  @override
+  String recordsCalendarLastSync(String time) {
+    return '上次同步：$time';
+  }
+
+  @override
+  String recordsCalendarDayRecords(String date) {
+    return '$date 的全部记录';
+  }
+
+  @override
+  String get recordsCalendarEmptyDay => '这一天没有记录。';
+
+  @override
+  String recordsCalendarCount(int count) {
+    return '$count 条';
+  }
+
+  @override
+  String get recordsCalendarDining => '外食或外卖';
+
+  @override
+  String get recordsCalendarCooking => '做菜记录';
+
+  @override
+  String get recordsCalendarPhoto => '本人记录照片';
+
+  @override
   String get monthlyReviewTitle => '上月回顾';
 
   @override

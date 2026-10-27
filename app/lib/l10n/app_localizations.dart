@@ -2073,6 +2073,72 @@ abstract class AppLocalizations {
   /// **'未分类'**
   String get dietaryStatisticsUnknown;
 
+  /// No description provided for @recordsCalendarOfflineTimezone.
+  ///
+  /// In zh, this message translates to:
+  /// **'离线时区信息不可用，请联网后打开这个月份。'**
+  String get recordsCalendarOfflineTimezone;
+
+  /// No description provided for @recordsCalendarPreviousMonth.
+  ///
+  /// In zh, this message translates to:
+  /// **'上个月'**
+  String get recordsCalendarPreviousMonth;
+
+  /// No description provided for @recordsCalendarNextMonth.
+  ///
+  /// In zh, this message translates to:
+  /// **'下个月'**
+  String get recordsCalendarNextMonth;
+
+  /// No description provided for @recordsCalendarMonth.
+  ///
+  /// In zh, this message translates to:
+  /// **'{year} 年 {month} 月'**
+  String recordsCalendarMonth(int year, int month);
+
+  /// No description provided for @recordsCalendarLastSync.
+  ///
+  /// In zh, this message translates to:
+  /// **'上次同步：{time}'**
+  String recordsCalendarLastSync(String time);
+
+  /// No description provided for @recordsCalendarDayRecords.
+  ///
+  /// In zh, this message translates to:
+  /// **'{date} 的全部记录'**
+  String recordsCalendarDayRecords(String date);
+
+  /// No description provided for @recordsCalendarEmptyDay.
+  ///
+  /// In zh, this message translates to:
+  /// **'这一天没有记录。'**
+  String get recordsCalendarEmptyDay;
+
+  /// No description provided for @recordsCalendarCount.
+  ///
+  /// In zh, this message translates to:
+  /// **'{count} 条'**
+  String recordsCalendarCount(int count);
+
+  /// No description provided for @recordsCalendarDining.
+  ///
+  /// In zh, this message translates to:
+  /// **'外食或外卖'**
+  String get recordsCalendarDining;
+
+  /// No description provided for @recordsCalendarCooking.
+  ///
+  /// In zh, this message translates to:
+  /// **'做菜记录'**
+  String get recordsCalendarCooking;
+
+  /// No description provided for @recordsCalendarPhoto.
+  ///
+  /// In zh, this message translates to:
+  /// **'本人记录照片'**
+  String get recordsCalendarPhoto;
+
   /// No description provided for @monthlyReviewTitle.
   ///
   /// In zh, this message translates to:

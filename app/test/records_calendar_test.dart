@@ -1,5 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:gram_tree/features/records/records_calendar.dart';
+import 'package:gram_tree/features/records/records_history.dart';
+import 'package:gram_tree/l10n/app_localizations.dart';
+import 'package:gramtree_api/gramtree_api.dart';
 
 import 'helpers.dart';
 
@@ -29,6 +34,109 @@ Map<String, dynamic> historyRecord(
 };
 
 void main() {
+  test('离线历史上下文使用快照IANA时区跨夏令时计算日期', () {
+    final container = ProviderContainer();
+    addTearDown(container.dispose);
+    final snapshot = RecordHistorySnapshot(
+      accountId: 'account',
+      timezone: 'America/Los_Angeles',
+      cachedAt: DateTime.utc(2026, 10),
+      items: const [],
+      contexts: const {},
+    );
+    final march = container
+        .read(recordsHistoryProvider)
+        .contextFor(snapshot, 2026, 3);
+    expect(march.dayFor(DateTime.utc(2026, 3, 9, 6, 30))?.date, '2026-03-08');
+    expect(march.dayFor(DateTime.utc(2026, 3, 9, 7, 30))?.date, '2026-03-09');
+    final springDay = march.days.singleWhere((day) => day.date == '2026-03-08');
+    expect(
+      springDay.end.difference(springDay.start),
+      const Duration(hours: 23),
+    );
+    final november = container
+        .read(recordsHistoryProvider)
+        .contextFor(snapshot, 2026, 11);
+    final fallDay = november.days.singleWhere(
+      (day) => day.date == '2026-11-01',
+    );
+    expect(fallDay.end.difference(fallDay.start), const Duration(hours: 25));
+  });
+  testWidgets('月日历可离线生成任意历史月份并保留记录集合', (tester) async {
+    final now = DateTime.now().toUtc();
+    final current = DateTime.utc(now.year, now.month);
+    final container = ProviderContainer();
+    addTearDown(container.dispose);
+    final context = container
+        .read(recordsHistoryProvider)
+        .localContext('America/Los_Angeles', current.year, current.month);
+    final expected = DateTime.utc(current.year, current.month - 3);
+    final older = historyRecord(
+      'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+      '三个月前的晚餐',
+      DateTime.utc(expected.year, expected.month, 2, 6, 30).toIso8601String(),
+    );
+    final recent = historyRecord(
+      'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',
+      '这个月的午餐',
+      DateTime.utc(current.year, current.month, 2, 20).toIso8601String(),
+    );
+    final snapshot = RecordHistorySnapshot(
+      accountId: 'account',
+      timezone: 'America/Los_Angeles',
+      cachedAt: now,
+      items: [recent, older],
+      contexts: {'${current.year}-${current.month}': context},
+    );
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: TestEnv.signedIn(offline: true).overrides,
+        child: MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: Scaffold(
+            body: RecordsCalendar(
+              snapshot: RecordHistorySnapshot.fromJson(snapshot.toJson()),
+              records: [
+                (CookingRecordOut.fromJson(recent), null, false),
+                (CookingRecordOut.fromJson(older), null, false),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    for (var i = 0; i < 3; i++) {
+      await tester.tap(find.byIcon(Icons.chevron_left));
+      await tester.pumpAndSettle();
+    }
+    expect(find.text('${expected.year} 年 ${expected.month} 月'), findsOneWidget);
+    final date =
+        '${expected.year}-${expected.month.toString().padLeft(2, '0')}-01';
+    await tapVisible(tester, find.byKey(ValueKey('calendar-day-$date')));
+    await tester.scrollUntilVisible(
+      find.text('三个月前的晚餐'),
+      400,
+      scrollable: find.byType(Scrollable).first,
+    );
+    expect(find.text('三个月前的晚餐'), findsOneWidget);
+    await tester.drag(find.byType(ListView).first, const Offset(0, 1800));
+    await tester.pumpAndSettle();
+    for (var i = 0; i < 3; i++) {
+      await tapVisible(tester, find.byTooltip('下个月'));
+    }
+    final recentDate =
+        '${current.year}-${current.month.toString().padLeft(2, '0')}-02';
+    await tapVisible(tester, find.byKey(ValueKey('calendar-day-$recentDate')));
+    await tester.scrollUntilVisible(
+      find.text('这个月的午餐'),
+      400,
+      scrollable: find.byType(Scrollable).first,
+    );
+    expect(find.text('这个月的午餐'), findsOneWidget);
+  });
   testWidgets('月日历取完全部分页并按账号时区跨日显示不同来源', (tester) async {
     final now = DateTime.now().toUtc();
     final month = DateTime.utc(now.year, now.month);

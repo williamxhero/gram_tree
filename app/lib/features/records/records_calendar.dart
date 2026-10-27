@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gramtree_api/gramtree_api.dart';
 
 import 'records_history.dart';
 import 'records_page.dart';
+import '../../l10n/app_localizations.dart';
 
-class RecordsCalendar extends StatefulWidget {
+class RecordsCalendar extends ConsumerStatefulWidget {
   const RecordsCalendar({
     super.key,
     required this.snapshot,
@@ -18,10 +20,10 @@ class RecordsCalendar extends StatefulWidget {
   final Widget? below;
 
   @override
-  State<RecordsCalendar> createState() => _RecordsCalendarState();
+  ConsumerState<RecordsCalendar> createState() => _RecordsCalendarState();
 }
 
-class _RecordsCalendarState extends State<RecordsCalendar> {
+class _RecordsCalendarState extends ConsumerState<RecordsCalendar> {
   String? _selected;
   bool _selectedByUser = false;
   late String _monthKey;
@@ -34,29 +36,49 @@ class _RecordsCalendarState extends State<RecordsCalendar> {
     for (final context in widget.snapshot.contexts.values) {
       if (context.dayFor(now) != null) {
         _monthKey = '${context.year}-${context.month}';
-        break;
+        return;
+      }
+    }
+    final history = ref.read(recordsHistoryProvider);
+    for (var delta = -1; delta <= 1; delta++) {
+      final candidate = DateTime.utc(now.year, now.month + delta);
+      final context = history.localContext(
+        widget.snapshot.timezone,
+        candidate.year,
+        candidate.month,
+      );
+      if (context.dayFor(now) != null) {
+        _monthKey = '${context.year}-${context.month}';
+        return;
       }
     }
   }
 
-  RecordCalendarContext? get _context =>
-      widget.snapshot.contexts[_monthKey] ??
-      (widget.snapshot.contexts.isEmpty
-          ? null
-          : widget.snapshot.contexts.values.first);
+  RecordCalendarContext? get _context {
+    final parts = _monthKey.split('-');
+    try {
+      return ref
+          .read(recordsHistoryProvider)
+          .contextFor(
+            widget.snapshot,
+            int.parse(parts[0]),
+            int.parse(parts[1]),
+          );
+    } catch (_) {
+      return null;
+    }
+  }
 
   void _moveMonth(int delta) {
     final context = _context;
     if (context == null) return;
     final next = DateTime.utc(context.year, context.month + delta, 1);
     final key = '${next.year}-${next.month}';
-    if (widget.snapshot.contexts.containsKey(key)) {
-      setState(() {
-        _monthKey = key;
-        _selected = null;
-        _selectedByUser = false;
-      });
-    }
+    setState(() {
+      _monthKey = key;
+      _selected = null;
+      _selectedByUser = false;
+    });
   }
 
   List<(CookingRecordOut, String?, bool)> _forDay(String date) => [
@@ -71,10 +93,7 @@ class _RecordsCalendarState extends State<RecordsCalendar> {
   @override
   Widget build(BuildContext context) {
     final calendar = _context;
-    final fallbackList =
-        calendar == null ||
-        (widget.snapshot.contexts[_monthKey] == null &&
-            widget.snapshot.contexts.length == 1);
+    final fallbackList = calendar == null;
     if (fallbackList) {
       return ListView(
         padding: const EdgeInsets.all(20),
@@ -83,7 +102,7 @@ class _RecordsCalendarState extends State<RecordsCalendar> {
             widget.above!,
             const SizedBox(height: 20),
           ],
-          const Text('离线时区信息不可用，请联网后打开这个月份。'),
+          Text(AppLocalizations.of(context).recordsCalendarOfflineTimezone),
           const SizedBox(height: 12),
           for (final (record, writeId, pending) in widget.records)
             RecordCard(
@@ -123,19 +142,21 @@ class _RecordsCalendarState extends State<RecordsCalendar> {
         Row(
           children: [
             IconButton(
-              tooltip: '上个月',
+              tooltip: AppLocalizations.of(context)
+                  .recordsCalendarPreviousMonth,
               onPressed: () => _moveMonth(-1),
               icon: const Icon(Icons.chevron_left),
             ),
             Expanded(
               child: Text(
-                '${calendar.year} 年 ${calendar.month} 月',
+                AppLocalizations.of(context)
+                    .recordsCalendarMonth(calendar.year, calendar.month),
                 textAlign: TextAlign.center,
                 style: Theme.of(context).textTheme.headlineSmall,
               ),
             ),
             IconButton(
-              tooltip: '下个月',
+              tooltip: AppLocalizations.of(context).recordsCalendarNextMonth,
               onPressed: () => _moveMonth(1),
               icon: const Icon(Icons.chevron_right),
             ),
@@ -146,7 +167,9 @@ class _RecordsCalendarState extends State<RecordsCalendar> {
           DateTime.now().toUtc().subtract(const Duration(minutes: 1)),
         ))
           Text(
-            '上次同步：${widget.snapshot.cachedAt.toLocal()}',
+            AppLocalizations.of(context).recordsCalendarLastSync(
+              widget.snapshot.cachedAt.toLocal().toString(),
+            ),
             style: Theme.of(context).textTheme.bodySmall,
           ),
         const SizedBox(height: 12),
@@ -173,7 +196,7 @@ class _RecordsCalendarState extends State<RecordsCalendar> {
         if (selected != null) ...[
           const SizedBox(height: 20),
           Text(
-            '$selected 的全部记录',
+            AppLocalizations.of(context).recordsCalendarDayRecords(selected),
             style: Theme.of(context).textTheme.titleLarge,
           ),
           const SizedBox(height: 8),
@@ -184,7 +207,8 @@ class _RecordsCalendarState extends State<RecordsCalendar> {
               recordWriteId: writeId,
               pending: pending,
             ),
-          if (selectedRecords.isEmpty) const Text('这一天没有记录。'),
+          if (selectedRecords.isEmpty)
+            Text(AppLocalizations.of(context).recordsCalendarEmptyDay),
         ],
         if (widget.below != null) ...[
           const SizedBox(height: 24),
@@ -231,11 +255,13 @@ class _DayCell extends StatelessWidget {
             Text(day.date.substring(8)),
             if (records.isNotEmpty)
               Text(
-                '${records.length} 条',
+                AppLocalizations.of(context)
+                    .recordsCalendarCount(records.length),
                 style: Theme.of(context).textTheme.labelSmall,
               ),
             for (final (record, _, pending) in records.take(2)) ...[
-              if (_recordPhoto(record) != null) _recordPhoto(record)!,
+              if (_recordPhoto(context, record) != null)
+                _recordPhoto(context, record)!,
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
@@ -246,8 +272,8 @@ class _DayCell extends StatelessWidget {
                     size: 11,
                     semanticLabel:
                         record.source_ == CookingRecordOutSource_Enum.dining
-                        ? '外食或外卖'
-                        : '做菜记录',
+                        ? AppLocalizations.of(context).recordsCalendarDining
+                        : AppLocalizations.of(context).recordsCalendarCooking,
                   ),
                   if (pending)
                     const Icon(Icons.cloud_upload_outlined, size: 11),
@@ -261,7 +287,7 @@ class _DayCell extends StatelessWidget {
   );
 }
 
-Widget? _recordPhoto(CookingRecordOut record) {
+Widget? _recordPhoto(BuildContext context, CookingRecordOut record) {
   final photos = record.toJson()['photos'];
   if (photos is! List || photos.isEmpty || photos.first is! String) return null;
   try {
@@ -272,7 +298,7 @@ Widget? _recordPhoto(CookingRecordOut record) {
         width: 24,
         height: 18,
         fit: BoxFit.cover,
-        semanticLabel: '本人记录照片',
+        semanticLabel: AppLocalizations.of(context).recordsCalendarPhoto,
       ),
     );
   } catch (_) {

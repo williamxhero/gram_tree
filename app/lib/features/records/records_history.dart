@@ -151,6 +151,14 @@ class RecordsHistory {
     );
   }
 
+  RecordCalendarContext contextFor(
+    RecordHistorySnapshot snapshot,
+    int year,
+    int month,
+  ) =>
+      snapshot.contexts['$year-$month'] ??
+      localContext(snapshot.timezone, year, month);
+
   Future<RecordHistorySnapshot?> read(String accountId) async {
     try {
       final raw = _ref.read(localStoreProvider).getString(keyFor(accountId));

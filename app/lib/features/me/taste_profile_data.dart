@@ -136,20 +136,28 @@ class TasteProfileRepository {
     );
   }
 
-  Future<TasteProfileChangeOut> confirmChange(String changeId) async {
+  Future<TasteProfileChangeOut> confirmChange(
+    String changeId, {
+    String? source,
+  }) async {
     final identity = _identity();
     final value = (await api.confirmChange(
       changeId: changeId,
+      source_: source,
       extra: _identityExtra(identity),
     )).data!;
     if (!session.matches(identity)) throw StateError('stale_profile_response');
     return value;
   }
 
-  Future<TasteProfileChangeOut> revertChange(String changeId) async {
+  Future<TasteProfileChangeOut> revertChange(
+    String changeId, {
+    String? source,
+  }) async {
     final identity = _identity();
     final value = (await api.revertChange(
       changeId: changeId,
+      source_: source,
       extra: _identityExtra(identity),
     )).data!;
     if (!session.matches(identity)) throw StateError('stale_profile_response');
