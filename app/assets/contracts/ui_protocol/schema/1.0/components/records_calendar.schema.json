@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://gramtree.app/contracts/ui_protocol/1.0/components/records_calendar.schema.json",
+  "title": "records_calendar 组件数据",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["conclusion", "days"],
+  "properties": {
+    "conclusion": {"type": "string", "minLength": 1},
+    "days": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["date", "count", "types"],
+        "properties": {
+          "date": {"type": "string", "minLength": 10},
+          "count": {"type": "integer", "minimum": 0},
+          "types": {"type": "array", "items": {"type": "string"}},
+          "photos": {"type": "array", "items": {"type": "string", "pattern": "^data:image/jpeg;base64,"}}
+        }
+      }
+    },
+    "basis": {"type": ["object", "null"]},
+    "action_label": {"type": "string", "minLength": 1},
+    "detail_label": {"type": "string", "minLength": 1}
+  }
+}

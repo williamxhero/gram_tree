@@ -32,6 +32,7 @@ def matches_submission(
         and row.source_context == source_context
         and (body.occurred_at is None or row.occurred_at == body.occurred_at)
         and row.co_diner_ids == [str(item) for item in body.co_diner_ids]
+        and row.photos == body.photos
     )
 
 

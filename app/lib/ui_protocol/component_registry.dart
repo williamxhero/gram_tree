@@ -8,6 +8,7 @@ import 'components/section_title_component.dart';
 import 'components/source_demo_component.dart';
 import 'components/scenario_summary_component.dart';
 import 'components/scenario_notice_component.dart';
+import 'components/records_calendar_component.dart';
 import 'components/text_block_component.dart';
 import 'recipe_components.dart';
 import 'source_attribution.dart';
@@ -167,6 +168,14 @@ final defaultComponentRegistry = ComponentRegistry(const [
     type: 'food_safety',
     builder: buildFoodSafetyProtocolComponent,
     emptyState: ComponentEmptyState(title: '暂时无法确认食品安全信息'),
+  ),
+  ComponentSpec(
+    type: 'records_calendar',
+    builder: buildRecordsCalendarComponent,
+    emptyState: ComponentEmptyState(
+      title: '还没有记录',
+      message: '做完菜点做好了，这里就会出现你的记录。',
+    ),
   ),
   ComponentSpec(
     type: 'allergen_notice',
