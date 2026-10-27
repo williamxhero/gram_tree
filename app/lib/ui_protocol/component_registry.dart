@@ -35,7 +35,11 @@ Widget buildMonthlyReviewComponent(
     return ComponentEmptyCard(emptyState: emptyState);
   }
   final detailed = component.detail == ComponentDescriptorDetailEnum.detailed;
-  final basis = parseBasisText(data);
+  final source = data['source'];
+  final sourceData = source is Map ? Map<String, dynamic>.from(source) : null;
+  final basis =
+      parseBasisText(data) ??
+      (sourceData == null ? null : parseBasisText(sourceData));
   Widget changeList({required bool detailed}) => Column(
     crossAxisAlignment: CrossAxisAlignment.stretch,
     children: [
@@ -89,9 +93,10 @@ Widget buildMonthlyReviewComponent(
     conclusion: Text(conclusion),
     conclusionSemanticsText: conclusion,
     basisText: basis,
-    standardExtra: component.detail == ComponentDescriptorDetailEnum.brief
-        ? null
-        : changeList(detailed: false),
+    standardExtra: switch (component.detail) {
+      ComponentDescriptorDetailEnum.standard => changeList(detailed: false),
+      _ => null,
+    },
     detailedExtra: detailed ? changeList(detailed: true) : null,
   );
 }

@@ -15,6 +15,7 @@ from sqlalchemy.orm import Session
 from gramtree.events.models import Event
 from gramtree.events.registry import BY_KEY, is_registered
 from gramtree.ui_protocol import actions as actions_registry
+from gramtree.ui_protocol import components as components_registry
 from gramtree.ui_protocol import page_types, schema_validation, service, validation
 from tests.accounts_support import Api, bearer
 from tests.test_conventions import assert_error_shape
@@ -30,6 +31,46 @@ def _compose(api: Api, tokens: dict, **overrides: object) -> Response:
     }
     body.update(overrides)
     return api.client.post("/v1/ui/compositions", json=body, headers=bearer(tokens))
+
+
+def test_monthly_review_component_is_registered_and_schema_validated() -> None:
+    assert components_registry.is_registered("monthly_review")
+    data = {
+        "conclusion": "2026 年 3 月做菜 3 次",
+        "month": "2026-03",
+        "source": {
+            "source_type": "verified",
+            "value": "账号记录",
+            "basis": {
+                "reason_code": "monthly_statistics",
+                "text": "按账号时区内记录统计",
+                "citation": "2026-03",
+            },
+        },
+        "taste_changes": [
+            {
+                "field": "flavors.spicy",
+                "conclusion": "辣度按近期记录调整",
+                "old_value": "标准",
+                "new_value": "少辣",
+                "reason": "近期做菜时多次调整",
+                "source": {
+                    "source_type": "taste_adjusted",
+                    "value": "按你的口味换算",
+                    "basis": {
+                        "reason_code": "learning",
+                        "text": "近期记录",
+                        "citation": "2026-03",
+                    },
+                },
+            }
+        ],
+    }
+    schema_validation.validate_component_data("1.0", "monthly_review", data)
+
+    invalid = {**data, "taste_changes": [{"field": "flavors.spicy"}]}
+    with pytest.raises(schema_validation.SchemaValidationFailed):
+        schema_validation.validate_component_data("1.0", "monthly_review", invalid)
 
 
 @pytest.mark.parametrize("question", ["鸡肉为什么要炒熟？", "", "   ", "x" * 1001, None])

@@ -112,6 +112,7 @@ void main() {
         },
       },
     };
+    final semantics = tester.ensureSemantics();
     for (final detail in ComponentDescriptorDetailEnum.values) {
       await pumpSpec(
         tester,
@@ -123,22 +124,31 @@ void main() {
         ),
       );
       expect(find.text('上月做菜 3 次'), findsOneWidget);
-      expect(find.bySemanticsLabel('上月做菜 3 次'), findsWidgets);
+      expect(find.bySemanticsLabel(RegExp('上月做菜 3 次')), findsWidgets);
       if (detail == ComponentDescriptorDetailEnum.brief) {
-        expect(find.text('1 条口味变化'), findsNothing);
-        expect(find.text('来自账号月度记录与已登记口味变化'), findsNothing);
+        expect(find.text('辣度按近期记录调整'), findsNothing);
+        expect(find.text('来自当月记录'), findsNothing);
       } else {
-        expect(find.textContaining('1 条口味变化'), findsOneWidget);
-        expect(find.text('来自账号月度记录与已登记口味变化'), findsOneWidget);
+        expect(find.text('辣度按近期记录调整'), findsOneWidget);
+        expect(find.text('来自当月记录'), findsOneWidget);
       }
       if (detail == ComponentDescriptorDetailEnum.detailed) {
-        expect(find.text('1 条口味变化及明细'), findsNothing);
-        expect(find.textContaining('变更前'), findsOneWidget);
-        expect(find.textContaining('变更后'), findsOneWidget);
-        expect(find.textContaining('近期做菜'), findsOneWidget);
+        expect(find.textContaining('标准 → 少辣'), findsOneWidget);
+        expect(find.textContaining('近期做菜时多次调整'), findsOneWidget);
         expect(find.text('按你的口味换算'), findsOneWidget);
       }
     }
+    await pumpSpec(
+      tester,
+      spec: spec,
+      component: descriptor(
+        type: 'monthly_review',
+        detail: ComponentDescriptorDetailEnum.brief,
+        data: {},
+      ),
+    );
+    expect(find.text(spec.emptyState.title), findsOneWidget);
+    semantics.dispose();
   });
 
   group('三档详略：简略只显示结论和一个主要动作', () {
