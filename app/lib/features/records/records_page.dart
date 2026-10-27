@@ -100,9 +100,7 @@ class RecordsPage extends ConsumerWidget {
             return ListView(
               padding: const EdgeInsets.fromLTRB(20, 24, 20, 32),
               children: [
-                const MonthlyReviewSection(),
-                const SizedBox(height: 20),
-                SizedBox(
+                const SizedBox(
                   height: 240,
                   child: ClipRect(
                     child: EmptyState(
@@ -114,14 +112,22 @@ class RecordsPage extends ConsumerWidget {
                 ),
                 const SizedBox(height: 24),
                 const DietaryStatisticsWidget(),
+                const SizedBox(height: 20),
+                const MonthlyReviewSection(),
               ],
             );
           }
           return RecordsCalendar(
             snapshot: snapshot,
             records: byClient.values.toList(),
-            above: const MonthlyReviewSection(),
-            below: const DietaryStatisticsWidget(),
+            below: const Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                DietaryStatisticsWidget(),
+                SizedBox(height: 20),
+                MonthlyReviewSection(),
+              ],
+            ),
           );
         },
       ),

@@ -39,6 +39,7 @@ void main() {
       'failure_reminder',
       'taste_change_notice',
       'records_calendar',
+      'monthly_review',
       'dietary_statistics',
       'dietary_distribution',
     });

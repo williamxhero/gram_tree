@@ -139,9 +139,10 @@ def record_change_event(
     record_taste_profile_changed(
         session,
         profile.owner_id,
-        new_id(),
+        row.id,
         now=row.reverted_at or utcnow(),
         source=source,
+        event_id=new_id(),
     )
 
 
