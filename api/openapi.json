@@ -10318,6 +10318,60 @@
         "title": "RecipeVersionSummary",
         "type": "object"
       },
+      "RecordCalendarContextOut": {
+        "properties": {
+          "days": {
+            "items": {
+              "$ref": "#/components/schemas/RecordCalendarDayOut"
+            },
+            "title": "Days",
+            "type": "array"
+          },
+          "month": {
+            "title": "Month",
+            "type": "integer"
+          },
+          "timezone": {
+            "title": "Timezone",
+            "type": "string"
+          },
+          "year": {
+            "title": "Year",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "timezone",
+          "year",
+          "month",
+          "days"
+        ],
+        "title": "RecordCalendarContextOut",
+        "type": "object"
+      },
+      "RecordCalendarDayOut": {
+        "properties": {
+          "date": {
+            "title": "Date",
+            "type": "string"
+          },
+          "end": {
+            "title": "End",
+            "type": "string"
+          },
+          "start": {
+            "title": "Start",
+            "type": "string"
+          }
+        },
+        "required": [
+          "date",
+          "start",
+          "end"
+        ],
+        "title": "RecordCalendarDayOut",
+        "type": "object"
+      },
       "RecordVersionSaveInput": {
         "additionalProperties": false,
         "properties": {
@@ -21989,6 +22043,76 @@
           }
         ],
         "summary": "Create Record",
+        "tags": [
+          "records"
+        ]
+      }
+    },
+    "/v1/records/calendar-context": {
+      "get": {
+        "operationId": "getRecordCalendarContext",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "year",
+            "required": true,
+            "schema": {
+              "maximum": 2200,
+              "minimum": 1900,
+              "title": "Year",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "month",
+            "required": true,
+            "schema": {
+              "maximum": 12,
+              "minimum": 1,
+              "title": "Month",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecordCalendarContextOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "参数错误"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "服务端错误"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Record Calendar Context",
         "tags": [
           "records"
         ]

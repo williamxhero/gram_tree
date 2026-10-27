@@ -242,6 +242,8 @@ export 'package:gramtree_api/src/model/recipe_version_create.dart';
 export 'package:gramtree_api/src/model/recipe_version_history.dart';
 export 'package:gramtree_api/src/model/recipe_version_out.dart';
 export 'package:gramtree_api/src/model/recipe_version_summary.dart';
+export 'package:gramtree_api/src/model/record_calendar_context_out.dart';
+export 'package:gramtree_api/src/model/record_calendar_day_out.dart';
 export 'package:gramtree_api/src/model/record_version_save_input.dart';
 export 'package:gramtree_api/src/model/refresh_request.dart';
 export 'package:gramtree_api/src/model/rejection_reason.dart';

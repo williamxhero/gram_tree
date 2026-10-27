@@ -210,6 +210,8 @@ import 'package:gramtree_api/src/model/recipe_version_create.dart';
 import 'package:gramtree_api/src/model/recipe_version_history.dart';
 import 'package:gramtree_api/src/model/recipe_version_out.dart';
 import 'package:gramtree_api/src/model/recipe_version_summary.dart';
+import 'package:gramtree_api/src/model/record_calendar_context_out.dart';
+import 'package:gramtree_api/src/model/record_calendar_day_out.dart';
 import 'package:gramtree_api/src/model/record_version_save_input.dart';
 import 'package:gramtree_api/src/model/refresh_request.dart';
 import 'package:gramtree_api/src/model/rejection_reason.dart';
@@ -892,6 +894,12 @@ ReturnType deserialize<ReturnType, BaseType>(
           as ReturnType;
     case 'RecipeVersionSummary':
       return RecipeVersionSummary.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'RecordCalendarContextOut':
+      return RecordCalendarContextOut.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'RecordCalendarDayOut':
+      return RecordCalendarDayOut.fromJson(value as Map<String, dynamic>)
           as ReturnType;
     case 'RecordVersionSaveInput':
       return RecordVersionSaveInput.fromJson(value as Map<String, dynamic>)
