@@ -1205,7 +1205,9 @@ void main() {
     );
     await tester.tap(find.byKey(const ValueKey('publication-lifecycle')));
     await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const ValueKey('publication-confirm-lifecycle')));
+    await tester.tap(
+      find.byKey(const ValueKey('publication-confirm-lifecycle')),
+    );
     await tester.pumpAndSettle();
     expect(reads, 2);
     await tester.pumpWidget(const SizedBox.shrink());

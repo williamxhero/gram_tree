@@ -64,10 +64,14 @@ def test_real_sync_create_revision_and_delete_invalidate_cached_results(api: Api
     write = envelope(
         tokens["user"]["id"],
         write_type="cooking_record.create",
-        payload={"record": {
-            "client_id": new_uuid(), "source": "calendar", "dish_name": "补记",
-            "occurred_at": "2026-03-02T08:00:00Z",
-        }},
+        payload={
+            "record": {
+                "client_id": new_uuid(),
+                "source": "calendar",
+                "dish_name": "补记",
+                "occurred_at": "2026-03-02T08:00:00Z",
+            }
+        },
     )
     assert submit(api, tokens, write)[0]["status"] == "confirmed"
     after = statistics(api, tokens)
@@ -76,7 +80,8 @@ def test_real_sync_create_revision_and_delete_invalidate_cached_results(api: Api
     assert statistics(api, tokens)["generated_at"] == after["generated_at"]
     row = api.client.get("/v1/records", headers=bearer(tokens)).json()["items"][0]
     revised = api.client.post(
-        f"/v1/records/{row['id']}/revisions", headers=bearer(tokens),
+        f"/v1/records/{row['id']}/revisions",
+        headers=bearer(tokens),
         json={"revision_id": new_uuid(), "field": "rating", "value": {"score": 4}},
     )
     assert revised.status_code == 201, revised.text
@@ -137,10 +142,21 @@ def test_version_distributions_merged_dishes_and_all_history_first_attempts(api:
     )
     assert updated.status_code == 201, updated.text
     updated = updated.json()
-    for detail, at in [(first, "2026-01-01T04:00:00Z"), (first, "2026-03-01T04:00:00Z"),
-                       (second, "2026-03-02T04:00:00Z"), (updated, "2026-03-03T04:00:00Z")]:
-        record(api, tokens, at, source="calendar", recipe_id=detail["id"],
-               recipe_version_id=detail["version"]["id"], dish_name="自由显示名")
+    for detail, at in [
+        (first, "2026-01-01T04:00:00Z"),
+        (first, "2026-03-01T04:00:00Z"),
+        (second, "2026-03-02T04:00:00Z"),
+        (updated, "2026-03-03T04:00:00Z"),
+    ]:
+        record(
+            api,
+            tokens,
+            at,
+            source="calendar",
+            recipe_id=detail["id"],
+            recipe_version_id=detail["version"]["id"],
+            dish_name="自由显示名",
+        )
     # Alias-only manual dishes must resolve even without an in-range recipe.
     alias_body = recipe_input("统计豆腐")
     alias_body["dish_aliases"] = ["统计豆腐别名"]
@@ -171,4 +187,3 @@ def test_version_distributions_merged_dishes_and_all_history_first_attempts(api:
     assert current["cooking_count"] == 1
     assert current["frequent_dishes"][0]["dish_id"] == first["dish"]["id"]
     assert completed["counts_as_cooked"] is True
-
