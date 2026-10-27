@@ -12,6 +12,7 @@ import 'package:gramtree_api/src/api/allergies_api.dart';
 import 'package:gramtree_api/src/api/analytics_api.dart';
 import 'package:gramtree_api/src/api/auth_api.dart';
 import 'package:gramtree_api/src/api/config_api.dart';
+import 'package:gramtree_api/src/api/dietary_history_api.dart';
 import 'package:gramtree_api/src/api/events_api.dart';
 import 'package:gramtree_api/src/api/exports_api.dart';
 import 'package:gramtree_api/src/api/family_members_api.dart';
@@ -124,6 +125,12 @@ class GramtreeApi {
   /// by doing that all interceptors will not be executed
   ConfigApi getConfigApi() {
     return ConfigApi(dio);
+  }
+
+  /// Get DietaryHistoryApi instance, base route and serializer can be overridden by a given but be careful,
+  /// by doing that all interceptors will not be executed
+  DietaryHistoryApi getDietaryHistoryApi() {
+    return DietaryHistoryApi(dio);
   }
 
   /// Get EventsApi instance, base route and serializer can be overridden by a given but be careful,

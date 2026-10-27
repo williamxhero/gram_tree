@@ -9,9 +9,11 @@ class RecordsCalendar extends StatefulWidget {
     super.key,
     required this.snapshot,
     required this.records,
+    this.below,
   });
   final RecordHistorySnapshot snapshot;
   final List<(CookingRecordOut, String?, bool)> records;
+  final Widget? below;
 
   @override
   State<RecordsCalendar> createState() => _RecordsCalendarState();
@@ -77,6 +79,10 @@ class _RecordsCalendarState extends State<RecordsCalendar> {
               recordWriteId: writeId,
               pending: pending,
             ),
+          if (widget.below != null) ...[
+            const SizedBox(height: 24),
+            widget.below!,
+          ],
         ],
       );
     }
@@ -163,6 +169,10 @@ class _RecordsCalendarState extends State<RecordsCalendar> {
               pending: pending,
             ),
           if (selectedRecords.isEmpty) const Text('这一天没有记录。'),
+        ],
+        if (widget.below != null) ...[
+          const SizedBox(height: 24),
+          widget.below!,
         ],
       ],
     );

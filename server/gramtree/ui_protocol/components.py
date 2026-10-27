@@ -36,6 +36,8 @@ ITEMS: tuple[ComponentSpec, ...] = (
     ComponentSpec("food_safety", "食品安全提醒：结论 + 依据 + 命中明细", always_required=True),
     ComponentSpec("allergen_notice", "过敏原提示：结论 + 依据 + 替代品明细", always_required=True),
     ComponentSpec("records_calendar", "本人记录月日历：日期、记录类型与个人照片"),
+    ComponentSpec("dietary_statistics", "本人周月年做菜统计"),
+    ComponentSpec("dietary_distribution", "本人主料或菜系分布"),
 )
 
 BY_TYPE: dict[str, ComponentSpec] = {item.type: item for item in ITEMS}

@@ -54,6 +54,10 @@ import 'package:gramtree_api/src/model/deletion_public_recipe.dart';
 import 'package:gramtree_api/src/model/deletion_request.dart';
 import 'package:gramtree_api/src/model/density_attribute.dart';
 import 'package:gramtree_api/src/model/detail_preference.dart';
+import 'package:gramtree_api/src/model/dietary_dish_count.dart';
+import 'package:gramtree_api/src/model/dietary_distribution_item.dart';
+import 'package:gramtree_api/src/model/dietary_statistics_out.dart';
+import 'package:gramtree_api/src/model/dietary_unclassified_dish.dart';
 import 'package:gramtree_api/src/model/dish_input.dart';
 import 'package:gramtree_api/src/model/dish_out.dart';
 import 'package:gramtree_api/src/model/email_code_request.dart';
@@ -431,6 +435,18 @@ ReturnType deserialize<ReturnType, BaseType>(
           as ReturnType;
     case 'DetailPreference':
       return DetailPreference.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'DietaryDishCount':
+      return DietaryDishCount.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'DietaryDistributionItem':
+      return DietaryDistributionItem.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'DietaryStatisticsOut':
+      return DietaryStatisticsOut.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'DietaryUnclassifiedDish':
+      return DietaryUnclassifiedDish.fromJson(value as Map<String, dynamic>)
           as ReturnType;
     case 'DishInput':
       return DishInput.fromJson(value as Map<String, dynamic>) as ReturnType;

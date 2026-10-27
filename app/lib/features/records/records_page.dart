@@ -9,6 +9,7 @@ import '../../auth/session.dart';
 import '../../events/event_queue.dart';
 import '../../events/event_uploader.dart';
 import '../../events/sync_status.dart';
+import 'dietary_statistics_widget.dart';
 import 'records_calendar.dart';
 import 'records_history.dart';
 import '../../l10n/app_localizations.dart';
@@ -95,15 +96,26 @@ class RecordsPage extends ConsumerWidget {
             } catch (_) {}
           }
           if (byClient.isEmpty) {
-            return const EmptyState(
-              icon: Icons.menu_book_outlined,
-              title: '还没有做菜记录',
-              message: '每次做完菜后的记录和心得会保存在这里。',
+            return ListView(
+              padding: const EdgeInsets.fromLTRB(20, 24, 20, 32),
+              children: const [
+                SizedBox(
+                  height: 240,
+                  child: EmptyState(
+                    icon: Icons.menu_book_outlined,
+                    title: '还没有做菜记录',
+                    message: '每次做完菜后的记录和心得会保存在这里。',
+                  ),
+                ),
+                SizedBox(height: 24),
+                DietaryStatisticsWidget(),
+              ],
             );
           }
           return RecordsCalendar(
             snapshot: snapshot,
             records: byClient.values.toList(),
+            below: const DietaryStatisticsWidget(),
           );
         },
       ),

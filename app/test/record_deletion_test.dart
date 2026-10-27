@@ -27,6 +27,7 @@ final _record = CookingRecordOut.fromJson({
   'source_context': {},
   'taste_summary': {},
   'co_diner_ids': [],
+  'photos': [],
 }).toJson();
 
 void main() {

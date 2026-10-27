@@ -262,6 +262,7 @@ void _recordRoutes(
     ],
     'source_context': <String, Object>{},
     'taste_summary': <String, Object>{},
+    'photos': <String>[],
   });
   env.server.on(
     'GET',

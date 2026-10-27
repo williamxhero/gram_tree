@@ -25,6 +25,8 @@ abstract class _$CookingRecordOutCWProxy {
 
   CookingRecordOut occurredAt(String occurredAt);
 
+  CookingRecordOut photos(List<String> photos);
+
   CookingRecordOut recipeId(String? recipeId);
 
   CookingRecordOut recipeVersionId(String? recipeVersionId);
@@ -55,6 +57,7 @@ abstract class _$CookingRecordOutCWProxy {
     String id,
     CookingRecordOutMealEnum? meal,
     String occurredAt,
+    List<String> photos,
     String? recipeId,
     String? recipeVersionId,
     Object? snapshot,
@@ -103,6 +106,9 @@ class _$CookingRecordOutCWProxyImpl implements _$CookingRecordOutCWProxy {
       this(occurredAt: occurredAt);
 
   @override
+  CookingRecordOut photos(List<String> photos) => this(photos: photos);
+
+  @override
   CookingRecordOut recipeId(String? recipeId) => this(recipeId: recipeId);
 
   @override
@@ -146,6 +152,7 @@ class _$CookingRecordOutCWProxyImpl implements _$CookingRecordOutCWProxy {
     Object? id = const $CopyWithPlaceholder(),
     Object? meal = const $CopyWithPlaceholder(),
     Object? occurredAt = const $CopyWithPlaceholder(),
+    Object? photos = const $CopyWithPlaceholder(),
     Object? recipeId = const $CopyWithPlaceholder(),
     Object? recipeVersionId = const $CopyWithPlaceholder(),
     Object? snapshot = const $CopyWithPlaceholder(),
@@ -191,6 +198,10 @@ class _$CookingRecordOutCWProxyImpl implements _$CookingRecordOutCWProxy {
           ? _value.occurredAt
           // ignore: cast_nullable_to_non_nullable
           : occurredAt as String,
+      photos: photos == const $CopyWithPlaceholder()
+          ? _value.photos
+          // ignore: cast_nullable_to_non_nullable
+          : photos as List<String>,
       recipeId: recipeId == const $CopyWithPlaceholder()
           ? _value.recipeId
           // ignore: cast_nullable_to_non_nullable
@@ -250,6 +261,7 @@ CookingRecordOut _$CookingRecordOutFromJson(Map<String, dynamic> json) =>
             'id',
             'meal',
             'occurred_at',
+            'photos',
             'recipe_id',
             'recipe_version_id',
             'snapshot',
@@ -278,6 +290,10 @@ CookingRecordOut _$CookingRecordOutFromJson(Map<String, dynamic> json) =>
             (v) => $enumDecodeNullable(_$CookingRecordOutMealEnumEnumMap, v),
           ),
           occurredAt: $checkedConvert('occurred_at', (v) => v as String),
+          photos: $checkedConvert(
+            'photos',
+            (v) => (v as List<dynamic>).map((e) => e as String).toList(),
+          ),
           recipeId: $checkedConvert('recipe_id', (v) => v as String?),
           recipeVersionId: $checkedConvert(
             'recipe_version_id',
@@ -323,6 +339,7 @@ Map<String, dynamic> _$CookingRecordOutToJson(CookingRecordOut instance) =>
       'id': instance.id,
       'meal': _$CookingRecordOutMealEnumEnumMap[instance.meal],
       'occurred_at': instance.occurredAt,
+      'photos': instance.photos,
       'recipe_id': instance.recipeId,
       'recipe_version_id': instance.recipeVersionId,
       'snapshot': instance.snapshot,

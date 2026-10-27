@@ -21,6 +21,8 @@ abstract class _$CookingRecordCreateCWProxy {
 
   CookingRecordCreate occurredAt(DateTime? occurredAt);
 
+  CookingRecordCreate photos(List<String>? photos);
+
   CookingRecordCreate recipeId(String? recipeId);
 
   CookingRecordCreate recipeVersionId(String? recipeVersionId);
@@ -49,6 +51,7 @@ abstract class _$CookingRecordCreateCWProxy {
     String? dishName,
     CookingRecordCreateMealEnum? meal,
     DateTime? occurredAt,
+    List<String>? photos,
     String? recipeId,
     String? recipeVersionId,
     Object? snapshot,
@@ -91,6 +94,9 @@ class _$CookingRecordCreateCWProxyImpl implements _$CookingRecordCreateCWProxy {
       this(occurredAt: occurredAt);
 
   @override
+  CookingRecordCreate photos(List<String>? photos) => this(photos: photos);
+
+  @override
   CookingRecordCreate recipeId(String? recipeId) => this(recipeId: recipeId);
 
   @override
@@ -128,6 +134,7 @@ class _$CookingRecordCreateCWProxyImpl implements _$CookingRecordCreateCWProxy {
     Object? dishName = const $CopyWithPlaceholder(),
     Object? meal = const $CopyWithPlaceholder(),
     Object? occurredAt = const $CopyWithPlaceholder(),
+    Object? photos = const $CopyWithPlaceholder(),
     Object? recipeId = const $CopyWithPlaceholder(),
     Object? recipeVersionId = const $CopyWithPlaceholder(),
     Object? snapshot = const $CopyWithPlaceholder(),
@@ -164,6 +171,10 @@ class _$CookingRecordCreateCWProxyImpl implements _$CookingRecordCreateCWProxy {
           ? _value.occurredAt
           // ignore: cast_nullable_to_non_nullable
           : occurredAt as DateTime?,
+      photos: photos == const $CopyWithPlaceholder()
+          ? _value.photos
+          // ignore: cast_nullable_to_non_nullable
+          : photos as List<String>?,
       recipeId: recipeId == const $CopyWithPlaceholder()
           ? _value.recipeId
           // ignore: cast_nullable_to_non_nullable
@@ -237,6 +248,10 @@ CookingRecordCreate _$CookingRecordCreateFromJson(Map<String, dynamic> json) =>
             'occurred_at',
             (v) => v == null ? null : DateTime.parse(v as String),
           ),
+          photos: $checkedConvert(
+            'photos',
+            (v) => (v as List<dynamic>?)?.map((e) => e as String).toList(),
+          ),
           recipeId: $checkedConvert('recipe_id', (v) => v as String?),
           recipeVersionId: $checkedConvert(
             'recipe_version_id',
@@ -277,6 +292,7 @@ Map<String, dynamic> _$CookingRecordCreateToJson(
   'dish_name': ?instance.dishName,
   'meal': ?_$CookingRecordCreateMealEnumEnumMap[instance.meal],
   'occurred_at': ?instance.occurredAt?.toIso8601String(),
+  'photos': ?instance.photos,
   'recipe_id': ?instance.recipeId,
   'recipe_version_id': ?instance.recipeVersionId,
   'snapshot': ?instance.snapshot,
